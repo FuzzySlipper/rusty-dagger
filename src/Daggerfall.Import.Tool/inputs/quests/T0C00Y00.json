@@ -1,0 +1,306 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/T0C00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "2f09a260e02fbe529d7ba25af18f50da7598fc42f56b333f2fa43511faf0c8c2",
+    "byteLength": 5861
+  },
+  "document": {
+    "fileName": "T0C00Y00.txt",
+    "questName": "T0C00Y00",
+    "questNameLine": 8,
+    "displayName": "Lady Azura's Quest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "T0C00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Lady Azura's Quest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>              You dare summon forth Azura of the Crimson",
+          "<ce>               Gate, pleading for power? I don't know if",
+          "<ce>                you are worthy of such favor. In fact, I",
+          "<ce>                doubt it very much. I suppose that if I",
+          "<ce>               demanded that you murder a priest who has",
+          "<ce>                been saying very, very rude things about",
+          "<ce>                 me, you would refuse even that small,",
+          "<ce>               simple request. Would you do that for me?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                No! You're supposed to say yes! You're",
+          "<ce>                 supposed to say: Yes, beautiful Azura,",
+          "<ce>                  I would gladly murder at the snap of",
+          "<ce>                          your ivory fingers.",
+          "<ce>                                 Boor!",
+          "<ce>                                 Bigot!",
+          "<ce>                               Barbarian!",
+          "<ce>                        Now, I must go before I",
+          "<ce>                    forget that I am a lady and say",
+          "<ce>                     something that I'll regret ..."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                 You would! Oh jolly good. Well, this",
+          "<ce>                perfectly awful priest is also a Healer,",
+          "<ce>                if that means anything. Isn't that just",
+          "<ce>              typical?  As usual with these self-righteous",
+          "<ce>                      types, =monster_ is secluded",
+          "<ce>                       in ___mondung_, cleansing",
+          "<ce>                or some such ridiculous thing.  Anyway,",
+          "<ce>               why don't you hop on over there and stick",
+          "<ce>                 a sword in %g2 or something. And then",
+          "<ce>                      scurry over to ___qgfriend_",
+          "<ce>                   and see my dear darling _qgfriend_",
+          "<ce>                who will give you my Star. That's enough",
+          "<ce>               power for anyone. I think =1stparton_ days",
+          "<ce>                is time enough for this, don't you? Oh,",
+          "<ce>                   good. Hurry along then, %pcf. And",
+          "<ce>                     don't be a stranger. Say hi to",
+          "<ce>                     _qgfriend_ for me. Okay, 'bye."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 54,
+        "lines": [
+          "<ce>                              Hmm? What?",
+          "<ce>                             Do I know you?"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 58,
+        "lines": [
+          "<ce>                          Oh. Oh, %pcn! Have",
+          "<ce>                  you been here long? I'm sorry, I was",
+          "<ce>                  just day-dreaming about my mistress,",
+          "<ce>                  the Lady Azura. That candle reminded",
+          "<ce>                  me of the scintillation of her eyes,",
+          "<ce>                 you see. How silly of me. Well, here's",
+          "<ce>                  _artifact_. She doesn't give this to",
+          "<ce>                  just anyone, but don't let it go to",
+          "<ce>                     your bean. She was mine first."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 69,
+        "lines": [
+          "Did you hear =monster_'s speech about the sin of vanity when %g came to town?",
+          "<--->",
+          "If you talk to =monster_, you'll recognize how egotism is the worst of sins."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 74,
+        "lines": [
+          "=monster_ has moved on, but %g3 message about the virtues of humility remain.",
+          "<--->",
+          "=monster_ has left %reg, still spreading %g3 messages about vanity, I hear."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 79,
+        "lines": [
+          "It's not a real tragedy about =monster_ -- I mean, %g was a real goody-goody.",
+          "<--->",
+          "<ce>I'm not glad =monster_'s dead, but %g3 message was ... well, rather extreme,",
+          " don't you think?"
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 85,
+        "lines": [
+          "_qgfriend_ is that =qgfriend_ I saw daydreaming at __qgfriend_ to the %di.",
+          "<--->",
+          "_qgfriend_ is that sleepy-eyed =qgfriend_ in __qgfriend_, %di of here."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 90,
+        "lines": [
+          "_qgfriend_ is one of the Lady Azura's lovers and an agent of hers in %reg.",
+          "<--->",
+          "_qgfriend_ is a =qgfriend_ who Lady Azura has bewitched into a virtual slave."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 95,
+        "lines": [
+          "Azura is one of the Daedric Regents of Oblivion. Her sphere is vanity.",
+          "<--->",
+          "Lady Azura is the Daedra Prince of Vanity and Egotism."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 100,
+        "lines": [
+          "_artifact_ can transform living creatures into statues forever."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 103,
+        "lines": [
+          "%qdt:",
+          " I have an arrangement with one of the",
+          " Daedra Princes, Azura. If I will slay a",
+          " monk who lives in a deserted temple,",
+          " ___mondung_, and meet her contact,",
+          " _qgfriend_ of ___qgfriend_",
+          " within =1stparton_ days, I will be given",
+          " _artifact_."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 113,
+        "lines": [
+          "<ce>                     You have killed the _monster_",
+          "<ce>                   =monster_, as you promised Azura."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 138,
+        "lines": [
+          "Item _artifact_ artifact Azuras_Star anyInfo 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 140,
+        "lines": [
+          "Person _questgiver_ face 112 named Azura anyInfo 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 141,
+        "lines": [
+          "Person _qgfriend_ group Librarian anyInfo 1011 rumors 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 143,
+        "lines": [
+          "Place _mondung_ remote dungeon4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 145,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 147,
+        "lines": [
+          "Foe _monster_ is Healer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 150,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "place foe _monster_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 155,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 158,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 159,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _npcclicked_ and _mondead_ ",
+          "give pc _artifact_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 165,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ ",
+          "say 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 169,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _qgfriend_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 172,
+        "lines": [
+          "_clearclick_ task:",
+          "when _npcclicked_ and not _mondead_ ",
+          "say 1003",
+          "clear _npcclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -17,13 +17,13 @@ internal sealed class CorpusTheoryAttribute : TheoryAttribute
     public CorpusTheoryAttribute(params string[] entries) => Skip = TestData.MissingCorpus(entries);
 }
 
-/// <summary>A fact that needs the named donor-checkout entries (or just the donor root when none are named).</summary>
+/// <summary>A fact that compares with a Daggerfall Unity checkout's named entries; it runs only when one is named.</summary>
 internal sealed class DonorFactAttribute : FactAttribute
 {
     public DonorFactAttribute(params string[] entries) => Skip = TestData.MissingDonor(entries);
 }
 
-/// <summary>A theory that needs the named donor-checkout entries (or just the donor root when none are named).</summary>
+/// <summary>A theory that compares with a Daggerfall Unity checkout's named entries; it runs only when one is named.</summary>
 internal sealed class DonorTheoryAttribute : TheoryAttribute
 {
     public DonorTheoryAttribute(params string[] entries) => Skip = TestData.MissingDonor(entries);

@@ -1,0 +1,451 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000004.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "fb7fc67a7a3c1454cb5d2c4dedae45ad36060391d47d25ed18cedf8aada5d1f8",
+    "byteLength": 7887
+  },
+  "document": {
+    "fileName": "S0000004.txt",
+    "questName": "S0000004",
+    "questNameLine": 5,
+    "displayName": "Morgiah's Wedding",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000004"
+      },
+      {
+        "name": "displayname",
+        "value": "Morgiah's Wedding"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 10,
+        "lines": [
+          "<ce>                You're trying to track down that letter",
+          "<ce>               of the Emperor's, yes? There are very few",
+          "<ce>               scandals in the Bay of which I am totally",
+          "<ce>             ignorant. I could give you some information,",
+          "<ce>              but nothing is without a price, that I know",
+          "<ce>               well. I need a champion who doesn't fear the",
+          "<ce>                 fire of Oblivion. Are you interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 19,
+        "lines": [
+          "<ce>              Pity. I will find someone else to help me.",
+          "<ce>             But who will you find to help you, I wonder?"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 23,
+        "lines": [
+          "<ce>               %oth, that is a relief to me. Do not ask",
+          "<ce>             any questions -- get this letter to a certain",
+          "<ce>               high-level sorcerer at the Necromancers'",
+          "<ce>                crypt, Scourg Barrow in the Dragontail",
+          "<ce>               Mountains. Avoid the rift. If you see it,",
+          "<ce>                        you have gone too far.",
+          "<ce>                                    ",
+          "<ce>                  They will not be expecting you and",
+          "<ce>               will not wait for any introductions. The",
+          "<ce>               necromancers feel that death is a reward",
+          "<ce>              for the living, not a punishment. Once you",
+          "<ce>              have delivered the letter, they would feel",
+          "<ce>                no need to guarantee your safety. It is",
+          "<ce>                their way. I need the letter delivered",
+          "<ce>                     and a response from _necs_ in",
+          "<ce>              my hand one month from now at the absolute",
+          "<ce>                   latest. The risks are very high,",
+          "<ce>                       %pcf, please do not fail."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                    I need a response to my letter",
+          "<ce>                          from _necs_, %pcf."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 47,
+        "lines": [
+          "<ce>                It's done! I'll be queen of Firsthold!",
+          "<ce>            Although I'm sure the engagement will be quite",
+          "<ce>            lengthy. Now, I promised you information about",
+          "<ce>                         the Emperor's letter.",
+          "<ce>                                    ",
+          "<ce>            The letter you seek is in the hands of Gortwog,",
+          "<ce>            the Warlord of the Orcs. He bought it from the",
+          "<ce>            Thieves Guild of Daggerfall after one of their",
+          "<ce>                  number stole it from Queen Aubk-i.",
+          "<ce>                                    ",
+          "<ce>            I confess I don't know why the Emperor sent it",
+          "<ce>            to Aubk-i. The girl is innocent to a fault, and",
+          "<ce>             everyone knows that Gothryd is not the loyal",
+          "<ce>           empire toady that Lysandus was. Of course my own",
+          "<ce>           family... well enough of this boring court gossip.",
+          "<ce>                                    ",
+          "<ce>              If you really want to find this letter, you",
+          "<ce>             should get in good with Mynisera, the former",
+          "<ce>               Queen of Daggerfall, and Queen Mother to",
+          "<ce>              Gothryd. I wouldn't directly approach her.",
+          "<ce>                 Start with someone of lower station."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 70,
+        "lines": [
+          "If it weren't for Morgiah's reputation, Wayrest would embrace her brother.",
+          "<--->",
+          "How could we crown the brother of a manipulative witch like Princess Morgiah?"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 75,
+        "lines": [
+          "Princess Morgiah's mood has worsened. And no one has as bad a temper as she.",
+          "<--->",
+          "I suppose it is time that Princess Morgiah married. But who would want her?"
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 80,
+        "lines": [
+          "Princess Morgiah is engaged to the King of Firsthold. A miracle of %god indeed.",
+          "<--->",
+          "What could've possessed the King of Firsthold to propose marriage to Morgiah?",
+          "<--->",
+          "Morgiah has a three-year engagement! Royals are a strange lot."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 87,
+        "lines": [
+          "<ce>                  You've failed me, %pcf. I required an answer from _necs_ within one month.",
+          "<ce>                  Now you dare return to me so late? Begone!"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 91,
+        "lines": [
+          "_necs_,",
+          "<ce>                                    ",
+          "<ce>                I agree to your terms. I will give you",
+          "<ce>              my first and you will exert your influence",
+          "<ce>              on the King of Firsthold on Sumurset Isle.",
+          "<ce>               Only you can let him speak with his dead",
+          "<ce>              son. For that, he would even marry Nulfaga!",
+          "<ce>                                    ",
+          "<ce>                                 -- M"
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 102,
+        "lines": [
+          "Princess,",
+          "<ce>                                    ",
+          " Done.",
+          "<ce>                                    ",
+          "<ce>                               -- _necs_"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 109,
+        "lines": [
+          "%qdt:",
+          " Princess Morgiah of Wayrest has",
+          " asked me to deliver a letter to the",
+          " _necs_ of the Necromancers",
+          " of Scourg Barrow in the Dragontail",
+          " Mountains. She said to avoid the rift,",
+          " whatever that is. If I see it, I have",
+          " gone too far. She wants a reply back",
+          " in a month."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 120,
+        "lines": [
+          "Princess Morgiah has left Wayrest for Sumurset Isle and the King of Firsthold.",
+          "<--->",
+          "Wayrest has cemented relations with the High Elves of Firsthold by marriage.",
+          "<--->",
+          "Firsthold has a new queen, and Wayrest has lost a princess.",
+          "<--->",
+          "Morgiah will be happy being Karoodil's queen in Firsthold.",
+          "<--->",
+          "Morgiah will be the first queen of Firsthold who isn't a High Elf."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 131,
+        "lines": [
+          "<ce>                           King Eadwyre and",
+          "<ce>                           Queen Barenziah,",
+          "<ce>                       Sovereigns of the Kingdom",
+          "<ce>                              of Wayrest",
+          "<ce>                 Are Proud to Announce The Engagement",
+          "<ce>                   of Morgiah, Princess of Wayrest,",
+          "<ce>                             to Karoodil,",
+          "<ce>                           King of Firsthold",
+          "<ce>                       in the Isle of Sumurset."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 142,
+        "lines": [
+          "<ce>           A young lad with the Rose of Wayrest embroidered",
+          "<ce>           on his surcoat appears at your side, hands you an",
+          "<ce>                    engraved card, and disappears."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 147,
+        "lines": [
+          "<ce>                  Very good. If you are not rewarded",
+          "<ce>                   with death by the loyal servants",
+          "<ce>                   of the Barrow, give this note to",
+          "<ce>                       Princess Morgiah, please."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 163,
+        "lines": [
+          "Item letter44 letter used 1010"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 164,
+        "lines": [
+          "Item letter13 letter used 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 165,
+        "lines": [
+          "Item _reward_ trinket"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 166,
+        "lines": [
+          "Item engagement letter used 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 168,
+        "lines": [
+          "Person _morgiah_ named Princess_Morgiah"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 169,
+        "lines": [
+          "Person _necs_ named King_of_Worms atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 171,
+        "lines": [
+          "Place _scourgbarrow_ permanent ScourgBarrow1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 173,
+        "lines": [
+          "Clock _2ndgo_ 30.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 174,
+        "lines": [
+          "Clock _S.01_ 7.00:00 14.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 175,
+        "lines": [
+          "Clock _letterdelay_ 1.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 178,
+        "lines": [
+          "prompt QuestorOffer yes yes no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 180,
+        "lines": [
+          "_2ndgo_ task:",
+          "drop _morgiah_ as questor ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 184,
+        "lines": [
+          "_S.01_ task:",
+          "repute with _morgiah_ exceeds 10 do _S.07_ ",
+          "rumor mill 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 188,
+        "lines": [
+          "_S.07_ task:",
+          "have engagement set _S.10_ ",
+          "give pc engagement notify 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 192,
+        "lines": [
+          "_S.02_ task:",
+          "toting letter13 and _morgiah_ clicked ",
+          "give pc _reward_ ",
+          "start timer _S.01_ ",
+          "stop timer _2ndgo_ ",
+          "remove log step 0 ",
+          "start task _S.08_ ",
+          "change repute with _morgiah_ by +10 ",
+          "drop _morgiah_ as questor "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 202,
+        "lines": [
+          "_S.03_ task:",
+          "toting letter44 and _necs_ clicked saying 1016 ",
+          "get item letter13 ",
+          "change repute with _necs_ by +10 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 207,
+        "lines": [
+          "variable _S.04_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 208,
+        "lines": [
+          "yes task:",
+          "start timer _2ndgo_ ",
+          "log 1012 step 0 ",
+          "get item letter44 ",
+          "reveal _scourgbarrow_ in province 1 at 450958 ",
+          "say AcceptQuest ",
+          "add _morgiah_ as questor "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 216,
+        "lines": [
+          "_no_ task:",
+          "say RefuseQuest ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 220,
+        "lines": [
+          "MorgiahSatisfied _S.08_"
+        ],
+        "global": 23
+      },
+      {
+        "kind": "task",
+        "firstLine": 221,
+        "lines": [
+          "_S.09_ task:",
+          "when _S.01_ and not _S.07_",
+          "start quest 21 21 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 226,
+        "lines": [
+          "_S.10_ task:",
+          "start timer _letterdelay_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 230,
+        "lines": [
+          "_letterdelay_ task:",
+          "start quest 21 21 ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

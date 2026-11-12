@@ -12,7 +12,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class CatalogsCommand
 {
     public static ToolCommand Command { get; } = new("catalogs",
-        [Options.Arena2, Options.Inventory, Options.Pack, CommandOption.Required("--donor-races", "RaceTemplate.cs"), Options.Update], Run);
+        [Options.Arena2, Options.Inventory, Options.Pack, CommandOption.Required("--races", "RACES.json"), Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {
@@ -24,7 +24,7 @@ internal static class CatalogsCommand
         DaggerfallCatalogs catalogs = DaggerfallCatalogBuilder.Build(
             inventory,
             careers,
-            File.ReadAllText(args["--donor-races"]),
+            TakenTable.Read<DaggerfallRaceTable>(File.ReadAllBytes(args["--races"]), args["--races"]),
             File.ReadAllBytes(Path.Combine(args["--arena2"], "CLASSES.DAT")),
             DaggerfallTextBuilder.Build(File.ReadAllBytes(Path.Combine(args["--arena2"], "TEXT.RSC")), "arena2/TEXT.RSC", inventory, "en"));
         byte[] section = DaggerfallCatalogSerializer.Serialize(catalogs, inventory.Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal));

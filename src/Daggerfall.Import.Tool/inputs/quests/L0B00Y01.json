@@ -1,0 +1,285 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/L0B00Y01.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "eb5ddcb2f52a5bded125b82eddd9d1e8b99f98939852fba286b40da9ff9f2470",
+    "byteLength": 4990
+  },
+  "document": {
+    "fileName": "L0B00Y01.txt",
+    "questName": "L0B00Y01",
+    "questNameLine": 8,
+    "displayName": "No Escape",
+    "header": [
+      {
+        "name": "quest",
+        "value": "L0B00Y01"
+      },
+      {
+        "name": "displayname",
+        "value": "No Escape"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                       As you know, %pct, there",
+          "<ce>                     is no room for failure in the",
+          "<ce>                    Dark Brotherhood. Brothers who",
+          "<ce>                     fail us are targeted for an",
+          "<ce>                     accounting. You will find and",
+          "<ce>                        correct one such errant",
+          "<ce>                            former member.",
+          "                                     <--->",
+          "<ce>                    It is a solemn duty, and not an",
+          "<ce>                     entirely disagreeable one, to",
+          "<ce>                   account agents of the Brotherhood",
+          "<ce>                       who have failed us in an",
+          "<ce>                     assignment. You are, I trust,",
+          "<ce>                        free to take on such an",
+          "<ce>                              assignment?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                       Did I hear you correctly?",
+          "<ce>                          %pct, I am grieved",
+          "<ce>                      by your lack of cooperation",
+          "<ce>                          with your brothers."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                           Very good, %pct.",
+          "<ce>                       =target_, having learned",
+          "<ce>                  something during %g3 tenure in the",
+          "<ce>                Brotherhood, has wisely hidden %g2self,",
+          "<ce>                  but we have a contact in __snitch_,",
+          "<ce>                 a miserable =snitch_ named _snitch_.",
+          "<ce>                    Talk to %g2 and get =target_'s",
+          "<ce>               location. I will expect the accounting to",
+          "<ce>                  be accomplished, and you to be back",
+          "<ce>                        here in =queston_ days."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                           Well done, %pct.",
+          "<ce>                    A good lesson for all who might",
+          "<ce>                         fail the Brotherhood."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 53,
+        "lines": [
+          "=target_ is at large somewhere in %reg, shaking like a willow, I wager.",
+          "<--->",
+          "=target_ was a pretty decent assassin. Not good enough, it seems."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 58,
+        "lines": [
+          "Apparently you can beat the Brotherhood. Witness =target_, for example.",
+          "<--->",
+          "=target_ is really thumbing %g3 nose at the Dark Brotherhood."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 63,
+        "lines": [
+          "=target_, they say %g failed the Brotherhood once. And that was %g3 reward.",
+          "<--->",
+          "The Dark Brotherhood tolerates no failure. Look what happened to poor =target_."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 68,
+        "lines": [
+          "Hello, %pcn. How may I assist you who slew our errant brother?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                 Let me understand this. I sent you to",
+          "<ce>                     account a _target_ who failed",
+          "<ce>                the Brotherhood and ... you failed. And",
+          "<ce>                 now, you want to chat. Unbelievable."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 77,
+        "lines": [
+          "%qdt:",
+          " The Dark Brotherhood in ___qgiver_",
+          " has sent me to a Brother who failed an",
+          " assigment. I am to talk to a squealer",
+          " named _snitch_ in __snitch_",
+          " of ___snitch_ who will tell",
+          " me whither =target_ has fled."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 86,
+        "lines": [
+          "<ce>                          %pcn? I'm _snitch_.",
+          "<ce>                 The fish you're after has slipped the",
+          "<ce>                 hook and is living a fancy life down",
+          "<ce>                         in ___mondung_. Just",
+          "<ce>                         watch yourself, %ra.",
+          "<ce>                      =target_ knows how to fight",
+          "<ce>                           and %g's scared."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 95,
+        "lines": [
+          "%qdt:",
+          " _snitch_ tells me that =target_",
+          " is in ___mondung_."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 100,
+        "lines": [
+          "<ce>                       You have slain =target_.",
+          "<ce>                   The Brotherhood will be pleased."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 125,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 126,
+        "lines": [
+          "Person _snitch_ factiontype Temple local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 128,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 130,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 132,
+        "lines": [
+          "Foe _target_ is Assassin"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 135,
+        "lines": [
+          "dialog link for location _mondung_ ",
+          "start timer _queston_ ",
+          "log 1010 step 0 ",
+          "place foe _target_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_reward_ task:",
+          "when _qgclicked_ and _S.02_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 148,
+        "lines": [
+          "_S.02_ task:",
+          "killed 1 _target_ ",
+          "say 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 152,
+        "lines": [
+          "_S.03_ task:",
+          "clicked npc _snitch_ ",
+          "add dialog for location _mondung_ ",
+          "reveal _mondung_ ",
+          "log 1012 step 1 ",
+          "say 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 159,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 162,
+        "lines": [
+          "_S.05_ task:",
+          "when _qgclicked_ and not _S.02_ ",
+          "clear _qgclicked_ _S.05_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

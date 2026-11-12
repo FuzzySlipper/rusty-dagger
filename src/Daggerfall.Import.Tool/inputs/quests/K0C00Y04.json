@@ -1,0 +1,440 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/K0C00Y04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "3d0404150f220a20fddda5a8200ea2a024a9e38689ee15b65b9681df53a25b45",
+    "byteLength": 9538
+  },
+  "document": {
+    "fileName": "K0C00Y04.txt",
+    "questName": "K0C00Y04",
+    "questNameLine": 8,
+    "displayName": "Two Cowards",
+    "header": [
+      {
+        "name": "quest",
+        "value": "K0C00Y04"
+      },
+      {
+        "name": "displayname",
+        "value": "Two Cowards"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                 I'm in an embarrassing predicament, I",
+          "<ce>                       fear. _lover_ and I have",
+          "<ce>                had ... an understanding, but %g3 lover",
+          "<ce>                 is being distressingly old-fashioned",
+          "<ce>                 about it. I have been challenged to a",
+          "<ce>                     duel. Luckily, _competitor_,",
+          "<ce>                 that's my rival's name, doesn't know",
+          "<ce>                 what I look like. You could stand in",
+          "<ce>                 for me. For _gold_ gold pieces, would",
+          "<ce>                      you? I'd be very grateful.",
+          "                                     <--->",
+          "<ce>                        This =competitor_ here",
+          "<ce>                   in %cn has sent me a challenge. I",
+          "<ce>                  guess the word has gone around that",
+          "<ce>                 I have ruined the honor of %g3 lover,",
+          "<ce>                        _lover_. Not that most",
+          "<ce>                     of %reg hasn't been with old",
+          "<ce>                       _lover_ first. Basically,",
+          "<ce>                I need someone like you to impersonate",
+          "<ce>                   me in the duel. Would _gold_ gold",
+          "<ce>                     pieces interest you in this?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                      No? That is too bad. Well,",
+          "<ce>                     I probably should get someone",
+          "<ce>                        who looks more like me,",
+          "<ce>                                anyhow."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                      Good show, %pcf. Bring this",
+          "<ce>                     reply to _competitor_. You'll",
+          "<ce>                    find %g2 over in __competitor_.",
+          "<ce>                   I'll expect you back in =queston_",
+          "<ce>                      days, victorious, for your",
+          "<ce>                        just reward. Good luck,",
+          "<ce>                              my friend."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                    Honor is restored, eh, my fine",
+          "<ce>                        %ra? Here's your _gold_",
+          "<ce>                   gold pieces. And now, I should go",
+          "<ce>                          visit dear _lover_",
+          "<ce>                  and tell %g2 of the ordeal ... with",
+          "<ce>                   certain alterations of the facts,",
+          "<ce>                              of course."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 60,
+        "lines": [
+          "_lover_, they say, has caused more deaths than any plague.",
+          "<--->",
+          "_lover_'s last lover died in %g3 arms, trying to satisfy %g3 ... appetite.",
+          "<--->",
+          "If _lover_ finds out they're fighting a duel over %g2 ... %oth, that'll be it."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 67,
+        "lines": [
+          "_lover_ has left _competitor_ and _qgiver_ too.",
+          "<--->",
+          "It's all over between _lover_, _competitor_, and _qgiver_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 72,
+        "lines": [
+          "_lover_ and _qgiver_ are together again. It's so romantic.",
+          "<--->",
+          "_qgiver_ killed a =competitor_, all for the love of _lover_."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 77,
+        "lines": [
+          "I'd be honored to help you, %pcf. And we all know about honor, don't we?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 80,
+        "lines": [
+          "You were supposed to impersonate me, idiot! Or don't you remember?"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 83,
+        "lines": [
+          "%qdt:",
+          " _qgiver_",
+          " of __qgiver_, ___qgiver_",
+          " has been challenged to a duel and has",
+          " sent me to impersonate %g2. I am to",
+          " bring %g3 reply to _competitor_'s",
+          " challenge and fight the duel. I can find this",
+          " _competitor_ in __competitor_",
+          " here in ___competitor_. After",
+          " the duel, I am to return and collect my",
+          " reward from _qgiver_ in",
+          " __qgiver_. All for the",
+          " love of _lover_."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 98,
+        "lines": [
+          "<ce>                      I, _qgiver_ of ___qgiver_,",
+          "<ce>                   do hereby answer your challenge.",
+          "<ce>                                    ",
+          "<ce>                  As is my right by the formal rules",
+          "<ce>                   of combat, I will call the place",
+          "<ce>                  where we shall meet. That place is",
+          "<ce>                       here and the time is now.",
+          "<ce>                                    ",
+          "<ce>                   This contract is legally binding.",
+          "<ce>                    To refuse to meet its challenge",
+          "<ce>                     without formal apology is to",
+          "<ce>                       sacrifice honor evermore.",
+          "<ce>                                    ",
+          "<ce>                        _qgiver_ of ___qgiver_"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 114,
+        "lines": [
+          "<ce>                       You're, uh, _qgiver_? You",
+          "<ce>                 must be looking for the other person",
+          "<ce>                         named _competitor_, a",
+          "<ce>                      real tough, uh, _duelist_.",
+          "<ce>                      You'll find %g2 in _arena_.",
+          "<ce>                        Good luck, _qgiver_. I",
+          "<ce>                             hope you win!",
+          "                                     <--->",
+          "<ce>                        If you're _qgiver_ ...",
+          "<ce>                       %oth, I'll meet you over",
+          "<ce>                       in _arena_. Let me just,",
+          "<ce>                       ah, get into my _duelist_",
+          "<ce>                             clothes. Bye!"
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 129,
+        "lines": [
+          "<ce>                          You're in _arena_,",
+          "<ce>                      where _competitor_ said %g",
+          "<ce>                            would meet you."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 134,
+        "lines": [
+          "<ce>                       In the guise of _qgiver_,",
+          "<ce>                     you have slain a _duelist_ in",
+          "<ce>                      the guise of _competitor_.",
+          "<ce>                     You have merely to return to",
+          "<ce>                      your employer and honor is",
+          "<ce>                               restored."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 142,
+        "lines": [
+          "<ce>                  This is preposterous! On one hand,",
+          "<ce>                       _competitor_ is a perfect",
+          "<ce>                      boor to challenge _qgiver_",
+          "<ce>                to a duel. On the other, what a perfect",
+          "<ce>                        coward _qgiver_ is for",
+          "<ce>                  sending you in %g3 place. Thank you",
+          "<ce>                  for bringing this to my attention.",
+          "<ce>                  Neither shall have me, but you may",
+          "<ce>                 have _lovgold_ gold pieces since that",
+          "<ce>                       fool promised to pay you.",
+          "                                     <--->",
+          "<ce>                 This is too romantic! Just imagine --",
+          "<ce>                       _competitor_ and _qgiver_",
+          "<ce>               tearing each other to pieces over little",
+          "<ce>                   me. %oth, as thoughtful a gesture",
+          "<ce>                as that is, I cannot let it be. I will",
+          "<ce>                       leave ___lover_ forever,",
+          "<ce>                  but first, please accept _lovgold_",
+          "<ce>                   gold pieces to replace that which",
+          "<ce>                   _qgiver_ offered you. I can't let",
+          "<ce>             you be poor just because no duel will occur.",
+          "<ce>                         Fare thee well, %pcf.",
+          "                                     <--->",
+          "<ce>                Let me get this straight. That idiotic",
+          "<ce>                      _competitor_ is jealous of",
+          "<ce>                        me and _qgiver_ and has",
+          "<ce>              challenged %g2 to a duel. And that infernal",
+          "<ce>                     coward _qgiver_ has sent you",
+          "<ce>               to pretend to be %g2 in this duel? Is it",
+          "<ce>                any wonder that I don't love either of",
+          "<ce>                 them? I'll take care of this. Here's",
+          "<ce>                 _lovgold_ gold pieces instead of what",
+          "<ce>                         _qgiver_ offered you.",
+          "<ce>                        There will be no duel."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 178,
+        "lines": [
+          "%qdt:",
+          " _competitor_ ran off when I",
+          " gave %g2 the reply to %g3 challenge.",
+          " The duel is still to take place,",
+          " in one form or the other,",
+          " at _arena_ here in __arena_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 215,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 216,
+        "lines": [
+          "Item _dueler_ letter used 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 218,
+        "lines": [
+          "Item _lovgold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 220,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 221,
+        "lines": [
+          "Person _lover_ group Group_7.0 local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 222,
+        "lines": [
+          "Person _competitor_ group Group_7.1 local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 225,
+        "lines": [
+          "Place _arena_ local house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 226,
+        "lines": [
+          "Place _loverhome_ local house"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 229,
+        "lines": [
+          "Clock _queston_ 3.01:20 5.23:20"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 231,
+        "lines": [
+          "Foe _duelist_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 234,
+        "lines": [
+          "start timer _queston_ ",
+          "log 1010 step 0 ",
+          "get item _dueler_ ",
+          "place npc _lover_ at _loverhome_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 239,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 242,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _duelist_ ",
+          "say 1014 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 246,
+        "lines": [
+          "_S.02_ task:",
+          "toting _dueler_ and _competitor_ clicked ",
+          "pc at _arena_ set _S.04_ ",
+          "log 1016 step 1 ",
+          "say 1012 ",
+          "place foe _duelist_ at _arena_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 253,
+        "lines": [
+          "_S.03_ task:",
+          "toting _dueler_ and _lover_ clicked ",
+          "get item _lovgold_ ",
+          "say 1015 ",
+          "make _lovgold_ permanent ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 260,
+        "lines": [
+          "_S.04_ task:",
+          "say 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 263,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 266,
+        "lines": [
+          "_reward_ task:",
+          "when _qgclicked_ and _S.01_ ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 271,
+        "lines": [
+          "until _reward_ performed:",
+          "clear _qgclicked_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

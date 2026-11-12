@@ -1,5 +1,7 @@
 using System.Text.Json.Nodes;
 using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Publication;
+using Daggerfall.Source.Tool.Donor;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -142,7 +144,7 @@ public sealed class Arena2MagicCatalogDocumentTests
     public void PublishesOneCostRowForEveryEffectVariantASpellUses()
     {
         Arena2MagicCatalogPublication publication = Arena2MagicCatalogDocument.Build(
-            SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF", Arena2MagicEffectCostTable.Read(Formulas()));
+            SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF", Costs());
         JsonArray costs = JsonNode.Parse(publication.Json)!["effectCosts"]!.AsArray();
 
         // Both spells carry one effect without a subtype, so each type resolves through its first slot.
@@ -160,16 +162,16 @@ public sealed class Arena2MagicCatalogDocumentTests
         // Without the donor's tables the catalog states no cost rather than inventing one.
         Assert.Null(JsonNode.Parse(Arena2MagicCatalogDocument.Build(
             SpellTable(), MagicItemTable(), "arena2/SPELLS.STD", "arena2/MAGIC.DEF").Json)!["effectCosts"]);
-        Assert.Throws<InvalidOperationException>(() => Arena2MagicEffectCostTable.Read(Formulas()).Resolve(51, -1));
+        Assert.Throws<InvalidOperationException>(() => Costs().Resolve(51, -1));
     }
 
-    [CorpusAndDonorFact(["SPELLS.STD", "MAGIC.DEF"], [Arena2MagicEffectCostTable.DonorSourcePath])]
+    [CorpusFact("SPELLS.STD", "MAGIC.DEF")]
     public void TheRealSpellsResolveEveryEffectThroughTheDonorCostTables()
     {
         Arena2MagicCatalogPublication publication = Arena2MagicCatalogDocument.Build(
             File.ReadAllBytes(TestData.Corpus("SPELLS.STD")), File.ReadAllBytes(TestData.Corpus("MAGIC.DEF")),
             "arena2/SPELLS.STD", "arena2/MAGIC.DEF",
-            Arena2MagicEffectCostTable.Read(File.ReadAllText(TestData.Donor(Arena2MagicEffectCostTable.DonorSourcePath))));
+            Arena2MagicEffectCostTable.From(TakenTable.Read<SpellCostTable>(File.ReadAllBytes(TestData.Input("spell-costs.json")), "spell-costs.json")));
         JsonObject document = JsonNode.Parse(publication.Json)!.AsObject();
         HashSet<(int, int)> rows = [.. document["effectCosts"]!.AsArray().Select(cost => (cost!["type"]!.GetValue<int>(), cost["subType"]!.GetValue<int>()))];
         HashSet<(int, int)> used = [.. document["spells"]!.AsArray().SelectMany(spell => spell!["effects"]!.AsArray())
@@ -232,6 +234,13 @@ public sealed class Arena2MagicCatalogDocumentTests
                 Assert.Equal(spell["identityShared"]!.GetValue<bool>(), rows[index]!["spellIdentityShared"]!.GetValue<bool>());
             }
         }
+    }
+
+    /// <summary>The excerpt below, taken as the drift check takes the donor's tables, and read as the import reads ours.</summary>
+    private static Arena2MagicEffectCostTable Costs()
+    {
+        (IReadOnlyList<SpellCostEffect> effects, IReadOnlyList<IReadOnlyList<int>> rows) = DonorSpellCosts.Read(Formulas());
+        return Arena2MagicEffectCostTable.From(new SpellCostTable(TakenFrom.Of("daggerfall-unity/FormulaHelper.cs", "test", "excerpt"u8), effects, rows));
     }
 
     private static string Formulas()

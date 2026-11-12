@@ -1,0 +1,337 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO08.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "03aa5853f814b8289db1b267f047e3bc791170549bbfcb8d12e6f029b4d7132f",
+    "byteLength": 5133
+  },
+  "document": {
+    "fileName": "__DEMO08.txt",
+    "questName": "__DEMO08",
+    "questNameLine": 4,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO08"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 9,
+        "lines": [
+          "<ce>               Howdy, %pcf.  If you got a few days free,",
+          "<ce>             a job just came in for some giant-killin', and",
+          "<ce>                     I thought of you.  Interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                  Too busy, eh?  When I was your age,",
+          "<ce>                  I was never too busy to off a giant",
+          "<ce>                  or two.  Kids these days, I tell ya."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 19,
+        "lines": [
+          "<ce>                Right.  Seems there's this giant, moved",
+          "<ce>                   into ___mondung_ a while back and",
+          "<ce>                has been having a fine old time feastin'",
+          "<ce>                  on _dummy_'s sheep in the area.  Ate",
+          "<ce>               a few of the local villagers too, I guess,",
+          "<ce>                but old _dummy_ don't seem so concerned",
+          "<ce>             about that.  At any rate, %g wants this giant",
+          "<ce>           taken care of within =qtime_ days, and %g's payin'",
+          "<ce>                 _gold_ gold for it.  See ya in a bit."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                  What, the giant died of overeating?",
+          "<ce>                 Get going, %pcf.  You got a job to do."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 34,
+        "lines": [
+          "<ce>                  Hail the giant-killer!  I knew you",
+          "<ce>                     was the right one for the job.",
+          "<ce>                        Here's the _gold_ gold."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 39,
+        "lines": [
+          "<ce> A giant in ___mondung_ is terrorizing the locals, but _dummy_ doesn't",
+          "<ce>                             seem to care.",
+          "                                     <--->",
+          "<ce> That giant in ___mondung_ carried off another villager the other day."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 45,
+        "lines": [
+          "<ce> I'm glad that giant finally moved out of ___mondung_.  I guess it got",
+          "<ce>       bored with it's bland diet of villager night after night."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 49,
+        "lines": [
+          "<ce>      Thank %god _dummy_ finally sent someone to kill that giant",
+          "<ce>     in ___mondung_.  It must have killed one of %g precious sheep."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 53,
+        "lines": [
+          "<ce>                 It's my old friend Giant-Killer %pcf!"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 56,
+        "lines": [
+          "<ce>                In my day, you could get kicked out of",
+          "<ce>                the Fighter's Guild if you couldn't kill",
+          "<ce>                a simple giant.  Times change, I guess."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 61,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of the Fighter's Guild",
+          " of ___questgiver_ has hired me to",
+          " kill a giant in ___mondung_.",
+          " I am to report back within =qtime_ days",
+          " for my reward of _gold_ gold."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 69,
+        "lines": [
+          "%qdt:",
+          " I rescued a merchant the giant was",
+          " apparently saving for a snack.",
+          " _villager_ asked me to take %g2",
+          " to _store_ in __store_."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                  The giant roars in pain.  You hear",
+          "<ce>                  the sound of heavy footsteps coming",
+          "<ce>                    towards you.  Perhaps the giant",
+          "<ce>                invited a few friends over for dinner..."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 82,
+        "lines": [
+          "<ce>                    Thank %god you're here!  I was",
+          "<ce>                     on my way to market yesterday",
+          "<ce>                  when the giant carried me off along",
+          "<ce>                    with four other merchants I was",
+          "<ce>                 travelling with.  It already ate them,",
+          "<ce>                  I guess it was saving me for later.",
+          "<ce>                Will you please help me get out of this",
+          "<ce>               place?  I'll never make it out on my own."
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 92,
+        "lines": [
+          "<ce>             You're a true hero.  Let me introduce myself:",
+          "<ce>                      _villager_ of ___villager_.",
+          "<ce>                     I was on my way to _store_ in",
+          "<ce>                    __store_.  If you could drop me",
+          "<ce>              off there, I would be forever in your debt."
+        ]
+      },
+      {
+        "id": 1042,
+        "firstLine": 99,
+        "lines": [
+          "<ce>                  I appreciate your help, but I think",
+          "<ce>                    I can find my own way from here."
+        ]
+      },
+      {
+        "id": 1043,
+        "firstLine": 103,
+        "lines": [
+          "<ce>                       You are truly heartless."
+        ]
+      },
+      {
+        "id": 1044,
+        "firstLine": 106,
+        "lines": [
+          "<ce>                   I've enjoyed your company, %pcf.",
+          "<ce>               You saved my life, and I won't forget it."
+        ]
+      },
+      {
+        "id": 1080,
+        "firstLine": 110,
+        "lines": [
+          "<ce>                   Hey, here's a map to ___newdung_",
+          "<ce>                    one of the other chaps found the",
+          "<ce>                  other day.  If I was a couple years",
+          "<ce>                   younger, we could tear through it",
+          "<ce>                   together, just like the old days."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 119,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 121,
+        "lines": [
+          "Person _villager_ face 8 group Shopkeeper"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 123,
+        "lines": [
+          "Place _mondung_ permanent PirateerHold1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 124,
+        "lines": [
+          "Place _store_ remote generalstore"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 126,
+        "lines": [
+          "Foe _giant_ is Giant"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 127,
+        "lines": [
+          "Foe _F.01_ is Giant"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 130,
+        "lines": [
+          "log 1020 step 0 ",
+          "start task _victim_",
+          "place foe _giant_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 134,
+        "lines": [
+          "_victim_ task:",
+          "place npc _villager_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 137,
+        "lines": [
+          "_S.09_ task:",
+          "hide npc _villager_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_S.10_ task:",
+          "clicked npc _villager_ ",
+          "prompt 1040 yes yes no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 144,
+        "lines": [
+          "yes task:",
+          "pc at _store_ set _S.13_ ",
+          "log 1021 step 1 ",
+          "hide npc _villager_ ",
+          "say 1041 ",
+          "add _villager_ face"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 151,
+        "lines": [
+          "_no_ task:",
+          "say 1043 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 155,
+        "lines": [
+          "_S.13_ task:",
+          "say 1044 ",
+          "drop _villager_ face ",
+          "place npc _villager_ at _store_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 161,
+        "lines": [
+          "_S.14_ task:",
+          "when yes and not _S.13_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

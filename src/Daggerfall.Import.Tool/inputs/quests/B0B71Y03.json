@@ -1,0 +1,818 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/B0B71Y03.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "81fe5a8b48e36463851aabff640690725091436da10b0ed4b2e56828d423c09f",
+    "byteLength": 14001
+  },
+  "document": {
+    "fileName": "B0B71Y03.txt",
+    "questName": "B0B71Y03",
+    "questNameLine": 8,
+    "displayName": "The Artifact",
+    "header": [
+      {
+        "name": "quest",
+        "value": "B0B71Y03"
+      },
+      {
+        "name": "displayname",
+        "value": "The Artifact"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                      A rumor has surfaced as to",
+          "<ce>                     the whereabouts of an ancient",
+          "<ce>                       artifact of power. This is",
+          "<ce>                          a once in a lifetime",
+          "<ce>                       opportunity. Are you up to",
+          "<ce>                               it, %pct?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                      Not the ambitious type, eh?",
+          "<ce>                        Some other lucky knight",
+          "<ce>                       will be sure to snap this",
+          "<ce>                                one up."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                       I thought I detected the",
+          "<ce>                       gleam of ambition in your",
+          "<ce>                         eyes %pcf. Supposedly,",
+          "<ce>                       a witch living deep in the",
+          "<ce>                         bowels of ___dungeon1_",
+          "<ce>                      has discovered a clue about",
+          "<ce>                       where to find this thing.",
+          "<ce>                          I'd start with her."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 37,
+        "lines": [
+          "<ce>                             Your quest is",
+          "<ce>                               complete."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 41,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 70,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 99,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 128,
+        "lines": [
+          "So, you won that which you quested for. What would you have now?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 131,
+        "lines": [
+          "I haven't anything to say to you, %pcf.",
+          "<--->",
+          "I wasted my breath talking to you before."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 136,
+        "lines": [
+          "%qdt:",
+          " I embarked upon a quest to find a legendary",
+          " artifact of power. The only clue",
+          " _questgiver_ of __questgiver_",
+          " was able to provide is that a witch hermited",
+          " in ___dungeon1_ might know",
+          " something about it."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 145,
+        "lines": [
+          "%qdt:",
+          " The witch, _witch_,",
+          " in ___dungeon1_ demanded",
+          " that I kidnap _child_,",
+          " in _palace_, in __palace_,",
+          " her great granddaughter, and bring her",
+          " to the witch if I am ever to find",
+          " _aurielsbow_."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 155,
+        "lines": [
+          "%qdt:",
+          " The witch, _witch_,",
+          " in ___dungeon1_ demanded",
+          " that I kidnap _child_,",
+          " in _palace_, in __palace_,",
+          " her great granddaughter, and bring her",
+          " to the witch if I am ever to find",
+          " _aurielshield_."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 165,
+        "lines": [
+          "%qdt:",
+          " The witch, _witch_,",
+          " in ___dungeon1_ demanded",
+          " that I kidnap _child_,",
+          " in _palace_, in __palace_,",
+          " her great granddaughter, and bring her",
+          " to the witch if I am ever to find",
+          " _lordsmail_."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 175,
+        "lines": [
+          "<ce>              I am _witch_. So, you want _aurielshield_.",
+          "<ce>          It is true that I know something of it. You must do",
+          "<ce>            something for me if you wish to learn my secret.",
+          "<ce>            Long ago, when I was young and your grandfather",
+          "<ce>                  was less than a gleam in your great",
+          "<ce>             grandmother's eye, I gave birth to a daughter.",
+          "<ce>        I left the child to be raised by others, but now that my",
+          "<ce>                   powers are waning, I need an heir.",
+          "<ce>                 My daughter is long dead, but I have a",
+          "<ce>                  great granddaughter of the right age",
+          "<ce>                     named _child_. Bring her to me",
+          "<ce>         within =finddaughter_ days and I will tell you what I",
+          "<ce>               know of _aurielshield_. _child_'s parents",
+          "<ce>           know nothing of her birthright and will certainly",
+          "<ce>                    resist any attempt to take her.",
+          "<ce>                     You will find her in _palace_",
+          "<ce>                             in __palace_."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 194,
+        "lines": [
+          "<ce>               I am _witch_. So, you want _aurielsbow_.",
+          "<ce>          It is true that I know something of it. You must do",
+          "<ce>            something for me if you wish to learn my secret.",
+          "<ce>            Long ago, when I was young and your grandfather",
+          "<ce>                  was less than a gleam in your great",
+          "<ce>             grandmother's eye, I gave birth to a daughter.",
+          "<ce>        I left the child to be raised by others, but now that my",
+          "<ce>                   powers are waning, I need an heir.",
+          "<ce>                 My daughter is long dead, but I have a",
+          "<ce>                  great granddaughter of the right age",
+          "<ce>                     named _child_. Bring her to me",
+          "<ce>         within =finddaughter_ days and I will tell you what I",
+          "<ce>                know of _aurielsbow_. _child_'s parents",
+          "<ce>           know nothing of her birthright and will certainly",
+          "<ce>                    resist any attempt to take her.",
+          "<ce>                     You will find her in _palace_",
+          "<ce>                             in __palace_."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 213,
+        "lines": [
+          "<ce>                I am _witch_. So, you want _lordsmail_.",
+          "<ce>          It is true that I know something of it. You must do",
+          "<ce>            something for me if you wish to learn my secret.",
+          "<ce>            Long ago, when I was young and your grandfather",
+          "<ce>                  was less than a gleam in your great",
+          "<ce>             grandmother's eye, I gave birth to a daughter.",
+          "<ce>        I left the child to be raised by others, but now that my",
+          "<ce>                   powers are waning, I need an heir.",
+          "<ce>                 My daughter is long dead, but I have a",
+          "<ce>                  great granddaughter of the right age",
+          "<ce>                     named _child_. Bring her to me",
+          "<ce>         within =finddaughter_ days and I will tell you what I",
+          "<ce>                 know of _lordsmail_. _child_'s parents",
+          "<ce>           know nothing of her birthright and will certainly",
+          "<ce>                    resist any attempt to take her.",
+          "<ce>                     You will find her in _palace_",
+          "<ce>                             in __palace_."
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 232,
+        "lines": [
+          "<ce>                      What are you doing!? I don't",
+          "<ce>                       want to go with you. Help!",
+          "<ce>                          Mommy, daddy, help!"
+        ]
+      },
+      {
+        "id": 1026,
+        "firstLine": 237,
+        "lines": [
+          "<ce>                          Intruder! Intruder!"
+        ]
+      },
+      {
+        "id": 1027,
+        "firstLine": 240,
+        "lines": [
+          "<ce>                          Put down _child_ or",
+          "<ce>                     I will be forced to kill you."
+        ]
+      },
+      {
+        "id": 1032,
+        "firstLine": 244,
+        "lines": [
+          "<ce>                     Ah yes, my heir. What did you",
+          "<ce>                      say its name was? _child_?",
+          "<ce>                         Yes, %g will do fine.",
+          "<ce>                         %pcn, you have earned",
+          "<ce>                  the right to pursue _aurielshield_.",
+          "<ce>                      The stars have told me that",
+          "<ce>                    the path to _aurielshield_ leads",
+          "<ce>                         through ___dungeon2_.",
+          "<ce>                          That is all I know."
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 255,
+        "lines": [
+          "<ce>                     Ah yes, my heir. What did you",
+          "<ce>                      say its name was? _child_?",
+          "<ce>                         Yes, %g will do fine.",
+          "<ce>                         %pcn, you have earned",
+          "<ce>                   the right to pursue _aurielsbow_.",
+          "<ce>                      The stars have told me that",
+          "<ce>                     the path to _aurielsbow_ leads",
+          "<ce>                         through ___dungeon2_.",
+          "<ce>                          That is all I know."
+        ]
+      },
+      {
+        "id": 1033,
+        "firstLine": 266,
+        "lines": [
+          "<ce>                     Ah yes, my heir. What did you",
+          "<ce>                      say its name was? _child_?",
+          "<ce>                         Yes, %g will do fine.",
+          "<ce>                         %pcn, you have earned",
+          "<ce>                    the right to pursue _lordsmail_.",
+          "<ce>                      The stars have told me that",
+          "<ce>                     the path to _lordsmail_ leads",
+          "<ce>                         through ___dungeon2_.",
+          "<ce>                          That is all I know."
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 277,
+        "lines": [
+          "%qdt:",
+          " _witch_ has told me that",
+          " the path to _aurielshield_",
+          " is through ___dungeon2_."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 283,
+        "lines": [
+          "%qdt:",
+          " _witch_ has told me that",
+          " the path to _aurielsbow_",
+          " is through ___dungeon2_."
+        ]
+      },
+      {
+        "id": 1052,
+        "firstLine": 289,
+        "lines": [
+          "%qdt:",
+          " _witch_ has told me that",
+          " the path to _lordsmail_",
+          " is through ___dungeon2_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 321,
+        "lines": [
+          "Item _aurielshield_ artifact Auriels_Shield"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 322,
+        "lines": [
+          "Item _aurielsbow_ artifact Auriels_Bow"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 323,
+        "lines": [
+          "Item _lordsmail_ artifact Lords_Mail"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 325,
+        "lines": [
+          "Person _witch_ face 1 faction The_Glenmoril_Witches remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 326,
+        "lines": [
+          "Person _child_ face 211 faction Children female remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 327,
+        "lines": [
+          "Person _ruler_ group Noble remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 328,
+        "lines": [
+          "Person _local_ face 33 group Resident2 local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 329,
+        "lines": [
+          "Person _questgiver_ face 67 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 331,
+        "lines": [
+          "Place _dungeon1_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 332,
+        "lines": [
+          "Place _palace_ remote palace"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 333,
+        "lines": [
+          "Place _dungeon2_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 335,
+        "lines": [
+          "Clock _finddaughter_ 00:00 0 flag 17 range 1 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 337,
+        "lines": [
+          "Foe _F.00_ is 2 Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 338,
+        "lines": [
+          "Foe _battlemage_ is Battle_mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 339,
+        "lines": [
+          "Foe _warrior_ is Warrior"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 342,
+        "lines": [
+          "start timer _finddaughter_ ",
+          "reveal _dungeon1_ ",
+          "log 1010 step 0 ",
+          "pick one of _artifact1_ _artifact2_ _artifact3_ ",
+          "pc at _palace_ set _S.10_ ",
+          "place npc _child_ at _palace_ ",
+          "place npc _witch_ at _dungeon1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 350,
+        "lines": [
+          "_S.00_ task:",
+          "clicked npc _witch_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 353,
+        "lines": [
+          "_S.01_ task:",
+          "clicked npc _child_ say 1025 ",
+          "create foe _F.00_ every 3 minutes 5 times with 30% success ",
+          "create foe _battlemage_ every 4 minutes 5 times with 25% success ",
+          "hide npc _child_ ",
+          "add _child_ face ",
+          "clear _S.00_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 366,
+        "lines": [
+          "variable _finddaughter_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 367,
+        "lines": [
+          "variable _artifact1_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 368,
+        "lines": [
+          "variable _artifact2_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 369,
+        "lines": [
+          "variable _artifact3_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 370,
+        "lines": [
+          "_how1_ task:",
+          "when _S.16_ and _artifact1_ ",
+          "log 1011 step 1 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 374,
+        "lines": [
+          "_how2_ task:",
+          "when _S.16_ and _artifact2_ ",
+          "log 1012 step 1 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 378,
+        "lines": [
+          "_fire_ task:",
+          "when _S.16_ and _artifact3_ ",
+          "log 1013 step 1 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 382,
+        "lines": [
+          "_S.10_ task:",
+          "create foe _warrior_ every 5 minutes 5 times with 50% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 385,
+        "lines": [
+          "_greklith_ task:",
+          "injured _warrior_ saying 1026 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 388,
+        "lines": [
+          "_S.12_ task:",
+          "injured _battlemage_ ",
+          "injured _F.00_ ",
+          "prompt 1027 yes _S.13_ no _S.14_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 393,
+        "lines": [
+          "_S.13_ task:",
+          "drop _child_ face ",
+          "change repute with _local_ by +6 ",
+          "change repute with _witch_ by -10 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 400,
+        "lines": [
+          "_S.14_ task:",
+          "change repute with _ruler_ by -50 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 403,
+        "lines": [
+          "_S.15_ task:",
+          "when _S.01_ and not _S.13_ and _S.00_ ",
+          "reveal _dungeon2_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 407,
+        "lines": [
+          "_S.16_ task:",
+          "when _S.00_ and not _S.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 410,
+        "lines": [
+          "_S.17_ task:",
+          "when _artifact1_ and _S.15_ ",
+          "place item _aurielsbow_ at _dungeon2_ ",
+          "log 1050 step 2 ",
+          "say 1031 ",
+          "drop _child_ face"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 418,
+        "lines": [
+          "_S.18_ task:",
+          "when _artifact2_ and _S.15_ ",
+          "place item _aurielshield_ at _dungeon2_ ",
+          "log 1051 step 2 ",
+          "say 1032 ",
+          "drop _child_ face"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 426,
+        "lines": [
+          "_S.19_ task:",
+          "when _artifact3_ and _S.15_ ",
+          "place item _lordsmail_ at _dungeon2_ ",
+          "log 1052 step 2 ",
+          "say 1033 ",
+          "drop _child_ face"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 434,
+        "lines": [
+          "_S.20_ task:",
+          "clicked item _aurielsbow_ ",
+          "make _aurielsbow_ permanent ",
+          "_0x3c_ 19"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 440,
+        "lines": [
+          "_S.21_ task:",
+          "clicked item _aurielshield_ ",
+          "make _aurielshield_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 444,
+        "lines": [
+          "_S.22_ task:",
+          "clicked item _lordsmail_ ",
+          "make _lordsmail_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 448,
+        "lines": [
+          "_S.23_ task:",
+          "when _S.20_ or _S.22_ or _S.21_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 453,
+        "lines": [
+          "_S.24_ task:",
+          "when _S.00_ and _artifact1_",
+          "say 1020 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 457,
+        "lines": [
+          "_S.25_ task:",
+          "when _S.00_ and _artifact2_",
+          "say 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 461,
+        "lines": [
+          "_S.26_ task:",
+          "when _S.00_ and _artifact3_",
+          "say 1022 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 465,
+        "lines": [
+          "variable _love_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

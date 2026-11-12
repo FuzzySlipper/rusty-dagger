@@ -1,0 +1,394 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000010.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "d2a1764a9c67f6a76bf1c3689d425bf82698500090fa144b771a21e13886d5e6",
+    "byteLength": 6946
+  },
+  "document": {
+    "fileName": "S0000010.txt",
+    "questName": "S0000010",
+    "questNameLine": 5,
+    "displayName": "Stronghold of the Blades",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000010"
+      },
+      {
+        "name": "displayname",
+        "value": "Stronghold of the Blades"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 10,
+        "lines": [
+          "<ce>                      Good day, %pcf. My name is",
+          "<ce>                     _agentuk_. I must admit that",
+          "<ce>              I am surprised to see you. Are you perhaps",
+          "<ce>               able to help the Underking in an endeavor",
+          "<ce>               against the Necromancers? We will reward",
+          "<ce>              you liberally for this service, and provide",
+          "<ce>               information you will probably not be able",
+          "<ce>                          to find elsewhere."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>                         No. I see. Very well."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 23,
+        "lines": [
+          "<ce>              You will. Hmm. Remarkable. The Necromancers",
+          "<ce>                have taken an item of ours, a _reward_",
+          "<ce>               of some value. The value is of secondary",
+          "<ce>             concern. The true problem is that they cursed",
+          "<ce>              this item and gave it to the Blades. If you",
+          "<ce>              are unaware, the Blades were once the honor",
+          "<ce>             guard for Tiber Septim. Today they are loyal",
+          "<ce>                to the empire and Tiber's code, but not",
+          "<ce>             always to the current emperor. The Underking",
+          "<ce>             has reason to not wish harm upon the Blades.",
+          "<ce>               We want you to infiltrate Castle Llugwych",
+          "<ce>                  in Ykalon and remove the _reward_.",
+          "<ce>             Please have this done in =itemindung_ days if",
+          "<ce>                 you want your information and reward."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 39,
+        "lines": [
+          "<ce>                       No _reward_, as they say,",
+          "<ce>                         no information, %pcf."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                     Well done, %pcf. Let me cast",
+          "<ce>                     this spell upon the _reward_",
+          "<ce>                    ... there. The _reward_ is now",
+          "<ce>                        safe and yours to keep.",
+          "<ce>                                    ",
+          "<ce>               Not even death can hide a true descendant",
+          "<ce>               of Tiber Septim from the Underking. King",
+          "<ce>                 Lysandus did not die in the battle of",
+          "<ce>              Cryngaine. He was slain by treachery before",
+          "<ce>              it. The monument to him in High Rock is an",
+          "<ce>                 empty tomb. His remains were secretly",
+          "<ce>              taken to an ancient tomb in Menevia, which",
+          "<ce>                I will now reveal to you. I do not know",
+          "<ce>               who betrayed Lysandus, nor why his spirit",
+          "<ce>               haunts the city of Daggerfall and not the",
+          "<ce>               battlefield of Cryngaine. I have kept my",
+          "<ce>               part of the bargain, and you have earned",
+          "<ce>                    the gratitude of the Underking."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 63,
+        "lines": [
+          "The King of Worms and the Underking are supposed to be one and the same.",
+          "<--->",
+          "The Underking is supposedly dead, but his agents still carry out his goals."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 68,
+        "lines": [
+          "Stealing from the Underking is a lunatic's profession. Ask that %ra mercenary.",
+          "<--->",
+          "Did you hear about the %ra who tried to steal from the Underking? Poor idiot."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 73,
+        "lines": [
+          "Strange portents were in the stars last night. Angry passions of a demi-god.",
+          "<--->",
+          "Necromancers are supposedly scouring the countryside looking for a _reward_."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 78,
+        "lines": [
+          "%qdt:",
+          " An agent of the Underking has sent me to",
+          " Castle Llugwych in Ykalon to find a certain",
+          " _reward_ the Necromancers stole from",
+          " the Underking. I have =itemindung_ days to find",
+          " and return the _reward_."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 86,
+        "lines": [
+          "<ce>               You interfere with the plans of The King",
+          "<ce>                 of Worms. Fear for your mortal life!",
+          "                                     <--->",
+          "<ce>                The King of Worms demands vengeance. You",
+          "<ce>                stole what was rightfully his. Now you",
+          "<ce>                  must join the kingdom of the dead.",
+          "                                     <--->",
+          "<ce>                 Foolish flesh and blood. Do not defy",
+          "<ce>                the Lord of the Dead. The King of Worms",
+          "<ce>                        will have his vengeance.",
+          "                                     <--->",
+          "<ce>                  You should never have touched that",
+          "<ce>                     _reward_. It is a gateway to",
+          "<ce>                the land of the dead. Now you must join",
+          "<ce>                       us there. Prepare to die!"
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 103,
+        "lines": [
+          "Dear %pcn,",
+          " ",
+          "    Queen Akorithi of Sentinel spoke highly of you as a",
+          " brave, able, and unprejudiced %ra. Her actual",
+          " words were 'a hero.' For some time, we have been",
+          " looking for someone like that.",
+          "    I will not lie to you about our loyalties. We",
+          " serve the Underking. If you are a believer in fairy",
+          " tales and consider the Underking the ultimate force of",
+          " evil, we apologize for misjudging you. Otherwise, we",
+          " need your help. You can find me at _agentplace_",
+          " of __agentplace_ in Sentinel. I will wait one month.",
+          " ",
+          " ",
+          "<ce>                             -- _agentuk_"
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 120,
+        "lines": [
+          "<ce>                   A young courier drily hands you a",
+          "<ce>                  letter and then stalks off without",
+          "<ce>                            saying a word."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 138,
+        "lines": [
+          "Item _reward_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 139,
+        "lines": [
+          "Item letter14 letter used 1021"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 141,
+        "lines": [
+          "Person _agentuk_ face 1 faction Agents_of_The_Underking remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 142,
+        "lines": [
+          "Person _necromancer_ face 1 faction The_Necromancers remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 144,
+        "lines": [
+          "Place _llugwych_ permanent LlugwychCastle"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 145,
+        "lines": [
+          "Place _agentplace_ remote house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 146,
+        "lines": [
+          "Place _lysandustomb_ permanent LysandusTomb2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 148,
+        "lines": [
+          "Clock _S.04_ 6.23:20 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 149,
+        "lines": [
+          "Clock _itemindung_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 151,
+        "lines": [
+          "Foe _F.00_ is Wraith"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 154,
+        "lines": [
+          "repute with _agentuk_ exceeds 0 do _S.07_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 156,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _reward_ and _agentuk_ clicked ",
+          "give pc _reward_ ",
+          "reveal _lysandustomb_ in province 33 at 210794 ",
+          "change repute with _necromancer_ by -20 ",
+          "change repute with _agentuk_ by +15 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 164,
+        "lines": [
+          "_S.01_ task:",
+          "injured _F.00_ saying 1010 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 167,
+        "lines": [
+          "yes task:",
+          "place item _reward_ at _llugwych_ marker 0",
+          "start timer _itemindung_ ",
+          "log 1008 step 0 ",
+          "reveal _llugwych_ in province 40 at 26340 ",
+          "say AcceptQuest ",
+          "have _reward_ set _S.06_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 175,
+        "lines": [
+          "_no_ task:",
+          "say RefuseQuest ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 179,
+        "lines": [
+          "_S.04_ task:",
+          "add dialog for location _agentplace_ person _agentuk_ ",
+          "give pc letter14 notify 1022 ",
+          "create npc at _agentplace_ ",
+          "place npc _agentuk_ at _agentplace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 185,
+        "lines": [
+          "_S.05_ task:",
+          "clicked npc _agentuk_ ",
+          "prompt QuestorOffer yes yes no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 189,
+        "lines": [
+          "_S.06_ task:",
+          "send _F.00_ every 50 minutes 10 times with 5% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 192,
+        "lines": [
+          "variable _S.07_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 193,
+        "lines": [
+          "_S.08_ task:",
+          "level 8 completed "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 196,
+        "lines": [
+          "_S.09_ task:",
+          "when _S.07_ and _S.08_ ",
+          "start timer _S.04_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 200,
+        "lines": [
+          "_itemindung_ task:",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,289 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO12.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "cb3bc5e99091c4564e0100f1323bbaeb2517081ed0582eb2465cdcee4740657c",
+    "byteLength": 5611
+  },
+  "document": {
+    "fileName": "__DEMO12.txt",
+    "questName": "__DEMO12",
+    "questNameLine": 1,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO12"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 5,
+        "lines": [
+          "<ce>                     %oth, is there anything more",
+          "<ce>             exasperating than the discovery that the mummy",
+          "<ce>               wrappings you were planning on using in a",
+          "<ce>              potion have gone all sort-of green? I could",
+          "<ce>               use the Guild's wrappings, but the recipe",
+          "<ce>              specifically calls for \"superlatively fresh",
+          "<ce>             mummy wrappings,\" whatever that means. I don't",
+          "<ce>              suppose you'd be willing to scare me up some",
+          "<ce>               cloth off a mummy I know has more wrapping",
+          "<ce>                     than it knows what to do with?",
+          "                                     <--->",
+          "<ce>                  Recipes are a daft business, %pct.",
+          "<ce>               I'm working on a formula that calls for a",
+          "<ce>                  \"goodly piece of =mummy_. What is a",
+          "<ce>                   =mummy_? An herb? A mineral? Well,",
+          "<ce>              I've researched the matter and found =mummy_",
+          "<ce>            is a mummy. Imagine that. And this particularly",
+          "<ce>                  mummy is right here in %reg. Could I",
+          "<ce>              talk you into going to its tomb and grabbing",
+          "<ce>            a piece of =mummy_ for, say, _gold_ gold pieces?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                           Oh, %oth. I know",
+          "<ce>                     it's not a swing by the local",
+          "<ce>                     general store, but I had hoped",
+          "<ce>                      for a little enthusiasm and",
+          "<ce>                          adventurous whatnot."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 34,
+        "lines": [
+          "<ce>                      Jolly good, %pct. It'll be",
+          "<ce>                     worth _gold_ gold to you. Now",
+          "<ce>                    this mummy's tomb is not too far",
+          "<ce>                   away at all, so it shouldn't take",
+          "<ce>                 you any longer than =queston_ days to",
+          "<ce>                   get there, make your grab, and get",
+          "<ce>                     back. Remember, it's got to be",
+          "<ce>                   fresh -- preferably off its body.",
+          "<ce>                   The name of the place is something",
+          "<ce>                           like ___mondung_.",
+          "<ce>                    It's sure to be gruesome there.",
+          "<ce>                    You might want to bring a sword",
+          "<ce>                     or some such thing. Well, good",
+          "<ce>                            luck, young %ra."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 50,
+        "lines": [
+          "<ce>                     Now that is a lovely piece of",
+          "<ce>                      wrapping. Thanks awfully. I",
+          "<ce>                    believe we agreed on _gold_ gold",
+          "<ce>                              pieces, yes?"
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 56,
+        "lines": [
+          "=mummy_ in ___mondung_ is supposedly all that's left of an ancient %t of %reg.",
+          "<--->",
+          "=mummy_ was supposedly a %t in ancient %reg who was too wicked to die."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 61,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has it good points and bad ones."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 90,
+        "lines": [
+          "=mummy_'s reign in %reg began before the First Era and ended with you.",
+          "<--->",
+          "_qgiver_ finally can finish %g3 potion thanks to =mummy_'s contribution."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 95,
+        "lines": [
+          "How are you, %pcf? I hope you aren't coming down with mummy rot or anything."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 98,
+        "lines": [
+          "<ce>                     I needed that wrapping, %pcf.",
+          "<ce>                  It's very annoying to need something",
+          "<ce>                            and not have it."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 103,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of the Mages Guild",
+          " in ___qgiver_ has sent me to",
+          " ___mondung_ to grab some",
+          " wrappings off of a mummy",
+          " named =mummy_. I have",
+          " =queston_ days to complete this quest."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 112,
+        "lines": [
+          "<ce>                        You find the wrappings",
+          "<ce>                             that _qgiver_",
+          "<ce>                         wanted you to get from",
+          "<ce>                                =mummy_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 139,
+        "lines": [
+          "Item _wrappings_ mummy_wrappings"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 140,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 142,
+        "lines": [
+          "Person _qgiver_ group Questor male"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 144,
+        "lines": [
+          "Place _mondung_ remote dungeon0"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 146,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 148,
+        "lines": [
+          "Foe _mummy_ is Mummy"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 151,
+        "lines": [
+          "start timer _queston_ ",
+          "reveal _mondung_ ",
+          "log 1010 step 0 ",
+          "place foe _mummy_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 156,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 159,
+        "lines": [
+          "_reward_ task:",
+          "toting _wrappings_ and _qgiver_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 164,
+        "lines": [
+          "variable _qgclicked_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 165,
+        "lines": [
+          "_S.03_ task:",
+          "clicked item _wrappings_ ",
+          "say 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 169,
+        "lines": [
+          "_S.04_ task:",
+          "injured _mummy_ ",
+          "give item _wrappings_ to _mummy_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

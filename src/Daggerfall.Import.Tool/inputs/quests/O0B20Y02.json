@@ -1,0 +1,278 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/O0B20Y02.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "dccff25bf48b8a2d1a2bf7f02bd32934af4f759408c0bdab040abe9ea340d1d4",
+    "byteLength": 3487
+  },
+  "document": {
+    "fileName": "O0B20Y02.txt",
+    "questName": "O0B20Y02",
+    "questNameLine": 8,
+    "displayName": "A Prized Item",
+    "header": [
+      {
+        "name": "quest",
+        "value": "O0B20Y02"
+      },
+      {
+        "name": "displayname",
+        "value": "A Prized Item"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                       Keep your voice down. My",
+          "<ce>                      name is ... er, just call me",
+          "<ce>                           _qgiver_. I have a",
+          "<ce>                      guild job for you. Standard",
+          "<ce>                        pay. Interested so far?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>                      Glad I didn't tell you any",
+          "<ce>                     details. Now get out of here."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                         You need to steal the",
+          "<ce>                       _magicitem_ from _mansion_",
+          "<ce>                           in __mansion_. You",
+          "<ce>                     have =traveltime_ days or the",
+          "<ce>                       deal is off. Did I mention",
+          "<ce>                       that the place is guarded?",
+          "<ce>                      Could have sworn I said so."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 33,
+        "lines": [
+          "<ce>                     Got the goods? Ah! Well done.",
+          "<ce>                      Standard pay for this job is",
+          "<ce>                    _gold_ gold pieces. Don't spend",
+          "<ce>                          it all in one place."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 39,
+        "lines": [
+          "_mansion_ in __mansion_ has an extensive collection of magical exotica."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 42,
+        "lines": [
+          "They moved the _magicitem_ out of _mansion_ for security's sake."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 45,
+        "lines": [
+          "That _magicitem_ was stolen from _mansion_. It's a real scandal."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 48,
+        "lines": [
+          "Surprised to see me, %pcf? Thought I'd run off with the _magicitem_, maybe?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                  They already moved the _magicitem_",
+          "<ce>                       out of _mansion_, %pcf. In",
+          "<ce>                 other words, you failed your mission.",
+          "<ce>                             Now, go away."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 57,
+        "lines": [
+          "%qdt:",
+          " _qgiver_, (or so %g called %g2-self)",
+          " of the guild contracted me to",
+          " steal the _magicitem_ from",
+          " _mansion_ in __mansion_.",
+          " I have =traveltime_ days to get",
+          " it back to %g2 in __qgiver_",
+          " in ___qgiver_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 84,
+        "lines": [
+          "Item _magicitem_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 85,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 87,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 89,
+        "lines": [
+          "Place _mansion_ remote house1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 91,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 93,
+        "lines": [
+          "Foe _F.00_ is 2 Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 94,
+        "lines": [
+          "Foe _F.01_ is Gargoyle"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 95,
+        "lines": [
+          "Foe _F.02_ is Flesh_atronach"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 96,
+        "lines": [
+          "Foe _F.03_ is Ghost"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 99,
+        "lines": [
+          "place item _magicitem_ at _mansion_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 100,
+        "lines": [
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "pc at _mansion_ set _S.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 104,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 107,
+        "lines": [
+          "_S.01_ task:",
+          "pick one of _guard1_ _guard2_ _guard3_ _guard4_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 110,
+        "lines": [
+          "_questdone_ task:",
+          "toting _magicitem_ and _qgiver_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 115,
+        "lines": [
+          "_guard1_ task:",
+          "create foe _F.00_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 118,
+        "lines": [
+          "_guard2_ task:",
+          "create foe _F.01_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 121,
+        "lines": [
+          "_guard3_ task:",
+          "create foe _F.02_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 124,
+        "lines": [
+          "_guard4_ task:",
+          "create foe _F.03_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

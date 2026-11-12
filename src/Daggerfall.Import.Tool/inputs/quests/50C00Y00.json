@@ -1,0 +1,312 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/50C00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "230a8e339394b874fde94205ada5a6cb62bc345b36f8b03b7ed10d6030e62678",
+    "byteLength": 5985
+  },
+  "document": {
+    "fileName": "50C00Y00.txt",
+    "questName": "50C00Y00",
+    "questNameLine": 8,
+    "displayName": "Peryite's Quest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "50C00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Peryite's Quest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                 You can't really have too much power,",
+          "<ce>                       can you, %pcf? You look a",
+          "<ce>                   lot like someone I used to know --",
+          "<ce>                  but that was back during your First",
+          "<ce>                 Era, so it couldn't very well be you,",
+          "<ce>                  could it? Now then, if you'd like, I",
+          "<ce>                  can give you a little shield of mine",
+          "<ce>                   called the Spell Breaker. It will",
+          "<ce>                 certainly give you the power you want,",
+          "<ce>                  but first, I need a little proof of",
+          "<ce>                   your seriousness. You are serious,",
+          "<ce>                              aren't you?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                   Changed your mind, eh? Don't feel",
+          "<ce>                    bad. It's a sign of maturity to",
+          "<ce>                    be brave enough to say no. Just",
+          "<ce>                     give me a call when you change",
+          "<ce>                      your mind. I know you will."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 34,
+        "lines": [
+          "<ce>                  Excellent. It's wonderful seeing a",
+          "<ce>                   %ra with clear objectives. So rare",
+          "<ce>                 in this day and age. Now then, there's",
+          "<ce>                 this _monster_, frankly a vampire, who",
+          "<ce>                 I know you'd hate. Thoroughly stupid,",
+          "<ce>                 unattractive, and mean-spirited sort.",
+          "<ce>                  He needs to go on a one-way trip to",
+          "<ce>                   you-know-where. Then, after you've",
+          "<ce>                taken care of that unpleasant business,",
+          "<ce>                    go visit my friend, _qgfriend_,",
+          "<ce>                         a charming =qgfriend_,",
+          "<ce>                    who will meet you at __qgfriend_",
+          "<ce>                     in ___qgfriend_. Now, I don't",
+          "<ce>                 want to rush you, but I can't ask %g2",
+          "<ce>                   to wait more than =1stparton_ days",
+          "<ce>                for you. And just getting to ___mondung_",
+          "<ce>                  may take a good while, so you ought",
+          "<ce>                 not dawdle along the way.  _qgfriend_",
+          "<ce>                  will be happy to show you the Spell",
+          "<ce>                  Breaker. Now, I've prattled on long",
+          "<ce>                     enough. It's been a pleasure."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 57,
+        "lines": [
+          "<ce>                       You must be looking for a",
+          "<ce>                         different =qgfriend_."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 61,
+        "lines": [
+          "<ce>                         There you are, %pct.",
+          "<ce>                            I'm _qgfriend_,",
+          "<ce>              I believe the Master wanted you to find me?",
+          "<ce>               The Master is very pleased with your work",
+          "<ce>                        on the dread _monster_,",
+          "<ce>               if you don't mind me saying so. The Master",
+          "<ce>               seems very fond of you in general. Here is",
+          "<ce>               the shield you wanted, the Spell Breaker.",
+          "<ce>                  Spellcasters will come to fear you.",
+          "<ce>                        I hope it pleases, %pct."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 73,
+        "lines": [
+          "=monster_ of ___mondung_, they say, has made powerful enemies as well as friends.",
+          "<--->",
+          "I met a very nice =qgfriend_ at __qgfriend_. Wonder why I never met %g2 before?"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 78,
+        "lines": [
+          "Old =monster_ moved up north. So I guess we know where plague will follow.",
+          "<--->",
+          "I hear the Daedra themselves fear =monster_ and its power."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 83,
+        "lines": [
+          "=monster_ they say fancied itself more powerful than the Daedra themselves.",
+          "<--->",
+          "=monster_ got its reward for boasting about its power over life and death."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 88,
+        "lines": [
+          "They say _qgfriend_ is a very pleasant and charming =qgfriend_, who is also a Daedra-worshipper.",
+          "<--->",
+          "_qgfriend_ is rumored to be Peryite's slave in %reg."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 93,
+        "lines": [
+          "Peryite is the Daedra of Pestilence and Plague.",
+          "<--->",
+          "Peryite is the most affable of the Daedra Princes with the worst reputation."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 98,
+        "lines": [
+          "The Spell Breaker is the ultimate defense against spells.",
+          "<--->",
+          "Spell Breaker can dispel or even reflect spells back on offensive casters."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 103,
+        "lines": [
+          "<ce>                       You have slain =monster_.",
+          "<ce>                     Peryite's revenge is complete."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 107,
+        "lines": [
+          "%qdt:",
+          " The Daedra Prince Peryite wants me",
+          " to go to ___mondung_",
+          " and slay a vampire named =monster_",
+          " After that, I am to meet _qgfriend_",
+          " in a place called __qgfriend_ in",
+          " ___qgfriend_ to claim the famous",
+          " Spell Breaker shield.  I have =1stparton_",
+          " days for the whole journey."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 136,
+        "lines": [
+          "Item _artifact_ artifact Spell_Breaker anyInfo 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 138,
+        "lines": [
+          "Person _questgiver_ face 112 named Peryite anyInfo 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 139,
+        "lines": [
+          "Person _qgfriend_ group Cleric female remote anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 140,
+        "lines": [
+          "Person _dummyvamp_ face 1 factiontype Vampire_Clan remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 142,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 144,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 1 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 146,
+        "lines": [
+          "Foe _monster_ is Ancient_vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 149,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1015 step 0 ",
+          "place foe _monster_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 154,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 157,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 158,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _npcclicked_ and _mondead_ ",
+          "give pc _artifact_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 164,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ ",
+          "say 1014 ",
+          "change repute with _dummyvamp_ by -20 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 169,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _qgfriend_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 172,
+        "lines": [
+          "_clearclick_ task:",
+          "when _npcclicked_ and not _mondead_",
+          "say 1003 ",
+          "clear _npcclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

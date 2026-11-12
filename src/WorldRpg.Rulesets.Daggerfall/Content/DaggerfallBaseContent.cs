@@ -1201,7 +1201,7 @@ internal static partial class DaggerfallBaseContent
     /// that no target claims a native fact while the native source is absent.
     /// </summary>
     /// <summary>
-    /// Reads the published text section from the pack alone. Every value resolves by the key its own
+    /// Reads the published text section, with the base pack's internal text beside it. Every value resolves by the key its own
     /// source gave it, carries the language of the source it was read from, and states whether it was
     /// readable — so a lookup answers with text, with a reason there is none, or with a miss, and never
     /// with an empty string standing in for either.
@@ -1217,10 +1217,16 @@ internal static partial class DaggerfallBaseContent
             return new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), []);
         }
 
+        // Daggerfall Unity's internal strings are a text family of their own, taken into the base pack's internalText
+        // section rather than imported; the two sections read as one set, each with its own sources and macro index.
+        JsonElement[] parts = root.TryGetProperty("internalText", out JsonElement internalText) && internalText.ValueKind == JsonValueKind.Object
+            ? [section, internalText]
+            : [section];
+
         // A source is the language and family its values inherit, so two sources claiming one path would
         // leave a value naming it with no one language and no one family.
         Dictionary<string, (DaggerfallTextKind Kind, string Language, int Records)> sources = new(StringComparer.Ordinal);
-        foreach (JsonElement source in Array(section, "sources", diagnostics))
+        foreach (JsonElement source in parts.SelectMany(part => Array(part, "sources", diagnostics)))
         {
             DaggerfallTextKind kind = TextKind(source, diagnostics);
             string path = Text(source, "path", diagnostics);
@@ -1239,7 +1245,7 @@ internal static partial class DaggerfallBaseContent
         HashSet<string> grouped = new(StringComparer.Ordinal);
         string previousSource = string.Empty;
         int previousIndex = -1;
-        foreach (JsonElement record in Array(section, "records", diagnostics))
+        foreach (JsonElement record in parts.SelectMany(part => Array(part, "records", diagnostics)))
         {
             JsonElement keyValue = Object(Property(record, "key", diagnostics), "key", diagnostics);
             DaggerfallTextKind kind = TextKind(keyValue, diagnostics);
@@ -1351,27 +1357,39 @@ internal static partial class DaggerfallBaseContent
         // *not* checked here is how often a symbol is spelled, because that is a fact about a value's
         // text that only the reader's own macro grammar produces, and that grammar is source-format
         // knowledge which stays in the importer rather than being re-implemented here.
-        List<DaggerfallTextMacro> macros = [];
-        HashSet<string> indexed = new(StringComparer.Ordinal);
-        foreach (JsonElement macro in Array(section, "macros", diagnostics))
+        // Each section indexes its own values; a symbol both index counts the values of both, under the one disposition.
+        Dictionary<string, DaggerfallTextMacro> merged = new(StringComparer.Ordinal);
+        foreach (JsonElement part in parts)
         {
-            string symbol = Text(macro, "symbol", diagnostics);
-            int records = Integer(macro, "records", diagnostics);
-            string dispositionName = Text(macro, "disposition", diagnostics);
-            if (records <= 0) diagnostics.Add($"Published macro '{symbol}' is indexed against {records} values.");
-            if (!indexed.Add(symbol)) diagnostics.Add($"Published macro '{symbol}' is indexed twice.");
-
-            // A consumer decides what to do with a symbol by its disposition, so a spelling the contract
-            // does not declare is refused here rather than read as a disposition nobody published. Whether
-            // the donor's table really accounts for the symbol that way is the importer's check: the table
-            // is imported donor knowledge, not something this assembly re-derives.
-            if (!TryReadName(dispositionName, out DaggerfallTextMacroDisposition disposition))
+            HashSet<string> indexedHere = new(StringComparer.Ordinal);
+            foreach (JsonElement macro in Array(part, "macros", diagnostics))
             {
-                diagnostics.Add($"Published macro '{symbol}' states the disposition '{dispositionName}', which the contract does not declare.");
-            }
+                string symbol = Text(macro, "symbol", diagnostics);
+                int records = Integer(macro, "records", diagnostics);
+                string dispositionName = Text(macro, "disposition", diagnostics);
+                if (records <= 0) diagnostics.Add($"Published macro '{symbol}' is indexed against {records} values.");
+                if (!indexedHere.Add(symbol)) diagnostics.Add($"Published macro '{symbol}' is indexed twice.");
 
-            macros.Add(new DaggerfallTextMacro(symbol, records, disposition));
+                // A consumer decides what to do with a symbol by its disposition, so a spelling the contract
+                // does not declare is refused here rather than read as a disposition nobody published. Whether
+                // the donor's table really accounts for the symbol that way is the importer's check: the table
+                // is imported donor knowledge, not something this assembly re-derives.
+                if (!TryReadName(dispositionName, out DaggerfallTextMacroDisposition disposition))
+                {
+                    diagnostics.Add($"Published macro '{symbol}' states the disposition '{dispositionName}', which the contract does not declare.");
+                }
+
+                if (merged.TryGetValue(symbol, out DaggerfallTextMacro? earlier))
+                {
+                    if (earlier.Disposition != disposition) diagnostics.Add($"Published macro '{symbol}' is indexed as '{earlier.Disposition}' and as '{disposition}'.");
+                    merged[symbol] = earlier with { Records = earlier.Records + records };
+                }
+                else merged[symbol] = new DaggerfallTextMacro(symbol, records, disposition);
+            }
         }
+
+        List<DaggerfallTextMacro> macros = [.. merged.Values.OrderBy(macro => macro.Symbol, StringComparer.Ordinal)];
+        HashSet<string> indexed = [.. merged.Keys];
 
         foreach (DaggerfallTextValue value in values.Values)
         {
@@ -2464,9 +2482,10 @@ internal static partial class DaggerfallBaseContent
             diagnostics.Add($"The published faction catalog claims {regions.Count} regions for the {regionCount} published regions.");
         }
 
+        // The flat captions are Daggerfall Unity's Internal_Flats table, taken into the base pack's npcCaptions section.
         Dictionary<(int Archive, int Record), string> npcCaptions = [];
-        if (section.TryGetProperty("npcCaptions", out var captionRows))
-            foreach (var row in captionRows.EnumerateArray())
+        if (root.TryGetProperty("npcCaptions", out JsonElement captionSection) && captionSection.ValueKind == JsonValueKind.Object)
+            foreach (JsonElement row in Array(captionSection, "captions", diagnostics))
             {
                 int archive = Integer(row, "archive", diagnostics), record = Integer(row, "record", diagnostics);
                 string caption = Text(row, "caption", diagnostics);

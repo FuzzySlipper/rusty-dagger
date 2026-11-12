@@ -1,0 +1,264 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/N0C00Y12.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "7dd9de282a4994a1b99d9977333f2cb55594745de25797a2def40356bc5820bf",
+    "byteLength": 4341
+  },
+  "document": {
+    "fileName": "N0C00Y12.txt",
+    "questName": "N0C00Y12",
+    "questNameLine": 9,
+    "displayName": "The Loose Pet Imp",
+    "header": [
+      {
+        "name": "quest",
+        "value": "N0C00Y12"
+      },
+      {
+        "name": "displayname",
+        "value": "The Loose Pet Imp"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                       You may call me _qgiver_.",
+          "<ce>                 Normally I can only give work to guild",
+          "<ce>                members. However, one of my students has",
+          "<ce>               a minor problem that would be embarrassing",
+          "<ce>                if it were to get out. I can't pay you,",
+          "<ce>               but if you would be willing to chase down",
+          "<ce>                an escaped experiment, at small risk to",
+          "<ce>                yourself, I would be grateful enough to",
+          "<ce>              speak kindly of you to other guild members."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                   So, why did you ask me for work?",
+          "<ce>                  Sometimes I really cannot understand",
+          "<ce>                        you common adventurers."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                Good. My student keeps a pet imp. These",
+          "<ce>               magical creatures are not very dangerous,",
+          "<ce>                but it could be potentially embarrassing",
+          "<ce>                for him. Our scrying has determined that",
+          "<ce>                    the imp has fled to ___mondung_.",
+          "<ce>                  Kill the thing and report back to me",
+          "<ce>                        within =1stparton_ days."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 39,
+        "lines": [
+          "<ce>               I scried earlier today. The imp is still",
+          "<ce>                    alive. What are you doing here?"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                 What a relief. I owe you a small debt",
+          "<ce>                      %pcn. You have improved your",
+          "<ce>                      favor with the Mages Guild."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 48,
+        "lines": [
+          "I hear something escaped from the Mages Guild lab the other night.",
+          "<--->",
+          "%oth, I saw a small shape skulking in the shadows last night."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 53,
+        "lines": [
+          "Well, there's a minor scandal involving the Mages Guild's lab security.",
+          "<--->",
+          "The Mages Guild lost another experiment apparently."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 58,
+        "lines": [
+          "I hear they torture imps in the Mages Guild laboratories!",
+          "<--->",
+          "<ce>                    Those imps have a mean streak.",
+          "<ce>                  %nam's house was overrun with mice,",
+          "<ce>                just for chasing after it with a broom.",
+          "                                     <--->",
+          "<ce>                 I heard an imp familiar escaped from",
+          "<ce>                the Mages Guild. They say that a wizard",
+          "<ce>                 that loses his familiar is vulnerable",
+          "<ce>                        to his enemies' spells."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 70,
+        "lines": [
+          "How are you, %pcf? No more troubles with imps, I hope, eh?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 73,
+        "lines": [
+          "<ce>                 I sent you off after that imp, if you",
+          "<ce>              recall. I don't see any reason why I should",
+          "<ce>                    waste my breath with you again."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 78,
+        "lines": [
+          "<ce>                      \"I would rather die than go",
+          "<ce>                        back to the Mages Guild",
+          "<ce>                              laboratory.\""
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 83,
+        "lines": [
+          "%qdt:",
+          " The Mages Guild of ___qgiver_",
+          " has hired me to find an imp that",
+          " escaped from their laboratory.",
+          " Apparently it is hiding out in ___mondung_.",
+          " I need to have the creature dead and be back",
+          " in ___qgiver_ in =1stparton_ days."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 106,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 108,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 110,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 112,
+        "lines": [
+          "Foe _imp_ is Imp"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 115,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "place foe _imp_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 120,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _mondead_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 125,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 126,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _imp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 129,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 132,
+        "lines": [
+          "_clearclick_ task:",
+          "    when _qgclicked_ and not _mondead_",
+          "say 1003",
+          "    clear _qgclicked_ _clearclick_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 138,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 141,
+        "lines": [
+          "_S.06_ task:",
+          "injured _imp_ saying 1010 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

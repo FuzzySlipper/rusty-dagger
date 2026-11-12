@@ -33,7 +33,6 @@ internal static class Program
         MagicCatalogCommand.Command,
         MobileCatalogCommand.Command,
         TextCommand.Command,
-        InternalStringsCommand.Command,
         BlocksCommand.Command,
         GeometryCommand.Command,
         ClimateCommand.Command,
@@ -44,7 +43,6 @@ internal static class Program
         ItemsCommand.Command,
         QuestsCommand.Command,
         VideosCommand.Command,
-        BuildingNameInputsCommand.Command,
         // Quest corpus payloads.
         FightersQuestCorpusCommand.Command,
         ClassicQuestCorporaCommand.Command,

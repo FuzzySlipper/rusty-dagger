@@ -1,0 +1,434 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C00Y12.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "b70bf4448f36b49da758bef68bb027784154962daf030e4c4a8f49d6c0721a1d",
+    "byteLength": 6970
+  },
+  "document": {
+    "fileName": "A0C00Y12.txt",
+    "questName": "A0C00Y12",
+    "questNameLine": 9,
+    "displayName": "The First Printing",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C00Y12"
+      },
+      {
+        "name": "displayname",
+        "value": "The First Printing"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                Pardon me. Have you ever read the book",
+          "<ce>                    _book_? It is excellent, and I",
+          "<ce>           have a first printing of it. Or, might I say, had",
+          "<ce>          a first printing. Seems someone has taken it. I'll",
+          "<ce>          gladly pay _gold_ gold pieces to the first one who",
+          "<ce>            returns it to me. Do you think you can find it?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>               Too bad. I really need to find that book."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 25,
+        "lines": [
+          "<ce>           Great! It is very important to me, being a first",
+          "<ce>            printing and all. Unfortunately, I have no idea",
+          "<ce>             who took it. You may try to ask around town."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 30,
+        "lines": [
+          "<ce>             Splendid! My copy of _book_! Well done, %pcn.",
+          "<ce>                Here is the _gold_ gold I promised you."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 34,
+        "lines": [
+          "<ce>                _giver_ has been desperately trying to",
+          "<ce>               find his smelly old book. Who would want",
+          "<ce>                          to steal it anyway?"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 39,
+        "lines": [
+          "<ce>                   I hear that _giver_ finally gave",
+          "<ce>                   up and bought another copy of his",
+          "<ce>             precious book. Did you know that %g actually",
+          "<ce>                hired someone to find it? What a fool!"
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 45,
+        "lines": [
+          "<ce>                    You must be the %ra that found",
+          "<ce>                 _giver_'s book for %g2. %G is telling",
+          "<ce>                 everyone about it. You'd think it was",
+          "<ce>                     the king that had been saved."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                     Anything for my friend %pcf.",
+          "<ce>                  You recovered my precious book and",
+          "<ce>                         I am quite grateful."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 56,
+        "lines": [
+          "<ce>                  Hmmph. I hired you to find my book.",
+          "<ce>                   When you failed, I had to go out",
+          "<ce>                    and buy another copy. I do not",
+          "<ce>                        wish to speak with you."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 62,
+        "lines": [
+          "%qdt:",
+          " _giver_ of ___giver_ has offered me _gold_",
+          " gold to find %g3 book, _book_."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 67,
+        "lines": [
+          "<ce>                  You may want to try _informant_ in",
+          "<ce>              _informant1_. %G seems to know everything",
+          "<ce>                 that goes on around __informant1_.",
+          "                                     <--->",
+          "<ce>                   You should ask at the local inns.",
+          "<ce>                       They are full of gossip.",
+          "                                     <--->",
+          "<ce>                            You should try",
+          "<ce>               _informant1_. There's always talk there.",
+          "                                     <--->",
+          "<ce>                      It was stolen from _giver_.",
+          "                                     <--->",
+          "<ce>               _giver_ has been asking around about it.",
+          "                                     <--->",
+          "<ce>                  I really enjoyed it when I read it.",
+          "                                     <--->",
+          "<ce>                 You should probably visit a library."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 86,
+        "lines": [
+          "<ce>         This must be the book that was stolen from _giver_."
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 89,
+        "lines": [
+          "<ce>                   Hello, %pcn. Word is that you've",
+          "<ce>                 been asking about me. I should know.",
+          "<ce>                   All of __informant1_'s news comes",
+          "<ce>                          through these ears.",
+          "<ce>              Enough about me. I did hear something about",
+          "<ce>                _giver_'s misfortunes. You want to find",
+          "<ce>                     _thief_. %G has been looking",
+          "<ce>                    for a first printing of _book_",
+          "<ce>                for some time. And %g is also the type",
+          "<ce>                   who takes things without asking,",
+          "<ce>                       if you know what I mean."
+        ]
+      },
+      {
+        "id": 1035,
+        "firstLine": 102,
+        "lines": [
+          "%qdt:",
+          " _informant_ has given me valuable",
+          " information about the missing",
+          " _book_. %G seems to think that",
+          " _thief_ might be mixed up in it",
+          " somehow. Now if I could just find %g2..."
+        ]
+      },
+      {
+        "id": 1027,
+        "firstLine": 110,
+        "lines": [
+          "_thief_ lives at _house_ in __house_.",
+          "<--->",
+          "_thief_ lives in __house_.",
+          "<--->",
+          "_thief_ spends %g3 nights at _house_.",
+          "<--->",
+          "You should try to find _thief_ at %g3 home. %G lives in __house_.",
+          "<--->",
+          "_thief_ does a lot of trading at _store_.",
+          "<--->",
+          "You may want to start shopping at _store_. _thief_ does.",
+          "<--->",
+          "_store_ is a popular place to trade stolen goods, which _thief_ has a lot of.",
+          "<--->",
+          "_thief_ has been seen at _store_.",
+          "<--->",
+          "_inn_ is a hangout for many thieves.",
+          "<--->",
+          "_thief_ likes to drink at _inn_.",
+          "<--->",
+          "_thief_'s favorite tavern is _inn_.",
+          "<--->",
+          "_thief_'s favorite meals are served at _inn_."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 135,
+        "lines": [
+          "<ce>                You want the book? You're not so tough.",
+          "<ce>                     Just try and take it from me!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 163,
+        "lines": [
+          "Item _book_ book2 anyInfo 1014 used 1015"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 164,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 166,
+        "lines": [
+          "Person _informant_ face 241 group Cleric local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 167,
+        "lines": [
+          "Person _giver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 168,
+        "lines": [
+          "Person _thief_ face 97 faction The_Thieves_Guild local anyInfo 1027 rumors 1027"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 170,
+        "lines": [
+          "Place _inn_ local tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 171,
+        "lines": [
+          "Place _store_ local generalstore"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 172,
+        "lines": [
+          "Place _house_ local house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 173,
+        "lines": [
+          "Place _informant1_ local tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 175,
+        "lines": [
+          "Clock _S.01_ 10.00:00 0 flag 9 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 177,
+        "lines": [
+          "Foe _thiefFoe_ is Thief"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 180,
+        "lines": [
+          "dialog link for location _house_ person _informant_ ",
+          "dialog link for location _inn_ ",
+          "dialog link for location _store_ person _thief_ ",
+          "start timer _S.01_ ",
+          "log 1010 step 0 ",
+          "place npc _informant_ at _informant1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 187,
+        "lines": [
+          "variable _S.00_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 188,
+        "lines": [
+          "_S.01_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 191,
+        "lines": [
+          "_S.02_ task:",
+          "daily from 00:00 to 08:00 ",
+          "pc at _house_ set _S.09_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 195,
+        "lines": [
+          "_S.03_ task:",
+          "daily from 16:02 to 23:59 ",
+          "pc at _inn_ set _S.10_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 199,
+        "lines": [
+          "_S.04_ task:",
+          "daily from 08:01 to 16:01 ",
+          "pc at _store_ set _S.11_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 204,
+        "lines": [
+          "_S.05_ task:",
+          "clicked npc _informant_ say 1025 ",
+          "add dialog for person _thief_ ",
+          "log 1035 step 1 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 209,
+        "lines": [
+          "_S.06_ task:",
+          "toting _book_ and _giver_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 214,
+        "lines": [
+          "variable _S.07_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 215,
+        "lines": [
+          "_S.08_ task:",
+          "injured _thiefFoe_ ",
+          "give item _book_ to _thiefFoe_ ",
+          "say 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 220,
+        "lines": [
+          "_S.09_ task:",
+          "place foe _thiefFoe_ at _house_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 223,
+        "lines": [
+          "_S.10_ task:",
+          "place foe _thiefFoe_ at _inn_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 226,
+        "lines": [
+          "_S.11_ task: ",
+          "place foe _thiefFoe_ at _store_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

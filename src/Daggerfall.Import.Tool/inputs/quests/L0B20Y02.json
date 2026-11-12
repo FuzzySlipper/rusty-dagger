@@ -1,0 +1,344 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/L0B20Y02.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "6dc6dc739289234414eef655de0d470ab424ac1074eb1413cc199c492832f526",
+    "byteLength": 5035
+  },
+  "document": {
+    "fileName": "L0B20Y02.txt",
+    "questName": "L0B20Y02",
+    "questNameLine": 8,
+    "displayName": "A Knight Without Honor",
+    "header": [
+      {
+        "name": "quest",
+        "value": "L0B20Y02"
+      },
+      {
+        "name": "displayname",
+        "value": "A Knight Without Honor"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                 Ah, here's something to appeal to the",
+          "<ce>                        romantic in you, %pcf: a",
+          "<ce>                    caddish knight has besmeared the",
+          "<ce>                 honor of a fair damsel and refuses to",
+          "<ce>                  fight any who would defend her. The",
+          "<ce>                 poor girl did the only thing she could",
+          "<ce>                 do, and now we have some accounting to",
+          "<ce>                   do. You're interested, I take it?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                     No? I would have thought this",
+          "<ce>                    would be your good cheer. Well,",
+          "<ce>                     we have plenty more accounters",
+          "<ce>                     with a soft spot for corrupted",
+          "<ce>                                wenches."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                As I thought. We think the knight does",
+          "<ce>                 not yet know about the contract, being",
+          "<ce>                 deeply entrenched in a fortress called",
+          "<ce>                      ___mondung_. Obviously, this",
+          "<ce>                 ill-bred warrior doesn't want to make",
+          "<ce>                this too easy on us. Well, the contract",
+          "<ce>             calls for the accounting to be in =1stparton_",
+          "<ce>                  days and for you to report back here",
+          "<ce>                      within that time. Go to it,",
+          "<ce>                 %pcf. Defend that poor soiled damsel."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                    I don't hear the thanks of our",
+          "<ce>                   client, so I take it the knight's",
+          "<ce>                    still among the living. Hurry up",
+          "<ce>                     and fix that oversight, %pcf."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                    So the rogue knight has entered",
+          "<ce>                the hereafter, yes? Perhaps in his next",
+          "<ce>                 incarnation he will have the wisdom to",
+          "<ce>                  keep his sword sheathed. Well done,",
+          "<ce>                            as usual, %pcf."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 55,
+        "lines": [
+          "That soldier is one mangy mutt, I'll tell you. No honor whatsoever.",
+          "<--->",
+          "I hear that lady tried to seduce the knight and failed. That's why she's upset."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 60,
+        "lines": [
+          "That warrior has moved on to new lands to corrupt their gentle womenfolk.",
+          "<--->",
+          "The soldier has left ____questgiver_ like a hurricane, leaving broken hearts behind."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 65,
+        "lines": [
+          "That soldier got what was coming to %g2 if you ask me. What a cad!",
+          "<--->",
+          "Good that someone isn't afraid to defend a damsel. Damned abominable rogue."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 70,
+        "lines": [
+          "I'd be enchanted to help the knight-slayer any way I can."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 73,
+        "lines": [
+          "<ce>                   What makes you think that I'd be",
+          "<ce>                    interested in talking with a %ra",
+          "<ce>                     who can't even slay one lousy",
+          "<ce>                    knight? Leave my sight at once."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 79,
+        "lines": [
+          "%qdt:",
+          " _questgiver_, of The Dark Brotherhood",
+          " in ___questgiver_, has sent me to",
+          " ___mondung_ to find and slay a knight.",
+          " The deed is to be done in =1stparton_ days."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 86,
+        "lines": [
+          "<ce>                       \"Tell _damsel_...that she",
+          "<ce>                     can share soiled...honor with",
+          "<ce>                       every farmboy...in %reg,\"",
+          "<ce>                  says the knight as you account him.",
+          "<ce>                    The contract has been fulfilled."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 109,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 111,
+        "lines": [
+          "Person _questgiver_ face 112 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 112,
+        "lines": [
+          "Person _damsel_ face 2 group Group_6.0 female local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 114,
+        "lines": [
+          "Place _mondung_ remote dungeon2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 116,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 18 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 118,
+        "lines": [
+          "Foe _monster1_ is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 119,
+        "lines": [
+          "Foe _monster2_ is Warrior"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 120,
+        "lines": [
+          "Foe _monster3_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 121,
+        "lines": [
+          "Foe _monster4_ is Nightblade"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 124,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "pick one of _S.06_ _S.07_ _S.08_ _S.09_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 129,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _S.02_ ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 134,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 137,
+        "lines": [
+          "_S.02_ task:",
+          "killed 1 _monster4_ saying 1021 ",
+          "killed 1 _monster3_ saying 1021 ",
+          "killed 1 _monster2_ saying 1021 ",
+          "killed 1 _monster1_ saying 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 143,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 144,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 147,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 148,
+        "lines": [
+          "_S.06_ task:",
+          "place foe _monster1_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 151,
+        "lines": [
+          "_S.07_ task:",
+          "place foe _monster2_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 154,
+        "lines": [
+          "_S.08_ task:",
+          "place foe _monster3_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 157,
+        "lines": [
+          "_S.09_ task:",
+          "place foe _monster4_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 160,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.02_ ",
+          "say 1003",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,108 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO06.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "8cc792b613604674c1292cdbd8e35c7ff93417ec092001b99138963e39f3f901",
+    "byteLength": 417
+  },
+  "document": {
+    "fileName": "__DEMO06.txt",
+    "questName": "__DEMO006",
+    "questNameLine": 3,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO006"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1021,
+        "firstLine": 7,
+        "lines": [
+          "Timer1 Started"
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 10,
+        "lines": [
+          "Timer2 Started"
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 13,
+        "lines": [
+          "Finished!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "variable",
+        "firstLine": 20,
+        "lines": [
+          "variable run"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 22,
+        "lines": [
+          "Clock _S.01_ 0.0:01 0.0:05"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 23,
+        "lines": [
+          "Clock _S.02_ 0.0:05"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 27,
+        "lines": [
+          "setvar run"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 30,
+        "lines": [
+          "_S.00_ task:",
+          "when run",
+          "say 1021",
+          "start timer _S.01_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 35,
+        "lines": [
+          "_S.01_ task:",
+          "say 1022",
+          "start timer _S.02_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 39,
+        "lines": [
+          "_S.02_ task:",
+          "say 1023"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

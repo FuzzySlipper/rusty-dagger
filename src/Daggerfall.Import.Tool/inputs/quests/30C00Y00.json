@@ -1,0 +1,280 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/30C00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "77ea35c6a1eb53ba6546790591ac52d1da2aad2548915639f4e55c4d32c6ae97",
+    "byteLength": 5516
+  },
+  "document": {
+    "fileName": "30C00Y00.txt",
+    "questName": "30C00Y00",
+    "questNameLine": 9,
+    "displayName": "Namira's Quest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "30C00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Namira's Quest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>          The desire for power gnaws at the gut, does it not,",
+          "<ce>            %pcf? I can see it does. Excuse my informality,",
+          "<ce>          but I feel like I know you, I recognize your craving",
+          "<ce>           as if it were my own. You want to control, and the",
+          "<ce>          thought makes you slaver like a starving wolf. I can",
+          "<ce>          fill your belly, but first, I need to know. Will you",
+          "<ce>                    kill in order to fill this void?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>             No?! Now you taunt me, %pcf. You tempt me out",
+          "<ce>            of my dark palace and then shun my company. If I",
+          "<ce>          thought you were merely being cruel, I could respect",
+          "<ce>            it. But I suspect that you are actually stupid,",
+          "<ce>           which I cannot abide. Therefore, I bid you a most",
+          "<ce>                           disgusted goodbye."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>           Wonderful. You should see the look in your eyes,",
+          "<ce>            %pcf. You will be mighty, I can see it in them.",
+          "<ce>            Now, your stepping stone to power is a vampiric",
+          "<ce>               ancient who has displeased me, =monster_.",
+          "<ce>              Know that %g is a mighty adversary, and %g3",
+          "<ce>                      asylum, ___mondung_, is well",
+          "<ce>             protected. But you can and will kill %g2. Once",
+          "<ce>                   you have, go to my darling friend,",
+          "<ce>                     _qgfriend_ over at __qgfriend_",
+          "<ce>                      in ___qgfriend_. _qgfriend_",
+          "<ce>            is a busy person, so don't keep %g2 waiting more",
+          "<ce>              than =1stparton_ days. _qgfriend_ will have",
+          "<ce>              a present for you that I think will make you",
+          "<ce>                very happy. Farewell, %pcf. We will meet",
+          "<ce>                             again, I know."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 48,
+        "lines": [
+          "<ce>            While that vampire ancient still lives, we have",
+          "<ce>                      nothing to talk about, %pcf."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 52,
+        "lines": [
+          "<ce>                     Hello, %pcn. I am _qgfriend_.",
+          "<ce>            You look ... sated. That murder agreed with you,",
+          "<ce>            I think. Well, I hope this will likewise please.",
+          "<ce>             Namira told me to give you her ring. Try it on",
+          "<ce>              and you will learn the meaning of hunger and",
+          "<ce>               fulfillment. Once you know that, you know",
+          "<ce>                         power. Good day, %pcf."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 61,
+        "lines": [
+          "There's a vampire in ___mondung_ that is so old, it doesn't drink blood anymore.",
+          "<--->",
+          "They say the vampire in ___mondung_ has learned to control its bloodlust."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 66,
+        "lines": [
+          "The vampire in ___mondung_ apparently decided that it was time to move on.",
+          "<--->",
+          "I guess that vampire did still need blood after all. It left for some reason."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 71,
+        "lines": [
+          "I don't care if that vampire did conquer its bloodlust; I'm glad it's dead.",
+          "<--->",
+          "The stars of Namira burned bright last night. Always hungry, never satisfied."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 76,
+        "lines": [
+          "_qgfriend_ is that =qgfriend_ over in __qgfriend_, I think. Yes, %di of here.",
+          "<--->",
+          "_qgfriend_ is the name of the =qgfriend_ in __qgfriend_. Look to the %di."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 81,
+        "lines": [
+          "_qgfriend_ is a Gourmand in the service of Namira, Daedra Prince of Hunger.",
+          "<--->",
+          "_qgfriend_ is the name of one of the Gourmands in the service of Namira."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 86,
+        "lines": [
+          "Pain inflicted on the Ring's wearer is reflected back on the attacker."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 89,
+        "lines": [
+          "%qdt:",
+          " The Daedra Prince Namira has promised me",
+          " _artifact_, if I will kill the vampire",
+          " =monster_ for her within =1stparton_ days.",
+          " Her contact _qgfriend_ won't wait any",
+          " longer than that for me in __qgfriend_",
+          " of ___qgfriend_, so I cannot be late. The",
+          " vampire supposedly lives in ___mondung_."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 99,
+        "lines": [
+          "<ce>                  =monster_ is dead.  Namira's hunger",
+          "<ce>                  is sated -- now to satisfy your own",
+          "<ce>                  desires by reporting to _qgfriend_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 123,
+        "lines": [
+          "Item _artifact_ artifact Ring_of_Namira anyInfo 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 125,
+        "lines": [
+          "Person _questgiver_ face 112 named Namira"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 126,
+        "lines": [
+          "Person _qgfriend_ group Librarian anyInfo 1011 rumors 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 128,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 130,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 132,
+        "lines": [
+          "Foe _monster_ is Ancient_vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 135,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "place foe _monster_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 144,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _npcclicked_ and _mondead_ ",
+          "give pc _artifact_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ ",
+          "say 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 154,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _qgfriend_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 158,
+        "lines": [
+          "_clearclick_ task:",
+          "when _npcclicked_ and not _mondead_",
+          "say 1003",
+          "clear _npcclicked_ _clearclick_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

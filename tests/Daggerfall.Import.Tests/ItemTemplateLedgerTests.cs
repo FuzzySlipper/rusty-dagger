@@ -1,5 +1,6 @@
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Publication;
+using Daggerfall.Source.Tool.Donor;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -63,7 +64,7 @@ public sealed class ItemTemplateLedgerTests
     public void Refuses_a_group_mapping_whose_signature_has_no_body()
     {
         // A truncated helper source must be a typed refusal rather than an index error.
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Baseline(
             "public enum Weapons { Dagger = 0 }",
             "public static class ItemHelper\n{\n public Array GetEnumArray(ItemGroups group);\n}\n",
             ItemsFileSource,
@@ -77,7 +78,7 @@ public sealed class ItemTemplateLedgerTests
     {
         // Two labels before one return would silently attribute the index to the wrong
         // group and drop the other, so it is refused.
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Baseline(
             "public enum Weapons { Dagger = 7 }",
             """
             public static class ItemHelper
@@ -104,7 +105,7 @@ public sealed class ItemTemplateLedgerTests
     [Fact]
     public void Reads_a_case_label_written_on_the_same_line_as_its_return()
     {
-        ItemTemplateBaseline baseline = ItemTemplateBaseline.FromDonorSources(
+        ItemTemplateBaseline baseline = Baseline(
             "public enum Weapons { Dagger = 7 /* the dagger */, Longsword = 8 }",
             """
             public static class ItemHelper
@@ -132,7 +133,7 @@ public sealed class ItemTemplateLedgerTests
     [Fact]
     public void Reads_members_written_on_one_line_and_hexadecimal_values()
     {
-        ItemTemplateBaseline baseline = ItemTemplateBaseline.FromDonorSources(
+        ItemTemplateBaseline baseline = Baseline(
             "public enum Weapons { Dagger = 7, Longsword = 0x08, Tanto = 9 }",
             Mapping("Weapons"),
             ItemsFileSource,
@@ -148,7 +149,7 @@ public sealed class ItemTemplateLedgerTests
     {
         // An expression is not a literal: reading it as one would invent a value, and
         // skipping it would silently understate the published coverage.
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Baseline(
             "public enum Weapons { Dagger = 1 + 2 }",
             Mapping("Weapons"),
             ItemsFileSource,
@@ -162,7 +163,7 @@ public sealed class ItemTemplateLedgerTests
     {
         // A value past the last representable one would wrap negative and then be dropped
         // as a sentinel: a silent loss the refusal names instead.
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Baseline(
             "public enum Weapons { Dagger = 2147483647, Longsword }",
             Mapping("Weapons"),
             ItemsFileSource,
@@ -174,7 +175,7 @@ public sealed class ItemTemplateLedgerTests
     [Fact]
     public void Refuses_a_duplicate_enumeration_declaration()
     {
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Baseline(
             "public enum Weapons { Dagger = 1 }\npublic enum Weapons { Dagger = 2 }",
             Mapping("Weapons"),
             ItemsFileSource,
@@ -186,7 +187,7 @@ public sealed class ItemTemplateLedgerTests
     [Fact]
     public void Refuses_a_mapped_enumeration_with_no_member()
     {
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Baseline(
             "public enum Weapons { }",
             Mapping("Weapons"),
             ItemsFileSource,
@@ -198,7 +199,7 @@ public sealed class ItemTemplateLedgerTests
     [Fact]
     public void Names_the_logical_source_when_a_declaration_body_is_not_closed()
     {
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Baseline(
             "public enum Weapons { Dagger = 1",
             Mapping("Weapons"),
             ItemsFileSource,
@@ -210,7 +211,7 @@ public sealed class ItemTemplateLedgerTests
     [Fact]
     public void Refuses_a_donor_declaring_a_different_template_count()
     {
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Baseline(
             "public enum Weapons { Dagger = 0 }",
             Mapping("Weapons"),
             "public class ItemsFile { const int totalItems = 200; }",
@@ -233,7 +234,7 @@ public sealed class ItemTemplateLedgerTests
     [Fact]
     public void Reports_a_donor_index_outside_the_classic_space()
     {
-        ItemTemplateBaseline baseline = ItemTemplateBaseline.FromDonorSources(
+        ItemTemplateBaseline baseline = Baseline(
             """
             public enum Weapons
             {
@@ -254,7 +255,7 @@ public sealed class ItemTemplateLedgerTests
     [Fact]
     public void Refuses_a_group_mapped_to_an_undeclared_enumeration()
     {
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Baseline(
             "public enum Weapons { Dagger = 0 }",
             Mapping("Armor"),
             ItemsFileSource,
@@ -267,7 +268,7 @@ public sealed class ItemTemplateLedgerTests
     [Fact]
     public void Refuses_a_source_without_the_group_mapping()
     {
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Baseline(
             "public enum Weapons { Dagger = 0 }",
             "public static class ItemHelper { }",
             ItemsFileSource,
@@ -279,7 +280,7 @@ public sealed class ItemTemplateLedgerTests
     [Fact]
     public void Refuses_an_enumeration_body_that_is_not_closed()
     {
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => Baseline(
             "public enum Weapons { Dagger = 0, ",
             Mapping("Weapons"),
             ItemsFileSource,
@@ -352,7 +353,7 @@ public sealed class ItemTemplateLedgerTests
     /// A donor pair small enough to reason about: one group naming four indices, one
     /// aliased index, one index no group names, and a "none" sentinel.
     /// </summary>
-    private static ItemTemplateBaseline ReadFixture() => ItemTemplateBaseline.FromDonorSources(
+    private static ItemTemplateBaseline ReadFixture() => Baseline(
         """
         namespace Fixture
         {
@@ -361,6 +362,8 @@ public sealed class ItemTemplateLedgerTests
                 None = -1,
                 Weapons = 0,
                 Books = 1,
+                Artifacts = 2,
+                Deeds = 3,
             }
 
             public enum Weapons
@@ -419,6 +422,20 @@ public sealed class ItemTemplateLedgerTests
         }
         """,
         "fixture");
+
+    /// <summary>
+    /// The baseline over a donor-shaped excerpt, taken as the drift check takes the donor's item groups. An excerpt
+    /// that declares no <c>ItemGroups</c> is given one naming the groups these tests map.
+    /// </summary>
+    private static ItemTemplateBaseline Baseline(string itemEnums, string itemHelper, string itemsFile, string source)
+    {
+        string enums = itemEnums.Contains("enum ItemGroups", StringComparison.Ordinal)
+            ? itemEnums
+            : "public enum ItemGroups { Weapons = 0, Armor = 1, Books = 2, Artifacts = 3, Deeds = 4 }\n" + itemEnums;
+        (int count, IReadOnlyList<ItemGroupEnumeration> groups) = DonorItemGroups.Read(enums, itemHelper, itemsFile, source);
+        TakenFrom taken = TakenFrom.Of("daggerfall-unity/fixture", "test", "fixture"u8);
+        return ItemTemplateBaseline.FromGroups(new ItemGroupTable(taken, taken, taken, count, groups), source);
+    }
 
     private const string ItemsFileSource = "public class ItemsFile { const int totalItems = 288; }";
 

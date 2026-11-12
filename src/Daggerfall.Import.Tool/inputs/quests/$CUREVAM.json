@@ -1,0 +1,663 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/$CUREVAM.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "61caca75467f92325361db87cf14af3e6fd746fcf8e7835f5d5d94015b1a741d",
+    "byteLength": 11016
+  },
+  "document": {
+    "fileName": "$CUREVAM.txt",
+    "questName": "$CUREVAM",
+    "questNameLine": 7,
+    "displayName": "Cure for Vampirism",
+    "header": [
+      {
+        "name": "quest",
+        "value": "$CUREVAM"
+      },
+      {
+        "name": "displayname",
+        "value": "Cure for Vampirism"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 12,
+        "lines": [
+          "Error -- 1000 called"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 15,
+        "lines": [
+          "Error -- 1001 called"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 18,
+        "lines": [
+          "Error -- 1002 called"
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                         Error -- 1003 called"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 24,
+        "lines": [
+          "<ce>               As =bloodfather_ dies, you feel the curse",
+          "<ce>                   of vampirism lift from your soul.",
+          "<ce>                      You are no longer a vampire."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 29,
+        "lines": [
+          "<ce> _hunter_ is leading a new crusade against vampires through %reg soon.",
+          "<ce> Maybe then we'll be able to walk the streets at night again without fear."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 33,
+        "lines": [
+          "<ce>_hunter_ and %g3 men killed a lot of vampires in %reg, but I doubt they",
+          "<ce>                             got them all.",
+          "                                     <--->",
+          "<ce> _hunter_ should have left well enough alone.  %G3 crusades just send",
+          "<ce> the vampires into hiding, and when %g leaves, they come back stronger than ever."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 40,
+        "lines": [
+          "<ce>_hunter_ and %g3 men killed a lot of vampires in %reg, but I doubt they",
+          "<ce>                             got them all.",
+          "                                     <--->",
+          "<ce> _hunter_ should have left well enough alone.  %G3 crusades just send",
+          "<ce> the vampires into hiding, and when %g leaves, they come back stronger than ever."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 47,
+        "lines": [
+          "Error -- 1008 called"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 50,
+        "lines": [
+          "Error -- 1009 called"
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 53,
+        "lines": [
+          "_hunter_ searches out and destroys vampires all across Tamriel.",
+          "<--->",
+          "_hunter_ has devoted %g3 life to hunting vampires."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 58,
+        "lines": [
+          "<ce>They say that _hunter_'s own father was killed by vampires.  That's what",
+          "<ce>               drove %g2 to %g3 fanatical hatred of them.",
+          "                                     <--->",
+          "<ce> _hunter_ killed %g3 own father after he became a vampire.  Now that's",
+          "<ce>                       what I call a true zealot!"
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 65,
+        "lines": [
+          "                       %qdt",
+          " ",
+          " Dear %pcn of %vam,",
+          " ",
+          "    Let me introduce myself.  I am _hunter_.",
+          " You may have heard of me -- the renowned vampire",
+          " hunter?  Do not be hasty in your judgment of me,",
+          " however.  I am not your enemy, at least not yet.",
+          " While I abhor vampirism with a passion, and have",
+          " devoted my life to stamping out this dark plague",
+          " from Tamriel, I understand that many are innocent",
+          " victims like yourself.  The will to live is not",
+          " of itself evil, and I always try to offer my quarry",
+          " one chance to prove that their bloody work is based",
+          " on necessity, not love for killing.",
+          "    I am sure that your \"kinfolk\" have not told",
+          " you this, but vampirism can be cured.  To do so,",
+          " you must kill your \"bloodfather\", the ancient evil",
+          " that created the line of vampires leading to you.",
+          " In doing so, you will not only free yourself, but",
+          " rid %reg of a cancer at its heart.",
+          " ",
+          "<ce>                              (continued)",
+          " ",
+          "    I myself do not know where to find your",
+          " \"bloodfather,\" but my sources have revealed the name",
+          " of one high in %vam who should have this information,",
+          " _vamp1_ of ___vamp1_.  I will wait",
+          " =huntstart_ days before moving against the vampires of %reg,",
+          " to give you a chance to save yourself.",
+          "    Consider my offer well, %pcn.  You have",
+          " =huntstart_ days, then you and the rest of %vam",
+          " will be hunted down like vermin.",
+          " ",
+          "<ce>                                _hunter_"
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 102,
+        "lines": [
+          "<ce>                      Do you want to show _vamp1_",
+          "<ce>                       the letter from _hunter_?"
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 106,
+        "lines": [
+          "<ce>                You have done well to bring this to me,",
+          "<ce>                   %pcn.  _hunter_ has been the bane",
+          "<ce>             of %vam for years.  With this advance warning,",
+          "<ce>             we can save the lives of many of our kinfolk.",
+          "<ce>              Do not underestimate the danger you are in,",
+          "<ce>               %pcf.  _hunter_ is ruthless and competent,",
+          "<ce>              and %g3 spies are everywhere.  %G would make",
+          "<ce>              an excellent addition to %vam -- perhaps %g",
+          "<ce>              will yet.  Be that as it may, %g knows your",
+          "<ce>              name, and do not doubt that %g will attempt",
+          "<ce>                      to make good on %g3 threat.",
+          "<ce>                      May the night keep you safe."
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 120,
+        "lines": [
+          "<ce>                  %pcn, isn't it?  I have heard good",
+          "<ce>                things about you from the rest of %vam.",
+          "<ce>               So, you want to find your bloodfather.  An",
+          "<ce>           understandable urge, although this is a privilege",
+          "<ce>               not usually granted to one of your youth.",
+          "<ce>              However, you have made such progress in %vam",
+          "<ce>            already, I believe I can make an exception.  Let",
+          "<ce>          me see, he must be either =elder_ or =bloodfather_.",
+          "<ce>                 You can find them at ___wrongdung_ and",
+          "<ce>                 ___fatherdung_, respectively.  I would",
+          "<ce>                 advise against intruding on an elder's",
+          "<ce>             seclusion lightly, however.  It would be best",
+          "<ce>                 if you looked up _vamp2_ of ___vamp2_.",
+          "<ce>              %G is the Keeper of the Bloodline, and will",
+          "<ce>              be able to tell you with certainty which of",
+          "<ce>              %vam elders is your bloodfather.  Take this",
+          "<ce>              bracelet to %g2 so %g will know I sent you."
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 139,
+        "lines": [
+          "<ce>               Hmph.  You are very young to be entrusted",
+          "<ce>               with such information.  However, since you",
+          "<ce>              carry _vamp1_'s token, I will reveal to you",
+          "<ce>            where your bloodfather, =bloodfather_, resides.",
+          "<ce>            You will find him in his lair in ___fatherdung_.",
+          "<ce>             Be aware that at this time of year, the elders",
+          "<ce>                 do not like to be disturbed by anyone.",
+          "<ce>          Intrude upon =bloodfather_'s solitude at your peril."
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 149,
+        "lines": [
+          "<ce>                Bloodtraitor!  We have learned of your",
+          "<ce>             treachery.  You will never find =bloodfather_,",
+          "<ce>                 although your days as one of %vam are",
+          "<ce>                  about to end, do not worry. _hunter_",
+          "<ce>                    will not need to hunt you down."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 156,
+        "lines": [
+          "<ce>               Stripling, do not disturb my meditations!",
+          "<ce>                    Begone, or my hunger will force",
+          "<ce>                            me to slay you!"
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 161,
+        "lines": [
+          "<ce>                        You have slain =elder_,",
+          "<ce>                             Elder of %vam."
+        ]
+      },
+      {
+        "id": 1032,
+        "firstLine": 165,
+        "lines": [
+          "<ce>                     %pcn, your blood calls to me.",
+          "<ce>                   Why do you strike your own father?",
+          "<ce>                      %vam punishes patricide with",
+          "<ce>                  death.  Do not force me to carry out",
+          "<ce>                 this sentence myself.  Flee, my child!"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 172,
+        "lines": [
+          "<ce>                   _hunter_ said I'd find you here.",
+          "<ce>                           Die, nightstalker!"
+        ]
+      },
+      {
+        "id": 1045,
+        "firstLine": 176,
+        "lines": [
+          "<ce>                   An unfamiliar object in your pack",
+          "<ce>                   catches your eye.  It is a letter,",
+          "<ce>                 addressed to you in an elegant flowing",
+          "<ce>                    script.  How did that get there?"
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 182,
+        "lines": [
+          "%qdt:",
+          " The vampire hunter _hunter_",
+          " has sent me a letter vowing to",
+          " hunt me down unless I cure myself",
+          " of vampirism by killing my bloodfather.",
+          " _hunter_ does not know who or where",
+          " my bloodfather is, but %g suggested",
+          " that _vamp1_ of",
+          " ___vamp1_ might know.",
+          " I have =huntstart_ days before the vampire",
+          " hunt begins."
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 197,
+        "lines": [
+          "%qdt:",
+          " _vamp1_ believes that my bloodfather",
+          " lives either in ___wrongdung_ or",
+          " ___fatherdung_, but advised that",
+          " I take %g3 bracelet to _vamp2_ of",
+          " __vamp2_, ___vamp2_, who can",
+          " tell me for sure where to find him."
+        ]
+      },
+      {
+        "id": 1052,
+        "firstLine": 206,
+        "lines": [
+          "%qdt:",
+          " _vamp2_ told me that my bloodfather's",
+          " name is =bloodfather_, and that he",
+          " lives in ___fatherdung_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 236,
+        "lines": [
+          "Item _letter_ letter used 1020"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 237,
+        "lines": [
+          "Item _token_ bracelet"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 239,
+        "lines": [
+          "Person _vamp1_ face 40 factiontype Vampire_Clan remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 240,
+        "lines": [
+          "Person _vamp2_ face 4 factiontype Vampire_Clan male remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 241,
+        "lines": [
+          "Person _hunter_ face 1 factiontype Knightly_Guard remote anyInfo 1011 rumors 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 243,
+        "lines": [
+          "Place _fatherdung_ remote dungeon8"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 244,
+        "lines": [
+          "Place _wrongdung_ remote dungeon5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 246,
+        "lines": [
+          "Clock _S.10_ 1.00:00 2.22:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 247,
+        "lines": [
+          "Clock _S.13_ 7.00:00 27.23:40"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 248,
+        "lines": [
+          "Clock _huntstart_ 00:00 0 flag 1 range 3 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 250,
+        "lines": [
+          "Foe _bloodfather_ is Ancient_vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 251,
+        "lines": [
+          "Foe _vampire_ is Vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 252,
+        "lines": [
+          "Foe _F.02_ is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 253,
+        "lines": [
+          "Foe _elder_ is Ancient_vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 256,
+        "lines": [
+          "dialog link for person _vamp2_ ",
+          "dialog link for location _fatherdung_ person _vamp1_ ",
+          "dialog link for person _hunter_ ",
+          "_letter_ used do _readletter_ ",
+          "have _letter_ set _S.19_ ",
+          "give pc _letter_ notify 1045 ",
+          "place foe _bloodfather_ at _fatherdung_ ",
+          "create npc _vamp1_ ",
+          "place foe _elder_ at _wrongdung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 266,
+        "lines": [
+          "_S.00_ task:",
+          "killed 1 _bloodfather_ ",
+          "give pc nothing ",
+          "cure vampirism ",
+          "change repute with _vamp1_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 273,
+        "lines": [
+          "_S.01_ task:",
+          "clicked npc _vamp1_ ",
+          "have _letter_ set _S.06_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 277,
+        "lines": [
+          "variable _S.02_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 278,
+        "lines": [
+          "_readletter_ task:",
+          "add dialog for person _hunter_ ",
+          "add dialog for person _vamp1_ ",
+          "log 1050 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 283,
+        "lines": [
+          "_S.04_ task:",
+          "daily from 06:00 to 18:00 ",
+          "clear _S.17_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 287,
+        "lines": [
+          "variable _S.05_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 288,
+        "lines": [
+          "variable _S.06_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 289,
+        "lines": [
+          "_S.07_ task:",
+          "when _S.06_ and _S.01_ ",
+          "prompt 1021 yes _S.08_ no _S.09_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 293,
+        "lines": [
+          "_S.08_ task:",
+          "hide npc _vamp2_ ",
+          "hide npc _vamp1_ ",
+          "say 1022 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 298,
+        "lines": [
+          "_S.09_ task:",
+          "add dialog for person _vamp2_ ",
+          "start timer _S.10_ ",
+          "reveal _fatherdung_ ",
+          "reveal _wrongdung_ ",
+          "log 1051 step 1 ",
+          "get item _token_ ",
+          "say 1023 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 307,
+        "lines": [
+          "_S.10_ task:",
+          "hide npc _vamp1_ ",
+          "hide npc _vamp2_ ",
+          "change repute with _vamp1_ by -15 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 312,
+        "lines": [
+          "_S.11_ task:",
+          "injured _bloodfather_ saying 1032 ",
+          "injured _elder_ saying 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 316,
+        "lines": [
+          "_S.12_ task:",
+          "killed 1 _elder_ saying 1031 ",
+          "change repute with _vamp1_ by -20 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 320,
+        "lines": [
+          "_S.13_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 323,
+        "lines": [
+          "_huntstart_ task:",
+          "create foe _F.02_ every 60 minutes 30 times with 20% success ",
+          "start timer _S.13_ ",
+          "hide npc _vamp2_ ",
+          "hide npc _vamp1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 329,
+        "lines": [
+          "_S.15_ task:",
+          "injured _F.02_ saying 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 332,
+        "lines": [
+          "_givetoken_ task:",
+          "toting _token_ and _vamp2_ clicked ",
+          "log 1052 step 2 ",
+          "say 1024 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 337,
+        "lines": [
+          "_S.17_ task:",
+          "when _S.10_ and not _S.04_ and not _givetoken_ ",
+          "create foe _vampire_ every 60 minutes 10 times with 25% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 341,
+        "lines": [
+          "_S.18_ task:",
+          "injured _vampire_ saying 1025 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 344,
+        "lines": [
+          "_S.19_ task:",
+          "start timer _huntstart_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

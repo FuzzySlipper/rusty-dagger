@@ -1,0 +1,901 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C11Y28.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "064fac5ab18f90914bda655fcd38668faa19628bcb998892cd717af110c6aeea",
+    "byteLength": 17890
+  },
+  "document": {
+    "fileName": "R0C11Y28.txt",
+    "questName": "R0C11Y28",
+    "questNameLine": 8,
+    "displayName": "The Mad Slayer",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C11Y28"
+      },
+      {
+        "name": "displayname",
+        "value": "The Mad Slayer"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>               There's a nightmare stalking the streets",
+          "<ce>                    of ___bookstore_. They're calling him the",
+          "<ce>                       ___bookstore_ Slayer, and so far no",
+          "<ce>               one can tell me if he's a man or a beast.",
+          "<ce>                  One of my finest sages, _contact_,",
+          "<ce>               is examing the bodies of the victims, but",
+          "<ce>                %g has begun getting disturbing letters",
+          "<ce>                and frankly fears for %g3 life. I need",
+          "<ce>              someone to investigate %g3 findings to see",
+          "<ce>               if %g3 fears are justified. Will you help",
+          "<ce>                    me in this, %pcf? I will offer",
+          "<ce>              you _reward_ gold pieces in return for the",
+          "<ce>                     retirement of the ___bookstore_ Slayer."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                 Not an uncommon response. Then I have",
+          "<ce>                 little choice, but to call on some of",
+          "<ce>                 my less-savoury contacts for help --",
+          "<ce>                   an option I was hoping to avoid."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 34,
+        "lines": [
+          "<ce>                      Thank %god for that, anyway.",
+          "<ce>                    The people of %reg are becoming",
+          "<ce>               anxious about the lack of progress in the",
+          "<ce>                official investigations. I fear that we",
+          "<ce>                will have a mob situation soon, perhaps",
+          "<ce>                  in =total_ days or less. _contact_",
+          "<ce>                       works out of _bookstore_,",
+          "<ce>                 and I told %g2 I'd be sending someone",
+          "<ce>                  there soon. Watch out for yourself,",
+          "<ce>                     %pcf. Until this situation is",
+          "<ce>                    resolved, remember that the ___bookstore_",
+          "<ce>                          night has a knife."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                        The ___bookstore_ Slayer is still",
+          "<ce>                at large. I have no time for chatting,",
+          "<ce>                            nor should you."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 53,
+        "lines": [
+          "<ce>                     %reg is at peace again, %pcf,",
+          "<ce>          thanks to you. Here is the _reward_ gold I promised",
+          "<ce>             -- gladly will I give it for the end of that",
+          "<ce>              maniac and your discretion in this matter.",
+          "<ce>                    %god truly blessed us when you",
+          "<ce>                             came to %reg."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 61,
+        "lines": [
+          "It isn't safe to walk the streets of ___bookstore_ anymore. Not with the ___bookstore_ Slayer.",
+          "<--->",
+          "I hear the Slayer isn't a man at all, but a daedra come to punish us all.",
+          "<--->",
+          "The last victim of the ___bookstore_ Slayer was found scattered in pieces over ___bookstore_.",
+          "<--->",
+          "Some folks are wondering if the Slayer might be a vampire or a werewolf."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 70,
+        "lines": [
+          "The killings stopped without us needing a mob. Guess the Slayer moved on.",
+          "<--->",
+          "_qgiver_'s just lucky the ___bookstore_ Slayer decided to move on. Panic was setting in.",
+          "<--->",
+          "_qgiver_ is still anxious. You'd think the Slayer's absence would relieve %g2.",
+          "<--->",
+          "The ___bookstore_ Slayer disappeared just as suddenly as he came to ___bookstore_.",
+          "<--->",
+          "Some say the Slayer's still here, waiting for the stars to be right again."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 81,
+        "lines": [
+          "I'm still afraid to be out in ___bookstore_ alone, even with the Slayer supposedly dead.",
+          "<--->",
+          "Guess the ___bookstore_ Slayer was just some poor lunatic. Nothing romantic to him at all.",
+          "<--->",
+          "The newest rumor is that the ___bookstore_ Slayer wasn't a vampire, but thought he was."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 88,
+        "lines": [
+          "I still remember you, %pcf, and the discretion you showed with the ___bookstore_ Slayer."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 91,
+        "lines": [
+          "<ce>                    You failed me in the ___bookstore_ Slayer",
+          "<ce>                         affair, %pcf. I don't",
+          "<ce>                  see any reason to believe you won't",
+          "<ce>                            fail me again."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 97,
+        "lines": [
+          "<ce>                        Ah, %pcf, my dear %ra,",
+          "<ce>                I am very glad you've arrived. You have",
+          "<ce>              doubtless been told that I've become a bit",
+          "<ce>               of a hermit ever since I began receiving",
+          "<ce>                those letters threatening my life if I",
+          "<ce>               did not abandon my investigations. Well,",
+          "<ce>               now I have an old colleague in town with",
+          "<ce>                whose assistance I may be able to solve",
+          "<ce>               these murders. I would like you to bring",
+          "<ce>                       these notes to a _vamp_,",
+          "<ce>                       a =vamp_ you will find at",
+          "<ce>                      _hookerhouse_. If anything",
+          "<ce>               should happen to me, I want someone to be",
+          "<ce>              able to continue on in the investigations.",
+          "<ce>                        That will be _vamp_ and",
+          "<ce>                   you, %pcf. So don't get yourself",
+          "<ce>                           killed out there."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 116,
+        "lines": [
+          "_contact_,",
+          " ",
+          " Terminate your investigations of the %reg Slayer's",
+          " victims if you value your life. You are moving",
+          " blindly into an inferno.",
+          " ",
+          " If you continue, you will die before your",
+          " studies are finished. Consider this a",
+          " serious warning.",
+          " ",
+          "<ce>                             A Well-Wisher"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 129,
+        "lines": [
+          "Dear _contact_,",
+          " ",
+          " Even if you lock all your doors and extinguish",
+          " all light from _bookstore_, we",
+          " will know that you are still indulging in your",
+          " forbidden autopsies. Do not ask for us to",
+          " demonstrate our power to stop you, for we will",
+          " act but once.",
+          " ",
+          "<ce>                             A Well-Wisher"
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 141,
+        "lines": [
+          "_contact_,",
+          " ",
+          " I would very much like to meet with you",
+          " about your fascinating mortuary studies of",
+          " the Slayer victims. As you know, I have",
+          " done similar investigations and would be",
+          " happy to share my knowledge and experience",
+          " with a distinguished colleague.",
+          " ",
+          " Let me know by courier how it would be",
+          " most convenient for us to meet. I am",
+          " staying at _hookerhouse_,",
+          " but perhaps you would rather meet at",
+          " _bookstore_ so I might",
+          " see the corpses in question. In either",
+          " case I look forward to receiving your",
+          " courier and note.",
+          " ",
+          "<ce>                         Yours in admiration,",
+          " ",
+          "<ce>                                _vamp_"
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 164,
+        "lines": [
+          "Autopsy report for %fn:",
+          " ",
+          " Throat torn out, apparently",
+          " with violent force (Slayer a",
+          " madman? Check into Lobornus'",
+          " work with criminally insane in Agryn",
+          " Prison). Death instantaneous,",
+          " no sign of struggle (Slayer knew",
+          " victim? Did not appear a threat?)",
+          " Carotid artery completely severed,",
+          " loss of blood extensive by time of",
+          " examination (remember to ask",
+          " _qgiver_ to send over guards",
+          " who found body for interview).",
+          " ",
+          " Autopsy report for %mn:",
+          " ",
+          " Subject shows similar pathology to",
+          " female victim. Throat torn out violently,",
+          " bruises on upper arms as if gripped by",
+          " extremely strong man (Slayer's insanity",
+          " produces superhuman strength? Note to self:",
+          " write to Lobornus for research notes from",
+          " interesting case he reported at last year's",
+          " Conclave). Bruising indicates some time",
+          " between attack and death? (Could be unrelated",
+          " to attack? Check on background of victim)."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 193,
+        "lines": [
+          "<ce>                    So, for all the days _contact_",
+          "<ce>                has spent with those flyblown cadavers",
+          "<ce>                         all %g comes up with",
+          "<ce>                     is this. %god, with this as a",
+          "<ce>                      start, _contact_ won't get",
+          "<ce>                an intimation of the Slayer's identity",
+          "<ce>                     for weeks yet. Listen, %pcf,",
+          "<ce>                     if you want to help _qgiver_,",
+          "<ce>                   take this flower over to _widow_",
+          "<ce>                        in _widowhouse_ -- %g3",
+          "<ce>                        brother was %mn, one of",
+          "<ce>                  the Slayer's victims. This may seem",
+          "<ce>                 like a trivial sentimentality, but it",
+          "<ce>                 will bring you closer to finding the",
+          "<ce>                        ___bookstore_ Slayer than any of",
+          "<ce>                        _contact_'s scientific",
+          "<ce>                      catalyses. Trust me, %pcf."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 212,
+        "lines": [
+          "_vamp_ is the =vamp_ I met over at _hookerhouse_. Nice enough, but spooky.",
+          "<--->",
+          "_vamp_ is the name of the =vamp_ staying over at _hookerhouse_."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 217,
+        "lines": [
+          "_vamp_ is one of the %vcn, sent to ___bookstore_ to eliminate the mad Slayer.",
+          "<--->",
+          "_vamp_ is a %vcn vampire here to stop the risk to %g3 security, the Slayer."
+        ]
+      },
+      {
+        "id": 1018,
+        "firstLine": 222,
+        "lines": [
+          "Poor _widow_ stays at _widowhouse_ ever since the Slayer got %g3 brother.",
+          "<--->",
+          "The %reg Slayer killed _widow_'s brother, and now %g never leaves _widowhouse_."
+        ]
+      },
+      {
+        "id": 1019,
+        "firstLine": 227,
+        "lines": [
+          "<ce>               A red poppy? Oh, you must be my brother's",
+          "<ce>                    friend, _rippername_, yes? I do",
+          "<ce>             appreciate the comforting note you sent after",
+          "<ce>             his death. He didn't have very many friends,",
+          "<ce>            and, to tell the truth, he had never mentioned",
+          "<ce>             your name. But I certainly thank you for the",
+          "<ce>              lovely flowers and the invitation to visit",
+          "<ce>                         you at _ripperhouse_.",
+          "<ce>              I've always admired that place, and I would",
+          "<ce>                     like to see the inside of it.",
+          "<ce>                                    ",
+          "<ce>                  What, you're not _rippername_? Oh,",
+          "<ce>              I'm so sorry. Please forgive me, I haven't",
+          "<ce>              been myself since my brother... No, I don't",
+          "<ce>             think I have information that might help you",
+          "<ce>              find that murdering devil. You know I would",
+          "<ce>              help you if I could. But you will find the",
+          "<ce>               fiend that killed my brother, won't you?"
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 247,
+        "lines": [
+          "%qdat:",
+          " I am on the trail of the Slayer",
+          " of ___bookstore_. The %rt wants",
+          " the ___bookstore_ Slayer caught in =total_ days",
+          " before the murders inflame the populace",
+          " to riot. _qgiver_ has a scientist",
+          " who has been examining the bodies of the",
+          " Slayer's victims and has recently",
+          " begun getting death threats, apparently",
+          " from the Slayer. _contact_ is",
+          " the name of this scientist, and %g",
+          " works out of _bookstore_."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 261,
+        "lines": [
+          "%qdat:",
+          " _contact_ has sent me",
+          " to _hookerhouse_ to meet with",
+          " an old colleague named _vamp_,",
+          " who might be able to help with the research."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 268,
+        "lines": [
+          "%qdat:",
+          " I got to _bookstore_ too late.",
+          " Apparently, _contact_'s death",
+          " threats were very real. Among the letters",
+          " I found was one from a colleague interested in",
+          " meeting with _contact_, someone",
+          " named _vamp_ staying at",
+          " _hookerhouse_."
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 278,
+        "lines": [
+          "%qdat:",
+          " I met with _vamp_ who seems",
+          " less than impressed with %g3",
+          " colleague _contact_'s work",
+          " on the %reg Slayer victims.",
+          " _vamp_ told me to bring",
+          " a red poppy to someone named",
+          " _widow_ whose brother",
+          " was killed by the Slayer. I have some",
+          " suspicions, but I won't know for sure",
+          " until I go to _widowhouse_",
+          " where _widow_ lives."
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 292,
+        "lines": [
+          "%qdat:",
+          " The late _contact_'s colleague",
+          " and murderer are one and the same person.",
+          " _vamp_ is a vampire, but professes",
+          " not to be the Slayer. If I kill the person",
+          " %g says is the %reg Slayer, _rippername_",
+          " of _ripperhouse_, _vamp_",
+          " has promised me a reward, apparently",
+          " in addition to the reward I'd get",
+          " from _qgiver_."
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 304,
+        "lines": [
+          "%qdat:",
+          " _widow_, the =widow_",
+          " _vamp_ sent me to, believed",
+          " that I was someone named _rippername_.",
+          " This _rippername_ apparently sent",
+          " _widow_ a bouquet of red poppies",
+          " and invited %g2 to a place called",
+          " _ripperhouse_. Sounds like a Slayer",
+          " trap if there ever was one."
+        ]
+      },
+      {
+        "id": 1026,
+        "firstLine": 315,
+        "lines": [
+          "<ce>                 Which letter brought you to me, %pcn?",
+          "<ce>             You are probably aware that I wrote them all.",
+          "<ce>                      After _contact_ refused to",
+          "<ce>           listen to my polite warnings about investigating",
+          "<ce>            matters beyond mortal understanding, I invited",
+          "<ce>             %g2 here as %g3 friend. I knew %g2, you see,",
+          "<ce>             years ago, before I became a vampire. We met,",
+          "<ce>                      went back to _bookstore_ to",
+          "<ce>              see the bodies, and there I slew %g2. Quite",
+          "<ce>             painlessly. I could tell %g would never have",
+          "<ce>              halted his studies. More than that I cannot",
+          "<ce>               say, except that the Slayer is a vampire",
+          "<ce>               like myself, but mad from the blessing of",
+          "<ce>                      immortality. _rippername_,",
+          "<ce>             that's the Slayer's real name and %g lives at",
+          "<ce>                    _ripperhouse_. If you go there",
+          "<ce>            and slay %g2, I will reward you. If you intend",
+          "<ce>                     to continue with _contact_'s",
+          "<ce>              studies, I will have no choice but to kill",
+          "<ce>                 you as well. That is my simple offer."
+        ]
+      },
+      {
+        "id": 1027,
+        "firstLine": 337,
+        "lines": [
+          "_contact_ is quite a learned scientist over in _bookstore_, %di of here.",
+          "<--->",
+          "_contact_ is a =contact_ who works out of _bookstore_."
+        ]
+      },
+      {
+        "id": 1028,
+        "firstLine": 342,
+        "lines": [
+          "_contact_ is dissecting the Slayer's victims and someone doesn't like that.",
+          "<--->",
+          "_contact_'s a scientist at _bookstore_, who has been getting threat letters."
+        ]
+      },
+      {
+        "id": 1029,
+        "firstLine": 347,
+        "lines": [
+          "<ce>  The Mad Slayer is no more."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 350,
+        "lines": [
+          "<ce>                   By killing _rippername_, you have",
+          "<ce>                 aided both %reg and myself. For this,",
+          "<ce>                  I give you a _reward2_. Perhaps we",
+          "<ce>                     may meet again one day, %pcn.",
+          "<ce>                  You have intrigued me in our brief",
+          "<ce>              acquaintance. May the night keep you safe."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 393,
+        "lines": [
+          "Item _I.00_ letter used 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 394,
+        "lines": [
+          "Item _I.01_ letter used 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 395,
+        "lines": [
+          "Item letter31 letter used 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 396,
+        "lines": [
+          "Item _I.03_ letter used 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 398,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 399,
+        "lines": [
+          "Item _reward2_ trinket"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 401,
+        "lines": [
+          "Item _I.09_ item class 15 subclass 13"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 403,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 404,
+        "lines": [
+          "Person _contact_ face 1 group Librarian local anyInfo 1027 rumors 1028"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 405,
+        "lines": [
+          "Person _vamp_ face 1 factiontype Vampire_Clan local anyInfo 1016 rumors 1017"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 406,
+        "lines": [
+          "Person _widow_ face 82 group Resident2 female local anyInfo 1018"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 407,
+        "lines": [
+          "Person _rippername_ face 5 group Group_6.0 male local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 409,
+        "lines": [
+          "Place _bookstore_ local house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 410,
+        "lines": [
+          "Place _hookerhouse_ local tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 411,
+        "lines": [
+          "Place _ripperhouse_ local house1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 412,
+        "lines": [
+          "Place _widowhouse_ local temple"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 414,
+        "lines": [
+          "Clock _1stparton_ 00:30 03:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 415,
+        "lines": [
+          "Clock _2ndparton_ 00:30 06:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 416,
+        "lines": [
+          "Clock _total_ 3.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 418,
+        "lines": [
+          "Foe _murder_ is Vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 422,
+        "lines": [
+          "dialog link for location _ripperhouse_ person _rippername_ ",
+          "dialog link for person _widow_ ",
+          "dialog link for person _vamp_ ",
+          "start timer _total_ ",
+          "start timer _1stparton_ ",
+          "log 1020 step 0 ",
+          "place npc _contact_ at _bookstore_ ",
+          "place npc _vamp_ at _hookerhouse_ ",
+          "place npc _widow_ at _widowhouse_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 436,
+        "lines": [
+          "_S.00_ task:",
+          "killed 1 _murder_ ",
+          "say 1029"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 440,
+        "lines": [
+          "_1stparton_ task:",
+          "start timer _2ndparton_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 443,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 444,
+        "lines": [
+          "_S.03_ task:",
+          "when _2ndparton_ and not _S.13_ ",
+          "letter31 used do _S.11_ ",
+          "place item _I.01_ at _bookstore_ ",
+          "place item _I.00_ at _bookstore_ ",
+          "place item letter31 at _bookstore_ ",
+          "hide npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 453,
+        "lines": [
+          "_vampclicked_ task:",
+          "clicked npc _vamp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 456,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 459,
+        "lines": [
+          "_qgclearclick_ task:",
+          "when not _S.00_ and _qgclicked_ ",
+          "clear _qgclicked_ _qgclearclick_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 463,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _S.00_ and _qgclicked_ ",
+          "give pc _reward_ ",
+          "unset _qgclicked_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 473,
+        "lines": [
+          "_S.07_ task:",
+          "when _S.17_ and not _S.00_ ",
+          "place foe _murder_ at _ripperhouse_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 477,
+        "lines": [
+          "_S.08_ task:",
+          "when _vampclicked_ and _S.11_ ",
+          "add dialog for location _ripperhouse_ ",
+          "log 1024 step 4 ",
+          "say 1026 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 483,
+        "lines": [
+          "_S.09_ task:",
+          "when _hasletter_ and _vampclicked_",
+          "add dialog for person _widow_ ",
+          "log 1023 step 3 ",
+          "get item _I.09_ ",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 490,
+        "lines": [
+          "variable _hasletter_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 491,
+        "lines": [
+          "_S.10_ task:",
+          "clicked npc _contact_ ",
+          "add dialog for person _vamp_ ",
+          "log 1021 step 1 ",
+          "get item _I.03_",
+          "setvar _hasletter_",
+          "say 1010"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 499,
+        "lines": [
+          "_vampclearclick_ task:",
+          "when _vampclicked_ and not _S.00_",
+          "clear _vampclicked_ _vampclearclick_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 503,
+        "lines": [
+          "_S.11_ task:",
+          "add dialog for person _vamp_ ",
+          "log 1022 step 2 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 507,
+        "lines": [
+          "variable _S.12_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 508,
+        "lines": [
+          "_S.13_ task:",
+          "daily from 06:00 to 18:00 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 511,
+        "lines": [
+          "_S.14_ task:",
+          "when not _S.13_ and not _S.00_ ",
+          "create foe _murder_ every 15 minutes 1 times with 15% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 515,
+        "lines": [
+          "_S.15_ task:",
+          "toting _I.09_ and _widow_ clicked ",
+          "add dialog for location _ripperhouse_ ",
+          "log 1025 step 5 ",
+          "say 1019 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 521,
+        "lines": [
+          "_S.16_ task:",
+          "when _vampclicked_ and _S.00_ ",
+          "get item _reward2_ saying 1050 ",
+          "make _reward2_ permanent ",
+          "unset _vampclicked_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 527,
+        "lines": [
+          "_S.17_ task:",
+          "when _S.15_ or _S.08_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 530,
+        "lines": [
+          "_total_ task:",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

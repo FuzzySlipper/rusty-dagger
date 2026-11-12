@@ -1,0 +1,273 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/Q0C00Y06.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "0942a3bea8bf856db84dd4ac195fbde3e4abeecba6f9ea31cf8f686a99e5246f",
+    "byteLength": 4776
+  },
+  "document": {
+    "fileName": "Q0C00Y06.txt",
+    "questName": "Q0C00Y06",
+    "questNameLine": 9,
+    "displayName": "Problems with Vampires",
+    "header": [
+      {
+        "name": "quest",
+        "value": "Q0C00Y06"
+      },
+      {
+        "name": "displayname",
+        "value": "Problems with Vampires"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                 We have a potential problem, I fear.",
+          "<ce>                 A vampire ancient hateful of witches",
+          "<ce>                  hath moved into an abandoned castle",
+          "<ce>                  in our territory. Obviously this is",
+          "<ce>                   a situation we must remedy, doth",
+          "<ce>                           thou agree, %pcf?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                    I can understand thy fear. Only",
+          "<ce>                   the very able or the very foolish",
+          "<ce>                    would agree to slay a vampiric",
+          "<ce>                               ancient."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                   Wouldst thou? And yet, a vampiric",
+          "<ce>                    ancient is no feeble adversary.",
+          "<ce>                     Do not go into battle without",
+          "<ce>                     preparation. This creature is",
+          "<ce>                          called =vamprival_,",
+          "<ce>                    and its new sanctuary is called",
+          "<ce>                    ___mondung_. Thou wilt find it",
+          "<ce>                           in ____mondung_.",
+          "<ce>                     I will expect ye back here in",
+          "<ce>                      =1stparton_ nights. Do not",
+          "<ce>                       get thyself killed, %pcf."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                      Perhaps you were hoping for",
+          "<ce>                            =vamprival_ to",
+          "<ce>                       commit suicide? Unlikely.",
+          "<ce>                       You must be the agent of",
+          "<ce>                              %g3 death."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                  We could almost hear the screams of",
+          "<ce>                     that ancient from here, %pcf.",
+          "<ce>                   Thou hast the witches' gratitude."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 53,
+        "lines": [
+          "There's been a lot of activity at ___mondung_, but it's been abandoned for years.",
+          "<--->",
+          "That =vamprival_ is an aristocrat. Says %g's cleaning up ___mondung_ and %reg."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 58,
+        "lines": [
+          "=vamprival_ finally moved out of ___mondung_, I hear. No place for an aristocrat.",
+          "<--->",
+          "Now that =vamprival_ moved out of ___mondung_, %g's over at the palace a lot."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 63,
+        "lines": [
+          "It turns out that nice =vamprival_ was a vampire! I had no idea!",
+          "<--->",
+          "Thank %god that wonderful %ra mercenary killed the vampire in ___mondung_."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 68,
+        "lines": [
+          "We have not forgot =vamprival_, %pcf. What may we do for thee?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                        =vamprival_ still walks",
+          "<ce>                  the night, feeding on our sisters.",
+          "<ce>                    Thou should have said that thou",
+          "<ce>                    could not defeat it. Go from us",
+          "<ce>                   now. We would not speak further."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 78,
+        "lines": [
+          "_witch_ is a very nice and intelligent =witch_ at __witch_.",
+          "<--->",
+          "_witch_ is that nice =witch_ you'll find at __witch_, %di of here."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 83,
+        "lines": [
+          "_witch_ is a witch of ___witch_.",
+          "<--->",
+          "_witch_ is a ___witch_ witch, a =witch_."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 88,
+        "lines": [
+          "%qdt:",
+          " _witch_ of",
+          " ___witch_ has sent me to slay",
+          " a vampire ancient bent on the destruction",
+          " of the witches of %reg. I",
+          " have promised to have the undead creature",
+          " in ___mondung_ permanently dead in",
+          " =1stparton_ days and be back in ___witch_."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 98,
+        "lines": [
+          "<ce>                      You have slain =vamprival_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 119,
+        "lines": [
+          "Item _reward_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 121,
+        "lines": [
+          "Person _witch_ face 44 group Questor anyInfo 1011 rumors 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 123,
+        "lines": [
+          "Place _mondung_ remote dungeon8"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 126,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 128,
+        "lines": [
+          "Foe _vamprival_ is Ancient_vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 131,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1015 step 0 ",
+          "place foe _vamprival_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 136,
+        "lines": [
+          "falseAide0 task:",
+          "when _vampclicked_ and _S.01_ ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 141,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _vamprival_ ",
+          "say 1020 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 145,
+        "lines": [
+          "_vampclicked_ task:",
+          "clicked npc _witch_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 148,
+        "lines": [
+          "_clearclick_ task:",
+          "when _vampclicked_ and not _S.01_ ",
+          "say 1003",
+          "clear _vampclicked_ _clearclick_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 154,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,272 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/B0B70Y16.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "41ecd1e940a24f9e34c813bbee84b197e1c54bcc6c71f10a813225db50cb374f",
+    "byteLength": 4606
+  },
+  "document": {
+    "fileName": "B0B70Y16.txt",
+    "questName": "B0B70Y16",
+    "questNameLine": 9,
+    "displayName": "The Dragonslayer",
+    "header": [
+      {
+        "name": "quest",
+        "value": "B0B70Y16"
+      },
+      {
+        "name": "displayname",
+        "value": "The Dragonslayer"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                   Shhh! Don't let anyone else hear",
+          "<ce>                         this, %pct. I just got",
+          "<ce>               word that a dragon has been spotted! Well,",
+          "<ce>                 not a full-grown dragon, just a little",
+          "<ce>               dragonling. There is no quest more heroic",
+          "<ce>                 for a member of ==qgiver_ than to slay",
+          "<ce>               a dragon. I know where it is, you go kill",
+          "<ce>               it. We can both lay claim to the glory. Is",
+          "<ce>                             it a bargain?",
+          "                                     <--->",
+          "<ce>                    'Tis time for you to prove that",
+          "<ce>                      you are truly of ==qgiver_,",
+          "<ce>                      %pct. It is time for you to",
+          "<ce>                             slay a dragon."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                      You tell anyone else about",
+          "<ce>                     this and I'll see you drummed",
+          "<ce>                           out of ==qgiver_."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                      The dragon egg just hatched",
+          "<ce>                        in ___dungeon_. I don't",
+          "<ce>                      know if there are any other",
+          "<ce>                       dragonlings there or not.",
+          "<ce>                       I can keep it all a secret",
+          "<ce>                           for =2dung_ days."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                         All hail %pcn, known",
+          "<ce>                      from this point onward as a",
+          "<ce>                         dragonslayer! All hail",
+          "<ce>                         _qgiver_, strong right",
+          "<ce>                       arm and valued confidant!"
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 50,
+        "lines": [
+          "Nothing much of any interest going on.",
+          "<--->",
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 81,
+        "lines": [
+          "%kno went stomping about in ___dungeon_ for no reason."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 84,
+        "lines": [
+          "The dragon in ___dungeon_ was fifty feet long!",
+          "<--->",
+          "The ___dungeon_ dragon was a hundred feet long!",
+          "<--->",
+          "The dragon that %ra slew ate forty cows for lunch!"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 91,
+        "lines": [
+          "What can I do for my fellow dragon slayer?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 94,
+        "lines": [
+          "You really let me down with that dragon. Leave me alone."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 97,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of",
+          " ==qgiver_ in ___qgiver_",
+          " told me that a dragon's egg",
+          " hatched in ___dungeon_.",
+          " I have =2dung_ days to slay",
+          " the beast and bask in the",
+          " glory of the deed."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 107,
+        "lines": [
+          "<ce>                        The dragonling is dead.",
+          "<ce>                       They'll talk about this in",
+          "<ce>                          ==qgiver_ for years!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 131,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 132,
+        "lines": [
+          "Person _local_ face 93 group Resident2 male local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 134,
+        "lines": [
+          "Place _dungeon_ remote dungeon14"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 136,
+        "lines": [
+          "Clock _2dung_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 138,
+        "lines": [
+          "Foe _monster_ is Dragonling"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 141,
+        "lines": [
+          "start timer _2dung_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 ",
+          "place foe _monster_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 146,
+        "lines": [
+          "_2dung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 149,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _monster_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 152,
+        "lines": [
+          "_S.02_ task:",
+          "clicked npc _qgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 155,
+        "lines": [
+          "_success_ task:",
+          "when _S.02_ and _S.01_",
+          "give pc nothing ",
+          "change repute with _local_ by +6 ",
+          "change repute with _qgiver_ by +10 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 162,
+        "lines": [
+          "_clearclick_ task:",
+          "when _S.02_ and not _S.01_ ",
+          "clear _S.02_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

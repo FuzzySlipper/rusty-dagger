@@ -1,0 +1,231 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/C0C00Y13.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "0b14ea7d13d2fa40411ff73bd42d00fded95c16a7fb421b38359b1e53271a460",
+    "byteLength": 3498
+  },
+  "document": {
+    "fileName": "C0C00Y13.txt",
+    "questName": "C0C00Y13",
+    "questNameLine": 8,
+    "displayName": "An Errand",
+    "header": [
+      {
+        "name": "quest",
+        "value": "C0C00Y13"
+      },
+      {
+        "name": "displayname",
+        "value": "An Errand"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                       Blessings upon you, %pcn,",
+          "<ce>                     even though you are a heathen",
+          "<ce>                        and do not patronize our",
+          "<ce>                         temple. I am _qgiver_.",
+          "<ce>                      So you are looking to curry",
+          "<ce>                         favor with __qgiver_.",
+          "<ce>                        Deliver this _religitem_",
+          "<ce>                          to ___priest_ within",
+          "<ce>                      =traveltime_ days and I can",
+          "<ce>                           speak well of you."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                     It is your loss. Ask not for",
+          "<ce>                      the favor of this temple any",
+          "<ce>                            time soon, %pcn."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                       Here is the _religitem_.",
+          "<ce>                          Take it to _priest_",
+          "<ce>                      of __priest_ in ___priest_.",
+          "<ce>                     Oh, I almost forgot to mention",
+          "<ce>                        that a rival temple may",
+          "<ce>                      send out thugs to stop you."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 38,
+        "lines": [
+          "<ce>                       The god's favor upon you",
+          "<ce>                         %pcn. This _religitem_",
+          "<ce>                         is sorely needed here."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 43,
+        "lines": [
+          "It's a race between two temples for that _religitem_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 46,
+        "lines": [
+          "_priest_ never got %g3 _religitem_ and _qgiver_ is wroth."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 49,
+        "lines": [
+          "_priest_ and __qgiver_ managed to get that _religitem_ thanks to a brave %ra."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 52,
+        "lines": [
+          "%god bless you, of course I remember %pcf. How are you, my child?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 55,
+        "lines": [
+          "_priest_ never got the _religitem_ and I am not amused."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 58,
+        "lines": [
+          "%qdt:",
+          " _qgiver_, of __qgiver_,",
+          " has given me a charge to",
+          " deliver the _religitem_",
+          " to _priest_ in __priest_ in",
+          " ___priest_. It must be there within =traveltime_ days."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 66,
+        "lines": [
+          "<ce>                         That _religitem_ will",
+          "<ce>                      never make it to __priest_.",
+          "<ce>                        Instead, I shall deliver",
+          "<ce>                            them your head!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 89,
+        "lines": [
+          "Item _religitem_ religious"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 91,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 92,
+        "lines": [
+          "Person _priest_ group Group_5.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 93,
+        "lines": [
+          "Person _enemy_ face 176 group Local_4.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 95,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 1 range 1 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 97,
+        "lines": [
+          "Foe _thief_ is Thief"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 98,
+        "lines": [
+          "Foe _spellsword_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 101,
+        "lines": [
+          "create foe _thief_ every 12 minutes 2 times with 5% success ",
+          "create foe _spellsword_ every 12 minutes 2 times with 5% success ",
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "get item _religitem_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 107,
+        "lines": [
+          "_traveltime_ task:",
+          "change repute with _qgiver_ by -5 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 111,
+        "lines": [
+          "_questdone_ task:",
+          "toting _religitem_ and _priest_ clicked ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 116,
+        "lines": [
+          "_S.02_ task:",
+          "injured _spellsword_ saying 1011 ",
+          "injured _thief_ saying 1011 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

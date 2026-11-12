@@ -1,0 +1,197 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000104.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "14c621414ea6cca9b2b9777df8e8bab8c94d665aee2a42d4dc8d04cacb811fd9",
+    "byteLength": 1505
+  },
+  "document": {
+    "fileName": "S0000104.txt",
+    "questName": "S0000104",
+    "questNameLine": 5,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000104"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1015,
+        "firstLine": 9,
+        "lines": [
+          "<ce>                    The Underking wants the Totem.",
+          "<ce>                             You must die.",
+          "                                     <--->",
+          "<ce>                   You have shown no loyalty to the",
+          "<ce>                  Underking. Therefore, you must die",
+          "<ce>                       for him to get the Totem.",
+          "                                     <--->",
+          "<ce>                  I have come for the Totem of Tiber",
+          "<ce>                    Septim. You will join the ranks",
+          "<ce>                             of the dead."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "clock",
+        "firstLine": 29,
+        "lines": [
+          "Clock _S.01_ 01:15 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 30,
+        "lines": [
+          "Clock _S.02_ 444.10:40 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 32,
+        "lines": [
+          "Foe _F.00_ is 3 Frost_daedra"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 33,
+        "lines": [
+          "Foe _F.01_ is 3 Fire_daedra"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 36,
+        "lines": [
+          "create foe _F.01_ every 101 minutes 15 times with 3% success ",
+          "create foe _F.00_ every 97 minutes 15 times with 3% success ",
+          "start timer _S.02_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 40,
+        "lines": [
+          "_S.00_ task:",
+          "injured _F.01_ ",
+          "injured _F.00_ ",
+          "start timer _S.01_ ",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 46,
+        "lines": [
+          "_S.01_ task:",
+          "clear _S.01_ _S.00_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 49,
+        "lines": [
+          "_S.02_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 52,
+        "lines": [
+          "GothrydGotTotem _S.03_"
+        ],
+        "global": 1
+      },
+      {
+        "kind": "global",
+        "firstLine": 53,
+        "lines": [
+          "KingOfWormsGotTotem _S.04_"
+        ],
+        "global": 2
+      },
+      {
+        "kind": "global",
+        "firstLine": 54,
+        "lines": [
+          "GortwogGotTotem _S.05_"
+        ],
+        "global": 3
+      },
+      {
+        "kind": "global",
+        "firstLine": 55,
+        "lines": [
+          "AkorithiGotTotem _S.06_"
+        ],
+        "global": 4
+      },
+      {
+        "kind": "global",
+        "firstLine": 56,
+        "lines": [
+          "UnderkingGotTotem _S.07_"
+        ],
+        "global": 6
+      },
+      {
+        "kind": "global",
+        "firstLine": 57,
+        "lines": [
+          "EadwyreGotTotem _S.08_"
+        ],
+        "global": 7
+      },
+      {
+        "kind": "global",
+        "firstLine": 58,
+        "lines": [
+          "BrisiennaGotTotem _S.09_"
+        ],
+        "global": 8
+      },
+      {
+        "kind": "task",
+        "firstLine": 59,
+        "lines": [
+          "_S.10_ task:",
+          "when _S.03_ or _S.04_ or _S.05_ or _S.06_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 62,
+        "lines": [
+          "_S.11_ task:",
+          "when _S.07_ or _S.08_ or _S.09_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 65,
+        "lines": [
+          "_S.12_ task:",
+          "when _S.10_ or _S.11_ ",
+          "start task _S.02_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,9 +1,10 @@
-using System.Text;
 using System.Text.Json;
+using System.Text;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
+using Daggerfall.Source.Tool.Donor;
 
 namespace Daggerfall.Import.Tests;
 
@@ -122,27 +123,13 @@ internal sealed partial class ImportToolFixture
 
     private void ExpectedQuestSections(Dictionary<string, string> sections, Dictionary<string, string> records)
     {
-        string Tables(string name) => Donor("Assets/StreamingAssets/Tables/" + name);
-        string TableLabel(string name) => PublishedSourcePath.Donor("Assets/StreamingAssets/Tables/" + name);
-        byte[] Table(string name) => File.ReadAllBytes(Tables(name));
-        var tables = new DaggerfallQuestTables(
-            DaggerfallQuestTableReader.Read(Table("Quests-GlobalVars.txt"), TableLabel("Quests-GlobalVars.txt"), globals: true),
-            DaggerfallQuestTableReader.Read(Table("Quests-StaticMessages.txt"), TableLabel("Quests-StaticMessages.txt")),
-            DaggerfallQuestPlaceReader.Read(Table("Quests-Places.txt"), TableLabel("Quests-Places.txt")),
-            DaggerfallQuestTableReader.Read(Table("Quests-Sounds.txt"), TableLabel("Quests-Sounds.txt")),
-            DaggerfallQuestTableReader.Read(Table("Quests-Diseases.txt"), TableLabel("Quests-Diseases.txt")),
-            DaggerfallQuestTableReader.Read(Table("Quests-Spells.txt"), TableLabel("Quests-Spells.txt")),
-            DaggerfallQuestActorItemTableReader.Read(Table("Quests-Items.txt"), TableLabel("Quests-Items.txt"), Table("Quests-Factions.txt"), TableLabel("Quests-Factions.txt"), Table("Quests-Foes.txt"), TableLabel("Quests-Foes.txt")));
-        var files = Directory.EnumerateFiles(Donor("Assets/StreamingAssets/Quests"), "*.txt").Order(StringComparer.Ordinal).ToArray();
-        List<QuestSourceDocument> documents = [];
-        List<(string FileName, string QuestName, int Line, string Reason)> failures = [];
-        foreach (string file in files)
-        {
-            try { documents.Add(QuestSourceReader.Read(File.ReadAllText(file), Path.GetFileName(file), tables.StaticMessages.Lookup, tables.Globals.Lookup)); }
-            catch (Arena2FormatException exception) { failures.Add((Path.GetFileName(file), Path.GetFileNameWithoutExtension(file), exception.Offset, exception.Message)); }
-        }
-        var pack = DaggerfallQuestPackBuilder.Build(documents, failures, PublishedSourcePath.Donor("Assets/StreamingAssets/Quests"), new byte[files.Sum(file => new FileInfo(file).Length)], Rows);
-        var catalog = DaggerfallQuestCatalogReader.Read(Table("QuestList-Classic.txt"), TableLabel("QuestList-Classic.txt"), files);
+        T Input<T>(string file) where T : class => TakenTable.Read<T>(File.ReadAllBytes(TestData.Input(file)), file);
+        DaggerfallQuestTables tables = Input<QuestTablesInput>("quest-tables.json").Tables;
+        DaggerfallQuestCatalog catalog = Input<QuestListInput>("quest-list.json").Catalog;
+        QuestDocumentInput[] quests = [.. Directory.EnumerateFiles(TestData.Input("quests"), "*.json").Order(StringComparer.Ordinal)
+            .Select(file => Input<QuestDocumentInput>(Path.Combine("quests", Path.GetFileName(file))))];
+        var pack = DaggerfallQuestPackBuilder.Build([.. quests.Select(quest => quest.Document).OfType<QuestSourceDocument>()], [],
+            PublishedSourcePath.Donor("Assets/StreamingAssets/Quests"), new byte[quests.Sum(quest => quest.Source.ByteLength)], Rows);
         var originals = DaggerfallQuestOriginalSourceBuilder.Build(Arena2, QuestSourceInventory.Enumerate(Directory.EnumerateFiles(Arena2).Where(file => file.EndsWith(".QBN", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".QRC", StringComparison.OrdinalIgnoreCase)).Select(Path.GetFileName).OfType<string>().ToArray(), Path.GetFileName(Path.TrimEndingDirectorySeparator(Arena2))), pack);
         sections.Add("questCatalog", JsonSerializer.Serialize(catalog, PublishedJson.Section));
         sections.Add("questTables", JsonSerializer.Serialize(tables, PublishedJson.Section));

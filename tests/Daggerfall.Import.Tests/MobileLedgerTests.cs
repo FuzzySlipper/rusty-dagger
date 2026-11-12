@@ -1,4 +1,6 @@
 using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Publication;
+using Daggerfall.Source.Tool.Donor;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -12,7 +14,7 @@ public sealed class MobileLedgerTests
     [Fact]
     public void NamesEveryDonorMobileNothingPublishes()
     {
-        MobileLedger ledger = MobileLedgerBuilder.Build(Donor(), Pack());
+        MobileLedger ledger = MobileLedgerBuilder.Build(Table(Donor()), Pack());
 
         Assert.Equal(5, ledger.DonorEntries);
         Assert.Equal(3, ledger.PublishedActors);
@@ -36,9 +38,13 @@ public sealed class MobileLedgerTests
     [Fact]
     public void RefusesToClaimCoverageItCannotRead()
     {
-        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => MobileLedgerBuilder.Build("// nothing here", Pack()));
-        Assert.Contains("static mobile table was not found", failure.Message, StringComparison.Ordinal);
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => MobileLedgerBuilder.Build(
+            new MobileTable(TakenFrom.Of("donor/EnemyBasics.cs", "test", "x"u8), []), Pack()));
+        Assert.Contains("mobile table is empty", failure.Message, StringComparison.Ordinal);
     }
+
+    /// <summary>A donor-shaped excerpt, taken as the drift check takes the donor's table.</summary>
+    private static MobileTable Table(string donor) => new(TakenFrom.Of("donor/EnemyBasics.cs", "test", System.Text.Encoding.UTF8.GetBytes(donor)), DonorMobileTable.Read(donor));
 
     private static string Donor() => """
         public static MobileEnemy[] Enemies = new MobileEnemy[]

@@ -58,6 +58,12 @@ internal static class ImportLayout
     /// <summary>Each container's own description, at its container-relative path.</summary>
     public const string DescriptorPath = "worldrpg/data-container.json";
 
+    /// <summary>
+    /// Our own tables the steps join with the player's files, taken once from Daggerfall Unity; a release publishes
+    /// them beside the tool at this same path. The import never reads a Daggerfall Unity file.
+    /// </summary>
+    public const string Inputs = "src/Daggerfall.Import.Tool/inputs";
+
     /// <summary>The tracked file that marks the repository root the import works in.</summary>
     public const string Inventory = "data/content-source-manifest.csv";
 

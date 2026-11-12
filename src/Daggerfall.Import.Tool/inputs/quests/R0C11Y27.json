@@ -1,0 +1,335 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C11Y27.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "d2e697d79ed516f41b26e7f45da239145a637eb4b8a98b1cf05dff196da1f40a",
+    "byteLength": 5787
+  },
+  "document": {
+    "fileName": "R0C11Y27.txt",
+    "questName": "R0C11Y27",
+    "questNameLine": 8,
+    "displayName": "A Special Substance",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C11Y27"
+      },
+      {
+        "name": "displayname",
+        "value": "A Special Substance"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                 I was wondering if you might do me a",
+          "<ce>                 small favor. You see, I have a friend",
+          "<ce>                  who requires a certain shipment of a",
+          "<ce>                 certain substance brought by a certain",
+          "<ce>                 time. I trust I'm making myself clear.",
+          "<ce>               Are you available for such an assignment,",
+          "<ce>             given a payment of, say, _reward_ gold pieces?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                   Well, I'm certainly disappointed.",
+          "<ce>                  I would've expected more enthusiasm.",
+          "<ce>                     Ah well, it's these times that",
+          "<ce>                 breed sloth and indolence, I suppose."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                  So, you are available. Well, that's",
+          "<ce>                 grand, I must say. Now then, here's a",
+          "<ce>                       whatsamajig, a _item1_. It",
+          "<ce>                 needs to be brought to an alchemist I",
+          "<ce>                      know by the name of _npc1_.",
+          "<ce>                       You'll find %g2 at __npc1_",
+          "<ce>                       in ___npc1_. With luck, %g",
+          "<ce>                will have something for you to bring to",
+          "<ce>                        my friend, _npc2_. Well,",
+          "<ce>                        you best be off. _npc1_",
+          "<ce>                     told me %g needed the _item1_",
+          "<ce>                      in =1stparton_ days or less.",
+          "<ce>                   Thank you and have a good journey."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                We'll have plenty of time to chat more",
+          "<ce>                 once you've completed your assignment."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 47,
+        "lines": [
+          "<ce>                   %oth, I was wondering when you'd",
+          "<ce>                        get here. You are %pcf?",
+          "<ce>                            I'm _npc2_, and",
+          "<ce>                    that, I believe, is my _item2_.",
+          "<ce>                  If you haven't tried it before, you",
+          "<ce>                 really should. The effect is heavenly.",
+          "<ce>               Anyway, here's your _reward_ gold pieces.",
+          "<ce>                          Thanks a lot, %pcf.",
+          "<ce>                          You're a life saver."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 58,
+        "lines": [
+          "I've heard that _npc2_ is a _item2_ addict, but I haven't seen any proof.",
+          "<--->",
+          "They say it's tough to concoct a good dose of _item2_, takes years of study."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 63,
+        "lines": [
+          "It turns out _npc2_ was a _item2_ addict after all. They caught %g2 buying it.",
+          "<--->",
+          "I wonder who was supplying that _npc1_ with the ingredients %g needed."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 68,
+        "lines": [
+          "_npc2_ finally got that shipment %g was waiting for. He's happy as a harpy.",
+          "<--->",
+          "_questgiver_ seems pretty pleased with a %ra mercenary, but won't say why."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 73,
+        "lines": [
+          "You did a fine job on that delivery, my friend. What can I do for you?",
+          "<--->",
+          "%oth, good to see you again, %pcf. You did a good job on that ... little job."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 78,
+        "lines": [
+          "<ce>                      As I recall, you failed the",
+          "<ce>                      last assignment I gave you.",
+          "<ce>                     I see little point in talking",
+          "<ce>                             with you now."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 84,
+        "lines": [
+          "%qdt:",
+          " I am bringing _npc1_",
+          " of __npc1_,",
+          " ___npc1_ a _item1_ in",
+          " exchange for some item that",
+          " _questgiver_ wants to be",
+          " delivered to a third party.",
+          " I have =1stparton_ days to accomplish",
+          " the first part of this delivery."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 95,
+        "lines": [
+          "%qdt:",
+          " _npc1_ sent",
+          " me on to _npc2_, the third",
+          " party in ___npc2_, with some",
+          " _item2_. I will recognize",
+          " _npc2_ as the =npc2_",
+          " in __npc2_, provided I get it to",
+          " %g2 in =2ndparton_ days."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 105,
+        "lines": [
+          "<ce>                      Lovely, %pcf, lovely. Now,",
+          "<ce>                        here's the _item2_ that",
+          "<ce>                      needs to be given to _npc2_",
+          "<ce>                      over in __npc2_ in ___npc2_.",
+          "<ce>                          Don't dawdle, %pct.",
+          "<ce>                     _npc2_ needs it in =2ndparton_",
+          "<ce>                             days or less."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 139,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 140,
+        "lines": [
+          "Item _item1_ misc"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 141,
+        "lines": [
+          "Item _item2_ drug"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 143,
+        "lines": [
+          "Person _questgiver_ face 136 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 144,
+        "lines": [
+          "Person _npc1_ group Chemist female"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 145,
+        "lines": [
+          "Person _npc2_ face 248 group Local_3.0"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 147,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 148,
+        "lines": [
+          "Clock _2ndparton_ 00:00 0 flag 1 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 151,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1010 step 0 ",
+          "get item _item1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 155,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _item2_ and _npc2_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 161,
+        "lines": [
+          "variable _pchasitem1_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 162,
+        "lines": [
+          "variable _pchasitem2_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 163,
+        "lines": [
+          "_S.03_ task:",
+          "toting _item1_ and _npc1_ clicked ",
+          "start timer _2ndparton_ ",
+          "log 1011 step 1 ",
+          "get item _item2_ ",
+          "say 1012 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 170,
+        "lines": [
+          "variable _S.04_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 171,
+        "lines": [
+          "_queston_ task:",
+          "when _1stparton_ and not _S.03_ ",
+          "make _item1_ permanent ",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 177,
+        "lines": [
+          "variable _1stparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 178,
+        "lines": [
+          "_2ndparton_ task:",
+          "make _item2_ permanent ",
+          "change repute with _questgiver_ by -2 ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

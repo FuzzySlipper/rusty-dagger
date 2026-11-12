@@ -1,0 +1,268 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/C0B00Y03.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "d2fa6c745da7911add9f139d4a318230d9410dd87b2150aca4cd65ca2f87d2f3",
+    "byteLength": 4568
+  },
+  "document": {
+    "fileName": "C0B00Y03.txt",
+    "questName": "C0B00Y03",
+    "questNameLine": 8,
+    "displayName": "The Missing Scholar",
+    "header": [
+      {
+        "name": "quest",
+        "value": "C0B00Y03"
+      },
+      {
+        "name": "displayname",
+        "value": "The Missing Scholar"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                       %pct, one of our clerics,",
+          "<ce>                            a =cleric_ named",
+          "<ce>                     _cleric_ has disappeared while",
+          "<ce>                     on an archaeological dig. Will",
+          "<ce>                         you help us find %g2?",
+          "                                     <--->",
+          "<ce>                    I fear that one of our noblest",
+          "<ce>                           scholars, _cleric_",
+          "<ce>                  has disappeared while investigating",
+          "<ce>                     an old ruined temple. Will you",
+          "<ce>                           help us find %g2?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                        That's a rather callous",
+          "<ce>                       point of view to be quite",
+          "<ce>                              frank, %pcf."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                     That's good, good. Now then,",
+          "<ce>                            _cleric_ went to",
+          "<ce>                          ___mondung_ close to",
+          "<ce>                      a fortnight ago to conduct a",
+          "<ce>                     dig. It's possible that all is",
+          "<ce>                      well, but ... I'll give you",
+          "<ce>                    =queston_ days to go there, find",
+          "<ce>                           _cleric_ and come",
+          "<ce>                       back. %god walk with you,",
+          "<ce>                            %pct. Fare well."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                           Ah, %pct and good",
+          "<ce>                          _cleric_, it is good",
+          "<ce>                     to have you back in __qgiver_",
+          "<ce>                        again. I had feared the",
+          "<ce>                          worst, to be honest."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 50,
+        "lines": [
+          "_cleric_ was a fool to go unarmed into ___mondung_.",
+          "<--->",
+          "___mondung_ is no place for a scholarly =cleric_ like _cleric_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 55,
+        "lines": [
+          "Everyone's given up hope of ever seeing _cleric_ again.",
+          "<--->",
+          "__qgiver_ is grieving over the disappearance of _cleric_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 60,
+        "lines": [
+          "Thanks to that %ra, _cleric_ has started work on a history of ___mondung_.",
+          "<--->",
+          "Rescuing _cleric_ increased __qgiver_'s estimation of you."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 65,
+        "lines": [
+          "For what you did for _cleric_, of course I'll help you, %pcf."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 68,
+        "lines": [
+          "I still remember _cleric_, %pcf. Leave me."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 71,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of __qgiver_",
+          " has sent me to ___mondung_",
+          " to rescue a cleric named _cleric_",
+          " who disappeared down there. I",
+          " have =queston_ days to find",
+          " the =cleric_ and",
+          " return to ___qgiver_",
+          " and __qgiver_."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 82,
+        "lines": [
+          "<ce>                      Goodness, you gave me quite",
+          "<ce>                          a start, young %ra.",
+          "<ce>                    Have I really been down here for",
+          "<ce>                      so long? How time does fly.",
+          "<ce>                     Well, if you would be so kind",
+          "<ce>                  as to escort me back to the temple,",
+          "<ce>                            my good %pcf ...",
+          "                                     <--->",
+          "<ce>                         Thank %god you came.",
+          "<ce>                      I've been searching for the",
+          "<ce>                      way out for close to a week.",
+          "<ce>                  I'll follow you back to the temple."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 96,
+        "lines": [
+          "<ce>                    \"Ah, I know the way from here,\"",
+          "<ce>                         _cleric_ totters off."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 118,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 119,
+        "lines": [
+          "Person _cleric_ face 105 factiontype Temple"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 121,
+        "lines": [
+          "Place _mondung_ remote dungeon4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 123,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 127,
+        "lines": [
+          "start timer _queston_ ",
+          "reveal _mondung_ ",
+          "log 1010 step 0 ",
+          "place npc _cleric_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 132,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 135,
+        "lines": [
+          "_S.01_ task:",
+          "clicked npc _cleric_ ",
+          "hide npc _cleric_ ",
+          "say 1011 ",
+          "add _cleric_ face "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 141,
+        "lines": [
+          "_reward_ task:",
+          "when _qgclicked_ and _S.01_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 146,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 149,
+        "lines": [
+          "_S.04_ task:",
+          "when _qgclicked_ and not _S.01_ ",
+          "clear _qgclicked_ _S.04_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 153,
+        "lines": [
+          "_cick_ task:",
+          "when _S.01_ and _queston_ ",
+          "say 1012 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

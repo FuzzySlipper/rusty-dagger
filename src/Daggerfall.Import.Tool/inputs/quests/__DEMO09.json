@@ -1,0 +1,384 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO09.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "782bf22baf27937aae11578b8f89fb40a5b45d6938ba170c1616c47497ce24dd",
+    "byteLength": 4751
+  },
+  "document": {
+    "fileName": "__DEMO09.txt",
+    "questName": "__DEMO09",
+    "questNameLine": 4,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO09"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 9,
+        "lines": [
+          "<ce>                            I am _qgiver_.",
+          "<ce>                We have a request from a local citizen.",
+          "<ce>                 It seems a wild animal has gotten into",
+          "<ce>                 his place. We need someone to go kill",
+          "<ce>               the thing. The guild will pay _gold_ gold.",
+          "<ce>                          Do you want it %pcn?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 17,
+        "lines": [
+          "<ce>                      I'm sure someone else will",
+          "<ce>                       be willing to take care of",
+          "<ce>                          this nuisance bear."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                    \"OK, %pcf. Get over to _house_",
+          "<ce>                 here in town. Get it done in one day.",
+          "<ce>               Nobody wants a animal left roaming around",
+          "<ce>                in their place. Come back here when the",
+          "<ce>                  beast is dead and I'll have your pay",
+          "<ce>                           waiting for you.\"",
+          "<ce>                                    ",
+          "<ce>                  _qgiver_ calls out, \"Hey, what kind",
+          " of animal is it in _house_?\""
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 33,
+        "lines": [
+          "<ce>                           Well done, %pcf.",
+          "<ce>                        Here's your _gold_ gold."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 37,
+        "lines": [
+          "<ce>                   Did you hear? An animal got into",
+          "<ce>                    a building in town. I hope they",
+          "<ce>                             kill it soon."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                    The Fighter's Guild killed that",
+          "<ce>                      bear that got into _house_.",
+          "<ce>                 Its a good thing we have them around."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 47,
+        "lines": [
+          "<ce>                That creature mauled some woman before",
+          "<ce>                 being chased out of town. What a pity."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                     Good job killin' that beast.",
+          "<ce>                         What can I do for you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 55,
+        "lines": [
+          "<ce>                   I hear that a critter ate the guy",
+          "<ce>                    that owned the house. Gave us a",
+          "<ce>                  bad rep. Try to do better next time."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 60,
+        "lines": [
+          "%qdt:",
+          " The Fighters Guild of ___qgiver_",
+          " has asked me to slay a wild beast which",
+          " has gotten into _house_. It's got",
+          " be done in one day."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 67,
+        "lines": [
+          "<ce>                           The bear is dead."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 70,
+        "lines": [
+          "<ce>                          The harpy is dead."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 73,
+        "lines": [
+          "<ce>                          The spider is dead."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                          The tiger is dead."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 79,
+        "lines": [
+          "<ce>                   You hear a voice call out from an",
+          "<ce>                       upper floor, \"Its a bear.\""
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 83,
+        "lines": [
+          "<ce>                   You hear a voice call out from an",
+          "<ce>                      upper floor, \"Its a harpy.\""
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 87,
+        "lines": [
+          "<ce>                   You hear a voice call out from an",
+          "<ce>                      upper floor, \"Its a spider.\""
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 91,
+        "lines": [
+          "<ce>                   You hear a voice call out from an",
+          "<ce>                      upper floor, \"Its a tiger.\""
+        ]
+      },
+      {
+        "id": 1080,
+        "firstLine": 95,
+        "lines": [
+          "<ce>                 By the way, since you seemed to have",
+          "<ce>                  so much fun with that beast, here's",
+          "<ce>               a map to ___newdung_.  Knock yourself out."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 113,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 115,
+        "lines": [
+          "Person _qgiver_ group Questor male"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 117,
+        "lines": [
+          "Place _house_ local random"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 118,
+        "lines": [
+          "Place _newdung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 120,
+        "lines": [
+          "Clock _2dung_ 1.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 122,
+        "lines": [
+          "Foe _bear_ is Grizzley_bear"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 123,
+        "lines": [
+          "Foe _tiger_ is Sabretooth_tiger"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 124,
+        "lines": [
+          "Foe _harpy_ is Harpy"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 125,
+        "lines": [
+          "Foe _spider_ is Spider"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 128,
+        "lines": [
+          "start timer _2dung_ ",
+          "reveal _house_ ",
+          "log 1010 step 0 ",
+          "pick one of _map_ _nomap_ _nomap_ _nomap_ ",
+          "pick one of _monster1_ _monster2_ _monster3_ _monster4_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 134,
+        "lines": [
+          "_2dung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 137,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _spider_ saying 1013 ",
+          "killed 1 _tiger_ saying 1014 ",
+          "killed 1 _harpy_ saying 1012 ",
+          "killed 1 _bear_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_S.02_ task:",
+          "clicked npc _qgiver_ ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 148,
+        "lines": [
+          "_clearclick_ task:",
+          "when _S.02_ and not _S.01_ ",
+          "clear _S.02_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 152,
+        "lines": [
+          "variable _map_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 153,
+        "lines": [
+          "variable _nomap_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 154,
+        "lines": [
+          "_S.06_ task:",
+          "when _map_ and _S.02_ ",
+          "reveal _newdung_ saying 1080 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 158,
+        "lines": [
+          "_monster1_ task:",
+          "say 1021 ",
+          "place foe _bear_ at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 162,
+        "lines": [
+          "_monster2_ task:",
+          "say 1022 ",
+          "place foe _harpy_ at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 166,
+        "lines": [
+          "_monster3_ task:",
+          "say 1023 ",
+          "place foe _spider_ at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_monster4_ task:",
+          "say 1024 ",
+          "place foe _tiger_ at _house_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

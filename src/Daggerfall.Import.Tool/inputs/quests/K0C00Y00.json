@@ -1,0 +1,468 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/K0C00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "d3cc536e00a48cab55d84064dec56e91867eaba2332874976d839d80a497e7fd",
+    "byteLength": 6849
+  },
+  "document": {
+    "fileName": "K0C00Y00.txt",
+    "questName": "K0C00Y00",
+    "questNameLine": 9,
+    "displayName": "An Object Lesson",
+    "header": [
+      {
+        "name": "quest",
+        "value": "K0C00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "An Object Lesson"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>          Perhaps you would be the right choice for a little",
+          "<ce>          employment I have in mind. A competitor of mine has",
+          "<ce>           usurped a contract of mine and has entered into an",
+          "<ce>           illegal, or at least immoral trading relationship.",
+          "<ce>          I want to correct this situation and send a message",
+          "<ce>                  to discourage _competitor_'s further",
+          "<ce>          encroachments. This may mean that someone will have",
+          "<ce>        to crush a few skulls. Would _reward_ gold pieces entice",
+          "<ce>                       you into this employment?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                     %oth, scruples make me rash."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                  Great. _competitor_ has a store in",
+          "<ce>                 __storehouse_ called _storehouse_ and",
+          "<ce>                  in it is a _mitem_ that I want you to",
+          "<ce>            liberate. And, on your way out, please drop this",
+          "<ce>            note off anywhere in the store. I can't resist.",
+          "<ce>                 _competitor_ is going to pass that",
+          "<ce>                  _mitem_ to a more secure location in",
+          "<ce>               =2storehouse_ days, so you'll need to move",
+          "<ce>               swiftly. If you're not back in that time,",
+          "<ce>                  your gold will be forfeit. And do I",
+          "<ce>                   even need to add that _storehouse_",
+          "<ce>               will be guarded? Probably not. Good luck."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                     This is not a charade, %pcf.",
+          "<ce>                         I need this job done."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 46,
+        "lines": [
+          "<ce>                    Well done indeed, %pcf. Ah yes,",
+          "<ce>                   lovely, lovely _mitem_. There can",
+          "<ce>                 be no doubt that this is the very same",
+          "<ce>                         _mitem_ _competitor_'s",
+          "<ce>                partner gave %g2 for security. You have",
+          "<ce>              certainly earned your _reward_ gold pieces."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 54,
+        "lines": [
+          "These are the days when business competition becomes particularly bloodthirsty.",
+          "<--->",
+          "_qgiver_ and _competitor_ are more bitter rivals than Gothryd and Akorithi."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 59,
+        "lines": [
+          "_competitor_ is really rubbing _qgiver_'s face in %g3 newest business deal.",
+          "<--->",
+          "Turns out that _competitor_ is a tougher merchant than _qgiver_ could dream of."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 64,
+        "lines": [
+          "_competitor_ has lost that contract %g worked so hard to get from _qgiver_.",
+          "<--->",
+          "_qgiver_ has %g3 old contract back and is happy as a well-fed harpy."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 69,
+        "lines": [
+          "Well, you got me the _mitem_, so what can I do for you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 72,
+        "lines": [
+          "I have nothing to say to the lackey of _competitor_."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 75,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of ___qgiver_ has sent",
+          " me to _storehouse_ in __storehouse_",
+          " to \"liberate\" a _mitem_ stored",
+          " there and drop off a note. If I can do this",
+          " and get back to __qgiver_ in =2storehouse_",
+          " days, I will earn _reward_ gold pieces."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 84,
+        "lines": [
+          " ",
+          " _competitor_,",
+          " ",
+          " ",
+          " Find security for your security.",
+          " ",
+          " ",
+          " ",
+          "<ce>                            Your Dear Friend"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 95,
+        "lines": [
+          "                                 __competitor_",
+          "                                  ___competitor_",
+          " ",
+          " ",
+          " Dear %pcn,",
+          " ",
+          "      I received your note. Very amusing. Now I have",
+          " a proposition for you to consider. Bring me the",
+          " stolen _mitem_ and I will recompense you with a",
+          " _gem_. If you bring that _mitem_ to your",
+          " employer, you will have made an enemy.",
+          " ",
+          " ",
+          "<ce>                              _competitor_"
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 111,
+        "lines": [
+          "<ce>             A young boy hands you a letter and runs away",
+          "<ce>               before you have a chance to question him."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 115,
+        "lines": [
+          "<ce>                 Do you give _competitor_ the _mitem_",
+          "<ce>                       in exchange for the _gem_?"
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 119,
+        "lines": [
+          "<ce>                A wise decision, %pcf. This may be the",
+          "<ce>            beginning of a profitable relationship. The days",
+          "<ce>                  of _qgiver_ making a profit, on the",
+          "<ce>                    other hand, may well be passing."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 125,
+        "lines": [
+          "<ce>                 I don't know why you came here then.",
+          "<ce>                      Leave this place now, %pcf."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 153,
+        "lines": [
+          "Item _letter_ letter used 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 154,
+        "lines": [
+          "Item _mitem_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 155,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 156,
+        "lines": [
+          "Item _letter10_ letter used 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 157,
+        "lines": [
+          "Item _gem_ gem"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 159,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 160,
+        "lines": [
+          "Person _competitor_ group Group_5.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 162,
+        "lines": [
+          "Place _storehouse_ remote generalstore"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 164,
+        "lines": [
+          "Clock _2storehouse_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 165,
+        "lines": [
+          "Clock _S.05_ 16:40 1.09:20"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 167,
+        "lines": [
+          "Foe _F.00_ is 2 Warrior"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 168,
+        "lines": [
+          "Foe _knight_ is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 169,
+        "lines": [
+          "Foe _battlemage_ is Battle_mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 170,
+        "lines": [
+          "Foe _F.03_ is 2 Rogue"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 173,
+        "lines": [
+          "place item _mitem_ at _storehouse_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 174,
+        "lines": [
+          "log 1010 step 0 ",
+          "get item _letter_ ",
+          "pc at _storehouse_ set _S.04_ ",
+          "start timer _2storehouse_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 180,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _mitem_ and _qgiver_ clicked ",
+          "give pc _reward_ ",
+          "change repute with _qgiver_ by +10 ",
+          "change repute with _competitor_ by -10 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 187,
+        "lines": [
+          "variable _qgclicked_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 188,
+        "lines": [
+          "_S.02_ task:",
+          "dropped _letter_ at _storehouse_ ",
+          "start timer _S.05_ ",
+          "stop timer _2storehouse_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 194,
+        "lines": [
+          "_2storehouse_ task:",
+          "make _mitem_ permanent ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 198,
+        "lines": [
+          "_S.04_ task:",
+          "create foe _knight_ every 8 minutes 2 times with 10% success ",
+          "create foe _battlemage_ every 7 minutes 2 times with 10% success ",
+          "create foe _F.00_ every 10 minutes 1 times with 10% success ",
+          "create foe _F.03_ every 9 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 204,
+        "lines": [
+          "_S.05_ task:",
+          "give pc _letter10_ notify 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 208,
+        "lines": [
+          "variable _S.06_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 209,
+        "lines": [
+          "_S.07_ task:",
+          "toting _mitem_ and _competitor_ clicked ",
+          "prompt 1014 yes _S.09_ no _gimme_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 213,
+        "lines": [
+          "_gimme_ task:",
+          "get item _mitem_ ",
+          "say 1016 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 217,
+        "lines": [
+          "_S.09_ task:",
+          "get item _gem_ ",
+          "say 1015 ",
+          "make _gem_ permanent ",
+          "change repute with _competitor_ by +5 ",
+          "change repute with _qgiver_ by -5 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 225,
+        "lines": [
+          "_qgclick2_ task:",
+          "clicked npc _qgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 228,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclick2_ and not _pcgetsgold_",
+          "say 1003",
+          "clear _clearclick_ _qgclick2_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

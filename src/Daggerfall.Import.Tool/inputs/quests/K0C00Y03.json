@@ -1,0 +1,484 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/K0C00Y03.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "838796763c9666fd4dbf818846c340a6ee11a5487121a6f9d7cba8df72ff21d4",
+    "byteLength": 7801
+  },
+  "document": {
+    "fileName": "K0C00Y03.txt",
+    "questName": "K0C00Y03",
+    "questNameLine": 2,
+    "displayName": "Smuggling",
+    "header": [
+      {
+        "name": "quest",
+        "value": "K0C00Y03"
+      },
+      {
+        "name": "displayname",
+        "value": "Smuggling"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 7,
+        "lines": [
+          "<ce>                  You wouldn't have any problem doing",
+          "<ce>                 a bit of smuggling for me, would you,",
+          "<ce>                      %pcf? There's a possibility",
+          "<ce>                 of risk, but a certainty of profit for",
+          "<ce>                    both of us. Your share would be",
+          "<ce>                  _gold_ gold pieces. What do you say?",
+          "                                     <--->",
+          "<ce>                 Smuggling is a nasty word, isn't it?",
+          "<ce>                  I prefer to say I need some legally",
+          "<ce>                   ambiguous stuff brought to a place",
+          "<ce>                  where some elements will welcome it,",
+          "<ce>                   and others, the law specifically,",
+          "<ce>                         will not. Interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                      We never met then. Remember",
+          "<ce>                              that, %pcf.",
+          "                                     <--->",
+          "<ce>                       In that case, I will deny",
+          "<ce>                           ever meeting you."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                    Grand. Here's the scheme, %pcf.",
+          "<ce>                I have a little side business exporting",
+          "<ce>                         _item_ to __conhouse_,",
+          "<ce>                but my regular agents are being watched",
+          "<ce>                 by the %t's guard. If you can get the",
+          "<ce>                        _item_ into __conhouse_",
+          "<ce>                     to a place called _conhouse_,",
+          "<ce>                     my client _contact_ will give",
+          "<ce>                you the _gold_ gold pieces I mentioned.",
+          "<ce>                Don't talk to any lawmen while you have",
+          "<ce>                      the _item_ and don't fail to",
+          "<ce>                  get to _conhouse_ in =queston_ days,",
+          "<ce>                  or I'll make it my life business to",
+          "<ce>                    destroy your reputation with the",
+          "<ce>                 government, the underworld, and anyone",
+          "<ce>                 else I can think of. But I'm sure you",
+          "<ce>                  won't fail me. Good luck, my child.",
+          "<ce>                          Make _qgiver_ proud."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 49,
+        "lines": [
+          "<ce>                  Jolly nerve-wracking sitting here,",
+          "<ce>                       waiting for you, %pcf. Ah,",
+          "<ce>                     the _item_. Good quality this.",
+          "<ce>                  Here, here's the _gold_ gold pieces.",
+          "<ce>                      Good doing business with you",
+          "<ce>                             and _qgiver_."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 57,
+        "lines": [
+          "The _item_ smuggling between ___qgiver_ and __conhouse_ is a %reg disgrace.",
+          "<--->",
+          "The %t has vowed to do something about the _item_ smuggling spree."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 62,
+        "lines": [
+          "They'll never be able to end the _item_ smuggling in %reg. Too much demand.",
+          "<--->",
+          "%rt %rn has appointed _qgiver_ special enforcer in the war against smuggling."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 67,
+        "lines": [
+          "_contact_ tells me you arrived just fine. For that, I thank you."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 70,
+        "lines": [
+          "<ce>               Maybe you betrayed me, maybe you're just",
+          "<ce>                  a bad smuggler. Either way, sod off."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 74,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of",
+          " ___qgiver_ has given me some",
+          " _item_ to smuggle into __conhouse_.",
+          " The name of my contact there is",
+          " _contact_ and %g will",
+          " be waiting at _conhouse_",
+          " there. Naturally, I'll need to",
+          " watch out for the city guards",
+          " in this enterprise. I have =queston_ days",
+          " to get there."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 87,
+        "lines": [
+          "Dear %pcf,",
+          " ",
+          "      You have been set up. _contact_",
+          " is not at _conhouse_. A knight",
+          " named =guard_ is waiting there",
+          " to ambush you. If you want to get rid of",
+          " that _item_, bring it to me",
+          " at __contact2_ here in",
+          " ___contact2_.",
+          " ",
+          " ",
+          " _contact2_"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 101,
+        "lines": [
+          "<ce>                           A letter has been",
+          "<ce>                        slipped into your hands."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 105,
+        "lines": [
+          "%qdt:",
+          " I received a letter from someone by the name of",
+          " _contact2_, saying that",
+          " _conhouse_ is a trap. I",
+          " have been offered the option of giving",
+          " the _item_ to this _contact2_",
+          " at %g3 inn in ___contact2_,",
+          " __contact2_."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 115,
+        "lines": [
+          "<ce>                   Ah, you received my letter. Good",
+          "<ce>                    thing for you. There was a nasty",
+          "<ce>                   situation brewing and I'd hate to",
+          "<ce>                     have you caught up in it. I'll",
+          "<ce>                          take that _item_ in",
+          "<ce>                    return for my services clearing",
+          "<ce>                      up your involvement in this",
+          "<ce>                       botched smuggling scheme.",
+          "<ce>                          No need to thank me."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 126,
+        "lines": [
+          "<ce>                   Wait a minute, kid. We don't want",
+          "<ce>                       you. Just _qgiver_ and the",
+          "<ce>                      _item_. Hand it over and you",
+          "<ce>                       can get out of here, okay?",
+          "                                     <--->",
+          "<ce>                  Listen, kid, nothing personal. Just",
+          "<ce>                          gimme the _item_ and",
+          "<ce>                       I'll tell my boss you got",
+          "<ce>                              away. Deal?"
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 137,
+        "lines": [
+          "<ce>                         Yer a smart kid. Now,",
+          "<ce>                            get outta here."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 141,
+        "lines": [
+          "<ce>                        _qgiver_ isn't going to",
+          "<ce>                    be happy about you holding on to",
+          "<ce>                        the _item_, but it's too",
+          "<ce>                      late to deliver it anywhere.",
+          "<ce>                       You might be able to sell",
+          "<ce>                            it somewhere ..."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 174,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 175,
+        "lines": [
+          "Item _item_ drug"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 176,
+        "lines": [
+          "Item _letter_ letter used 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 178,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 179,
+        "lines": [
+          "Person _contact_ face 1 group Innkeeper remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 180,
+        "lines": [
+          "Person _contact2_ group Innkeeper remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 182,
+        "lines": [
+          "Place _conhouse_ remote house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 184,
+        "lines": [
+          "Clock _2letter_ 03:20 06:40"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 185,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 1 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 187,
+        "lines": [
+          "Foe _guard_ is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 190,
+        "lines": [
+          "dialog link for person _contact_ ",
+          "start timer _queston_ ",
+          "log 1010 step 0 ",
+          "get item _item_ ",
+          "pick one of _whip_ _S.02_ ",
+          "legal repute -10",
+          "place npc _contact_ at _conhouse_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 199,
+        "lines": [
+          "variable _traveltime_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 200,
+        "lines": [
+          "_whip_ task:",
+          "pc at _conhouse_ set _S.04_ ",
+          "start timer _2letter_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 204,
+        "lines": [
+          "variable _S.02_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 205,
+        "lines": [
+          "variable _S.03_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 206,
+        "lines": [
+          "_S.04_ task:",
+          "hide npc _contact_ ",
+          "place foe _guard_ at _conhouse_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 210,
+        "lines": [
+          "_S.05_ task:",
+          "injured _guard_ ",
+          "prompt 1015 yes _deed_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 214,
+        "lines": [
+          "_deed_ task:",
+          "take _item_ from pc",
+          "give item _item_ to _guard_ ",
+          "say 1016 ",
+          "restrain foe _guard_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 221,
+        "lines": [
+          "_2letter_ task:",
+          "_letter_ used do _S.08_ ",
+          "give pc _letter_ notify 1012 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 225,
+        "lines": [
+          "_S.08_ task:",
+          "log 1013 step 1 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 228,
+        "lines": [
+          "_reward_ task:",
+          "toting _item_ and _contact_ clicked ",
+          "give pc _gold_ ",
+          "legal repute +10",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 234,
+        "lines": [
+          "_S.10_ task:",
+          "toting _item_ and _contact2_ clicked "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 237,
+        "lines": [
+          "_S.11_ task:",
+          "when _S.10_ and _whip_ ",
+          "say 1014 ",
+          "legal repute +10",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 243,
+        "lines": [
+          "_S.12_ task:",
+          "when _queston_ and _S.14_ ",
+          "say 1017 ",
+          "make _item_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 248,
+        "lines": [
+          "_queston_ task:",
+          "have _item_ set _S.14_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 252,
+        "lines": [
+          "variable _S.14_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 253,
+        "lines": [
+          "variable _no_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

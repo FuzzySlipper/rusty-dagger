@@ -1,0 +1,96 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO20.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "c088e63b00b6d95ad2ed728c960283a8936e0ab940b8671534fd7239797da8b7",
+    "byteLength": 1017
+  },
+  "document": {
+    "fileName": "__DEMO20.txt",
+    "questName": "__DEMO20",
+    "questNameLine": 4,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO20"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1010,
+        "firstLine": 9,
+        "lines": [
+          "%qdt",
+          "  You must find any home location",
+          "and also explore the wilderness."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "headless",
+        "firstLine": 18,
+        "lines": [
+          "log 1010 step 0"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 20,
+        "lines": [
+          "variable _atAnyHome_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 21,
+        "lines": [
+          "variable _inWilderness_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 25,
+        "lines": [
+          "_entersAnywhere task:",
+          "when pc enters anywhere",
+          "clear _inWilderness_",
+          "clear _exitsAnywhere_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 32,
+        "lines": [
+          "_exitsAnywhere_ task:",
+          "when pc exits anywhere",
+          "setvar _inWilderness_",
+          "clear _atAnyHome_",
+          "clear _entersAnywhere_",
+          "clear _entersAnyHome_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 40,
+        "lines": [
+          "_entersAnyHome_ task:",
+          "when pc enters farmhome",
+          "when pc enters wealthyhome",
+          "when pc enters poorhome",
+          "when pc enters tavernhome",
+          "when pc enters templehome",
+          "setvar _atAnyHome_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

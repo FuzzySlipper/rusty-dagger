@@ -1,0 +1,92 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000107.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "b02eabdde6e10f8113e6cab1a1fe41c87998cdae4bcd3da1caf3174217c8c96b",
+    "byteLength": 568
+  },
+  "document": {
+    "fileName": "S0000107.txt",
+    "questName": "S0000107",
+    "questNameLine": 5,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000107"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 9,
+        "lines": []
+      },
+      {
+        "id": 1001,
+        "firstLine": 12,
+        "lines": []
+      },
+      {
+        "id": 1002,
+        "firstLine": 15,
+        "lines": []
+      },
+      {
+        "id": 1003,
+        "firstLine": 18,
+        "lines": []
+      },
+      {
+        "id": 1004,
+        "firstLine": 21,
+        "lines": []
+      },
+      {
+        "id": 1005,
+        "firstLine": 24,
+        "lines": []
+      },
+      {
+        "id": 1006,
+        "firstLine": 27,
+        "lines": []
+      },
+      {
+        "id": 1007,
+        "firstLine": 30,
+        "lines": []
+      },
+      {
+        "id": 1008,
+        "firstLine": 33,
+        "lines": []
+      },
+      {
+        "id": 1009,
+        "firstLine": 36,
+        "lines": []
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 45,
+        "lines": [
+          "Person _aubki_ named Queen_Aubk-i atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 51,
+        "lines": [
+          "change repute with _aubki_ by +8 ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

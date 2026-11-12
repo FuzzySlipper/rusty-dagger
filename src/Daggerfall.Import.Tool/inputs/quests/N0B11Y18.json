@@ -1,0 +1,641 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/N0B11Y18.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "8f00aaa449e80ab2c7764ca1a1ec0f6c0d0b2c3ca53d7a4112ac4eafdd0b4828",
+    "byteLength": 9741
+  },
+  "document": {
+    "fileName": "N0B11Y18.txt",
+    "questName": "N0B11Y18",
+    "questNameLine": 9,
+    "displayName": "Former Student Part I",
+    "header": [
+      {
+        "name": "quest",
+        "value": "N0B11Y18"
+      },
+      {
+        "name": "displayname",
+        "value": "Former Student Part I"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>               You are a loyal member of the Mages Guild,",
+          "<ce>                 are you not, %pct?  I have some guild",
+          "<ce>                  business of the gravest import that",
+          "<ce>                      I would like you to handle."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>              Perhaps you are not as loyal as I thought."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 23,
+        "lines": [
+          "<ce>               Very good. There is a rebel mage that we",
+          "<ce>                need eliminated, by the name of _rebel_.",
+          "<ce>              A former pupil of mine, showed some promise",
+          "<ce>            but lacked the loyalty to the ancient principles",
+          "<ce>               of the Guild that are so important to its",
+          "<ce>               continued survival.  We have learned that",
+          "<ce>            %g is currently doing some kind of unsanctioned",
+          "<ce>               research over in ___rebelhouse_, apparently",
+          "<ce>            oblivious to the danger.  You have =qtime_ days",
+          "<ce>            to dispose of this menace and report back to me."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                             Begone, %pcn."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 38,
+        "lines": [
+          "<ce>                   I made this _reward_ myself as a",
+          "<ce>               token of my appreciation for your service",
+          "<ce>                          to the Mages Guild."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 43,
+        "lines": [
+          "%qdt:",
+          " I have undertaken to find and",
+          " destroy a rebel mage, who currently",
+          " resides in ___rebelhouse_.  Once I",
+          " have disposed of this mage, _rebel_,",
+          " I am to report back to _questgiver_ of",
+          " ___questgiver_'s Mages Guild.",
+          " I have =qtime_ days."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 53,
+        "lines": [
+          "%qdt:",
+          " I agreed to spare _rebel_'s life.",
+          " He said I should just tell _questgiver_",
+          " that I found no sign of _rebel_ in ",
+          " ___rebelhouse_, except for a letter which",
+          " he gave me."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 61,
+        "lines": [
+          "<ce>                   So, _questgiver_ has sent another",
+          "<ce>                  of %g3 lackeys to bring me to heel.",
+          "<ce>                 The old men who run the Mages Guild",
+          "<ce>               have no sense of adventure, take no risks,",
+          "<ce>                dare nothing, and learn nothing.  I have",
+          "<ce>               never lifted a finger against them, except",
+          "<ce>                to repudiate their control.  Yet, simply",
+          "<ce>               because I refuse to abide by their rules,",
+          "<ce>               the Mages Guild would slay me!  Why do you",
+          "<ce>               give them your blind obedience, killing on",
+          "<ce>                command like a hired assassin?  Join me",
+          "<ce>                       and we will defy them all!"
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 75,
+        "lines": [
+          "<ce>                Wonderful!  Just tell old _questgiver_",
+          "<ce>               that I was not here, but left this letter",
+          "<ce>                  for %g2.  I must depart, but I will",
+          "<ce>                  contact you as soon as I can cook us",
+          "<ce>                 up a truly smashing adventure.  Ta ta!"
+        ]
+      },
+      {
+        "id": 1032,
+        "firstLine": 82,
+        "lines": [
+          "<ce>                Well then, I shall have to convince you",
+          "<ce>               the hard way.  Defend yourself, mageling!"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 86,
+        "lines": [
+          "Dear _questgiver_,",
+          " ",
+          "   So sorry I missed you.  I would love",
+          " to catch up on old times with you. Do you",
+          " remember the days when I dutifully learned",
+          " at your knee, as if you had more to teach me",
+          " than the stale repetition of past greatness?",
+          " =mage1_, the Archmagister =mage3_ --",
+          " in their day the Mages Guild was an institution",
+          " worthy of respect.  No more. I cannot offer my",
+          " allegiance to a Guild whose sole purpose is to",
+          " quash all original thought.",
+          " ",
+          "   If you send more of your enforcers against",
+          " me, I will be forced to defend myself.  Consider",
+          " yourself warned.",
+          " ",
+          "<ce>                           Your humble pupil,",
+          "<ce>                                    ",
+          "<ce>                                _rebel_"
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 108,
+        "lines": [
+          "<ce>                     Why... that impertinent!  I am",
+          "<ce>                      speechless!  You can now see",
+          "<ce>                      why _rebel_ must be stopped",
+          "<ce>                   at all costs, before he undermines",
+          "<ce>                    everything the Guild stands for.",
+          "<ce>                   It is unfortunate that you missed",
+          "<ce>                 that miserable little sot, but I have",
+          "<ce>                       no doubt that we will soon",
+          "<ce>                         track him down again."
+        ]
+      },
+      {
+        "id": 1042,
+        "firstLine": 119,
+        "lines": [
+          "<ce>                   Very good, %pct.  The Mages Guild",
+          "<ce>                  cannot survive if we do not enforce",
+          "<ce>                 our own rules, harsh as they may seem."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 124,
+        "lines": [
+          "<ce>                    Stop this pointless attack, and",
+          "<ce>                            join me instead!"
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 128,
+        "lines": [
+          "<ce>                    Surely you are ready to concede",
+          "<ce>              my point?  We could have such fun together!"
+        ]
+      },
+      {
+        "id": 1052,
+        "firstLine": 132,
+        "lines": [
+          "<ce>               _questgiver_ has taught you persistence,",
+          "<ce>                at least.  But why remain a slave to the",
+          "<ce>                rules and regulations of the hidebound?",
+          "<ce>                  Join my merry band of Guild defiers!"
+        ]
+      },
+      {
+        "id": 1053,
+        "firstLine": 138,
+        "lines": [
+          "<ce>                 You are beginning to try my patience,",
+          "<ce>                  but I will give you one last chance.",
+          "<ce>                   Cease your attack, and I will let",
+          "<ce>                          bygones be bygones."
+        ]
+      },
+      {
+        "id": 1060,
+        "firstLine": 144,
+        "lines": [
+          "<ce>                 Perhaps we should take this outside."
+        ]
+      },
+      {
+        "id": 1061,
+        "firstLine": 147,
+        "lines": [
+          "<ce>                          Yoo-hoo, over here!"
+        ]
+      },
+      {
+        "id": 1062,
+        "firstLine": 150,
+        "lines": [
+          "<ce>               Did _questgiver_ forget to tell you about",
+          "<ce>               my skill in magicka when %g was preaching",
+          "<ce>                about my disloyalty and insubordination?"
+        ]
+      },
+      {
+        "id": 1063,
+        "firstLine": 155,
+        "lines": [
+          "<ce>          Missed me again, my good Guild Drone.  Why haven't",
+          "<ce>              your Guild masters taught you these tricks?"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 178,
+        "lines": [
+          "Item _letter_ letter used 1040"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 179,
+        "lines": [
+          "Item _reward_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 181,
+        "lines": [
+          "Person _rebel_ named Baltham_Greyman"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 182,
+        "lines": [
+          "Person _questgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 184,
+        "lines": [
+          "Place aide remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 185,
+        "lines": [
+          "Place _rebelhouse_ remote house1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 187,
+        "lines": [
+          "Clock _qtime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 188,
+        "lines": [
+          "Clock _S.04_ 00:01 00:05"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 189,
+        "lines": [
+          "Clock _S.05_ 00:01 00:10"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 190,
+        "lines": [
+          "Clock _S.06_ 00:01 00:14"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 191,
+        "lines": [
+          "Clock _healer_ 00:02 00:18"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 193,
+        "lines": [
+          "Foe _mage1_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 194,
+        "lines": [
+          "Foe _mage2_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 195,
+        "lines": [
+          "Foe _mage3_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 196,
+        "lines": [
+          "Foe _mage4_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 197,
+        "lines": [
+          "Foe _F.04_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 200,
+        "lines": [
+          "start timer _qtime_",
+          "log 1020 step 0 ",
+          "place npc _rebel_ at _rebelhouse_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 204,
+        "lines": [
+          "_qtime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 207,
+        "lines": [
+          "_S.01_ task:",
+          "clicked npc _rebel_ ",
+          "prompt 1030 yes _S.02_ no _S.03_ ",
+          "hide npc _rebel_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 213,
+        "lines": [
+          "_qgclicked_ task:",
+          "  clicked npc _questgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 216,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.01_ ",
+          "say 1003",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 221,
+        "lines": [
+          "_S.02_ task:",
+          "start quest 502 502 ",
+          "log 1021 step 1 ",
+          "get item _letter_ ",
+          "say 1031 ",
+          "remove foe _mage2_",
+          "remove foe _F.04_",
+          "remove foe _mage1_",
+          "remove foe _mage4_",
+          "remove foe _mage3_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 233,
+        "lines": [
+          "_S.03_ task:",
+          "start timer _S.04_ ",
+          "say 1032 ",
+          "    hide npc _rebel_",
+          "place foe _mage1_ at _rebelhouse_ ",
+          "cast Spell_Reflection spell on _mage1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 241,
+        "lines": [
+          "_S.04_ task:",
+          "pc at _rebelhouse_ set _S.19_ ",
+          "remove foe _mage1_",
+          "say 1060 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 248,
+        "lines": [
+          "_S.05_ task:",
+          "create foe _mage3_ every 1 minutes 1 times with 100% success",
+          "say 1061 ",
+          "start timer _S.06_ ",
+          "remove foe _mage2_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 256,
+        "lines": [
+          "_S.06_ task:",
+          "create foe _mage4_ every 1 minutes 1 times with 100% success",
+          "say 1062 ",
+          "start timer _healer_ ",
+          "remove foe _mage3_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 264,
+        "lines": [
+          "_healer_ task:",
+          "create foe _F.04_ every 1 minutes 1 times with 100% success",
+          "say 1063 ",
+          "remove foe _mage4_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 271,
+        "lines": [
+          "_S.08_ task:",
+          "killed 1 _mage2_ ",
+          "killed 1 _F.04_ ",
+          "killed 1 _mage4_ ",
+          "killed 1 _mage3_ ",
+          "killed 1 _mage1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 278,
+        "lines": [
+          "_S.09_ task:",
+          "when _S.08_ or _S.02_ ",
+          "stop timer _healer_ ",
+          "stop timer _S.06_ ",
+          "stop timer _S.05_ ",
+          "stop timer _S.04_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 285,
+        "lines": [
+          "_S.10_ task:",
+          "injured _mage1_ ",
+          "cast Heal spell on _mage1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 289,
+        "lines": [
+          "_S.11_ task:",
+          "injured _mage2_ ",
+          "prompt 1050 yes _S.02_ no _S.03_ ",
+          "cast Heal spell on _mage2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 294,
+        "lines": [
+          "_S.12_ task:",
+          "injured _mage3_ ",
+          "prompt 1051 yes _S.02_ no _S.03_ ",
+          "cast Heal spell on _mage3_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 299,
+        "lines": [
+          "_S.13_ task:",
+          "injured _mage4_ ",
+          "prompt 1052 yes _S.02_ no _S.03_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 305,
+        "lines": [
+          "_S.14_ task:",
+          "injured _F.04_ ",
+          "prompt 1053 yes _S.02_ no _S.03_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 309,
+        "lines": [
+          "_S.15_ task:",
+          "toting _letter_ and _questgiver_ clicked ",
+          "say 1041 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 313,
+        "lines": [
+          "_success_ task:",
+          "when _qgclicked_ and _S.08_ ",
+          "say 1042 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 317,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _S.15_ or _success_ ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 322,
+        "lines": [
+          "variable _S.19_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 323,
+        "lines": [
+          "_S.20_ task:",
+          "when _S.04_ and not _S.19_ and not _S.08_ ",
+          "create foe _mage2_ every 1 minutes 1 times with 100% success ",
+          "start timer _S.05_ ",
+          "cast Spell_Reflection spell on _mage2_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

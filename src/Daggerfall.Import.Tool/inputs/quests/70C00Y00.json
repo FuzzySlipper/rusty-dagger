@@ -1,0 +1,287 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/70C00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "8e69e3f18d0ac4b9edab88ef5ae1a0133f24f2b0cf04a303c6b7a04da7f13bfa",
+    "byteLength": 5371
+  },
+  "document": {
+    "fileName": "70C00Y00.txt",
+    "questName": "70C00Y00",
+    "questNameLine": 8,
+    "displayName": "Sanguine's Quest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "70C00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Sanguine's Quest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>               Power is such a lovely word, isn't it? It",
+          "<ce>               drips from the tongue like honey. If power",
+          "<ce>                is your aphrodisiac, I would be ecstatic",
+          "<ce>                    to present you with _artifact_.",
+          "<ce>                 All you have to do for me in return is",
+          "<ce>               punish a perfectly awful priest who dared",
+          "<ce>                  to challenge me. Sounds good to you?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                        A pox on you, %pcn. How",
+          "<ce>                 dare you summon me forth and refuse my",
+          "<ce>                generous offer? Pray that I forgive you,",
+          "<ce>                          %pcf. Sanguine is an",
+          "<ce>                        enemy none should have."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                     You won't regret this, %pcf,",
+          "<ce>                  provided you fulfill your end of our",
+          "<ce>                  agreement. This sanctimonius monk is",
+          "<ce>                       not harmless; =monster_ is",
+          "<ce>                    %g3 name and %g burned my lovely",
+          "<ce>                    worshippers to crisps. Go to the",
+          "<ce>                    abandoned temple where %g lurks,",
+          "<ce>                          ___mondung_, and rip",
+          "<ce>                      %g3 heart from %g3 chest. My",
+          "<ce>                         agent, _contact_ will",
+          "<ce>                       await you in ___contact_.",
+          "<ce>                        _contact_ does not like",
+          "<ce>                  to wait so accomplish the murder in",
+          "<ce>                  =1stparton_ days or less. I have the",
+          "<ce>                 delicious feeling we'll see each other",
+          "<ce>                        again, %pcf. I hope so."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 47,
+        "lines": [
+          "<ce>                  That pietistic reactionary is still",
+          "<ce>                      alive and you know it, %pcf.",
+          "<ce>                 Don't play games with Sanguine, %pct.",
+          "<ce>                       You won't like the rules."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 53,
+        "lines": [
+          "<ce>                      Charmed to meet you, %pcn.",
+          "<ce>                        I'm _contact_. Sanguine",
+          "<ce>                 must be quite enraptured with you. He",
+          "<ce>                      had _artifact_ set aside for",
+          "<ce>                  his favored disciples. And now it's",
+          "<ce>                 yours. I hope you enjoy it immensely."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 61,
+        "lines": [
+          "All those orgies that used to go on have been stamped out by =monster_.",
+          "<--->",
+          "There isn't much to do since =monster_ set a torch to the orgies."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 66,
+        "lines": [
+          "=monster_'s moved on -- %g's looking for dens of decadence to the north.",
+          "<--->",
+          "Everyone's afraid to do anything at all fun with people like =monster_ around."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 71,
+        "lines": [
+          "Lots of people are happy about =monster_'s death. Just deserts for %g3 ilk.",
+          "<--->",
+          "The orgies have started up again now that =monster_'s out of the picture."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 76,
+        "lines": [
+          "Sanguine is the Daedra Prince of Lust. Anything in excess is his motto.",
+          "<--->",
+          "The Daedra Prince of Perversity and Unnatural Sexual Relations, of course."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 81,
+        "lines": [
+          "Just a leering =contact_ %di of here in __contact_.",
+          "<--->",
+          "_contact_ is the name of a naughty =contact_ in __contact_."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 86,
+        "lines": [
+          "<ce>The Sanguine Rose summons a daedra to fight for you.  A risky proposition",
+          "<ce>                                at best.",
+          "<--->",
+          "<ce>The possessor of the Sanguine Rose is supposed to have the power to summon",
+          "<ce>                    aid from the plane of Oblivion."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 93,
+        "lines": [
+          "<ce>                          =monster_ is dead.",
+          "<ce>                       Sanguine will be ecstatic,",
+          "<ce>                               you hope."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 98,
+        "lines": [
+          "%qdt:",
+          " Sanguine wants me to murder a",
+          " monk named =monster_ in return for",
+          " _artifact_. The monk",
+          " is in ___mondung_ and must be dead in",
+          " =1stparton_ days or less, and I must be",
+          " in ___contact_ in",
+          " =1stparton_ days to meet with _contact_",
+          " at a place called __contact_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 129,
+        "lines": [
+          "Item _artifact_ artifact Sanguine_Rose anyInfo 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 131,
+        "lines": [
+          "Person _questgiver_ face 112 named Sanguine anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 132,
+        "lines": [
+          "Person _contact_ face 232 faction The_Cabal remote anyInfo 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 134,
+        "lines": [
+          "Place _mondung_ remote dungeon4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 136,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 138,
+        "lines": [
+          "Foe _monster_ is Monk"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 141,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "place foe _monster_ at _mondung_ ",
+          "create npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 147,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _mondead_ ",
+          "give pc _artifact_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 153,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ ",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 157,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 160,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 163,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _mondead_ ",
+          "say 1003",
+          "clear _qgclicked_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,58 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "c4a167dc59cf49f7a56e0d965a4a7453fae57309fbb87ae05e6ea1c099b69ad2",
+    "byteLength": 12931
+  },
+  "races": {
+    "Breton": {
+      "resistanceFlags": 2,
+      "immunityFlags": 0,
+      "lowToleranceFlags": 0,
+      "criticalWeaknessFlags": 0
+    },
+    "Redguard": {
+      "resistanceFlags": 0,
+      "immunityFlags": 0,
+      "lowToleranceFlags": 0,
+      "criticalWeaknessFlags": 0
+    },
+    "Nord": {
+      "resistanceFlags": 16,
+      "immunityFlags": 0,
+      "lowToleranceFlags": 0,
+      "criticalWeaknessFlags": 0
+    },
+    "DarkElf": {
+      "resistanceFlags": 0,
+      "immunityFlags": 0,
+      "lowToleranceFlags": 0,
+      "criticalWeaknessFlags": 0
+    },
+    "HighElf": {
+      "resistanceFlags": 0,
+      "immunityFlags": 1,
+      "lowToleranceFlags": 0,
+      "criticalWeaknessFlags": 0
+    },
+    "WoodElf": {
+      "resistanceFlags": 0,
+      "immunityFlags": 0,
+      "lowToleranceFlags": 0,
+      "criticalWeaknessFlags": 0
+    },
+    "Khajiit": {
+      "resistanceFlags": 0,
+      "immunityFlags": 0,
+      "lowToleranceFlags": 0,
+      "criticalWeaknessFlags": 0
+    },
+    "Argonian": {
+      "resistanceFlags": 0,
+      "immunityFlags": 0,
+      "lowToleranceFlags": 0,
+      "criticalWeaknessFlags": 0
+    }
+  }
+}

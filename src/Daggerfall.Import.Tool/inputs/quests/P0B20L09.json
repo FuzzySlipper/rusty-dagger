@@ -1,0 +1,365 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/P0B20L09.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "86ea27b98d795748c7cd0bc2a33bc68f0a8ac6a808b48a6cfe5e98f428bf7853",
+    "byteLength": 4586
+  },
+  "document": {
+    "fileName": "P0B20L09.txt",
+    "questName": "P0B20L09",
+    "questNameLine": 8,
+    "displayName": "The Vanguard",
+    "header": [
+      {
+        "name": "quest",
+        "value": "P0B20L09"
+      },
+      {
+        "name": "displayname",
+        "value": "The Vanguard"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "Error: Questtext 1000 Called"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 16,
+        "lines": [
+          "Error: Questtext 1001 Called"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 19,
+        "lines": [
+          "Error: Questtext 1002 Called"
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 22,
+        "lines": [
+          "Error: Questtext 1003 Called"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                  I salute you, slayer of werebeasts.",
+          "<ce>                 Your bloodfather will be very pleased",
+          "<ce>                  to hear about the efficiency of your",
+          "<ce>                 extermination.  Keep =wereboar_'s tusk",
+          "<ce>                    as a badge of honor among %vam."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 32,
+        "lines": [
+          "___mondung_ is the one dungeon no one should ever enter. Ever."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 35,
+        "lines": [
+          "There was triumphant howling coming out of ___mondung_ the other night."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 38,
+        "lines": [
+          "Things are peaceful, still as a grave, in ___mondung_ again."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 41,
+        "lines": [
+          "Error: Questtext 1008 Called"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 44,
+        "lines": [
+          "Error: Questtext 1009 Called"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 47,
+        "lines": [
+          "                   __vamp_",
+          "                    ___vamp_",
+          " ",
+          " ",
+          " Dear %pcn,",
+          " ",
+          "      %vam need you.",
+          " Come immediately.",
+          " ",
+          " ",
+          "                  Yours in Death,",
+          " ",
+          "                  _vamp_"
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 62,
+        "lines": [
+          "<ce>                      Honored %pcn, good evening.",
+          "<ce>                The ancients of %vam are to meet shortly",
+          "<ce>               in %reg, but as if in mockery, a group of",
+          "<ce>                 lycanthropes have set up residence in",
+          "<ce>                  ___mondung_, where the ancients plan",
+          "<ce>                to convene.  Pray, show these vermin and",
+          "<ce>                 others of their kind that ___mondung_",
+          "<ce>          belongs to %vam and we will tolerate no trespassers.",
+          "<ce>           Kill as many of them as possible, including their",
+          "<ce>             leader, a wereboar.  Return back here with one",
+          "<ce>             of his tusks in =queston_ nights time and %vam",
+          "<ce>                 will be most grateful. Fare thee well."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 76,
+        "lines": [
+          "%qdt:",
+          " I have received a letter",
+          " from _vamp_ of %vam,",
+          " urgently requesting my presence",
+          " at __vamp_ in ___vamp_."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 83,
+        "lines": [
+          "%qdt:",
+          " _vamp_ has sent me to",
+          " ___mondung_, where a group of impudent",
+          " werecreatures have dared intrude on",
+          " %vam ground. I am to show the misshaped",
+          " creatures the error of their ways",
+          " and return to _vamp_ in =queston_ nights",
+          " with the tusk of their leader as a trophy."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 93,
+        "lines": [
+          "<ce>                    A pale, wild-eyed boy hands you",
+          "<ce>                   a letter and then disappears into",
+          "<ce>                             the darkness."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 98,
+        "lines": [
+          "<ce>                    You have slain =wereboar_, the",
+          "<ce>                    lycanthropes' leader.  They will",
+          "<ce>                    now know better than to trespass",
+          "<ce>                        in a stronghold of %vam."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 104,
+        "lines": [
+          "<ce>                 Don't make me kill you, bloodsucker.",
+          "<ce>                 Go back and tell %vam that =wereboar_",
+          "<ce>              sent you home because you didn't play nice.",
+          " "
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 123,
+        "lines": [
+          "Item _letter_ letter used 1010"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 124,
+        "lines": [
+          "Item _I.01_ tusk"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 126,
+        "lines": [
+          "Person _vamp_ factiontype Vampire_Clan local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 128,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 130,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 132,
+        "lines": [
+          "Foe _F.00_ is Werewolf"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 133,
+        "lines": [
+          "Foe _wereboar_ is Wereboar"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 136,
+        "lines": [
+          "dialog link for person _vamp_ ",
+          "pc at _mondung_ set _S.07_ ",
+          "_letter_ used do _readletter_ ",
+          "have _letter_ set _S.09_ ",
+          "give pc _letter_ notify 1017 ",
+          "place foe _wereboar_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_queston_ task:",
+          "change repute with _vamp_ by -5 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 147,
+        "lines": [
+          "_vampclicked_ task:",
+          "clicked npc _vamp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_S.06_ task:",
+          "when _vampclicked_ ",
+          "reveal _mondung_ ",
+          "log 1013 step 1 ",
+          "say 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 156,
+        "lines": [
+          "_nononono_ task:",
+          "when _vampclicked_ and not _S.04_ ",
+          "clear _vampclicked_ _nononono_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 160,
+        "lines": [
+          "_reward_ task:",
+          "toting _I.01_ and _vamp_ clicked ",
+          "give pc _I.01_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 165,
+        "lines": [
+          "_S.04_ task:",
+          "killed 1 _wereboar_ ",
+          "say 1020 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 169,
+        "lines": [
+          "_readletter_ task:",
+          "add dialog for person _vamp_ ",
+          "log 1012 step 0 ",
+          "create npc _vamp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 174,
+        "lines": [
+          "_S.07_ task:",
+          "create foe _F.00_ every 12 minutes 30 times with 50% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 177,
+        "lines": [
+          "_S.08_ task:",
+          "injured _wereboar_ ",
+          "give item _I.01_ to _wereboar_ ",
+          "say 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 182,
+        "lines": [
+          "_S.09_ task:",
+          "start timer _queston_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

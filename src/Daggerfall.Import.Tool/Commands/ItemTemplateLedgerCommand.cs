@@ -6,19 +6,19 @@ using Daggerfall.Import.Publication;
 namespace Daggerfall.Import.Tool.Commands;
 
 /// <summary>
-/// Builds the item-template ledger from the donor's own group enumerations and either reports the drift
-/// against the pack's ledger or publishes the rebuilt section.
+/// Builds the item-template ledger from our item-group table (taken from the donor's own group enumerations) and
+/// either reports the difference from the pack's ledger or publishes the rebuilt section.
 /// </summary>
 internal static class ItemTemplateLedgerCommand
 {
     private const string ItemTemplateFamily = "CNT-011";
 
     public static ToolCommand Command { get; } = new("item-template-ledger",
-        [CommandOption.Required("--donor", "ITEMS_DIR"), Options.Inventory, Options.Pack, Options.Update], Run);
+        [CommandOption.Required("--item-groups", "ITEM_GROUPS.json"), Options.Inventory, Options.Pack, Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {
-        string donor = args["--donor"];
+        string groups = args["--item-groups"];
         string packFile = args["--pack"];
         // The target's provenance comes from the documented inventory rather than from a literal here, so a
         // manifest-row change flows into the ledger instead of leaving it silently stale.
@@ -26,11 +26,8 @@ internal static class ItemTemplateLedgerCommand
             .FirstOrDefault(row => row.RowType == "family" && row.Id == ItemTemplateFamily)
             ?? throw new InvalidOperationException($"The documented inventory does not carry family '{ItemTemplateFamily}'.");
         string targetStatus = ItemTemplateLedgerBuilder.StatusFor(family.Disposition);
-        ItemTemplateBaseline baseline = ItemTemplateBaseline.FromDonorSources(
-            File.ReadAllText(Path.Combine(donor, "ItemEnums.cs")),
-            File.ReadAllText(Path.Combine(donor, "ItemHelper.cs")),
-            File.ReadAllText(Path.Combine(donor, "..", "..", "API", "ItemsFile.cs")),
-            PublishedSourcePath.DonorRoot);
+        ItemTemplateBaseline baseline = ItemTemplateBaseline.FromGroups(
+            TakenTable.Read<ItemGroupTable>(File.ReadAllBytes(groups), groups), PublishedSourcePath.DonorRoot);
         JsonObject ledger = ItemTemplateLedgerBuilder.Build(baseline, family.Id, family.PathOrPattern, targetStatus);
         Console.WriteLine($"target: {family.Id} | {family.PathOrPattern} | documented '{family.Disposition}' -> status '{targetStatus}'");
         Console.WriteLine($"item template ledger: {baseline.Targets.Count} targets, {baseline.Targets.Count(target => target.IsReferenced)} referenced by donor groups, {baseline.Unreferenced.Count()} referenced by none, {baseline.OutOfRangeIndices.Count} outside the classic space");
@@ -40,14 +37,13 @@ internal static class ItemTemplateLedgerCommand
         if (!args.Switch("--update"))
         {
             // Report only: the pack's ledger is the published artifact, and a difference is printed for a
-            // human to publish rather than failed, since this command needs the donor checkout that a
-            // routine build does not carry.
+            // human to publish rather than failed.
             JsonNode? existing = PayloadFiles.ReadGenerated(packFile)[ItemTemplateLedgerBuilder.SectionName];
             Console.WriteLine(existing is null
                 ? $"pack: no {ItemTemplateLedgerBuilder.SectionName} section (rerun with --update to publish it)"
                 : JsonNode.DeepEquals(existing, ledger)
-                    ? $"pack: {ItemTemplateLedgerBuilder.SectionName} matches the donor baseline"
-                    : $"pack: {ItemTemplateLedgerBuilder.SectionName} differs from the donor baseline (rerun with --update to publish it)");
+                    ? $"pack: {ItemTemplateLedgerBuilder.SectionName} matches the item-group baseline"
+                    : $"pack: {ItemTemplateLedgerBuilder.SectionName} differs from the item-group baseline (rerun with --update to publish it)");
             return 0;
         }
 

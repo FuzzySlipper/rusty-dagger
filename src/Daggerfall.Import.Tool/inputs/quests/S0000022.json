@@ -1,0 +1,186 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000022.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "29285c3c053447d6b986d69a4c76989d61ecc3ab4ffbd040bde0500895c0316d",
+    "byteLength": 2282
+  },
+  "document": {
+    "fileName": "S0000022.txt",
+    "questName": "S0000022",
+    "questNameLine": 5,
+    "displayName": "Lysandus' Revelation",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000022"
+      },
+      {
+        "name": "displayname",
+        "value": "Lysandus' Revelation"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1001,
+        "firstLine": 10,
+        "lines": [
+          "<ce>                     I thought I told you it would",
+          "<ce>                    take a month. The powder is not",
+          "<ce>                      ready yet. Come back later."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 15,
+        "lines": [
+          "<ce>                   The powder is ready. All you need",
+          "<ce>                    to do is sprinkle it on his true",
+          "<ce>                   corpse. I must warn you. It will",
+          "<ce>                  not put his shade to rest, but will",
+          "<ce>                  soothe it sufficiently to allow you",
+          "<ce>                 a chance to speak with him. The final",
+          "<ce>                  exorcism is for Lysandus to choose.",
+          "<ce>                                    ",
+          "<ce>                  I do not know where he was buried.",
+          "<ce>                 I do know that it is not on the field",
+          "<ce>                 of Cryngaine where they erected that",
+          "<ce>                  monument to him. If you do speak to",
+          "<ce>                   him... could you tell him I still",
+          "<ce>                     love him? Death will not be a",
+          "<ce>                        barrier to us for long."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 32,
+        "lines": [
+          "%qdt:",
+          " Medora has told me it would take her",
+          " a month to prepare the Dust. When this",
+          " time has passed, I should visit her",
+          " again at her home in the Direnni Tower."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 39,
+        "lines": [
+          "%qdt:",
+          " Medora has given me a powder that will",
+          " soothe the spirit of Lysandus. However,",
+          " it will not lay his shade to rest, but",
+          " only calm it. Now I need only to find",
+          " his tomb and use it."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 53,
+        "lines": [
+          "Item _spider_ lich_dust"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 55,
+        "lines": [
+          "Person _medora_ named Medora atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 58,
+        "lines": [
+          "Clock _S.00_ 30.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 62,
+        "lines": [
+          "start timer _S.00_ ",
+          "log 1010 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 65,
+        "lines": [
+          "variable _S.00_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 66,
+        "lines": [
+          "_S.01_ task:",
+          "clicked npc _medora_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 69,
+        "lines": [
+          "_S.02_ task:",
+          "when _S.01_ and _S.00_ ",
+          "log 1011 step 1 ",
+          "get item _spider_ ",
+          "say AcceptQuest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 75,
+        "lines": [
+          "_S.03_ task:",
+          "when not _S.00_ and _S.01_ ",
+          "say RefuseQuest ",
+          "clear _S.01_ _S.03_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 80,
+        "lines": [
+          "LysandusSatisfied _S.04_",
+          "have _spider_ set _S.05_ "
+        ],
+        "global": 43
+      },
+      {
+        "kind": "task",
+        "firstLine": 83,
+        "lines": [
+          "_S.05_ task:",
+          "start quest 15 15 ",
+          "take _spider_ from pc ",
+          "play video 5 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 89,
+        "lines": [
+          "_S.06_ task:",
+          "when _S.04_ and not _S.05_ ",
+          "clear _S.04_ _S.06_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

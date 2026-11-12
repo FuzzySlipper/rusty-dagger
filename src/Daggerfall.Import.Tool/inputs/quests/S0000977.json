@@ -1,0 +1,198 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000977.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "370db9b88ff4320fde574f0e5471633cb07f57b9e732676c73dc4c4c192b97ba",
+    "byteLength": 1323
+  },
+  "document": {
+    "fileName": "S0000977.txt",
+    "questName": "S0000977",
+    "questNameLine": 5,
+    "displayName": "Curse of Daggerfall",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000977"
+      },
+      {
+        "name": "displayname",
+        "value": "Curse of Daggerfall"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 10,
+        "lines": []
+      },
+      {
+        "id": 1001,
+        "firstLine": 13,
+        "lines": []
+      },
+      {
+        "id": 1002,
+        "firstLine": 16,
+        "lines": []
+      },
+      {
+        "id": 1003,
+        "firstLine": 19,
+        "lines": []
+      },
+      {
+        "id": 1004,
+        "firstLine": 22,
+        "lines": []
+      },
+      {
+        "id": 1005,
+        "firstLine": 25,
+        "lines": [
+          "Ghosts are haunting the streets of Daggerfall.",
+          "<--->",
+          "Don't walk the streets of Daggerfall at night.",
+          "<--->",
+          "<ce>      The ghost of King Lysandus haunts his old capital at night.",
+          "<ce>                           No one knows why."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 33,
+        "lines": []
+      },
+      {
+        "id": 1007,
+        "firstLine": 36,
+        "lines": []
+      },
+      {
+        "id": 1008,
+        "firstLine": 39,
+        "lines": []
+      },
+      {
+        "id": 1009,
+        "firstLine": 42,
+        "lines": []
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "place",
+        "firstLine": 52,
+        "lines": [
+          "Place _daggerfall_ permanent DaggerfallCity1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 54,
+        "lines": [
+          "Clock _delay_ 00:04 00:15 flag 12 range 0 0"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 55,
+        "lines": [
+          "Clock _S.05_ 00:01 0 flag 9 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 57,
+        "lines": [
+          "Foe _F.00_ is Ghost"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 58,
+        "lines": [
+          "Foe _wraith_ is Wraith"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 61,
+        "lines": [
+          "pc at _daggerfall_ set _S.02_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 63,
+        "lines": [
+          "LiftedCurse _S.00_",
+          "end quest "
+        ],
+        "global": 0
+      },
+      {
+        "kind": "task",
+        "firstLine": 66,
+        "lines": [
+          "_S.01_ task:",
+          "daily from 05:00 to 19:00 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 69,
+        "lines": [
+          "variable _S.02_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 70,
+        "lines": [
+          "_S.03_ task:",
+          "when not _S.01_ and _S.02_ ",
+          "create foe _wraith_ every 21 minutes indefinitely with 50% success ",
+          "create foe _F.00_ every 31 minutes indefinitely with 50% success ",
+          "play sound vengence 5 0"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 76,
+        "lines": [
+          "variable _delay_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 77,
+        "lines": [
+          "variable _S.05_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 78,
+        "lines": [
+          "_S.06_ task:",
+          "when _S.01_ or not _S.02_ ",
+          "clear _S.03_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

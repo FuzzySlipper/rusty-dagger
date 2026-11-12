@@ -1,0 +1,517 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C01Y13.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "e08ba6dc42cc99d4084698761dccc02159153dc6e43f6088cc7456893e3503c1",
+    "byteLength": 10991
+  },
+  "document": {
+    "fileName": "A0C01Y13.txt",
+    "questName": "A0C01Y13",
+    "questNameLine": 7,
+    "displayName": "Defamation",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C01Y13"
+      },
+      {
+        "name": "displayname",
+        "value": "Defamation"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 12,
+        "lines": [
+          "<ce>                Good day. _giver_ is the name. You may",
+          "<ce>               have heard of me lately. Somebody has been",
+          "<ce>                 filling the streets with horrible lies",
+          "<ce>                  concerning my private life. I'll pay",
+          "<ce>               _gold_ gold to the person who puts a stop",
+          "<ce>                       to them. What do you say?",
+          "                                     <--->",
+          "<ce>                  The malicious, downright slanderous",
+          "<ce>                 rumors about me must cease and desist",
+          "<ce>                 immediately. I need someone anonymous",
+          "<ce>                  to trace these rumors back to their",
+          "<ce>                   infernal source. Would _gold_ gold",
+          "<ce>                      pieces be enough to buy your",
+          "<ce>                      investigative skills in this",
+          "<ce>                                matter?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                  I guess you heard the one about me",
+          "<ce>                  not keeping my promises. Damn lies!"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 33,
+        "lines": [
+          "<ce>                  You will? Excellent. Come back when",
+          "<ce>                  you have some proof of who's behind",
+          "<ce>                 all these nasty rumors about me. I'll",
+          "<ce>                 give you the gold then. If you're not",
+          "<ce>                   back within a month, I will assume",
+          "<ce>                         that you have failed."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 41,
+        "lines": [
+          "%qdt:",
+          " Someone has been spreading rumors around",
+          " ___giver_ about _giver_.",
+          " %G has hired me to put a stop",
+          " to them for _gold_ gold. I have 1 month to",
+          " return with proof of my success."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 49,
+        "lines": [
+          "<ce>              You have been honorable, %pcn. I thank you.",
+          "<ce>           Take this _magicsword_, my most prized possession.",
+          "<ce>          It is the least I can offer. We are friends forever,",
+          "<ce>                             and I owe you.",
+          "<ce>                   Leave _giver_ and _sister_ to me,",
+          "<ce>                   I have something planned for them."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 57,
+        "lines": [
+          "<ce>                   I heard that _giver_ keeps slaves!",
+          "<--->",
+          "<ce>                       _giver_ beats %g3 spouse."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 62,
+        "lines": [
+          "<ce>                    _giver_ is a pariah. Nobody in",
+          "<ce>                town wants anything to do with %g2. You",
+          "<ce>                 have heard all the things %g has done?"
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 67,
+        "lines": [
+          "<ce>                 _lover_ was rescued from ___dungeon_",
+          "<ce>                 by some %ra. Hey! Aren't you that %ra?"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                 You must think I am a horrible person",
+          "<ce>                 after what I did to my sister's lover,",
+          "<ce>                   _lover_. Let me make it up to you."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                  You failed me! My sister no longer",
+          "<ce>                   speaks to me and it's your fault."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 80,
+        "lines": [
+          " %qdt:",
+          " I have learned that _giver_ made a deal with",
+          " %g3 sister, _sister_, to kidnap her lover,",
+          " _lover_. There is a letter received by",
+          " _giver_ that outlines the plan."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 87,
+        "lines": [
+          "_giver_,",
+          " My words will be quick. _lover_ is too",
+          " much, as you have said, and a little scare",
+          " may be what is needed. I'll be leaving on a trip",
+          " tonight, so tomorrow at sunset,",
+          " you should take him. I'll be in touch again,",
+          " but I don't imagine we will need to continue",
+          " for more than a week.",
+          "<ce>                               -_sister_"
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 98,
+        "lines": [
+          "<ce>                     What's that you say? _giver_?",
+          "<ce>               I have heard something... but we must keep",
+          "<ce>                 our voices low. Seems that %g3 sister,",
+          "<ce>            _sister_, was having a hard time with her lover.",
+          "<ce>             I believe his name is _lover_. I do know that",
+          "<ce>                there was a deal struck between _giver_",
+          "<ce>               and %g3 sister to have _lover_ dealt with.",
+          "<ce>             I'm not sure how, but a young chap I met says",
+          "<ce>             he delivered a letter from _sister_ outlining",
+          "<ce>                          the plan to _giver_."
+        ]
+      },
+      {
+        "id": 1018,
+        "firstLine": 110,
+        "lines": [
+          "%qdt:",
+          " I have shown _giver_ the letter",
+          " outlining the plan to kidnap _lover_,",
+          " and _giver_ has now divulged that",
+          " %g hired some bandits to lock him away in",
+          " ___dungeon_. %G begged for his life",
+          " and asked that I rescue _lover_."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 119,
+        "lines": [
+          "<ce>                         Lies, all lies I say!",
+          "<ce>                   I hate those nasty street rumors.",
+          "<ce>                Please hurry up and put a stop to them!"
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 124,
+        "lines": [
+          "<ce>                     What?! What is this? Oh my...",
+          "<ce>                     Please, please don't kill me!",
+          "<ce>                  My sister put me up to it... I didn't",
+          "<ce>                  mean any harm. She only asked that I",
+          "<ce>                 scare him a little, you know, make him",
+          "<ce>                appreciate her more. I know I shouldn't",
+          "<ce>                have done it. Now I'm in over my head...",
+          "<ce>               you see, I paid a group of bandits to take",
+          "<ce>                 him away and lock him in ___dungeon_.",
+          "<ce>                I figured this would scare him enough...",
+          "<ce>               but he hasn't returned! I went too far... I",
+          "<ce>             know. Please... you must rescue him! I thought",
+          "<ce>               I could cover it up, but I can't anymore.",
+          "<ce>            You've got to rescue him. If he's not back when ",
+          "<ce>           my sister returns... well, she'll kill me for sure!"
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 141,
+        "lines": [
+          "<ce>                  _giver_ is a big topic these days.",
+          "                                     <--->",
+          "<ce>              _giver_ has been staying at _givershouse_.",
+          "                                     <--->",
+          "<ce>                 _giver_'s sister's lover is missing.",
+          "                                     <--->",
+          "<ce>               You can usually find _giver_ at __giver_.",
+          "                                     <--->",
+          "<ce>              _giver_? You can find %g2 either at __giver_,",
+          "<ce>                      or at home at _givershouse_.",
+          "                                     <--->",
+          "<ce>                  _giver_ is well liked in ___giver_.",
+          "                                     <--->",
+          "<ce>                         You should try _inn_.",
+          "<ce>                    The good gossip is always there.",
+          "                                     <--->",
+          "<ce>       _giver_ is often seen shopping with %g3 sister, _sister_.",
+          "                                     <--->",
+          "<ce>                    _giver_ has been stealing from",
+          "<ce>                    _inn_. Or was that someone else?",
+          "                                     <--->",
+          "<ce>                     _giver_ murdered his sister.",
+          "                                     <--->",
+          "<ce>                 _giver_'s father was raised by orcs.",
+          "                                     <--->",
+          "<ce>                    _giver_ has taken an orc lover.",
+          "                                     <--->",
+          "<ce>              _giver_ has been stealing from the temples.",
+          "                                     <--->",
+          "<ce>                  _giver_ is in league with the orcs.",
+          "                                     <--->",
+          "<ce>                  There are more rumors about _giver_",
+          "<ce>                than anyone else in ___giver_ this week.",
+          "                                     <--->",
+          "<ce>            _giver_ promised to kidnap %g3 sister's lover.",
+          "                                     <--->",
+          "<ce>         There is so much talk around these parts of nothing.",
+          "                                     <--->",
+          "<ce>                  _giver_ doesn't keep %g3 promises.",
+          "                                     <--->",
+          "<ce>                _giver_ has been keeping some secrets.",
+          "                                     <--->",
+          "<ce>              Everyone around here has their own stories.",
+          "                                     <--->",
+          "<ce>                     There's always talk at _inn_."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 188,
+        "lines": [
+          "<ce>_lover_ is _sister_'s lover. You know, I haven't seen him around lately.",
+          "<--->",
+          "<ce>_lover_ hasn't been seen around town in days. I bet _giver_ is behind",
+          "<ce>                              it somehow."
+        ]
+      },
+      {
+        "id": 2000,
+        "firstLine": 194,
+        "lines": [
+          "<ce>       Thank %god someone has found me! I thought I'd never get",
+          "<ce>             out of here. I've been wandering around these",
+          "<ce>                passages for days, trying to stay alive.",
+          "<ce>                   What is that you say? _sister_ and",
+          "<ce>                      _giver_ are behind all this!?",
+          "<ce>               Well, you get me back to _sistershouse_ in",
+          "<ce>               __sistershouse_ and I'll reward you well.",
+          "<ce>                And then I will take care of those two!"
+        ]
+      },
+      {
+        "id": 2001,
+        "firstLine": 204,
+        "lines": [
+          "%qdt:",
+          " I have found _lover_ and am escorting him",
+          " back to _sistershouse_",
+          " in __sistershouse_."
+        ]
+      },
+      {
+        "id": 2005,
+        "firstLine": 210,
+        "lines": [
+          "<ce>                             _lover_ says,",
+          "<ce>                      \"Thanks for your help, %pcn,",
+          "<ce>                     but I'll find my own way home",
+          "<ce>                              from here.\""
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 239,
+        "lines": [
+          "Item _letter_ letter used 1015"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 240,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 241,
+        "lines": [
+          "Item _magicsword_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 243,
+        "lines": [
+          "Person _giver_ group Questor anyInfo 1022 rumors 1022"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 244,
+        "lines": [
+          "Person _teller_ face 1 group Innkeeper local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 245,
+        "lines": [
+          "Person _sister_ face 19 group Group_6.0 female local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 246,
+        "lines": [
+          "Person _lover_ face 117 group Group_6.0 male local anyInfo 1030 rumors 1030"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 248,
+        "lines": [
+          "Place _givershouse_ local house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 249,
+        "lines": [
+          "Place _sistershouse_ local house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 250,
+        "lines": [
+          "Place _dungeon_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 251,
+        "lines": [
+          "Place _inn_ local tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 253,
+        "lines": [
+          "Clock _S.00_ 30.00:00 0 flag 9 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 257,
+        "lines": [
+          "place item _letter_ at _givershouse_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 258,
+        "lines": [
+          "dialog link for location _givershouse_ person _teller_ ",
+          "dialog link for location _sistershouse_ person _lover_ item _letter_ ",
+          "dialog link for location _dungeon_ person _sister_ item _gold_ ",
+          "start timer _S.00_ ",
+          "log 1003 step 0 ",
+          "clicked npc _giver_ say 1020 ",
+          "place npc _teller_ at _inn_ ",
+          "place npc _lover_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 267,
+        "lines": [
+          "_S.00_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 270,
+        "lines": [
+          "_S.01_ task:",
+          "clicked npc _teller_ say 1017 ",
+          "log 1010 step 1 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 274,
+        "lines": [
+          "variable _S.02_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 275,
+        "lines": [
+          "variable _S.03_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 276,
+        "lines": [
+          "_S.04_ task:",
+          "toting _letter_ and _giver_ clicked saying 1021 ",
+          "reveal _dungeon_ ",
+          "log 1018 step 2 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 281,
+        "lines": [
+          "_S.05_ task:",
+          "give pc _magicsword_ ",
+          "drop _lover_ face ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 286,
+        "lines": [
+          "_S.06_ task:",
+          "clicked npc _lover_ say 2000 ",
+          "pc at _sistershouse_ set _S.05_ ",
+          "log 2001 step 3 ",
+          "hide npc _lover_ ",
+          "add _lover_ face "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 293,
+        "lines": [
+          "_S.07_ task:",
+          "when _S.00_ and _S.06_ and not _S.05_ ",
+          "say 2005 ",
+          "drop _lover_ face "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

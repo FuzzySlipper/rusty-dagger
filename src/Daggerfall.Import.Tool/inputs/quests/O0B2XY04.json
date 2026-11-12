@@ -1,0 +1,294 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/O0B2XY04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "ff4fab1febdbb40aa096999c95d12c1dd7c1ce737b80db7c42e1ea617a4a82b5",
+    "byteLength": 3408
+  },
+  "document": {
+    "fileName": "O0B2XY04.txt",
+    "questName": "O0B2XY04",
+    "questNameLine": 8,
+    "displayName": "Valuable Pages",
+    "header": [
+      {
+        "name": "quest",
+        "value": "O0B2XY04"
+      },
+      {
+        "name": "displayname",
+        "value": "Valuable Pages"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                     I have a job. Ordinary guild",
+          "<ce>                   work. Worth _gold_ gold. Just the",
+          "<ce>                    standard guild fee. Interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 18,
+        "lines": [
+          "<ce>                        Too bad for you, %pcn."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                           Go to __mansion_.",
+          "<ce>                            Find _mansion_.",
+          "<ce>                    Inside is a rare book, entitled",
+          "<ce>                         _book_. Bring it back",
+          "<ce>                    to me within =traveltime_ days,",
+          "<ce>                        and I'll pay you. Simple",
+          "<ce>                              enough, eh?"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                        Ah. %oth. Here is your",
+          "<ce>                      guild fee. Maybe some day we",
+          "<ce>                        can work together again."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 35,
+        "lines": [
+          "A collector in __mansion_ just bought a rare copy of _book_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 38,
+        "lines": [
+          "The security in _mansion_ wasn't great, so they moved the valuables out."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 41,
+        "lines": [
+          "That copy of _book_ that was stolen from _mansion_ was irreplaceable."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 44,
+        "lines": [
+          "Oh, hello, %pcf. Good work on getting that book, if I didn't mention it before."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 47,
+        "lines": [
+          "<ce>                    Don't fumble for excuses, %pcf.",
+          "<ce>               I told you where to find the book and told",
+          "<ce>                 you to hurry, but you didn't. Now it's",
+          "<ce>                  too late, and I'm tired. Just, be a",
+          "<ce>                    good %ra and sod off, will you?"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 54,
+        "lines": [
+          "%qdt:",
+          " A Thieves Guild member in",
+          " ___qgiver_ offered me a job to",
+          " steal a book, _book_",
+          " from _mansion_ in",
+          " __mansion_. I have",
+          " =traveltime_ days to get it",
+          " and return to _qgiver_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 81,
+        "lines": [
+          "Item _book_ book3"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 82,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 84,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 86,
+        "lines": [
+          "Place _mansion_ remote house1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 88,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 90,
+        "lines": [
+          "Foe _F.00_ is Battle_mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 91,
+        "lines": [
+          "Foe _F.01_ is Iron_atronach"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 92,
+        "lines": [
+          "Foe _F.02_ is Daedra_seducer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 93,
+        "lines": [
+          "Foe _F.03_ is Werewolf"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 96,
+        "lines": [
+          "place item _book_ at _mansion_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 97,
+        "lines": [
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "pc at _mansion_ set _S.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 101,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 104,
+        "lines": [
+          "_S.01_ task:",
+          "pick one of _guard1_ _guard2_ _guard3_ _guard4_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 107,
+        "lines": [
+          "_questdone_ task:",
+          "toting _book_ and _qgiver_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 112,
+        "lines": [
+          "_guard1_ task:",
+          "create foe _F.00_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 115,
+        "lines": [
+          "_guard2_ task:",
+          "create foe _F.01_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 118,
+        "lines": [
+          "_guard3_ task:",
+          "create foe _F.02_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 121,
+        "lines": [
+          "_guard4_ task:",
+          "create foe _F.03_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 124,
+        "lines": [
+          "_S.07_ task:",
+          "clicked item _book_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 127,
+        "lines": [
+          "_S.08_ task:",
+          "when _traveltime_ and _S.07_ ",
+          "make _book_ permanent "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

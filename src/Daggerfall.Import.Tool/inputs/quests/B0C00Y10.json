@@ -1,0 +1,239 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/B0C00Y10.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "2def7c1208c93a6a70676f0fb54a25f1936474bc0ddf0e98b578dc3d255b358b",
+    "byteLength": 3393
+  },
+  "document": {
+    "fileName": "B0C00Y10.txt",
+    "questName": "B0C00Y10",
+    "questNameLine": 9,
+    "displayName": "Trouble with Orcs",
+    "header": [
+      {
+        "name": "quest",
+        "value": "B0C00Y10"
+      },
+      {
+        "name": "displayname",
+        "value": "Trouble with Orcs"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                        I am _qgiver_. You are",
+          "<ce>                  not a member of this knightly order.",
+          "<ce>                 We are not sure if you can be trusted",
+          "<ce>                  yet. If you were to slay the leader",
+          "<ce>                  of the bandit band of orcs troubling",
+          "<ce>                  our area, it might change our minds.",
+          "<ce>                 Do you have the stomach for such work?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                        Why am I not surprised?",
+          "<ce>                      Come back when you are ready",
+          "<ce>                          to earn our respect."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                     Kill as many orcs as you can,",
+          "<ce>                       but be sure to kill their",
+          "<ce>                           leader, =monster_.",
+          "<ce>                     The foul band is hiding up in",
+          "<ce>                         ___dungeon_. If you're",
+          "<ce>                      not back in =2dung_ days, I",
+          "<ce>                      will know you are the coward",
+          "<ce>                         everyone says you are."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 38,
+        "lines": [
+          "<ce>                    Hmmm. Maybe we should consider",
+          "<ce>                     you for membership. Not a bad",
+          "<ce>                           job at all, %pcn."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 43,
+        "lines": [
+          "That orc tribe has eluded the knights so far.",
+          "<--->",
+          "That orc tribe would be lost without its leader."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 48,
+        "lines": [
+          "The orcs will be back. Their leader still lives."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 51,
+        "lines": [
+          "Some %ra came out of nowhere, slew the orc leader, and left."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 54,
+        "lines": [
+          "What can I do for you, orc slayer?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 57,
+        "lines": [
+          "You are not worth my time, orc fancier.",
+          "<--->",
+          "Why would I talk to a lousy orc lover?"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 62,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of",
+          " the knightly order in ___qgiver_",
+          " gave me the task of wiping",
+          " out an orc band that makes",
+          " its home in ___dungeon_.",
+          " In particular, I must get the",
+          " leader, a certain =monster_.",
+          " I need to get back to %g2 in",
+          " =2dung_ days or %g will",
+          " assume I'm dead."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 75,
+        "lines": [
+          "<ce>                          =monster_ is dead.",
+          "<ce>                      Without a leader, these orcs",
+          "<ce>                  will never be more than a nuisance."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 95,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 96,
+        "lines": [
+          "Person _local_ face 1 group Resident2 local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 98,
+        "lines": [
+          "Place _dungeon_ remote dungeon1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 100,
+        "lines": [
+          "Clock _2dung_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 102,
+        "lines": [
+          "Foe _monster_ is Orc_sergeant"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 105,
+        "lines": [
+          "start timer _2dung_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 ",
+          "place foe _monster_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 110,
+        "lines": [
+          "_2dung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 113,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _monster_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 116,
+        "lines": [
+          "_S.02_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 119,
+        "lines": [
+          "_success_ task:",
+          "when _S.02_ and _S.01_ ",
+          "give pc nothing ",
+          "change repute with _local_ by +4 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 125,
+        "lines": [
+          "_clearclick_ task:",
+          "when _S.02_ and not _S.01_ ",
+          "clear _S.02_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

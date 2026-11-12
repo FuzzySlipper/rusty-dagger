@@ -1,0 +1,345 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/L0B60Y10.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "01971c5a3be2493f515ae5a6848b195798c5486152f28d88ab3265d5918747f6",
+    "byteLength": 4318
+  },
+  "document": {
+    "fileName": "L0B60Y10.txt",
+    "questName": "L0B60Y10",
+    "questNameLine": 9,
+    "displayName": "The Veteran",
+    "header": [
+      {
+        "name": "quest",
+        "value": "L0B60Y10"
+      },
+      {
+        "name": "displayname",
+        "value": "The Veteran"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                  This could be a tough one, even for",
+          "<ce>                    you %pcf. It's one of the best",
+          "<ce>                     fighters in all of %reg. Are",
+          "<ce>                      you sure you want this job?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>                   Don't blame you a bit. This could",
+          "<ce>                        be a bit too dangerous."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                  Somehow I thought you might try for",
+          "<ce>     this one. It's your funeral. This mark is no arena gladiator.",
+          "<ce>                   We're talking about a veteran of",
+          "<ce>                 the Betony war. Killed 9 men, if the",
+          "<ce>                  stories are right. Go to _mondung_",
+          "<ce>                     in ___mondung_. You'll be able",
+          "<ce>                  to identify the mark easily because",
+          "<ce>                   of the limp. A spear in the knee",
+          "<ce>                  during the war caused it. Get back",
+          "<ce>                       here in =1stparton_ days."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                   I don't know who you think you've",
+          "<ce>                   killed, but it wasn't the target.",
+          "<ce>                      Get back to ___mondung_ and",
+          "<ce>                  finish what we were contracted for."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                    What a battle! I heard about it",
+          "<ce>                 already. Street gossip is faster than",
+          "<ce>              a horse you know. Here's the _reward_ gold",
+          "<ce>                       pieces for the job, %pcf."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 48,
+        "lines": [
+          "Such a shame, what's happening in Daggerfall."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 51,
+        "lines": [
+          "I hear the queen is pregnant. At least that's what everyone is saying."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 54,
+        "lines": [
+          "Did you hear about that war hero? Killed in a duel. What a shame."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 57,
+        "lines": [
+          "Your battle with that war hero is still being told %pcn."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 60,
+        "lines": [
+          "You failed in your contract to kill the war hero. The Brotherhood never forgets failure."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 63,
+        "lines": [
+          "%qdt:",
+          " My contract for the Dark Brotherhood",
+          " in ___questgiver_ is a war hero at _mondung_,",
+          " in ___mondung_. The deed must be",
+          " done in =1stparton_ days."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 70,
+        "lines": [
+          "<ce>                 \"You have succeeded...where all...the",
+          "<ce>               soldiers in the...war of Betony failed.\"",
+          "<ce>                                    ",
+          "<ce>                   The contract has been fulfilled."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                   \"Do not think me a cripple, just",
+          "<ce>                   because I have a limp. I'll still",
+          "<ce>                       tear you limb from limb!\""
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 81,
+        "lines": [
+          "<ce>                   This isn't a man! It's a vampire!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 97,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 99,
+        "lines": [
+          "Person _questgiver_ face 112 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 101,
+        "lines": [
+          "Place _mondung_ remote weaponstore"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 103,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 18 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 105,
+        "lines": [
+          "Foe _F.00_ is Ancient_vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 106,
+        "lines": [
+          "Foe _F.01_ is Ranger"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 107,
+        "lines": [
+          "Foe _F.02_ is Monk"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 108,
+        "lines": [
+          "Foe _F.03_ is Barbarian"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 111,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1020 step 0 ",
+          "pick one of _S.06_ _S.07_ _S.08_ _onehour_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 115,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _S.02_ ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 120,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 125,
+        "lines": [
+          "_S.02_ task:",
+          "killed 1 _F.00_ saying 1021 ",
+          "killed 1 _F.03_ saying 1021 ",
+          "killed 1 _F.02_ saying 1021 ",
+          "killed 1 _F.01_ saying 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 131,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 132,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 135,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 136,
+        "lines": [
+          "_S.06_ task:",
+          "place foe _F.00_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 139,
+        "lines": [
+          "_S.07_ task:",
+          "place foe _F.01_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 142,
+        "lines": [
+          "_S.08_ task:",
+          "place foe _F.02_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 145,
+        "lines": [
+          "_onehour_ task:",
+          "place foe _F.03_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 148,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.02_",
+          "say 1003 ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 153,
+        "lines": [
+          "_S.11_ task:",
+          "injured _F.03_ saying 1022 ",
+          "injured _F.02_ saying 1022 ",
+          "injured _F.01_ saying 1022 ",
+          "injured _F.00_ saying 1023 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

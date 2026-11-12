@@ -1,0 +1,325 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/M0B30Y04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "3145b03a610137f3dbfaca1a057ddc7becb7a9c2c9f02d3569eb44d538a0a374",
+    "byteLength": 4924
+  },
+  "document": {
+    "fileName": "M0B30Y04.txt",
+    "questName": "M0B30Y04",
+    "questNameLine": 8,
+    "displayName": "Fighters Lich",
+    "header": [
+      {
+        "name": "quest",
+        "value": "M0B30Y04"
+      },
+      {
+        "name": "displayname",
+        "value": "Fighters Lich"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                         Listen, %pcf, if you",
+          "<ce>                  hadn't already done a bunch of jobs",
+          "<ce>                    for us already, I wouldn't even",
+          "<ce>                    suggest this, but there's a job",
+          "<ce>                     I don't even want to tell you",
+          "<ce>                   about. It sounds like crying for",
+          "<ce>               the moon, and more dangerous. It's offing",
+          "<ce>                  a lich in ___mondung_. And it only",
+          "<ce>              pays _reward_ gold. You're not interested,",
+          "<ce>                               are you?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                         Thank %god you got a",
+          "<ce>                     little sense left. We'll just",
+          "<ce>                     let that lich do whatever the",
+          "<ce>                      hell it wants to do. That's",
+          "<ce>                             fine with me."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 32,
+        "lines": [
+          "<ce>                 Aw, I knew I shouldn't have mentioned",
+          "<ce>                 it. Listen, if you're really gonna do",
+          "<ce>                   this, get the best stuff you can",
+          "<ce>                 get, magic stuff, ebony blades, what",
+          "<ce>                  have you. This lich has to cross to",
+          "<ce>                 Oblivion in =1stparton_ days, and you",
+          "<ce>                  gotta be back here within that time",
+          "<ce>               to get your reward. You're unbelievable,",
+          "<ce>                     %pcf. Good luck. You're gonna",
+          "<ce>                               need it."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 44,
+        "lines": [
+          "<ce>                   Takin' a little break before the",
+          "<ce>                           lich-hunt, %pcf?",
+          "<ce>                       Just don't wait too long."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 49,
+        "lines": [
+          "<ce>                   I didn't expect to see you again,",
+          "<ce>                        %pcf, no foolin'. %god",
+          "<ce>                 must be lookin' out after you. Here's",
+          "<ce>                     your _reward_ gold. Enjoy it."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 55,
+        "lines": [
+          "I hear some stupid %ra's going to take on the lich in ___mondung_.",
+          "<--->",
+          "Everyone's placing bets on that %ra that's going after that lich in ___mondung_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 60,
+        "lines": [
+          "That lich is still out there somewhere, and it's not happy with us.",
+          "<--->",
+          "I wish they had just left that lich alone. They just made it mad."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 65,
+        "lines": [
+          "Someone actually killed that lich! I thought liches were immortal.",
+          "<--->",
+          "I lost money betting against that %ra that went to kill that lich."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 70,
+        "lines": [
+          "<ce>                  The lich slayer has returned! What",
+          "<ce>                   will it be now? Dragons? Daedra?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 74,
+        "lines": [
+          "<ce>                 I wouldn't have taken a job to face a",
+          "<ce>                  lich. Never understood why you did.",
+          "<ce>                 Now you just look stupid because you",
+          "<ce>                       weren't able to kill it."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 80,
+        "lines": [
+          "<ce>                      Puny mortal! You should not",
+          "<ce>                      have attempted to interfere",
+          "<ce>                    with the affairs of the undead.",
+          "<ce>                       Now I shall add you to my",
+          "<ce>                          collection of slain",
+          "<ce>                           %ra mercenaries."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 88,
+        "lines": [
+          "%qdt:",
+          " The Fighters Guild",
+          " of ___questgiver_ has hired me to",
+          " slay a lich in =1stparton_ days or less.",
+          " The lich's lair is a place called",
+          " ___mondung_."
+        ]
+      },
+      {
+        "id": 1080,
+        "firstLine": 96,
+        "lines": [
+          "<ce>                  Here, take this map to ___newdung_.",
+          "<ce>                 Should be just the kind of thing that",
+          "<ce>             a lich-killer like you does before breakfast."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 115,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 117,
+        "lines": [
+          "Person _questgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 119,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 120,
+        "lines": [
+          "Place _newdung_ remote dungeon14"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 122,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 124,
+        "lines": [
+          "Foe _monster_ is Lich"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 127,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1030 step 0 ",
+          "pick one of _map_ _nomap_ _nomap_ _map_ ",
+          "place foe _monster_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 133,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _mondead_ ",
+          "give pc _reward_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 137,
+        "lines": [
+          "_S.01_ task:",
+          "injured _monster_ ",
+          "say 1020 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 141,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 144,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 147,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _mondead_",
+          "say 1003 ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 155,
+        "lines": [
+          "variable _map_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 156,
+        "lines": [
+          "variable _nomap_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 157,
+        "lines": [
+          "_S.07_ task:",
+          "when _map_ and _pcgetsgold_ ",
+          "reveal _newdung_ readmap",
+          "    say 1080 ",
+          "end quest"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 163,
+        "lines": [
+          "_S.08_ task:",
+          "when _nomap_ and _pcgetsgold_ ",
+          "end quest"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,244 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/L0B00Y03.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "5147557e59d587af5ed0a78c796fbb07052ad35a7dc7001c4f036884eb6b7d20",
+    "byteLength": 4047
+  },
+  "document": {
+    "fileName": "L0B00Y03.txt",
+    "questName": "L0B00Y03",
+    "questNameLine": 8,
+    "displayName": "A Renegade Mage",
+    "header": [
+      {
+        "name": "quest",
+        "value": "L0B00Y03"
+      },
+      {
+        "name": "displayname",
+        "value": "A Renegade Mage"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                  The Mages Guild has come to us for",
+          "<ce>                   a bit of messy business that's too",
+          "<ce>                    gross and nasty for them to deal",
+          "<ce>                     with. A renegade mage needs an",
+          "<ce>                      accounting fast. Interested?",
+          "                                     <--->",
+          "<ce>                 We have the Mages Guild for a client",
+          "<ce>                  again. Seems that one of their boys",
+          "<ce>                  has been sniffing too much bat gut,",
+          "<ce>                     and has gone off on a rampage.",
+          "<ce>                        Sound interesting, %pct?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                         That's disappointing."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                  Good. Now, this mage -- the name is",
+          "<ce>                             =mage_ -- has",
+          "<ce>               absconded with a number of magic thingies",
+          "<ce>                but the Mages Guild doesn't mind if you",
+          "<ce>                 take whatever %g has stolen. They just",
+          "<ce>              want %g2 dead. And you've only got =queston_",
+          "<ce>                    days to bring in the accounting.",
+          "<ce>                You'll find %g2 cowering down in a nasty",
+          "<ce>                       place called ___mondung_.",
+          "<ce>              Get back here with the world minus one rogue",
+          "<ce>                 mage in =queston_ days. Mephala steady",
+          "<ce>                            your arm, %pct."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                   So, you put the spark out of that",
+          "<ce>                         Sparkcaster, %pcf? Ah,",
+          "<ce>                  Mephala is pleased with you, as are",
+          "<ce>                             her children."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 49,
+        "lines": [
+          "The Mages Guild denies that =mage_ is beyond their control.",
+          "<--->",
+          "The Order of the Lamp is too official an organization to deal with =mage_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 54,
+        "lines": [
+          "=mage_ has fled across the Bay. Who can say what %g3 plans are?"
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 57,
+        "lines": [
+          "=mage_, the common people say, was done in by the Order of the Lamp.",
+          "<--->",
+          "Who can say what would've happened if that _mage_ had been suffered to live."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 62,
+        "lines": [
+          "Greetings and salutations. How may =qgiver_ assist thee, slayer of mages?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 65,
+        "lines": [
+          "<ce>               You have failed your contract with us, so",
+          "<ce>               we have failed our contract with the Mages",
+          "<ce>               Guild. I have little but scorn for you at",
+          "<ce>                            this time, %pcf."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 71,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of the Dark Brotherhood",
+          " in __qgiver_, ___qgiver_",
+          " has sent me to ___mondung_",
+          " to deal with a renegade mage from",
+          " the Mages Guild. I've =queston_ days to",
+          " put the matter to rest."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 80,
+        "lines": [
+          "<ce>                    =mage_'s light is snuffed out.",
+          "<ce>          The Brotherhood and the Mages Guild will be pleased."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 103,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 105,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 107,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 109,
+        "lines": [
+          "Foe _mage_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 112,
+        "lines": [
+          "start timer _queston_ ",
+          "reveal _mondung_ ",
+          "log 1010 step 0 ",
+          "place foe _mage_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 117,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 120,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _mage_ ",
+          "say 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 124,
+        "lines": [
+          "_S.02_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 127,
+        "lines": [
+          "variable _ma1_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 128,
+        "lines": [
+          "_S.04_ task:",
+          "when _S.02_ and not _S.01_ ",
+          "clear _S.02_ _S.04_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 132,
+        "lines": [
+          "_reward_ task:",
+          "when _S.02_ and _S.01_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

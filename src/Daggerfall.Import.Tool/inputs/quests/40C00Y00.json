@@ -1,0 +1,977 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/40C00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "f1d0c2a5eb860156c9414c6256e7af6aa6b3980ae890347adb4ca6a75a39557e",
+    "byteLength": 16077
+  },
+  "document": {
+    "fileName": "40C00Y00.txt",
+    "questName": "40C00Y00",
+    "questNameLine": 8,
+    "displayName": "Nocturnal's Quest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "40C00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Nocturnal's Quest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                      You wish, %pcn, for power.",
+          "<ce>                 With it you can thrash at shadows and",
+          "<ce>                  have a hope. If I brought you this",
+          "<ce>                 hope, what would you bring me? Would",
+          "<ce>                  you destroy one who brings me pain?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>                As I thought, no heart at all. We shall",
+          "<ce>                have no contract then, you and I, and,",
+          "<ce>                   disappointed, return I to my cold",
+          "<ce>                palace. The souls within are no kinder",
+          "<ce>               than those here, but there, they follow."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                Would you? You would be my anesthesia?",
+          "<ce>               You will go to the lair of the _monster_",
+          "<ce>                =monster_ at ___mondung_ and slay %g2?",
+          "<ce>                    Ah, %pcf, for that I would give",
+          "<ce>                     to you my _artifact_ which I",
+          "<ce>                have entrusted to my slave _qgfriend_.",
+          "<ce>                      After =monster_ lies dead,",
+          "<ce>                    go to ___qgfriend_ and meet my",
+          "<ce>                    slave at __qgfriend_. You will",
+          "<ce>                 recognize %g2 easily - a =qgfriend_.",
+          "<ce>                There you will receive the _artifact_.",
+          "<ce>                   And now, I must return to my cold",
+          "<ce>                palace of Oblivion. I will await news."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                      No. You must be looking for",
+          "<ce>                        a different =qgfriend_.",
+          "<ce>                       My name isn't _qgfriend_."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 47,
+        "lines": [
+          "<ce>                           So, you're %pcn,",
+          "<ce>                        right? I'm _qgfriend_.",
+          "<ce>               I must say, I was wondering what kind of",
+          "<ce>                %ra it took to glide into a _monster_'s",
+          "<ce>                stronghold, murder the owner, and trip",
+          "<ce>                    right on out. Very impressive.",
+          "<ce>                  Nocturnal is likewise intrigued by",
+          "<ce>                   you, hence this gift: _artifact_.",
+          "<ce>                       Be careful with it, %pcf."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 58,
+        "lines": [
+          "=monster_ is a sneaky one -- %g brings the whole Mages Guild under suspicion.",
+          "<--->",
+          "I can't trust anyone at the Mages Guild, knowing =monster_ is a member.",
+          "<--->",
+          "Mages say =monster_ is hiding from Oblivion's wrath at ___fakedung_.",
+          "<--->",
+          "Mages are gathering to scour ___fakedung_ for that scoundrel =monster_.",
+          "<--->",
+          "I saw a bunch of mages heading out to ___fakedung_.",
+          "<--->",
+          "I heard that traitor =monster_ is now hiding out in ___fakedung_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 71,
+        "lines": [
+          "I knew =monster_ was in some kind of trouble, why else would %g leave so quickly?",
+          "<--->",
+          "The Mages Guild must have decided =monster_ was a liability to their image."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 76,
+        "lines": [
+          "Well, I can't say I'm surprised about =monster_; %g3 past caught up to %g2.",
+          "<--->",
+          "I don't even think the Archmagister is sad to hear of the death of =monster_."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 81,
+        "lines": [
+          "_qgfriend_ is one of the regulars at __qgfriend_, just %di of here.",
+          "<--->",
+          "_qgfriend_ is a =qgfriend_ who haunts __qgfriend_. That's to the %di."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 86,
+        "lines": [
+          "_qgfriend_ is an agent of Nocturnal, operating out of __qgfriend_ %di of here.",
+          "<--->",
+          "_qgfriend_ is one of the slaves of Nocturnal, Daedra Lady of the Night."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 91,
+        "lines": [
+          "Nocturnal is the mysterious Lady of the Night, one of the Daedric Regents.",
+          "<--->",
+          "Nocturnal is a Regent of Oblivion, whose sphere is darkness and mystery."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 96,
+        "lines": [
+          "The _artifact_ can open any lock."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 99,
+        "lines": [
+          "Mages say =monster_ is hiding from Oblivion's wrath at ___fakedung_.",
+          "<--->",
+          "Mages are gathering to scour ___fakedung_ for that scoundrel =monster_.",
+          "<--->",
+          "I saw a bunch of mages heading out to ___fakedung_.",
+          "<--->",
+          "I heard that traitor =monster_ is now hiding out in ___fakedung_."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 108,
+        "lines": [
+          "<ce>                           %oth!  =monster_,",
+          "<ce>                     Oblivion's agent is upon us!",
+          "<ce>                 I've moved the most valuable reagents",
+          "<ce>                          to ___fakedung_ and",
+          "<ce>                  plan to meet you there after you've",
+          "<ce>                      dealt with that pesky %ra.",
+          "<ce>                                    ",
+          "<ce>                                  N."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 118,
+        "lines": [
+          "<ce>                         A voice seems to echo",
+          "<ce>                        in your ear: =monster_",
+          "<ce>                      ...sure...special place...",
+          "<ce>                                news..."
+        ]
+      },
+      {
+        "id": 1018,
+        "firstLine": 124,
+        "lines": [
+          "%qdt:",
+          " When I arrived at ___mondung_",
+          " an echo mentioned a 'special",
+          " place' inside."
+        ]
+      },
+      {
+        "id": 1019,
+        "firstLine": 130,
+        "lines": [
+          "%qdt:",
+          " I found a note from =monster_ saying that %g is",
+          " expected at ___fakedung_ after trying",
+          " to bribe me."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 136,
+        "lines": [
+          "%qdt:",
+          " I now have a contract with Nocturnal,",
+          " one of the Daedric Princes of Oblivion. I have agreed",
+          " to slay the _monster_ =monster_ in %g3 stronghold of",
+          " ___mondung_ in exchange for Nocturnal's",
+          " artifact, the _artifact_. I must have the deed",
+          " done and meet her agent _qgfriend_",
+          " in __qgfriend_ of ___qgfriend_",
+          " in =1stparton_ days or I will have failed the contract.",
+          " This may mean something worse than just me not getting",
+          " the _artifact_."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 149,
+        "lines": [
+          "%qdt:",
+          " =monster_ offered me _bow_",
+          " in exchange for %g3 life, and I",
+          " could not resist.  %G said that",
+          " it is somewhere in ___bowdung_.",
+          " Since I have already betrayed",
+          " Nocturnal, I may as well try to",
+          " find it."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 159,
+        "lines": [
+          "%qdt:",
+          " =monster_ offered me the _ring_",
+          " in exchange for %g3 life, and I",
+          " could not resist.  %G said that",
+          " it is somewhere in ___ringdung_.",
+          " Since I have already betrayed",
+          " Nocturnal, I may as well try to",
+          " find it."
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 169,
+        "lines": [
+          "%qdt:",
+          " =monster_ offered me the _staff_",
+          " in exchange for %g3 life, and I",
+          " could not resist.  %G said that",
+          " it is somewhere in ___staffdung_.",
+          " Since I have already betrayed",
+          " Nocturnal, I may as well try",
+          " to find it."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 179,
+        "lines": [
+          "<ce>                   Wait!  I know that Nocturnal has",
+          "<ce>                  sent you, and that she has promised",
+          "<ce>                   you the _artifact_.  But if it is",
+          "<ce>                  truly power you seek, I can top her",
+          "<ce>                  offer -- if you cease your attack,",
+          "<ce>                 I will tell you where to find _bow_.",
+          "<ce>                       Do you agree to my offer?"
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 188,
+        "lines": [
+          "<ce>                   Wait!  I know that Nocturnal has",
+          "<ce>                  sent you, and that she has promised",
+          "<ce>                   you the _artifact_.  But if it is",
+          "<ce>                  truly power you seek, I can top her",
+          "<ce>                  offer -- if you cease your attack,",
+          "<ce>               I will tell you where to find the _ring_.",
+          "<ce>                       Do you agree to my offer?"
+        ]
+      },
+      {
+        "id": 1032,
+        "firstLine": 197,
+        "lines": [
+          "<ce>                   Wait!  I know that Nocturnal has",
+          "<ce>                  sent you, and that she has promised",
+          "<ce>                   you the _artifact_.  But if it is",
+          "<ce>                  truly power you seek, I can top her",
+          "<ce>                  offer -- if you cease your attack,",
+          "<ce>              I will tell you where to find the _staff_.",
+          "<ce>                       Do you agree to my offer?"
+        ]
+      },
+      {
+        "id": 1035,
+        "firstLine": 206,
+        "lines": [
+          "<ce>                       You have slain =monster_.",
+          "<ce>                       Prince Nocturnal will now",
+          "<ce>                             rest easier."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 211,
+        "lines": [
+          "<ce>                      Excellent.  I knew you had",
+          "<ce>                      a mercenary's heart.  _bow_",
+          "<ce>                      lies hidden in ___bowdung_.",
+          "<ce>                     You have only to find it and",
+          "<ce>                       you will be a power to be",
+          "<ce>                      reckoned with indeed.  Now,",
+          "<ce>                     I bid you good day, lest you",
+          "<ce>                      decide to claim both _bow_",
+          "<ce>                         and the _artifact_ by",
+          "<ce>                    killing me.  A mercenary heart",
+          "<ce>                      such as yours should not be",
+          "<ce>                           trusted too far!"
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 225,
+        "lines": [
+          "<ce>                      Excellent.  I knew you had",
+          "<ce>                   a mercenary's heart.  The _ring_",
+          "<ce>                     lies hidden in ___ringdung_.",
+          "<ce>                     You have only to find it and",
+          "<ce>                       you will be a power to be",
+          "<ce>                      reckoned with indeed.  Now,",
+          "<ce>                     I bid you good day, lest you",
+          "<ce>                    decide to claim both the _ring_",
+          "<ce>                         and the _artifact_ by",
+          "<ce>                    killing me.  A mercenary heart",
+          "<ce>                      such as yours should not be",
+          "<ce>                           trusted too far!"
+        ]
+      },
+      {
+        "id": 1042,
+        "firstLine": 239,
+        "lines": [
+          "<ce>                      Excellent.  I knew you had",
+          "<ce>                   a mercenary's heart.  The _staff_",
+          "<ce>                     lies hidden in ___staffdung_.",
+          "<ce>                     You have only to find it and",
+          "<ce>                       you will be a power to be",
+          "<ce>                      reckoned with indeed.  Now,",
+          "<ce>                     I bid you good day, lest you",
+          "<ce>                   decide to claim both the _staff_",
+          "<ce>                         and the _artifact_ by",
+          "<ce>                    killing me.  A mercenary heart",
+          "<ce>                      such as yours should not be",
+          "<ce>                           trusted too far!"
+        ]
+      },
+      {
+        "id": 1045,
+        "firstLine": 253,
+        "lines": [
+          "<ce>                 Mocking laughter echoes in your mind,",
+          "<ce>                                    ",
+          "<ce>                  \"You should have known better than",
+          "<ce>                   to trust me, %pcn.  Perhaps this",
+          "<ce>                   shadow of power can satisfy your",
+          "<ce>                     craving for a time, while you",
+          "<ce>                     rage vainly against those who",
+          "<ce>                 actually possess it.  Me for example.",
+          "<ce>                  I do hope sweet Nocturnal won't be",
+          "<ce>                 too displeased with your treachery.\"",
+          "<ce>                                    ",
+          "<ce>                 _bow_ crumbles to dust in your hand."
+        ]
+      },
+      {
+        "id": 1046,
+        "firstLine": 267,
+        "lines": [
+          "<ce>                 Mocking laughter echoes in your mind,",
+          "<ce>                                    ",
+          "<ce>                  \"You should have known better than",
+          "<ce>                   to trust me, %pcn.  Perhaps this",
+          "<ce>                   shadow of power can satisfy your",
+          "<ce>                     craving for a time, while you",
+          "<ce>                     rage vainly against those who",
+          "<ce>                 actually possess it.  Me for example.",
+          "<ce>                  I do hope sweet Nocturnal won't be",
+          "<ce>                 too displeased with your treachery.\"",
+          "<ce>                                    ",
+          "<ce>               The _ring_ crumbles to dust in your hand."
+        ]
+      },
+      {
+        "id": 1047,
+        "firstLine": 281,
+        "lines": [
+          "<ce>                 Mocking laughter echoes in your mind,",
+          "<ce>                                    ",
+          "<ce>                  \"You should have known better than",
+          "<ce>                   to trust me, %pcn.  Perhaps this",
+          "<ce>                   shadow of power can satisfy your",
+          "<ce>                     craving for a time, while you",
+          "<ce>                     rage vainly against those who",
+          "<ce>                 actually possess it.  Me for example.",
+          "<ce>                  I do hope sweet Nocturnal won't be",
+          "<ce>                 too displeased with your treachery.\"",
+          "<ce>                                    ",
+          "<ce>              The _staff_ crumbles to dust in your hand."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 295,
+        "lines": [
+          "<ce>                 Nocturnal was most impressed at your",
+          "<ce>                    daring, %pcn.  She asked me to",
+          "<ce>                   kill you quickly as a reward for",
+          "<ce>                       such audacious treachery."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 331,
+        "lines": [
+          "Item _artifact_ artifact Skeletons_Key anyInfo 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 332,
+        "lines": [
+          "Item _bow_ artifact Auriels_Bow"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 333,
+        "lines": [
+          "Item _ring_ artifact Warlocks_Ring"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 334,
+        "lines": [
+          "Item _staff_ artifact Staff_of_Magnus"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 335,
+        "lines": [
+          "Item _letter_ letter used 1016"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 337,
+        "lines": [
+          "Person _questgiver_ face 112 named Nocturnal anyInfo 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 338,
+        "lines": [
+          "Person _qgfriend_ group Librarian anyInfo 1011 rumors 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 340,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 341,
+        "lines": [
+          "Place _bowdung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 342,
+        "lines": [
+          "Place _ringdung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 343,
+        "lines": [
+          "Place _staffdung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 344,
+        "lines": [
+          "Place _fakedung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 346,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 347,
+        "lines": [
+          "Clock _bonk_ 01:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 348,
+        "lines": [
+          "Clock _S.22_ 1.00:00 2.18:40"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 349,
+        "lines": [
+          "Clock _betrayQuestor_ 00:02 00:30"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 351,
+        "lines": [
+          "Foe _monster_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 352,
+        "lines": [
+          "Foe _monster1_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 353,
+        "lines": [
+          "Foe _daedra_ is Frost_daedra"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 356,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "pick one of _S.08_ _S.09_ _S.33_ ",
+          "pc at _mondung_ set _S.00_ ",
+          "_letter_ used do _S.02_ ",
+          "place foe _monster_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 364,
+        "lines": [
+          "variable _S.00_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 365,
+        "lines": [
+          "_S.01_ task:",
+          "when _S.00_ and not _S.05_ and not _S.17_ ",
+          "log 1018 step 1 ",
+          "say 1017 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 370,
+        "lines": [
+          "_S.02_ task:",
+          "reveal _fakedung_ ",
+          "log 1019 step 1 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 374,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 377,
+        "lines": [
+          "_S.04_ task:",
+          "clicked npc _qgfriend_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 380,
+        "lines": [
+          "_S.05_ task:",
+          "killed 1 _monster_ ",
+          "killed 1 _monster1_",
+          "say 1035 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 385,
+        "lines": [
+          "_S.06_ task:",
+          "when _S.04_ and _S.05_ ",
+          "give pc _artifact_ ",
+          "start timer _bonk_ ",
+          "unset _S.04_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 391,
+        "lines": [
+          "_clearclick_ task:",
+          "when _S.04_ and not _S.05_",
+          "say 1003",
+          "clear _S.04_ _clearclick_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 396,
+        "lines": [
+          "_S.07_ task:",
+          "injured _monster_ ",
+          "place item _letter_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 400,
+        "lines": [
+          "variable _S.08_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 401,
+        "lines": [
+          "variable _S.09_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 402,
+        "lines": [
+          "variable _betrayQuestor_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 403,
+        "lines": [
+          "_S.11_ task:",
+          "clicked item _bow_ ",
+          "clear _S.08_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 407,
+        "lines": [
+          "_S.12_ task:",
+          "clicked item _ring_ ",
+          "clear _S.09_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 411,
+        "lines": [
+          "_S.13_ task:",
+          "clicked item _staff_ ",
+          "clear _S.33_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 415,
+        "lines": [
+          "_S.14_ task:",
+          "when _S.17_ and _S.19_ ",
+          "place item _bow_ at _bowdung_ ",
+          "reveal _bowdung_ ",
+          "log 1021 step 2 ",
+          "say 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 422,
+        "lines": [
+          "_S.15_ task:",
+          "when _S.17_ and _S.20_ ",
+          "place item _ring_ at _ringdung_ ",
+          "reveal _ringdung_ ",
+          "log 1022 step 2 ",
+          "say 1041 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 429,
+        "lines": [
+          "_S.16_ task:",
+          "when _S.17_ and _S.21_ ",
+          "place item _staff_ at _staffdung_ ",
+          "reveal _staffdung_ ",
+          "log 1023 step 2 ",
+          "say 1042 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 436,
+        "lines": [
+          "_S.17_ task:",
+          "place item _letter_ at _mondung_ ",
+          "dialog link for location _fakedung_ ",
+          "start timer _S.22_ ",
+          "rumor mill 1015 ",
+          "change repute with _questgiver_ by -20 ",
+          "remove foe _monster_",
+          "place foe _monster1_ at _fakedung_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 447,
+        "lines": [
+          "variable _S.18_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 448,
+        "lines": [
+          "_S.19_ task:",
+          "when _S.07_ and _S.08_ ",
+          "prompt 1030 yes _S.17_ no _S.18_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 452,
+        "lines": [
+          "_S.20_ task:",
+          "when _S.07_ and _S.09_ ",
+          "prompt 1031 yes _S.17_ no _S.18_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 456,
+        "lines": [
+          "_S.21_ task:",
+          "when _S.07_ and _S.33_ ",
+          "prompt 1032 yes _S.17_ no _S.18_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 460,
+        "lines": [
+          "_S.22_ task:",
+          "create foe _daedra_ every 3 minutes 4 times with 100% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 463,
+        "lines": [
+          "_S.23_ task:",
+          "injured _daedra_ ",
+          "say 1050 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 467,
+        "lines": [
+          "_S.24_ task:",
+          "when _betrayQuestor_ and _S.14_ ",
+          "place item _bow_ at _fakedung_ ",
+          "say 1045 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 472,
+        "lines": [
+          "_S.25_ task:",
+          "when _betrayQuestor_ and _S.15_ ",
+          "place item _ring_ at _fakedung_ ",
+          "say 1046 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 477,
+        "lines": [
+          "_S.26_ task:",
+          "when _betrayQuestor_ and _S.16_ ",
+          "place item _staff_ at _fakedung_ ",
+          "say 1047 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 482,
+        "lines": [
+          "_S.27_ task:",
+          "when _S.11_ and not _S.05_ ",
+          "start timer _betrayQuestor_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 486,
+        "lines": [
+          "_S.28_ task:",
+          "when _S.12_ and not _S.05_ ",
+          "start timer _betrayQuestor_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 490,
+        "lines": [
+          "_S.29_ task:",
+          "when _S.13_ and not _S.05_ ",
+          "start timer _betrayQuestor_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 494,
+        "lines": [
+          "_S.30_ task:",
+          "when _S.11_ and _S.05_ ",
+          "make _bow_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 498,
+        "lines": [
+          "_S.31_ task:",
+          "when _S.12_ and _S.05_ ",
+          "make _ring_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 502,
+        "lines": [
+          "_S.32_ task:",
+          "when _S.13_ and _S.05_ ",
+          "make _staff_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 506,
+        "lines": [
+          "variable _S.33_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 507,
+        "lines": [
+          "_bonk_ task:",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

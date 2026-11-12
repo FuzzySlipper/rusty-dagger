@@ -1,0 +1,285 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C10Y20.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "73d98bda963b32572075e954de31450a78dd0a67395ebd799eea849224fe03e9",
+    "byteLength": 5202
+  },
+  "document": {
+    "fileName": "R0C10Y20.txt",
+    "questName": "R0C10Y20",
+    "questNameLine": 8,
+    "displayName": "A Rare Ingredient",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C10Y20"
+      },
+      {
+        "name": "displayname",
+        "value": "A Rare Ingredient"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                  How would you like to have a lovely",
+          "<ce>                    _reward_ from my treasury, %pcf?",
+          "<ce>                  My alchemist has ordered a very rare",
+          "<ce>                  ingredient he needs for an important",
+          "<ce>                   experiment and we need someone to",
+          "<ce>                   pick it up. Do you think you could",
+          "<ce>                           handle that, %pcf?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                      Well, that's odd. You might",
+          "<ce>                   try not to have such a mercenary's",
+          "<ce>                              heart, %pcf."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                        Excellent, %pcf, I knew",
+          "<ce>                      you would be game. Take this",
+          "<ce>                       _item1_ down to __contact_",
+          "<ce>                        in ___contact_. There's",
+          "<ce>                           a =contact_ there",
+          "<ce>                       by the name of _contact_.",
+          "<ce>                    Ask %g2 to give you the _item2_",
+          "<ce>                        %g's brought up from the",
+          "<ce>                   south. Make sure you're there and",
+          "<ce>                  back in =1stparton_ days. All righty",
+          "<ce>                        then, %pcf. I'm relying",
+          "<ce>                           on you. Don't make",
+          "<ce>                             me regret it."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                          The _item2_, %pcf?",
+          "<ce>                      Remember? And don't dawdle."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 46,
+        "lines": [
+          "<ce>                    Good timing, %pcf. My alchemist",
+          "<ce>                   will be so pleased -- it is a most",
+          "<ce>                   excellent _item2_. As I promised,",
+          "<ce>                         here is your _reward_.",
+          "<ce>                           Pretty, isn't it?"
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 53,
+        "lines": [
+          "_questgiver_'s alchemist once refused a chip of ebonium -- it wasn't \"fresh\".",
+          "<--->",
+          "_questgiver_'s alchemist always requires very fresh elements. Don't know why."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 58,
+        "lines": [
+          "_questgiver_ is having trouble with %g3 alchemist. Very temperamental, I hear.",
+          "<--->",
+          "A whole batch of _questgiver_'s alchemist's potions had to be thrown away."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 63,
+        "lines": [
+          "Really strange smells coming out of _questgiver_'s palace lately, you notice?",
+          "<--->",
+          "I saw this puff of red smoke rise out of _questgiver_'s palace like a bird."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 68,
+        "lines": [
+          "Don't think for a minute I've forgotten you, %pcf. How are you, friend?",
+          "<--->",
+          "My alchemist wanted to thank you personally, %pcf, but he's busy. How are you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 73,
+        "lines": [
+          "<ce>                    If my alchemist were here, he'd",
+          "<ce>                         demand the _item2_ you",
+          "<ce>                  were to retrieve, and then brain you",
+          "<ce>                    with it. But, as it is, consider",
+          "<ce>                      this a warning. Do not fail",
+          "<ce>                       me in the future, should I",
+          "<ce>                          need your services.",
+          "<ce>                              That is all."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 83,
+        "lines": [
+          "<ce>                      And you must be %pcf, sent",
+          "<ce>                         by _questgiver_, yes?",
+          "<ce>                      Well, here's that _item2_ %g",
+          "<ce>                   wanted. You better hurry back with",
+          "<ce>                  it -- %g3 alchemist has very strong",
+          "<ce>                    feelings about the freshness of",
+          "<ce>                   ingredients. Misplaced, of course.",
+          "<ce>                     _item2_ doesn't spoil. Still,",
+          "<ce>                    you know what they say about one",
+          "<ce>                   man's poison ... Now hurry along."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 95,
+        "lines": [
+          "%qdt:",
+          "I will be given a _reward_",
+          " by _questgiver_ of __questgiver_,",
+          " ___questgiver_, if I get a",
+          " fresh _item2_ for %g2 from",
+          " _contact_ in =1stparton_ days or",
+          " less. _contact_ is in __contact_",
+          " in ___contact_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 125,
+        "lines": [
+          "Item _reward_ gem"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 126,
+        "lines": [
+          "Item _item1_ turquoise"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 127,
+        "lines": [
+          "Item _item2_ skin"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 129,
+        "lines": [
+          "Person _questgiver_ face 72 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 130,
+        "lines": [
+          "Person _contact_ face 80 group Chemist remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 133,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 137,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1015 step 0 ",
+          "get item _item1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 141,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _item2_ and _questgiver_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 146,
+        "lines": [
+          "variable _qgclicked_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 147,
+        "lines": [
+          "variable _npcclicked_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 148,
+        "lines": [
+          "_1stparton_ task:",
+          "make _item2_ permanent ",
+          "make _item1_ permanent ",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 154,
+        "lines": [
+          "variable _pchasitem1_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 155,
+        "lines": [
+          "_pchasitem2_ task:",
+          "toting _item1_ and _contact_ clicked ",
+          "get item _item2_ ",
+          "say 1010 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

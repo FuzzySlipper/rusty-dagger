@@ -386,7 +386,7 @@ public sealed class DaggerfallCatalogTests
         ReadInventory(), ReadCareers(), RaceTemplate(),
         File.ReadAllBytes(TestData.Corpus("CLASSES.DAT")), DaggerfallTextBuilder.Build(File.ReadAllBytes(TestData.Corpus("TEXT.RSC")), "arena2/TEXT.RSC", ReadInventory(), "en"));
 
-    private static string RaceTemplate() => File.ReadAllText(TestData.Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs"));
+    private static DaggerfallRaceTable RaceTemplate() => TakenTable.Read<DaggerfallRaceTable>(File.ReadAllBytes(TestData.Input("races.json")), "races.json");
 
     private static IReadOnlyList<SourceInventoryRow> ReadInventory() =>
         SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));

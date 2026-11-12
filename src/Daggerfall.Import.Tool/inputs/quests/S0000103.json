@@ -1,0 +1,227 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000103.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "985ab7ea03128ab9a34a493a9dbd4b803563e4f311d9499a0e7a6fbdfd22e5b9",
+    "byteLength": 1862
+  },
+  "document": {
+    "fileName": "S0000103.txt",
+    "questName": "S0000103",
+    "questNameLine": 5,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000103"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1015,
+        "firstLine": 9,
+        "lines": [
+          "<ce>                  None may defy the King of Worms and",
+          "<ce>                  live to tell of it. You have denied",
+          "<ce>                    him the Totem of Tiber Septim.",
+          "<ce>                  Therefore I will slay you and bring",
+          "<ce>                              it to him.",
+          "                                     <--->",
+          "<ce>                 I will take the Totem and drink from",
+          "<ce>               your veins on this night. Just surrender",
+          "<ce>                  and it will be relatively painless.",
+          "                                     <--->",
+          "<ce>                  The King of Worms wants the Totem.",
+          "<ce>                   Since he has no reason to believe",
+          "<ce>                 that you might give it to him of your",
+          "<ce>                 own free will, I am here to kill you."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "clock",
+        "firstLine": 33,
+        "lines": [
+          "Clock _S.01_ 01:15 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 34,
+        "lines": [
+          "Clock _S.02_ 44.10:40 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 36,
+        "lines": [
+          "Foe _F.00_ is 3 Vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 37,
+        "lines": [
+          "Foe _F.01_ is 2 Ancient_vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 40,
+        "lines": [
+          "start timer _S.02_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 42,
+        "lines": [
+          "_S.00_ task:",
+          "injured _F.01_ ",
+          "injured _F.00_ ",
+          "start timer _S.01_ ",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 48,
+        "lines": [
+          "_S.01_ task:",
+          "clear _S.01_ _S.00_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 51,
+        "lines": [
+          "_S.02_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 54,
+        "lines": [
+          "_S.03_ task:",
+          "daily from 04:10 to 20:50 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 57,
+        "lines": [
+          "until _S.03_ performed:",
+          "start task _S.04_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 60,
+        "lines": [
+          "_S.04_ task:",
+          "create foe _F.00_ every 1440 minutes 20 times with 5% success ",
+          "create foe _F.01_ every 1440 minutes 10 times with 3% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 64,
+        "lines": [
+          "GothrydGotTotem _S.05_"
+        ],
+        "global": 1
+      },
+      {
+        "kind": "global",
+        "firstLine": 65,
+        "lines": [
+          "KingOfWormsGotTotem _S.06_"
+        ],
+        "global": 2
+      },
+      {
+        "kind": "global",
+        "firstLine": 66,
+        "lines": [
+          "GortwogGotTotem _S.07_"
+        ],
+        "global": 3
+      },
+      {
+        "kind": "global",
+        "firstLine": 67,
+        "lines": [
+          "AkorithiGotTotem _S.08_"
+        ],
+        "global": 4
+      },
+      {
+        "kind": "global",
+        "firstLine": 68,
+        "lines": [
+          "UnderkingGotTotem _S.09_"
+        ],
+        "global": 6
+      },
+      {
+        "kind": "global",
+        "firstLine": 69,
+        "lines": [
+          "EadwyreGotTotem _S.10_"
+        ],
+        "global": 7
+      },
+      {
+        "kind": "global",
+        "firstLine": 70,
+        "lines": [
+          "BrisiennaGotTotem _S.11_"
+        ],
+        "global": 8
+      },
+      {
+        "kind": "task",
+        "firstLine": 71,
+        "lines": [
+          "_S.12_ task:",
+          "when _S.05_ or _S.06_ or _S.07_ or _S.08_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 74,
+        "lines": [
+          "_S.13_ task:",
+          "when _S.09_ or _S.10_ or _S.11_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 77,
+        "lines": [
+          "_S.14_ task:",
+          "when _S.12_ or _S.13_ ",
+          "start task _S.02_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

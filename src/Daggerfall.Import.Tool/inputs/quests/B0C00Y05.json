@@ -1,0 +1,296 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/B0C00Y05.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "c4f9b13897322be3cf2869e53a1dcb1519443843e4295ca0892249015c9d5996",
+    "byteLength": 4462
+  },
+  "document": {
+    "fileName": "B0C00Y05.txt",
+    "questName": "B0C00Y05",
+    "questNameLine": 9,
+    "displayName": "The Traitor",
+    "header": [
+      {
+        "name": "quest",
+        "value": "B0C00Y05"
+      },
+      {
+        "name": "displayname",
+        "value": "The Traitor"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                  You are not yet a trusted member of",
+          "<ce>                       our knightly order, %pcn.",
+          "<ce>                   However, I think I know a way you",
+          "<ce>                     can earn our trust. There is a",
+          "<ce>                  traitor to the order in ___qgiver_,",
+          "<ce>                     a dastardly _monster_ who has",
+          "<ce>                   betrayed us to our enemies. Death",
+          "<ce>                   is a fair punishment for treason,",
+          "<ce>                       don't you think %pcn? Will",
+          "<ce>                       you do this for the order?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                     Don't expect any favors from",
+          "<ce>                   this knightly order anytime soon."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                      The traitor is a _monster_",
+          "<ce>                     named =monster_ who is hiding",
+          "<ce>                        like a craven coward in",
+          "<ce>                              ___mondun_.",
+          "<ce>                        If you have not returned",
+          "<ce>                    in =queston_ days, our trust is",
+          "<ce>                     forfeit and another will take",
+          "<ce>                              your place."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 40,
+        "lines": [
+          "<ce>                 The _monster_ is not dead. Do not try",
+          "<ce>                       to convince me otherwise."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 44,
+        "lines": [
+          "<ce>                       Maybe you are not as bad",
+          "<ce>                         as they say. %pcn, you",
+          "<ce>                      have earned a bit of respect",
+          "<ce>                       with this knightly order."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 50,
+        "lines": [
+          "That _monster_ ran off to ___mondun_ like the hounds of hell were behind him.",
+          "<--->",
+          "_qgiver_ can't just let =monster_ go after what %g did to the knightly order."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 55,
+        "lines": [
+          "=monster_ is apparently tougher than _qgiver_ thought. What an escape.",
+          "<--->",
+          "=monster_ has moved north I hear, but %g3 memory still plagues the order."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 60,
+        "lines": [
+          "=monster_'s story just proves it. You don't play around with the ==qgiver_.",
+          "<--->",
+          "I always thought the Order would be more merciful to a dolt like =monster_."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 65,
+        "lines": [
+          "I'd be happy to help you however I can, killer."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 68,
+        "lines": [
+          "Your heart is too soft, %pcf. Don't waste my time."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 71,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of ___qgiver_",
+          " has sent me to find and slay a _monster_",
+          " called =monster_ who is slinking",
+          " around in ___mondun_. I have",
+          " =queston_ days to accomplish this."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 79,
+        "lines": [
+          "<ce>               You have killed =monster_, the _monster_.",
+          "<ce>                   The knightly order will be proud."
+        ]
+      },
+      {
+        "id": 1080,
+        "firstLine": 83,
+        "lines": [
+          "<ce>                    As a token of our appreciation,",
+          "<ce>                 please accept this map to ___newdung_,",
+          "<ce>                  a foul, vermin-infested hole by all",
+          "<ce>                   accounts.  Just the kind of place",
+          "<ce>                     a budding knight should enjoy",
+          "<ce>                              cleaning up."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 110,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 112,
+        "lines": [
+          "Place _mondun_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 113,
+        "lines": [
+          "Place _newdung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 115,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 117,
+        "lines": [
+          "Foe _monster_ is Nightblade"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 120,
+        "lines": [
+          "start timer _queston_ ",
+          "reveal _mondun_ ",
+          "log 1010 step 0 ",
+          "pick one of _map_ _nomap_ _nomap_ ",
+          "place foe _monster_ at _mondun_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 126,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 129,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _mondead_ and _qgclicked_ ",
+          "give pc nothing "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 133,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 136,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 139,
+        "lines": [
+          "_clearclick_ task:",
+          "when not _mondead_ and _qgclicked_ ",
+          "say 1003",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 144,
+        "lines": [
+          "variable _map_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 145,
+        "lines": [
+          "variable _nomap_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 146,
+        "lines": [
+          "_S.07_ task:",
+          "when _map_ and _pcgetsgold_",
+          "    say 1080",
+          "reveal _newdung_",
+          "end quest"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 152,
+        "lines": [
+          "_S.08_ task:",
+          "    when not _map_ and _pcgetsgold_",
+          "    end quest"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

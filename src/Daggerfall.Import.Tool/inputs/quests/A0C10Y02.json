@@ -1,0 +1,314 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C10Y02.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "dc8337561300b439b06c2aaa2cbce44109008a9a0f6dc1a56853c26c63071a5d",
+    "byteLength": 5305
+  },
+  "document": {
+    "fileName": "A0C10Y02.txt",
+    "questName": "A0C10Y02",
+    "questNameLine": 7,
+    "displayName": "The Abducted Child",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C10Y02"
+      },
+      {
+        "name": "displayname",
+        "value": "The Abducted Child"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 12,
+        "lines": [
+          "<ce>                 I am desperate. The Dark Brotherhood",
+          "<ce>                     has taken my child _child_ and",
+          "<ce>                    will kill %g2 if I do not pay a",
+          "<ce>                  ransom. I do not have enough to buy",
+          "<ce>                     %g3 freedom, but I can pay you",
+          "<ce>                    _money_ gold pieces if you will",
+          "<ce>                               free %g2.",
+          "                                     <--->",
+          "<ce>                       My child, my poor _child_",
+          "<ce>                    is gone, stolen away by the Dark",
+          "<ce>                       Brotherhood for %god knows",
+          "<ce>                  what hideous purpose. You must help",
+          "<ce>                      me, %pcf. I'll give you all",
+          "<ce>                      I have, _money_ gold, if you",
+          "<ce>                  will bring my child back home to me."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                      This is a dark day for me.",
+          "<ce>                  _child_ will surely be slain by the",
+          "<ce>                    Dark Brotherhood. May %g3 ghost",
+          "<ce>                  haunt you for the rest of your days!"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                You are my savior! My name is _qgiver_.",
+          "<ce>             Quickly now, for you only have =timeforq_ days",
+          "<ce>                 before they kill _child_. %G is being",
+          "<ce>                    held in _dbguild_ in __dbguild_."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                   _child_? Where is %g? Why haven't",
+          "<ce>                    you brought %g2 back yet? If you",
+          "<ce>                      would save %g3 life, go now!"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 46,
+        "lines": [
+          "<ce>                   _child_! You are alive and well!",
+          "<ce>                    %pcf, I owe you a debt that can",
+          "<ce>                   never be fully repaid. This modest",
+          "<ce>                     reward is the least that I can",
+          "<ce>                               give you."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 53,
+        "lines": [
+          "<ce>                   The Dark Brotherhood has gone too",
+          "<ce>                  far this time. Kidnapping _qgiver_'s",
+          "<ce>                         child is unforgivable."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 58,
+        "lines": [
+          "<ce>                   I don't think that _qgiver_ will",
+          "<ce>                   survive the season. %G'll probably",
+          "<ce>                 commit suicide. You did hear that the",
+          "<ce>         Dark Brotherhood kidnapped and slew %g3 child, _child_?"
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 65,
+        "lines": [
+          "<ce>                   You're that %ra that rescued baby",
+          "<ce>                         _child_! What a hero."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 69,
+        "lines": [
+          "<ce>                  The savior of my child! I thank you",
+          "<ce>                   and _child_ thanks you for saving",
+          "<ce>                       %g3 life. Bless you %pcf."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 74,
+        "lines": [
+          "<ce>                   My child _child_ is dead because",
+          "<ce>                 of you! Never darken my doorway again."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 78,
+        "lines": [
+          "<ce>                 Are you here to rescue me? My name is",
+          "<ce>                         _child_. I don't like",
+          "<ce>                   these people. Please take me back",
+          "<ce>                             to my family."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 84,
+        "lines": [
+          "<ce>                         _dbguild_ is dark and",
+          "<ce>                      ominous. It is certain that",
+          "<ce>                        enemies lurk everywhere."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 89,
+        "lines": [
+          "On %qdt, _qgiver_",
+          " told me of the heartbreaking kidnapping of",
+          " %g3 child _child_ by the Dark",
+          " Brotherhood. I immediately agreed to",
+          " rescue %g2 from _dbguild_ in",
+          " __dbguild_. %G3 family will wait",
+          " =timeforq_ days for my return to",
+          " __qgiver_ in ___qgiver_."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 99,
+        "lines": [
+          "<ce>                No one messes with the Dark Brotherhood",
+          "<ce>                               and lives!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 123,
+        "lines": [
+          "Item _money_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 125,
+        "lines": [
+          "Person _child_ face 1 faction Children remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 126,
+        "lines": [
+          "Person _qgiver_ face 121 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 127,
+        "lines": [
+          "Person _dummydarkb_ face 169 faction The_Dark_Brotherhood remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 129,
+        "lines": [
+          "Place _dbguild_ remote house1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 131,
+        "lines": [
+          "Clock _timeforq_ 00:00 0 flag 17 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 133,
+        "lines": [
+          "Foe _darkb_ is Assassin"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 136,
+        "lines": [
+          "dialog link for person _child_ ",
+          "start timer _timeforq_ ",
+          "log 1012 step 0 ",
+          "pc at _dbguild_ set _S.01_ saying 1011 ",
+          "place npc _child_ at _dbguild_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 142,
+        "lines": [
+          "_timeforq_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 145,
+        "lines": [
+          "_S.01_ task:",
+          "create foe _darkb_ every 2 minutes 4 times with 30% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 148,
+        "lines": [
+          "_S.02_ task:",
+          "clicked npc _child_ say 1010 ",
+          "hide npc _child_ ",
+          "add _child_ face "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 153,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 156,
+        "lines": [
+          "_vamp1_ task:",
+          "when _qgclicked_ and _S.02_ ",
+          "give pc _money_ ",
+          "change repute with _dummydarkb_ by -15 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 162,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.02_ ",
+          "say 1003",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 167,
+        "lines": [
+          "_S.06_ task:",
+          "injured _darkb_ ",
+          "say 1020 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

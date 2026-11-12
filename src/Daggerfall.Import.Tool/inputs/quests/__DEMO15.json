@@ -1,0 +1,64 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO15.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "1ff11515467df082152bc7ae80151ff5a0db24fbdbe50ca515f19e4f15ff3014",
+    "byteLength": 563
+  },
+  "document": {
+    "fileName": "__DEMO15.txt",
+    "questName": "__DEMO15",
+    "questNameLine": 5,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO15"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1011,
+        "firstLine": 9,
+        "lines": [
+          "_someperson_ used to possess _someitem_."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 12,
+        "lines": [
+          "It is said that _someitem_ has magical powers."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 17,
+        "lines": [
+          "Person _someperson_ face 81 faction The_Thieves_Guild anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 18,
+        "lines": [
+          "Item _someitem_ trinket anyInfo 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 21,
+        "lines": [
+          "dialog link for person _someperson_ item _someitem_",
+          "add dialog for person _someperson_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

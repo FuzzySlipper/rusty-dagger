@@ -1,0 +1,232 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/B0B00Y01.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "9eb949ee82a45f4ac9e748ab8911d1f2d95101dcad57c5804bcb1f59ec736f17",
+    "byteLength": 3598
+  },
+  "document": {
+    "fileName": "B0B00Y01.txt",
+    "questName": "B0B00Y01",
+    "questNameLine": 8,
+    "displayName": "Retribution",
+    "header": [
+      {
+        "name": "quest",
+        "value": "B0B00Y01"
+      },
+      {
+        "name": "displayname",
+        "value": "Retribution"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                    We have a traitor in __qgiver_,",
+          "<ce>                 a villainous _monster_ who has turned",
+          "<ce>                 against %g3 brethren. Our honor is at",
+          "<ce>                         stake, %pct. Join our",
+          "<ce>                            righteous fury.",
+          "                                     <--->",
+          "<ce>                      __qgiver_ has been betrayed",
+          "<ce>                       by a perfidious _monster_.",
+          "<ce>                  Will you help us track the cowardly",
+          "<ce>                     villain down and destroy %g2?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                 An ignoble reply. I expected better."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                 Very good. The traitor is a _monster_",
+          "<ce>                     named =monster_ who has taken",
+          "<ce>                      refuge in ___mondun_ to the",
+          "<ce>                     %di. If you have not returned",
+          "<ce>                 in =queston_ days, your honor will be",
+          "<ce>               forfeit and another will take your place.",
+          "<ce>                     Do not fail us in this, %pcf."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 37,
+        "lines": [
+          "<ce>                 The _monster_ is not dead. Do not try",
+          "<ce>                       to convince me otherwise."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                Well done. You have reason to be proud."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 44,
+        "lines": [
+          "That _monster_ ran off to ___mondun_ like the hounds of hell were behind him.",
+          "<--->",
+          "_qgiver_ can't just let =monster_ go after what %g did to the %kno."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 49,
+        "lines": [
+          "=monster_ is apparently tougher than _qgiver_ thought. What an escape.",
+          "<--->",
+          "=monster_ has moved north I hear, but %g3 memory still plagues the order."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 54,
+        "lines": [
+          "=monster_'s story just proves it. You don't play around with the %kno.",
+          "<--->",
+          "I always thought the Order would be more merciful to a dolt like =monster_."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 59,
+        "lines": [
+          "You have proven yourself in the =monster_ affair. How can we help you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 62,
+        "lines": [
+          "__qgiver_ has been embarrassed by the =monster_ affair. What do you want now?"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 65,
+        "lines": [
+          "%qdt:",
+          " The %kno in ___qgiver_",
+          " has sent me to find and slay a _monster_",
+          " called =monster_ in",
+          " %g3 hideout, ___mondun_. I have",
+          " =queston_ days to accomplish this."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 73,
+        "lines": [
+          "<ce>               You have slain =monster_, the _monster_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 96,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 98,
+        "lines": [
+          "Place _mondun_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 100,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 102,
+        "lines": [
+          "Foe _monster_ is Nightblade"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 105,
+        "lines": [
+          "start timer _queston_ ",
+          "reveal _mondun_ ",
+          "log 1010 step 0 ",
+          "place foe _monster_ at _mondun_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 110,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 113,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _mondead_ and _qgclicked_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 118,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 121,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 124,
+        "lines": [
+          "_clearclick_ task:",
+          "when not _mondead_ and _qgclicked_",
+          "say 1003 ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

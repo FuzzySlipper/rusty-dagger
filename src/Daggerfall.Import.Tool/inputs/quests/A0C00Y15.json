@@ -1,0 +1,626 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C00Y15.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "6bec512281df03b7f3c3cac353acc59ee2fe2f75526b662561c48f6bb16dfc0d",
+    "byteLength": 8941
+  },
+  "document": {
+    "fileName": "A0C00Y15.txt",
+    "questName": "A0C00Y15",
+    "questNameLine": 9,
+    "displayName": "The Courier",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C00Y15"
+      },
+      {
+        "name": "displayname",
+        "value": "The Courier"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                      I have heard of you, %pcn.",
+          "<ce>                         I am _questgiver_. May",
+          "<ce>                  I beg a boon of you? Are you passing",
+          "<ce>                      by ___pickupregion_ any time",
+          "<ce>                    soon? If so, I need to deliver a",
+          "<ce>                   package to someone there. I would",
+          "<ce>                   gladly pay you _gold_ gold pieces.",
+          "                                     <--->",
+          "<ce>                     Your reputation precedes you,",
+          "<ce>                        %pcn. I am in need of a",
+          "<ce>                    courier. Would you by chance be",
+          "<ce>                    heading toward ___pickupregion_",
+          "<ce>                   anytime soon? Could I entrust you",
+          "<ce>                    to drop off a package there for",
+          "<ce>                    me? I would pay you _gold_ gold",
+          "<ce>                        pieces for your trouble."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 32,
+        "lines": [
+          "<ce>                               Too bad.",
+          "                                     <--->",
+          "<ce>                   I'll have to find someone willing",
+          "<ce>                         to work for a living.",
+          "                                     <--->",
+          "<ce>                     You must be a different %pcn",
+          "<ce>              than the one whom I've heard so much about."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                       Great! Take this package",
+          "<ce>                        to ___pickupregion_ and",
+          "<ce>                        ask for _pickupregion_.",
+          "<ce>                       %G will pay you. It needs",
+          "<ce>                   to be there in =traveltime_ days.",
+          "<ce>                          Here is the package.",
+          "                                     <--->",
+          "<ce>                What luck! My friend is _pickupregion_",
+          "<ce>                     in ___pickupregion_. Just ask",
+          "<ce>                  around, everyone knows %g2. %G will",
+          "<ce>                    pay you right away. If you take",
+          "<ce>                   longer than =traveltime_ days, you",
+          "<ce>                      might as well throw it away.",
+          "<ce>                              Here it is."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 57,
+        "lines": [
+          "<ce>                       I was hoping _questgiver_",
+          "<ce>                would be able to get this to me in time.",
+          "<ce>                      %G has been so busy lately.",
+          "<ce>                 Here is the _gold_ you were promised."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 63,
+        "lines": [
+          "<ce>                The orcs are stirring up trouble again."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 66,
+        "lines": [
+          "<ce>               They say the spirit of dead King Lysandus",
+          "<ce>                      has been seen in Daggerfall."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 70,
+        "lines": [
+          "<ce>                A sea storm wrecked a ship just off the",
+          "<ce>                shores of Daggerfall. I hear it carried",
+          "<ce>                     an emissary from the emperor."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 75,
+        "lines": [
+          "<ce>               My humble thanks for taking that package",
+          "<ce>                          to ___pickupregion_."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 79,
+        "lines": [
+          "<ce>                  Scoundrel! What did you do with my",
+          "<ce>                 package? Sell it? It never arrived at",
+          "<ce>                     ___pickupregion_. Just leave."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 84,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of",
+          " ___questgiver_ has charged",
+          " me with the task of delivering",
+          " a package to _pickupregion_",
+          " of ___pickupregion_.",
+          " I have to have it there within",
+          " =traveltime_ days."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 94,
+        "lines": [
+          "<ce>                    This book has some sentimental",
+          "<ce>                     value. _pickupregion_ has not",
+          "<ce>                         seen a copy of _book_",
+          "<ce>                               in years."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 100,
+        "lines": [
+          "<ce>                       _pickupregion_ needs this",
+          "<ce>                       _ingredient_ for a special",
+          "<ce>                           brew %g is making."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 105,
+        "lines": [
+          "<ce>                       This _jewelry_ is a gift",
+          "<ce>                      to _pickupregion_ that will",
+          "<ce>                     seal my arrangement with %g2."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 110,
+        "lines": [
+          "<ce>                   This is a special _mensclothing_",
+          "<ce>                        that my mother made for",
+          "<ce>                  _pickupregion_ for the celebration."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 115,
+        "lines": [
+          "<ce>                    _pickupregion_ commissioned this",
+          "<ce>                          _painting_. It needs to be there",
+          "<ce>                          for %g3 gathering tomorrow."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 120,
+        "lines": [
+          "<ce>                       _pickupregion_ needs this",
+          "<ce>                     _potion_ as soon as possible."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 124,
+        "lines": [
+          "<ce>                        _pickupregion_ has been",
+          "<ce>                       threatened. This _weapon_",
+          "<ce>                     should put %g3 fears to rest."
+        ]
+      },
+      {
+        "id": 1018,
+        "firstLine": 129,
+        "lines": [
+          "<ce>                  I bought this fine _womensclothing_",
+          "<ce>                     for _pickupregion_'s wedding.",
+          "<ce>                  It would be dreadfully embarrassing",
+          "<ce>                     if it does not arrive in time."
+        ]
+      },
+      {
+        "id": 1019,
+        "firstLine": 135,
+        "lines": [
+          "<ce>                    What do you want? _questgiver_?",
+          "<ce>                     Yes, %g promised to send me a",
+          "<ce>                    package. If I don't get it soon,",
+          "<ce>                          it will be too late."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 141,
+        "lines": [
+          "<ce>                    I know you have a package from",
+          "<ce>                         _questgiver_. Hand it",
+          "<ce>                       over and nobody gets hurt."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 170,
+        "lines": [
+          "Item _book_ book0"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 171,
+        "lines": [
+          "Item _womensclothing_ womens_clothing"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 172,
+        "lines": [
+          "Item _potion_ misc"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 173,
+        "lines": [
+          "Item _mensclothing_ mens_clothing"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 174,
+        "lines": [
+          "Item _painting_ portrait"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 175,
+        "lines": [
+          "Item _weapon_ weapon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 176,
+        "lines": [
+          "Item _ingredient_ large_plant"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 177,
+        "lines": [
+          "Item _jewelry_ trinket"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 178,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 180,
+        "lines": [
+          "Person _questgiver_ face 137 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 181,
+        "lines": [
+          "Person _pickupregion_ face 232 group Local_3.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 183,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 1 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 186,
+        "lines": [
+          "Foe _thief_ is Burglar"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 189,
+        "lines": [
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "pick one of _S.01_ _S.10_ ",
+          "pick one of _S.14_ _S.15_ _S.15_ _S.15_ ",
+          "create npc _pickupregion_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 195,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 198,
+        "lines": [
+          "_S.01_ task:",
+          "pick one of _S.02_ _snitch0_ _S.04_ _S.05_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 202,
+        "lines": [
+          "_S.02_ task:",
+          "get item _book_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 205,
+        "lines": [
+          "_snitch0_ task:",
+          "get item _ingredient_ saying 1012 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 208,
+        "lines": [
+          "_S.04_ task:",
+          "get item _jewelry_ saying 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 211,
+        "lines": [
+          "_S.05_ task:",
+          "get item _mensclothing_ saying 1014 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 214,
+        "lines": [
+          "_S.06_ task:",
+          "get item _painting_ saying 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 217,
+        "lines": [
+          "_S.07_ task:",
+          "get item _potion_ saying 1016 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 220,
+        "lines": [
+          "_S.08_ task:",
+          "get item _weapon_ saying 1017 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 223,
+        "lines": [
+          "_S.09_ task:",
+          "get item _womensclothing_ saying 1018 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 226,
+        "lines": [
+          "_S.10_ task:",
+          "pick one of _S.06_ _S.07_ _S.08_ _S.09_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 229,
+        "lines": [
+          "_S.11_ task:",
+          "toting _jewelry_ and _pickupregion_ clicked ",
+          "toting _mensclothing_ and _pickupregion_ clicked ",
+          "toting _painting_ and _pickupregion_ clicked ",
+          "toting _potion_ and _pickupregion_ clicked ",
+          "toting _weapon_ and _pickupregion_ clicked ",
+          "toting _book_ and _pickupregion_ clicked ",
+          "toting _ingredient_ and _pickupregion_ clicked ",
+          "toting _womensclothing_ and _pickupregion_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 242,
+        "lines": [
+          "_S.12_ task:",
+          "clicked npc _pickupregion_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 245,
+        "lines": [
+          "_S.13_ task:",
+          "when _S.12_ and not _S.11_ ",
+          "say 1019 ",
+          "clear _S.12_ _S.13_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 250,
+        "lines": [
+          "_S.14_ task:",
+          "create foe _thief_ every 200 minutes 3 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 253,
+        "lines": [
+          "variable _S.15_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 254,
+        "lines": [
+          "_S.16_ task:",
+          "injured _thief_ ",
+          "prompt 1020 yes _yes_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 258,
+        "lines": [
+          "_yes_ task:",
+          "restrain foe _thief_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 261,
+        "lines": [
+          "variable _no_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 262,
+        "lines": [
+          "_yes1_ task:",
+          "when _yes_ and _S.02_ ",
+          "take _book_ from pc",
+          "give item _book_ to _thief_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 268,
+        "lines": [
+          "_yes2_ task:",
+          "when _yes_ and _snitch0_ ",
+          "take _ingredient_ from pc",
+          "give item _ingredient_ to _thief_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 273,
+        "lines": [
+          "_yes3_ task:",
+          "when _yes_ and _S.04_ ",
+          "take _jewelry_ from pc",
+          "give item _jewelry_ to _thief_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 278,
+        "lines": [
+          "_yes4_ task:",
+          "when _yes_ and _S.05_ ",
+          "take _mensclothing_ from pc",
+          "give item _mensclothing_ to _thief_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 283,
+        "lines": [
+          "_ring_ task:",
+          "when _yes_ and _S.06_ ",
+          "take _painting_ from pc",
+          "give item _painting_ to _thief_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 288,
+        "lines": [
+          "_yes6_ task:",
+          "when _yes_ and _S.07_",
+          "take _potion_ from pc ",
+          "give item _potion_ to _thief_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 293,
+        "lines": [
+          "_note_ task:",
+          "when _yes_ and _S.08_ ",
+          "take _weapon_ from pc",
+          "give item _weapon_ to _thief_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 298,
+        "lines": [
+          "_poet_ task:",
+          "when _yes_ and _S.09_ ",
+          "take _womensclothing_ from pc",
+          "give item _womensclothing_ to _thief_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

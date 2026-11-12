@@ -1,0 +1,361 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/O0B00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "2ad04d261225d66df788c400ee74461bdbd25226684b57d7c02445bc39026b15",
+    "byteLength": 6205
+  },
+  "document": {
+    "fileName": "O0B00Y00.txt",
+    "questName": "O0B00Y00",
+    "questNameLine": 8,
+    "displayName": "A Hot Stone",
+    "header": [
+      {
+        "name": "quest",
+        "value": "O0B00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "A Hot Stone"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                       Listen, %pcf, we got one",
+          "<ce>                    of our family who's in trouble.",
+          "<ce>                     You got a couple days to help",
+          "<ce>                        out one of the family?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 19,
+        "lines": [
+          "<ce>                      Alright then. Guess you're",
+          "<ce>                      countin' on not bein' in a",
+          "<ce>                        fix yourself some day."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                       Good %ra. One of our best",
+          "<ce>                      catburglars in ___contact_",
+          "<ce>                   is holed up in a rat-trap called",
+          "<ce>                       __contact_. On %g3 person",
+          "<ce>                     is a hot stone %g lifted from",
+          "<ce>                   the palace. Now the word is that",
+          "<ce>                    someone saw it on %g2, and the",
+          "<ce>                   guards are casing the place. Out",
+          "<ce>                      of respect for the owner of",
+          "<ce>                      __contact_, they're waiting",
+          "<ce>                    =1stparton_ days before moving",
+          "<ce>                      in. Get over to __contact_",
+          "<ce>                          and give _contact_",
+          "<ce>                 this hunk of _metal_ in exchange for",
+          "<ce>                    the _gems_, and then you bring",
+          "<ce>                     it back here. You understand?",
+          "<ce>                  Good. Now, hurry, there ain't time."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                        Good to see you, %pcf,",
+          "<ce>                     but you ain't supposed to be",
+          "<ce>                     empty-handed. You're supposed",
+          "<ce>                      to have a _gems_, remember?"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 49,
+        "lines": [
+          "<ce>                      Good job, %pcf. I hear that",
+          "<ce>                         _contact_ showed the",
+          "<ce>               guards the piece of _metal_ they thought",
+          "<ce>                   was a _gems_, and they bought %g2",
+          "<ce>                  a drink as an apology. I tell you,",
+          "<ce>                   ain't no life like the life of a",
+          "<ce>                  scoundrel. Here's your share of the",
+          "<ce>                  _gems_ -- _reward_ gold. You earned",
+          "<ce>                               it, %pcf."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 60,
+        "lines": [
+          "Well, everyone knows that _contact_ stole that jewel. Why don't they get %g2?",
+          "<--->",
+          "There's a lot of posses at __contact_. Guards aren't wanted in there."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 65,
+        "lines": [
+          "The guards finally got _contact_. Guess %g couldn't hold 'em off forever.",
+          "<--->",
+          "Yeah, they found the %t's _gems_ and arrested that =contact_ alright."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 70,
+        "lines": [
+          "They had to let _contact_ go after all. Turns out %g was innocent.",
+          "<--->",
+          "Now how do you mistake _metal_ for a _gems_? They're both rocks, but come on!"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 75,
+        "lines": [
+          "What is it, %pcf? Want that _gems_ back? I bet you do!"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 78,
+        "lines": [
+          "<ce>                      Don't you remember that you",
+          "<ce>                 were s'posed to get that _gems_ from",
+          "<ce>                      _contact_, and give %g2 the",
+          "<ce>                       _metal_ I gave you? %oth!",
+          "<ce>                   You'd think it was hard science."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 85,
+        "lines": [
+          "<ce>                   %oth, %pcf, you're a life saver.",
+          "<ce>                    Turns out someone saw me with a",
+          "<ce>                _gems_ and they figure it's the stolen",
+          "<ce>                   gem. This hunk of _metal_ will be",
+          "<ce>                  my ticket out of here. Remind me to",
+          "<ce>                  buy you a drink sometime. Now hurry",
+          "<ce>                         back to _questgiver_.",
+          "<ce>                  They're gonna be real suspicious if",
+          "<ce>                 you're not back in =1stparton_ days."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 96,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of",
+          " the Thieves Guild in ___questgiver_",
+          " has sent me to ___contact_",
+          " to a dive called __contact_.",
+          " I have a _metal_ I am",
+          " supposed to give _contact_",
+          " in exchange for the stolen rock %g",
+          " was seen with. I have =1stparton_",
+          " days to get this done."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 108,
+        "lines": [
+          "<ce>                      I have it on good authority",
+          "<ce>                       that you have the _gems_",
+          "<ce>                         that _contact_ stole.",
+          "<ce>                       Hand it over and I'll let",
+          "<ce>                           you go unharmed."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 136,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 137,
+        "lines": [
+          "Item _metal_ element"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 138,
+        "lines": [
+          "Item _gems_ gem"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 140,
+        "lines": [
+          "Person _questgiver_ face 72 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 141,
+        "lines": [
+          "Person _contact_ face 80 group Innkeeper remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 143,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 18 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 145,
+        "lines": [
+          "Foe _guards_ is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 148,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1015 step 0 ",
+          "get item _metal_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 152,
+        "lines": [
+          "_qgclicked_ task:",
+          "toting _gems_ and _questgiver_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 157,
+        "lines": [
+          "_npcclicked_ task:",
+          "toting _metal_ and _contact_ clicked ",
+          "create foe _guards_ every 173 minutes 3 times with 25% success ",
+          "get item _gems_ ",
+          "say 1010 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 163,
+        "lines": [
+          "_qgtalk_ task:",
+          "clicked npc _questgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 166,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgtalk_ and not _qgclicked_",
+          "say 1003",
+          "clear _clearclick_ _qgtalk_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 172,
+        "lines": [
+          "_1stparton_ task:",
+          "have _metal_ set _keptmetal_ ",
+          "have _gems_ set _keptgems_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 178,
+        "lines": [
+          "_greklith_ task:",
+          "injured _guards_ ",
+          "prompt 1020 yes _S.05_ no _S.06_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 182,
+        "lines": [
+          "_S.05_ task:",
+          "take _gems_ from pc ",
+          "change repute with _questgiver_ by -40 ",
+          "restrain foe _guards_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 189,
+        "lines": [
+          "variable _S.06_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 190,
+        "lines": [
+          "_keptmetal_ task:",
+          "make _metal_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 193,
+        "lines": [
+          "_keptgems_ task:",
+          "make _gems_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 196,
+        "lines": [
+          "_S.09_ task:",
+          "when _npcclicked_ and _1stparton_ ",
+          "change repute with _questgiver_ by -20 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

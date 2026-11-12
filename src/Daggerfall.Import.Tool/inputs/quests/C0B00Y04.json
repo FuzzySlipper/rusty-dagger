@@ -1,0 +1,282 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/C0B00Y04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "6b4d663d4cfe9ac2c090c4eca3f8e353f01aaf64c74ec011a79bb1b2306c6f89",
+    "byteLength": 5062
+  },
+  "document": {
+    "fileName": "C0B00Y04.txt",
+    "questName": "C0B00Y04",
+    "questNameLine": 9,
+    "displayName": "The Insane Priest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "C0B00Y04"
+      },
+      {
+        "name": "displayname",
+        "value": "The Insane Priest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                        __qgiver_ often delves",
+          "<ce>                 into mysteries of cosmic proportions,",
+          "<ce>                  and occasionally we misjudge one of",
+          "<ce>                 our priests' suppleness of sanity in",
+          "<ce>                 the face of eternity. In other words,",
+          "<ce>                  one of our priests has gone off his",
+          "<ce>                    nut. Will you help us bring the",
+          "<ce>                       lunatic back to __qgiver_?",
+          "                                     <--->",
+          "<ce>                         Old =priest_ is on a",
+          "<ce>                    rampage again. Could be that %g",
+          "<ce>                        got into __qgiver_ wine",
+          "<ce>                   cellars again. Regardless, are you",
+          "<ce>                    available to help bring the old",
+          "<ce>                            loony back home?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                        %oth, I hope that when",
+          "<ce>                     you lose your mind, someone is",
+          "<ce>                      kind enough to come to your",
+          "<ce>                             rescue, %pct."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 37,
+        "lines": [
+          "<ce>                     Good of you, %pct. Now then,",
+          "<ce>                       =priest_ has run off to a",
+          "<ce>                     place called ___mondung_. Try",
+          "<ce>                 not to hurt the poor maniac too much.",
+          "<ce>                         =priest_ doesn't know",
+          "<ce>                  what %g's doing right now. Just give",
+          "<ce>                   %g2 a little knock on the head and",
+          "<ce>                bring %g2 back here. I'll wait =queston_",
+          "<ce>                       days for you. Be careful."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                     Good to see you again, %pct.",
+          "<ce>                      Don't worry about =priest_.",
+          "<ce>                      We'll take good care of %g2."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 53,
+        "lines": [
+          "That lunatic =priest_ is holed up in ___mondung_. Only an idiot would go there.",
+          "<--->",
+          "___mondung_ is a dangerous place for sane people. _priest_ won't last long."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 58,
+        "lines": [
+          "Apparently, =priest_ is never coming back home.",
+          "<--->",
+          "=priest_ is still out of %g3 mind, wandering about ___mondung_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 63,
+        "lines": [
+          "A %ra rescued that crazy =priest_. Whether %g3 sanity was saved is a question.",
+          "<--->",
+          "=priest_ is either very holy, very drunk, or very mad. Or possibly all three."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 68,
+        "lines": [
+          "You were kindhearted to rescue =priest_, I recall. What can I do for you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 71,
+        "lines": [
+          "I have nothing to say to you. You see, I remember =priest_."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 74,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of",
+          " __qgiver_, ___qgiver_",
+          " has sent me to find a priest by",
+          " the name of =priest_,",
+          " who went berserk and ran away to",
+          " a place called ___mondung_.",
+          " I have =queston_ days to go there,",
+          " find the nut, and get back to",
+          " _qgiver_."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 86,
+        "lines": [
+          "<ce>                       \"%oth, that was my head!\"",
+          "<ce>                          =priest_ falls down",
+          "<ce>                    unconscious and you pick %g2 up.",
+          "                                     <--->",
+          "<ce>                        =priest_ rolls %g3 eyes",
+          "<ce>                      in pain and madness. With a",
+          "<ce>                        low groan, %g falls into",
+          "<ce>                               your arms."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 96,
+        "lines": [
+          "<ce>                      You hear a light, maniacal",
+          "<ce>                          giggle, and =priest_",
+          "<ce>                    disappears, as if into thin air.",
+          "                                     <--->",
+          "<ce>                     \"I have a kingdom to rule, I",
+          "<ce>                    can't spend all my time picking",
+          "<ce>                          damn lint!\" =priest_",
+          "<ce>                    slips your grasp with surprising",
+          "<ce>                           agility and flees."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 124,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 126,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 129,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 131,
+        "lines": [
+          "Foe _priest_ is Monk"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 134,
+        "lines": [
+          "start timer _queston_ ",
+          "reveal _mondung_ ",
+          "log 1010 step 0 ",
+          "place foe _priest_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 139,
+        "lines": [
+          "variable _reward_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_bonk_ task:",
+          "injured _priest_ ",
+          "say 1011 ",
+          "add foe _priest_ face ",
+          "remove foe _priest_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 147,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_cick_ task:",
+          "when _bonk_ and _queston_ ",
+          "say 1012 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 154,
+        "lines": [
+          "_S.04_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 157,
+        "lines": [
+          "_success_ task:",
+          "when _S.04_ and _bonk_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 162,
+        "lines": [
+          "_nope_ task:",
+          "when _S.04_ and not _bonk_ ",
+          "clear _S.04_ _nope_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

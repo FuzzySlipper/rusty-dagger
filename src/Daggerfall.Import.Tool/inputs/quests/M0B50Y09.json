@@ -1,0 +1,296 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/M0B50Y09.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "7b0cd6cde15f516d3dbf5582203577bd0ba14cb2da662b9a42117d5d418da5e4",
+    "byteLength": 3985
+  },
+  "document": {
+    "fileName": "M0B50Y09.txt",
+    "questName": "M0B50Y09",
+    "questNameLine": 9,
+    "displayName": "Hunt for a Gargoyle",
+    "header": [
+      {
+        "name": "quest",
+        "value": "M0B50Y09"
+      },
+      {
+        "name": "displayname",
+        "value": "Hunt for a Gargoyle"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>              A certain merchant needs to have a monster,",
+          "<ce>               a gargoyle to be precise, dispatched. The",
+          "<ce>               pay is a modest _gold_ gold pieces. Can I",
+          "<ce>                     have your help in this matter?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>                      Hmmm. Not the brave, heroic",
+          "<ce>                             sort I guess."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 24,
+        "lines": [
+          "<ce>               It seems this merchant hired a wizard to",
+          "<ce>                build him a grand mansion. Then the poor",
+          "<ce>               fool tried to cheat the mage of his wages.",
+          "<ce>               The wizard grew angry and animated one of",
+          "<ce>                the stone gargoyles on the new mansion.",
+          "<ce>                   It has been attacking the merchant",
+          "<ce>                   ceaselessly. Go out to ___dungeon_",
+          "<ce>                     and kill the thing. You've got",
+          "<ce>                   =2dung_ days to complete the task."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                        Hail to the hero, %pcn!",
+          "<ce>                     Well done! This paltry fee of",
+          "<ce>                    _gold_ is hardly a worthy reward",
+          "<ce>                            for such a deed."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                  The Mages Guild has refused to kill",
+          "<ce>                that rampaging gargoyle. They claim it's",
+          "<ce>                    not their fault. Lazy bastards."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 46,
+        "lines": [
+          "<ce>                 Some merchant was killed recently. I",
+          "<ce>                 hear that a gargoyle was seen hovering",
+          "<ce>                             over his body."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                The Fighters Guild took out a gargoyle.",
+          "<ce>                  Those guys are good to have around."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 55,
+        "lines": [
+          "<ce>                   Well done with the gargoyle %pcn."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 58,
+        "lines": [
+          "<ce>                  That gargoyle killed the merchant.",
+          "<ce>                  You should never have taken the job.",
+          "<ce>                    Now you've made yourself and the",
+          "<ce>                            guild look bad."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 64,
+        "lines": [
+          "On %qdt,",
+          " The Fighters Guild of ___qgiver_",
+          " charged me with the duty of destroying a",
+          " gargoyle that lairs in ___dungeon_.",
+          " I have =2dung_ days to finish the task."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                        The _monster_ is dead.",
+          "<ce>                         Hopefully that foolish",
+          "<ce>                       merchant has learned never",
+          "<ce>                            to cheat a mage."
+        ]
+      },
+      {
+        "id": 1080,
+        "firstLine": 77,
+        "lines": [
+          "<ce>                     Maybe this map to ___newdung_",
+          "<ce>                    will sweeten the deal a little."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 94,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 96,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 98,
+        "lines": [
+          "Place _dungeon_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 99,
+        "lines": [
+          "Place _newdung_ remote dungeon8"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 101,
+        "lines": [
+          "Clock _2dung_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 102,
+        "lines": [
+          "Clock _end_ 00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 104,
+        "lines": [
+          "Foe _monster_ is Gargoyle"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 107,
+        "lines": [
+          "start timer _2dung_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 ",
+          "pick one of _map_ _nomap_ ",
+          "place foe _monster_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 113,
+        "lines": [
+          "_2dung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 116,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _monster_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 119,
+        "lines": [
+          "_victory_ task:",
+          "                when _S.01_ and _qgclicked_",
+          "give pc _gold_ ",
+          "                start timer _end_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 124,
+        "lines": [
+          "_end_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 127,
+        "lines": [
+          "_qgclicked_ task:",
+          "               clicked npc _qgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 130,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.01_ ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 134,
+        "lines": [
+          "variable _map_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 135,
+        "lines": [
+          "variable _nomap_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 136,
+        "lines": [
+          "_S.06_ task:",
+          "when _map_ and _victory_ ",
+          "reveal _newdung_ readmap",
+          "    say 1080"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

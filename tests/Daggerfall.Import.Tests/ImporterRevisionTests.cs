@@ -41,7 +41,7 @@ public sealed class ImporterRevisionTests
                 "src/Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj",
                 "data/content-source-manifest.csv",
                 "data/ui-authored-assets.json",
-                "data/daggerfall-unity/Assets/Resources/ItemTemplates.txt",
+                "src/Daggerfall.Import.Tool/inputs/item-templates.json",
                 "content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-title-v2.png",
             ];
             string[] unread =
@@ -151,7 +151,7 @@ public sealed class ImporterRevisionTests
         Assert.Contains("data/content-source-manifest.csv", checkedPaths);
         Assert.Contains("data/ui-authored-assets.json", checkedPaths);
         Assert.Contains(checkedPaths, path => path.StartsWith(AuthoredUi.ProductDirectory + "/", StringComparison.Ordinal));
-        Assert.Contains(checkedPaths, path => path.StartsWith(ImportCommand.Donor + "/Assets/StreamingAssets/Quests/", StringComparison.Ordinal));
+        Assert.Contains(checkedPaths, path => path.StartsWith(ImportLayout.Inputs + "/quests/", StringComparison.Ordinal));
     }
 
     private static void Write(string tree, string path, string text)

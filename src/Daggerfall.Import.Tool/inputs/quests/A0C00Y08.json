@@ -1,0 +1,407 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C00Y08.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "db59cbb234d118850a4eba17ab3a8ab1f8788ceaa9ee5221ffbcdfa3a2b4636f",
+    "byteLength": 6125
+  },
+  "document": {
+    "fileName": "A0C00Y08.txt",
+    "questName": "A0C00Y08",
+    "questNameLine": 9,
+    "displayName": "The Assassin",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C00Y08"
+      },
+      {
+        "name": "displayname",
+        "value": "The Assassin"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>             My name is unimportant. All you need to know",
+          "<ce>               is that I need someone who isn't afraid to",
+          "<ce>            spill a little blood for, say, _gold_ gold. Tell",
+          "<ce>            me now if you're not interested. Are you willing",
+          "<ce>                           to take this job?",
+          "                                     <--->",
+          "<ce>               Shhh! Keep your voice down. Before I say",
+          "<ce>              anything else, are you the kind of %ra that",
+          "<ce>               will kill for gold? How about _gold_ gold?",
+          "                                     <--->",
+          "<ce>             I am looking for someone that won't faint at",
+          "<ce>            the sight of blood. Human blood. For _gold_ gold,",
+          "<ce>                         would you kill a man?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                           You never saw me.",
+          "                                     <--->",
+          "<ce>        Scram. I don't want anyone to see us talking together.",
+          "                                     <--->",
+          "<ce>                          Fine. Be that way."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 36,
+        "lines": [
+          "<ce>              I want _darkb_ killed. The problem is that",
+          "<ce>           the Dark Brotherhood won't take the job. Something",
+          "<ce>           about a favor they owe. I need an independent. Do",
+          "<ce>           the job and get back to me within a week and I'll",
+          "<ce>          pay you the _gold_ gold. Just ask for _questgiver_.",
+          "<ce>                  I'll be waiting right here for you."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 44,
+        "lines": [
+          "<ce>            Revenge is mine! By the way, you had better get",
+          "<ce>            out of town. I hear the Brotherhood caught wind",
+          "<ce>                    of this. Here's your money, %pcf."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 49,
+        "lines": [
+          "<ce>                  I hear _questgiver_ hates _darkb_.",
+          "                                     <--->",
+          "<ce>             _darkb_ is connected to the Dark Brotherhood."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 54,
+        "lines": [
+          "<ce>             Someone slew _darkb_, and in public, no less!",
+          "                                     <--->",
+          "<ce>                Did you hear about the murder? _darkb_",
+          "<ce>                       was slain by an assassin.",
+          "                                     <--->",
+          "<ce>              I never did like _darkb_. I'm glad someone",
+          "<ce>                  finally offed %g2. I hear it was the",
+          "<ce>                           Dark Brotherhood."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 64,
+        "lines": [
+          "<ce>               Keep your voice down. You killed _darkb_",
+          "<ce>            for me, and I acknowledge the debt, but I don't",
+          "<ce>           want people thinking I had anything to do with it."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 69,
+        "lines": [
+          "<ce>              I hired you to do a job, but you couldn't.",
+          "<ce>                  All you had to do was kill _darkb_.",
+          "<ce>               Now it's too late, and the Dark Brotherhood",
+          "<ce>                   is after me. Just leave me alone."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 75,
+        "lines": [
+          "%qdt:",
+          " I accepted a contract to kill _darkb_.",
+          " I have a week to get back to _questgiver_",
+          " of ___questgiver_ with the deed done."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 81,
+        "lines": [
+          "<ce>                _darkb_ isn't dead! What kind of a fool",
+          "<ce>                        do you take me for, %pcf?"
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 85,
+        "lines": [
+          "<ce>                         Help! Murderer! Help!"
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 88,
+        "lines": [
+          "<ce>         Cur! What kind of assassin are you? To arms! To arms!"
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 91,
+        "lines": [
+          "<ce>                            I'm hit! %oth."
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 94,
+        "lines": [
+          "<ce>          Coward! You attack me without cause or provocation."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 97,
+        "lines": [
+          "<ce>              _questgiver_? I don't know much about %g2.",
+          "<ce>                           Keeps to %g2self."
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 101,
+        "lines": [
+          "<ce>          I hear _questgiver_ has some pretty shady friends.",
+          "<ce>                    But you didn't hear it from me."
+        ]
+      },
+      {
+        "id": 1032,
+        "firstLine": 105,
+        "lines": [
+          "<ce>                A fine upstanding citizen. Ask anyone."
+        ]
+      },
+      {
+        "id": 1033,
+        "firstLine": 108,
+        "lines": [
+          "<ce>                  _darkb_ is usually at _place_, but",
+          "<ce>                I wouldn't get mixed up in %g3 affairs.",
+          "<ce>                    Just a friendly word of advice."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 130,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 132,
+        "lines": [
+          "Person _questgiver_ group Questor anyInfo 1030 rumors 1031"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 133,
+        "lines": [
+          "Person _darkb_ face 1 faction The_Dark_Brotherhood remote anyInfo 1032 rumors 1033"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 135,
+        "lines": [
+          "Place _place_ local random"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 137,
+        "lines": [
+          "Clock _S.00_ 7.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 139,
+        "lines": [
+          "Foe _bard_ is Bard"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 140,
+        "lines": [
+          "Foe _rogue_ is Rogue"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 141,
+        "lines": [
+          "Foe _archer_ is Archer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 142,
+        "lines": [
+          "Foe _spellsword_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 145,
+        "lines": [
+          "start timer _S.00_ ",
+          "log 1010 step 0 ",
+          "pc at _place_ set _S.11_ ",
+          "place npc _darkb_ at _place_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_S.00_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 153,
+        "lines": [
+          "_S.01_ task:",
+          "restrain foe _archer_ ",
+          "place foe _archer_ at _place_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 157,
+        "lines": [
+          "_S.02_ task:",
+          "restrain foe _bard_ ",
+          "place foe _bard_ at _place_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 161,
+        "lines": [
+          "_S.03_ task:",
+          "restrain foe _rogue_ ",
+          "place foe _rogue_ at _place_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 165,
+        "lines": [
+          "_S.04_ task:",
+          "restrain foe _spellsword_ ",
+          "place foe _spellsword_ at _place_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 169,
+        "lines": [
+          "variable _S.05_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_S.06_ task:",
+          "injured _rogue_ saying 1023 ",
+          "injured _archer_ saying 1021 ",
+          "injured _bard_ saying 1022 ",
+          "injured _spellsword_ saying 1024 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 176,
+        "lines": [
+          "_S.07_ task:",
+          "killed 1 _archer_ ",
+          "killed 1 _bard_ ",
+          "killed 1 _rogue_ ",
+          "killed 1 _spellsword_ ",
+          "change repute with _darkb_ by -20 ",
+          "legal repute -20"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 185,
+        "lines": [
+          "_S.08_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 188,
+        "lines": [
+          "_clearclick_ task:",
+          "when _S.08_ and not _S.07_ ",
+          "say 1015 ",
+          "clear _S.08_ _clearclick_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 194,
+        "lines": [
+          "_S.10_ task:",
+          "when _S.08_ and _S.07_ ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 199,
+        "lines": [
+          "_S.11_ task:",
+          "pick one of _S.01_ _S.02_ _S.03_ _S.04_ ",
+          "hide npc _darkb_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,549 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/K0C0XY01.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "970b8c81ca8dec3bbe69e4c8e3ac965a0279348ae04c5fa27bb3d1d931f49edd",
+    "byteLength": 7984
+  },
+  "document": {
+    "fileName": "K0C0XY01.txt",
+    "questName": "K0C0XY01",
+    "questNameLine": 9,
+    "displayName": "The Harpies' Nest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "K0C0XY01"
+      },
+      {
+        "name": "displayname",
+        "value": "The Harpies' Nest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>          I have a not-uncommon situation on my hands. A nest",
+          "<ce>           of harpies has moved into an old property of mine,",
+          "<ce>          and while I personally couldn't care less, our wise",
+          "<ce>            and benevolent %rt has decreed that the owner of",
+          "<ce>          any structure infested by harpies is responsible for",
+          "<ce>           extermination. There is apparently a fine involved",
+          "<ce>           for noncompliance. Frankly, I don't have the time",
+          "<ce>           for this; but if you wouldn't mind bloodying your",
+          "<ce>              sword a bit, I could use your help. The last",
+          "<ce>              mercenary I hired didn't make it, so I would",
+          "<ce>             understand if you're hesitant. I'd be happy to",
+          "<ce>          pay you, say, _reward_ gold pieces for your trouble."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                    %oth. Well, I can't blame you.",
+          "<ce>            Never could abide the stench of harpies myself."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 32,
+        "lines": [
+          "<ce>            Would you? Marvelous. Now, the catch is that I",
+          "<ce>             must have proof that a serious effort has been",
+          "<ce>              made to clear out ___mondung_ in =2mondung_",
+          "<ce>              days. Obviously that does not leave a lot of",
+          "<ce>                   time. I had hoped that _contact_,",
+          "<ce>          the mercenary I had hired earlier from the Fighters",
+          "<ce>            Guild, would have been more capable. And, listen,",
+          "<ce>                   %pcf, you don't have to clear out",
+          "<ce>                all ___mondung_. Just kill four or five",
+          "<ce>             of the critters and get back here. I know! The",
+          "<ce>               clan leaders wear specially-dyed gryphon's",
+          "<ce>                   feathers. Bring back one of those",
+          "<ce>               and I'll have the proof I need. Just make",
+          "<ce>             certain you don't fail to return in =2mondung_",
+          "<ce>                              days, %pcf."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 49,
+        "lines": [
+          "<ce>                 %oth. That wasn't much of an effort."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 52,
+        "lines": [
+          "<ce>                Well done, %pcf. Now I can prove to the",
+          "<ce>             %rt that I've done my civic duty, or at least",
+          "<ce>           attempted to do it. You have earned your _reward_",
+          "<ce>                        gold indeed. Thank you."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 58,
+        "lines": [
+          "The %rt demands physical proof of harpy extermination from some mercenaries.",
+          "<--->",
+          "_qgiver_ has really let ___mondung_ go to seed. It's hardly a storehouse now.",
+          "<--->",
+          "_qgiver_ ought to have ___mondung_ destroyed if it isn't going to be used."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 65,
+        "lines": [
+          "The %rt slapped _qgiver_ with so many fines, I wonder if %g'll recover.",
+          "<--->",
+          "_qgiver_ has had some real bad luck with harpy exterminators from what I see."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 70,
+        "lines": [
+          "The %rt seems happy with _qgiver_'s efforts to get ___mondung_ cleaned out.",
+          "<--->",
+          "_qgiver_ has made %g3 first effort to get that filthy ___mondung_ cleaned up."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 75,
+        "lines": [
+          "You helped me with those harpies, %pcf. What can I help you with?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 78,
+        "lines": [
+          "I have nothing to say to a %ra who can't pick up a few feathers."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 81,
+        "lines": [
+          "A large, white feather, dyed a repulsive shade of red."
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 84,
+        "lines": [
+          "A gray feather, dyed a sickly shade of green."
+        ]
+      },
+      {
+        "id": 1032,
+        "firstLine": 87,
+        "lines": [
+          "A large, white feather, dyed pure black."
+        ]
+      },
+      {
+        "id": 1033,
+        "firstLine": 90,
+        "lines": [
+          "A gray feather, dyed dull blue."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 93,
+        "lines": [
+          "<ce>                      Thank you, %pcf. I know my",
+          "<ce>                          way home from here."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 97,
+        "lines": [
+          "__qgiver_, ___qgiver_",
+          " Dear %pcn,",
+          " ",
+          "      I am sorry to annoy you while I'm sure you're",
+          " busy, but I received a caller from the Fighters Guild",
+          " on the subject of _contact_, that",
+          " mercenary I first hired to clean out ___mondung_.",
+          "      Without boring you with the details of the",
+          " interview, let me tell you that I promised the",
+          " Guildmaster I'd ask you to look for _contact_",
+          " while you're in ___mondung_. _contact_",
+          " is a =contact_, so %g should",
+          " stick out at ___mondung_.",
+          "      Well, I've fulfilled my promise to the Guildmaster.",
+          " Personally, I don't care if you throw this letter away",
+          " and let _contact_ rot in ___mondung_.",
+          " ",
+          "      I am eagerly awaiting your return.",
+          " ",
+          "<ce>                              Yours truly,",
+          "<ce>                                _qgiver_"
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 120,
+        "lines": [
+          "<ce>                         You're from _qgiver_?",
+          "<ce>                        Thank %god you arrived,",
+          "<ce>                          %pcf. Hope you don't",
+          "<ce>                          mind if I join you.",
+          "<ce>                         Take this _jewelry_ as",
+          "<ce>                        a sign of my gratitude."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 128,
+        "lines": [
+          "<ce>            A young courier appears at your side, hands you",
+          "<ce>                a letter, and disappears without a word."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 132,
+        "lines": [
+          "%qdt:",
+          " _qgiver_, a",
+          " merchant in ___qgiver_ has hired me",
+          " to clear out %g3 desolate property,",
+          " ___mondung_, which is infested by",
+          " harpies. Apparently, the place does not",
+          " have to be cleared out, but some sort of",
+          " effort needs to be made or at least the",
+          " appearance of an effort. I must return",
+          " with a clan feather from one of the leaders in",
+          " =2mondung_ days for a reward of _reward_ gold pieces."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 145,
+        "lines": [
+          "1 harpy dead"
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 148,
+        "lines": [
+          "2 harpies dead"
+        ]
+      },
+      {
+        "id": 1052,
+        "firstLine": 151,
+        "lines": [
+          "3 harpies dead"
+        ]
+      },
+      {
+        "id": 1053,
+        "firstLine": 154,
+        "lines": [
+          "4 harpies dead"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 159,
+        "lines": [
+          "<ce>                I need some proof before I can pay you."
+        ]
+      },
+      {
+        "id": 1099,
+        "firstLine": 162,
+        "lines": [
+          "<ce>                    You have found a clan feather."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 187,
+        "lines": [
+          "Item _item_ book2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 188,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 189,
+        "lines": [
+          "Item _clanfeather1_ harpy_feather"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 191,
+        "lines": [
+          "Item _letter26_ letter used 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 192,
+        "lines": [
+          "Item _jewelry_ trinket"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 194,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 195,
+        "lines": [
+          "Person _contact_ face 1 faction The_Fighters_Guild remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 197,
+        "lines": [
+          "Place _mondung_ remote dungeon10"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 199,
+        "lines": [
+          "Clock _2mondung_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 200,
+        "lines": [
+          "Clock _S.05_ 16:40 1.09:20"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 201,
+        "lines": [
+          "Clock _S.06_ 05:00 10:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 203,
+        "lines": [
+          "Foe _F.00_ is Harpy"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 204,
+        "lines": [
+          "Foe _F.01_ is Harpy"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 207,
+        "lines": [
+          "start timer _2mondung_ ",
+          "start timer _S.05_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "give item _clanfeather1_ to _F.01_ ",
+          "pc at _mondung_ set _S.08_ ",
+          "_letter26_ used do _S.15_ ",
+          "place foe _F.01_ at _mondung_",
+          "have _clanfeather1_ set _S.14_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 217,
+        "lines": [
+          "_2mondung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 220,
+        "lines": [
+          "variable _pcgetsgold_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 221,
+        "lines": [
+          "_S.02_ task:",
+          "toting _clanfeather1_ and _qgiver_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 226,
+        "lines": [
+          "_S.03_ task:",
+          "clicked npc _contact_ ",
+          "start timer _S.06_ ",
+          "get item _jewelry_ ",
+          "hide npc _contact_ ",
+          "say 1013 ",
+          "make _jewelry_ permanent ",
+          "add _contact_ face ",
+          "change repute with _contact_ by +10 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 236,
+        "lines": [
+          "_S.04_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 239,
+        "lines": [
+          "_S.05_ task:",
+          "give pc _letter26_ notify 1014 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 242,
+        "lines": [
+          "_S.06_ task:",
+          "say 1011 ",
+          "drop _contact_ face "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 246,
+        "lines": [
+          "variable _S.07_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 247,
+        "lines": [
+          "_S.08_ task:",
+          "create foe _F.00_ every 21 minutes 15 times with 25% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 250,
+        "lines": [
+          "_clearclick_ task:",
+          "when _S.04_ and not _S.02_ ",
+          "clear _S.04_ _clearclick_",
+          "say 1003",
+          "say 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 256,
+        "lines": [
+          "variable _S.10_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 257,
+        "lines": [
+          "variable _S.11_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 258,
+        "lines": [
+          "variable _S.12_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 259,
+        "lines": [
+          "variable _S.13_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 260,
+        "lines": [
+          "_S.14_ task:",
+          "say 1099 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 264,
+        "lines": [
+          "_S.15_ task:",
+          "place npc _contact_ at _mondung_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

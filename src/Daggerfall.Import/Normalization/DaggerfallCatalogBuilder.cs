@@ -21,7 +21,7 @@ public static class DaggerfallCatalogBuilder
     public static DaggerfallCatalogs Build(
         IReadOnlyList<SourceInventoryRow> inventory,
         IReadOnlyList<(string FileName, byte[] Bytes)> careers,
-        string raceTemplateSource, byte[]? classRecommendations = null, DaggerfallText? classQuestionText = null)
+        DaggerfallRaceTable raceTable, byte[]? classRecommendations = null, DaggerfallText? classQuestionText = null)
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(careers);
@@ -40,7 +40,7 @@ public static class DaggerfallCatalogBuilder
             resistances.Add(new DaggerfallIndexedKey(DaggerfallCatalogs.ElementKeys[index], index, careerCitation));
         }
 
-        var raceFlags = DaggerfallRaceFlagsReader.Read(raceTemplateSource);
+        IReadOnlyDictionary<string, DaggerfallRaceFlags> raceFlags = raceTable.Races;
         List<DaggerfallRaceKey> races = [];
         string[] raceNames = raceFamily.RecordOrStem.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         for (int index = 0; index < raceNames.Length; index++)
@@ -48,7 +48,7 @@ public static class DaggerfallCatalogBuilder
             // The donor's race values are contiguous from one in its own enumeration order.
             string donorClass = raceNames[index].Replace(" ", "", StringComparison.Ordinal);
             if (!raceFlags.TryGetValue(donorClass, out var flags))
-                throw new InvalidOperationException($"Documented race '{raceNames[index]}' has no donor RaceTemplate constructor.");
+                throw new InvalidOperationException($"Documented race '{raceNames[index]}' has no row in the race table.");
             races.Add(new DaggerfallRaceKey(Key(raceNames[index]), index + 1, family(raceFamily.PathOrPattern))
             { ResistanceFlags = flags.ResistanceFlags, ImmunityFlags = flags.ImmunityFlags,
                 LowToleranceFlags = flags.LowToleranceFlags, CriticalWeaknessFlags = flags.CriticalWeaknessFlags });

@@ -514,13 +514,12 @@ public static class DaggerfallItemTemplatesBuilder
         IReadOnlyList<SubstituteItemTemplate> substitutes,
         IReadOnlyList<SubstituteMagicTemplate> magic,
         string label,
-        byte[] bytes,
+        long byteLength,
         IReadOnlyList<SourceInventoryRow> inventory)
     {
         ArgumentNullException.ThrowIfNull(substitutes);
         ArgumentNullException.ThrowIfNull(magic);
         ArgumentException.ThrowIfNullOrWhiteSpace(label);
-        ArgumentNullException.ThrowIfNull(bytes);
         ArgumentNullException.ThrowIfNull(inventory);
         SourceInventoryRow family = SourceInventoryRow.RequireFamily(inventory, ItemsFamily);
 
@@ -576,7 +575,7 @@ public static class DaggerfallItemTemplatesBuilder
         }
 
         DaggerfallItemTemplates catalog = new(
-            new DaggerfallTextSource(DaggerfallTextKind.Resource, label, "en", bytes.LongLength, 0, templates.Count),
+            new DaggerfallTextSource(DaggerfallTextKind.Resource, label, "en", byteLength, 0, templates.Count),
             [.. templates.OrderBy(template => template.Index)],
             [.. magicTemplates.OrderBy(template => template.Index)]);
         catalog.Validate();

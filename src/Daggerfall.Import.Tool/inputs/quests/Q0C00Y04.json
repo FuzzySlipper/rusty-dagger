@@ -1,0 +1,373 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/Q0C00Y04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "66977f63be66277de8d8de3cb0a9196ca8d7fb52de04777d813b9a134c4813a8",
+    "byteLength": 6301
+  },
+  "document": {
+    "fileName": "Q0C00Y04.txt",
+    "questName": "Q0C00Y04",
+    "questNameLine": 8,
+    "displayName": "A Special Mixture",
+    "header": [
+      {
+        "name": "quest",
+        "value": "Q0C00Y04"
+      },
+      {
+        "name": "displayname",
+        "value": "A Special Mixture"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                     ==qgiver_ have been contacted",
+          "<ce>                  by the Mages Guild and asked about a",
+          "<ce>                 special potion, a very sacred formula",
+          "<ce>                         much desired in %reg.",
+          "<ce>                  They would be willing to pay _gold_",
+          "<ce>                   gold pieces for it, which would be",
+          "<ce>                  yours. All we want is the regard of",
+          "<ce>                   the Mages Guild. The journey will",
+          "<ce>                      not be an easy one. Are you",
+          "<ce>                              interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                           I understand. I'm",
+          "<ce>                          disappointed, but I",
+          "<ce>                              understand."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                     Very good, %pcf. Here is the",
+          "<ce>                 potion. Now, you should be safe during",
+          "<ce>                the day, for those who want it strictly",
+          "<ce>                  travel by night. They are expecting",
+          "<ce>                    the potion at the Mages Guild of",
+          "<ce>                        ___mguild_ in =queston_",
+          "<ce>                      days or less, so tarry not.",
+          "<ce>                       Ask for a mage by the name",
+          "<ce>                               of _mage_."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                     Ah, a most rare and wondrous",
+          "<ce>                   formula. Here are your _gold_ gold",
+          "<ce>                      pieces. A bargain price for",
+          "<ce>                              this potion."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 47,
+        "lines": [
+          "The peace between the Mages Guild and ==qgiver_ is surprising.",
+          "<--->",
+          "It won't last, this peace between the mages and the witches."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 52,
+        "lines": [
+          "==qgiver_ went back on an agreement with the Mages Guild.",
+          "<--->",
+          "The Mages Guild is cutting off relations with ==qgiver_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 57,
+        "lines": [
+          "The potion ==qgiver_ gave the Mages Guild cures vampirism!",
+          "<--->",
+          "The potion ==qgiver_ gave the Mages Guild cures lycanthropy!"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 62,
+        "lines": [
+          "The Mages Guild tells us the transaction went through. Thank you, %pcf."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 65,
+        "lines": [
+          "<ce>                  We have been working to strengthen",
+          "<ce>                  relations with the Mages Guild, but",
+          "<ce>                   thou hast destroyed all by failing",
+          "<ce>                     to deliver that potion, %pcf.",
+          "<ce>                    Get thee from my sight. I cannot",
+          "<ce>                         stand to look on thee."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 73,
+        "lines": [
+          "%qdt:",
+          " ==qgiver_ has",
+          " sent me to the Mages Guild of",
+          " ___mguild_ with a",
+          " mysterious potion. I am to look",
+          " out at nighttime for those who",
+          " might want the potion. The name",
+          " of the mage who will pay me",
+          " _gold_ gold pieces for the potion",
+          " is _mage_. I have",
+          " =queston_ days to accomplish this",
+          " delivery."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 87,
+        "lines": [
+          "<ce>                     A voice gritty with the dirt",
+          "<ce>                    of the grave hisses, \"You! That",
+          "<ce>                         potion belongs to us!\"",
+          "                                     <--->",
+          "<ce>                    \"Give me the potion,\" somebody",
+          "<ce>                     snarls. \"It doesn't belong to",
+          "<ce>                                 you!\"",
+          "                                     <--->",
+          "<ce>                       You hear someone howl an",
+          "<ce>                    unnatural, savage cry of desire.",
+          "<ce>                       \"The potion! The potion!\""
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 100,
+        "lines": [
+          "<ce>                              The howl of",
+          "<ce>                           a wolf sounds out.",
+          "                                     <--->",
+          "<ce>                          You hear something",
+          "<ce>                          snarl a piteous cry",
+          "<ce>                              of yearning.",
+          "                                     <--->",
+          "<ce>                       The cry of a wolf pierces",
+          "<ce>                      the night. It is not a howl",
+          "<ce>                      of hunger, but of yearning."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 112,
+        "lines": [
+          "<ce>                           The high-pitched",
+          "<ce>                            shriek of a boar",
+          "<ce>                           pierces the night.",
+          "                                     <--->",
+          "<ce>                         You hear the guttural",
+          "<ce>                      snarl of a boar, its timbre",
+          "<ce>                        shaking in desperation.",
+          "                                     <--->",
+          "<ce>                       The still night suddenly",
+          "<ce>                      breaks with the high-pitched",
+          "<ce>                        snarl of an angry boar."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 125,
+        "lines": [
+          "<ce>                           You feel strange."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 128,
+        "lines": [
+          "Error: Questtext 1016 Called."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 131,
+        "lines": [
+          "<ce>                     What's this? The formula has",
+          "<ce>                   been desecrated! I am disappointed",
+          "<ce>                   that you cannot do this one simple",
+          "<ce>                             thing for me."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 150,
+        "lines": [
+          "Item _potion_ Pure_water"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 151,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 153,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 154,
+        "lines": [
+          "Person _mage_ face 105 faction The_Mages_Guild remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 156,
+        "lines": [
+          "Place _mguild_ remote magery"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 158,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 1 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 160,
+        "lines": [
+          "Foe _vampire_ is Vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 161,
+        "lines": [
+          "Foe _werewolf_ is Werewolf"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 162,
+        "lines": [
+          "Foe _wereboar_ is Wereboar"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 165,
+        "lines": [
+          "start timer _queston_ ",
+          "log 1010 step 0 ",
+          "get item _potion_ ",
+          "_potion_ used do _S.03_ ",
+          "place npc _mage_ at _mguild_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 171,
+        "lines": [
+          "_queston_ task:",
+          "make _potion_ permanent ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 175,
+        "lines": [
+          "_S.01_ task:",
+          "daily from 06:40 to 17:20 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 178,
+        "lines": [
+          "until _S.01_ performed:",
+          "create foe _werewolf_ every 19 minutes 12 times with 50% success msg 1013 ",
+          "create foe _wereboar_ every 11 minutes 10 times with 40% success msg 1014 ",
+          "create foe _vampire_ every 15 minutes 7 times with 70% success msg 1012 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 183,
+        "lines": [
+          "_S.02_ task:",
+          "toting _potion_ and _mage_ clicked "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 186,
+        "lines": [
+          "_S.03_ task:",
+          "say 1015 ",
+          "cure vampirism ",
+          "cure lycanthropy "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 191,
+        "lines": [
+          "_S.04_ task:",
+          "when _S.02_ and _S.03_ ",
+          "say 1017 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 196,
+        "lines": [
+          "_reward_ task:",
+          "when _S.02_ and not _S.03_ ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

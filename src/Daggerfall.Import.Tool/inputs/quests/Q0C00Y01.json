@@ -1,0 +1,288 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/Q0C00Y01.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "f9480d376ac77bcb9b9900f40b6307af328dcf23b699ea26b14ae3ef5a4bb200",
+    "byteLength": 5030
+  },
+  "document": {
+    "fileName": "Q0C00Y01.txt",
+    "questName": "Q0C00Y01",
+    "questNameLine": 9,
+    "displayName": "The Libel",
+    "header": [
+      {
+        "name": "quest",
+        "value": "Q0C00Y01"
+      },
+      {
+        "name": "displayname",
+        "value": "The Libel"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                      We would use thee to find",
+          "<ce>                  a perfidious document circulated by",
+          "<ce>                  our enemies in an effort to suppress",
+          "<ce>                 our coven. I know wherein this packet",
+          "<ce>                  of printed lies has been placed, but",
+          "<ce>                   we need someone like thee to fight",
+          "<ce>                 its guardian and bring it to us. Wilt",
+          "<ce>                      thou assist ==qgiver_ thus?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                         Wilt thou not? %oth,",
+          "<ce>                      then do not ask for favor of",
+          "<ce>                               ==qgiver_."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                   Wilt thou? Then you will have our",
+          "<ce>                most unconfuted gratitude. The document",
+          "<ce>                    lies in a temple, here in %reg,",
+          "<ce>                      in a town called __temple_.",
+          "<ce>                      _temple_ keeps it somewhere,",
+          "<ce>                perhaps behind locked doors, guarded by",
+          "<ce>                  a _guardian_ of unquestioned power.",
+          "<ce>                If thou wilt bring the document here, to",
+          "<ce>                   me, I will give to thee a _mitem_",
+          "<ce>                of the coven's manufacture. Return in no",
+          "<ce>                       later than =queston_ days."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                  Ah, the accursed document. Thou art",
+          "<ce>                 to be commended for thy service to our",
+          "<ce>                     sisterhood, %pct. Here is the",
+          "<ce>                        _mitem_ I promised thee.",
+          "<ce>                    The gratitude of ==qgiver_ need",
+          "<ce>                      not be physical to be felt."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 50,
+        "lines": [
+          "Have you read the next History of ==qgiver_. Shocking!"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 53,
+        "lines": [
+          "The History of ==qgiver_ is being reproduced in the Imperial City."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 56,
+        "lines": [
+          "Some have read the History of ==qgiver_, but the only copy disappeared."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 59,
+        "lines": [
+          "Art thou pleased with thy _mitem_, %pcf? Thou surely didst deserve it."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 62,
+        "lines": [
+          "<ce>                      The accursed document hath",
+          "<ce>                    gone to the Imperial City to be",
+          "<ce>                      reproduced for the ignorant",
+          "<ce>                           masses, %pcf. Thou",
+          "<ce>                         hast failed ==qgiver_.",
+          "<ce>                          Go from this place."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 70,
+        "lines": [
+          "%qdt:",
+          " I have agreed to get a document",
+          " about ==qgiver_ from _temple_",
+          " in __temple_ and return with it",
+          " in =queston_ days or less. The document",
+          " will likely be guarded by a _guardian_."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 78,
+        "lines": [
+          "<ce>                    This is apparently the document",
+          "<ce>                         that ==qgiver_ wanted."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 82,
+        "lines": [
+          "Among the more fiendish practices of the",
+          " ==qgiver_ is the rite they",
+          " perform in honor of ==daedra_.",
+          " The flesh of a newborn infant is boiled over",
+          " the flames of burning brimstone for three and",
+          " a half days until it is hard and leathery.",
+          " The resultant fiber is sewn over the head of",
+          " a black cat, who is kept in a cage until it",
+          " has chewed through the caul or has died of",
+          " suffocation. If the cat dies, the witches",
+          " know that ==daedra_ will",
+          " not answer their entreaties, but if the cat",
+          " lives, ==qgiver_ may ask",
+          " ==daedra_ for anything -- the",
+          " death or mutilation of princes, economic",
+          " catastrophe, famine, plague, war ..."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 100,
+        "lines": [
+          "<ce>                     Pawn of the Fiends! Slave of",
+          "<ce>                           the ==qgiver_! The",
+          "<ce>                         Righteous Hand of %god",
+          "<ce>                            will smite thee!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 124,
+        "lines": [
+          "Item _document_ letter used 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 126,
+        "lines": [
+          "Item _mitem_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 128,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 129,
+        "lines": [
+          "Person _daedra_ face 80 factiontype Daedra remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 131,
+        "lines": [
+          "Place _temple_ remote temple"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 133,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 135,
+        "lines": [
+          "Foe _guardian_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 138,
+        "lines": [
+          "place item _document_ at _temple_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 139,
+        "lines": [
+          "dialog link for person _daedra_ ",
+          "start timer _queston_ ",
+          "log 1010 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 146,
+        "lines": [
+          "_S.01_ task:",
+          "clicked item _document_ ",
+          "create foe _guardian_ every 1 minutes 1 times with 100% success ",
+          "say 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 151,
+        "lines": [
+          "_S.02_ task:",
+          "injured _guardian_ ",
+          "say 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 155,
+        "lines": [
+          "_reward_ task:",
+          "toting _document_ and _qgiver_ clicked ",
+          "give pc _mitem_ ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

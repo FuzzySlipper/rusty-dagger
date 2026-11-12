@@ -1,0 +1,32 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO01.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "63f21aa705e1dc539fe0da20951cfe914884ee58f5188a4d17465f7c6962677d",
+    "byteLength": 206
+  },
+  "document": {
+    "fileName": "__DEMO01.txt",
+    "questName": "__DEMO01",
+    "questNameLine": 3,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO01"
+      }
+    ],
+    "messages": [],
+    "blocks": [
+      {
+        "kind": "headless",
+        "firstLine": 12,
+        "lines": [
+          "juggle 5 apples every 2 seconds drop 40%"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

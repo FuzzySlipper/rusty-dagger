@@ -1,0 +1,465 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000500.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "01ce556e38776981bae5da9f009e694c9a3b19b2a42807cd5cd2c726aa2ad946",
+    "byteLength": 7075
+  },
+  "document": {
+    "fileName": "S0000500.txt",
+    "questName": "S0000500",
+    "questNameLine": 5,
+    "displayName": "Lord K'avar Quest Part II",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000500"
+      },
+      {
+        "name": "displayname",
+        "value": "Lord K'avar Quest Part II"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1004,
+        "firstLine": 10,
+        "lines": [
+          "<ce>                   %pcf, you saved my life when most",
+          "<ce>                 of my supposed friends abandoned me.",
+          "<ce>                  I am in your debt. My resources are",
+          "<ce>               not what they once were, but accept this",
+          "<ce>             _gold_ gold as a small token of my gratitude."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 17,
+        "lines": [
+          "<ce>   One of _queen_'s high lords was arrested for treason. His friends",
+          "<ce>    are pleading for mercy, but the Queen has already scheduled his",
+          "<ce>                            execution date."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 22,
+        "lines": [
+          "<ce> They say that _traitor_ escaped from the dungeon of Castle Sentinel,",
+          "<ce> right from under the noses of _queen_'s guards. She must be furious!"
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 26,
+        "lines": [
+          "%qdt:",
+          " I have received a letter from one",
+          " _contact1_, asking me to meet %g2",
+          " at _tavern_ in __tavern_,",
+          " ____tavern_, on some matter having",
+          " to do with _traitor_ of Sentinel."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 34,
+        "lines": [
+          "%qdt:",
+          " I met with _contact1_, who told",
+          " me that _traitor_ languishes",
+          " in the dungeons of Sentinel, with",
+          " his execution scheduled in =executiondelay_",
+          " days. _contact1_ begged me to",
+          " rescue _traitor_ before it was",
+          " too late."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 44,
+        "lines": [
+          "%qdt:",
+          " I have rescued _traitor_ from",
+          " Castle Sentinel's dungeon, and",
+          " am taking him to _safehouse_",
+          " in __safehouse_, ____safehouse_,",
+          " where we will meet an ally",
+          " named _contact2_."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 53,
+        "lines": [
+          "Dear %pcn:",
+          " ",
+          " If you are a friend of _traitor_,",
+          " please meet me at _tavern_ in",
+          " __tavern_, ____tavern_, as soon as",
+          " possible. This is a matter of life or death!",
+          " Find me within =firsttimer_ days!",
+          " ",
+          "<ce>                              _contact1_"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 64,
+        "lines": [
+          "<ce>                     %pcn? You are my last hope!",
+          "<ce>                    _traitor_'s friends and allies",
+          "<ce>                    have all proven faithless after",
+          "<ce>                     he was arrested by the tyrant",
+          "<ce>                     _queen_ on trumped-up charges",
+          "<ce>                     of treason. He is now locked",
+          "<ce>                       in the dungeons of Castle",
+          "<ce>                     Sentinel, awaiting execution.",
+          "<ce>                    Please, if you have any regard",
+          "<ce>                 for the man, rescue him from certain",
+          "<ce>                  death. He often spoke of your skill",
+          "<ce>                 and bravery. I know you will help us.",
+          "<ce>                  He has only =executiondelay_ days to live! Hurry!"
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 79,
+        "lines": [
+          "<ce>                    %oth, am I glad to see you. We",
+          "<ce>                    must get out of here before the",
+          "<ce>                 alarm is raised. I was just plotting",
+          "<ce>                 my escape when you showed up, but no",
+          "<ce>                   need for that now, eh? My strong",
+          "<ce>                  right arm, that's what I've always",
+          "<ce>                   called you. I promise, when I am",
+          "<ce>                  King of Sentinel, you will be there",
+          "<ce>                  at my side, the richest lord of the",
+          "<ce>                    kingdom! Sounds good, eh? Once",
+          "<ce>                  we're clear of pursuit, take me to",
+          "<ce>                    __safehouse_ in ____safehouse_.",
+          "<ce>                       I have a friend there at",
+          "<ce>                     _safehouse_ who will help me",
+          "<ce>                organize the conquest of Sentinel anew.",
+          "<ce>                   Lead on, good %pcn, let us away!",
+          "<ce>                   We have just =escapetime_ days to make the connection."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 98,
+        "lines": [
+          "<ce>                      Raise the alarm! _traitor_",
+          "<ce>                  is escaping! =guards_, come quick!"
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 102,
+        "lines": [
+          "<ce>                      _traitor_ clasps your hand,",
+          "<ce>                          and says earnestly:",
+          "<ce>                                    ",
+          "<ce>                   \"I thank you for rescuing me from",
+          "<ce>                    that black pit of despair, but",
+          "<ce>               I will have to part ways with you here.\""
+        ]
+      },
+      {
+        "id": 1060,
+        "firstLine": 110,
+        "lines": [
+          "<ce>   Did you hear that _traitor_ of Sentinel was executed for treason?",
+          "<ce>Apparently it was quite a spectacle -- they hanged him in the public square",
+          "<ce>                     in front of _queen_'s Castle.",
+          "                                     <--->",
+          "<ce>   _traitor_ of Sentinel was hanged for treason. They say he pleaded",
+          "<ce>             for his life quite shamefully before he died."
+        ]
+      },
+      {
+        "id": 1070,
+        "firstLine": 118,
+        "lines": [
+          "<ce>                   A courier shouts at you to wait.",
+          "<ce>                       \"%pcn, right? This letter",
+          "<ce>                        is for you. Gotta go.\""
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 145,
+        "lines": [
+          "Item _letter_ letter used 1030"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 146,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 148,
+        "lines": [
+          "Person _traitor_ face 1 named Lord_K'avar"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 149,
+        "lines": [
+          "Person _contact1_ face 15 group Banker female remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 150,
+        "lines": [
+          "Person _queen_ named Queen_Akorithi atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 151,
+        "lines": [
+          "Person _contact2_ face 1 group Local_3.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 153,
+        "lines": [
+          "Place _tavern_ remote tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 154,
+        "lines": [
+          "Place _sentinel_ permanent SentinelCastle4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 155,
+        "lines": [
+          "Place _safehouse_ remote house4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 157,
+        "lines": [
+          "Clock _S.00_ 31.06:00 93.18:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 158,
+        "lines": [
+          "Clock _firsttimer_ 7.00:00 14.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 160,
+        "lines": [
+          "Clock _executiondelay_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 161,
+        "lines": [
+          "Clock _escapetime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 163,
+        "lines": [
+          "Foe _guards_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 164,
+        "lines": [
+          "Foe _F.01_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 167,
+        "lines": [
+          "start timer _S.00_ ",
+          "have _letter_ set _goclock_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_goclock_ task:",
+          "start timer _firsttimer_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 173,
+        "lines": [
+          "_S.00_ task:",
+          "_letter_ used do _readletter_ ",
+          "give pc _letter_ notify 1070 ",
+          "place foe _guards_ at _sentinel_ ",
+          "place npc _contact1_ at _tavern_ ",
+          "place npc _traitor_ at _sentinel_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 180,
+        "lines": [
+          "variable _executiondelay_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 181,
+        "lines": [
+          "variable _firsttimer_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 182,
+        "lines": [
+          "_S.02_ task:",
+          "clicked npc _contact1_ ",
+          "log 1021 step 1 ",
+          "say 1040 ",
+          "start timer _executiondelay_ ",
+          "stop timer _firsttimer_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 189,
+        "lines": [
+          "_S.03_ task:",
+          "clicked npc _traitor_ ",
+          "start timer _escapetime_ ",
+          "log 1022 step 2 ",
+          "hide npc _traitor_ ",
+          "hide npc _contact1_ ",
+          "say 1041 ",
+          "add _traitor_ face ",
+          "change repute with _queen_ by -20",
+          "place npc _contact2_ at _safehouse_ ",
+          "stop timer _executiondelay_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 201,
+        "lines": [
+          "_greklith_ task:",
+          "injured _guards_ ",
+          "create foe _F.01_ every 2 minutes 5 times with 50% success ",
+          "say 1050 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 206,
+        "lines": [
+          "_S.05_ task:",
+          "clicked npc _contact2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 209,
+        "lines": [
+          "_S.06_ task:",
+          "when _S.03_ and _S.05_ ",
+          "give pc _gold_ ",
+          "drop _traitor_ face ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 216,
+        "lines": [
+          "_S.08_ task:",
+          "when _executiondelay_ and not _S.03_ ",
+          "rumor mill 1060 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 221,
+        "lines": [
+          "_S.08a_ task:",
+          "when _firsttimer_ and not _S.03_ ",
+          "rumor mill 1060 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 226,
+        "lines": [
+          "_escapetime_ task:",
+          "say 1051 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 230,
+        "lines": [
+          "_readletter_ task:",
+          "log 1020 step 0 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

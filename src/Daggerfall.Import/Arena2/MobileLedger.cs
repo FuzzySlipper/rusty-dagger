@@ -48,24 +48,15 @@ public static class MobileLedgerBuilder
     /// <summary>The first id the donor's human-mobile space occupies.</summary>
     public const int FirstHumanMobileId = 128;
 
-    private static readonly Regex EntryPattern = new(
-        @"//[ \t]*(?<name>[^\n]*?)[ \t]*\r?\n[ \t]*new MobileEnemy\(\)[ \t]*\r?\n[ \t]*\{[ \t]*\r?\n[ \t]*ID[ \t]*=[ \t]*(?<id>\d+)",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
-    /// <summary>Builds the reconciliation from the donor's table text and the published pack's JSON.</summary>
-    public static MobileLedger Build(string donorEnemyBasics, string packJson)
+    /// <summary>Builds the reconciliation from our mobile table and the published pack's JSON.</summary>
+    public static MobileLedger Build(MobileTable table, string packJson)
     {
-        ArgumentNullException.ThrowIfNull(donorEnemyBasics);
+        ArgumentNullException.ThrowIfNull(table);
         ArgumentNullException.ThrowIfNull(packJson);
-        List<(int Id, string Name)> donor = [];
-        foreach (Match match in EntryPattern.Matches(donorEnemyBasics))
-        {
-            donor.Add((int.Parse(match.Groups["id"].Value, System.Globalization.CultureInfo.InvariantCulture), match.Groups["name"].Value.Trim()));
-        }
-
+        List<(int Id, string Name)> donor = [.. table.Mobiles.Select(entry => (entry.Id, entry.Name))];
         if (donor.Count == 0)
         {
-            throw new InvalidOperationException("The donor's static mobile table was not found; the ledger cannot report coverage it cannot read.");
+            throw new InvalidOperationException("The mobile table is empty; the ledger cannot report coverage it cannot read.");
         }
 
         JsonNode pack = JsonNode.Parse(packJson) ?? throw new InvalidOperationException("The published pack is not JSON.");

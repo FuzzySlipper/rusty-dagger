@@ -1,0 +1,656 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/K0C00Y07.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "ea90c7a998b2ee6a962d0d88b4f2c9dd70666fa97af8cf52b6b3836ba478d990",
+    "byteLength": 11404
+  },
+  "document": {
+    "fileName": "K0C00Y07.txt",
+    "questName": "K0C00Y07",
+    "questNameLine": 9,
+    "displayName": "The Ransom",
+    "header": [
+      {
+        "name": "quest",
+        "value": "K0C00Y07"
+      },
+      {
+        "name": "displayname",
+        "value": "The Ransom"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                       My poor darling _victim_",
+          "<ce>                has been kidnapped by the Thieves Guild.",
+          "<ce>                           Could you help me?",
+          "                                     <--->",
+          "<ce>                    The Thieves Guild has taken my",
+          "<ce>                       dearest _victim_ away from",
+          "<ce>             me and now they're demanding a ransom. I need",
+          "<ce>                 someone to bring my lover back to me,",
+          "<ce>                       any way they can. Please,",
+          "<ce>                           will you help me?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                        You have a cold heart,",
+          "<ce>                          %pcf. I guess I will",
+          "<ce>                    have to face these kidnappers on",
+          "<ce>                                my own.",
+          "                                     <--->",
+          "<ce>                        Then I'll find someone",
+          "<ce>                              else, %pcn."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                   I can't pay you very much, %pcf.",
+          "<ce>             I used most of my gold to buy this gem for the",
+          "<ce>              ransom, but you can have the remainder of my",
+          "<ce>              savings, _gold_ gold pieces, when my dearest",
+          "<ce>                       _victim_ is back with me.",
+          "<ce>                  The kidnappers want the _gem_ to be",
+          "<ce>                      delivered to __kidnapper_ in",
+          "<ce>                   ___kidnapper_ and I am to take no",
+          "<ce>              longer than =2ransom_ days. At __kidnapper_,",
+          "<ce>                    I am to look for a =kidnapper_,",
+          "<ce>                       whose name's _kidnapper_.",
+          "<ce>                     Nothing matters but _victim_'s",
+          "<ce>           safety, but if you ensure that without paying the",
+          "<ce>              ransom, I'll be very grateful. Like I said,",
+          "<ce>                   it's all I have. Good luck and may",
+          "<ce>                            %god Bless You.",
+          "                                     <--->",
+          "<ce>                     Thank %god. Here's the _gem_",
+          "<ce>               the kidnappers want for ransom. If you can",
+          "<ce>                     find a way to rescue _victim_",
+          "<ce>               without paying the ransom, I would be very",
+          "<ce>             grateful. After buying that gem, my savings is",
+          "<ce>             almost entirely gone. You can, of course, have",
+          "<ce>                     _gold_ gold, once _victim_ has",
+          "<ce>            returned -- that will make my life savings gone",
+          "<ce>             entirely, but it'll be worth it. If the ransom",
+          "<ce>               must be paid, be sure to take no more than",
+          "<ce>              =2ransom_ days to do it. The kidnappers have",
+          "<ce>                     an agent in __kidnapper_ over",
+          "<ce>                    in ___kidnapper_, a =kidnapper_",
+          "<ce>                   named _kidnapper_. Once =2ransom_",
+          "<ce>           days have passed, %g will send word to %g3 friends",
+          "<ce>                   where-ever they're keeping _victim_",
+          "<ce>              and they'll kill %g2. Please don't let that",
+          "<ce>                       happen. Good luck, friend."
+        ]
+      },
+      {
+        "id": 1099,
+        "firstLine": 72,
+        "lines": [
+          "<ce>                          _victim_! Oh, thank",
+          "<ce>                   %god you're alive. And, good %pcf,",
+          "<ce>                 you didn't even use the ransom _gem_.",
+          "<ce>                 I cannot thank you enough. Here is the",
+          "<ce>                   _gold_ gold I promised, but it is",
+          "<ce>                   hardly enough. You have my deepest",
+          "<ce>                         gratitude, my friend."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 81,
+        "lines": [
+          "<ce>                    Take it. It's yours my friend."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 84,
+        "lines": [
+          "_qgiver_ can scarcely afford to pay _victim_'s ransom.",
+          "<--->",
+          "_victim_'s kidnapping has scared everyone in ___qgiver_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 89,
+        "lines": [
+          "The thieves who kidnapped _victim_ will probably never come to justice."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 92,
+        "lines": [
+          "_victim_ was rescued from the thieves by a wonderful %ra mercenary."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 95,
+        "lines": [
+          "You rescued _victim_, %pcf. Of course, I'll help you any way I can."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 98,
+        "lines": [
+          "<ce>                    Listen, I don't want to talk to",
+          "<ce>                   you or anyone else right now. Why",
+          "<ce>                         don't you get stuffed?"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 103,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of",
+          " __qgiver_, ___qgiver_",
+          " has sent me with a _gem_ to",
+          " ransom %g3 lover, _victim_",
+          " from the Thieves Guild. The ransom",
+          " must be paid in =2ransom_ days or they",
+          " will kill _victim_.",
+          " _kidnapper_ is the agent",
+          " of the kidnappers who awaits me in",
+          " __kidnapper_ in ___kidnapper_.",
+          " Of course, _qgiver_",
+          " wants me, if possible, to rescue %g3",
+          " lover without paying the ransom."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 119,
+        "lines": [
+          "<ce>                         Do you give the _gem_",
+          "<ce>                            to _kidnapper_?"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 123,
+        "lines": [
+          "<ce>                   You're %pcf, aintcha? The Thieves",
+          "<ce>                 Guild's fond of you, kid. Oh, %oth, I",
+          "<ce>                    see. You're working for _qgiver_",
+          "<ce>              to make sure %g pays us with no funny stuff,",
+          "<ce>                                 right?"
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 130,
+        "lines": [
+          "<ce>                         _victim_ will pay for",
+          "<ce>                      your stupidity! %oth, %g'll",
+          "<ce>                   be dead before =queston_ days have",
+          "<ce>                            passed! =thug_!",
+          "<ce>                          Rip this %ra apart!",
+          "                                     <--->",
+          "<ce>                           =thug_! Kill this",
+          "<ce>                     very stupid %ra while I do the",
+          "<ce>                           same to _victim_."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 141,
+        "lines": [
+          "<ce>                          _qgiver_ sent you?",
+          "<ce>                        %oth, thank %god! Quick,",
+          "<ce>                         let's get out of here!"
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 146,
+        "lines": [
+          "=thug_,",
+          " ",
+          "      The Guild could use your muscle on a",
+          " fairly routine kidnapping. The name of the",
+          " victim is _victim_",
+          " and after you've taken %g2 from %g3 home in",
+          " __qgiver_ in ___qgiver_,",
+          " go to ___mondung_.",
+          "      Directions to ___mondung_",
+          " follow. I hope this isn't too difficult a",
+          " plan for you.",
+          " ",
+          "<ce>                              _kidnapper_"
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 161,
+        "lines": [
+          "<ce>                         %pcf, I sure hope you",
+          "<ce>                  know what you're doing. I'm glad to",
+          "<ce>                      have my _gem_ back, but not",
+          "<ce>                      at the expense of _victim_.",
+          "<ce>                    If %g gets killed, do not expect",
+          "<ce>                             my gratitude."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 169,
+        "lines": [
+          "<ce>                         _victim_! Thank %god",
+          "<ce>                    you're all right! Thank you, my",
+          "<ce>                   friend. I wish you didn't have to",
+          "<ce>                         pay the ransom, %pcf,",
+          "<ce>                    but it's most important that my",
+          "<ce>                            dear _victim_ is",
+          "<ce>                        back. Here is the _gold_",
+          "<ce>                        gold pieces I promised."
+        ]
+      },
+      {
+        "id": 1018,
+        "firstLine": 179,
+        "lines": [
+          "<ce>                    No wonder the Guild likes you.",
+          "<ce>                  I'll make sure they hear about this",
+          "<ce>                         too, %pcf. Now, go on",
+          "<ce>                          back to _qgiver_ and",
+          "<ce>                         tell %g2 that _victim_",
+          "<ce>                      will be there shortly. Nice",
+          "<ce>                        doing business with you."
+        ]
+      },
+      {
+        "id": 1019,
+        "firstLine": 188,
+        "lines": [
+          "<ce>                        Ah, good. Let _qgiver_",
+          "<ce>                         know that %g3 _victim_",
+          "<ce>                       will be safe in ___qgiver_",
+          "<ce>                        very shortly. Farewell."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 194,
+        "lines": [
+          "<ce>                           Yes, _victim_ was",
+          "<ce>                   delivered just before you arrived,",
+          "<ce>                       %pcf. Thank you for facing",
+          "<ce>                       that dreadful _kidnapper_",
+          "<ce>                    for me. Here is the _gold_ gold",
+          "<ce>                           pieces I promised."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 202,
+        "lines": [
+          "<ce>                          _victim_ tells you",
+          "<ce>                    %g can find %g3 way to %g3 lover",
+          "<ce>                          _qgiver_ from here,",
+          "<ce>                     thanks you, and sprints away."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 208,
+        "lines": [
+          "<ce>                           By now, _victim_",
+          "<ce>                            is surely dead."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 240,
+        "lines": [
+          "Item _gem_ gem"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 241,
+        "lines": [
+          "Item _gold_ gold range 5 to 25"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 242,
+        "lines": [
+          "Item _map_ letter used 1015"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 244,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 245,
+        "lines": [
+          "Person _victim_ face 1 group Group_7.0 local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 246,
+        "lines": [
+          "Person _kidnapper_ face 36 faction The_Thieves_Guild male remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 248,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 250,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 251,
+        "lines": [
+          "Clock _2ransom_ 00:00 0 flag 17 range 1 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 253,
+        "lines": [
+          "Foe _thug_ is Rogue"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 256,
+        "lines": [
+          "start timer _2ransom_ ",
+          "start timer _queston_ ",
+          "log 1010 step 0 ",
+          "get item _gem_ ",
+          "_map_ used do _S.08_ ",
+          "place npc _victim_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 263,
+        "lines": [
+          "_queston_ task:",
+          "have _gem_ set _S.20_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 267,
+        "lines": [
+          "variable _2ransom_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 268,
+        "lines": [
+          "_S.02_ task:",
+          "toting _gem_ and _kidnapper_ clicked ",
+          "repute with _kidnapper_ exceeds 10 do _S.05_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 272,
+        "lines": [
+          "_S.03_ task:",
+          "say 1019 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 275,
+        "lines": [
+          "_S.04_ task:",
+          "create foe _thug_ every 1 minutes 1 times with 100% success ",
+          "get item _gem_ ",
+          "give item _map_ to _thug_ ",
+          "hide npc _kidnapper_ ",
+          "say 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 282,
+        "lines": [
+          "_S.05_ task:",
+          "prompt 1012 yes _S.07_ no _S.04_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 285,
+        "lines": [
+          "_S.06_ task:",
+          "when _S.02_ and not _S.05_ ",
+          "prompt 1011 yes _S.03_ no _S.04_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 289,
+        "lines": [
+          "_S.07_ task:",
+          "get item _gem_ ",
+          "say 1018 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 293,
+        "lines": [
+          "_S.08_ task:",
+          "reveal _mondung_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 296,
+        "lines": [
+          "_S.09_ task:",
+          "clicked npc _victim_ ",
+          "hide npc _victim_ ",
+          "say 1014 ",
+          "add _victim_ face "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 302,
+        "lines": [
+          "_reward_ task:",
+          "when _S.11_ and _S.09_ ",
+          "say 1099 ",
+          "change repute with _qgiver_ by +15 ",
+          "change repute with _kidnapper_ by -10 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 308,
+        "lines": [
+          "_S.11_ task:",
+          "toting _gem_ and _qgiver_ clicked ",
+          "clear _qgclicked_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 312,
+        "lines": [
+          "_S.12_ task:",
+          "when _S.11_ and not _S.09_ and not _S.04_ ",
+          "get item _gem_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 316,
+        "lines": [
+          "_S.13_ task:",
+          "when _S.11_ and not _S.09_ and _S.04_ ",
+          "say 1016 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 320,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ ",
+          "have _gem_ set _S.15_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 324,
+        "lines": [
+          "variable _S.15_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 325,
+        "lines": [
+          "_S.16_ task:",
+          "when _qgclicked_ and not _S.15_ and _S.09_ ",
+          "say 1017 ",
+          "change repute with _qgiver_ by +8 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 330,
+        "lines": [
+          "_S.17_ task:",
+          "when _qgclicked_ and _S.07_ ",
+          "when _qgclicked_ and _S.03_ ",
+          "say 1020 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 335,
+        "lines": [
+          "_S.18_ task:",
+          "when not _S.15_ or not _S.09_ or not _S.03_ or not _S.07_ ",
+          "clear _qgclicked_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 339,
+        "lines": [
+          "_S.19_ task:",
+          "when _queston_ and _S.09_ and not _qgclicked_ ",
+          "say 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 343,
+        "lines": [
+          "_S.20_ task:",
+          "make _gem_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 346,
+        "lines": [
+          "_S.21_ task:",
+          "when _queston_ and not _S.09_ and not _S.07_ and not _S.17_ ",
+          "say 1022 ",
+          "change repute with _qgiver_ by -5 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 351,
+        "lines": [
+          "_S.22_ task:",
+          "when not _S.09_ and _S.11_ ",
+          "get item _gem_ ",
+          "clear _S.11_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 356,
+        "lines": [
+          "_givereward_ task:",
+          "when _reward_ or _S.16_ or _S.17_ ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

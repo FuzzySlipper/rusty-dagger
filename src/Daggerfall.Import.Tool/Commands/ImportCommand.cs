@@ -24,8 +24,6 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </remarks>
 internal static class ImportCommand
 {
-    /// <summary>The Daggerfall Unity values the import reads, tracked in the repository under DFU's own paths.</summary>
-    internal const string Donor = "data/daggerfall-unity";
     private const string Inventory = ImportLayout.Inventory;
     private const string UiAssets = "data/ui-authored-assets.json";
     private const string UiOriginal = AuthoredUi.ProductDirectory;
@@ -34,23 +32,8 @@ internal static class ImportCommand
         ["MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "MONSTER.BSA", "DAGGER.SND", "TEXT.RSC", "CLASSES.DAT", "CLIMATE.PAK", "POLITIC.PAK",
          "WOODS.WLD", "FACTION.TXT", "SPELLS.STD", "MAGIC.DEF", "ANIM0000.VID", "AZURA.FLC"];
 
-    private static readonly string[] DonorFiles =
-    [
-        "Assets/Scripts/Utility/EnemyBasics.cs",
-        "Assets/Scripts/Game/Items/ItemEnums.cs",
-        "Assets/Scripts/Game/Items/ItemHelper.cs",
-        "Assets/Scripts/API/ItemsFile.cs",
-        "Assets/Scripts/API/MapsFile.cs",
-        "Assets/Scripts/Game/Formulas/FormulaHelper.cs",
-        "Assets/Scripts/Game/Entities/RaceTemplate.cs",
-        "Assets/Resources/ItemTemplates.txt",
-        "Assets/Resources/MagicItemTemplates.txt",
-        "Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv",
-        "Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv",
-        "Assets/StreamingAssets/Tables/QuestList-Classic.txt",
-        .. new[] { "GlobalVars", "StaticMessages", "Places", "Sounds", "Diseases", "Spells", "Items", "Factions", "Foes" }
-            .Select(table => $"Assets/StreamingAssets/Tables/Quests-{table}.txt"),
-    ];
+    /// <summary>Our own tables the steps read, under <see cref="ImportLayout.Inputs"/>.</summary>
+    private static readonly string[] InputFiles = ["races.json", "item-groups.json", "item-templates.json", "magic-item-templates.json", "spell-costs.json", "mobiles.json", "quest-tables.json", "quest-list.json"];
 
     public static ToolCommand Command { get; } = new("import",
     [
@@ -137,7 +120,7 @@ internal static class ImportCommand
     internal static IReadOnlyList<Step> Steps(Inputs inputs)
     {
         string arena2 = inputs.Arena2;
-        static string Donor(string path) => $"{ImportCommand.Donor}/{path}";
+        static string Input(string file) => $"{ImportLayout.Inputs}/{file}";
         const string staging = ImportLayout.Staging;
         const string records = ImportLayout.Records;
         const string imported = ImportLayout.ImportedPayload;
@@ -161,45 +144,36 @@ internal static class ImportCommand
         // 2. The imported payload's sections, in dependency order, with the block document and the import
         //    records. None reads the authored payload: the ruleset joins it to these sections when it loads.
         Add("catalogs", "catalogs", "--arena2", arena2, "--inventory", Inventory, "--pack", imported,
-            "--donor-races", Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs"), "--update");
-        Add("item-template-ledger", "item-template-ledger", "--donor", Donor("Assets/Scripts/Game/Items"), "--inventory", Inventory,
+            "--races", Input("races.json"), "--update");
+        Add("item-template-ledger", "item-template-ledger", "--item-groups", Input("item-groups.json"), "--inventory", Inventory,
             "--pack", imported, "--update");
         Add("character-presentation", "character-presentation", "--arena2", arena2, "--inventory", Inventory, "--pack", imported,
             "--out", staging, "--group", "worldrpg", "--update");
         Add("locations", "locations", "--arena2", arena2, "--pack", imported, "--out", staging, "--update");
         Add("magic-catalog", "magic-catalog", "--arena2", arena2, "--pack", imported,
-            "--donor-formulas", Donor("Assets/Scripts/Game/Formulas/FormulaHelper.cs"), "--update");
-        Add("mobile-catalog", "mobile-catalog", "--donor", Donor("Assets/Scripts/Utility/EnemyBasics.cs"),
+            "--spell-costs", Input("spell-costs.json"), "--update");
+        Add("mobile-catalog", "mobile-catalog", "--mobiles", Input("mobiles.json"),
             "--pack", imported, "--archive", $"{arena2}/MONSTER.BSA", "--update");
         Add("text", "text", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--language", "en", "--update");
-        Add("internal-strings", "internal-strings",
-            "--source", Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv"),
-            "--label", "daggerfall-unity/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv",
-            "--pack", imported, "--language", "en", "--update");
         Add("blocks", "blocks", "--arena2", arena2, "--document", blocks, "--buildings", buildings, "--inventory", Inventory, "--update");
         Add("geometry", "geometry", "--arena2", arena2, "--blocks", blocks, "--records", importRecords, "--inventory", Inventory, "--update");
         Add("climate", "climate", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
-        Add("factions", "factions", "--arena2", arena2, "--pack", imported, "--inventory", Inventory,
-            "--flat-captions", Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv"), "--update");
+        Add("factions", "factions", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
         Add("terrain", "terrain", "--arena2", arena2, "--pack", imported, "--out", staging, "--inventory", Inventory, "--update");
         Add("relief", "relief", "--arena2", arena2, "--pack", imported, "--out", staging, "--update");
         Add("atlas", "atlas", "--pack", imported, "--out", staging, "--update");
         Add("items", "items", "--arena2", arena2, "--pack", imported, "--inventory", Inventory,
-            "--item-templates", Donor("Assets/Resources/ItemTemplates.txt"),
-            "--item-enums", Donor("Assets/Scripts/Game/Items/ItemEnums.cs"),
-            "--item-helper", Donor("Assets/Scripts/Game/Items/ItemHelper.cs"),
-            "--magic-templates", Donor("Assets/Resources/MagicItemTemplates.txt"), "--update");
+            "--item-templates", Input("item-templates.json"), "--magic-item-templates", Input("magic-item-templates.json"),
+            "--item-groups", Input("item-groups.json"), "--update");
         Add("paper-doll-media", "paper-doll-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--group", "worldrpg", "--update");
-        Add("quests", "quests", "--arena2", arena2, "--quest-text", Donor("Assets/StreamingAssets/Quests"),
-            "--tables", Donor("Assets/StreamingAssets/Tables"), "--pack", imported, "--records", importRecords, "--inventory", Inventory, "--update");
+        Add("quests", "quests", "--arena2", arena2, "--quest-documents", Input("quests"), "--quest-tables", Input("quest-tables.json"),
+            "--quest-list", Input("quest-list.json"), "--pack", imported, "--records", importRecords, "--inventory", Inventory, "--update");
         Add("videos", "videos", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
         if (inputs.Cinematics)
         {
             Add("cinematic-media-vid", "cinematic-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--kind", "vid", "--update");
             Add("cinematic-media-flc", "cinematic-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--kind", "flc", "--update");
         }
-        Add("building-name-inputs", "building-name-inputs", "--maps-file", Donor("Assets/Scripts/API/MapsFile.cs"),
-            "--label", "daggerfall-unity/Assets/Scripts/API/MapsFile.cs", "--pack", imported, "--update");
 
         // 3. Quest corpus payloads, read from the quest sections and the original-source selections above.
         Add("fighters-quest-corpus", "fighters-quest-corpus", "--pack", imported, "--records", importRecords,
@@ -288,10 +262,10 @@ internal static class ImportCommand
             if (!IsDirectory(Path.Combine(inputs.Arena2, "books"))) yield return $"Arena2 books directory '{inputs.Arena2}/books'";
         }
 
-        foreach (string file in DonorFiles.Where(file => !IsFile(Path.Combine(Donor, file))))
-            yield return $"tracked file '{Donor}/{file}'";
-        if (!IsDirectory(Path.Combine(Donor, "Assets/StreamingAssets/Quests")))
-            yield return $"tracked directory '{Donor}/Assets/StreamingAssets/Quests'";
+        foreach (string file in InputFiles.Where(file => !IsFile(Path.Combine(ImportLayout.Inputs, file))))
+            yield return $"tracked file '{ImportLayout.Inputs}/{file}'";
+        if (!IsDirectory(Path.Combine(ImportLayout.Inputs, "quests")))
+            yield return $"tracked directory '{ImportLayout.Inputs}/quests'";
 
         if (inputs.Music is { } music && !IsDirectory(music)) yield return $"music folder '{music}' (a folder of <track>.<ext> recordings, or leave out --music)";
         foreach (string file in new[] { Inventory, UiAssets }.Where(file => !IsFile(file)))

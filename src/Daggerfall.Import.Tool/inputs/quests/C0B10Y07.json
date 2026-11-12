@@ -1,0 +1,266 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/C0B10Y07.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "667baf9aefecfbccd3a1c80e53d62a5fb40d8a3fbe82a90cde69d1326f97b653",
+    "byteLength": 4358
+  },
+  "document": {
+    "fileName": "C0B10Y07.txt",
+    "questName": "C0B10Y07",
+    "questNameLine": 8,
+    "displayName": "A Delivery",
+    "header": [
+      {
+        "name": "quest",
+        "value": "C0B10Y07"
+      },
+      {
+        "name": "displayname",
+        "value": "A Delivery"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                       Blessings upon you, %pcn.",
+          "<ce>                       __qgiver_ needs you to run",
+          "<ce>                         an errand for us. This",
+          "<ce>                          _religitem_ needs to",
+          "<ce>                       be delivered to ___priest_",
+          "<ce>                     within =traveltime_ days. You",
+          "<ce>                       will receive a temple fee",
+          "<ce>                       of _gold_ gold pieces. Can",
+          "<ce>                           you do it for us?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                      Sigh. I shall have to find",
+          "<ce>                       some other temple servant",
+          "<ce>                         to perform this task."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                       Here is the _religitem_.",
+          "<ce>                          Take it to _priest_",
+          "<ce>                      of __priest_ in ___priest_.",
+          "<ce>                     Oh, I almost forgot to mention",
+          "<ce>                        that a rival temple may",
+          "<ce>                      send out thugs to stop you."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 37,
+        "lines": [
+          "<ce>                         %god's favor upon you",
+          "<ce>                         %pcn. This _religitem_",
+          "<ce>                        is sorely needed here. I",
+          "<ce>                       understand that you are to",
+          "<ce>                        be given a temple fee of",
+          "<ce>                          _gold_ gold pieces."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 45,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 74,
+        "lines": [
+          "__qgiver_ has been cursing the name %pcn."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 77,
+        "lines": [
+          "_priest_ seems pleased with %g3 gift from __qgiver_."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 80,
+        "lines": [
+          "_priest_ sends %g3 regards, %pcf. What can I do for you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 83,
+        "lines": [
+          "_priest_ would never forgive me if I spoke with you."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 86,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of __qgiver_ has given me",
+          " a charge to deliver the _religitem_",
+          " to _priest_ in __priest_ in",
+          " ___priest_. It must be there",
+          " within =traveltime_ days."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 94,
+        "lines": [
+          "<ce>                         That _religitem_ will",
+          "<ce>                      never make it to __priest_.",
+          "<ce>                        Instead, I shall deliver",
+          "<ce>                            them your head!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 121,
+        "lines": [
+          "Item _religitem_ religious"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 122,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 124,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 125,
+        "lines": [
+          "Person _priest_ group Group_5.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 126,
+        "lines": [
+          "Person _enemy_ face 176 group Local_4.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 128,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 1 range 1 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 130,
+        "lines": [
+          "Foe _thief_ is Thief"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 131,
+        "lines": [
+          "Foe _spellsword_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 134,
+        "lines": [
+          "create foe _thief_ every 12 minutes 2 times with 5% success ",
+          "create foe _spellsword_ every 12 minutes 2 times with 5% success ",
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "get item _religitem_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_questdone_ task:",
+          "toting _religitem_ and _priest_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 148,
+        "lines": [
+          "_S.02_ task:",
+          "injured _thief_ saying 1011 ",
+          "injured _spellsword_ saying 1011 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

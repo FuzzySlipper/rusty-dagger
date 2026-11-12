@@ -1,0 +1,383 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/O0A0AL00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "0310e613a67e818cdfa88f9b2477544583c18f42b52a7ae25b059e43f9b93645",
+    "byteLength": 6314
+  },
+  "document": {
+    "fileName": "O0A0AL00.txt",
+    "questName": "O0A0AL00",
+    "questNameLine": 9,
+    "displayName": "The Qualifying Examination",
+    "header": [
+      {
+        "name": "quest",
+        "value": "O0A0AL00"
+      },
+      {
+        "name": "displayname",
+        "value": "The Qualifying Examination"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1004,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                Another initiate. Sometimes I wonder if",
+          "<ce>              the guild can hold them all. Ah, I see they",
+          "<ce>               sent you after a mage's _clothing_. It's a",
+          "<ce>                 popular choice of late. You are now a",
+          "<ce>               member of the Thieves Guild. Whenever you",
+          "<ce>              enter a town, you will know if there are any",
+          "<ce>               guild buildings there. Unfortunately guild",
+          "<ce>                  rules say I have to pay you for this",
+          "<ce>               worthless piece of trash because you stole",
+          "<ce>                    it in the service of the guild.",
+          "<ce>                          Here's a gold piece.",
+          "<ce>                                    ",
+          "<ce>                                    ",
+          "<ce>              Oh, I almost forgot. You are also entitled",
+          "<ce>             to a dungeon map. Here, let me show you where",
+          "<ce>                        ___dungeon_ is on yours."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 33,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 62,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 91,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 120,
+        "lines": [
+          "%qdt:",
+          " I was handed a note by a beggar.",
+          " The Thieves Guild has targeted me for 'unapproved'",
+          " criminal activity. I must either join them or become",
+          " their enemy."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 127,
+        "lines": [
+          "<ce>                      A one-eyed beggar hands you",
+          "<ce>                       a letter. \"A woman in gray",
+          "<ce>                     paid me to give this to you,\"",
+          "<ce>                                he says."
+        ]
+      },
+      {
+        "id": 1018,
+        "firstLine": 133,
+        "lines": [
+          "<ce>                     As you pick up the _clothing_",
+          "<ce>                      you hear the soft rustle of",
+          "<ce>                        paper. A note is tucked",
+          "<ce>                         inside the _clothing_."
+        ]
+      },
+      {
+        "id": 1019,
+        "firstLine": 139,
+        "lines": [
+          "<ce>                             _thiefmember_",
+          "<ce>                            ___endbuilding_"
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 143,
+        "lines": [
+          "%pcn,",
+          "    You are a thief. Do not",
+          " try to deny it, you have",
+          " been seen in the act. There",
+          " is honor among thieves.",
+          " Either join the guild or",
+          " face the consequences. Steal",
+          " the _clothing_ from",
+          " _mansion_",
+          " in ___mansion_",
+          " if you desire to join us.",
+          " You have =traveltime_ days."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 157,
+        "lines": [
+          "<ce>                  Thief! I'll teach you to steal from",
+          "<ce>                   a wizard. It will be a lesson you",
+          "<ce>                           won't soon forget!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 180,
+        "lines": [
+          "Item _clothing_ womens_clothing"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 181,
+        "lines": [
+          "Item _letter_ letter used 1024"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 182,
+        "lines": [
+          "Item _note_ letter used 1019"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 183,
+        "lines": [
+          "Item _gold_ gold range 1 to 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 185,
+        "lines": [
+          "Person _thiefmember_ face 88 faction The_Thieves_Guild remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 186,
+        "lines": [
+          "Person _npc_ face 218 group Group_6.0 female remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 188,
+        "lines": [
+          "Place _mansion_ remote house1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 189,
+        "lines": [
+          "Place _dungeon_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 191,
+        "lines": [
+          "Place _endbuilding_ remote random"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 193,
+        "lines": [
+          "Clock _traveltime_ 90.00:01 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 195,
+        "lines": [
+          "Foe _F.00_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 198,
+        "lines": [
+          "place item _clothing_ at _mansion_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 199,
+        "lines": [
+          "_letter_ used do _readletter_ ",
+          "give pc _letter_ notify 1020 ",
+          "                place npc _thiefmember_ at _endbuilding_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 203,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 206,
+        "lines": [
+          "_questdone_ task:",
+          "toting _clothing_ and _thiefmember_ clicked ",
+          "give pc _gold_ ",
+          "reveal _dungeon_ readmap",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 212,
+        "lines": [
+          "_S.02_ task:",
+          "create foe _F.00_ every 3 minutes 3 times with 25% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 215,
+        "lines": [
+          "_S.03_ task:",
+          "clicked item _clothing_ say 1018 ",
+          "get item _note_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 219,
+        "lines": [
+          "_readletter_ task:",
+          "pc at _mansion_ set _S.02_ ",
+          "start timer _traveltime_ ",
+          "log 1010 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 224,
+        "lines": [
+          "_S.05_ task:",
+          "injured _F.00_ ",
+          "say 1030 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

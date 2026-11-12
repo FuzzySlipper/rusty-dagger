@@ -1,0 +1,448 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C01Y06.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "f5b5cfb573cd1dc1cd24dbefed4cae540630a2fb7624e30147211dbe71af3d5b",
+    "byteLength": 6756
+  },
+  "document": {
+    "fileName": "A0C01Y06.txt",
+    "questName": "A0C01Y06",
+    "questNameLine": 9,
+    "displayName": "An Unexpected Journey Part II",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C01Y06"
+      },
+      {
+        "name": "displayname",
+        "value": "An Unexpected Journey Part II"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                         My name is _qgiver_.",
+          "<ce>                My master has asked me to find a brave",
+          "<ce>                 adventurer for a dangerous mission. I",
+          "<ce>                cannot tell you more, other than to say",
+          "<ce>                that it is worth _gold_ gold pieces to",
+          "<ce>                 whoever succeeds. Are you interested?",
+          "                                     <--->",
+          "<ce>                   Call me _qgiver_. I know someone",
+          "<ce>                 that may have some work of interest.",
+          "<ce>                 There's _gold_ gold in it for whoever",
+          "<ce>                            can do the job."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                   I shall seek elsewhere for a hero",
+          "<ce>                     to fulfill my master's quest."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                    Go to _meetingplace_. There you",
+          "<ce>                    will find my master, _master_.",
+          "                                     <--->",
+          "<ce>                  Ask for _master_ in _meetingplace_",
+          "<ce>                    and %g will have a job for you."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 38,
+        "lines": [
+          "<ce>                 =mmaster_ is dead.  Your enemies will",
+          "<ce>                  think twice before attempting such",
+          "<ce>                           treachery again."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                I heard that an orc was spotted in town",
+          "<ce>                     today. I hope they catch him."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 47,
+        "lines": [
+          "<ce>                  Did you hear the one about the %ra",
+          "<ce>                 that got teleported to the bottom of",
+          "<ce>               a dungeon? It's really funny! Oh. Sorry."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 52,
+        "lines": [
+          "<ce>                   Hey! You're that %ra that killed",
+          "<ce>                   the orc witch doctor! Good work!"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 56,
+        "lines": [
+          "<ce>                Ok, Ok. I guess I owe you one for that",
+          "<ce>             incident with the orc shaman. He was magicked",
+          "<ce>                      to look like a regular guy."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 61,
+        "lines": [
+          "<ce>                 Just stay away! I didn't mean to get",
+          "<ce>              anyone hurt. That orc was magicked to look",
+          "<ce>               like a regular guy. It's not my fault he",
+          "<ce>                    teleported you into a dungeon."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 67,
+        "lines": [
+          "%qdt:",
+          " I met _qgiver_ in ___qgiver_,",
+          " who told me %g3 master,",
+          " _master_, would pay _gold_ gold",
+          " pieces for an unknown but certainly",
+          " dangerous task. %G1 is staying in",
+          " _meetingplace_ in __meetingplace_."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 76,
+        "lines": [
+          "%qdt:",
+          " The traitor =mmaster_, disguised as",
+          " _master_, magicked me",
+          " to ___dungeon_. If I ever",
+          " get out, %g will regret our next meeting."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 83,
+        "lines": [
+          "<ce>                Know me for who I really am. I am your",
+          "<ce>                   mortal enemy, =mmaster_! I have a",
+          "<ce>                    special fate in store for you."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 88,
+        "lines": [
+          "<ce>                    Don't hurt me, %pcn! I didn't",
+          "<ce>               know what _master_ was planning. I ain't",
+          "<ce>               got no beef with you, honest. %G didn't",
+          "<ce>                   tell me nothin', I swear, %g just",
+          "<ce>                 paid me to send you to %g2. It's %g2",
+          "<ce>                   you want, not me, right? I hear",
+          "<ce>                     %g's moved to __hidingplace_.",
+          "<ce>                          Look for %g2 there."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 98,
+        "lines": [
+          "<ce>                   I don't know how you escaped from",
+          "<ce>                   ___dungeon_, %pcf. It won't do you",
+          "<ce>                   much good, though. Prepare to die!"
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 103,
+        "lines": [
+          "<ce>                   _master_? No, I don't think %g's",
+          "<ce>                           from around here.",
+          "                                     <--->",
+          "<ce>                   _master_ is new in town. I'm not",
+          "<ce>                         sure where %g's from."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 110,
+        "lines": [
+          "<ce>                 _master_ has been asking around about",
+          "<ce>                               some %ra.",
+          "                                     <--->",
+          "<ce>               _master_ is staying here in town. I hear",
+          "<ce>               %g's been asking a lot of questions about",
+          "<ce>               a %ra. You're a %ra, aren't you? Maybe",
+          "<ce>                        %g was looking for you?"
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 119,
+        "lines": [
+          "%qdt:",
+          " I have learned that =mmaster_",
+          " is now hiding out in __hidingplace_."
+        ]
+      },
+      {
+        "id": 1035,
+        "firstLine": 124,
+        "lines": [
+          "The orc shaman's chanting rises."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 148,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 150,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 151,
+        "lines": [
+          "Person _master_ face 1 group Group_6.0 local anyInfo 1020 rumors 1021"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 153,
+        "lines": [
+          "Place _dungeon_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 154,
+        "lines": [
+          "Place _meetingplace_ local tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 155,
+        "lines": [
+          "Place _hidingplace_ remote house1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 157,
+        "lines": [
+          "Clock _escapetime_ 00:00 0 flag 1 range 0 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 158,
+        "lines": [
+          "Clock _shortdelay_ 00:01"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 160,
+        "lines": [
+          "Clock _S.13_ 1.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 162,
+        "lines": [
+          "Foe _mmaster_ is Orc_shaman"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 165,
+        "lines": [
+          "dialog link for location _hidingplace_ ",
+          "start timer _escapetime_ ",
+          "log 1010 step 0 ",
+          "place npc _master_ at _meetingplace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_escapetime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 173,
+        "lines": [
+          "variable _shortdelay_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 174,
+        "lines": [
+          "_clickonenemy_ task:",
+          "clicked npc _master_ say 1012 ",
+          "start timer _shortdelay_ ",
+          "hide npc _master_ ",
+          "cast Shield spell on _mmaster_ ",
+          "cast Spell_Reflection spell on _mmaster_ ",
+          "cast Free_Action spell on _mmaster_ ",
+          "place foe _mmaster_ at _meetingplace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 183,
+        "lines": [
+          "_traitordead_ task:",
+          "killed 1 _mmaster_ ",
+          "give pc nothing ",
+          "start timer _S.13_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 188,
+        "lines": [
+          "_teleportpc_ task:",
+          "pc at _hidingplace_ set _S.12_ ",
+          "when not _traitordead_ and _shortdelay_ ",
+          "reveal _dungeon_ ",
+          "log 1011 step 1 ",
+          "say 1035 ",
+          "place foe _mmaster_ at _hidingplace_ ",
+          "place npc _master_ at _hidingplace_ ",
+          "teleport pc to _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 198,
+        "lines": [
+          "_hittraitor_ task:",
+          "injured _mmaster_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 201,
+        "lines": [
+          "variable _revenge_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 202,
+        "lines": [
+          "_foundme_ task:",
+          "when _S.12_ and _hittraitor_ and _teleportpc_ ",
+          "say 1014 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 206,
+        "lines": [
+          "variable _questdone_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 207,
+        "lines": [
+          "_clickqgiver_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 210,
+        "lines": [
+          "_findtraitor_ task:",
+          "when _clickqgiver_ and _teleportpc_ ",
+          "log 1030 step 2 ",
+          "say 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 215,
+        "lines": [
+          "_clearclick_ task:",
+          "when _clickqgiver_ and not _teleportpc_ ",
+          "clear _clickqgiver_ _clearclick_ ",
+          "clear _clickqgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 220,
+        "lines": [
+          "_S.12_ task:",
+          "hide npc _master_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 223,
+        "lines": [
+          "_S.13_ task:",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

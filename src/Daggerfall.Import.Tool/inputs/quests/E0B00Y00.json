@@ -1,0 +1,299 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/E0B00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "a6d9f66ec89186b73c2e6eed687fb9af4b743cc63c2f381832344d8dfb0dc01d",
+    "byteLength": 5233
+  },
+  "document": {
+    "fileName": "E0B00Y00.txt",
+    "questName": "E0B00Y00",
+    "questNameLine": 8,
+    "displayName": "The Desecrated Temple",
+    "header": [
+      {
+        "name": "quest",
+        "value": "E0B00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "The Desecrated Temple"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>             As a matter of fact, we could doubtlessly use",
+          "<ce>             someone like you. There's a desecrated temple",
+          "<ce>                     nearby called ___mondung_. You",
+          "<ce>              may have heard of it. For some time, it has",
+          "<ce>              been a home to evil, but we have ignored its",
+          "<ce>               influence. It is a counterbalance to other",
+          "<ce>              forces, after all. Now the balance has been",
+          "<ce>                upset. I need someone to right it. Sound",
+          "<ce>                  like something you could help with?",
+          "                                     <--->",
+          "<ce>                    The Balance in ___mondung_ has",
+          "<ce>             been unbound by a new intrusion that threatens",
+          "<ce>                our efforts at bringing harmony to %reg.",
+          "<ce>              We need a champion, someone like you, to set",
+          "<ce>                 ___mondung_ to right. Will you do it?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                Disappointing. Well, we'll find someone",
+          "<ce>                           else doubtlessly."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 34,
+        "lines": [
+          "<ce>                       Excellent, %pcf. What we",
+          "<ce>             need is to have a certain powerful lycanthrope",
+          "<ce>              who has established its lair in that unholy",
+          "<ce>                        ___mondung_ slain. It is",
+          "<ce>               threatening the expansion of our order in",
+          "<ce>               that area. If you are not back here after",
+          "<ce>               =1stparton_ days have passed, we will move",
+          "<ce>             against it ourselves, and your reward will be",
+          "<ce>              forfeit. Obviously, you had best be on your",
+          "<ce>                 way. Fare thee well and best of luck.",
+          "                                     <--->",
+          "<ce>                     %oth, that's good, %pcf. Now,",
+          "<ce>           there are but =1stparton_ days we can give you to",
+          "<ce>                  restore equilibrium in ___mondung_,",
+          "<ce>            and the fastest, most appropriate way we know of",
+          "<ce>            is for you to slay the lycanthrope who has made",
+          "<ce>                 its foul nest in ___mondung_'s bowels.",
+          "<ce>                 Pray hurry, %pcf. If you are not here",
+          "<ce>              when =1stparton_ suns have set, your reward",
+          "<ce>                            with be forfeit."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 57,
+        "lines": [
+          "<ce>                    You had best move along, %pcf.",
+          "<ce>                 You do not have very much more time to",
+          "<ce>                kill that werebeast. =1stparton_ days",
+          "<ce>                             to be precise."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 63,
+        "lines": [
+          "<ce>              You have done a great service to the Temple",
+          "<ce>                     of Arkay, %pcf. One that will",
+          "<ce>               not be forgotten. Enjoy your _reward_ gold",
+          "<ce>                      -- you certainly deserve it."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 69,
+        "lines": [
+          "I've heard there's some kind of werewolf on the loose around here.",
+          "<--->",
+          "I hear the wereboar's found a lair in someplace called ___mondung_.",
+          "<--->",
+          "Didja hear that howling last night? Wolf howling?"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 76,
+        "lines": [
+          "Lupines are real nomads, I guess. I hear our loup moved down south.",
+          "<--->",
+          "My cousin tells me that our wereboar was spotted down south aways."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 81,
+        "lines": [
+          "I hear they found out that werewolf was a priest during the day!",
+          "<--->",
+          "A lot of people feel safer knowing that wereboar is dead.",
+          "<--->",
+          "You heard about that werecreature some %ra hunted down?"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 88,
+        "lines": [
+          "How may I assist thee who restored the balance within ___mondung_?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 91,
+        "lines": [
+          "You failed to slay that lupine, %pcf. I am sorely aggrieved."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 94,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of",
+          " the Temple of Arkay offered to",
+          " pay me _reward_ gold pieces to slay",
+          " a werecreature lurking in",
+          " ___mondung_, a former",
+          " temple of theirs. I have =1stparton_",
+          " days to do it and be back to",
+          " ___questgiver_."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 105,
+        "lines": [
+          "<ce>                    You have slain the lycanthrope",
+          "<ce>                            of ___mondung_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 123,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 125,
+        "lines": [
+          "Person _questgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 127,
+        "lines": [
+          "Place _mondung_ remote dungeon4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 129,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 131,
+        "lines": [
+          "Foe _wolf_ is Werewolf"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 132,
+        "lines": [
+          "Foe boar is Wereboar"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 135,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1010 step 0 ",
+          "pick one of _wereboar_ _werewolf_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _mondead_ ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 145,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _wolf_ saying 1020 ",
+          "killed 1 boar saying 1020 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 149,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 152,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 155,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _mondead_",
+          "say 1003 ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 160,
+        "lines": [
+          "_werewolf_ task:",
+          "place foe _wolf_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 163,
+        "lines": [
+          "_wereboar_ task:",
+          "place foe boar at _mondung_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

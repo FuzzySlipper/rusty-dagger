@@ -1,0 +1,123 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO07.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "98e103e0ff54d02a67503f8d2bb43a47c93365e85a4f7cd4126c48a0b78cd7fd",
+    "byteLength": 874
+  },
+  "document": {
+    "fileName": "__DEMO07.txt",
+    "questName": "__DEMO07",
+    "questNameLine": 4,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO07"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1010,
+        "firstLine": 9,
+        "lines": [
+          "%qdt",
+          "    You are to meet _king_",
+          " at an inn, _dirtypit_ in __dirtypit_",
+          " and visit _queen_ in Castle Daggerfall."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 15,
+        "lines": [
+          "Hey %pcn, you just clicked on _king_!"
+        ]
+      },
+      {
+        "id": 1035,
+        "firstLine": 18,
+        "lines": [
+          "Hey %pcn, you just clicked on _queen_!"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 21,
+        "lines": [
+          "Well done, %pcn. You have clicked on the",
+          "King and Queen of Daggerfall."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "place",
+        "firstLine": 27,
+        "lines": [
+          "Place _dirtypit_ local tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 29,
+        "lines": [
+          "Person _king_ named King_Gothryd"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 30,
+        "lines": [
+          "Person _queen_ named Queen_Aubk-i atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 34,
+        "lines": [
+          "log 1010 step 0",
+          "create npc at _dirtypit_",
+          "place npc _king_ at _dirtypit_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 38,
+        "lines": [
+          "_clickedKing_ task:",
+          "clicked npc _king_",
+          "say 1030"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 42,
+        "lines": [
+          "_clickedQueen_ task:",
+          "clicked npc _queen_",
+          "say 1035"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 46,
+        "lines": [
+          "_clickedBoth_ task:",
+          "when _clickedKing_ and _clickedQueen_",
+          "say 1040",
+          "remove log step 0",
+          "end quest"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

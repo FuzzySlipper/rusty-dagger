@@ -1,0 +1,255 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C10Y11.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "2eca21e004c455be24c3df3c8f66c23f554dd95c0923f154455a9d1c42f294b8",
+    "byteLength": 4447
+  },
+  "document": {
+    "fileName": "R0C10Y11.txt",
+    "questName": "R0C10Y11",
+    "questNameLine": 8,
+    "displayName": "Contraband Goods",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C10Y11"
+      },
+      {
+        "name": "displayname",
+        "value": "Contraband Goods"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                   You are not by any chance free to",
+          "<ce>                    run a little errand for me? It's",
+          "<ce>                   very simple, I would do it myself",
+          "<ce>                     or have one of my runners take",
+          "<ce>                   care of it, but we are all so very",
+          "<ce>                 busy. It would mean an extra _reward_",
+          "<ce>                    gold pieces. That's not too bad.",
+          "<ce>                           Are you available?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                         No? %god save me from",
+          "<ce>                            idle %ra hands."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                   What luck. Now, take this _item_",
+          "<ce>                         and go to ___qgfriend_",
+          "<ce>                     to a place called __qgfriend_.",
+          "<ce>                       There's an odd =qgfriend_",
+          "<ce>                        there named _qgfriend_.",
+          "<ce>                       Give %g2 the _item_ and %g",
+          "<ce>                    will give you the _reward_ gold.",
+          "<ce>                    Oh, and you need to be there in",
+          "<ce>                  =queston_ days, but that should not",
+          "<ce>                  be a problem. You have sturdy young",
+          "<ce>                       legs. Off with you, what."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 40,
+        "lines": [
+          "<ce>                          You look like %pcf,",
+          "<ce>                        but you can't be.  %pcn",
+          "<ce>                     is on the way to ___qgfriend_."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 45,
+        "lines": [
+          "<ce>                  _questgiver_ hired you as a runner?",
+          "<ce>                  Ah, the _item_ I've been expecting.",
+          "<ce>                Very good. Here's your gold. Thank you."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 50,
+        "lines": [
+          "_questgiver_ is still in the smuggling business, I hear.",
+          "<--->",
+          "There's been an extraordinary increase in smuggling lately."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 55,
+        "lines": [
+          "I heard someone came across a _item_ out in the middle of nowhere.",
+          "<--->",
+          "_questgiver_ is mad as hell at some incompetent %ra courier."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 60,
+        "lines": [
+          "Some =qgfriend_ was just here, waving around some _item_.",
+          "<--->",
+          "<ce>             I guess _questgiver_ didn't steal that _item_",
+          "<ce>                      after all, or else %g ate it."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 66,
+        "lines": [
+          "I recognize those sturdy young legs. How are you, my old courier?",
+          "<--->",
+          "Come back to visit your old employer, have you, %pcf?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                      I remember you. You're the",
+          "<ce>                       %ra who failed that simple",
+          "<ce>                     delivery assignment.  %oth, I",
+          "<ce>                         have no time for you."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 77,
+        "lines": [
+          "%G's a thoroughly-respectable ruler, with kleptomaniac tendencies.",
+          "<--->",
+          "A big-time jewelry smuggler, from what I hear."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 82,
+        "lines": [
+          "One of _questgiver_'s fences. _qgfriend_ practically lives at __qgfriend_.",
+          "<--->",
+          "That =qgfriend_? _qgfriend_ is a fence for a den of smugglers at __qgfriend_."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 87,
+        "lines": [
+          "%qdt:",
+          "_questgiver_ of",
+          " __questgiver_ has asked me",
+          " to deliver a certain _item_ to",
+          " an associate named _qgfriend_.",
+          " _qgfriend_'s current haunt is",
+          " __qgfriend_ in ___qgfriend_,",
+          " a journey of about =queston_ days.",
+          " That's how long I have, anyway."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 119,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 120,
+        "lines": [
+          "Item _item_ ring"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 122,
+        "lines": [
+          "Person _questgiver_ group Questor anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 123,
+        "lines": [
+          "Person _qgfriend_ group Local_3.0 remote anyInfo 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 126,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 1 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 130,
+        "lines": [
+          "start timer _queston_ ",
+          "log 1015 step 0 ",
+          "get item _item_ ",
+          "create npc _qgfriend_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 135,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _item_ and _qgfriend_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 140,
+        "lines": [
+          "variable _pchasitem_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 141,
+        "lines": [
+          "_queston_ task:",
+          "make _item_ permanent ",
+          "change repute with _questgiver_ by -30 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 146,
+        "lines": [
+          "variable _npcclicked_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

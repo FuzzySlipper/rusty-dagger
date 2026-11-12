@@ -1,0 +1,265 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C10Y12.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "5f26e002e7d4330c300057735a3ecb535ad9b8408e6347a9f15d890e2a2ed877",
+    "byteLength": 4726
+  },
+  "document": {
+    "fileName": "R0C10Y12.txt",
+    "questName": "R0C10Y12",
+    "questNameLine": 8,
+    "displayName": "Smuggled Goods",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C10Y12"
+      },
+      {
+        "name": "displayname",
+        "value": "Smuggled Goods"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                  Yes, this is a potentially awkward",
+          "<ce>                  situation I'm in. Not the worst, but",
+          "<ce>                  awkward indeed. I'm in possession of",
+          "<ce>                   a certain ... item that is not, to",
+          "<ce>                  be blunt, legally mine. If you would",
+          "<ce>                     carry it to a contact of mine in",
+          "<ce>                        ___contact_, you will be",
+          "<ce>                handsomely rewarded. Does _reward_ gold",
+          "<ce>                       pieces sound fair to you?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                     You abandon me in my hour of",
+          "<ce>                           need, young %ra. I",
+          "<ce>                         am sorely displeased."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                  You will help me? %god be praised.",
+          "<ce>                      Now, hurry, take this _item_",
+          "<ce>                          and go to __contact_",
+          "<ce>                          in ___contact_. Look",
+          "<ce>                            for a =contact_",
+          "<ce>                            named _contact_.",
+          "<ce>                  Don't think about taking the _item_",
+          "<ce>                      elsewhere. If you're not in",
+          "<ce>                        __contact_ in =queston_",
+          "<ce>                       days, _contact_ will come",
+          "<ce>                      looking for you. Now, hurry,",
+          "<ce>                        time is of the essence."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                        Why are you still here?",
+          "<ce>                       My instructions were quite",
+          "<ce>                       clear, now carry them out."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                          Good day, %pcf. I'm",
+          "<ce>                          _contact_. Thank you",
+          "<ce>                  for your discretion in this matter.",
+          "<ce>                    You will find that discretion is",
+          "<ce>                    a valuable quality. Here is your",
+          "<ce>                           payment. Good day."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 56,
+        "lines": [
+          "Those guards are even searching _questgiver_'s house for that _item_ shipment.",
+          "<--->",
+          "It's a complete mystery where that _item_ disappeared to. Everyone's curious."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 61,
+        "lines": [
+          "What an embarrassment for _questgiver_. The stolen _item_ was traced to %g2.",
+          "<--->",
+          "I hear _questgiver_ tried to smuggle the _item_ to ___contact_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 66,
+        "lines": [
+          "The guards have given up their search for that stolen _item_.",
+          "<--->",
+          "Imagine them suspecting that _questgiver_ had something to do with that _item_."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 71,
+        "lines": [
+          "Lovely to see you again, %pcf. I understand that your mission was accomplished.",
+          "<--->",
+          "I'm glad you returned, %pcf. You helped me out of a potential embarrassment."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                  My contact says you never arrived.",
+          "<ce>                  That was very unprofessional, %pcf.",
+          "<ce>                    Now leave me. I have work to do."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 81,
+        "lines": [
+          "_questgiver_ is a rather small-time ruler, but a big-time _item_ smuggler.",
+          "<--->",
+          "_questgiver_'s in over %g3 head in this _item_-smuggling business."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 86,
+        "lines": [
+          "Supposedly _contact_ is a fence for stolen merchandise.",
+          "<--->",
+          "_contact_, eh? A mysterious =contact_ who operates out of __contact_, %di of here."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 91,
+        "lines": [
+          "%qdt:",
+          "I have accepted a",
+          " mission from _questgiver_ of",
+          " ___questgiver_ to bring a stolen",
+          " _item_ to _contact_,",
+          " at __contact_ in ___contact_.",
+          " I have =queston_ days to get",
+          " the _item_ to ___contact_."
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 101,
+        "lines": [
+          "Who is calling 1023?"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 124,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 125,
+        "lines": [
+          "Item _item_ drug"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 127,
+        "lines": [
+          "Person _questgiver_ group Questor anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 128,
+        "lines": [
+          "Person _contact_ group Local_3.0 remote anyInfo 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 131,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 1 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 135,
+        "lines": [
+          "start timer _queston_ ",
+          "log 1015 step 0 ",
+          "get item _item_ ",
+          "create npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _item_ and _contact_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 145,
+        "lines": [
+          "variable _pchasitem_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 146,
+        "lines": [
+          "_queston_ task:",
+          "make _item_ permanent ",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 151,
+        "lines": [
+          "variable _npcclicked_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

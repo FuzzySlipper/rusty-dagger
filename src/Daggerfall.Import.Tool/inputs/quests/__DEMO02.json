@@ -1,0 +1,67 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO02.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "760b2656ded8655e5e23cfbf89ecb73fa122f1f5020d3d8a0bec5444d5defb1e",
+    "byteLength": 244
+  },
+  "document": {
+    "fileName": "__DEMO02.txt",
+    "questName": "__DEMO02",
+    "questNameLine": 3,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO02"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1010,
+        "firstLine": 7,
+        "lines": [
+          "Wearing hat and shades"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "variable",
+        "firstLine": 12,
+        "lines": [
+          "variable hat"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 13,
+        "lines": [
+          "variable shades"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 16,
+        "lines": [
+          "setvar hat",
+          "setvar shades"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 19,
+        "lines": [
+          "_HatAndShades_ task:",
+          "when hat and shades",
+          "say 1010"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

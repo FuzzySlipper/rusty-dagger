@@ -1,0 +1,386 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/P0B10L07.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "12b22aed21300856b124038200b1c0cd0366ac4e5f1a75e198b831bd41348e63",
+    "byteLength": 6018
+  },
+  "document": {
+    "fileName": "P0B10L07.txt",
+    "questName": "P0B10L07",
+    "questNameLine": 8,
+    "displayName": "Intimidation",
+    "header": [
+      {
+        "name": "quest",
+        "value": "P0B10L07"
+      },
+      {
+        "name": "displayname",
+        "value": "Intimidation"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1001,
+        "firstLine": 13,
+        "lines": [
+          "Error: Questtext 1001 Called."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 16,
+        "lines": [
+          "Error: Questtext 1002 Called."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 19,
+        "lines": [
+          "<ce>                         _knight_ is half out",
+          "<ce>                    of %g3 mind, %pcf. What a terror",
+          "<ce>                           you are. %vam feel",
+          "<ce>                    that you deserve this _jewelry_",
+          "<ce>                   in recognition of your loyalty and",
+          "<ce>                    remarkable ... restraint in this",
+          "<ce>                     matter. Well done, tribesman."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 28,
+        "lines": [
+          "If _knight_ doesn't watch out, those vampires are going to turn on %g2.",
+          "<--->",
+          "_knight_ thinks %g knows about vampires. But %g's a fool."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 33,
+        "lines": [
+          "_knight_ has moved across the Bay, but %g's keeping an eye on the vampires.",
+          "<--->",
+          "_knight_'s not afraid of any vampires. Killed thousands of 'em, I hear."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 38,
+        "lines": [
+          "_knight_ got taught the lesson of %g3 life. It doesn't pay to fight vampires.",
+          "<--->",
+          "_knight_ was a stupid do-gooder. Just leave the vampires alone, I say."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 43,
+        "lines": [
+          "Error: Questtext 1008 Called."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 46,
+        "lines": [
+          "Error: Questtext 1009 Called."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 49,
+        "lines": [
+          "              __vamp_",
+          "               ___vamp_",
+          " ",
+          " ",
+          " Dear %pcn,",
+          " ",
+          "     %vam need you. Come",
+          " immediately.",
+          " ",
+          " ",
+          "               Yours in Death,",
+          " ",
+          " ",
+          "               _vamp_"
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 65,
+        "lines": [
+          "<ce>                  Ah, good evening, my tribesman. We",
+          "<ce>                   are having difficulty with a local",
+          "<ce>                  warlord who, despite our many, many",
+          "<ce>                   polite verbal and written threats,",
+          "<ce>                    continues to wage a war against",
+          "<ce>                 %vam. Ordinarily, this irksome knight",
+          "<ce>                    would have been in the hereafter",
+          "<ce>                   weeks ago. Our mercy is not sprung",
+          "<ce>                      from sentiment. We could use",
+          "<ce>                          _knight_ as an ally",
+          "<ce>                   in %reg, but %g needs to be taught",
+          "<ce>                  obedience. I want you to have a talk",
+          "<ce>                        with %g2 in ___mondung_",
+          "<ce>                   where %g feels most secure. Don't",
+          "<ce>                  kill %g2 -- just rough %g2 up a bit.",
+          "<ce>                 I'll expect you back in =queston_ days",
+          "<ce>                           after _knight_ has",
+          "<ce>                           been ... softened."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 85,
+        "lines": [
+          "%qdt:",
+          " I received a letter",
+          " from _vamp_, of",
+          " %vam of ___vamp_. I",
+          " am needed in __vamp_",
+          " as soon as possible."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 93,
+        "lines": [
+          "%qdt:",
+          " _vamp_ wants me",
+          " to go to ___mondung_",
+          " and throttle _knight_,",
+          " a knight who refuses to bend to the",
+          " will of %vam. I am",
+          " ordered not to kill %g2, just",
+          " frighten %g2, and be back in",
+          " ___vamp_ in =queston_ days."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 104,
+        "lines": [
+          "<ce>                         Sweet %god, tell %vam",
+          "<ce>                         that I'll do anything!",
+          "<ce>                          Just don't kill me!",
+          "                                     <--->",
+          "<ce>                          %oth, I surrender!",
+          "<ce>                      I'll do anything they want,",
+          "<ce>                      just please, in the name of",
+          "<ce>                            %god, don't kill",
+          "<ce>                                  me!"
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 115,
+        "lines": [
+          "<ce>                           _knight_ is dead.",
+          "<ce>                           _vamp_ will not be",
+          "<ce>                                pleased."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 120,
+        "lines": [
+          "<ce>                       I've already heard, %pcf.",
+          "<ce>                           You slew _knight_",
+          "<ce>                 though I specifically told you only to",
+          "<ce>                       frighten %g2. %oth, you're",
+          "<ce>                    no better than a thug, are you?",
+          "<ce>                          %vam and I are very",
+          "<ce>                          disappointed, %pcf."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 129,
+        "lines": [
+          "<ce>                     A pale young boy hands you a",
+          "<ce>                      letter before scurrying away",
+          "<ce>                        with surprising agility."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 156,
+        "lines": [
+          "Item _letter_ letter used 1010"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 157,
+        "lines": [
+          "Item _jewelry_ trinket"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 159,
+        "lines": [
+          "Person _vamp_ factiontype Vampire_Clan local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 160,
+        "lines": [
+          "Person _knight_ face 69 factiontype Knightly_Guard male remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 162,
+        "lines": [
+          "Place _mondung_ remote dungeon2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 164,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 166,
+        "lines": [
+          "Foe _F.00_ is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 169,
+        "lines": [
+          "dialog link for person _vamp_ ",
+          "_letter_ used do _readletter_ ",
+          "have _letter_ set _S.09_ ",
+          "give pc _letter_ notify 1017 ",
+          "place foe _F.00_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 175,
+        "lines": [
+          "variable _S.00_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 176,
+        "lines": [
+          "_queston_ task:",
+          "change repute with _vamp_ by -5 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 180,
+        "lines": [
+          "_vampclicked_ task:",
+          "clicked npc _vamp_ ",
+          "reveal _mondung_ ",
+          "log 1013 step 1 ",
+          "say 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 186,
+        "lines": [
+          "_S.03_ task:",
+          "when _vampclicked_ and not _S.05_ and not _S.04_ ",
+          "clear _vampclicked_ _S.03_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 190,
+        "lines": [
+          "_S.04_ task:",
+          "injured _F.00_ ",
+          "say 1014 ",
+          "restrain foe _F.00_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 197,
+        "lines": [
+          "_S.05_ task:",
+          "killed 1 _F.00_ ",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 201,
+        "lines": [
+          "_reward_ task:",
+          "when _vampclicked_ and _S.04_ and not _S.05_ ",
+          "give pc _jewelry_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 206,
+        "lines": [
+          "_S.07_ task:",
+          "when _vampclicked_ and _S.05_ ",
+          "say 1016 ",
+          "change repute with _vamp_ by -5 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 212,
+        "lines": [
+          "_readletter_ task:",
+          "add dialog for location _mondung_ person _vamp_ ",
+          "log 1012 step 0 ",
+          "create npc _vamp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 217,
+        "lines": [
+          "_S.09_ task:",
+          "start timer _queston_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -38,7 +38,7 @@ public sealed class ReferenceExportTests : IDisposable
     [CorpusFact("ART_PAL.COL", "TEXTURE.234", "TEXTURE.245", "TEXTURE.252", "TEXTURE.432", "TEXTURE.433", "WEAPON02.CIF", "WEAPO102.CIF")]
     public void Item_export_covers_templates_bodies_and_artifacts_and_every_PNG_matches_its_source_pixels()
     {
-        ItemReferenceExport.Run(TestData.CorpusRoot, TestData.DonorRoot, root);
+        ItemReferenceExport.Run(TestData.CorpusRoot, TestData.Input(""), root);
         using JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "manifest.json")));
         JsonElement document = manifest.RootElement;
         JsonElement[] entries = document.GetProperty("entries").EnumerateArray().ToArray();

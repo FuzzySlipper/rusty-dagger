@@ -1,0 +1,298 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/O0B2XY10.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "d46e8b89e2d441b292f66362927645508cacfe0ac857ab10e53da74d3f00c66e",
+    "byteLength": 3591
+  },
+  "document": {
+    "fileName": "O0B2XY10.txt",
+    "questName": "O0B2XY10",
+    "questNameLine": 8,
+    "displayName": "A Treasured Potion",
+    "header": [
+      {
+        "name": "quest",
+        "value": "O0B2XY10"
+      },
+      {
+        "name": "displayname",
+        "value": "A Treasured Potion"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                           %pcn, my name is",
+          "<ce>                        _qgiver_. I have a line",
+          "<ce>                         on a _potion_. I need",
+          "<ce>                         someone to lift it for",
+          "<ce>                      me. I'll pay you _gold_ gold",
+          "<ce>                       to do it. What do you say?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                       Let me know when you want",
+          "<ce>                        to get real work, %pcn."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                          At _alchemyshop_ in",
+          "<ce>                        __alchemyshop_ you will",
+          "<ce>                         find a _potion_. Take",
+          "<ce>                        it and bring it to me in",
+          "<ce>                      =traveltime_ days, and I'll",
+          "<ce>                        pay you. That's not too",
+          "<ce>                           tough now, is it?"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 34,
+        "lines": [
+          "<ce>                         Not bad, %pcn. Here's",
+          "<ce>                           your _gold_ gold."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 38,
+        "lines": [
+          "_alchemyshop_ has some of the best ingredients in __alchemyshop_.",
+          "<--->",
+          "If you want just about anything, go to _alchemyshop_ in __alchemyshop_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 43,
+        "lines": [
+          "There was a rare _potion_ in _alchemyshop_, but it's in a safer place now."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 46,
+        "lines": [
+          "Someone stole a bottle of _potion_ right out of _alchemyshop_. What cheek!"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 49,
+        "lines": [
+          "Sure, I remember you, %pcf. The _potion_, right?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 52,
+        "lines": [
+          "<ce>                  Don't tell me. You went all the way",
+          "<ce>                      to _alchemyshop_, found the",
+          "<ce>                       _potion_, and accidentally",
+          "<ce>                    drank it, right? %oth, different",
+          "<ce>                         thief, same old story."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 59,
+        "lines": [
+          "%qdt:",
+          " _qgiver_, a Thieves Guild member",
+          " in ___qgiver_ offered me a job to",
+          " steal a _potion_ from",
+          " _alchemyshop_ in",
+          " __alchemyshop_. I have",
+          " =traveltime_ days to get it to %g2."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 84,
+        "lines": [
+          "Item _potion_ Elixir_vitae"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 85,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 87,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 89,
+        "lines": [
+          "Place _alchemyshop_ remote apothecary"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 91,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 93,
+        "lines": [
+          "Foe _F.00_ is Battle_mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 94,
+        "lines": [
+          "Foe _F.01_ is Iron_atronach"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 95,
+        "lines": [
+          "Foe _F.02_ is Daedra_seducer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 96,
+        "lines": [
+          "Foe _F.03_ is Werewolf"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 99,
+        "lines": [
+          "place item _potion_ at _alchemyshop_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 100,
+        "lines": [
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "pc at _alchemyshop_ set _S.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 104,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 107,
+        "lines": [
+          "_S.01_ task:",
+          "pick one of _guard1_ _guard2_ _guard3_ _guard4_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 110,
+        "lines": [
+          "_questdone_ task:",
+          "toting _potion_ and _qgiver_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 115,
+        "lines": [
+          "_guard1_ task:",
+          "create foe _F.00_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 118,
+        "lines": [
+          "_guard2_ task:",
+          "create foe _F.01_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 121,
+        "lines": [
+          "_guard3_ task:",
+          "create foe _F.02_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 124,
+        "lines": [
+          "_guard4_ task:",
+          "create foe _F.03_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 127,
+        "lines": [
+          "_S.07_ task:",
+          "clicked item _potion_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 130,
+        "lines": [
+          "_S.08_ task:",
+          "when _traveltime_ and _S.07_ ",
+          "make _potion_ permanent "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

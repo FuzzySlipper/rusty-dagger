@@ -1,0 +1,247 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C10Y13.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "f53f677f555d26e72a7a8130a8f206e8450931c293b53a0f50af072b70ae4c17",
+    "byteLength": 4388
+  },
+  "document": {
+    "fileName": "R0C10Y13.txt",
+    "questName": "R0C10Y13",
+    "questNameLine": 8,
+    "displayName": "A Peace Offering",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C10Y13"
+      },
+      {
+        "name": "displayname",
+        "value": "A Peace Offering"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                  I have a mission of some diplomatic",
+          "<ce>                    importance. A gift of peace that",
+          "<ce>                 needs be exchanged.  As a favor to me,",
+          "<ce>                 would you bring my gift to my friend,",
+          "<ce>                               _contact_?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>                  Is it the price, the inconvenience,",
+          "<ce>                  or the lowliness of the mission that",
+          "<ce>                       irks you, %pcf? No matter,",
+          "<ce>                     I can easily find another %ra",
+          "<ce>                        interested in furthering",
+          "<ce>                        his political standing."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                           Very good, %pcf.",
+          "<ce>                Now, listen carefully: take this _item_",
+          "<ce>            to the palace in __palace_ and find a =contact_.",
+          "<ce>                   That will be _contact_. %G will be",
+          "<ce>                 expecting you, and will likely reward",
+          "<ce>                  you for your trouble.  You'd best be",
+          "<ce>                  on your way.  Do not fail me, %pcf."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 37,
+        "lines": [
+          "<ce>                     Quickly now, begone!  This is",
+          "<ce>                   no time for idle conversation. You",
+          "<ce>                            have work to do."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                       Oh, what a lovely _item_.",
+          "<ce>                        It's from _questgiver_?",
+          "<ce>                      Well, perhaps this was just",
+          "<ce>                     a misunderstanding after all.",
+          "<ce>                     Here's _reward_ gold for your",
+          "<ce>                          good services, %pcf."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 50,
+        "lines": [
+          "I hear _contact_ is considering breaking allegiance with _questgiver_.",
+          "<--->",
+          "_questgiver_ better do something to cement relations with _contact_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 55,
+        "lines": [
+          "_questgiver_ and _contact_ seem more estranged than ever.",
+          "<--->",
+          "I wouldn't be surprised if _contact_ and _questgiver_ broke ties altogether."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 60,
+        "lines": [
+          "_contact_ is supposed to be very pleased with the present from _questgiver_.",
+          "<--->",
+          "Thank %god _questgiver_ got that _item_ to _contact_. Could've been nasty."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 65,
+        "lines": [
+          "Ah, it's my agent of peace. How goes it with you, my friend?",
+          "<--->",
+          "%oth, if it isn't my favorite courier. How are you doing?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 70,
+        "lines": [
+          "<ce>                   By failing to bring _contact_ the",
+          "<ce>                      _item_ you promised to deliver,",
+          "<ce>                 you've made my peace plans rather more",
+          "<ce>                            difficult, %pcf.",
+          "<ce>                            Out of my sight."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 77,
+        "lines": [
+          "%qdt:",
+          "_questgiver_ has",
+          " implied a reward if I go",
+          " to __palace_ palace",
+          " to bring a peace offering, a _item_",
+          " to _contact_.  I must be there in",
+          " =queston_ days or less."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 86,
+        "lines": [
+          "<ce>                           Did _questgiver_",
+          "<ce>                       not give you something for",
+          "<ce>                   me?  Damnation, if this is one of",
+          "<ce>                             %g3 tricks ..."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 111,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 112,
+        "lines": [
+          "Item _item_ trinket"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 114,
+        "lines": [
+          "Person _questgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 115,
+        "lines": [
+          "Person _contact_ face 1 group Local_3.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 117,
+        "lines": [
+          "Place _palace_ remote palace"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 119,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 1 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 122,
+        "lines": [
+          "start timer _queston_ ",
+          "log 1010 step 0 ",
+          "get item _item_ ",
+          "place npc _contact_ at _palace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 127,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _item_ and _contact_ clicked ",
+          "give pc _reward_ ",
+          "change repute with _questgiver_ by +20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 134,
+        "lines": [
+          "_queston_ task:",
+          "make _item_ permanent ",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 139,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _contact_ say 1020 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,91 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO14.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "447521d4230ae07a4966fecfc522b3b2820d93bbc7f2e585306ad762b7b33058",
+    "byteLength": 984
+  },
+  "document": {
+    "fileName": "__DEMO14.txt",
+    "questName": "__DEMO14",
+    "questNameLine": 8,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO14"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1011,
+        "firstLine": 12,
+        "lines": [
+          "_someperson_ can be found in _tavern_."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 15,
+        "lines": [
+          "This is a short anyInfo message about item resource..."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 18,
+        "lines": [
+          "You should ask around for _someitem_..."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 23,
+        "lines": [
+          "Person _someperson_ face 81 faction The_Thieves_Guild anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 24,
+        "lines": [
+          "Item _someitem_ trinket anyInfo 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 25,
+        "lines": [
+          "Place _tavern_ local tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 28,
+        "lines": [
+          "dialog link for item _someitem_",
+          "create npc _someperson_ ",
+          "place npc _someperson_ at _tavern_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 32,
+        "lines": [
+          "_S.00_ task:",
+          "clicked npc _someperson_",
+          "say 1013",
+          "add dialog for item _someitem_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

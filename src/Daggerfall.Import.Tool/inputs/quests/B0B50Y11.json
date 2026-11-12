@@ -1,0 +1,267 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/B0B50Y11.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "91a17d49835eb739a03110d3715f5db9ad4ab663dfabd3a9b4a4a1d7651244dd",
+    "byteLength": 3509
+  },
+  "document": {
+    "fileName": "B0B50Y11.txt",
+    "questName": "B0B50Y11",
+    "questNameLine": 8,
+    "displayName": "The Exorcism",
+    "header": [
+      {
+        "name": "quest",
+        "value": "B0B50Y11"
+      },
+      {
+        "name": "displayname",
+        "value": "The Exorcism"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                            I am _qgiver_.",
+          "<ce>                        One of the local nobles,",
+          "<ce>                      _nobleman_, has just gotten",
+          "<ce>                        the deed to an abandoned",
+          "<ce>                      piece of property. Too late,",
+          "<ce>                      %g found out it is haunted.",
+          "<ce>                      Someone needs to go out and",
+          "<ce>                      banish the ghost that haunts",
+          "<ce>                      it. Are you willing to take",
+          "<ce>                             up this quest?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                        Ghosts are normally the",
+          "<ce>                      temple's problem. Maybe I'll",
+          "<ce>                      turn this one over to them."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                       _nobleman_ wants to begin",
+          "<ce>                    rebuilding within =2dung_ days.",
+          "<ce>                    %G has the deed to ___dungeon_,",
+          "<ce>                     where you'll find the spirit."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                       _nobleman_ will be quite",
+          "<ce>                      pleased. %G has even offered",
+          "<ce>                       to dedicate a fountain in",
+          "<ce>                               your name."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 42,
+        "lines": [
+          "_nobleman_ was crazy to accept the deed to ___dungeon_. Crazy or stupid."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 45,
+        "lines": [
+          "Poor _nobleman_ appealed to %kno to exorcise ___dungeon_, but they failed."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 48,
+        "lines": [
+          "___dungeon_ can be made into a warehouse or a summer home, thanks to %kno."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 51,
+        "lines": [
+          "Greetings, %pcf. After helping us with _nobleman_, what can I do for you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 54,
+        "lines": [
+          "You failed %kno when you failed _nobleman_, %pcf. A grave disappointment."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 58,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of",
+          " ==qgiver_ in ___qgiver_",
+          " pled with me to rid ___dungeon_",
+          " of a ghost that is haunting",
+          " it. I have =2dung_ days before",
+          " they need to begin",
+          " the reconstruction."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 68,
+        "lines": [
+          "<ce>                      The ghost has been laid to",
+          "<ce>                        rest. _nobleman_ can now",
+          "<ce>                          rebuild ___dungeon_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 88,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 90,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 91,
+        "lines": [
+          "Person _nobleman_ face 182 factiontype Province remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 92,
+        "lines": [
+          "Person _local_ face 77 group Resident2 male local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 94,
+        "lines": [
+          "Place _dungeon_ remote dungeon11"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 96,
+        "lines": [
+          "Clock _2dung_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 98,
+        "lines": [
+          "Foe _ghost_ is Ghost"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 99,
+        "lines": [
+          "Foe _wraith_ is Wraith"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 102,
+        "lines": [
+          "start timer _2dung_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 ",
+          "pick one of _S.04_ _S.05_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 107,
+        "lines": [
+          "_2dung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 110,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _wraith_ saying 1011 ",
+          "killed 1 _ghost_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 114,
+        "lines": [
+          "_S.02_ task:",
+          "clicked npc _qgiver_ ",
+          "give pc nothing ",
+          "change repute with _local_ by +4 ",
+          "change repute with _nobleman_ by +10 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 121,
+        "lines": [
+          "_clearclick_ task:",
+          "when _S.02_ and not _S.01_ ",
+          "clear _S.02_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 125,
+        "lines": [
+          "_S.04_ task:",
+          "place foe _wraith_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 128,
+        "lines": [
+          "_S.05_ task:",
+          "place foe _ghost_ at _dungeon_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

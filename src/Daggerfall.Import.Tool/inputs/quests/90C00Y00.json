@@ -1,0 +1,316 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/90C00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "a850b95a74f2867580451a9ea936e12a69cc9947dcbe4bffd2b727a2615f539f",
+    "byteLength": 5957
+  },
+  "document": {
+    "fileName": "90C00Y00.txt",
+    "questName": "90C00Y00",
+    "questNameLine": 8,
+    "displayName": "Vaernima's Quest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "90C00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Vaernima's Quest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                    A very wise %ra once said that",
+          "<ce>                   power corrupts, and absolute power",
+          "<ce>                   is absolutely fabulous. That's why",
+          "<ce>                    I am going to help you. Now, I'm",
+          "<ce>                  sure you have certain moral problems",
+          "<ce>                  with murdering an innocent who never",
+          "<ce>                   hurt you in any way. But you'll do",
+          "<ce>                 it to win my Skull of Corruption, yes?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                          No? Why ... you ...",
+          "<ce>                        contemptible, sniveling,",
+          "<ce>                        virtuous, sterling piece",
+          "<ce>                        of goblin snot! I'm not",
+          "<ce>                       going to waste my precious",
+          "<ce>                          time with anyone so",
+          "<ce>                           poisonously moral."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 32,
+        "lines": [
+          "<ce>               Grand. The particular innocent I have in",
+          "<ce>                      mind is a _monster_. You're",
+          "<ce>               probably thinking, an innocent lich? Well,",
+          "<ce>                    innocent to you. To me, he is a",
+          "<ce>                  treacherous former servant who took",
+          "<ce>                all the power I offered him, and ignored",
+          "<ce>                my orders. You will find his cadaverous",
+          "<ce>                        presence in ___mondung_.",
+          "<ce>                He's nervous, so be ready for a battle.",
+          "<ce>                After your victory, go to ___qgfriend_,",
+          "<ce>                  and look for my servant _qgfriend_,",
+          "<ce>                      a =qgfriend_ at __qgfriend_."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 46,
+        "lines": [
+          "<ce>                       Why, you treacherous %ra.",
+          "<ce>                    Are you pretending you've slain",
+          "<ce>                   the lich to get your grabby hands",
+          "<ce>                    on the Skull? Vaernima would be",
+          "<ce>                     amused, but, alas, I am under",
+          "<ce>                     strict orders. Come back when",
+          "<ce>                    you've fulfilled your contract."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 55,
+        "lines": [
+          "<ce>                 So, did the lich cough up a cloud of",
+          "<ce>                     dust when it died? _qgfriend_",
+          "<ce>                    here, %pcf. Vaernima will be so",
+          "<ce>                   pleased with the news. I hope you",
+          "<ce>                   won't mind if I embellish a little",
+          "<ce>                  about some horrible outrageous sins",
+          "<ce>                   you committed in your journey. Here",
+          "<ce>                   is _artifact_. Use it whenever you",
+          "<ce>                  want a target to be faced with their",
+          "<ce>                     darkest side. Farewell, %pcf,",
+          "<ce>                              but do bad."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 68,
+        "lines": [
+          "There is a curse on this land while that lich remains in ___mondung_.",
+          "<--->",
+          "If only some great hero would come to slay that ancient lich in ___mondung_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 73,
+        "lines": [
+          "That lich left ___mondung_, but it's not dead. It'll be back when it's ready.",
+          "<--->",
+          "I'm just happy that lich is gone, even if it isn't dead."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 78,
+        "lines": [
+          "I hear %god sent us an angel to rid ___mondung_ of that accursed lich.",
+          "<--->",
+          "We may never know who destroyed that lich in ___mondung_, but he's in our prayers."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 83,
+        "lines": [
+          "_qgfriend_ is that creepy =qgfriend_ over at __qgfriend_ to the %di.",
+          "<--->",
+          "_qgfriend_ is the foul-smelling =qgfriend_ I saw at __qgfriend_."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 88,
+        "lines": [
+          "_qgfriend_ is one of Vaernima's agents of corruption in %reg.",
+          "<--->",
+          "_qgfriend_ is one of Vaernima's dirty little spreaders of corruption."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 93,
+        "lines": [
+          "Vaernima is the Daedra Lady of Corruption and Decay. Not nice to look at.",
+          "<--->",
+          "Vaernima is a Regent of Oblivion, and her sphere is Corruption and Decay."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 98,
+        "lines": [
+          "The Skull of Corruption creates dark and oppositional duplicates of a target.",
+          "<--->",
+          "The Skull brings forth a target's dark half from Vaernima's plane of Oblivion."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 103,
+        "lines": [
+          "<ce>                     You have slain the _monster_,",
+          "<ce>                  fulfilling your part of the bargain",
+          "<ce>                          with Lady Vaernima."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 108,
+        "lines": [
+          "%qdt:",
+          " I have made a contract with the Daedra Prince Vaernima.",
+          " She will order her agent in ___qgfriend_",
+          " to give me her artifact, _artifact_, if",
+          " I can meet %g2 at __qgfriend_ with the",
+          " dust of a certain _monster_ on my hands",
+          " in =1stparton_ days or less.",
+          " All I know about the _monster_ is that it",
+          " lives in ___mondung_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 138,
+        "lines": [
+          "Item _artifact_ artifact Skull_of_Corruption anyInfo 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 140,
+        "lines": [
+          "Person _questgiver_ face 112 named Vaernima anyInfo 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 141,
+        "lines": [
+          "Person _qgfriend_ group Librarian anyInfo 1011 rumors 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 143,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 145,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 147,
+        "lines": [
+          "Foe _monster_ is Lich"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 151,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "place foe _monster_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 156,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 159,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 161,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _npcclicked_ and _mondead_ ",
+          "give pc _artifact_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 167,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 169,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ ",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 173,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _qgfriend_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 176,
+        "lines": [
+          "_clearclick_ task:",
+          "when _npcclicked_ and not _mondead_ ",
+          "say 1003",
+          "clear _npcclicked_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

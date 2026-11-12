@@ -1,0 +1,298 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/O0B10Y06.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "42115ff0f9b14d924e513cc7acf62b92fca08aa03eba194b2348d920f872a894",
+    "byteLength": 3582
+  },
+  "document": {
+    "fileName": "O0B10Y06.txt",
+    "questName": "O0B10Y06",
+    "questNameLine": 8,
+    "displayName": "The Jewel Heist",
+    "header": [
+      {
+        "name": "quest",
+        "value": "O0B10Y06"
+      },
+      {
+        "name": "displayname",
+        "value": "The Jewel Heist"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                       Here's somethin' right up",
+          "<ce>                    your thing. Jewelry heist in the",
+          "<ce>                      works. Want to get in on it?",
+          "<ce>                         Standard guild pay of",
+          "<ce>                          _gold_ gold pieces."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>                      See ya. Got to find a guild",
+          "<ce>                       member who wants this job."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                        %oth, bloody brilliant.",
+          "<ce>                          Go to the _mansion_",
+          "<ce>                             in __mansion_.",
+          "<ce>                           Find the _jewelry_",
+          "<ce>                         and get it back here.",
+          "<ce>                       Keep an eye open. There's",
+          "<ce>                        supposed to be some sort",
+          "<ce>                        of guardian in the dump."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 34,
+        "lines": [
+          "<ce>                            Nice work %pcn.",
+          "<ce>                         Here's your guild fee."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 38,
+        "lines": [
+          "They say _mansion_ is impenetrable."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 41,
+        "lines": [
+          "Someone tried to break into _mansion_, but they failed."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 44,
+        "lines": [
+          "_mansion_ got robbed. It seems barely conceivable.",
+          "<--->",
+          "If _mansion_ can get robbed, no place is safe."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 49,
+        "lines": [
+          "How are you doing, %pcf? Didn't spend all that _gold_ gold already, didja?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 52,
+        "lines": [
+          "<ce>                      %oth, it's you. The guy who",
+          "<ce>                      owns _mansion_ already moved",
+          "<ce>                   the _jewelry_, so the whole thing",
+          "<ce>                     is over. Thanks a lot for all",
+          "<ce>                       your so-called hard work."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 59,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ in ___qgiver_",
+          " freelanced me to slip the _jewelry_",
+          " out of _mansion_",
+          " in ___mansion_. I've",
+          " got =traveltime_ days to get it back to %g2."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 85,
+        "lines": [
+          "Item _jewelry_ trinket"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 86,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 88,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 90,
+        "lines": [
+          "Place _mansion_ remote house1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 92,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 94,
+        "lines": [
+          "Foe _F.00_ is Grizzley_bear"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 95,
+        "lines": [
+          "Foe _F.01_ is Giant_scorpion"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 96,
+        "lines": [
+          "Foe _F.02_ is Ranger"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 97,
+        "lines": [
+          "Foe _F.03_ is Thief"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 100,
+        "lines": [
+          "place item _jewelry_ at _mansion_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 101,
+        "lines": [
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "pc at _mansion_ set _S.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 105,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 108,
+        "lines": [
+          "_S.01_ task:",
+          "pick one of _guard1_ _guard2_ _guard3_ _guard4_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 111,
+        "lines": [
+          "_questdone_ task:",
+          "toting _jewelry_ and _qgiver_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 116,
+        "lines": [
+          "_guard1_ task:",
+          "create foe _F.00_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 119,
+        "lines": [
+          "_guard2_ task:",
+          "create foe _F.01_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 122,
+        "lines": [
+          "_guard3_ task:",
+          "create foe _F.02_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 125,
+        "lines": [
+          "_guard4_ task:",
+          "create foe _F.03_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 128,
+        "lines": [
+          "wizard0 task:",
+          "clicked item _jewelry_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 131,
+        "lines": [
+          "_S.08_ task:",
+          "when wizard0 and _traveltime_ ",
+          "make _jewelry_ permanent ",
+          "change repute with _qgiver_ by -20 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

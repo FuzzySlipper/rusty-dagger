@@ -1,0 +1,320 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/L0B30Y09.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "55a6617f805bfd193b7741b482a05cf04c258ca442dba008db3e2078ab9cbfe6",
+    "byteLength": 3848
+  },
+  "document": {
+    "fileName": "L0B30Y09.txt",
+    "questName": "L0B30Y09",
+    "questNameLine": 9,
+    "displayName": "An Anonymous Job",
+    "header": [
+      {
+        "name": "quest",
+        "value": "L0B30Y09"
+      },
+      {
+        "name": "displayname",
+        "value": "An Anonymous Job"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                 We have an anonymous job for you. It",
+          "<ce>                happens every now and then that someone",
+          "<ce>                 pays us to remove someone, but never",
+          "<ce>                 reveals why, or may even work through",
+          "<ce>                  a go-between to keep their identity",
+          "<ce>                 secret. At any rate, the job is yours",
+          "<ce>                            if you want it."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                  Can't blame you for not wanting to",
+          "<ce>                       get mixed up in this one."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                    Go to _mondung_ of ___mondung_.",
+          "<ce>                  Your target has a scar on the left",
+          "<ce>                    cheek. That's all we know. Come",
+          "<ce>                  back in =1stparton_ days to collect",
+          "<ce>                   your payment. Mephala bless your",
+          "<ce>                             blade, %pcn."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                   I don't know who you think you've",
+          "<ce>                killed, but it wasn't the right target.",
+          "<ce>                  Get your butt over to _mondung_ and",
+          "<ce>                    do what we were contracted for."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                    Beautiful, %pcf, truly. Brings",
+          "<ce>                 tears to these weary eyes. As lovely",
+          "<ce>                  an accounting as I've ever seen. I",
+          "<ce>                  feel like writing a poem. Why don't",
+          "<ce>                you take your _reward_ gold pieces and",
+          "<ce>                   get the hell out of here so I can",
+          "<ce>                  write a ballad about it. Seriously,",
+          "<ce>                         I'm very proud, %pcf."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 51,
+        "lines": [
+          "Lovely weather."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 54,
+        "lines": [
+          "They say the king is having an affair."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 57,
+        "lines": [
+          "If you ask me, our taxes are too high."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 60,
+        "lines": [
+          "Good work with that anonymous job."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 63,
+        "lines": [
+          "Too bad you couldn't complete that anonymous job. Definitely a stain on your record."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 66,
+        "lines": [
+          "%qdt:",
+          " My new contract for the Dark Brotherhood",
+          " in ___questgiver_ is an ",
+          " anonymous mark at _mondung_,",
+          " in ___mondung_. I'll only be able to",
+          " recognize the target by a scar on the",
+          " left cheek. The deed must be done in =1stparton_ days."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 75,
+        "lines": [
+          "<ce>              A fresh scar mars the target's left cheek."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 90,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 92,
+        "lines": [
+          "Person _questgiver_ face 112 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 94,
+        "lines": [
+          "Place _mondung_ remote palace"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 96,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 18 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 98,
+        "lines": [
+          "Foe _F.00_ is Healer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 99,
+        "lines": [
+          "Foe _F.01_ is Rogue"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 100,
+        "lines": [
+          "Foe _F.02_ is Burglar"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 101,
+        "lines": [
+          "Foe _F.03_ is Daedra_seducer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 104,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "pick one of _S.06_ _S.07_ _S.08_ _onehour_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 109,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _S.02_ ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 114,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 117,
+        "lines": [
+          "_S.02_ task:",
+          "killed 1 _F.03_ saying 1021 ",
+          "killed 1 _F.02_ saying 1021 ",
+          "killed 1 _F.01_ saying 1021 ",
+          "killed 1 _F.00_ saying 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 123,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 124,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 127,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 128,
+        "lines": [
+          "_S.06_ task:",
+          "place foe _F.00_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 131,
+        "lines": [
+          "_S.07_ task:",
+          "place foe _F.01_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 134,
+        "lines": [
+          "_S.08_ task:",
+          "place foe _F.02_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 137,
+        "lines": [
+          "_onehour_ task:",
+          "place foe _F.03_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.02_ ",
+          "say 1003",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

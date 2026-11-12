@@ -1,0 +1,373 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C00Y07.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "4e3dae061eee9191fe75d8e137bd2564fa9cb1028fea64adfcb067145198ef4e",
+    "byteLength": 5349
+  },
+  "document": {
+    "fileName": "A0C00Y07.txt",
+    "questName": "A0C00Y07",
+    "questNameLine": 9,
+    "displayName": "The Exterminator",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C00Y07"
+      },
+      {
+        "name": "displayname",
+        "value": "The Exterminator"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                I need help. _qgiver_ at your service,",
+          "<ce>                 although I hope yours will be at mine.",
+          "<ce>                   _house_ is infested with monsters.",
+          "<ce>                Can you kill them for me? I can pay you",
+          "<ce>                          _gold_ gold pieces."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                 I need help! Won't somebody help me?"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 24,
+        "lines": [
+          "<ce>             Thank you, thank you, thank you! If they are",
+          "<ce>            not gone by this time tomorrow, I'll be ruined."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                What a relief. I hate those things. You",
+          "<ce>                     have been most helpful, %pcn.",
+          "<ce>                Here is the _gold_ gold that I promised."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 33,
+        "lines": [
+          "<ce>                   I think it's hilarious! _qgiver_'s",
+          "<ce>                  _house_ is overrun with giant bugs!",
+          "                                     <--->",
+          "<ce>                    I feel sorry for _qgiver_. %G3",
+          "<ce>                    _house_ has been virtually taken",
+          "<ce>                over by 12-foot-long rats with poisonous",
+          "<ce>                stingers. I hear they can turn a man to",
+          "<ce>                      stone with a single glance!"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                     _qgiver_ had to sell _house_.",
+          "                                     <--->",
+          "<ce>               I hear someone in the Fighters Guild died",
+          "<ce>                   trying to clear the infestation of",
+          "<ce>                          _qgiver_'s _house_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 50,
+        "lines": [
+          "<ce>                    Aren't you the %ra that helped",
+          "<ce>                     _qgiver_ get rid of the beasts",
+          "<ce>                    that had taken over %g3 _house_?",
+          "                                     <--->",
+          "<ce>                       I hear that _qgiver_ paid",
+          "<ce>                   someone to kill all the creatures",
+          "<ce>                     that had overrun %g3 _house_."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 59,
+        "lines": [
+          "<ce>                %pcf, I owe you a debt of gratitude for",
+          "<ce>                    clearing my _house_ of monsters.",
+          "                                     <--->",
+          "<ce>                Everyone, listen up. I want you to meet",
+          "<ce>             my friend, %pcn, exterminator extraordinaire.",
+          "<ce>               %G rid my _house_ of three dozen monsters!"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 67,
+        "lines": [
+          "<ce>                  You! You ruined me! I lost _house_",
+          "<ce>                 because you weren't able to take care",
+          "<ce>                    of a handful of monsters in it.",
+          "                                     <--->",
+          "<ce>                  Aren't you the %ra that failed me?",
+          "<ce>                   I hired you to kill some monsters",
+          "<ce>                     infesting my _house_, and you",
+          "<ce>                     just couldn't do it. Go away."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 77,
+        "lines": [
+          "%qdt:",
+          " In ___qgiver_, I met _qgiver_.",
+          " %G asked me to rid _house_ in",
+          " __house_ of monsters. %G needs",
+          " them gone within a day."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 84,
+        "lines": [
+          "<ce>  That should be enough."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 87,
+        "lines": [
+          "<ce>  You hear scratching noises coming from the walls.",
+          "<ce>  The creatures will most certainly react poorly",
+          "<ce>  to your intrusion on their territory."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 107,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 109,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 111,
+        "lines": [
+          "Place _house_ local random"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 114,
+        "lines": [
+          "Clock _oneday_ 1.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 116,
+        "lines": [
+          "Foe _spiders_ is Spider"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 117,
+        "lines": [
+          "Foe _rats_ is Giant_rat"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 118,
+        "lines": [
+          "Foe _scorpions_ is Giant_scorpion"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 119,
+        "lines": [
+          "Foe _bats_ is Giant_bat"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 122,
+        "lines": [
+          "start timer _oneday_ ",
+          "log 1010 step 0 ",
+          "pc at _house_ set _S.01_ ",
+          "create npc at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 127,
+        "lines": [
+          "_oneday_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 131,
+        "lines": [
+          "_questdone_ task:",
+          "clicked npc _qgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 134,
+        "lines": [
+          "_S.01_ task:",
+          "say 1012",
+          "start task _pickspawn_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 139,
+        "lines": [
+          "_pickspawn_ task:",
+          "pick one of _S.04_ _S.05_ _S.06_ _S.07_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_S.03_ task:",
+          "killed 6 _bats_ ",
+          "killed 3 _spiders_ ",
+          "killed 7 _rats_ ",
+          "killed 3 _scorpions_",
+          "say 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 150,
+        "lines": [
+          "variable _S.04_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 151,
+        "lines": [
+          "_spawn1_ task:",
+          "when _S.01_ and _S.04_ and not _S.03_",
+          "create foe _bats_ every 2 minutes indefinitely with 100% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 155,
+        "lines": [
+          "variable _S.05_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 156,
+        "lines": [
+          "_spawn2_ task:",
+          "when _S.01_ and _S.05_ and not _S.03_",
+          "create foe _rats_ every 2 minutes indefinitely with 100% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 160,
+        "lines": [
+          "variable _S.06_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 161,
+        "lines": [
+          "_spawn3_ task:",
+          "when _S.01_ and _S.06_ and not _S.03_",
+          "create foe _scorpions_ every 3 minutes indefinitely with 100% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 165,
+        "lines": [
+          "variable _S.07_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 166,
+        "lines": [
+          "_spawn4_ task:",
+          "when _S.01_ and _S.07_ and not _S.03_",
+          "create foe _spiders_ every 3 minutes indefinitely with 100% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_clearclick_ task:",
+          "when not _S.03_ and _questdone_ ",
+          "clear _questdone_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 175,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _questdone_ and _S.03_",
+          "give pc _gold_ ",
+          "end quest"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

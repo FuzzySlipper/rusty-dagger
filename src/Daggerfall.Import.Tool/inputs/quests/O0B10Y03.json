@@ -1,0 +1,318 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/O0B10Y03.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "e1d2a03a800e38d3ecab422a49b9eb439020dec57c6bcc14fe22e7d18e6eb456",
+    "byteLength": 4899
+  },
+  "document": {
+    "fileName": "O0B10Y03.txt",
+    "questName": "O0B10Y03",
+    "questNameLine": 8,
+    "displayName": "A Temple Visit",
+    "header": [
+      {
+        "name": "quest",
+        "value": "O0B10Y03"
+      },
+      {
+        "name": "displayname",
+        "value": "A Temple Visit"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                      Got a guild job for ya, if",
+          "<ce>                        yer innerested. Name is",
+          "<ce>                        _qgiver_. Some guy wants",
+          "<ce>                       the _religiousitem_ lifted",
+          "<ce>                             from _temple_.",
+          "<ce>                             Wanna take it?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                       I'll keep ya in mind %pcn",
+          "<ce>                       if a more interestin' job",
+          "<ce>                               comes up."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                        OK. Here's the skinny.",
+          "<ce>                         You go to _temple_ in",
+          "<ce>                          __temple_. Take the",
+          "<ce>                       _religiousitem_ and bring",
+          "<ce>                         it back to me. You get",
+          "<ce>                         the usual guild fee of",
+          "<ce>                         _gold_ gold pieces. Ya",
+          "<ce>                      got =traveltime_ days ta put",
+          "<ce>                            it in my hands."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 37,
+        "lines": [
+          "<ce>                      Boy, some guys are hard ta",
+          "<ce>                      figure out. Can you believe",
+          "<ce>                      he paid to have this lifted?",
+          "<ce>                      Wasn't as if there was some",
+          "<ce>                      \"hideous guardian\" stoppin'",
+          "<ce>                      from doin' it himself. Huh?",
+          "<ce>                      There was?! Maybe he wasn't",
+          "<ce>                       so screwy. Here's yer fee",
+          "<ce>                           %pcf. Good workin'",
+          "<ce>                                with ya."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 49,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 78,
+        "lines": [
+          "_temple_ is pretty well-guarded against thieves, it seems."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 81,
+        "lines": [
+          "The guy who owns _temple_ paid some thieves to break into his own place."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 84,
+        "lines": [
+          "How are you, %pcf? I'm still waiting to hear from the guy who hired us."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 87,
+        "lines": [
+          "<ce>                       I don't care whether that",
+          "<ce>                     temple was guarded by the Lord",
+          "<ce>                         of All Oblivion, %pcf.",
+          "<ce>                     There is no excuse for failing",
+          "<ce>                         an assignment for the",
+          "<ce>                             Thieves Guild."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 95,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of ___qgiver_",
+          " of the Thieves Guild gave me a job",
+          " to heist a _religiousitem_",
+          " from the _temple_ in",
+          " __temple_. I have",
+          " =traveltime_ days to get it back",
+          " to %g2 for my fee."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 125,
+        "lines": [
+          "Item _religiousitem_ religious"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 126,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 128,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 130,
+        "lines": [
+          "Place _temple_ remote temple"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 132,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 134,
+        "lines": [
+          "Foe _F.00_ is 2 Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 135,
+        "lines": [
+          "Foe _F.01_ is Giant_scorpion"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 136,
+        "lines": [
+          "Foe _F.02_ is Monk"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 137,
+        "lines": [
+          "Foe _F.03_ is Zombie"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 140,
+        "lines": [
+          "place item _religiousitem_ at _temple_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 141,
+        "lines": [
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "pc at _temple_ set _S.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 145,
+        "lines": [
+          "_traveltime_ task:",
+          "make _religiousitem_ permanent ",
+          "change repute with _qgiver_ by -5 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_S.01_ task:",
+          "pick one of _guard1_ _guard2_ _guard3_ _guard4_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 153,
+        "lines": [
+          "_questdone_ task:",
+          "toting _religiousitem_ and _qgiver_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 158,
+        "lines": [
+          "_guard1_ task:",
+          "create foe _F.00_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 161,
+        "lines": [
+          "_guard2_ task:",
+          "create foe _F.01_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 164,
+        "lines": [
+          "_guard3_ task:",
+          "create foe _F.02_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 167,
+        "lines": [
+          "_guard4_ task:",
+          "create foe _F.03_ every 4 minutes 1 times with 10% success "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

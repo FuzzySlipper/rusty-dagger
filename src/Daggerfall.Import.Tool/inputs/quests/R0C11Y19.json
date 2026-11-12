@@ -1,0 +1,352 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C11Y19.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "24aee882caa9e614e34c3114d01572c07b2741a9f28611d2e059d5e7a87ebfca",
+    "byteLength": 5585
+  },
+  "document": {
+    "fileName": "R0C11Y19.txt",
+    "questName": "R0C11Y19",
+    "questNameLine": 8,
+    "displayName": "The Emperor's Gift",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C11Y19"
+      },
+      {
+        "name": "displayname",
+        "value": "The Emperor's Gift"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>               I'm in rather a delicate situation, %pcf.",
+          "<ce>              If I could count on your diligence and your",
+          "<ce>                 silence, you could earn yourself, say,",
+          "<ce>              _reward_ gold pieces profiting on my misery.",
+          "<ce>                            Sound enticing?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>                        %oth, blast, and %oth!",
+          "<ce>                 I'm surrounded by apathetic lazybones!",
+          "<ce>                        Nothing personal, %pcf."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                Well, that's good, anyway. Not long ago,",
+          "<ce>                during a time of financial stagnancy, I",
+          "<ce>                pawned a ring given to me by the Emperor",
+          "<ce>                  himself. I figured that Uriel Septim",
+          "<ce>                 never makes it down to this corner of",
+          "<ce>               the Empire, but now I hear his agents are",
+          "<ce>                   in the area, and I must have that",
+          "<ce>                  ring back. _contact_, of __contact_",
+          "<ce>           in ___contact_, will only hold it for =1stparton_",
+          "<ce>            more days.  Here's the gold to pay for the ring.",
+          "<ce>                 Good luck and %god speed your journey."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 38,
+        "lines": [
+          "<ce>                        My ring, %pcf? The %god-",
+          "<ce>                    forsaken ring I sent you to get?",
+          "<ce>                    Where is it? If you've lost it,",
+          "<ce>                    I'll have your rotten %ra hide!"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 44,
+        "lines": [
+          "<ce>               Oh good, oh good, the ring. Oh thank you,",
+          "<ce>                        thank you, %pcf. Here's",
+          "<ce>                  the _reward_ gold pieces I promised.",
+          "<ce>                    An expensive delivery, but truly",
+          "<ce>                           worth every piece."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 51,
+        "lines": [
+          "The Emperor's men don't make a big production when they come to town, I hear.",
+          "<--->",
+          "They're not very flashy; the Emperor's men could be here even as we speak."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 56,
+        "lines": [
+          "I hear _questgiver_ did not have a very pleasant meeting with the Imperials.",
+          "<--->",
+          "For some reason, _questgiver_ is out of favor with the Emperor."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 61,
+        "lines": [
+          "_questgiver_ entertained the Imperial statesmen in great style, I understand.",
+          "<--->",
+          "The Imperial statesmen were apparently very satisfied with their visit."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 66,
+        "lines": [
+          "Ah, hello, ring-bearer. What can I do for you?",
+          "<--->",
+          "You helped keep me in good standing with the Empire. Now, what can I do for you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                    The Imperial emissaries didn't",
+          "<ce>                 notice the ring was gone, thank %god.",
+          "<ce>                 Still, you are not one of my favorite",
+          "<ce>                        people right now, %pcf."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 77,
+        "lines": [
+          "<ce>                    You must be %pcf. You're lucky",
+          "<ce>                 you made it when you did. I was about",
+          "<ce>                 to sell the ring to a very eager third",
+          "<ce>              party.  Well, if I understand correctly and",
+          "<ce>                         _questgiver_ wants the",
+          "<ce>                   ring before the Imperial statesmen",
+          "<ce>                   arrive, you better be on your way.",
+          "<ce>                      You only have a little time."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 87,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of",
+          " ___questgiver_ has sent me to",
+          " ___contact_ to __contact_",
+          " where _contact_ is holding",
+          " a ring _questgiver_",
+          " pawned. I need to pay for the ring with",
+          " the gold _questgiver_ gave me,",
+          " and then get back to __questgiver_.",
+          " All in less than =1stparton_ days."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 99,
+        "lines": [
+          "<ce>                     Give me the ring. This can go",
+          "<ce>                      easy or hard. It's really up",
+          "<ce>                       to you. Either way, we get",
+          "<ce>                               the ring."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 105,
+        "lines": [
+          "<ce>                      Fool. Now you will die. Did",
+          "<ce>                       you really think we would",
+          "<ce>                          let a witness live?"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 128,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 129,
+        "lines": [
+          "Item _item1_ gold_bar"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 130,
+        "lines": [
+          "Item _item2_ ring"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 132,
+        "lines": [
+          "Person _questgiver_ face 72 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 133,
+        "lines": [
+          "Person _contact_ face 80 group Pawnbroker remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 136,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 138,
+        "lines": [
+          "Foe _F.00_ is 2 Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 141,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1015 step 0 ",
+          "get item _item1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 145,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _item2_ and _questgiver_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 150,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 151,
+        "lines": [
+          "variable _qgclicked_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 152,
+        "lines": [
+          "variable _npcclicked_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 153,
+        "lines": [
+          "_1stparton_ task:",
+          "make _item2_ permanent ",
+          "make _item1_ permanent ",
+          "change repute with _questgiver_ by -50 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 159,
+        "lines": [
+          "variable _pchasitem1_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 160,
+        "lines": [
+          "_pchasitem2_ task:",
+          "toting _item1_ and _contact_ clicked ",
+          "create foe _F.00_ every 5 minutes 3 times with 35% success",
+          "get item _item2_ ",
+          "say 1010 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 166,
+        "lines": [
+          "yes task:",
+          "have _item2_ set _S.09_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 169,
+        "lines": [
+          "variable _no_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_S.09_ task:",
+          "give item _item2_ to _F.00_",
+          "say 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 175,
+        "lines": [
+          "_S.10_ task:",
+          "injured _F.00_ ",
+          "prompt 1020 yes yes no _no_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

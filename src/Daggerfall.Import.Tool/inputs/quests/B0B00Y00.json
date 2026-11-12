@@ -1,0 +1,408 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/B0B00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "2cf9c9cefd57eaa76115e33804721a099feeb0fff551a80505afa7ab5f60ce6c",
+    "byteLength": 6772
+  },
+  "document": {
+    "fileName": "B0B00Y00.txt",
+    "questName": "B0B00Y00",
+    "questNameLine": 8,
+    "displayName": "The Princess",
+    "header": [
+      {
+        "name": "quest",
+        "value": "B0B00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "The Princess"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                       %pcf, the Princess _lady_",
+          "<ce>                 has been captured from our protection,",
+          "<ce>                   and it is the responsibility of us",
+          "<ce>                 knights to rescue her. Unfortunately,",
+          "<ce>                  many of our members are off fighting",
+          "<ce>                  in the war. In the truest spirit of",
+          "<ce>                  chivalry, will you go to rescue the",
+          "<ce>                  princess from the _monster_ who has",
+          "<ce>                             captured her?",
+          "                                     <--->",
+          "<ce>                    The war has busied the order to",
+          "<ce>                  such a degree that important duties",
+          "<ce>                  such as protecting the virtue of the",
+          "<ce>                         noblewomen of %reg has",
+          "<ce>                  fallen rather by the wayside. There",
+          "<ce>                    is literally no one available to",
+          "<ce>                         rescue Princess _lady_",
+          "<ce>                   who was carried off the other day.",
+          "<ce>                       Are you free for this most",
+          "<ce>                           worthy of quests?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                   Ah, that is not the spirit of our",
+          "<ce>                 order. There is nothing more important",
+          "<ce>                    to us than protecting the virtue",
+          "<ce>                            of the innocent."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                  You will? I must say, your heart is",
+          "<ce>                brave. A _monster_ is a fearsome foe. Be",
+          "<ce>                certain to prepare for a battle. Do not",
+          "<ce>                  be foolhardy -- we care only for the",
+          "<ce>                rescue of the princess. If the _monster_",
+          "<ce>                  can be left alone, leave him. And if",
+          "<ce>              you are not returned in =2mondung_ days, we",
+          "<ce>                 will assume that you have failed, and",
+          "<ce>                  someone will be sent in your place.",
+          "<ce>                  I am certain you do not want someone",
+          "<ce>                 else to earn the honor of the rescue.",
+          "<ce>                      May %god bless your journey",
+          "<ce>                            to ___mondung_."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 56,
+        "lines": [
+          "<ce>                         Hurry, %pcf. You only",
+          "<ce>                       have =2mondung_ days left."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 60,
+        "lines": [
+          "<ce>                      Princess _lady_, may I more",
+          "<ce>                 officially introduce you to your good",
+          "<ce>                             rescuer, %pcn.",
+          "<ce>                You have done a fine and honorable thing",
+          "<ce>                 this day, my friend, and it shall not",
+          "<ce>                             be forgotten."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 68,
+        "lines": [
+          "Poor Princess _lady_. When her father gets to ___qgiver_, he will be furious.",
+          "<--->",
+          "_qgiver_ promised Princess _lady_'s father that she would be protected."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 73,
+        "lines": [
+          "The Princess managed to escape ___mondung_ by herself. Some knightly valor.",
+          "<--->",
+          "The Princess just wandered in ___qgiver_ by herself, pale from blood loss."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 78,
+        "lines": [
+          "The knights are celebrating the heroism of the great %ra who rescued _lady_.",
+          "<--->",
+          "Lady _lady_ has begun writing poetry about the valorous %ra who rescued her."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 83,
+        "lines": [
+          "Greetings, %pct. You'll be happy to know that Lady _lady_ is doing well."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 86,
+        "lines": [
+          "What a fiasco that Lady _lady_ affair was. I imagine you want it behind you."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 89,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of __qgiver_",
+          " in ___qgiver_ has given me a quest",
+          " to rescue the fair Lady _lady_",
+          " from ___mondung_, where she",
+          " has been captured and imprisoned by a _monster_.",
+          " I have =2mondung_ days to rescue her before someone",
+          " else is sent to win my honor and glory."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 99,
+        "lines": [
+          "<ce>             A small, thin, pale little boy hisses at you",
+          "<ce>              and slips a note into your hand. He vanishes",
+          "<ce>                   almost the moment you notice him."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 104,
+        "lines": [
+          "<ce>                  You have just slain the _monster_,",
+          "<ce>                   the stuff of _lady_'s nightmares."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 108,
+        "lines": [
+          "<ce>                        Lady _lady_ leaves you,",
+          "<ce>                   intent on making her own way home."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 112,
+        "lines": [
+          "Dear %pcf,",
+          " ",
+          "      If you were hesitating in that quest out of",
+          " reasonable fear that your dear friends, the _monster_s",
+          " of %reg would not want you to foil the",
+          " rather lascivious plans of one of its order, do not",
+          " fear. =monster_ is about",
+          " as precious to our cold hearts as a puddle of month-",
+          " old spew.",
+          "      Enjoy yourself. And, if you are so inclined,",
+          " enjoy _lady_.",
+          " ",
+          "<ce>                           Your Dear Friends,",
+          "<ce>                        The Oldest Power in %reg"
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 128,
+        "lines": [
+          "<ce>                       \"You're %pcf! Thank %god!",
+          "<ce>                            I'm Lady _lady_,",
+          "<ce>                      let's get out of here now.\""
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 153,
+        "lines": [
+          "Item letter31 letter used 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 155,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 156,
+        "lines": [
+          "Person _lady_ face 2 group Noble female local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 157,
+        "lines": [
+          "Person _vamp_ face 40 factiontype Vampire_Clan local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 159,
+        "lines": [
+          "Place _mondung_ remote dungeon8"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 161,
+        "lines": [
+          "Clock _2mondung_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 162,
+        "lines": [
+          "Clock _S.07_ 10:00 1.16:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 164,
+        "lines": [
+          "Foe _monster_ is Vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 165,
+        "lines": [
+          "Foe imp0 is Giant_rat"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 168,
+        "lines": [
+          "dialog link for person _vamp_ ",
+          "start timer _2mondung_ ",
+          "reveal _mondung_ ",
+          "log 1010 step 0 ",
+          "repute with _vamp_ exceeds 20 do _S.05_ ",
+          "pc at _mondung_ set _S.03_ ",
+          "place foe _monster_ at _mondung_ ",
+          "place npc _lady_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 177,
+        "lines": [
+          "_2mondung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 180,
+        "lines": [
+          "_S.01_ task:",
+          "when _qgclicked_ and _S.04_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 185,
+        "lines": [
+          "_S.02_ task:",
+          "killed 1 _monster_ ",
+          "say 1012 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 189,
+        "lines": [
+          "_S.03_ task:",
+          "create foe imp0 every 40 minutes 100 times with 15% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 192,
+        "lines": [
+          "_S.04_ task:",
+          "clicked npc _lady_ ",
+          "hide npc _lady_ ",
+          "say 1015 ",
+          "add _lady_ face "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 198,
+        "lines": [
+          "_S.05_ task:",
+          "start timer _S.07_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 201,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 204,
+        "lines": [
+          "_S.07_ task:",
+          "get item letter31 ",
+          "say 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 208,
+        "lines": [
+          "variable _S.08_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 209,
+        "lines": [
+          "_S.09_ task:",
+          "when _S.04_ and _2mondung_ ",
+          "say 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 213,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.04_",
+          "say 1003 ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

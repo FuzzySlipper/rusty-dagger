@@ -1,0 +1,225 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/M0C00Y11.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "01dc93ca48f4a2a0e7b024c130d046216e74618f29ca163ff4a2e5330b6740f8",
+    "byteLength": 3423
+  },
+  "document": {
+    "fileName": "M0C00Y11.txt",
+    "questName": "M0C00Y11",
+    "questNameLine": 9,
+    "displayName": "Hunt for a Giant Scorpion",
+    "header": [
+      {
+        "name": "quest",
+        "value": "M0C00Y11"
+      },
+      {
+        "name": "displayname",
+        "value": "Hunt for a Giant Scorpion"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                       You can call me _qgiver_.",
+          "<ce>             Normally we only give jobs to guild members.",
+          "<ce>              But you show promise %pcn. I tell ya what.",
+          "<ce>                 I got a request to dispose of a giant",
+          "<ce>              scorpion. Do that and I'll see if the guild",
+          "<ce>            will overlook your reputation. Is that a deal?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                       I try to be nice and look",
+          "<ce>                       what it gets me. Just get",
+          "<ce>                              outta here."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                 You got guts %pcf, I'll give ya that.",
+          "<ce>            Apparently this scorpion escaped from someone's",
+          "<ce>             personal collection. Right now it's cornered in",
+          "<ce>                   _house_. Kill the thing today and",
+          "<ce>                        I'll speak well of you."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 34,
+        "lines": [
+          "<ce>              I guess you aren't the weak-kneed jellyfish",
+          "<ce>               everyone says you are. I'll make sure the",
+          "<ce>                     right people hear about this."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 39,
+        "lines": [
+          "<ce>                Have you heard about the poor fool that",
+          "<ce>               found a giant scorpion in his house? He's",
+          "<ce>                       getting drunk right now."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 44,
+        "lines": [
+          "<ce>               Some drunken fool stumbled into his house",
+          "<ce>               and got killed by a giant scorpion. Seems",
+          "<ce>               he thought the Fighters Guild had taken",
+          "<ce>                          care of the beast."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 50,
+        "lines": [
+          "<ce>                 The Fighters Guild is a good bunch.",
+          "<ce>                They killed a giant scorpion that found",
+          "<ce>                     its way into someone's house."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 55,
+        "lines": [
+          "<ce>                  Good work with that giant scorpion.",
+          "<ce>                At this rate you'll be admitted to the",
+          "<ce>                           guild real soon."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 60,
+        "lines": [
+          "<ce>                 All I asked was that you kill a giant",
+          "<ce>                   scorpion. You are worthless %pcf."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 64,
+        "lines": [
+          "%qdt:",
+          " The Fighters Guild of ___qgiver_",
+          " has offered to let me slay a",
+          " giant scorpion which has gotten into",
+          " _house_. It's got be done today."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                        The _monster_ is dead."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 87,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 89,
+        "lines": [
+          "Place _house_ local random"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 91,
+        "lines": [
+          "Clock _2dung_ 1.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 93,
+        "lines": [
+          "Foe _monster_ is Giant_scorpion"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 96,
+        "lines": [
+          "start timer _2dung_ ",
+          "reveal _house_ ",
+          "log 1010 step 0 ",
+          "place foe _monster_ at _house_ ",
+          "create npc at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 102,
+        "lines": [
+          "_2dung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 105,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _monster_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 108,
+        "lines": [
+          "_S.02_ task:",
+          "when _qgclicked_ and _S.01_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 113,
+        "lines": [
+          "_qgclicked_ task:",
+          "               clicked npc _qgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 116,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.01_ ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

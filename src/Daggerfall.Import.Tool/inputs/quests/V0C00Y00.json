@@ -1,0 +1,309 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/V0C00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "9b13146acf0ff82d10136144e598064cdb58fb69d743fc4d5e9a30d0284160f4",
+    "byteLength": 5407
+  },
+  "document": {
+    "fileName": "V0C00Y00.txt",
+    "questName": "V0C00Y00",
+    "questNameLine": 8,
+    "displayName": "Clavicus Vile's Quest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "V0C00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Clavicus Vile's Quest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                My needs are rather ... modest, but my",
+          "<ce>             offer, I think you will agree, is altruism",
+          "<ce>               and generosity indissoluble. In return for",
+          "<ce>                        _artifact_, an artifact",
+          "<ce>            of great power, I only ask that you exterminate",
+          "<ce>            a nasty little bit of fur that has been preying",
+          "<ce>                  on some of my friends who live near",
+          "<ce>                   ___mondung_. Lupines are generally",
+          "<ce>               quite friendly with me and my associates,",
+          "<ce>                    but this one ... well, kids will",
+          "<ce>                 be kids. Do we understand one another?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 26,
+        "lines": [
+          "<ce>              Why, you nauseating insect. You poison the",
+          "<ce>             air with your thickwitted insolence. How dare",
+          "<ce>              you summon forth the greatest of the Princes",
+          "<ce>              of Oblivion and refuse the simplest request",
+          "<ce>             I could possibly propose? In return for water,",
+          "<ce>             I offer you wine and you spit both in my face.",
+          "<ce>                     I will not forget this, %pcn."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 35,
+        "lines": [
+          "<ce>              Ah, recognize a good deal, do you? You will",
+          "<ce>              find the lupine menace somewhere in a place",
+          "<ce>                   called ___mondung_. Unfortunately,",
+          "<ce>               time is not our friend in this matter. For",
+          "<ce>              reasons too dull to discuss, I need the oaf",
+          "<ce>                dead in =1stparton_ days. After you have",
+          "<ce>                murdered the creature, meet my friend at",
+          "<ce>                    __contact_ in ___contact_. Just",
+          "<ce>                    look for a =contact_. Nice doing",
+          "<ce>                        business with you, %pcn.",
+          "<ce>                       I'm sure we'll meet again."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 48,
+        "lines": [
+          "<ce>              Listen, kid. I don't know how much business",
+          "<ce>               you've done with Clavicus Vile before, but",
+          "<ce>              I'll tell you this -- he don't like anything",
+          "<ce>                done halfway. I know that werewolf ain't",
+          "<ce>               dead, and if you think you can fool Vile,",
+          "<ce>  you're an idiot. No dead werewolf, no _artifact_. Simple as that."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 56,
+        "lines": [
+          "<ce>                   Ah, %pcf, Vile told me to expect",
+          "<ce>             you. Well, you fulfilled your end I understand",
+          "<ce>           so here's the _artifact_, just like Vile promised.",
+          "<ce>             He's impressed with you, by the way. Not a bad",
+          "<ce>                    friend to have. Take it from me."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 63,
+        "lines": [
+          "I've heard there's some kind of werewolf on the loose around here.",
+          "<--->",
+          "I hear the werewolf's found a lair in someplace called ___mondung_.",
+          "<--->",
+          "Didja hear that howling last night? Wolf howling?"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 70,
+        "lines": [
+          "Werewolves are real nomads, I guess. I hear our loup moved down south.",
+          "<--->",
+          "My cousin tells me that our werewolf was spotted down south a ways."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 75,
+        "lines": [
+          "Some kind of weird cult activity started up over by ___mondung_.",
+          "<--->",
+          "A lot of people feel safer knowing that werewolf is dead.",
+          "<--->",
+          "You heard about that werewolf some %ra hunted down?"
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 82,
+        "lines": [
+          "Clavicus Vile is the consummate politician of Oblivion.",
+          "<--->",
+          "You won't find a more carefully neutral Daedric Prince than Clavicus Vile."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 87,
+        "lines": [
+          "That smooth-talking =contact_ is %di of here in __contact_.",
+          "<--->",
+          "If you go %di of here in __contact_, just look for a =contact_."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 92,
+        "lines": [
+          "Supposedly, the Masque enhances the personality of the wearer."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 95,
+        "lines": [
+          "%qdt:",
+          " Clavicus Vile wants me to kill a werewolf",
+          " located in the dungeon ___mondung_.",
+          " A =contact_ named _contact_ will",
+          " wait for =1stparton_ days for me at __contact_",
+          " in ___contact_ to give me the Masque",
+          " of Clavicus Vile."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 104,
+        "lines": [
+          "<ce>                     You have slain the werewolf,",
+          "<ce>                      as ordered by Clavicus Vile."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 124,
+        "lines": [
+          "Item _artifact_ artifact Masque_of_Clavicus_Vile anyInfo 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 126,
+        "lines": [
+          "Person _questgiver_ face 112 named Clavicus_Vile anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 127,
+        "lines": [
+          "Person _contact_ face 238 faction The_Cabal female remote anyInfo 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 129,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 130,
+        "lines": [
+          "Place _tavern_ remote tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 132,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 0 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 134,
+        "lines": [
+          "Foe _monster_ is Werewolf"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 138,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "place foe _monster_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _mondead_ ",
+          "give pc _artifact_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 149,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ ",
+          "say 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 154,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 157,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 160,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 161,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _mondead_",
+          "say 1003 ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

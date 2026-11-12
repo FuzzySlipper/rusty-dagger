@@ -1,0 +1,310 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/B0C00Y13.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "c63e66fc0127494d7b67a23ee8fbade1965bd70cdf5199ba253bad345a11cd89",
+    "byteLength": 3895
+  },
+  "document": {
+    "fileName": "B0C00Y13.txt",
+    "questName": "B0C00Y13",
+    "questNameLine": 9,
+    "displayName": "The Infested House",
+    "header": [
+      {
+        "name": "quest",
+        "value": "B0C00Y13"
+      },
+      {
+        "name": "displayname",
+        "value": "The Infested House"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                        Why should I trust you,",
+          "<ce>                          %pcn? I suppose some",
+          "<ce>                       small trial of arms is in",
+          "<ce>                      order. I certainly wouldn't",
+          "<ce>                      give you anything important,",
+          "<ce>                        seeing as you are not a",
+          "<ce>                     member of this knightly order.",
+          "<ce>                        I own a building that is",
+          "<ce>                        infested with creatures.",
+          "<ce>                       Kill them for me and maybe",
+          "<ce>                    I'll put in a good word for you."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                     I guess I'll just have to do",
+          "<ce>                      it myself. You are even more",
+          "<ce>                       worthless than I thought."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 32,
+        "lines": [
+          "<ce>                      I am only giving you 1 day",
+          "<ce>                      to clean _house_ out. After",
+          "<ce>                      that, I'll just do it myself",
+          "<ce>                    and tell everyone what a coward",
+          "<ce>                            you really are."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 39,
+        "lines": [
+          "<ce>                        Quite acceptable %pcn.",
+          "<ce>                      I'll put in a good word for",
+          "<ce>                      you with my knightly order."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 44,
+        "lines": [
+          "Very strange sounds come out of the _house_.",
+          "<--->",
+          "_qgiver_'s house has really gone to Oblivion."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 49,
+        "lines": [
+          "Poor _qgiver_ has to hire an exterminator.",
+          "<--->",
+          "It's going to cost _qgiver_ to clean that house."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 54,
+        "lines": [
+          "_house_ is finally at peace.",
+          "<--->",
+          "Those critters are out of _house_ at last."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 59,
+        "lines": [
+          "Well, you did clean out my house. What do you need?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 62,
+        "lines": [
+          "You can't even kill a few critters. Don't waste my time.",
+          "<--->",
+          "I wouldn't waste my breath talking to a lickspittle."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 68,
+        "lines": [
+          "%qdt:",
+          " In ___qgiver_,",
+          " I met _qgiver_ of the knightly order.",
+          " I can curry favor with the knights",
+          " if I rid _house_ in __house_",
+          " of its infestation for %g2."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                You have cleaned out _qgiver_'s house."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 79,
+        "lines": [
+          "<ce>  You hear scratching noises coming from the walls.",
+          "<ce>  The creatures will most certainly react poorly",
+          "<ce>  to your intrusion on their territory."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 95,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 97,
+        "lines": [
+          "Place _house_ local house"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 99,
+        "lines": [
+          "Clock _oneday_ 1.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 101,
+        "lines": [
+          "Foe _spiders_ is Spider"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 102,
+        "lines": [
+          "Foe _rats_ is Giant_rat"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 103,
+        "lines": [
+          "Foe _scorpions_ is Giant_scorpion"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 104,
+        "lines": [
+          "Foe _bats_ is Giant_bat"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 107,
+        "lines": [
+          "start timer _oneday_ ",
+          "log 1010 step 0 ",
+          "pc at _house_ set _S.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 112,
+        "lines": [
+          "_oneday_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 115,
+        "lines": [
+          "_S.01_ task:",
+          "say 1012",
+          "pick one of _S.04_ _S.05_ _S.06_ _S.07_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 119,
+        "lines": [
+          "_questdone_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 122,
+        "lines": [
+          "_success_ task:",
+          "when _S.03_ and _questdone_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 127,
+        "lines": [
+          "_S.03_ task:",
+          "killed 6 _bats_ ",
+          "killed 7 _rats_ ",
+          "killed 3 _scorpions_ ",
+          "killed 3 _spiders_ ",
+          "say 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 134,
+        "lines": [
+          "_S.04_ task:",
+          "create foe _bats_ every 2 minutes 8 times with 100% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 137,
+        "lines": [
+          "_S.05_ task:",
+          "create foe _rats_ every 2 minutes 10 times with 100% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_S.06_ task:",
+          "create foe _scorpions_ every 3 minutes 4 times with 100% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_S.07_ task:",
+          "create foe _spiders_ every 3 minutes 4 times with 100% success"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 147,
+        "lines": [
+          "_clearclick_ task:",
+          "when not _S.03_ and _questdone_ ",
+          "clear _questdone_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

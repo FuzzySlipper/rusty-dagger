@@ -1,6 +1,8 @@
+using System.Text.Json.Nodes;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
+using Daggerfall.Source.Tool.Donor;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -94,29 +96,22 @@ public sealed class DaggerfallFactionsTests
         Assert.DoesNotContain(factions.Regions.SelectMany(region => region.FactionIds), id => id is >= 150 and <= 158);
     }
 
-    [DonorFact("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv")]
-    public void Publishes_the_actual_localized_flat_captions_with_offline_addresses_and_provenance()
+    [Fact]
+    public void The_base_pack_carries_the_localized_flat_captions_with_offline_addresses_and_provenance()
     {
-        const string relative = "Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv";
-        byte[] bytes = File.ReadAllBytes(TestData.Donor(relative));
-        var baseline = DaggerfallFactionsBuilder.Build("#1\nname: X\n", "arena2/FACTION.TXT", [1], Inventory());
-        var catalog = DaggerfallFactionsBuilder.WithNpcCaptions(baseline, bytes, PublishedSourcePath.Donor(relative));
-        Assert.Equal(226, catalog.NpcCaptions.Count);
-        Assert.Equal(PublishedSourcePath.Donor(relative), catalog.NpcCaptionSource!.Path);
-        Assert.Equal("beautiful maiden", catalog.NpcCaptions.Single(value => value.Archive == 175 && value.Record == 0).Caption);
-        Assert.Equal(InternalStringsReader.Read(bytes, relative).Records.Select(value => value.Value), catalog.NpcCaptions.Select(value => value.Caption));
+        JsonNode section = JsonNode.Parse(File.ReadAllBytes(TestData.PackPayload("daggerfall.base")))!["npcCaptions"]!;
+        JsonArray captions = section["captions"]!.AsArray();
+        Assert.Equal(226, captions.Count);
+        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv", section["source"]!["path"]!.GetValue<string>());
+        Assert.Equal("beautiful maiden", captions.Single(value => value!["archive"]!.GetValue<int>() == 175 && value["record"]!.GetValue<int>() == 0)!["caption"]!.GetValue<string>());
     }
 
     [Theory]
     [InlineData("Key,Value\nnot-a-flat,caption\n")]
     [InlineData("Key,Value\n22400,caption\n22400,other\n")]
     [InlineData("Key,Value\n22400,\n")]
-    public void Malformed_caption_data_is_reported_without_silently_dropping_entries(string csv)
-    {
-        var baseline = DaggerfallFactionsBuilder.Build("#1\nname: X\n", "arena2/FACTION.TXT", [1], Inventory());
-        Assert.Throws<InvalidOperationException>(() => DaggerfallFactionsBuilder.WithNpcCaptions(baseline,
-            System.Text.Encoding.UTF8.GetBytes(csv), "fixture/Internal_Flats.csv"));
-    }
+    public void Malformed_caption_data_is_reported_without_silently_dropping_entries(string csv) =>
+        Assert.Throws<InvalidOperationException>(() => DonorNpcCaptions.Build(System.Text.Encoding.UTF8.GetBytes(csv), "fixture/Internal_Flats.csv"));
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
     [

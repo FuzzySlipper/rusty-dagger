@@ -1,0 +1,422 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C20Y22.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "cf7d164db6244a1640498060ab18535d57ed271ec88c58130a8aeb77254bdb18",
+    "byteLength": 7371
+  },
+  "document": {
+    "fileName": "R0C20Y22.txt",
+    "questName": "R0C20Y22",
+    "questNameLine": 8,
+    "displayName": "Business with Orcs",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C20Y22"
+      },
+      {
+        "name": "displayname",
+        "value": "Business with Orcs"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                   Ah, %pcf, I am glad you're here.",
+          "<ce>            If you are available for hire, I am looking for",
+          "<ce>                 someone to purvey a special _item_ to",
+          "<ce>             an acquaintance of mine. The reward, I think,",
+          "<ce>                 you will find to be extremely liberal,",
+          "<ce>              to compensate for the danger of the mission.",
+          "<ce>                          Are you interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>              Really? Too busy, perhaps. That is a shame."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                     Excellent. Here's the _item_.",
+          "<ce>                    Now, _contact_ needs to have it",
+          "<ce>          in ___contact_ in =queston_ days.  That ought to be",
+          "<ce>               plenty of time, I hope.  _contact_ will be",
+          "<ce>               easy to find -- just look for a =contact_",
+          "<ce>                  at __contact_.  By the way, you may",
+          "<ce>           encounter some orcs who do not want this shipment",
+          "<ce>          made.  I trust you know how to deal with their kind.",
+          "<ce>                               Good luck."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 36,
+        "lines": [
+          "<ce>              Speed is vital, %pcf.  Orcs have been seen",
+          "<ce>                prowling around ___questgiver_ at night.",
+          "<ce>                You had best get on the road before they",
+          "<ce>                             become bolder."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                   Ah, good to see you %pcf. And the",
+          "<ce>                 _item_ too. Excellent. Here's a little",
+          "<ce>               trinket for your trouble. I hope you like",
+          "<ce>                      red. Take care of yourself."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 48,
+        "lines": [
+          "_questgiver_ is still in the smuggling business, I hear.",
+          "<--->",
+          "<ce>  I hear the guards chased off a couple of orcs last night.  I wonder",
+          "<ce>                    what would bring them into town?"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 54,
+        "lines": [
+          "Someone found a very lovely _item_ around here recently.",
+          "<--->",
+          "I hear _questgiver_ is mad as hell at some %ra adventurer."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 59,
+        "lines": [
+          "Some =contact_ was just here, waving around some _item_.",
+          "<--->",
+          "Some jewelry store has reported the theft of a big ruby, I hear."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 64,
+        "lines": [
+          "I hear that your mission was a success, %pcf. That's good. Very good.",
+          "<--->",
+          "I was pleased to hear of the success of the delivery. What can I do for you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 69,
+        "lines": [
+          "<ce>                    You're the courier who couldn't",
+          "<ce>                  complete the delivery, yes? Wouldn't",
+          "<ce>                   I be a fool to waste my breath on",
+          "<ce>                    you again?  That's a rhetorical",
+          "<ce>                         question, by the way."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 76,
+        "lines": [
+          "%qdt: ",
+          " _questgiver_ has hired me",
+          " to deliver a _item_ to someone",
+          " in ___contact_ named _contact_.",
+          " %G will meet me at __contact_",
+          " in =queston_ days to reward me if I have not",
+          " already been minced by the orcs who are also",
+          " after the _item_."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 86,
+        "lines": [
+          "You don't want to have anything to do with that orc-lover from ___orsinium_.",
+          "<--->",
+          "_orsinium_ of ___orsinium_?  They say %g actually talks to orcs."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 91,
+        "lines": [
+          "_orsinium_ is well-known in ___orsinium_ as an orc sympathizer.",
+          "<--->",
+          "<ce>I know for a fact that _orsinium_ is a filthy orc-lover.  I've seen %g2",
+          "<ce> myself, meeting with the brutes outside of ___orsinium_.  %G should be run out",
+          "<ce>                        of town, if you ask me."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 98,
+        "lines": [
+          "_questgiver_ will deny it, but they say %g's in the smuggling business.",
+          "<--->",
+          "<ce>_questgiver_ is said to be involved in a smuggling ring, bringing in loot",
+          "<ce>                     plundered out of old Orsinium."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 104,
+        "lines": [
+          "<ce>_questgiver_ will bring the orcs down on all of us if he keeps dealing in",
+          "<ce> plunder from Orsinium.  _orsinium_ has accused _questgiver_ publicly,",
+          "<ce>              but nothing's been done about it, of course.",
+          "                                     <--->",
+          "<ce>I don't know where _questgiver_ gets it from, but I've seen %g2 wearing",
+          "<ce> some exquisite antique jewelry lately.  Ancient Orsinium craftsmanship, if",
+          "<ce>                           I'm not mistaken."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 113,
+        "lines": [
+          "<ce>                   I'm glad you sought me out, %pcn.",
+          "<ce>            You should know that the _item_ you are carrying",
+          "<ce>       was stolen from Orsinium, the ancient capital of the orcs.",
+          "<ce>              _questgiver_, like most people, treats orcs",
+          "<ce>        as beneath contempt, hence they are forced to resort to",
+          "<ce>      violence to recover their stolen property.  However, I hope",
+          "<ce>       that you are more enlightened than your employer.  If you",
+          "<ce>       give me the _item_, I will see that it is returned to its",
+          "<ce>                            rightful owners."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 124,
+        "lines": [
+          "<ce>                        Do you give the _item_?"
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 127,
+        "lines": [
+          "<ce>              I'm glad I was right about you.  Thank you,",
+          "<ce>                    %pcf.  We will not forget this."
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 131,
+        "lines": [
+          "<ce>                That is most regrettable.  Well, we all",
+          "<ce>                 have our reasons.  I hope you can live",
+          "<ce>                          with this decision."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 136,
+        "lines": [
+          "<ce>            As the orc crumples to the ground, it gasps in",
+          "<ce>                    a barely comprehensible accent,",
+          "<ce>                 \"_orsinium_ ... go ... _orsinium_ ...\""
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 161,
+        "lines": [
+          "Item _reward_ ruby"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 162,
+        "lines": [
+          "Item _item_ trinket"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 164,
+        "lines": [
+          "Person _questgiver_ group Questor anyInfo 1015 rumors 1016"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 165,
+        "lines": [
+          "Person _contact_ group Local_3.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 166,
+        "lines": [
+          "Person _orsinium_ face 184 faction Orsinium remote anyInfo 1012 rumors 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 168,
+        "lines": [
+          "Place orcCastle permanent OrsiniumCastle3"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 171,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 3 range 3 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 173,
+        "lines": [
+          "Foe _note_ is 3 Orc"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 174,
+        "lines": [
+          "Foe _F.01_ is Orc_sergeant"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 177,
+        "lines": [
+          "dialog link for location orcCastle person _orsinium_ ",
+          "start timer _queston_ ",
+          "log 1010 step 0 ",
+          "get item _item_ ",
+          "create npc _orsinium_ ",
+          "create npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 184,
+        "lines": [
+          "variable _pcgetsgold_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 185,
+        "lines": [
+          "variable _pchasitem_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 186,
+        "lines": [
+          "_queston_ task:",
+          "make _item_ permanent ",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 191,
+        "lines": [
+          "_npcclicked_ task:",
+          "toting _item_ and _contact_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 196,
+        "lines": [
+          "_S.04_ task:",
+          "clicked npc _orsinium_ ",
+          "say 1020 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 200,
+        "lines": [
+          "_S.05_ task:",
+          "say 1022 ",
+          "change repute with _orsinium_ by +30 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 204,
+        "lines": [
+          "until _S.05_ performed:",
+          "create foe _note_ every 5 minutes 12 times with 35% success ",
+          "create foe _F.01_ every 10 minutes 12 times with 35% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 208,
+        "lines": [
+          "_bookstore_ task:",
+          "get item _item_ ",
+          "say 1023 ",
+          "change repute with _orsinium_ by -10 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 213,
+        "lines": [
+          "_S.07_ task:",
+          "killed 1 _F.01_ ",
+          "add dialog for person _orsinium_ ",
+          "say 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 218,
+        "lines": [
+          "_S.08_ task:",
+          "toting _item_ and _orsinium_ clicked ",
+          "prompt 1021 yes _S.05_ no _bookstore_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

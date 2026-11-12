@@ -1,6 +1,8 @@
+using System.Text.Json.Nodes;
 using System.Text;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
+using Daggerfall.Source.Tool.Donor;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -38,16 +40,9 @@ public sealed class InternalStringsReaderTests
     }
 
     [Fact]
-    public void Merges_internal_strings_as_the_shared_text_family()
+    public void Builds_internal_strings_as_a_text_family_of_their_own()
     {
-        DaggerfallText baseText = DaggerfallTextBuilder.Build(
-            Resource((1, "Classic"u8.ToArray())),
-            "arena2/TEXT.RSC",
-            [new Daggerfall.Import.Publication.SourceInventoryRow("CNT-016", "family", "CNT-016", "text", "arena2/TEXT.RSC", "", "", "")],
-            "en");
-
-        DaggerfallText merged = DaggerfallInternalStringsBuilder.Merge(
-            baseText,
+        DaggerfallText merged = DonorInternalText.Build(
             Encoding.UTF8.GetBytes("Key,Value\nStoresA,The %ef\n"),
             "daggerfall-unity/Internal_Strings.csv",
             "en");
@@ -65,7 +60,7 @@ public sealed class InternalStringsReaderTests
         int[] source = [.. Enumerable.Repeat(0, 62)];
         source[0] = 1;
         source[7] = 1;
-        DaggerfallBuildingNameInputs inputs = DaggerfallBuildingNameInputsBuilder.Build(
+        DaggerfallBuildingNameInputs inputs = DonorBuildingNames.Build(
             Encoding.UTF8.GetBytes($"private static readonly byte[] regionRaces = {{ {string.Join(", ", source)} }};"),
             "donor/MapsFile.cs");
 
@@ -74,49 +69,15 @@ public sealed class InternalStringsReaderTests
         Assert.Equal(1, inputs.RegionNameBanks[7]);
     }
 
-    [DonorFact("Assets/Scripts/API/MapsFile.cs")]
-    public void Retains_the_donor_region_names_beside_their_bank_mapping()
+    [Fact]
+    public void The_base_pack_retains_the_donor_region_names_beside_their_bank_mapping()
     {
-        var inputs = DaggerfallBuildingNameInputsBuilder.Build(File.ReadAllBytes(TestData.Donor("Assets/Scripts/API/MapsFile.cs")), "donor/MapsFile.cs");
-        Assert.Equal(62, inputs.RegionNames.Count);
-        Assert.Equal("Alik'r Desert", inputs.RegionNames[0]);
-        Assert.Equal("Daggerfall", inputs.RegionNames[17]);
-        Assert.Equal("Cybiades", inputs.RegionNames[61]);
-    }
-
-    private static byte[] Resource(params (int Id, byte[] Text)[] records)
-    {
-        const int Header = TextResourceReader.HeaderLengthBytes;
-        const int Entry = TextResourceReader.DirectoryEntryBytes;
-        int headerLength = Entry * (records.Length + TextResourceReader.DirectoryExtraEntries);
-        int directory = Header + Entry * (records.Length + TextResourceReader.DirectoryExtraEntries);
-        int length = directory + records.Sum(record => record.Text.Length + 1);
-        byte[] bytes = new byte[length];
-        Write16(bytes, 0, headerLength);
-        int offset = directory;
-        for (int index = 0; index < records.Length; index++)
-        {
-            Write16(bytes, Header + index * Entry, records[index].Id);
-            Write32(bytes, Header + index * Entry + 2, offset);
-            records[index].Text.CopyTo(bytes, offset);
-            offset += records[index].Text.Length + 1;
-        }
-
-        int sentinel = Header + records.Length * Entry;
-        Write16(bytes, sentinel, Arena2FormatConstants.ClassicDirectorySentinelId);
-        Write32(bytes, sentinel + 2, bytes.Length);
-        return bytes;
-    }
-
-    private static void Write16(byte[] bytes, int offset, int value)
-    {
-        bytes[offset] = (byte)(value & 0xff);
-        bytes[offset + 1] = (byte)(value >> 8);
-    }
-
-    private static void Write32(byte[] bytes, int offset, int value)
-    {
-        Write16(bytes, offset, value);
-        Write16(bytes, offset + 2, value >> 16);
+        JsonNode section = JsonNode.Parse(File.ReadAllBytes(TestData.PackPayload("daggerfall.base")))!["buildingNames"]!;
+        string[] names = [.. section["regionNames"]!.AsArray().Select(name => name!.GetValue<string>())];
+        Assert.Equal(62, names.Length);
+        Assert.Equal(62, section["regionNameBanks"]!.AsArray().Count);
+        Assert.Equal("Alik'r Desert", names[0]);
+        Assert.Equal("Daggerfall", names[17]);
+        Assert.Equal("Cybiades", names[61]);
     }
 }

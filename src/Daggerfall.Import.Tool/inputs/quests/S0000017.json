@@ -1,0 +1,326 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000017.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "a59b6813d598504d650002ea03cf0daa41e50cdb2d09252ae378a53bbc3ee104",
+    "byteLength": 4808
+  },
+  "document": {
+    "fileName": "S0000017.txt",
+    "questName": "S0000017",
+    "questNameLine": 5,
+    "displayName": "Wayrest Painting",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000017"
+      },
+      {
+        "name": "displayname",
+        "value": "Wayrest Painting"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 10,
+        "lines": [
+          "<ce>                      %pcn! Welcome to Sentinel.",
+          "<ce>                  I trust you have had a comfortable",
+          "<ce>                 stay so far. Let me get right to the",
+          "<ce>                  point. My son, Prince Lhotun, says",
+          "<ce>                 you are a well-respected and trusted",
+          "<ce>                    %ra. I have need of your sort.",
+          "<ce>                  I am willing to pay you _gold_ gold",
+          "<ce>                   to infiltrate Castle Wayrest and",
+          "<ce>                    recover an heirloom of the late",
+          "<ce>                 King Lysandus for me. Will you do it?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                  Hmmm. I shall have to rethink your",
+          "<ce>                        standing in this court."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                   What bounty! There is an item, a",
+          "<ce>                  painting, that is hidden somewhere",
+          "<ce>                    within Castle Wayrest. I desire",
+          "<ce>                  this item for reasons you need not",
+          "<ce>                   worry about. Bring it to me and I",
+          "<ce>                      will pay you _gold_ gold."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 34,
+        "lines": [
+          "<ce>                    Here is your _gold_ gold, %pcf."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 37,
+        "lines": [
+          "%qdt:",
+          " Queen Akorithi has set me to infiltrate",
+          " Castle Wayrest. Somewhere in its",
+          " dungeons is a painting that she",
+          " desires. If I can place it in her hands,",
+          " she will pay me _gold_ gold."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 45,
+        "lines": [
+          "Dear %pcn,",
+          " ",
+          " Your presence in our court is desired",
+          " before the end of the next season.",
+          " Prince Lhotun has recommended you with",
+          " high praise. I await your arrival.",
+          " ",
+          "<ce>                               Akorithi",
+          "<ce>                           Queen of Sentinel"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 56,
+        "lines": [
+          "<ce>               A page girl bearing the crest of Sentinel",
+          "<ce>                stiffly presents you a crisply-pressed",
+          "<ce>              envelope. Ignoring your queries, she turns",
+          "<ce>                            and walks away."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 62,
+        "lines": [
+          "<ce>               The longer you stare, the more the image",
+          "<ce>                  in the painting seems to be moving.",
+          "<ce>                You tear your eyes away before anything",
+          "<ce>                        worse begins to happen."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 68,
+        "lines": [
+          "<ce>                 The scene in the painting shifts and",
+          "<ce>                twists. You can clearly see the inside",
+          "<ce>                of a tent. Several men in the livery of",
+          "<ce>                 Wayrest are intensely debating with a",
+          "<ce>              man bearing the coat of arms of Daggerfall.",
+          "<ce>                One of the Wayrest men slips behind the",
+          "<ce>                  Daggerfall man, draws a dagger and",
+          "<ce>                 casually slides it between his ribs.",
+          "<ce>                 The image fades as the life ebbs from",
+          "<ce>                               his body."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 80,
+        "lines": [
+          "<ce>                 Did you attempt to use the painting?"
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 83,
+        "lines": [
+          "<ce>                     Excellent. Its properties are",
+          "<ce>                 inappropriate for those not of royal",
+          "<ce>                 blood. You have shown yourself to be",
+          "<ce>                  not only loyal, but also obedient."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 89,
+        "lines": [
+          "<ce>                        You presume much, %pcn.",
+          "<ce>                  What you saw is not for the prying",
+          "<ce>                    eyes of the masses. It concerns",
+          "<ce>                 matters of royalty and will be dealt",
+          "<ce>                           with by royalty."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 106,
+        "lines": [
+          "Item _letter_ letter used 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 107,
+        "lines": [
+          "Item _item_ Lysandus_death used 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 108,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 110,
+        "lines": [
+          "Person _Akorithi_ named Queen_Akorithi atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 112,
+        "lines": [
+          "Place _wayrest_ permanent WayrestCastle"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 114,
+        "lines": [
+          "Clock _2letter_ 7.00:00 14.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 118,
+        "lines": [
+          "dialog link for item _item_ ",
+          "start timer _2letter_ ",
+          "add _Akorithi_ as questor "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 122,
+        "lines": [
+          "_2letter_ task:",
+          "give pc _letter_ notify 1012 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 125,
+        "lines": [
+          "yes task:",
+          "_item_ used do _S.05_ ",
+          "place item _item_ at _wayrest_ marker 0",
+          "add dialog for item _item_ ",
+          "log 1010 step 0 ",
+          "say AcceptQuest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 132,
+        "lines": [
+          "_no_ task:",
+          "say RefuseQuest ",
+          "drop _Akorithi_ as questor ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 137,
+        "lines": [
+          "_S.03_ task:",
+          "clicked npc _Akorithi_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_S.04_ task:",
+          "when _S.03_ and _2letter_ ",
+          "prompt QuestorOffer yes yes no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 144,
+        "lines": [
+          "_clearclick_ task:",
+          "when _S.03_ and not _2letter_ ",
+          "clear _S.03_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 148,
+        "lines": [
+          "_S.05_ task:",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 151,
+        "lines": [
+          "_S.06_ task:",
+          "toting _item_ and _Akorithi_ clicked ",
+          "give pc _gold_ ",
+          "start quest 10 10 ",
+          "prompt 1020 yes _S.07_ no _S.08_ ",
+          "drop _Akorithi_ as questor ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 159,
+        "lines": [
+          "_S.07_ task:",
+          "say 1022 ",
+          "change repute with _Akorithi_ by +10 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 163,
+        "lines": [
+          "_S.08_ task:",
+          "say 1021 ",
+          "change repute with _Akorithi_ by +15 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

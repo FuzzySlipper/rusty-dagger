@@ -1,0 +1,189 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000101.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "4e7d433d37c7dcbc33750cf117a378588ee6bb6874627e26daae631bc4c9390f",
+    "byteLength": 1551
+  },
+  "document": {
+    "fileName": "S0000101.txt",
+    "questName": "S0000101",
+    "questNameLine": 5,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000101"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1015,
+        "firstLine": 9,
+        "lines": [
+          "<ce>                 King Eadwyre has sent us to kill you and",
+          "<ce>                 deliver the Totem to him. Prepare to",
+          "<ce>                              die, %pcn.",
+          "                                     <--->",
+          "<ce>                   We want the Totem. Actually to be",
+          "<ce>                  precise, Queen Barenziah wants the",
+          "<ce>                 Totem. She's willing to pay you with",
+          "<ce>                 a quick death rather than a slow one.",
+          "                                     <--->",
+          "<ce>                  You must have had bad dealings with",
+          "<ce>                  Wayrest. They sent us to murder you",
+          "<ce>                       and bring back the Totem."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "clock",
+        "firstLine": 32,
+        "lines": [
+          "Clock _S.01_ 01:15 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 33,
+        "lines": [
+          "Clock _S.02_ 444.10:40 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 35,
+        "lines": [
+          "Foe _F.00_ is 3 Assassin"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 38,
+        "lines": [
+          "create foe _F.00_ every 100 minutes 30 times with 5% success ",
+          "start timer _S.02_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 41,
+        "lines": [
+          "_S.00_ task:",
+          "injured _F.00_ ",
+          "start timer _S.01_ ",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 46,
+        "lines": [
+          "_S.01_ task:",
+          "clear _S.01_ _S.00_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 49,
+        "lines": [
+          "_S.02_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 52,
+        "lines": [
+          "GothrydGotTotem _S.03_"
+        ],
+        "global": 1
+      },
+      {
+        "kind": "global",
+        "firstLine": 53,
+        "lines": [
+          "KingOfWormsGotTotem _S.04_"
+        ],
+        "global": 2
+      },
+      {
+        "kind": "global",
+        "firstLine": 54,
+        "lines": [
+          "GortwogGotTotem _S.05_"
+        ],
+        "global": 3
+      },
+      {
+        "kind": "global",
+        "firstLine": 55,
+        "lines": [
+          "AkorithiGotTotem _S.06_"
+        ],
+        "global": 4
+      },
+      {
+        "kind": "global",
+        "firstLine": 56,
+        "lines": [
+          "UnderkingGotTotem _S.07_"
+        ],
+        "global": 6
+      },
+      {
+        "kind": "global",
+        "firstLine": 57,
+        "lines": [
+          "EadwyreGotTotem _S.08_"
+        ],
+        "global": 7
+      },
+      {
+        "kind": "global",
+        "firstLine": 58,
+        "lines": [
+          "BrisiennaGotTotem _S.09_"
+        ],
+        "global": 8
+      },
+      {
+        "kind": "task",
+        "firstLine": 59,
+        "lines": [
+          "_S.10_ task:",
+          "when _S.03_ or _S.04_ or _S.05_ or _S.06_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 62,
+        "lines": [
+          "_S.11_ task:",
+          "when _S.07_ or _S.08_ or _S.09_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 65,
+        "lines": [
+          "_S.12_ task:",
+          "when _S.10_ or _S.11_ ",
+          "start task _S.02_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

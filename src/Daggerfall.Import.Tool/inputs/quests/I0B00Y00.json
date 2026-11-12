@@ -1,0 +1,291 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/I0B00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "607e31a822452bbce0406737338cd98ebc34b75b21ba307ea3ec2acd0d6c6445",
+    "byteLength": 4366
+  },
+  "document": {
+    "fileName": "I0B00Y00.txt",
+    "questName": "I0B00Y00",
+    "questNameLine": 8,
+    "displayName": "A Special Plant",
+    "header": [
+      {
+        "name": "quest",
+        "value": "I0B00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "A Special Plant"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                    Our healer needs some sort of a",
+          "<ce>                   special plant, called _item_, for",
+          "<ce>                     his healing potions. I cannot",
+          "<ce>                     offer you much, but I can give",
+          "<ce>                   you the holy symbol of the Temple",
+          "<ce>                     of Stendarr if you'd bring us",
+          "<ce>                    some _item_ for our sacred duty."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                    Unfortunately, such is a common",
+          "<ce>                    response. We cannot offer great",
+          "<ce>                      piles of gold and jewelry to",
+          "<ce>                     entice questers. Nevertheless,",
+          "<ce>                     I am particularly disappointed",
+          "<ce>                        in you, %pcf. I expected",
+          "<ce>                           a nobler response."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                  You have a kind heart indeed, %pcf.",
+          "<ce>                  The _item_ we need is at a place in",
+          "<ce>                     ___chemist_ called __chemist_.",
+          "<ce>                           A =chemist_ named",
+          "<ce>                         _chemist_ will give it",
+          "<ce>                   to us for free if you are there in",
+          "<ce>                    =1stparton_ days or less. Please",
+          "<ce>                    do hurry, %pcf. We have a great",
+          "<ce>                    many injured innocents to heal."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                    I am always happy to talk with",
+          "<ce>                         thee, %pcf, but please",
+          "<ce>                       do not delay in getting us",
+          "<ce>                              that _item_."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                    Is that _item_ you have, %pcf?",
+          "<ce>                   Oh, thank Stendarr. Please accept",
+          "<ce>                      our humble offering of this",
+          "<ce>                          symbol of our order."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 54,
+        "lines": [
+          "The Temple of Stendarr is the only purely philanthropic order I can think of.",
+          "<--->",
+          "Mother waits for the healer at the Temple of Stendarr. Her condition is bad."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 59,
+        "lines": [
+          "My sister died waiting for that damned healer at the Temple of Stendarr.",
+          "<--->",
+          "I hear the Temple's healer couldn't get the herbs he needed in time."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 64,
+        "lines": [
+          "They had a few scary moments at the Temple. More injured people than usual.",
+          "<--->",
+          "The god Stendarr was watching over His Temple, that's for certain."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 69,
+        "lines": [
+          "It would be unkind not to speak with one who brought us the _item_, %pcf."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 72,
+        "lines": [
+          "I will control my temper, but didst thou forget the _item_, %pcf?",
+          "<--->",
+          "Perhaps you'd like to speak to those who died because you did not get the _item_."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 77,
+        "lines": [
+          "<ce>                     Here's the _item_, %pcf. Now",
+          "<ce>                    hurry back to the Temple. There are",
+          "<ce>                    many there waiting to be healed."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 82,
+        "lines": [
+          "%qdt:",
+          " The Temple of Stendarr in",
+          " ___questgiver_ has offered me",
+          " the symbol of their order if I would",
+          " find some _item_ and deliver it to them",
+          " in =1stparton_ days.",
+          " Someone named _chemist_ in",
+          " ___chemist_ in a place called",
+          " __chemist_ is willing to give some",
+          " if I am able to get there in time."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 106,
+        "lines": [
+          "Item _reward_ common_symbol"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 107,
+        "lines": [
+          "Item _item_ large_plant"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 109,
+        "lines": [
+          "Person _questgiver_ face 112 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 110,
+        "lines": [
+          "Person _chemist_ group Chemist remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 113,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 117,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1030 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 120,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 123,
+        "lines": [
+          "variable _pcgetsgold_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 124,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _chemist_ say 1010 ",
+          "get item _item_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 128,
+        "lines": [
+          "_qgclicked_ task:",
+          "toting _item_ and _questgiver_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 133,
+        "lines": [
+          "_qgclick2_ task:",
+          "clicked npc _questgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 136,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclick2_ and not _qgclicked_",
+          "say 1003",
+          "clear _clearclick_ _qgclick2_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 141,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 142,
+        "lines": [
+          "variable _S.05_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_S.06_ task:",
+          "when _npcclicked_ and _1stparton_ ",
+          "make _item_ permanent "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

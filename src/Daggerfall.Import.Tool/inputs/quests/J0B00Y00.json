@@ -1,0 +1,319 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/J0B00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "2e91634ae20fdc3d686eb87780f0b171df52ef2736b1dedb29c78bd767b4b047",
+    "byteLength": 4057
+  },
+  "document": {
+    "fileName": "J0B00Y00.txt",
+    "questName": "J0B00Y00",
+    "questNameLine": 8,
+    "displayName": "The Bounty",
+    "header": [
+      {
+        "name": "quest",
+        "value": "J0B00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "The Bounty"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>               If you are available for employment, I may",
+          "<ce>                 have a job for you. It's a messy little",
+          "<ce>                  affair, involving punishing a thief.",
+          "<ce>               It will mean a _reward_ gold piece reward.",
+          "<ce>                 Sounds like something you'd be at all",
+          "<ce>                             interested in?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                Disappointing. Well, we'll find someone",
+          "<ce>                           else doubtlessly."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                We seldom take a vigilante stand in our",
+          "<ce>                   affairs, but in this case, we feel",
+          "<ce>                 justified. This thief, you see, stole",
+          "<ce>                 directly from one of our caravans and",
+          "<ce>                is extorting us for use of the highway.",
+          "<ce>               Such nerve. You will find the little thug",
+          "<ce>                    in a hideout called ___mondung_.",
+          "<ce>                      Be back in =1stparton_ days."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                    You had best move along, %pcf.",
+          "<ce>                     You only have =1stparton_ days",
+          "<ce>                          to kill that crook."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 40,
+        "lines": [
+          "<ce>                         Very good job, %pcf.",
+          "<ce>                     That ought to discourage other",
+          "<ce>                    highwaymen. Here's your _reward_",
+          "<ce>                            gold. Thank you."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 46,
+        "lines": [
+          "That footpad is single-handedly ruining the economy.",
+          "<--->",
+          "They think that highwayman is a thief, but the crook is highly trained with a blade."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 51,
+        "lines": [
+          "That robber moved to a different hideout, but the roads still aren't safe.",
+          "<--->",
+          "I don't know why they can't arrest that highwayman. It ought to be easy."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 56,
+        "lines": [
+          "The merchants are pretty happy that they finally got that thief.",
+          "<--->",
+          "I don't care that they got that nightblade. The roads still aren't safe."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 61,
+        "lines": [
+          "Of course I'll chat with you, %pcf. I remember those highwaymen you killed."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 64,
+        "lines": [
+          "The Resolution continues to lose gold to those highwaymen. Not very amusing."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 67,
+        "lines": [
+          "<ce>                   You must be from the Resolution.",
+          "<ce>                     Prepare to die, bounty hunter!"
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 71,
+        "lines": [
+          "%qdt:",
+          " The Resolution of Zenithar",
+          " has sent me to kill a thief who has been ransacking",
+          " their caravans. ___mondung_ is",
+          " the crook's hideout. I need to",
+          " kill the thief and be back at",
+          " ___questgiver_ in =1stparton_ days."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 91,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 93,
+        "lines": [
+          "Person _questgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 95,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 97,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 99,
+        "lines": [
+          "Foe _monster1_ is Nightblade"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 100,
+        "lines": [
+          "Foe _monster2_ is Assassin"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 101,
+        "lines": [
+          "Foe _monster3_ is Thief"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 102,
+        "lines": [
+          "Foe _monster4_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 105,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1030 step 0 ",
+          "pick one of _S.05_ _S.06_ _S.07_ _S.08_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 110,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _mondead_ ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 115,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster4_ ",
+          "killed 1 _monster2_ ",
+          "killed 1 _monster1_ ",
+          "killed 1 _monster3_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 121,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 124,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 127,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _mondead_",
+          "say 1003 ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 132,
+        "lines": [
+          "_S.05_ task:",
+          "place foe _monster1_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 135,
+        "lines": [
+          "_S.06_ task:",
+          "place foe _monster2_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 138,
+        "lines": [
+          "_S.07_ task:",
+          "place foe _monster3_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 141,
+        "lines": [
+          "_S.08_ task:",
+          "place foe _monster4_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 144,
+        "lines": [
+          "_S.09_ task:",
+          "injured _monster4_ saying 1020 ",
+          "injured _monster3_ saying 1020 ",
+          "injured _monster2_ saying 1020 ",
+          "injured _monster1_ saying 1020 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

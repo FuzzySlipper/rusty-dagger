@@ -21,6 +21,7 @@ internal static class Program
         TextureLeavesCommand.Command,
         ResidualPathsCommand.Command,
         MapArtCommand.Command,
+        DonorDriftCommand.Command,
         // Local image-generation reference sets (never product content).
         ReferenceExportCommands.Items,
         ReferenceExportCommands.Spells,

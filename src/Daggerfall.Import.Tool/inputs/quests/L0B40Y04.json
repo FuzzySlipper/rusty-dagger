@@ -1,0 +1,343 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/L0B40Y04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "4fc1b39a045921964527c6dff2c83fa16b5acb153af43da0e977f0ca2db12a33",
+    "byteLength": 4962
+  },
+  "document": {
+    "fileName": "L0B40Y04.txt",
+    "questName": "L0B40Y04",
+    "questNameLine": 9,
+    "displayName": "Concerns of a Noble",
+    "header": [
+      {
+        "name": "quest",
+        "value": "L0B40Y04"
+      },
+      {
+        "name": "displayname",
+        "value": "Concerns of a Noble"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                 This little excursion is not for just",
+          "<ce>                  anyone, but I feel you'd enjoy the",
+          "<ce>                 challenge of the experience. We have",
+          "<ce>                a client who wants to call accounts on",
+          "<ce>                    a member of the royal family of",
+          "<ce>                       ___mondung_. When I heard",
+          "<ce>                  that, I thought of you. Interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                    Oh, well. Probably wise, but it",
+          "<ce>                      does smack a little of ...",
+          "<ce>                        dare I say, cowardice?"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                 I just knew you could not resist this",
+          "<ce>                    one. Fair warning, your target,",
+          "<ce>                  _knight_ is no pampered princeling.",
+          "<ce>                  The client is also one of the royal",
+          "<ce>                family, worried that _knight_ is going",
+          "<ce>                 to worm a way to the throne. And from",
+          "<ce>                 what I've heard, %g has the power to",
+          "<ce>                  do just that. Our client wants %g2",
+          "<ce>               extinct in =1stparton_ days. We will give",
+          "<ce>                     you that time to account and",
+          "<ce>                      return to make your report.",
+          "<ce>                   May Mephala walk with you, %pcf."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                   I don't know who you think you've",
+          "<ce>                    killed, but it wasn't _knight_.",
+          "<ce>                 Get your butt over to the palace and",
+          "<ce>                    do what we were contracted for."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                    Beautiful, %pcf, truly. Brings",
+          "<ce>                 tears to these weary eyes. As lovely",
+          "<ce>                  an accounting as I've ever seen. I",
+          "<ce>                  feel like writing a poem. Why don't",
+          "<ce>                you take your _reward_ gold pieces and",
+          "<ce>                   get the hell out of here so I can",
+          "<ce>                  write a ballad about it? Seriously,",
+          "<ce>                         I'm very proud, %pcf."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 58,
+        "lines": [
+          "I know what I'm talking about. _knight_ is going to be our next ruler.",
+          "<--->",
+          "Someday _knight_ is going to be our ruler. Then we'll know real tyranny."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 63,
+        "lines": [
+          "_knight_ left the court for a while, but %g'll be back. That's for certain.",
+          "<--->",
+          "And the royal opera continues. I wonder what made _knight_ leave court."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 68,
+        "lines": [
+          "They ought to declare it a %reg holiday. _knight_ death day! Hooray!",
+          "<--->",
+          "I can't help but be suspicious about _knight_'s sudden death. Too convenient."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 73,
+        "lines": [
+          "I'm still thinking about that knight's accounting. It was truly sublime, %pcf."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                 I know it was a difficult assignment.",
+          "<ce>                Nigh impossible. But still, you failed,",
+          "<ce>                 and I have no tolerance for failure."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 81,
+        "lines": [
+          "%qdt:",
+          " My latest contract for the Dark Brotherhood",
+          " in ___questgiver_ is a noble at _mondung_,",
+          " in ___mondung_, by the name of",
+          " _knight_. The deed must be",
+          " done in =1stparton_ days."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 89,
+        "lines": [
+          "<ce>                     \"I could...have been your...",
+          "<ce>                    next...ruler,\" moans _knight_.",
+          "<ce>                   The contract has been fulfilled."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 109,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 111,
+        "lines": [
+          "Person _questgiver_ face 112 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 112,
+        "lines": [
+          "Person _knight_ face 5 faction The_Host_of_the_Horn male remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 114,
+        "lines": [
+          "Place _mondung_ remote palace"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 116,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 18 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 118,
+        "lines": [
+          "Foe _F.00_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 119,
+        "lines": [
+          "Foe _F.01_ is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 120,
+        "lines": [
+          "Foe _F.02_ is Warrior"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 121,
+        "lines": [
+          "Foe _F.03_ is Nightblade"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 124,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1020 step 0 ",
+          "pick one of _S.06_ _S.07_ _S.08_ _onehour_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 128,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _S.02_ ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 133,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 136,
+        "lines": [
+          "_S.02_ task:",
+          "killed 1 _F.01_ saying 1021 ",
+          "killed 1 _F.02_ saying 1021 ",
+          "killed 1 _F.03_ saying 1021 ",
+          "killed 1 _F.00_ saying 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 142,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 146,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 147,
+        "lines": [
+          "_S.06_ task:",
+          "place foe _F.00_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_S.07_ task:",
+          "place foe _F.01_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 153,
+        "lines": [
+          "_S.08_ task:",
+          "place foe _F.02_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 156,
+        "lines": [
+          "_onehour_ task:",
+          "place foe _F.03_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 159,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.02_ ",
+          "say 1003",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

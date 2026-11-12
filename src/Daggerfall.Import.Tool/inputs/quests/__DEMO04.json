@@ -1,0 +1,125 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "3797ac769041bd004df54d1c3b00c4e424443fd0316fb84e554ef37cf857ebea",
+    "byteLength": 2173
+  },
+  "document": {
+    "fileName": "__DEMO04.txt",
+    "questName": "__DEMO04",
+    "questNameLine": 3,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO04"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1010,
+        "firstLine": 8,
+        "lines": [
+          "<ce>             A redfaced courier startles you with a cry of",
+          "<ce>                   \"Letter for %pcn! Hey that must be",
+          "<ce>                 you. Here, take this. Gotta go. Other",
+          "<ce>                         deliveries to be made."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 14,
+        "lines": [
+          "<ce>              Ah, thank you for responding to my letter,",
+          "<ce>                     %pcf. I am Lady Brisienna. Let",
+          "<ce>              me bring you to date on affairs. The spectre",
+          "<ce>                 of King Lysandus haunts the streets of",
+          "<ce>               Daggerfall at night. Trying to communicate",
+          "<ce>                with him is futile. He will occasionally",
+          "<ce>               moan the word \"Vengeance,\" but that is the",
+          "<ce>                only coherent word I have ever heard him",
+          "<ce>              utter. If you are ever in Daggerfall, do not",
+          "<ce>              wander the city at night. You are certain to",
+          "<ce>                  be attacked by his legion of ghosts."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 27,
+        "lines": [
+          "%qdt:",
+          " I met with Lady Brisienna in a tavern room. She",
+          " told me that the three major powers of the Iliac",
+          " bay are Daggerfall, Wayrest, and Sentinel. If I",
+          " am to investigate the mystery of Lysandus' ghost,",
+          " I should start by speaking with the royal families",
+          " of these fiefdoms."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 36,
+        "lines": [
+          "Lady Brisienna has taken up lodging at _dirtypit_ in __dirtypit_."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 39,
+        "lines": [
+          "<ce>                       I'll give you a hint %ra.",
+          "<ce>                    If you want to succeed in magic,",
+          "<ce>                         join the mages guild."
+        ]
+      },
+      {
+        "id": 1060,
+        "firstLine": 44,
+        "lines": [
+          "<ce>                  A small tip for you. Put your money",
+          "<ce>                  in the bank of %reg. Have them give",
+          "<ce>                   you letters of credit. They hardly",
+          "<ce>                             weigh a thing."
+        ]
+      },
+      {
+        "id": 1070,
+        "firstLine": 50,
+        "lines": [
+          "<ce>           For this tutorial to continue, you should go to a",
+          "<ce>           large city, such as the city of Daggerfall. We'll",
+          "<ce>           pick up the lessons again in =2dagger_ days. This",
+          "<ce>              should give you plenty of time to get there."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "clock",
+        "firstLine": 58,
+        "lines": [
+          "Clock _2dagger_ 6.22:40 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 59,
+        "lines": [
+          "Place _dirtypit_ remote tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 62,
+        "lines": [
+          "say 1040"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

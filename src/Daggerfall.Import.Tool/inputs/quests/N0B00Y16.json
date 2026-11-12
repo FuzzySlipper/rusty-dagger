@@ -1,0 +1,510 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/N0B00Y16.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "b48b688cf1314f95f34ecb18578b3b5cfb67fb2b3bb32b6735e93a1edbafcb19",
+    "byteLength": 7819
+  },
+  "document": {
+    "fileName": "N0B00Y16.txt",
+    "questName": "N0B00Y16",
+    "questNameLine": 9,
+    "displayName": "Open a Chest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "N0B00Y16"
+      },
+      {
+        "name": "displayname",
+        "value": "Open a Chest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                   %pct, I need someone who can cast",
+          "<ce>                    the Open spell.  Please tell me",
+          "<ce>                     you have learned this by now."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 19,
+        "lines": [
+          "<ce>                  Really, you need to devote yourself",
+          "<ce>                    to your studies if you expect to",
+          "<ce>                         advance in the Guild."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                 Well, that's a start.  The job I need",
+          "<ce>                 you for is quite simple.  Even a child",
+          "<ce>                could probably do it, but here you are.",
+          "<ce>                  A local merchant, _merchant_, bought",
+          "<ce>                an antique chest, but has been unable to",
+          "<ce>                  get it open.  The best locksmiths in",
+          "<ce>                     __shop_ have tried and failed,",
+          "<ce>                so %g has asked us if we can help.  Now,",
+          "<ce>              we really don't have time for such trifling",
+          "<ce>                  matters, but the Guild could use %g3",
+          "<ce>                patronage, so I agreed to send someone.",
+          "<ce>                From what I am told, it sounds like one",
+          "<ce>                   of _mage_'s trick boxes.  %G made",
+          "<ce>                 hundreds of them in %g3 day, mainly as",
+          "<ce>                 gifts for %g3 friends, and they still",
+          "<ce>               turn up from time to time, as the workman-",
+          "<ce>               ship really is outstanding... where was I?",
+          "<ce>                Oh yes, well, the secret to these boxes",
+          "<ce>               is that they are almost impossible to open",
+          "<ce>              in any way except by the use of the simple,",
+          "<ce>               standard Open spell.  %G specifically made",
+          "<ce>             them resistant to the fancy alternative spells",
+          "<ce>              %g3 friends liked to use.  Yes, %g tended to",
+          "<ce>              waste %g3 considerable talents on jokes like",
+          "<ce>                 this.  A real shame.  Well, run along."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                %pct, leave me in peace and run along.",
+          "<ce>                    I have work to do and so do you,",
+          "<ce>                          if I'm not mistaken."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 56,
+        "lines": [
+          "<ce>                  Eh?  What do you want?  Oh yes, the",
+          "<ce>                   trick box.  I trust it didn't give",
+          "<ce>                   you any difficulty.  A little good",
+          "<ce>                     publicity for the Mages Guild",
+          "<ce>                     and all that rot.  Jolly good."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 63,
+        "lines": [
+          "<ce>        Did you hear about _merchant_?  %G bought an old chest",
+          "<ce>                and now %g can't open it.  What a hoot!"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 67,
+        "lines": [
+          "<ce>_merchant_ finally gave up on his magic box and sold it to someone else."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 70,
+        "lines": [
+          "<ce>  _merchant_ got the Mages Guild to open %g3 trick box, and it turned",
+          "<ce>            out to be empty!  At least that's what I heard."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 74,
+        "lines": [
+          "<ce>        Hullo, %pcn.  I remember you.  _mage_'s magic box, yes?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 77,
+        "lines": [
+          "<ce>         For heaven's sake, what do you want now?  You're the",
+          "<ce>      fool that couldn't even open that trick box of _merchant_'s."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 81,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of ___questgiver_'s",
+          " Mages Guild has asked me to open",
+          " an old chest for _merchant_,",
+          " a local merchant.  _questgiver_",
+          " believes it is probably a trick",
+          " box that only a standard Open",
+          " spell will open.  I suppose",
+          " I should return to see %g2 when",
+          " I am done."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 93,
+        "lines": [
+          "<ce>                 The Mages Guild sent you?  Very good.",
+          "<ce>                   I knew my old friend _questgiver_",
+          "<ce>                   wouldn't let me down.  Here is the",
+          "<ce>                   box.  I hope you have some idea of",
+          "<ce>                  how to open it.  I'm at my wit's end."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 100,
+        "lines": [
+          "<ce>                  As you cast Open on the chest, the",
+          "<ce>                 lid springs open and an imp flies out.",
+          "<ce>                                    ",
+          "<ce>                \"Happy birthday, =mage2_ you old fart!\"",
+          "<ce>                   the imp cackles in an unnaturally",
+          "<ce>                          deep gravelly voice."
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 108,
+        "lines": [
+          "<ce>                  You hear the lock click as you cast",
+          "<ce>                  Open on the chest.  Inside is a wand",
+          "<ce>                  inscribed: \"To =mage3_ on your 110th",
+          "<ce>                   birthday.  Use me for a preview of",
+          "<ce>                         your 120th birthday!\""
+        ]
+      },
+      {
+        "id": 1042,
+        "firstLine": 115,
+        "lines": [
+          "<ce>                Smoke pours from the chest as you cast",
+          "<ce>               Open on it.  The lid pops open, revealing",
+          "<ce>                           an engraved card:",
+          "<ce>                                    ",
+          " Dear =mage4_,",
+          " ",
+          " Hope you like the new place.  Did",
+          " you remember to call the exterminator",
+          " before you moved in?",
+          " ",
+          " Your friend,",
+          " ",
+          " _mage_"
+        ]
+      },
+      {
+        "id": 1043,
+        "firstLine": 130,
+        "lines": [
+          "<ce>                    The lid of the chest pops open.",
+          "<ce>                      Inside is nothing but a few",
+          "<ce>                       scraps of faded confetti."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 135,
+        "lines": [
+          "<ce>                    Tell _questgiver_ I appreciate",
+          "<ce>                   %g2 sending you to help... I guess.",
+          "<ce>                     Of course, if I had known what",
+          "<ce>                      was inside, I might not have",
+          "<ce>                       been so eager to open it!"
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 142,
+        "lines": [
+          "<ce>                     If you can't open it, you may",
+          "<ce>                        as well keep it.  I have",
+          "<ce>                         no use for it anymore."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 166,
+        "lines": [
+          "Item _crn_ item class 1 subclass 8"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 168,
+        "lines": [
+          "Item _I.01_ wand"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 170,
+        "lines": [
+          "Person _questgiver_ face 86 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 171,
+        "lines": [
+          "Person _merchant_ face 87 group Pawnbroker female"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 172,
+        "lines": [
+          "Person _mage_ face 1 group Spellcaster remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 174,
+        "lines": [
+          "Place _shop_ local pawnshop"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 176,
+        "lines": [
+          "Clock _qtime_ 2.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 178,
+        "lines": [
+          "Foe _mage2_ is Battle_mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 179,
+        "lines": [
+          "Foe _mage3_ is Sorceror"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 180,
+        "lines": [
+          "Foe _imp_ is Imp"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 181,
+        "lines": [
+          "Foe _rats_ is Giant_rat"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 182,
+        "lines": [
+          "Foe _bats_ is Giant_bat"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 183,
+        "lines": [
+          "Foe _mage4_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 184,
+        "lines": [
+          "Foe _skeleton_ is Skeletal_warrior"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 187,
+        "lines": [
+          "start timer _qtime_ ",
+          "log 1020 step 0 ",
+          "place npc _merchant_ at _shop_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 191,
+        "lines": [
+          "_qtime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 194,
+        "lines": [
+          "_clickqgiver_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 197,
+        "lines": [
+          "_S.10_ task:",
+          "toting _crn_ and _merchant_ clicked "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 200,
+        "lines": [
+          "_S.02_ task:",
+          "clicked npc _merchant_ ",
+          "cast Open spell do _S.07_ ",
+          "get item _crn_ ",
+          "say 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 206,
+        "lines": [
+          "_a3_ task:",
+          "create foe _imp_ every 0 minutes 1 times with 100% success ",
+          "say 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 210,
+        "lines": [
+          "_a4_ task:",
+          "_I.01_ used do _S.09_ ",
+          "get item _I.01_ ",
+          "say 1041 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 215,
+        "lines": [
+          "_a5_ task:",
+          "create foe _rats_ every 0 minutes 1 times with 100% success ",
+          "create foe _bats_ every 0 minutes 1 times with 100% success ",
+          "say 1042 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 220,
+        "lines": [
+          "_a6_ task:",
+          "say 1043 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 223,
+        "lines": [
+          "_S.07_ task:",
+          "have _crn_ set _S.08_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 226,
+        "lines": [
+          "_S.08_ task:",
+          "pick one of _a3_ _a4_ _a5_ _a6_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 229,
+        "lines": [
+          "_S.09_ task:",
+          "create foe _skeleton_ every 0 minutes 1 times with 100% success ",
+          "make _I.01_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 233,
+        "lines": [
+          "_S.11_ task:",
+          "when _S.08_ and _S.10_ ",
+          "say 1050 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 237,
+        "lines": [
+          "_success_ task:",
+          "when _S.11_ and _clickqgiver_ ",
+          "give pc nothing ",
+          "unset _clickqgiver_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 243,
+        "lines": [
+          "_clearclick_ task:",
+          "when _clickqgiver_ and not _S.11_",
+          "say 1003",
+          "clear _clearclick_ _clickqgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 248,
+        "lines": [
+          "_S.13_ task:",
+          "when _S.10_ and not _S.08_ ",
+          "get item _crn_ ",
+          "say 1051 ",
+          "clear _S.10_",
+          "clear _S.13_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,391 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/M0B00Y06.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "03a82ff244363a99289ff18076fe9f1b3290847d7a3b7338f0fd00a0abb34547",
+    "byteLength": 4603
+  },
+  "document": {
+    "fileName": "M0B00Y06.txt",
+    "questName": "M0B00Y06",
+    "questNameLine": 9,
+    "displayName": "Wild Animal",
+    "header": [
+      {
+        "name": "quest",
+        "value": "M0B00Y06"
+      },
+      {
+        "name": "displayname",
+        "value": "Wild Animal"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                            I am _qgiver_.",
+          "<ce>                We have a request from a local citizen.",
+          "<ce>                It seems a wild animal has gotten into",
+          "<ce>                 his place. We need someone to go kill",
+          "<ce>              the thing. The guild will pay _gold_ gold.",
+          "<ce>                         Do you want it %pcn?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                      I'm sure someone else will",
+          "<ce>                      be willing to take care of",
+          "<ce>                          this nuisance bear."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                    \"OK, %pcf. Get over to _house_",
+          "<ce>                 here in town. Get it done in one day.",
+          "<ce>               Nobody wants an animal left roaming around",
+          "<ce>                in their place. Come back here when the",
+          "<ce>                 beast is dead and I'll have your pay",
+          "<ce>                           waiting for you.\"",
+          "<ce>                                    ",
+          "<ce>                  _qgiver_ calls out, \"Hey, what kind",
+          "<ce> of animal is it in _house_?\""
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 38,
+        "lines": [
+          "<ce>                           Well done, %pcf.",
+          "<ce>                       Here's your _gold_ gold."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 42,
+        "lines": [
+          "Did you hear? An animal got into a building in town. I hope they kill it soon."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 45,
+        "lines": [
+          "That creature mauled some woman before being chased out of town. What a pity."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 48,
+        "lines": [
+          "The Fighters Guild killed that bear that got into _house_. It's a good thing we have them around."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 51,
+        "lines": [
+          "Good job killin' that beast. What can I do for you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 54,
+        "lines": [
+          "I hear that a critter ate the guy that owned the house. Gave us a bad rep. Try to do better next time."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 57,
+        "lines": [
+          "%qdt:",
+          " The Fighters Guild of ___qgiver_",
+          " has asked me to slay a wild beast which",
+          " has gotten into _house_. It's got to",
+          " be done in one day."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 64,
+        "lines": [
+          "<ce>                           The bear is dead."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 67,
+        "lines": [
+          "<ce>                          The harpy is dead."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 70,
+        "lines": [
+          "<ce>                          The spider is dead."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 73,
+        "lines": [
+          "<ce>                          The tiger is dead."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                   You hear a voice call out from an",
+          "<ce>                      upper floor, \"It's a bear.\""
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 80,
+        "lines": [
+          "<ce>                   You hear a voice call out from an",
+          "<ce>                      upper floor, \"It's a harpy.\""
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 84,
+        "lines": [
+          "<ce>                   You hear a voice call out from an",
+          "<ce>                     upper floor, \"It's a spider.\""
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 88,
+        "lines": [
+          "<ce>                   You hear a voice call out from an",
+          "<ce>                      upper floor, \"It's a tiger.\""
+        ]
+      },
+      {
+        "id": 1080,
+        "firstLine": 92,
+        "lines": [
+          "<ce>                 By the way, since you seemed to have",
+          "<ce>                  so much fun with that beast, here's",
+          "<ce>              a map to ___newdung_.  Knock yourself out."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 110,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 112,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 114,
+        "lines": [
+          "Place _house_ local random"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 115,
+        "lines": [
+          "Place _newdung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 117,
+        "lines": [
+          "Clock _2dung_ 1.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 119,
+        "lines": [
+          "Foe _bear_ is Grizzley_bear"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 120,
+        "lines": [
+          "Foe _tiger_ is Sabretooth_tiger"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 121,
+        "lines": [
+          "Foe _harpy_ is Harpy"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 122,
+        "lines": [
+          "Foe _spider_ is Spider"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 125,
+        "lines": [
+          "start timer _2dung_ ",
+          "reveal _house_ ",
+          "log 1010 step 0 ",
+          "pick one of _map_ _nomap_ _nomap_ _nomap_ ",
+          "pick one of _monster1_ _monster2_ _monster3_ _monster4_ ",
+          "create npc at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 132,
+        "lines": [
+          "_2dung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 135,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _spider_ saying 1013 ",
+          "killed 1 _tiger_ saying 1014 ",
+          "killed 1 _harpy_ saying 1012 ",
+          "killed 1 _bear_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 141,
+        "lines": [
+          "_S.02_ task:",
+          "when _qgclicked_ and _mondead_ ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 146,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _mondead_ ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 153,
+        "lines": [
+          "variable _map_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 154,
+        "lines": [
+          "variable _nomap_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 155,
+        "lines": [
+          "_S.06_ task:",
+          "when _map_ and _S.02_ ",
+          "reveal _newdung_ readmap",
+          "    say 1080 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 160,
+        "lines": [
+          "_monster1_ task:",
+          "say 1021 ",
+          "place foe _bear_ at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 164,
+        "lines": [
+          "_monster2_ task:",
+          "say 1022 ",
+          "place foe _harpy_ at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 168,
+        "lines": [
+          "_monster3_ task:",
+          "say 1023 ",
+          "place foe _spider_ at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 172,
+        "lines": [
+          "_monster4_ task:",
+          "say 1024 ",
+          "place foe _tiger_ at _house_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

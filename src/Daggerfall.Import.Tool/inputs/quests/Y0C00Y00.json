@@ -1,0 +1,307 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/Y0C00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "3c75140d3329d46a2e32f6e5ed4b0dc0c5a3f6ad83992eed639f2e41af9cc459",
+    "byteLength": 5090
+  },
+  "document": {
+    "fileName": "Y0C00Y00.txt",
+    "questName": "Y0C00Y00",
+    "questNameLine": 8,
+    "displayName": "Mehrunes Dagon's Quest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "Y0C00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Mehrunes Dagon's Quest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                  So you want power? Yes, many covet",
+          "<ce>                    power, yes, but so few know why.",
+          "<ce>                      Want you _artifact_? Is very",
+          "<ce>                       special, _artifact_. Very",
+          "<ce>                   nice, yes yes. Just, do one thing,",
+          "<ce>                   and you have it, mmmm. Child have",
+          "<ce>                   I that needs to be punished, yes.",
+          "<ce>                      You will do this for lovely,",
+          "<ce>                        lovely _artifact_, yes?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 24,
+        "lines": [
+          "<ce>               Scruh! Mortalcreature say no to Mehrunes",
+          "<ce>               Dagon! Mortalcreature know you time means",
+          "<ce>              nothing to Dagon, he remembers insult, yes.",
+          "<ce>                Hamita too black for Mortalcreature, no,",
+          "<ce>                        I ... will ... remember",
+          "<ce>                                 %pcn."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 32,
+        "lines": [
+          "<ce>              Mmm, Mortalcreature brave, good good. Now,",
+          "<ce>                  go to ___mondung_, kill frost daedra",
+          "<ce>                there. It thinks safe, ha, we slaughter",
+          "<ce>               frostflesh tight and everywhere. You kill",
+          "<ce>                        it and go =contact_, %g2",
+          "<ce>                        _contact_ in __tavern_.",
+          "<ce>                   Got good good _artifact_ for you.",
+          "<ce>                  Kill frost daedra and see _contact_",
+          "<ce>                   before =1stparton_ Mundal nights.",
+          "<ce>                       Go now, %pcn. Dagon waits."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 44,
+        "lines": [
+          "<ce>                         Hello. %pcn, I trust?",
+          "<ce>                      I'm _contact_. If you would",
+          "<ce>              permit me, a word of advice: Mehrunes Dagon",
+          "<ce>              may seem like a witless toad, but he isn't.",
+          "<ce>               He knows that the frost daedra is not yet",
+          "<ce>              dead, and you would do well to fulfill your",
+          "<ce>                           contract with him."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 53,
+        "lines": [
+          "<ce>                         Ah, you're %pcn, yes?",
+          "<ce>                      _contact_ here. I understand",
+          "<ce>               you successfully corrected one of Mehrunes",
+          "<ce>                 Dagon's straying children. Excellent.",
+          "<ce>                        Well, here is _artifact_",
+          "<ce>               you were promised. Enjoy it. I don't think",
+          "<ce>                    that we'll meet again. Goodbye."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 62,
+        "lines": [
+          "There are cold winds blowing in from the direction of ___mondung_.",
+          "<--->",
+          "It's rather more cold lately."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 67,
+        "lines": [
+          "Crazy =contact_ came through here, screaming about a %ra adventurer.",
+          "<--->",
+          "The stars of Mehrunes Dagon are blazing tonight."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 72,
+        "lines": [
+          "It's considerably warmer than it has been lately.",
+          "<--->",
+          "The weather isn't as biting as it used to be."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 77,
+        "lines": [
+          "Mehrunes Dagon is the Lord of Destruction, the most violent of the Daedra.",
+          "<--->",
+          "Dagon seems like an ignorant brute, but he is really rather cunning."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 82,
+        "lines": [
+          "Really creepy =contact_ called _contact_ -- I saw %g2 in _tavern_.",
+          "<--->",
+          "Over %di of here there's a place called _tavern_. Look there."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 87,
+        "lines": [
+          "<ce>                 I have no idea what _artifact_ does."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 90,
+        "lines": [
+          "%qdt: ",
+          " The Daedric Prince Mehrunes Dagon",
+          " wants me to slay a frost daedra in",
+          " ___mondung_.  After the extermination",
+          " is complete, I have =1stparton_ days",
+          " to meet with _contact_ and receive",
+          " _artifact_ for slaying the frost",
+          " daedra for Mehrunes Dagon.",
+          " %G will wait for me at _tavern_",
+          " in __tavern_."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 102,
+        "lines": [
+          "Dagon's prey returns to Oblivion."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 123,
+        "lines": [
+          "Item _artifact_ artifact Mehrunes_Razor anyInfo 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 125,
+        "lines": [
+          "Person _questgiver_ face 112 named Mehrunes_Dagon anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 126,
+        "lines": [
+          "Person _contact_ face 239 faction The_Cabal female remote anyInfo 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 128,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 129,
+        "lines": [
+          "Place _tavern_ remote tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 131,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 0 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 133,
+        "lines": [
+          "Foe _monster_ is Frost_daedra"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 136,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "place foe _monster_ at _mondung_ ",
+          "place npc _contact_ at _tavern_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 142,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _mondead_ ",
+          "give pc _artifact_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 148,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 149,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ ",
+          "say 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 153,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 156,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 159,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 160,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _mondead_ ",
+          "say 1003",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

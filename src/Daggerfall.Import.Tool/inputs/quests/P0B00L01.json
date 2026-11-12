@@ -1,0 +1,447 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/P0B00L01.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "85893a295b8de64461744b12b2fcab2e1fc0a858aa83bb035e019201dc50067e",
+    "byteLength": 6749
+  },
+  "document": {
+    "fileName": "P0B00L01.txt",
+    "questName": "P0B00L01",
+    "questNameLine": 8,
+    "displayName": "The Vampire's Letter",
+    "header": [
+      {
+        "name": "quest",
+        "value": "P0B00L01"
+      },
+      {
+        "name": "displayname",
+        "value": "The Vampire's Letter"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                                Do you",
+          "<ce>                         have a few nights free",
+          "<ce>                               for %vam?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 18,
+        "lines": [
+          "<ce>                      No was not the answer I was",
+          "<ce>                     anticipating. Try to make some",
+          "<ce>                        time and effort for %vam",
+          "<ce>                       in the future, whelp. You",
+          "<ce>                          would not like being",
+          "<ce>                               abandoned."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                      %pcf, I need you to deliver",
+          "<ce>                      a letter to an ally of %vam.",
+          "<ce>               _pawn_ will wait for you for no more than",
+          "<ce>                    =1stparton_ nights at __pawn_ in",
+          "<ce>                 ___pawn_. Do not miss the appointment.",
+          "<ce>           I will expect you back here in =1stparton_ nights.",
+          "<ce>                                Goodbye."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                         Until my letter is in",
+          "<ce>                            _pawn_'s sweaty",
+          "<ce>                       hands, I'm not interested",
+          "<ce>                           in talking, %pcf."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                 Thank you for delivering that letter",
+          "<ce>                    so promptly, %pcf. It was rather",
+          "<ce>                   important. I have also been busy.",
+          "<ce>                      Take this _reward_ as a gift",
+          "<ce>                          for a job well done."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 48,
+        "lines": [
+          "That =pawn_ in __pawn_ is waiting for someone. Someone who's arriving at night.",
+          "<--->",
+          "They say the %t is finally going to do something about the vampire menace."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 53,
+        "lines": [
+          "That nervous =pawn_ finally left __pawn_. Must've missed %g3 nighttime meeting.",
+          "<--->",
+          "That =vampire_ in __vampire_ was muttering about that %ra %g's always with."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 58,
+        "lines": [
+          "The %rt apparently changed %g3 mind about the existence of vampires in %reg.",
+          "<--->",
+          "The %rt was going to put more guards out at night, but changed %g3 mind."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 63,
+        "lines": [
+          "Salutations, %pcf. I hope _pawn_ was sufficiently polite to you."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 66,
+        "lines": [
+          "<ce>                      When I sent you to _pawn_,",
+          "<ce>                   I expected you to go to %g2, %pcf.",
+          "<ce>                        Don't ... make me angry."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                        Yes, my name is _pawn_.",
+          "<ce>                          Y-you must be %pcn.",
+          "<ce>                          Tell _vampire_ that",
+          "<ce>                   I'll take care of everything. Make",
+          "<ce>                   sure %g knows I'm loyal. Nothing's",
+          "<ce>                     changed. Thank you. I'll make",
+          "<ce>                        sure everything's fine."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 80,
+        "lines": [
+          "_vampire_?  A very charming =vampire_ who stays at __vampire_, I believe.",
+          "<--->",
+          "_vampire_ is that =vampire_ at __vampire_."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 85,
+        "lines": [
+          "_vampire_ is one of %vam vampires.",
+          "<--->",
+          "_vampire_ is a mentor, a fairly young member of %vam bloodline."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 90,
+        "lines": [
+          "_pawn_,",
+          " ",
+          "   We have heard that once again the %t",
+          " is considering increasing the number of",
+          " patrols in %reg during the night",
+          " to combat the unexplained attacks. %t",
+          " %rt will be receiving a visitor",
+          " from %vam so this situation will",
+          " be reasonably resolved.",
+          "   Please assist in this matter as per",
+          " the usual plan. %vam are not",
+          " amused that we must continually address",
+          " this same potential problem.",
+          "   The %t's family has grown quite",
+          " healthy incidentally. Not a coincidence.",
+          " Or a situation without a remedy.",
+          " ",
+          "<ce>                              -- _vampire_"
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 110,
+        "lines": [
+          "_pawn_ is a nervous =pawn_ at __pawn_, %di of here.",
+          "<--->",
+          "_pawn_ is the name of that =pawn_ I saw at __pawn_. That's to the %di."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 115,
+        "lines": [
+          "_pawn_ is a pawn of %vam vampires, who operates out of __pawn_.",
+          "<--->",
+          "That =pawn_ is an ally of %vam vampires -- %g lives at __pawn_."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 120,
+        "lines": [
+          "%pcn,",
+          "    %vam summon you",
+          " to ___vampire_. Look for",
+          " me there and present this",
+          " letter.",
+          " ",
+          " With dying breath,",
+          "<ce>                               _vampire_"
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 130,
+        "lines": [
+          "<ce>                      You have received a letter."
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 133,
+        "lines": [
+          "%qdt:",
+          " _vampire_ of %vam in",
+          " __vampire_, ___vampire_",
+          " has sent me to bring a letter",
+          " to some sort of =pawn_ in",
+          " ___pawn_ with the unfortunate",
+          " name of _pawn_. It is apparently",
+          " of great importance that I meet %g2",
+          " at __pawn_ no later than =1stparton_",
+          " nights from now."
+        ]
+      },
+      {
+        "id": 1026,
+        "firstLine": 145,
+        "lines": [
+          "%qdt:",
+          " _vampire_ of ___vampire_",
+          " has summoned me to __vampire_",
+          " on %vam business."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 178,
+        "lines": [
+          "Item _reward_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 179,
+        "lines": [
+          "Item _letter_ letter used 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 180,
+        "lines": [
+          "Item letter36 letter used 1020"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 182,
+        "lines": [
+          "Person _vampire_ factiontype Vampire_Clan local anyInfo 1011 rumors 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 183,
+        "lines": [
+          "Person _pawn_ group Group_5.0 remote anyInfo 1014 rumors 1015"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 186,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 1 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 190,
+        "lines": [
+          "dialog link for person _vampire_ ",
+          "dialog link for person _pawn_ ",
+          "letter36 used do _S.12_ ",
+          "have letter36 set _S.13_ ",
+          "give pc letter36 notify 1021 ",
+          "create npc _vampire_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 197,
+        "lines": [
+          "variable _pcgetsgold_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 198,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 199,
+        "lines": [
+          "variable _S.02_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 200,
+        "lines": [
+          "variable _S.03_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 201,
+        "lines": [
+          "_npcclicked_ task:",
+          "toting _letter_ and _pawn_ clicked ",
+          "say 1010 ",
+          "change repute with _vampire_ by +5 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 206,
+        "lines": [
+          "_vampclicked_ task:",
+          "toting letter36 and _vampire_ clicked ",
+          "add dialog for person _pawn_ ",
+          "log 1025 step 1 ",
+          "get item _letter_ ",
+          "say AcceptQuest ",
+          "create npc _pawn_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 214,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 217,
+        "lines": [
+          "_vampsecondclick_ task:",
+          "clicked npc _vampire_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 220,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 221,
+        "lines": [
+          "_clearclick_ task:",
+          "when _vampsecondclick_ and not _npcclicked_ ",
+          "clear _S.11_ _vampsecondclick_ _clearclick_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 225,
+        "lines": [
+          "variable _S.09_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 226,
+        "lines": [
+          "variable _S.10_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 227,
+        "lines": [
+          "_S.11_ task:",
+          "when _vampsecondclick_ ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 232,
+        "lines": [
+          "_S.12_ task:",
+          "add dialog for person _vampire_ ",
+          "log 1026 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 236,
+        "lines": [
+          "_S.13_ task:",
+          "start timer _1stparton_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

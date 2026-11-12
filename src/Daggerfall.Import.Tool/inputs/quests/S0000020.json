@@ -1,0 +1,331 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000020.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "4b34ecd7d53c9782c66593fc69bb6b9ed80893ec34ad88defba253b304534130",
+    "byteLength": 4936
+  },
+  "document": {
+    "fileName": "S0000020.txt",
+    "questName": "S0000020",
+    "questNameLine": 5,
+    "displayName": "Orcish Treaty",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000020"
+      },
+      {
+        "name": "displayname",
+        "value": "Orcish Treaty"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 10,
+        "lines": [
+          "<ce>               So Morgiah says Gortwog has the emperor's",
+          "<ce>               letter. Very interesting. I think I have a",
+          "<ce>              way to get Gortwog to turn over that letter.",
+          "<ce>                 Are you willing to brave the depths of",
+          "<ce>                    Orsinium to try to retrieve it?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 17,
+        "lines": [
+          "<ce>                 You are obviously not as loyal to the",
+          "<ce>                     empire as I thought. Be gone."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 21,
+        "lines": [
+          "<ce>               Gortwog wants very badly to be recognized",
+          "<ce>               by the empire. It would mean the beginning",
+          "<ce>                of peace between the orcs and the other",
+          "<ce>              races of the empire. Present this letter to",
+          "<ce>                Gortwog. Hopefully it will persuade him",
+          "<ce>                             to cooperate."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 29,
+        "lines": [
+          "%qdt:",
+          " Mynisera, Queen Mother to King Gothryd",
+          " of Daggerfall, has asked me to retrieve",
+          " the stolen letter sent to her by the",
+          " emperor. I have to go to the hall of",
+          " Orsinium in Orsinium and give Gortwog,",
+          " the orc warlord, a letter from her."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 38,
+        "lines": [
+          "So, Mynisera seeks to sweet-talk me.",
+          " Bah! Her old letter is of no value to me",
+          " anymore. She may have it. However, my",
+          " people may not be so lenient toward a",
+          " %ra wandering the halls of Orsinium.",
+          " If you can survive my realm and find",
+          " the letter, you may take it back to",
+          " her. I will also consider you to be",
+          " a worthy %ra."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 49,
+        "lines": [
+          "Lord Gortwog,",
+          " King of Orcs,",
+          " Warlord of the Subterranean Realms",
+          " ",
+          "    Hail and long life, King Gortwog. Long",
+          " have you and the Orcish people sought",
+          " formal recognition by the empire. My dead",
+          " husband King Lysandus supported your claim",
+          " to sovereign rule. I would now help you in",
+          " your cause. Sadly, a minor missive from",
+          " the emperor has been misplaced. For me to",
+          " truly hold the trust and ear of Emperor",
+          " Uriel Septim, I need to reclaim this note.",
+          " Should you be able to place in my servant's",
+          " hand this trifling letter, I would be far",
+          " better able to forward your claim to the",
+          " emperor and his court.",
+          " ",
+          " The Dowager Mynisera,",
+          " Queen Mother to King Gothryd of Daggerfall"
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 71,
+        "lines": [
+          "Queen Mynisera,",
+          " ",
+          "    I have grave news. The Totem of Tiber",
+          " Septim has been found. You know what this",
+          " means. The power behind Tiber Septim could",
+          " be unleashed upon Tamriel again. Rumor has it",
+          " that Lord Woodborne, a minor lord of Wayrest,",
+          " has possession of it. He will doubtless",
+          " \"lose\" it soon. You must persuade him to turn",
+          " it over to you or Lady Brisienna. The court of",
+          " Wayrest has no love of King Lysandus, but you",
+          " still have influence there. I am asking you to",
+          " use it on my behalf.",
+          " ",
+          " Uriel Septim",
+          " Emperor of Tamriel"
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 89,
+        "lines": [
+          "<ce>                    %pcf, this letter is dangerous.",
+          "<ce>               Gortwog has undoubtedly sold copies of it",
+          "<ce>               to everyone from Wayrest to the Underking.",
+          "<ce>               After all, if the powers of the Iliac Bay",
+          "<ce>               become embroiled in war over the Totem, he",
+          "<ce>                      stands to gain quite a lot.",
+          " ",
+          "<ce>               Go now. You have done your job. I am sure",
+          "<ce>               the Totem will find its way into your life",
+          "<ce>               somehow. You seem to have a knack for such",
+          "<ce>               things. Just remember, the only safe master",
+          "<ce>                      of the Totem is the emperor."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 103,
+        "lines": [
+          "<ce>               You still don't know where the Emperor's",
+          "<ce>                letter is. Come back when you know that."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 115,
+        "lines": [
+          "Item EmperorsLetter letter used 1021"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 116,
+        "lines": [
+          "Item GortwogsLetter letter used 1020"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 118,
+        "lines": [
+          "Person _Mynisera_ named Mynisera atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 119,
+        "lines": [
+          "Person _gortwog_ face 88 named Gortwog atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 121,
+        "lines": [
+          "Place _Orsinium_ permanent OrsiniumCastle1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 126,
+        "lines": [
+          "add _Mynisera_ as questor ",
+          "add _gortwog_ as questor "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 129,
+        "lines": [
+          "_S.00_ task:",
+          "clicked npc _Mynisera_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 132,
+        "lines": [
+          "MorgiahSatisfied _S.01_"
+        ],
+        "global": 23
+      },
+      {
+        "kind": "task",
+        "firstLine": 133,
+        "lines": [
+          "_S.02_ task:",
+          "when _S.00_ and _S.09_ ",
+          "prompt QuestorOffer yes yes no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 137,
+        "lines": [
+          "until _S.02_ performed:",
+          "clear _S.00_ _S.10_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "yes task:",
+          "log 1010 step 0 ",
+          "get item GortwogsLetter ",
+          "reveal _Orsinium_ in province 26 at 146892 ",
+          "say AcceptQuest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 146,
+        "lines": [
+          "_no_ task:",
+          "say RefuseQuest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 149,
+        "lines": [
+          "_S.05_ task:",
+          "toting GortwogsLetter and _gortwog_ clicked ",
+          "place item EmperorsLetter at _Orsinium_ marker 0",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 154,
+        "lines": [
+          "_S.06_ task:",
+          "toting EmperorsLetter and _Mynisera_ clicked ",
+          "start quest 988 988 ",
+          "start task _S.07_ ",
+          "say 1030 ",
+          "change repute with _Mynisera_ by +15 ",
+          "change repute with _gortwog_ by +10 ",
+          "drop _gortwog_ as questor ",
+          "drop _Mynisera_ as questor ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 165,
+        "lines": [
+          "MyniseraSatisfied _S.07_"
+        ],
+        "global": 29
+      },
+      {
+        "kind": "global",
+        "firstLine": 166,
+        "lines": [
+          "BarenziahSatisfied _S.08_"
+        ],
+        "global": 28
+      },
+      {
+        "kind": "task",
+        "firstLine": 167,
+        "lines": [
+          "_S.09_ task:",
+          "when _S.08_ or _S.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_S.10_ task:",
+          "when _S.00_ and not _S.09_ ",
+          "say 1040 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

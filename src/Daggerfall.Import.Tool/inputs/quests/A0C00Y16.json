@@ -1,0 +1,682 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C00Y16.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "b8eb01c25ed7918e1dd1499d72ebf9accf360223c4c30fbbcd0c64fcf7cd62d7",
+    "byteLength": 9832
+  },
+  "document": {
+    "fileName": "A0C00Y16.txt",
+    "questName": "A0C00Y16",
+    "questNameLine": 9,
+    "displayName": "Missing Person Case",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C00Y16"
+      },
+      {
+        "name": "displayname",
+        "value": "Missing Person Case"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                     My name is _questgiver_. Can",
+          "<ce>                   you help me find my friend? I can",
+          "<ce>                       only pay you _gold_ gold.",
+          "                                     <--->",
+          "<ce>               Please help me. My friend _missingperson_",
+          "<ce>               is missing. I am afraid that %g might have",
+          "<ce>                 been hurt. I will pay you _gold_ gold",
+          "<ce>                        pieces if you find %g2."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 24,
+        "lines": [
+          "<ce>             Good day, %ra. I will look for someone else.",
+          "                                     <--->",
+          "<ce>                     Is no-one willing to help me?",
+          "                                     <--->",
+          "<ce>                     A thousand pardons. I mistook",
+          "<ce>                      you for a heroic adventurer."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 32,
+        "lines": [
+          "<ce>            My prayers have been answered. _missingperson_",
+          "<ce>             has not been seen for four days, and I am very",
+          "<ce>             worried about %g2. %G has been seen consorting",
+          "<ce>                   with _friend1_ and _friend2_. You",
+          "<ce>              might want to start with them. If you can't",
+          "<ce>                 find _missingperson_ within two days,",
+          "<ce>                    you need not search any further."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                Here is the _gold_ gold I promised you."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 44,
+        "lines": [
+          "<ce>                  I hear _questgiver_ is frantically",
+          "<ce>                     searching for _missingperson_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                    No one has seen _missingperson_",
+          "<ce>                 for days now. %G has been given up for",
+          "<ce>                  dead. I hear _questgiver_ is grief-",
+          "<ce>                           stricken over it."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 54,
+        "lines": [
+          "<ce>                 Say, aren't you that %ra that helped",
+          "<ce>                   _questgiver_ find _missingperson_?"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 58,
+        "lines": [
+          "<ce>                   How can I turn down the %ra that",
+          "<ce>                     found _missingperson_ for me?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 62,
+        "lines": [
+          "<ce>                 I know it wasn't your fault you were",
+          "<ce>                     unable to find _missingperson_",
+          "<ce>                for me. They found %g2 body in a gutter."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 67,
+        "lines": [
+          "On %qdt,",
+          " I agreed to help _questgiver_ find",
+          " _missingperson_. %G has been missing",
+          " for four days. My only clues are that",
+          " %g has been seen with _friend2_",
+          " and _friend1_ recently. If",
+          " I do not succeed within two days,",
+          " I will not get paid."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 77,
+        "lines": [
+          "<ce>                  You're looking for _missingperson_?",
+          "<ce>                Well, %g is hiding in _hidingplace_,",
+          "<ce>                      but don't tell _questgiver_.",
+          "<ce>                      _missingperson_ has sworn to",
+          "<ce>                      never speak to _questgiver_",
+          "<ce>                        again. Don't ask me why."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 85,
+        "lines": [
+          "<ce>                  Have I seen _missingperson_ lately?",
+          "<ce>                  Sure. The guards caught %g2 stealing",
+          "<ce>                    from a temple. _questgiver_ will",
+          "<ce>                      be livid when %g finds out."
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 91,
+        "lines": [
+          "<ce>                    Did _questgiver_ put you up to",
+          "<ce>                    this? I thought so. %oth, %g had",
+          "<ce>                        a nasty fight with",
+          "<ce>                         _missingperson_ a few",
+          "<ce>                       days ago. _missingperson_",
+          "<ce>               left town and hasn't been seen since. No,",
+          "<ce>                      I don't know where %g went."
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 100,
+        "lines": [
+          "<ce>                       _missingperson_? Yeah, I",
+          "<ce>                       know what happened to %g2.",
+          "<ce>                      %G got killed, that's what.",
+          "<ce>                       My friend Smiley asked %g2",
+          "<ce>                      real nice for %g3 gold, and",
+          "<ce>                        %g wouldn't hand it over.",
+          "<ce>                     You really should meet Smiley",
+          "<ce>                     and my other friends. Get the",
+          "<ce>                              %ra, Smiley!"
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 111,
+        "lines": [
+          "<ce>                     _missingperson_? Naw. Haven't",
+          "<ce>                     seen %g2 for a couple of days.",
+          "<ce>                     Try asking _friend3_. %G might",
+          "<ce>                                 know."
+        ]
+      },
+      {
+        "id": 1032,
+        "firstLine": 117,
+        "lines": [
+          "<ce>                 %oth. I haven't seen _missingperson_",
+          "<ce>              since the day before yesterday. You could",
+          "<ce>                      ask _friend4_ or _friend1_.",
+          "<ce>                        One of them might know."
+        ]
+      },
+      {
+        "id": 1033,
+        "firstLine": 123,
+        "lines": [
+          "<ce>                      _friend1_ told you I might",
+          "<ce>                 know something about _missingperson_?",
+          "<ce>                   Afraid not. All I know is %g went",
+          "<ce>                 out drinking last night. Hope nothing",
+          "<ce>                          bad happened to %g2."
+        ]
+      },
+      {
+        "id": 1034,
+        "firstLine": 130,
+        "lines": [
+          "<ce>               Sorry, I haven't seen _missingperson_ in",
+          "<ce>                       a while. I don't know why",
+          "<ce>                        _friend2_ would send you",
+          "<ce>                        to me... Have you tried",
+          "<ce>                               _friend1_?"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 137,
+        "lines": [
+          "<ce>                      What are you doing here? I",
+          "<ce>                         don't ever want to see",
+          "<ce>                      _questgiver_ again. Hey! Let",
+          "<ce>                     me go! You can't just drag me",
+          "<ce>                      through the streets to %g2."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 144,
+        "lines": [
+          "<ce>                       _missingperson_! I didn't",
+          "<ce>                    expect you to actually bring %g2",
+          "<ce>                      here, %pcn. _missingperson_,",
+          "<ce>                     where have you been? I've been",
+          "<ce>                        worried about you. %pcf,",
+          "<ce>                        I'll take it from here."
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 152,
+        "lines": [
+          "<ce>                    So, _missingperson_ is hiding,",
+          "<ce>                     eh? I'll go get that miscreant",
+          "<ce>                    out of %g3 hiding place. You've",
+          "<ce>                        been very helpful, %pcn."
+        ]
+      },
+      {
+        "id": 1052,
+        "firstLine": 158,
+        "lines": [
+          "<ce>                    In jail!? I have to leave right",
+          "<ce>                      away. Maybe I can bribe the",
+          "<ce>                              magistrate."
+        ]
+      },
+      {
+        "id": 1053,
+        "firstLine": 163,
+        "lines": [
+          "<ce>                        So _missingperson_ has",
+          "<ce>                    left town? %G didn't need to do",
+          "<ce>                    that. I would have forgiven %g2."
+        ]
+      },
+      {
+        "id": 1054,
+        "firstLine": 168,
+        "lines": [
+          "<ce>                     Dead!? How can that be? I hope",
+          "<ce>                      you made that Smiley suffer,",
+          "<ce>                         %pcn. This is a day of",
+          "<ce>                          great sorrow for me.",
+          " "
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 195,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 197,
+        "lines": [
+          "Person _questgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 198,
+        "lines": [
+          "Person _missingperson_ face 1 group Group_6.0 local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 199,
+        "lines": [
+          "Person _friend1_ group Local_3.1 local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 200,
+        "lines": [
+          "Person _friend2_ group Local_3.1 local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 201,
+        "lines": [
+          "Person _friend3_ group Local_3.1 local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 202,
+        "lines": [
+          "Person _friend4_ group Local_4.1 local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 204,
+        "lines": [
+          "Place _hidingplace_ local random"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 206,
+        "lines": [
+          "Clock _S.16_ 2.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 209,
+        "lines": [
+          "Clock _delay_ 00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 211,
+        "lines": [
+          "Foe _F.00_ is 3 Barbarian"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 214,
+        "lines": [
+          "dialog link for person _friend4_ ",
+          "dialog link for person _missingperson_ ",
+          "dialog link for location _hidingplace_ person _friend3_ ",
+          "start timer _S.16_ ",
+          "log 1010 step 0 ",
+          "pick one of _S.00_ _S.02_ _S.03_ _S.01_ ",
+          "create npc _friend4_ ",
+          "create npc _friend2_ ",
+          "create npc _friend3_ ",
+          "create npc _friend1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 225,
+        "lines": [
+          "_S.00_ task:",
+          "place npc _missingperson_ at _hidingplace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 228,
+        "lines": [
+          "variable _S.01_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 229,
+        "lines": [
+          "variable _S.02_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 230,
+        "lines": [
+          "variable _S.03_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 231,
+        "lines": [
+          "_S.04_ task:",
+          "clicked npc _friend1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 234,
+        "lines": [
+          "_S.05_ task:",
+          "clicked npc _friend2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 237,
+        "lines": [
+          "_S.06_ task:",
+          "clicked npc _friend3_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 240,
+        "lines": [
+          "_S.07_ task:",
+          "clicked npc _friend4_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 243,
+        "lines": [
+          "_S.08_ task:",
+          "when _S.00_ and _S.04_ ",
+          "add dialog for location _hidingplace_",
+          "say 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 248,
+        "lines": [
+          "_S.09_ task:",
+          "when _S.02_ and _S.05_ ",
+          "say 1022 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 252,
+        "lines": [
+          "_S.10_ task:",
+          "when _S.03_ and _S.06_ ",
+          "say 1023 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 256,
+        "lines": [
+          "_S.11_ task:",
+          "when _S.01_ and _S.07_ ",
+          "create foe _F.00_ every 1 minutes 1 times with 100% success ",
+          "say 1024 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 261,
+        "lines": [
+          "_S.12_ task:",
+          "when not _S.00_ and _S.04_ ",
+          "add dialog for person _friend3_",
+          "say 1031 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 266,
+        "lines": [
+          "_S.13_ task:",
+          "when not _S.02_ and _S.05_ ",
+          "add dialog for person _friend4_",
+          "say 1032 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 271,
+        "lines": [
+          "_S.14_ task:",
+          "when not _S.03_ and _S.06_ ",
+          "say 1033 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 275,
+        "lines": [
+          "_S.15_ task:",
+          "when not _S.01_ and _S.07_ ",
+          "say 1034 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 279,
+        "lines": [
+          "_S.16_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 282,
+        "lines": [
+          "_S.17_ task:",
+          "killed 1 _F.00_ ",
+          "hide npc _friend4_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 286,
+        "lines": [
+          "_S.18_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 289,
+        "lines": [
+          "_clearclick_ task:",
+          "when not _yes_ and _S.18_ ",
+          "clear _S.18_ _clearclick_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 293,
+        "lines": [
+          "_yes_ task:",
+          "when _S.08_ or _S.09_ or _S.10_ or _S.11_ or _S.22_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 296,
+        "lines": [
+          "_givereward_ task:",
+          "when _yes_ and _S.18_ ",
+          "start timer _delay_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 300,
+        "lines": [
+          "_delay_ task:",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 304,
+        "lines": [
+          "_S.22_ task:",
+          "clicked npc _missingperson_ ",
+          "add _missingperson_ face saying 1040 ",
+          "hide npc _missingperson_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 309,
+        "lines": [
+          "_S.23_ task:",
+          "when _S.22_ and _S.18_ ",
+          "drop _missingperson_ face "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 313,
+        "lines": [
+          "_S.24_ task:",
+          "when _S.18_ and _S.08_ and not _S.22_ ",
+          "say 1051 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 317,
+        "lines": [
+          "_S.25_ task:",
+          "when _S.18_ and _S.09_ ",
+          "say 1052 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 321,
+        "lines": [
+          "_S.26_ task:",
+          "when _S.18_ and _S.10_ ",
+          "say 1053 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 325,
+        "lines": [
+          "_S.27_ task:",
+          "when _S.18_ and _S.11_ ",
+          "say 1054 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 329,
+        "lines": [
+          "_S.28_ task:",
+          "when _S.18_ and _S.22_ ",
+          "say 1050 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

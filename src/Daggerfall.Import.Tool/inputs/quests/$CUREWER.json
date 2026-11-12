@@ -1,0 +1,834 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/$CUREWER.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "0be8920b856c972e1eb7bc4e1f2d5baf1a7154625502340c1f8d51be8b549355",
+    "byteLength": 15710
+  },
+  "document": {
+    "fileName": "$CUREWER.txt",
+    "questName": "$CUREWER",
+    "questNameLine": 7,
+    "displayName": "Cure for Lycanthropy",
+    "header": [
+      {
+        "name": "quest",
+        "value": "$CUREWER"
+      },
+      {
+        "name": "displayname",
+        "value": "Cure for Lycanthropy"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 12,
+        "lines": [
+          "Error -- 1000 called"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 15,
+        "lines": [
+          "Error -- 1001 called"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 18,
+        "lines": [
+          "Error -- 1002 called"
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                         Error -- 1003 called"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                     As _child_ drinks your blood,",
+          "<ce>                    you feel your mind clear for the",
+          "<ce>                  first time since you were afflicted",
+          "<ce>                     with lycanthropy.  But _child_",
+          "<ce>                 cries out in agony as %g changes form",
+          "<ce>                        right before your eyes."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 32,
+        "lines": [
+          "<ce>   _hunter_ is coming to %reg to clean out the werebeast infestation.",
+          "<ce> Maybe then we'll be able to walk the streets at night again without fear."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 36,
+        "lines": [
+          "<ce>_hunter_ and %g3 men killed a lot of loups in %reg, but I'll be hanged",
+          "<ce>                          if they got 'em all.",
+          "                                     <--->",
+          "<ce> _hunter_ should have left well enough alone.  %G3 crusades just send",
+          "<ce>                  the werecreatures into greater fury."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 43,
+        "lines": [
+          "<ce>_hunter_ and %g3 men killed a lot of loups in %reg, but I'll be hanged",
+          "<ce>                          if they got 'em all.",
+          "                                     <--->",
+          "<ce> _hunter_ should have left well enough alone.  %G3 crusades just send",
+          "<ce>                  the lycanthropes into greater fury."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 50,
+        "lines": [
+          "Error -- 1008 called"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 53,
+        "lines": [
+          "Error -- 1009 called"
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 56,
+        "lines": [
+          "_hunter_ searches out and destroys lycanthropes all across Tamriel.",
+          "<--->",
+          "_hunter_ has devoted %g3 life to hunting lycanthropes."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 61,
+        "lines": [
+          "<ce>They say that _hunter_'s own mother was killed by a werewolf.  That's what",
+          "<ce>               drove %g2 to %g3 fanatical hatred of them.",
+          "                                     <--->",
+          "<ce>_hunter_ killed %g3 own mother after she became a werewolf.  Now that's",
+          "<ce>                       what I call a true zealot!"
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 68,
+        "lines": [
+          "_father_ ... the name sounds familiar, but I can't say that I know him.",
+          "<--->",
+          "I think _father_ died years ago.  Or maybe moved away?  I'm not sure.",
+          "<--->",
+          "<ce>  _father_ was the last of a once-powerful noble house in ___local_.",
+          "<ce>                 He died several years ago, I'm afraid.",
+          "                                     <--->",
+          "<ce>I think he was the one that died two or three years ago, leaving his only child an orphan.  But _local_ over at __local_ would know more about that.",
+          "                                     <--->",
+          "<ce>_father_ hasn't lived in ___local_ for years.  I don't know what happened",
+          "<ce>     to him.  But _local_ was a friend of his, and might know more.",
+          "                                     <--->",
+          "<ce>_father_ moved away to ___father_ a long while back.  Or was he the one",
+          "<ce>                        who died so tragically?"
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 84,
+        "lines": [
+          "<ce>_father_ died several years ago.  His only child was adopted by a family",
+          "<ce>      from __childhouse_, I think.  Ask around there for _child_.",
+          "                                     <--->",
+          "<ce>Were you a friend?  I'm sorry to say he died about a year ago.  His only",
+          "<ce>       child _child_ was taken in by a family from __childhouse_."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 91,
+        "lines": [
+          "                       %qdt",
+          " ",
+          " Dear %pcn,",
+          " ",
+          "    Or should I call you \"=wereboar_,\" as you are",
+          " known to the common folk of ____childhouse_, who bar their",
+          " doors against you in fear each night?  Yes, I know",
+          " who and what you are, and your days of terrorizing",
+          " the Iliac Bay are numbered.  I offer you a simple",
+          " choice: renounce your lycanthropy, or be hunted",
+          " down like the wild beast you are.",
+          "    Let no one say that _hunter_ lacks",
+          " compassion. I offer you one last chance to save",
+          " yourself.  Go to _priest_ of",
+          " __priest_ in ___priest_ if you wish",
+          " to live. %G is wise in the ways of lycanthropy, and if",
+          " anyone can help you, %g can.",
+          "    I will wait =huntstart_ days before sending my hunters",
+          " after you.  Use the time wisely.",
+          " ",
+          "<ce>                                _hunter_"
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 114,
+        "lines": [
+          "<ce>                 You must be %pcn.  _hunter_ said you",
+          "<ce>          might be coming to see me, although %g doubted that",
+          "<ce>              you would heed %g3 warning.  Sadly, most do",
+          "<ce>             not, already too befuddled by the Beast within",
+          "<ce>           to save themselves.  Yes, the curse of lycanthropy",
+          "<ce>           can be lifted, although I hesitate to speak of it,",
+          "<ce>          as the cure may be worse than the disease.  We must",
+          "<ce>              lower our voices.  You may not be aware that",
+          "<ce>           lycanthropy is a hereditary condition, passed on",
+          "<ce>            in certain families, although it can lie dormant",
+          "<ce>            for generations before reappearing.  This is why",
+          "<ce>          the great crusades against lycanthropes led by those",
+          "<ce>            like _hunter_ are ultimately futile, unless the",
+          "<ce>           families who carry this bloodline are exterminated",
+          "<ce>            as well.  You now understand why I am reluctant",
+          "<ce>            to share this knowledge.  As you know, the bite",
+          "<ce>           of a werebeast can pass the infection on to a new",
+          "<ce>            victim.  However, if you can pass the infection",
+          "<ce>           to a latent lycanthrope, the curse will be lifted",
+          "<ce>            from you due to the intensity of its blossoming",
+          "<ce>           in the victim.  My studies have recently uncovered",
+          "<ce>           a family which I am sure carries the disease.  If",
+          "<ce>          you still wish to proceed on this dark course, I can",
+          "<ce>            tell you where to find the last survivor of this",
+          "<ce>                       ancient, cursed bloodline."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 141,
+        "lines": [
+          "<ce>          Very well.  I cannot blame you for wishing to live.",
+          "<ce>            I comfort myself with the thought that _father_",
+          "<ce>           is the last of a doomed family, best ended before",
+          "<ce>             the curse renews itself.  Yes, he is the one.",
+          "<ce>             As far as I know, he still lives in ___local_,",
+          "<ce>            the family home for generations.  But first, you",
+          "<ce>             will need to see _alchemist_ in ___alchemist_.",
+          "<ce>            %G has assisted me in such matters before.  The",
+          "<ce>          surest way to pass on the disease is for the victim",
+          "<ce>          to drink the blood of the lycanthrope.  _alchemist_",
+          "<ce>            will ask no questions and tell no tales at your",
+          "<ce>              strange request.  May %god guide your steps."
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 155,
+        "lines": [
+          "<ce>           I understand.  In fact, I am almost relieved that",
+          "<ce>            you shun this road to salvation.  It shows that",
+          "<ce>             the Beast does not yet wholly dominate you.  I",
+          "<ce>           would not offer false hope, but if you still wish",
+          "<ce>           to try to cure yourself ... Well, this is no more",
+          "<ce>             than a legend, but supposedly there is a coven",
+          "<ce>            somewhere which can cure lycanthropy.  The best",
+          "<ce>            lead I can offer is an ancient text, \"A History",
+          "<ce>            of the Daedric Sects.\"  Unfortunately, the only",
+          "<ce>                existing copy disappeared in the sack of",
+          "<ce>              ___hintdung_ over a century ago.  Perhaps it",
+          "<ce>              remains hidden somewhere in the ruins there.",
+          "<ce>            If nothing else, the search might help you keep",
+          "<ce>                the Beast at bay, at least for a while.",
+          "<ce>                       May %god guide your steps."
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 172,
+        "lines": [
+          "<ce>               So, another visitor from _priest_.  Yeah,",
+          "<ce>               I know what you want, but it ain't cheap.",
+          "<ce>               1000 gold up front.  Take it or leave it.",
+          "<ce>               Alright then, hold still a minute.  There",
+          "<ce>                   you go, didn't hurt a bit, right?",
+          "<ce>                  Now get outta here before one of my",
+          "<ce>                    respectable customers sees you."
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 181,
+        "lines": [
+          "<ce>               So, another visitor from _priest_.  Yeah,",
+          "<ce>               I know what you want, but it ain't cheap.",
+          "<ce>               1000 gold up front.  Take it or leave it.",
+          "<ce>                Sorry pal, you haven't got enough cash.",
+          "<ce>                   Move it before I call the guards."
+        ]
+      },
+      {
+        "id": 1026,
+        "firstLine": 188,
+        "lines": [
+          "<ce>               You're looking for _father_?  I'm afraid",
+          "<ce>             that he died three years ago.  Killed himself,",
+          "<ce>               actually, although very few know that part",
+          "<ce>               of it.  I'm not sure what happened, but he",
+          "<ce>               became very moody, and began disappearing",
+          "<ce>                for days at a time.  Left a note saying",
+          "<ce>             something about he couldn't live with himself,",
+          "<ce>                and didn't want _child_ to find out the",
+          "<ce>               truth about it.  I never figured out what",
+          "<ce>                it was all about.  Yes, _child_ was his",
+          "<ce>                only child.  %G was taken in by a family",
+          "<ce>                 from __childhouse_ after %g3 father's",
+          "<ce>                 death.  I'm afraid that's all I know."
+        ]
+      },
+      {
+        "id": 1027,
+        "firstLine": 203,
+        "lines": [
+          "<ce>               Hello.  Are you a doctor?  I haven't been",
+          "<ce>               feeling very well today.  Is that medicine",
+          "<ce>                         you have there for me?"
+        ]
+      },
+      {
+        "id": 1028,
+        "firstLine": 208,
+        "lines": [
+          "<ce>                   Do you give the blood to _child_?"
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 211,
+        "lines": [
+          "<ce>                   Do you wish to seek out a victim",
+          "<ce>                   in order to cure your lycanthropy?"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 215,
+        "lines": [
+          "<ce>                   _hunter_ said I'd find you here.",
+          "<ce>                            Die, =wereboar_!"
+        ]
+      },
+      {
+        "id": 1045,
+        "firstLine": 219,
+        "lines": [
+          "<ce>                   An unfamiliar object in your pack",
+          "<ce>                   catches your eye.  It is a letter,",
+          "<ce>                 addressed to you in an elegant flowing",
+          "<ce>                    script.  How did that get there?"
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 225,
+        "lines": [
+          "%qdt:",
+          " The lycanthrope hunter _hunter_",
+          " has sent me a letter vowing to",
+          " hunt me down unless I cure myself",
+          " of lycanthropy.  %G directed me to",
+          " a _priest_ of __priest_,",
+          " ___priest_. I have =huntstart_ days",
+          " before the hunt begins."
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 235,
+        "lines": [
+          "%qdt:",
+          " _priest_ told me the only way",
+          " to cure myself is to find _father_",
+          " of ___local_, the last of a latent lycanthrope",
+          " family, and force him to drink my blood, thus",
+          " transferring the disease completely from me",
+          " to him.  An alchemist named _alchemist_ in",
+          " ___alchemist_ can prepare a vial of my",
+          " blood for this purpose."
+        ]
+      },
+      {
+        "id": 1052,
+        "firstLine": 246,
+        "lines": [
+          "%qdt:",
+          " I declined _priest_'s offer to cure",
+          " my lycanthropy by inflicting it on",
+          " another.  %G3 only additional advice",
+          " was to seek out a book which might",
+          " lead me to a Coven purported to have",
+          " the cure.  The book's last known location",
+          " was ___hintdung_, so I may as well",
+          " start there."
+        ]
+      },
+      {
+        "id": 1053,
+        "firstLine": 257,
+        "lines": [
+          "%qdt:",
+          " I found a page from the book, which",
+          " said that more information on the",
+          " \"Glenmoril Coven\" could be found",
+          " in the library of ___mapdung_."
+        ]
+      },
+      {
+        "id": 1054,
+        "firstLine": 264,
+        "lines": [
+          "%qdt:",
+          " It seems that _father_ is already",
+          " dead.  However, all hope is not lost,",
+          " since I have learned that he had a",
+          " child, _child_, who is now living",
+          " in __childhouse_."
+        ]
+      },
+      {
+        "id": 1060,
+        "firstLine": 272,
+        "lines": [
+          "<ce>                     A map showing the location of",
+          "<ce>                 Glenmoril Coven in the Ilessan Hills."
+        ]
+      },
+      {
+        "id": 1061,
+        "firstLine": 276,
+        "lines": [
+          "This appears to be a page torn from a book:",
+          " ",
+          " \"...reputed to have the ability to raise the",
+          " dead, although as yet the Conclave has not",
+          " unearthed any evidence of this beyond the",
+          " usual legends and anecdotes.",
+          " ",
+          "   By contrast, the existence of the Glenmoril",
+          " Coven is firmly rooted in history.  In fact, this",
+          " coven is of such antiquity that its very origins",
+          " have been lost.  The Circle of Seven, as it is",
+          " often called (the Glenmoril Coven regards thirteen",
+          " as a newfangled corruption of the original seven",
+          " Initiates plus six Acolytes -- one for each of the",
+          " Circle except for the Mistress, who is considered",
+          " above such apprenticeship duties).  As usual,",
+          " legend mixes with fact in the popular belief that",
+          " the Glenmoril Coven possesses the cure for",
+          " lycanthropy.  Complete documentation of these legends",
+          " may be found in the library of ___mapdung_.",
+          " ",
+          "   The Iliac Bay region is also home to another of...\""
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 329,
+        "lines": [
+          "Item _letter_ letter used 1020"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 330,
+        "lines": [
+          "Item _blood_ werewolf_blood"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 331,
+        "lines": [
+          "Item _map_ letter used 1060"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 332,
+        "lines": [
+          "Item map2 letter used 1061"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 334,
+        "lines": [
+          "Person _priest_ face 40 group Cleric remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 335,
+        "lines": [
+          "Person _child_ face 1 faction Children remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 336,
+        "lines": [
+          "Person _hunter_ face 1 factiontype Temple remote anyInfo 1011 rumors 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 337,
+        "lines": [
+          "Person _alchemist_ group Chemist remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 338,
+        "lines": [
+          "Person _father_ face 5 group Noble male remote anyInfo 1013 rumors 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 339,
+        "lines": [
+          "Person _local_ group Resident1 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 341,
+        "lines": [
+          "Place _mapdung_ remote dungeon4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 342,
+        "lines": [
+          "Place glenmorilCoven permanent GlenmorilCoven"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 343,
+        "lines": [
+          "Place _childhouse_ remote house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 344,
+        "lines": [
+          "Place _hintdung_ remote dungeon11"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 346,
+        "lines": [
+          "Clock _S.05_ 7.00:00 27.23:40"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 347,
+        "lines": [
+          "Clock _huntstart_ 60.00:00 0"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 349,
+        "lines": [
+          "Foe _F.00_ is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 350,
+        "lines": [
+          "Foe _wereboar_ is Wereboar"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 353,
+        "lines": [
+          "place item _map_ at _mapdung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 354,
+        "lines": [
+          "place item map2 at _hintdung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 355,
+        "lines": [
+          "dialog link for location glenmorilCoven person _hunter_ ",
+          "dialog link for location _mapdung_ person _priest_ ",
+          "dialog link for person _local_ ",
+          "dialog link for location _hintdung_ person _alchemist_ ",
+          "dialog link for person _father_ ",
+          "dialog link for person _child_ ",
+          "_letter_ used do _readletter_ ",
+          "_map_ used do _S.10_ ",
+          "map2 used do _S.16_ ",
+          "have _letter_ set _S.09_ ",
+          "give pc _letter_ notify 1045 ",
+          "create npc at _childhouse_ ",
+          "place npc _child_ at _childhouse_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 369,
+        "lines": [
+          "_S.00_ task:",
+          "clicked npc _priest_ ",
+          "prompt 1030 yes _S.03_ no _S.04_ ",
+          "say 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 374,
+        "lines": [
+          "_readletter_ task:",
+          "add dialog for person _hunter_ ",
+          "add dialog for person _priest_ ",
+          "log 1050 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 379,
+        "lines": [
+          "variable _S.02_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 380,
+        "lines": [
+          "_S.03_ task:",
+          "add dialog for person _father_ ",
+          "add dialog for person _alchemist_ ",
+          "log 1051 step 1 ",
+          "say 1022 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 386,
+        "lines": [
+          "_S.04_ task:",
+          "reveal _hintdung_ ",
+          "log 1052 step 1 ",
+          "say 1023 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 391,
+        "lines": [
+          "_S.05_ task:",
+          "make _map_ permanent ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 395,
+        "lines": [
+          "_huntstart_ task:",
+          "start timer _S.05_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 398,
+        "lines": [
+          "_S.07_ task:",
+          "injured _F.00_ saying 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 401,
+        "lines": [
+          "_S.08_ task:",
+          "toting _blood_ and _child_ clicked ",
+          "prompt 1028 yes _S.14_ no _S.15_ ",
+          "say 1027 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 406,
+        "lines": [
+          "_S.09_ task:",
+          "start timer _huntstart_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 409,
+        "lines": [
+          "_S.10_ task:",
+          "reveal glenmorilCoven in province 60 at 81312 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 412,
+        "lines": [
+          "_npc_ task:",
+          "clicked _alchemist_ and at least 1000 gold otherwise do _S.12_ ",
+          "get item _blood_ ",
+          "say 1024 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 417,
+        "lines": [
+          "_S.12_ task:",
+          "say 1025 ",
+          "clear _S.12_ _npc_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 421,
+        "lines": [
+          "_S.13_ task:",
+          "clicked npc _local_ ",
+          "add dialog for person _child_ ",
+          "log 1054 step 2 ",
+          "say 1026 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 427,
+        "lines": [
+          "_S.14_ task:",
+          "give pc nothing ",
+          "hide npc _child_ ",
+          "cure lycanthropy ",
+          "legal repute -10 ",
+          "place foe _wereboar_ at _childhouse_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 434,
+        "lines": [
+          "_S.15_ task:",
+          "get item _blood_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 437,
+        "lines": [
+          "_S.16_ task:",
+          "reveal _mapdung_ ",
+          "log 1053 step 2 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 441,
+        "lines": [
+          "_S.17_ task:",
+          "killed 1 _wereboar_ ",
+          "legal repute -20 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 445,
+        "lines": [
+          "_S.18_ task:",
+          "when _huntstart_ ",
+          "create foe _F.00_ every 79 minutes 30 times with 20% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 449,
+        "lines": [
+          "_S.19_ task:",
+          "when _S.14_ ",
+          "clear _S.18_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

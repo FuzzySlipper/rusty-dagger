@@ -1,0 +1,105 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO19.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "d0efbe9b9ddbf6e1b2cad5ceebb88d73f182e456adbd1567c268027440299b89",
+    "byteLength": 1210
+  },
+  "document": {
+    "fileName": "__DEMO19.txt",
+    "questName": "__DEMO19",
+    "questNameLine": 3,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO19"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 7,
+        "lines": [
+          "<ce>            Interested in a test of your pathfinding abilities?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 10,
+        "lines": [
+          "<ce>                Well, seems like you never know the right way, isn't it?"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 13,
+        "lines": [
+          "<ce>             Excellent! I would like to test if you are able to find ___lostdung_ on your own.",
+          "<ce>             Do not expect help from me except for the one tip",
+          "<ce>             to ask peasants about some information where ___lostdung_ might",
+          "<ce>             be found."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 19,
+        "lines": [
+          "%qdt:",
+          " I was asked to find ___lostdung_ on my own.",
+          " The only advise I was given was to ask peasants",
+          " if they could provide some information about",
+          " where I might be able to find it."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 26,
+        "lines": [
+          "I only know that ___lostdung_ is a dangerous place.",
+          "<--->",
+          "You might want to look %di of this place.",
+          "<--->",
+          "You want to find ___lostdung_? It is %di of here."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 33,
+        "lines": [
+          "You have finally found ___lostdung_!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "place",
+        "firstLine": 38,
+        "lines": [
+          "Place _lostdung_ remote dungeon anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 41,
+        "lines": [
+          "log 1010 step 0",
+          "pc at _lostdung_ set _S.00_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 44,
+        "lines": [
+          "_S.00_ task:",
+          "say 1012",
+          "end quest"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

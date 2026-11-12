@@ -41,7 +41,7 @@ public sealed class DaggerfallRestorationEffectsTests
         Assert.Equal(default, restored.State.Effects.ControlsFor(1));
     }
 
-    [DonorFact(Arena2MagicEffectCostTable.DonorSourcePath)]
+    [Fact]
     public void Normalized_free_action_cast_has_regular_cost_binding_and_a_classic_record_is_read_without_its_element_gate()
     {
         using Fixture f = new(); var s = f.Session; Fund(s);
@@ -255,7 +255,8 @@ public sealed class DaggerfallRestorationEffectsTests
         var costs = TestPayload.Definitions.Magic.EffectCosts.ToDictionary();
         if (spell.Effects.Any(effect => effect.Type == 26))
         {
-            var row = Arena2MagicEffectCostTable.Read(TestContentFiles.ReadText(TestData.Donor(Arena2MagicEffectCostTable.DonorSourcePath))).Resolve(26,-1);
+            var row = Arena2MagicEffectCostTable.From(global::Daggerfall.Import.Publication.TakenTable.Read<SpellCostTable>(
+                TestContentFiles.ReadCopy(TestData.Input("spell-costs.json")), "spell-costs.json")).Resolve(26,-1);
             costs[(26,-1)] = new(row.Type,row.SubType,row.SettingsType,row.School,row.Coefficients[0],row.Coefficients[1],row.Coefficients[2],row.Coefficients[3]);
         }
         var catalog = TestPayload.Definitions.Magic with { Spells = new Dictionary<string,DaggerfallSpellDefinition> { [spell.Key] = spell }, EffectCosts = costs };

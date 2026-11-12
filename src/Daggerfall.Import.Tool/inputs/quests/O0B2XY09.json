@@ -1,0 +1,303 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/O0B2XY09.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "fa97c0746f80e8f46f137bfdda650bb9c363fde208a909214ddccad1670ff1ab",
+    "byteLength": 3831
+  },
+  "document": {
+    "fileName": "O0B2XY09.txt",
+    "questName": "O0B2XY09",
+    "questNameLine": 8,
+    "displayName": "The Rich Merchant",
+    "header": [
+      {
+        "name": "quest",
+        "value": "O0B2XY09"
+      },
+      {
+        "name": "displayname",
+        "value": "The Rich Merchant"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                       You can call me _qgiver_.",
+          "<ce>                     I have wind of some _coastal_",
+          "<ce>                      that some pig of a merchant",
+          "<ce>                       just bought. I want you to",
+          "<ce>                       pinch it an bring it here.",
+          "<ce>                       I'll pay you _gold_ gold.",
+          "<ce>                          Are you interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                           Move along %pcn.",
+          "<ce>                         I need to find a thief",
+          "<ce>                          worthy of the name."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                          In __mansion_ go to",
+          "<ce>                        _mansion_. It shouldn't",
+          "<ce>                        be too tough to find the",
+          "<ce>                         _coastal_. Get it back",
+          "<ce>                      to me in =traveltime_ days,",
+          "<ce>                          and I'll pay you. No",
+          "<ce>                            questions? Good."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                        Oh ho! This shipment is",
+          "<ce>                       better than I had thought.",
+          "<ce>                        Here's your _gold_ gold",
+          "<ce>                        %pcn. Don't spend it all",
+          "<ce>                           on drink or vice."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 43,
+        "lines": [
+          "A new shipment of _coastal_ came into __mansion_. No one knows exactly where."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 46,
+        "lines": [
+          "Someone must've found the _coastal_ in __mansion_. They're shipping it out again."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 49,
+        "lines": [
+          "Turns out where they were keeping the _coastal_ was robbed the other day."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 52,
+        "lines": [
+          "Now, you ain't spending that gold on drink or vice, are you, %pcf?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 55,
+        "lines": [
+          "<ce>                  What do you want? I told you where",
+          "<ce>                 to find the _coastal_, but you diddled",
+          "<ce>               around until it didn't do no one no good.",
+          "<ce>                     Just get out, %pcf. Yer giving",
+          "<ce>                             me a headache."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 62,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of",
+          " the Thieves Guild has hired",
+          " me to steal some _coastal_",
+          " from _mansion_ in",
+          " __mansion_. I have to get",
+          " it back to __qgiver_",
+          " in ___qgiver_ in =traveltime_",
+          " days for my payment."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 89,
+        "lines": [
+          "Item _coastal_ mineral"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 90,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 92,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 94,
+        "lines": [
+          "Place _mansion_ remote generalstore"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 96,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 98,
+        "lines": [
+          "Foe _F.00_ is Battle_mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 99,
+        "lines": [
+          "Foe _F.01_ is Iron_atronach"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 100,
+        "lines": [
+          "Foe _F.02_ is Daedra_seducer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 101,
+        "lines": [
+          "Foe _F.03_ is Werewolf"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 104,
+        "lines": [
+          "place item _coastal_ at _mansion_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 105,
+        "lines": [
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "pc at _mansion_ set _S.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 109,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 112,
+        "lines": [
+          "_S.01_ task:",
+          "pick one of _guard1_ _guard2_ _guard3_ _guard4_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 115,
+        "lines": [
+          "_questdone_ task:",
+          "toting _coastal_ and _qgiver_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 120,
+        "lines": [
+          "_guard1_ task:",
+          "create foe _F.00_ every 2 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 123,
+        "lines": [
+          "_guard2_ task:",
+          "create foe _F.01_ every 2 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 126,
+        "lines": [
+          "_guard3_ task:",
+          "create foe _F.02_ every 2 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 129,
+        "lines": [
+          "_guard4_ task:",
+          "create foe _F.03_ every 2 minutes 1 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 132,
+        "lines": [
+          "_S.07_ task:",
+          "clicked item _coastal_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 135,
+        "lines": [
+          "_S.08_ task:",
+          "when _S.07_ and _traveltime_ ",
+          "make _coastal_ permanent "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

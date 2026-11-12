@@ -1,0 +1,225 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/M0C00Y13.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "ff8a192aa87a95dc968c6eb28a8ffea91dc3421c534b1e60b01b8a94fdd6b062",
+    "byteLength": 3240
+  },
+  "document": {
+    "fileName": "M0C00Y13.txt",
+    "questName": "M0C00Y13",
+    "questNameLine": 9,
+    "displayName": "Hunt for Barbarians",
+    "header": [
+      {
+        "name": "quest",
+        "value": "M0C00Y13"
+      },
+      {
+        "name": "displayname",
+        "value": "Hunt for Barbarians"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                            I am _qgiver_.",
+          "<ce>                 The Fighters Guild doesn't hand out",
+          "<ce>                  charity work. If I weren't short on",
+          "<ce>                 fighters right now, I'd have to send",
+          "<ce>                 you away %pcn. I do need a fighter to",
+          "<ce>                  chase off some barbarian that's",
+          "<ce>                  running wild. Do it for me and I'll",
+          "<ce>                    make sure everyone knows you're",
+          "<ce>                     a stand up %ra. Is it a deal?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                    You've just made a big mistake",
+          "<ce>                     %pcn. Don't come looking for",
+          "<ce>                        work here for a while."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                    Get your sorry carcass over to",
+          "<ce>                         _house_. Run off the",
+          "<ce>                        barbarian by this time",
+          "<ce>                      tomorrow and you'll be OK."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                        Did you get cut up bad?",
+          "<ce>                     A couple more jobs like this",
+          "<ce>                      and you can write your own",
+          "<ce>                   ticket into the Fighters Guild."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                Barbarians are raiding the farms again."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 45,
+        "lines": [
+          "<ce>                 The barbarians looted four farmsteads",
+          "<ce>                before the Fighters Guild stepped in."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 49,
+        "lines": [
+          "<ce>                  Aren't you the %ra that chased off",
+          "<ce>                            the barbarian?"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 53,
+        "lines": [
+          "<ce>               You managed that barbarian pretty well",
+          "<ce>                         %pcf. Not bad at all."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 57,
+        "lines": [
+          "<ce>                  I trusted you to take care of that",
+          "<ce>               barbarian. You failed, so I had to send",
+          "<ce>                        someone else to do it."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 62,
+        "lines": [
+          "%qdt:",
+          " The Fighters Guild of",
+          " ___qgiver_ has",
+          " offered to let me take",
+          " care of some barbarian",
+          " marauding _house_.",
+          " I have one full day."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                        The _monster_ is dead."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 88,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 90,
+        "lines": [
+          "Place _house_ local random"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 92,
+        "lines": [
+          "Clock _2dung_ 1.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 94,
+        "lines": [
+          "Foe _monster_ is Barbarian"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 97,
+        "lines": [
+          "start timer _2dung_ ",
+          "reveal _house_ ",
+          "log 1010 step 0 ",
+          "place foe _monster_ at _house_ ",
+          "create npc at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 103,
+        "lines": [
+          "_2dung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 106,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _monster_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 109,
+        "lines": [
+          "_S.02_ task:",
+          "when _qgclicked_ and _S.01_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 114,
+        "lines": [
+          "_qgclicked_ task:",
+          "               clicked npc _qgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 117,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.01_ ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

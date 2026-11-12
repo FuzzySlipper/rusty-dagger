@@ -17,7 +17,8 @@ internal sealed partial class ImportToolFixture : IDisposable
     private static readonly DateTime OldTime = new(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     internal string Root { get; } = Path.Combine(Path.GetTempPath(), "daggerfall-tool-tests-" + Guid.NewGuid().ToString("N"));
     private string Arena2 => TestData.CorpusRoot;
-    private string Donor(string path) => TestData.Donor(path);
+    private static string Input(string file) => TestData.Input(file);
+    private static T Table<T>(string file) where T : class => TakenTable.Read<T>(File.ReadAllBytes(Input(file)), file);
     private string Repo(string path) => Path.Combine(TestData.RepositoryRoot, path);
     private string At(string path) => Path.Combine(Root, path);
     private string Pack => At("pack.json");
@@ -94,17 +95,12 @@ internal sealed partial class ImportToolFixture : IDisposable
         {
             ["--arena2"] = Arena2, ["--pack"] = Pack, ["--authored"] = Authored, ["--records"] = Records,
             ["--inventory"] = Inventory, ["--out"] = At("output"), ["--group"] = "worldrpg", ["--language"] = "en",
-            ["--donor-races"] = Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs"),
-            ["--donor-formulas"] = Donor("Assets/Scripts/Game/Formulas/FormulaHelper.cs"),
-            ["--donor"] = name == "item-template-ledger" ? Donor("Assets/Scripts/Game/Items") : Donor("Assets/Scripts/Utility/EnemyBasics.cs"),
+            ["--races"] = Input("races.json"), ["--spell-costs"] = Input("spell-costs.json"), ["--mobiles"] = Input("mobiles.json"),
             ["--archive"] = Path.Combine(Arena2, "MONSTER.BSA"), ["--monster"] = Path.Combine(Arena2, "MONSTER.BSA"),
             ["--document"] = At("blocks.json"), ["--buildings"] = At("buildings.json"), ["--blocks"] = At("blocks.json"),
-            ["--quest-text"] = Donor("Assets/StreamingAssets/Quests"), ["--tables"] = Donor("Assets/StreamingAssets/Tables"),
-            ["--item-templates"] = Donor("Assets/Resources/ItemTemplates.txt"), ["--magic-templates"] = Donor("Assets/Resources/MagicItemTemplates.txt"),
-            ["--item-enums"] = Donor("Assets/Scripts/Game/Items/ItemEnums.cs"), ["--item-helper"] = Donor("Assets/Scripts/Game/Items/ItemHelper.cs"),
-            ["--flat-captions"] = Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv"),
-            ["--maps-file"] = Donor("Assets/Scripts/API/MapsFile.cs"), ["--label"] = PublishedSourcePath.Donor("Assets/Scripts/API/MapsFile.cs"),
-            ["--source"] = Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv"),
+            ["--quest-documents"] = Input("quests"), ["--quest-tables"] = Input("quest-tables.json"), ["--quest-list"] = Input("quest-list.json"),
+            ["--item-templates"] = Input("item-templates.json"), ["--magic-item-templates"] = Input("magic-item-templates.json"),
+            ["--item-groups"] = Input("item-groups.json"),
             ["--output"] = At("report.json"), ["--repository"] = TestData.RepositoryRoot, ["--publication"] = Publication,
             ["--region"] = name == "rmb-spatial" ? RmbRegion.ToString(System.Globalization.CultureInfo.InvariantCulture) : "17",
             ["--location"] = name == "rmb-spatial" ? RmbLocation : "Privateer's Hold",
@@ -114,7 +110,6 @@ internal sealed partial class ImportToolFixture : IDisposable
             // Coverage reads the import's staging tree over the repository's content, with its import records.
             ["--content"] = ImportedContent.Staged(""), ["--import-records"] = TestData.ImportRecords,
         };
-        if (name == "internal-strings") values["--label"] = PublishedSourcePath.Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv");
         List<string> args = [name];
         // A staged option is passed too: its default is the repository's staging tree, which these private roots replace.
         foreach (var option in ToolPrograms.Commands[name].Options.Where(option => option.IsRequired || option.Default is not null))
@@ -158,22 +153,18 @@ internal sealed partial class ImportToolFixture : IDisposable
                 // Each exterior's detail record and ground file are written under the content root beside the section.
                 foreach ((string path, byte[] bytes) in DaggerfallLocationDetails.Files(locations)) result.Add(At(Path.Combine("output", path.Replace('/', Path.DirectorySeparatorChar))), bytes);
                 break;
-            case "magic-catalog": sections.Add("magic", Arena2MagicCatalogDocument.Build(Source("SPELLS.STD"), Source("MAGIC.DEF"), Label("SPELLS.STD"), Label("MAGIC.DEF"), Arena2MagicEffectCostTable.Read(File.ReadAllText(Donor("Assets/Scripts/Game/Formulas/FormulaHelper.cs")))).Json); break;
-            case "mobile-catalog": sections.Add("mobiles", Arena2MobileCatalogDocument.Build(File.ReadAllText(Donor("Assets/Scripts/Utility/EnemyBasics.cs")), PublishedSourcePath.Donor("Assets/Scripts/Utility/EnemyBasics.cs"), MonsterArchiveInventory.Enumerate(Source("MONSTER.BSA"), "MONSTER.BSA"), PublishedSource.Of(Label("MONSTER.BSA"), Source("MONSTER.BSA"))).Json); break;
-            case "internal-strings": Section("text", DaggerfallInternalStringsBuilder.Merge(Read<DaggerfallText>(Pack, "text"), File.ReadAllBytes(Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv")), PublishedSourcePath.Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Strings.csv"), "en")); break;
+            case "magic-catalog": sections.Add("magic", Arena2MagicCatalogDocument.Build(Source("SPELLS.STD"), Source("MAGIC.DEF"), Label("SPELLS.STD"), Label("MAGIC.DEF"), Arena2MagicEffectCostTable.From(Table<SpellCostTable>("spell-costs.json"))).Json); break;
+            case "mobile-catalog": sections.Add("mobiles", Arena2MobileCatalogDocument.Build(Table<MobileTable>("mobiles.json"), MonsterArchiveInventory.Enumerate(Source("MONSTER.BSA"), "MONSTER.BSA"), PublishedSource.Of(Label("MONSTER.BSA"), Source("MONSTER.BSA"))).Json); break;
             case "climate":
                 Section("climate", DaggerfallWorldGridsBuilder.BuildClimate(Source("CLIMATE.PAK"), Label("CLIMATE.PAK"), Rows));
                 Section("politic", DaggerfallWorldGridsBuilder.BuildPolitic(Source("POLITIC.PAK"), Label("POLITIC.PAK"), Rows)); break;
-            case "factions": Section("factions", DaggerfallFactionsBuilder.WithNpcCaptions(
-                DaggerfallFactionsBuilder.Build(File.ReadAllText(Path.Combine(Arena2, "FACTION.TXT")), Label("FACTION.TXT"), Source("FACTION.TXT"), Rows),
-                File.ReadAllBytes(Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv")),
-                PublishedSourcePath.Donor("Assets/StreamingAssets/Text/Master Localization CSV Files/Internal_Flats.csv"))); break;
+            case "factions": Section("factions",
+                DaggerfallFactionsBuilder.Build(File.ReadAllText(Path.Combine(Arena2, "FACTION.TXT")), Label("FACTION.TXT"), Source("FACTION.TXT"), Rows)); break;
             case "terrain":
                 DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(Source("WOODS.WLD"), Label("WOODS.WLD"), Rows);
                 Section("terrain", terrain);
                 result.Add(At(Path.Combine("output", terrain.Samples.Replace('/', Path.DirectorySeparatorChar))), terrain.SampleBytes);
                 break;
-            case "building-name-inputs": Section("buildingNames", DaggerfallBuildingNameInputsBuilder.Build(File.ReadAllBytes(Donor("Assets/Scripts/API/MapsFile.cs")), PublishedSourcePath.Donor("Assets/Scripts/API/MapsFile.cs"))); break;
             case "blocks":
                 var blocks = DaggerfallBlocksBuilder.Build(Source("BLOCKS.BSA"), Label("BLOCKS.BSA"), Rows);
                 result.Add(At("blocks.json"), Encoding.UTF8.GetBytes(JsonSerializer.Serialize(blocks, PublishedJson.SectionCompact) + "\n"));
@@ -186,23 +177,19 @@ internal sealed partial class ImportToolFixture : IDisposable
             case "catalogs":
                 var catalogs = DaggerfallCatalogBuilder.Build(Rows,
                     Directory.EnumerateFiles(Arena2, "CLASS*.CFG").Order(StringComparer.Ordinal).Select(file => (Path.GetFileName(file), File.ReadAllBytes(file))).ToArray(),
-                    File.ReadAllText(Donor("Assets/Scripts/Game/Entities/RaceTemplate.cs")),
+                    Table<DaggerfallRaceTable>("races.json"),
                     Source("CLASSES.DAT"), DaggerfallTextBuilder.Build(Source("TEXT.RSC"), Label("TEXT.RSC"), Rows, "en"));
                 sections.Add("catalogs", Encoding.UTF8.GetString(DaggerfallCatalogSerializer.Serialize(catalogs, Rows.Select(row => row.PathOrPattern).ToHashSet(StringComparer.Ordinal)))); break;
             case "item-template-ledger":
                 var family = Rows.Single(row => row.RowType == "family" && row.Id == "CNT-011");
-                var baseline = ItemTemplateBaseline.FromDonorSources(File.ReadAllText(Donor("Assets/Scripts/Game/Items/ItemEnums.cs")), File.ReadAllText(Donor("Assets/Scripts/Game/Items/ItemHelper.cs")), File.ReadAllText(Donor("Assets/Scripts/API/ItemsFile.cs")), PublishedSourcePath.DonorRoot);
+                var baseline = ItemTemplateBaseline.FromGroups(Table<ItemGroupTable>("item-groups.json"), PublishedSourcePath.DonorRoot);
                 sections.Add(ItemTemplateLedgerBuilder.SectionName, ItemTemplateLedgerBuilder.Build(baseline, family.Id, family.PathOrPattern, ItemTemplateLedgerBuilder.StatusFor(family.Disposition)).ToJsonString(PublishedJson.Section)); break;
             case "items":
-                var templates = File.ReadAllBytes(Donor("Assets/Resources/ItemTemplates.txt"));
-                string label = PublishedSourcePath.Donor("Assets/Resources/ItemTemplates.txt");
-                var items = DaggerfallItemTemplatesBuilder.Build(ItemTemplateReader.ReadTemplates(Encoding.UTF8.GetString(templates), label), ItemTemplateReader.ReadMagic(File.ReadAllText(Donor("Assets/Resources/MagicItemTemplates.txt")), PublishedSourcePath.Donor("Assets/Resources/MagicItemTemplates.txt")), label, templates, Rows);
-                byte[] groupEnums = File.ReadAllBytes(Donor("Assets/Scripts/Game/Items/ItemEnums.cs"));
-                byte[] groupHelper = File.ReadAllBytes(Donor("Assets/Scripts/Game/Items/ItemHelper.cs"));
-                items = items with { GroupTable = new(
-                    PublishedSource.Of(PublishedSourcePath.Donor("Assets/Scripts/Game/Items/ItemEnums.cs"), groupEnums),
-                    PublishedSource.Of(PublishedSourcePath.Donor("Assets/Scripts/Game/Items/ItemHelper.cs"), groupHelper),
-                    ItemTemplateBaseline.ReadGroupEnumerations(Encoding.UTF8.GetString(groupEnums), Encoding.UTF8.GetString(groupHelper), "fixture item groups")) };
+                ItemTemplateTable templates = Table<ItemTemplateTable>("item-templates.json");
+                ItemGroupTable groups = Table<ItemGroupTable>("item-groups.json");
+                var items = DaggerfallItemTemplatesBuilder.Build(templates.Templates, Table<MagicItemTemplateTable>("magic-item-templates.json").Templates,
+                    templates.Source.Path, templates.Source.ByteLength, Rows);
+                items = items with { GroupTable = new(groups.ItemEnums.Cited(), groups.ItemHelper.Cited(), [.. groups.Groups.OrderBy(group => group.Id)]) };
                 Section("itemTemplates", items);
                 sections.Add(ItemTemplateLedgerBuilder.SectionName, ItemTemplateLedgerBuilder.WithSubstituteTargets(JsonNode.Parse(File.ReadAllText(Pack))![ItemTemplateLedgerBuilder.SectionName]!.AsObject(), items).ToJsonString(PublishedJson.Section)); break;
             case "videos": Section("cinematics", DaggerfallCinematicPackBuilder.Build(Directory.EnumerateFiles(Arena2).Order(StringComparer.OrdinalIgnoreCase)

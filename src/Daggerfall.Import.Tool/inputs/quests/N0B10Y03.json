@@ -1,0 +1,417 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/N0B10Y03.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "536013fafb1e843d02813c0f53933a83d7df624dd0366155f48e9e8d7affa66a",
+    "byteLength": 5550
+  },
+  "document": {
+    "fileName": "N0B10Y03.txt",
+    "questName": "N0B10Y03",
+    "questNameLine": 9,
+    "displayName": "Guard the Guild",
+    "header": [
+      {
+        "name": "quest",
+        "value": "N0B10Y03"
+      },
+      {
+        "name": "displayname",
+        "value": "Guard the Guild"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                      The Mages Guild is in need",
+          "<ce>                        of someone to guard the",
+          "<ce>                      magical _treasure_ tonight.",
+          "<ce>                     Is it feasible that you could",
+          "<ce>                        do it for us? There's a",
+          "<ce>                        _potion_ in it for you.",
+          "                                     <--->",
+          "<ce>                    The Guildhall -- how should one",
+          "<ce>                   put this? In life, I think you'll",
+          "<ce>                  agree, there are always some people",
+          "<ce>                    who just ... well, the Guild has",
+          "<ce>                   always stood for, or, rather, had",
+          "<ce>                    problems with ... Listen, young",
+          "<ce>                 %pct, we need a guard. Will you do it?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                     No problem. There are always",
+          "<ce>                      other guild members looking",
+          "<ce>                               for work."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                         Be at the Mages Guild",
+          "<ce>                      by midnight. Your period of",
+          "<ce>                         guardianship will last",
+          "<ce>                       until 3:00 in the morning."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                        Well done, %pcf. Those",
+          "<ce>                     thieves didn't stand a chance",
+          "<ce>                      against you. Here, take this",
+          "<ce>                             _potion_. It's",
+          "<ce>                      really the least we can do."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 48,
+        "lines": [
+          "The thieves must think that _treasure_ in the Mages Guild is very valuable.",
+          "<--->",
+          "The thieves have been threatening to steal the Mages Guild's _treasure_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 53,
+        "lines": [
+          "The thieves finally got that _treasure_ after all.",
+          "<--->",
+          "The Mages Guild should've got real guards. That's why they lost the _treasure_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 58,
+        "lines": [
+          "Those thieves aren't going to try to get that _treasure_ again, I bet.",
+          "<--->",
+          "The thieves who tried to get that _treasure_ didn't expect a real guard, I bet."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 63,
+        "lines": [
+          "How are you, %pcf? Found any use for that _potion_ yet?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 66,
+        "lines": [
+          "<ce>                        The _treasure_ is gone,",
+          "<ce>                   but you're here? That's hardly an",
+          "<ce>                        equal exchange, I think.",
+          "<ce>                            Leave me, %pcn."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 72,
+        "lines": [
+          "%qdt:",
+          " I agreed to guard a",
+          " magic _treasure_",
+          " at the Mages Guild of",
+          " ___qgiver_. I have",
+          " to be there between midnight",
+          " and three."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 83,
+        "lines": [
+          "%qdt:",
+          " I couldn't resist it. I took",
+          " the _treasure_ I was",
+          " supposed to guard. They'll",
+          " be after me for sure."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 90,
+        "lines": [
+          "<ce>                      Lookee here, boys. A guard.",
+          "<ce>                        Gee, I'm all scared and",
+          "<ce>                        shaking. Let's leave the",
+          "<ce>                        tongue on the door as a",
+          "<ce>                        warning not to mess with",
+          "<ce>                      the Thieves Guild. Get him!"
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 98,
+        "lines": [
+          "<ce>                      I claim bounty on the thief",
+          "<ce>                        and traitor to the Mages",
+          "<ce>                                 Guild."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 115,
+        "lines": [
+          "Item _treasure_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 116,
+        "lines": [
+          "Item _potion_ gem"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 118,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 120,
+        "lines": [
+          "Place _magesguild_ local magery"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 122,
+        "lines": [
+          "Clock _oneday_ 1.03:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 123,
+        "lines": [
+          "Clock _S.10_ 3.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 125,
+        "lines": [
+          "Foe _F.00_ is Thief"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 126,
+        "lines": [
+          "Foe _F.01_ is 4 Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 129,
+        "lines": [
+          "place item _treasure_ at _magesguild_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 130,
+        "lines": [
+          "start timer _oneday_ ",
+          "log 1010 step 0",
+          "create npc at _magesguild_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 134,
+        "lines": [
+          "variable _oneday_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 136,
+        "lines": [
+          "_timeout_ task:",
+          "when _oneday_ and not _S.07_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_clickonqgiver_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_S.02_ task:",
+          "daily from 00:00 to 03:00 ",
+          "pc at _magesguild_ set _S.03_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 147,
+        "lines": [
+          "_S.03_ task:",
+          "create foe _F.00_ every 3 minutes 1 times with 100% success ",
+          "create foe _F.00_ every 3 minutes 1 times with 100% success ",
+          "create foe _F.00_ every 3 minutes 1 times with 100% success ",
+          "create foe _F.00_ every 3 minutes 1 times with 100% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 154,
+        "lines": [
+          "_S.04_ task:",
+          "injured _F.00_ saying 1012 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 157,
+        "lines": [
+          "_S.05_ task:",
+          "killed 2 _F.00_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 160,
+        "lines": [
+          "_S.06_ task:",
+          "clicked item _treasure_ ",
+          "clear _dropped_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 164,
+        "lines": [
+          "_dropped_ task:",
+          "dropped _treasure_ at _magesguild_ ",
+          "clear _S.06_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 168,
+        "lines": [
+          "_S.07_ task:",
+          "when _S.06_ and not _S.02_ ",
+          "create foe _F.01_ every 60 minutes 5 times with 10% success ",
+          "start timer _S.10_ ",
+          "log 1011 step 1 ",
+          "change repute with _qgiver_ by -30 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 175,
+        "lines": [
+          "_S.08_ task:",
+          "injured _F.01_ saying 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 178,
+        "lines": [
+          "_questdone_ task:",
+          "when _S.10_ and _S.07_ ",
+          "make _treasure_ permanent ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 183,
+        "lines": [
+          "variable _S.10_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 185,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _clickonqgiver_ and _S.05_ and not _S.07_ and not _S.02_ ",
+          "give pc _potion_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 190,
+        "lines": [
+          "_clearclick_ task:",
+          "               when _clickonqgiver_ and not _S.05_",
+          "               clear _clearclick_ _clickonqgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 194,
+        "lines": [
+          "_clearclick2_ task:",
+          "               when _clickonqgiver_ and _S.02_",
+          "               clear _clearclick2_ _clickonqgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 198,
+        "lines": [
+          "variable _S.13_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

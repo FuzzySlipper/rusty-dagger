@@ -1,0 +1,468 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C01Y09.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "c9aa3359c161c54374094985b5f85ff3fcf494e8ee3af5436f0a638fe14e367f",
+    "byteLength": 6723
+  },
+  "document": {
+    "fileName": "A0C01Y09.txt",
+    "questName": "A0C01Y09",
+    "questNameLine": 8,
+    "displayName": "The Birthday Present",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C01Y09"
+      },
+      {
+        "name": "displayname",
+        "value": "The Birthday Present"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                   Excuse me? _questg_ is the name.",
+          "<ce>                   I don't know how I feel about you,",
+          "<ce>              but I do need a favor. My sister, _sister_,",
+          "<ce>              is having a birthday next month and I could",
+          "<ce>              really use some _item_ for the celebration.",
+          "<ce>            It's worth _gold_ gold pieces. What do you say?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                  Just as well, I suppose. Good day.",
+          "                                     <--->",
+          "<ce>                            Sorry I asked.",
+          "                                     <--->",
+          "<ce>                  Then we never talked. I'd hate for",
+          "<ce>                       you to spoil the surprise.",
+          "                                     <--->",
+          "<ce>                 Whatever. It was easy gold, you know.",
+          "                                     <--->",
+          "<ce>             Leave me then. I have a celebration to plan."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 33,
+        "lines": [
+          "<ce>                    Excellent! You are a smart one.",
+          "<ce>                    This is easy gold. Go to _store_",
+          "<ce>                and find _merchant_. %G has the specific",
+          "<ce>                   _item_ I need. Remember, there is",
+          "<ce>                   only a month 'til the celebration.",
+          "                                     <--->",
+          "<ce>          Very good. This is easy gold. You'll have to go to",
+          "<ce>                 _store_ to find the exact kind I need.",
+          "<ce>                 Talk to _merchant_. %G runs the place."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 45,
+        "lines": [
+          "<ce>             Very good, %pcn. Here's the gold I promised."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                  I hear that _questg_ really doesn't",
+          "<ce>                  like %g3 sister, _sister_. And %g is",
+          "<ce>                         about to get married."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 53,
+        "lines": [
+          "<ce>                 Did you hear that _sister_ uncovered",
+          "<ce>                       an attempt to poison %g2?"
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 57,
+        "lines": [
+          "<ce>                     _sister_ was found dead! And",
+          "<ce>                   on the eve of %g3 wedding day, too."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 61,
+        "lines": [
+          "<ce>                 Ahem. Well, yes. I suppose since you",
+          "<ce>                  did get that... item for my sister's",
+          "<ce>                     nuptials, I do owe you a debt."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 66,
+        "lines": [
+          "<ce>                 Traitor! I send you on a simple fetch",
+          "<ce>                   mission and you have to blab it to",
+          "<ce>                 _sister_. You'll get no help from me."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 72,
+        "lines": [
+          "<ce>                     You are carrying the _item_.",
+          "<ce>                  Do you want to give it to _sister_?"
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                     You are carrying the _item_.",
+          "<ce>                       Do you want to give it to",
+          "<ce>                               _questg_?"
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 81,
+        "lines": [
+          "%qdt:",
+          " I have promised _questg_ of ___questg_",
+          " that I will obtain some _item_ from",
+          " _merchant_ at _store_",
+          " in return for _gold_ gold pieces. I must return with",
+          " the _item_ before the birthday celebration",
+          " of _questg_'s sister, _sister_,",
+          " which is in one month."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 91,
+        "lines": [
+          "<ce>                     Hello. Yes, I am _merchant_.",
+          "<ce>               Some _item_? Yes, I have it. I'll take your",
+          "<ce>              20 gold pieces and you can have the _item_.",
+          "<ce>                        Thanks for stopping by."
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 97,
+        "lines": [
+          "<ce>                     Hello. Yes, I am _merchant_.",
+          "<ce>               Some _item_? Yes, I have it. I'll take your",
+          "<ce>              20 gold pieces and you can have the _item_.",
+          "<ce>             Oh, I'm sorry. You don't seem to have enough",
+          "<ce>                         gold to pay for that."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 104,
+        "lines": [
+          "<ce>                   Hello? Why are you here? You say",
+          "<ce>                       _questg_ wants some _item_",
+          "<ce>           for my birthday celebration? Oh, what a wonderful",
+          "<ce>               idea! I promise not to spoil the surprise!"
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 110,
+        "lines": [
+          "<ce>                 Hello? How did you get in here? What?",
+          "<ce>                  _questg_ asked you to bring %g2 some",
+          "<ce>                 _item_? Oh my... do you have any idea",
+          "<ce>                   what he plans to do with it? I do.",
+          "<ce>                    _item_ is part of a potion that",
+          "<ce>               my loving brother likes to make. A potion",
+          "<ce>                that kills. You must not give it to %g2!",
+          "<ce>                    Please! Bring the _item_ to me.",
+          "<ce>                 You must do this or I may be killed!"
+        ]
+      },
+      {
+        "id": 1060,
+        "firstLine": 121,
+        "lines": [
+          "<ce>                        I'll take it, I guess.",
+          "<ce>                  But doesn't this ruin the surprise?",
+          "<ce>                      You are a strange one, %pcn."
+        ]
+      },
+      {
+        "id": 1061,
+        "firstLine": 126,
+        "lines": [
+          "<ce>                     Thank you. My brother cannot",
+          "<ce>                    use it now. You have done well.",
+          "<ce>                               Thank you."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 148,
+        "lines": [
+          "Item _item_ large_plant"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 149,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 151,
+        "lines": [
+          "Person _questg_ face 4 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 152,
+        "lines": [
+          "Person _sister_ face 2 group Resident2 female local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 153,
+        "lines": [
+          "Person _merchant_ face 1 faction The_Merchants local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 155,
+        "lines": [
+          "Place _item0_ local house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 157,
+        "lines": [
+          "Place _store_ local generalstore"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 159,
+        "lines": [
+          "Clock _questtime_ 31.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 160,
+        "lines": [
+          "Clock _shortdelay_ 01:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 164,
+        "lines": [
+          "start timer _questtime_ ",
+          "log 1025 step 0 ",
+          "pick one of _S.01_ _S.02_ _S.01_ _S.02_ ",
+          "create npc _sister_ ",
+          "place npc _merchant_ at _store_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_questtime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 173,
+        "lines": [
+          "variable _S.01_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 174,
+        "lines": [
+          "variable _S.02_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 175,
+        "lines": [
+          "variable _S.03_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 176,
+        "lines": [
+          "_S.04_ task:",
+          "clicked _merchant_ and at least 20 gold otherwise do _S.05_ ",
+          "get item _item_ ",
+          "say 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 181,
+        "lines": [
+          "_S.05_ task:",
+          "say 1041 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 184,
+        "lines": [
+          "_S.06_ task:",
+          "toting _item_ and _questg_ clicked ",
+          "prompt 1013 yes _S.13_ no _S.11_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 188,
+        "lines": [
+          "_S.07_ task:",
+          "clicked npc _sister_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 191,
+        "lines": [
+          "_S.08_ task:",
+          "when _S.07_ and _S.01_ ",
+          "say 1050 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 195,
+        "lines": [
+          "_S.09_ task:",
+          "when _S.07_ and _S.02_ ",
+          "say 1051 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 199,
+        "lines": [
+          "_S.10_ task:",
+          "toting _item_ and _sister_ clicked ",
+          "prompt 1011 yes _S.12_ no _S.11_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 203,
+        "lines": [
+          "_S.11_ task:",
+          "get item _item_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 206,
+        "lines": [
+          "variable _S.12_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 207,
+        "lines": [
+          "_S.13_ task:",
+          "give pc _gold_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 210,
+        "lines": [
+          "_S.14_ task:",
+          "when _S.01_ and _S.12_ ",
+          "say 1060 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 214,
+        "lines": [
+          "_S.15_ task:",
+          "when _S.02_ and _S.12_ ",
+          "say 1061 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 218,
+        "lines": [
+          "_shortdelay_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 221,
+        "lines": [
+          "_S.17_ task:",
+          "when _S.06_ or _S.10_ ",
+          "start timer _shortdelay_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

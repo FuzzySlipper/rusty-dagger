@@ -1,7 +1,8 @@
+using System.Text.Json;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
-using System.Text.Json;
+using Daggerfall.Source.Tool.Donor;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -28,19 +29,19 @@ public sealed class DaggerfallQuestPackTests
     [Fact]
     public void Refuses_malformed_sources_and_unknown_signatures()
     {
-        Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("displayname: X\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "q.txt", MessageIds, GlobalKeys));
-        Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("quest: Q\nqbn:\nclock a\n", "q.txt", MessageIds, GlobalKeys));
-        Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\n", "q.txt", MessageIds, GlobalKeys));
+        Assert.Throws<Arena2FormatException>(() => DonorQuestScript.Read("displayname: X\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "q.txt", MessageIds, GlobalKeys));
+        Assert.Throws<Arena2FormatException>(() => DonorQuestScript.Read("quest: Q\nqbn:\nclock a\n", "q.txt", MessageIds, GlobalKeys));
+        Assert.Throws<Arena2FormatException>(() => DonorQuestScript.Read("quest: Q\nqrc:\nMessage: 1\ntext\n", "q.txt", MessageIds, GlobalKeys));
         // The first stray line is the headless entry and the second joins no block: the donor's
         // block reader swallows following lines into the open block, so the refusal lands late.
-        Arena2FormatException unknown = Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\nfrobnicate wildly\n\nzorbnication opens\n\nzorbnication continues\n", "q.txt", MessageIds, GlobalKeys));
+        Arena2FormatException unknown = Assert.Throws<Arena2FormatException>(() => DonorQuestScript.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\nfrobnicate wildly\n\nzorbnication opens\n\nzorbnication continues\n", "q.txt", MessageIds, GlobalKeys));
         Assert.Contains("zorbnication opens", unknown.Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Parses_structure_blocks_and_links()
     {
-        QuestSourceDocument document = QuestSourceReader.Read(
+        QuestSourceDocument document = DonorQuestScript.Read(
             "quest: Q\nqrc:\nQuestorOffer:  [1000]\nOffer text\n\nMessage:  1011\nFirst\n\nSecond\nqbn:\nclock myclock 1 day 1\n\nLiftedCurse _S.01_\n\n_pcgetsgold_ task:\nperform action\n",
             "q.txt", MessageIds, GlobalKeys);
         Assert.Equal("Q", document.QuestName);
@@ -57,7 +58,7 @@ public sealed class DaggerfallQuestPackTests
     [Fact]
     public void Retains_QRC_message_boundaries_and_ordered_QBN_action_source_without_executing_it()
     {
-        QuestSourceDocument document = QuestSourceReader.Read(
+        QuestSourceDocument document = DonorQuestScript.Read(
             "-- donor metadata\nQuest: Q\nDisplayName: Fixture\nQRC:\n-- panel comment\nMessage: 7\nFirst\n-- adjacent dash text\n\nQBN:\n-- ignored QBN comment\nClock timer 1 day 1\n\nstartup action\nsecond action\n\n_done_ task:\nend quest\n",
             "fixture.txt", MessageIds, GlobalKeys);
 
@@ -70,7 +71,7 @@ public sealed class DaggerfallQuestPackTests
     [Fact]
     public void Refuses_an_unattached_QBN_line_with_its_file_and_physical_line()
     {
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => DonorQuestScript.Read(
             "Quest: Q\nQRC:\nMessage: 7\ntext\nQBN:\nstartup action\n\nunsupported top-level\n",
             "fixture.txt", MessageIds, GlobalKeys));
 
@@ -79,16 +80,12 @@ public sealed class DaggerfallQuestPackTests
         Assert.Contains("unsupported top-level", error.Message, StringComparison.Ordinal);
     }
 
-    [DonorFact("Assets/StreamingAssets/Tables", "Assets/StreamingAssets/Quests/50C00Y00.txt")]
-    public void Deterministically_compiles_a_representative_classic_script()
+    [Fact]
+    public void Deterministically_compiles_a_representative_classic_quest_document()
     {
-        string tables = TestData.Donor("Assets/StreamingAssets/Tables");
-        string source = TestData.Donor("Assets/StreamingAssets/Quests/50C00Y00.txt");
-
-        DaggerfallQuestTable globals = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true);
-        DaggerfallQuestTable messages = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt");
-        DaggerfallQuestPack first = Compile(File.ReadAllText(source), "50C00Y00.txt", messages.Lookup, globals.Lookup);
-        DaggerfallQuestPack second = Compile(File.ReadAllText(source), "50C00Y00.txt", messages.Lookup, globals.Lookup);
+        QuestSourceDocument document = Assert.IsType<QuestSourceDocument>(OurDocuments().Single(quest => quest.Source.Path.EndsWith("/50C00Y00.txt", StringComparison.Ordinal)).Document);
+        DaggerfallQuestPack first = DaggerfallQuestPackBuilder.Build([document], [], "donor/StreamingAssets/Quests", [1], Inventory());
+        DaggerfallQuestPack second = DaggerfallQuestPackBuilder.Build([document], [], "donor/StreamingAssets/Quests", [1], Inventory());
 
         Assert.Equal(JsonSerializer.Serialize(first), JsonSerializer.Serialize(second));
         DaggerfallQuestRecord quest = Assert.Single(first.Quests);
@@ -100,8 +97,8 @@ public sealed class DaggerfallQuestPackTests
     [Fact]
     public void Builds_the_pack_and_diagnoses_duplicates()
     {
-        QuestSourceDocument first = QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "a.txt", MessageIds, GlobalKeys);
-        QuestSourceDocument second = QuestSourceReader.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "b.txt", MessageIds, GlobalKeys);
+        QuestSourceDocument first = DonorQuestScript.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "a.txt", MessageIds, GlobalKeys);
+        QuestSourceDocument second = DonorQuestScript.Read("quest: Q\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "b.txt", MessageIds, GlobalKeys);
         DaggerfallQuestPack pack = DaggerfallQuestPackBuilder.Build([first, second], [], "donor/StreamingAssets/Quests", [1], Inventory());
         pack.Validate();
         Assert.Equal(2, pack.Quests.Count);
@@ -113,8 +110,8 @@ public sealed class DaggerfallQuestPackTests
     [Fact]
     public void Canonicalizes_quest_records_by_source_file_not_semantic_name()
     {
-        QuestSourceDocument first = QuestSourceReader.Read("quest: A\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "z.txt", MessageIds, GlobalKeys);
-        QuestSourceDocument second = QuestSourceReader.Read("quest: Z\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "a.txt", MessageIds, GlobalKeys);
+        QuestSourceDocument first = DonorQuestScript.Read("quest: A\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "z.txt", MessageIds, GlobalKeys);
+        QuestSourceDocument second = DonorQuestScript.Read("quest: Z\nqrc:\nMessage: 1\ntext\nqbn:\nclock a\n", "a.txt", MessageIds, GlobalKeys);
 
         DaggerfallQuestPack pack = DaggerfallQuestPackBuilder.Build([first, second], [], "donor/StreamingAssets/Quests", [1], Inventory());
 
@@ -122,29 +119,15 @@ public sealed class DaggerfallQuestPackTests
         Assert.Equal(["Z", "A"], pack.Quests.Select(quest => quest.Name));
     }
 
-    [DonorFact("Assets/StreamingAssets/Quests", "Assets/StreamingAssets/Tables")]
-    public void Parses_the_donor_corpus()
+    [Fact]
+    public void Builds_the_pack_from_our_quest_documents()
     {
-        string quests = TestData.Donor("Assets/StreamingAssets/Quests");
-
-        DaggerfallQuestTable globals = DaggerfallQuestTableReader.Read(File.ReadAllBytes(TestData.Donor("Assets/StreamingAssets/Tables/Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true);
-        DaggerfallQuestTable messages = DaggerfallQuestTableReader.Read(File.ReadAllBytes(TestData.Donor("Assets/StreamingAssets/Tables/Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt");
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
-        List<QuestSourceDocument> documents = [];
+        IReadOnlyList<QuestDocumentInput> ours = OurDocuments();
+        List<QuestSourceDocument> documents = [.. ours.Select(quest => quest.Document).OfType<QuestSourceDocument>()];
         List<(string, string, int, string)> failures = [];
-        long total = 0;
-        foreach (string path in Directory.EnumerateFiles(quests, "*.txt").Order(StringComparer.Ordinal))
-        {
-            total += new FileInfo(path).Length;
-            try
-            {
-                documents.Add(QuestSourceReader.Read(File.ReadAllText(path), Path.GetFileName(path), messages.Lookup, globals.Lookup));
-            }
-            catch (Arena2FormatException exception)
-            {
-                failures.Add((Path.GetFileName(path), Path.GetFileNameWithoutExtension(path), exception.Offset, exception.Message));
-            }
-        }
+        long total = ours.Sum(quest => quest.Source.ByteLength);
+        Assert.All(ours, quest => Assert.Null(quest.Refusal));
 
         DaggerfallQuestPack pack = DaggerfallQuestPackBuilder.Build(documents, failures, "donor/StreamingAssets/Quests", new byte[total], inventory);
         pack.Validate();
@@ -173,9 +156,9 @@ public sealed class DaggerfallQuestPackTests
         new SourceInventoryRow("CNT-017-QBN", "family", "CNT-017", "quest-source", "donor", string.Empty, string.Empty, string.Empty),
     ];
 
-    private static DaggerfallQuestPack Compile(string text, string file, IReadOnlyDictionary<string, int> messages, IReadOnlyDictionary<string, int> globals)
-    {
-        QuestSourceDocument document = QuestSourceReader.Read(text, file, messages, globals);
-        return DaggerfallQuestPackBuilder.Build([document], [], "donor/StreamingAssets/Quests", [1], Inventory());
-    }
+    /// <summary>Our quest documents, in source order, as the import reads them.</summary>
+    private static IReadOnlyList<QuestDocumentInput> OurDocuments() =>
+        [.. Directory.EnumerateFiles(TestData.Input("quests"), "*.json")
+            .Select(path => TakenTable.Read<QuestDocumentInput>(File.ReadAllBytes(path), path))
+            .OrderBy(quest => quest.Source.Path, StringComparer.Ordinal)];
 }

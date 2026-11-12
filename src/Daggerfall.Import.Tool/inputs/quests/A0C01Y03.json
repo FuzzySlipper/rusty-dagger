@@ -1,0 +1,394 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C01Y03.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "729ce803544beccfe1d37dd16668a9d2819dfa495353ea09297c1dfdd8984cca",
+    "byteLength": 6853
+  },
+  "document": {
+    "fileName": "A0C01Y03.txt",
+    "questName": "A0C01Y03",
+    "questNameLine": 8,
+    "displayName": "The Riddle",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C01Y03"
+      },
+      {
+        "name": "displayname",
+        "value": "The Riddle"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                       I am _qgiver_, and I need",
+          "<ce>                the services of a hunter of men. I am in",
+          "<ce>                      love with _spouse_. Alas, %g",
+          "<ce>             refuses to marry unless I prove my worthiness",
+          "<ce>                    by answering a riddle %g3 mentor",
+          "<ce>                 _hermit_ left behind when %g vanished.",
+          "<ce>               I need you to find %g2 and find the answer",
+          "<ce>               to %g3 riddle. I will pay you _gold_ gold",
+          "<ce>                         pieces if you succeed."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 24,
+        "lines": [
+          "<ce>              I will continue my search for an adventurer",
+          "<ce>               willing to take up my charge. If you meet",
+          "<ce>                anyone who would be interested in such a",
+          "<ce>                    quest, direct them to _qgiver_."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                The only person who might help you find",
+          "<ce>                         _hermit_ is _spouse_.",
+          "<ce>                     %G can be found in ___spouse_.",
+          "<ce>              Take these flowers. They are %g3 favorites.",
+          "<ce>                 They may gain you some favor with %g2.",
+          "<ce>                    Here is a letter with _hermit_'s",
+          "<ce>               riddle inscribed upon it. If you have not",
+          "<ce>                returned in three months, I will assume",
+          "<ce>                         that you have failed."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                  _qgiver_ rips open the letter from",
+          "<ce>                  _hermit_. \"Kindness! Of course. Now",
+          "<ce>                  I understand why _spouse_ sent me on",
+          "<ce>               this quest. It is not enough to love %g2,",
+          "<ce>                I have to show %g2 kindness as well. You",
+          "<ce>                   have been most helpful, %pcf. Here",
+          "<ce>                      is the gold I promised you.\""
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 50,
+        "lines": [
+          "<ce>                    _qgiver_ is smitten with love.",
+          "<ce>                   %G has been trying to get _spouse_",
+          "<ce>                to accept a marriage proposal for ages."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 55,
+        "lines": [
+          "<ce>                     I hear that _spouse_ over in",
+          "<ce>                      ___spouse_ married. _qgiver_",
+          "<ce>                 will be heartbroken when %g finds out."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 60,
+        "lines": [
+          "<ce>                        Good news! _spouse_ and",
+          "<ce>                    _qgiver_ were married recently."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 64,
+        "lines": [
+          "<ce>                  Anything for the %ra that found the",
+          "<ce>                     answer to my riddle. _spouse_",
+          "<ce>                      and I are married, you know."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 69,
+        "lines": [
+          "<ce>              You are the %ra that was unable to find the",
+          "<ce>              answer to the hermit's riddle. I have no use",
+          "<ce>                           for failed heroes."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 74,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of ___qgiver_",
+          " asked me to find _hermit_.",
+          " Supposedly, _hermit_ has the",
+          " answer to a riddle. The only clue",
+          " I have is that %g once worked with",
+          " _spouse_ in ___spouse_.",
+          " I have three months to report my success."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 84,
+        "lines": [
+          "<ce>               The _flowers_ were not really necessary.",
+          "<ce>                    _hermit_ left to study under the",
+          "<ce>                      famous teacher _teacher_ in",
+          "<ce>                    __school_. If you give %g2 this",
+          "<ce>                 book, %g may look upon you favorably."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 91,
+        "lines": [
+          "<ce>                    _hermit_ asked me not to reveal",
+          "<ce>                 %g3 whereabouts to strangers. However,",
+          "<ce>                      since you bring _book_ from",
+          "<ce>                   _spouse_, you are clearly not just",
+          "<ce>                    some stranger. _hermit_ secluded",
+          "<ce>                  %g2self in a dungeon to study arcane",
+          "<ce>                  lore. I have marked its location on",
+          "<ce>                       your map. Good luck, %pcn."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 101,
+        "lines": [
+          "<ce>                  I hate being bothered! If the only",
+          "<ce>                  way to get you to leave me alone is",
+          "<ce>                 to give you the answer to that stupid",
+          "<ce>                  riddle, then here, take it. Now get",
+          "<ce>                   out of here before I summon a fire",
+          "<ce>                      daedra to show you the way."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 109,
+        "lines": [
+          "Speak not of love or hate, but tell",
+          " me this: what gift can you give to",
+          " me that I can never buy for myself?"
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 114,
+        "lines": [
+          "On %qdt, I spoke with",
+          " _spouse_. %G told me that",
+          " _hermit_ left to",
+          " study under _teacher_",
+          " in __school_."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 121,
+        "lines": [
+          "On %qdt, I met with",
+          " _hermit_'s teacher,",
+          " _teacher_ of",
+          " __school_. %G said that",
+          " _hermit_ had secluded %g2self in",
+          " ___dungeon_."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 129,
+        "lines": [
+          "Speak not of love or hate, but tell",
+          " me this: what gift can you give to",
+          " me that I can never buy for myself?",
+          " ",
+          " 'It's KINDNESS, stupid!'"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 161,
+        "lines": [
+          "Item _book_ book"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 162,
+        "lines": [
+          "Item _letter_ letter used 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 163,
+        "lines": [
+          "Item _flowers_ yellow_flowers"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 164,
+        "lines": [
+          "Item _answer_ letter used 1017"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 165,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 167,
+        "lines": [
+          "Person _hermit_ face 1 group Group_7.2 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 168,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 169,
+        "lines": [
+          "Person _spouse_ group Group_7.1 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 170,
+        "lines": [
+          "Person _teacher_ face 1 faction The_Academics remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 172,
+        "lines": [
+          "Place _dungeon_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 173,
+        "lines": [
+          "Place _school_ remote library"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 175,
+        "lines": [
+          "Clock _S.01_ 90.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 180,
+        "lines": [
+          "dialog link for location _school_ person _teacher_ ",
+          "dialog link for location _dungeon_ person _hermit_ ",
+          "start timer _S.01_ ",
+          "log 1010 step 0 ",
+          "get item _flowers_ ",
+          "get item _letter_ ",
+          "create npc _spouse_ ",
+          "place npc _hermit_ at _dungeon_ ",
+          "place npc _teacher_ at _school_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 190,
+        "lines": [
+          "variable _questdone_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 191,
+        "lines": [
+          "_S.01_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 194,
+        "lines": [
+          "_S.02_ task:",
+          "toting _flowers_ and _spouse_ clicked saying 1011 ",
+          "add dialog for location _school_ person _teacher_ ",
+          "log 1015 step 1 ",
+          "get item _book_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 200,
+        "lines": [
+          "_S.03_ task:",
+          "toting _book_ and _teacher_ clicked saying 1012 ",
+          "add dialog for person _hermit_ ",
+          "reveal _dungeon_ ",
+          "log 1016 step 2 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 206,
+        "lines": [
+          "_S.04_ task:",
+          "toting _letter_ and _hermit_ clicked saying 1013 ",
+          "get item _answer_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 210,
+        "lines": [
+          "_S.05_ task:",
+          "toting _answer_ and _qgiver_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

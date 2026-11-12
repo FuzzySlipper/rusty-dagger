@@ -1,0 +1,570 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000009.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "a5718efae03e0f09e131f2cb47cf8aecbdc5c2e817eeb27751ee2efbd5a885fa",
+    "byteLength": 8079
+  },
+  "document": {
+    "fileName": "S0000009.txt",
+    "questName": "S0000009",
+    "questNameLine": 5,
+    "displayName": "Elysana's Betrayal",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000009"
+      },
+      {
+        "name": "displayname",
+        "value": "Elysana's Betrayal"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 10,
+        "lines": [
+          "<ce>                  You are even more dashing in person",
+          "<ce>                 than Lord Woodborne said. I just love",
+          "<ce>                  talking to men and women of action!",
+          "<ce>                    I know that you're looking for a",
+          "<ce>                   certain object, %pcf. A totem pole",
+          "<ce>                  or something? Well, an acquaintance",
+          "<ce>                    of mine, a perfectly delightful",
+          "<ce>                        =contact_, has something",
+          "<ce>                    that may help you. If you would",
+          "<ce>                       escort my cousin _foil_ to",
+          "<ce>                       _contact_ you can have it.",
+          "<ce>                    Would you do this teensy weensy",
+          "<ce>                             favor for me?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                   No? How dreadful! My poor cousin",
+          "<ce>                    will be so disappointed. You are",
+          "<ce>                  not nearly as fun as Lord Woodborne",
+          "<ce>                           said you would be."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                    How exciting! It will be a real",
+          "<ce>                    adventure. _foil_ just loves to",
+          "<ce>                travel and has been dying to spend some",
+          "<ce>                       time with _contact_. Go to",
+          "<ce>                      ___contact_ of ____contact_,",
+          "<ce>                     to a place called __contact_.",
+          "<ce>                %G will pay you =reward_ gold pieces for",
+          "<ce>                     bringing %g2 _foil_. Don't you",
+          "<ce>                  just love these dangerous missions?"
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                  I have nothing to discuss with you."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 45,
+        "lines": [
+          "<ce>                      %pcf! How did... I mean, I'm",
+          "<ce>                      glad to see you. And _foil_",
+          "<ce>                too. Here, take the gold. Object? What's",
+          "<ce>                a totem? Well, it's been nice talking to",
+          "<ce>                            you. Gotta run!"
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 52,
+        "lines": [
+          "A crowd of shady characters was here a while ago, looking for a %ra mercenary.",
+          "<--->",
+          "Princess Elysana's been spending a lot of time in the Wayrest wilderness, I hear."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 57,
+        "lines": [
+          "Hear about the gang that ambushed that %ra? Funny business that, if you ask me.",
+          "<--->",
+          "Those guys who ambushed that %ra weren't from around here. Hired assassins."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 62,
+        "lines": [
+          "Hear some mystery man is hiring assassins to kill a certain %ra mercenary.",
+          "<--->",
+          "_contact_ was mad as can be. You'd think %g'd be happy to see %g3 cousin."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 67,
+        "lines": [
+          "%qdt:",
+          " Princess Elysana has asked me to escort",
+          " her cousin _foil_ to ___contact_",
+          " of ____contact_ to meet _contact_. %G will pay",
+          " me =reward_ gold, and give me something",
+          " relative to the Totem."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 75,
+        "lines": [
+          "<ce>                    _foil_ suddenly runs away, %g3",
+          "<ce>               feet making no sound as %g disappears into",
+          "<ce>                              the shadows."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 80,
+        "lines": [
+          "<ce>                       %pcf, it wasn't my fault!",
+          "<ce>                 I was hired to set you up! Here, take",
+          "<ce>                 the _reward_ gold. Some guy in a gray",
+          "<ce>                   cloak paid me exactly that much to",
+          "<ce>                      do it. _foil_ was just some",
+          "<ce>                  whore paid to go with you. You know,",
+          "<ce>                 I just remembered. I have _bribe_ gold",
+          "<ce>                   pieces that are just too heavy to",
+          "<ce>                 carry anymore. Why don't you take them",
+          "<ce>                        and I'll just be going."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 92,
+        "lines": [
+          "Kill %pcn before too much is",
+          " learned. Use any means.",
+          "<ce>                                    ",
+          "<ce>                                 -- W."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 98,
+        "lines": [
+          "<ce>                   A street urchin races up calling",
+          "<ce>                         \"Message for %pcn from",
+          "<ce>                  the man in gray.\" The child runs off",
+          "<ce>                  before you can grab him, leaving you",
+          "<ce>                            holding a note."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 105,
+        "lines": [
+          "%pcn,",
+          " ",
+          " My good friend Lord Woodborne says",
+          " you are a hero that can be trusted.",
+          " I would be truly indebted to you if",
+          " you would stop by some time to chat.",
+          " Maybe you could even do something",
+          " for me. I would be oh so grateful.",
+          " ",
+          "<ce>                            Princess Elysana",
+          "<ce>                             Castle Wayrest"
+        ]
+      },
+      {
+        "id": 1018,
+        "firstLine": 118,
+        "lines": [
+          "%pcf,",
+          " ",
+          " If you don't want to be dead as",
+          " Lysandus, stop your investigations",
+          " immediately. Do you really want to",
+          " risk your life for a dead man?",
+          " You are being watched."
+        ]
+      },
+      {
+        "id": 1019,
+        "firstLine": 127,
+        "lines": [
+          "%pcn needs to die. No excuses.",
+          "<ce>                                    ",
+          "<ce>                                 -- W."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 132,
+        "lines": [
+          "<ce>                      _foil_ says \"Who were those",
+          "<ce>                  barbarians? They almost killed you!",
+          "<ce>                   Maybe you should just forget about",
+          "<ce>                           Lysandus' ghost.\""
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 138,
+        "lines": [
+          "<ce>                       _foil_ says \"You're much",
+          "<ce>                          tougher than Elysana",
+          "<ce>                          said you would be.\""
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 162,
+        "lines": [
+          "Item _note_ letter used 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 163,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 164,
+        "lines": [
+          "Item _letter45_ letter used 1018"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 165,
+        "lines": [
+          "Item _letter46_ letter used 1016"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 166,
+        "lines": [
+          "Item _letter47_ letter used 1019"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 167,
+        "lines": [
+          "Item _bribe_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 169,
+        "lines": [
+          "Person _elysana_ named Princess_Elysana atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 170,
+        "lines": [
+          "Person _foil_ face 115 faction The_Prostitutes female remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 171,
+        "lines": [
+          "Person _contact_ group Local_3.3 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 172,
+        "lines": [
+          "Person Woodborne face 1 named Lord_Woodborne"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 174,
+        "lines": [
+          "Clock _giveLetter_ 7.00:00 14.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 175,
+        "lines": [
+          "Clock _S.14_ 2.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 177,
+        "lines": [
+          "Foe _barbarians_ is Barbarian"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 178,
+        "lines": [
+          "Foe _knights_ is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 181,
+        "lines": [
+          "start timer _giveLetter_ ",
+          "give pc _letter45_ notify 1015 ",
+          "add _elysana_ as questor "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 185,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _contact_ ",
+          "start timer _S.14_ ",
+          "hide npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 190,
+        "lines": [
+          "_S.01_ task:",
+          "when not _foilGone_ and _npcclicked_ ",
+          "give pc _reward_ ",
+          "drop _foil_ face "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 195,
+        "lines": [
+          "_S.02_ task:",
+          "when _foilGone_ and _npcclicked_ ",
+          "get item _reward_ ",
+          "get item _bribe_ ",
+          "say 1012 ",
+          "drop _foil_ face "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 202,
+        "lines": [
+          "_yes_ task:",
+          "log 1010 step 0 ",
+          "say AcceptQuest ",
+          "add _foil_ face ",
+          "change repute with _elysana_ by -25 ",
+          "unset _clickedElysana_ ",
+          "start task _spawnBarbarians_",
+          "start task _spawnKnights_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 211,
+        "lines": [
+          "_no_ task:",
+          "say RefuseQuest ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 215,
+        "lines": [
+          "_S.05_ task:",
+          "injured _barbarians_ ",
+          "give item _note_ to _barbarians_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 219,
+        "lines": [
+          "_S.06_ task:",
+          "injured _knights_ ",
+          "give item _letter47_ to _knights_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 226,
+        "lines": [
+          "_S.07_ task:",
+          "killed 3 _barbarians_ ",
+          "unset _spawnBarbarians_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 230,
+        "lines": [
+          "_slainBarbarians_ task:",
+          "when _S.07_ and _yes_",
+          "say 1020 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 234,
+        "lines": [
+          "_spawnBarbarians_ task:",
+          "send _barbarians_ every 70 minutes 10 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 237,
+        "lines": [
+          "_S.08_ task:",
+          "killed 2 _knights_ ",
+          "unset _spawnKnights_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 241,
+        "lines": [
+          "_slainKnights_ task:",
+          "when _S.08_ and _yes_",
+          "say 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 245,
+        "lines": [
+          "_spawnKnights_ task:",
+          "send _knights_ every 91 minutes 10 times with 10% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 248,
+        "lines": [
+          "_foilGone_ task:",
+          "when _slainKnights_ and _slainBarbarians_ and not _daytime_ ",
+          "say 1011 ",
+          "drop _foil_ face "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 253,
+        "lines": [
+          "_daytime_ task:",
+          "daily from 06:00 to 18:00 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 256,
+        "lines": [
+          "_giveLetter_ task:",
+          "give pc _letter46_ silently "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 259,
+        "lines": [
+          "_clickedElysana_ task:",
+          "clicked npc _elysana_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 262,
+        "lines": [
+          "_S.13_ task:",
+          "when _clickedElysana_ and _giveLetter_ ",
+          "prompt QuestorOffer yes _yes_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 266,
+        "lines": [
+          "_clearclick_ task:",
+          "when _clickedElysana_ and not _giveLetter_",
+          "clear _clickedElysana_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 270,
+        "lines": [
+          "_S.14_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 273,
+        "lines": [
+          "FinishedMantellanCrux _S.15_",
+          "end quest "
+        ],
+        "global": 36
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -82,8 +82,8 @@ public sealed class DataContainerImportTests : IDisposable
         string[] missing = [.. ImportCommand.MissingInputs(inputs, root)];
 
         Assert.Contains(missing, entry => entry.StartsWith("Arena2 directory 'local/inputs/arena2'", StringComparison.Ordinal));
-        Assert.Contains($"tracked file '{ImportCommand.Donor}/Assets/Scripts/Utility/EnemyBasics.cs'", missing);
-        Assert.Contains($"tracked directory '{ImportCommand.Donor}/Assets/StreamingAssets/Quests'", missing);
+        Assert.Contains($"tracked file '{ImportLayout.Inputs}/mobiles.json'", missing);
+        Assert.Contains($"tracked directory '{ImportLayout.Inputs}/quests'", missing);
         Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/inputs/Sound'", StringComparison.Ordinal));
         Assert.Contains("tracked file 'data/content-source-manifest.csv'", missing);
         // The import does not read the authored base payload, so its absence is no missing input.

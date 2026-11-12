@@ -1,0 +1,387 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/Q0C0XY02.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "18629680a9063cbdaf659cd3c259e29c1809cb73eea65145258332a7e5e3cb40",
+    "byteLength": 6198
+  },
+  "document": {
+    "fileName": "Q0C0XY02.txt",
+    "questName": "Q0C0XY02",
+    "questNameLine": 9,
+    "displayName": "A Treacherous Gift",
+    "header": [
+      {
+        "name": "quest",
+        "value": "Q0C0XY02"
+      },
+      {
+        "name": "displayname",
+        "value": "A Treacherous Gift"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                     Thou wouldst help ==qgiver_,",
+          "<ce>                    %pcf? Many come to us for aid,",
+          "<ce>                   and then turn from us once their",
+          "<ce>                   wishes have been met, their oaths",
+          "<ce>                    are curses, their promises are",
+          "<ce>                    abominations. For the gratitude",
+          "<ce>                         of ==qgiver_, wouldst",
+          "<ce>                     thou punish one transgressor",
+          "<ce>                          for the sisterhood?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                    Not even that wouldst thou do?",
+          "<ce>                         %oth, by ==daedra_, I",
+          "<ce>                  suppose it is better not to promise",
+          "<ce>                  what thou cannot deliver, yet still",
+          "<ce>                            I am aggrieved."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 32,
+        "lines": [
+          "<ce>                 Wilt thou truly? If thou wilt, a fine",
+          "<ce>                        _mitem_ will be crafted",
+          "<ce>                for thee. Now, journey thou to farthest",
+          "<ce>                     __tavern_ and seek he who has",
+          "<ce>                    betrayed us, a villainous =man_",
+          "<ce>                       who calls %g2-self _man_.",
+          "<ce>                Give to %g2 this _jewelry_, tell %g2 it",
+          "<ce>                is a gift from %g3 old lover, and then",
+          "<ce>                 come back to us. Thou must to hurry,",
+          "<ce>                 for the _jewelry_ will transform %g3",
+          "<ce>                 outerself to a semblance of %g3 inner",
+          "<ce>                        beauty. ==qgiver_ wilt",
+          "<ce>                  expect thee in =queston_ days. May",
+          "<ce>                        ==daedra_ smile on thy",
+          "<ce>                             sacred quest."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                       Good %pcf, thy promise to",
+          "<ce>                      ==qgiver_ is fulfilled.",
+          "<ce>                         Here is the _mitem_ I",
+          "<ce>                         promised. Poor _man_.",
+          "<ce>                I hope they allow %g2 to suffer deeply,",
+          "<ce>                      before %g is put to death."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 59,
+        "lines": [
+          "_man_ is a true example of a self-made =man_. A marvel to behold.",
+          "<--->",
+          "==qgiver_ can be extremely vengeful."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 64,
+        "lines": [
+          "_man_ is laughing at the idea that %g owes anything to ==qgiver_.",
+          "<--->",
+          "_man_ has left __tavern_. And %g will be sorely missed."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 69,
+        "lines": [
+          "_man_ transformed into a horrible beast before the tavernfolk at _tavern_.",
+          "<--->",
+          "_man_ must have been trafficking with daedra. %oth, what a fate."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 74,
+        "lines": [
+          "Truly, I hope thou art enjoying thy _mitem_, %pcf."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 77,
+        "lines": [
+          "<ce>                      Our vengeance against _man_",
+          "<ce>                 is not complete! Get thee from here,",
+          "<ce>                 or %g3 deserved fate wilt be visited",
+          "<ce>                           upon thou, %pcf."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 83,
+        "lines": [
+          "<ce>                         _man_ thanks you for",
+          "<ce>                   the _jewelry_. %G tries it on as",
+          "<ce>                 you are telling %g2 who sent it. %G3",
+          "<ce>                   eyes light up in fear at the name",
+          "<ce>                      of ==qgiver_, and then the",
+          "<ce>                          fear turns to pain."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 91,
+        "lines": [
+          "<ce>                     Thou wert not to kill _man_,",
+          "<ce>                   merely give to %g2 the _jewelry_!",
+          "<ce>                         Oaf! Assassin! _man_",
+          "<ce>                was to suffer deeply for %g3 insolence,",
+          "<ce>                       not be painlessly slain.",
+          "<ce>                            ==daedra_ curse",
+          "<ce>                              thee, %pcf."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 100,
+        "lines": [
+          "%qdt:",
+          " ==qgiver_ of",
+          " %reg has sent me to bring a",
+          " _jewelry_ to a =man_ by the name of",
+          " _man_ in __tavern_.",
+          " I was told to move hastily for the",
+          " _jewelry_ would \"transform %g3",
+          " outerself to a semblance of %g3",
+          " inner beauty.\" I must have the",
+          " _jewelry_ in %g3 hands and",
+          " get back with ==qgiver_ in",
+          " no more than =queston_ days."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 135,
+        "lines": [
+          "Item _jewelry_ trinket"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 136,
+        "lines": [
+          "Item _mitem_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 138,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 139,
+        "lines": [
+          "Person _daedra_ face 1 factiontype Daedra remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 140,
+        "lines": [
+          "Person _man_ faction Dancers male remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 143,
+        "lines": [
+          "Place _tavern_ remote tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 145,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 147,
+        "lines": [
+          "Foe _zombie_ is Zombie"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 148,
+        "lines": [
+          "Foe _harpy_ is Harpy"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 149,
+        "lines": [
+          "Foe _daedroth_ is Daedroth"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 150,
+        "lines": [
+          "Foe _giant_ is Giant"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 153,
+        "lines": [
+          "dialog link for person _daedra_ ",
+          "start timer _queston_ ",
+          "log 1020 step 0 ",
+          "get item _jewelry_ ",
+          "place npc _man_ at _tavern_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 159,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 162,
+        "lines": [
+          "_S.01_ task:",
+          "toting _jewelry_ and _man_ clicked ",
+          "pick one of _S.04_ _S.02_ _S.03_ _S.05_ ",
+          "hide npc _man_ ",
+          "say 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 168,
+        "lines": [
+          "_S.02_ task:",
+          "place foe _giant_ at _tavern_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 171,
+        "lines": [
+          "_S.03_ task:",
+          "place foe _harpy_ at _tavern_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 174,
+        "lines": [
+          "_S.04_ task:",
+          "place foe _daedroth_ at _tavern_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 177,
+        "lines": [
+          "_S.05_ task:",
+          "place foe _zombie_ at _tavern_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 180,
+        "lines": [
+          "_S.06_ task:",
+          "killed 1 _giant_ ",
+          "killed 1 _harpy_ ",
+          "killed 1 _zombie_ ",
+          "killed 1 _daedroth_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 186,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 189,
+        "lines": [
+          "_S.08_ task:",
+          "when _qgclicked_ and _S.06_ ",
+          "say 1012",
+          "change repute with _man_ by -15 ",
+          "make pc ill with Witches'_Pox ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 197,
+        "lines": [
+          "_reward_ task:",
+          "when _qgclicked_ and _S.01_ and not _S.06_ ",
+          "give pc _mitem_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 202,
+        "lines": [
+          "_S.10_ task:",
+          "when _qgclicked_ and not _S.01_ ",
+          "clear _qgclicked_ _S.10_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

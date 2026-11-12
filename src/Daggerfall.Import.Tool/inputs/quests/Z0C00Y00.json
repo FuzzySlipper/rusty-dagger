@@ -1,0 +1,371 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/Z0C00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "aecf97e2a8d5c80584ecc1b6559c39c0b91871b58b1030a85f9ef6fbef9ade12",
+    "byteLength": 6335
+  },
+  "document": {
+    "fileName": "Z0C00Y00.txt",
+    "questName": "Z0C00Y00",
+    "questNameLine": 8,
+    "displayName": "Mephala's Quest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "Z0C00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Mephala's Quest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>              I might have known it would be you. I ought",
+          "<ce>            to never answer these summonings. Well, perhaps",
+          "<ce>               it is natural for a worm to want to evolve",
+          "<ce>                  into a wasp. Very well, %pcf, I will",
+          "<ce>             give you power, but you must do something for",
+          "<ce>               me first. I need someone to assassinate a",
+          "<ce>              certain troublesome minor noble. Can I rely",
+          "<ce>                            on you for that?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>               That is just as well. I have better uses",
+          "<ce>                 for my time than building a power base",
+          "<ce>                   for ungrateful, lazy guttersnipes."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>             Well, that's something, anyhow. You can find",
+          "<ce>                     this irksome official _enemy_",
+          "<ce>              in __palace_, snug and secure in his palace,",
+          "<ce>                as he believes. I don't know how you're",
+          "<ce>             going to gain entry, but perhaps you will come",
+          "<ce>             up with an idea. Perhaps. If you don't manage",
+          "<ce>                  to kill yourself, go to ___qgfriend_",
+          "<ce>              and I'll arrange for a servant to bring you",
+          "<ce>                your new power source, the _artifact_. I",
+          "<ce>                   will ask my servant _qgfriend_ to",
+          "<ce>           wait for you for =1stparton_ days at __qgfriend_.",
+          "<ce>                 Do not, please, be late. That is all."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                     No, no, no, no! You kill the",
+          "<ce>                          knight in __palace_",
+          "<ce>                    first, then you come to see me!",
+          "<ce>                        %oth, Mephala was right."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                    Good day, %pcf, I'm _qgfriend_.",
+          "<ce>            Mephala told me that you might show up, but she",
+          "<ce>             did cast some doubts about the chances of you",
+          "<ce>                 surviving the encounter with _enemy_.",
+          "<ce>           Well, it's a good thing I brought the Blade, then,",
+          "<ce>              isn't it? Sorry if you got a bad talking-to",
+          "<ce>                       from Mephala. With _enemy_",
+          "<ce>               dead, she should be in a much better mood.",
+          "<ce>                    And for that alone, I thank you."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 61,
+        "lines": [
+          "_enemy_ says %g can find %g3 way to the headquarters of the Dark Brotherhood.",
+          "<--->",
+          "The Dark Brotherhood must be terrified with _enemy_ working against them."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 66,
+        "lines": [
+          "The Dark Brotherhood sent someone to get _enemy_, but they couldn't kill %g2!",
+          "<--->",
+          "After that failed assassination attempt, _enemy_ has moved out of __palace_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 71,
+        "lines": [
+          "_enemy_ must have been too close to finding the location of Nightside Asylum.",
+          "<--->",
+          "I guess the Dark Brotherhood heard about _enemy_ and %g3 ambitions."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 76,
+        "lines": [
+          "_qgfriend_ is that snobby =qgfriend_ slumming in __qgfriend_, %di of here.",
+          "<--->",
+          "_qgfriend_ is the name of that =qgfriend_ %di of here in __qgfriend_."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 81,
+        "lines": [
+          "_qgfriend_ is one of Mephala's agents in %reg, operating out of __qgfriend_.",
+          "<--->",
+          "_qgfriend_ is a pawn of Mephala; %g's a =qgfriend_ at __qgfriend_."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 86,
+        "lines": [
+          "Mephala is the Daedra Regent of Murder, and Patroness of the Dark Brotherhood.",
+          "<--->",
+          "Mephala is one of the Princes of Oblivion whose sphere is Murder."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 91,
+        "lines": [
+          "<ce> The _artifact_ is an artifact of vampiric power, draining its victim",
+          " of life, even as it feeds its owner."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 95,
+        "lines": [
+          "%qdt:",
+          " I have made a contract with one of the Daedra",
+          " Princes, Mephala -- I will slay an official",
+          " named _enemy_ and she will give me",
+          " an artifact called the _artifact_. Her contact",
+          " _qgfriend_ will wait for me for =1stparton_",
+          " days in __qgfriend_ of ___qgfriend_.",
+          " The only other complication is that Mephala tells me",
+          " that _enemy_ lives in the palace",
+          " at __palace_. Could be difficult to",
+          " get to %g2."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 108,
+        "lines": [
+          "<ce>                       Mephala would be proud--",
+          "<ce>                         _enemy_ is dead.  Time",
+          "<ce>                          to make your escape."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 113,
+        "lines": [
+          "<ce>              Who are you and what are you doing in here?"
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 116,
+        "lines": [
+          "<ce>           You sneaking assassins are all the same.  That's",
+          "<ce>           why I decided to get myself some real protection.",
+          "<ce>               =bodyguard_!  Wake up, you big oaf.  Kill!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 142,
+        "lines": [
+          "Item _artifact_ artifact Ebony_Blade anyInfo 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 144,
+        "lines": [
+          "Person _questgiver_ face 112 named Mephala remote anyInfo 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 145,
+        "lines": [
+          "Person _qgfriend_ group Librarian remote anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 146,
+        "lines": [
+          "Person _enemy_ face 1 factiontype Knightly_Guard remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 148,
+        "lines": [
+          "Place _palace_ remote palace"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 150,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 152,
+        "lines": [
+          "Foe _monster_ is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 153,
+        "lines": [
+          "Foe _guards_ is Warrior"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 154,
+        "lines": [
+          "Foe _bodyguard_ is Giant"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 157,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1020 step 0 ",
+          "pc at _palace_ set _S.06_ ",
+          "place npc _enemy_ at _palace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 162,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 165,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 166,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _npcclicked_ and _mondead_ ",
+          "give pc _artifact_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 172,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ ",
+          "say 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 176,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _qgfriend_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 179,
+        "lines": [
+          "_clearclick_ task:",
+          "when _npcclicked_ and not _mondead_ ",
+          "say 1003",
+          "clear _npcclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 184,
+        "lines": [
+          "_S.06_ task:",
+          "create foe _guards_ every 2 minutes 10 times with 25% success ",
+          "hide npc _enemy_ ",
+          "place foe _monster_ at _palace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 189,
+        "lines": [
+          "_S.07_ task:",
+          "injured _monster_ ",
+          "create foe _bodyguard_ every 1 minutes 1 times with 100% success ",
+          "say 1041 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 194,
+        "lines": [
+          "_greklith_ task:",
+          "injured _guards_ saying 1040 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

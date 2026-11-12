@@ -1,0 +1,754 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/C0B00Y02.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "fd80cc29aae7d864fe2a24771f0bf3825ecb4a3e720b65aef3cccb2d325250a0",
+    "byteLength": 14303
+  },
+  "document": {
+    "fileName": "C0B00Y02.txt",
+    "questName": "C0B00Y02",
+    "questNameLine": 9,
+    "displayName": "The Possessed Child",
+    "header": [
+      {
+        "name": "quest",
+        "value": "C0B00Y02"
+      },
+      {
+        "name": "displayname",
+        "value": "The Possessed Child"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                 Would you be willing to assist in an",
+          "<ce>                            exorcism, %pct?",
+          "                                     <--->",
+          "<ce>                      _guardian_, a local knight,",
+          "<ce>                          has entreated us to",
+          "<ce>                  help %g3 ward, who has been showing",
+          "<ce>                signs of daedric possession. Would you",
+          "<ce>                be willing to assist with the exorcism,",
+          "<ce>                if that's what the situation requires?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                   That's unfortunate. I hope we can",
+          "<ce>                        find someone else then."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                      Would you? %oth, you have a",
+          "<ce>                      heart as big as %reg, %pct.",
+          "<ce>                     The child's name is _child_,",
+          "<ce>                          %g's a =child_ over",
+          "<ce>                     at _house_ here in __house_,",
+          "<ce>               but the person you'll want to speak with",
+          "<ce>                      is %g3 guardian, _guardian_",
+          "<ce>                         over in _tavern_. If",
+          "<ce>                 based on what %g has to say, you feel",
+          "<ce>                 that an exorcism is in order, go see",
+          "<ce>                         _priest_ in _house3_",
+          "<ce>                       of __house3_. I'll expect",
+          "<ce>                  this whole unfortunate affair to be",
+          "<ce>                 resolved in =queston_ days and to see",
+          "<ce>                       you here then. Good luck,",
+          "<ce>                           %god be with you."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 47,
+        "lines": [
+          "<ce>                      Thank %god that situation's",
+          "<ce>                  resolved. You can never really tell",
+          "<ce>                  from the start whether an exorcism",
+          "<ce>       is really merited or not. You've done well, %pcf. Accept",
+          "<ce>                       this _reward_ as a small",
+          "<ce>                 token of our thanks for your efforts."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 55,
+        "lines": [
+          "Poor little _child_. And poor _guardian_ having to watch %g3 ward suffer so.",
+          "<--->",
+          "The heart of ___house_ has really gone out to _child_ and %g3 terrible crisis."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 60,
+        "lines": [
+          "_child_ and _guardian_ left ___guardian_.",
+          "<--->",
+          "We'll never know if _child_ was really possessed."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 65,
+        "lines": [
+          "Everyone's thanking %god for the %ra who saved little _child_'s life.",
+          "<--->",
+          "Everything turned out all right for little _child_, so maybe %god does care."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 70,
+        "lines": [
+          "You helped __qgiver_ in that exorcism. What can I do for you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 73,
+        "lines": [
+          "You left that child to suffer. I have nothing to say to you."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 76,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of ___qgiver_",
+          " wants me to see if a =child_ named",
+          " _child_ in _house_",
+          " is a victim of possession, and, if so,",
+          " to cure %g2. I am to talk first with %g3",
+          " guardian, _guardian_ of _tavern_."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 85,
+        "lines": [
+          "<ce>                  You've come from __qgiver_? Please",
+          "<ce>                 tell me you can help little _child_,",
+          "<ce>                  I can't stand to see %g2 suffer so.",
+          "<ce>               I don't know what to do with %g2. Please,",
+          "<ce>                take a look at %g2 and then see if you",
+          "<ce>                      can persuade that _priest_",
+          "<ce>                      to help. _child_ has always",
+          "<ce>                      been such a sweet =child_,",
+          "<ce>                but now ... If you want to see %g2, %g",
+          "<ce>                        is at _house_. I don't",
+          "<ce>                       know what else I can do."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 98,
+        "lines": [
+          "<ce>                     You're from __qgiver_? Thank",
+          "<ce>                    %god you're here. They say you",
+          "<ce>                         can get to _priest_,",
+          "<ce>                       the exorcist in _house3_",
+          "<ce>                    and %g has some special _item_",
+          "<ce>                  for possessions like this. I can't",
+          "<ce>                         convince _priest_ to",
+          "<ce>                     get me the _item_ myself, but",
+          "<ce>                  someone like you with the authority",
+          "<ce>                       of __qgiver_ could. Go to",
+          "<ce>                     __house3_ and talk to %g2. I",
+          "<ce>                      know you can convince %g2."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 112,
+        "lines": [
+          "%qdt:",
+          " _guardian_,",
+          " the guardian of _child_,",
+          " asked me to look at the child and",
+          " then see if _priest_",
+          " of _house3_, __house3_",
+          " needs to perform an exorcism or",
+          " not. _child_ is in",
+          " _house_."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 123,
+        "lines": [
+          "%qdt:",
+          " _guardian_,",
+          " the guardian of _child_",
+          " asked me to go to _house3_",
+          " in __house3_ to ask",
+          " _priest_ for some special",
+          " _item_ to exorcise the daedric",
+          " spirit from the child."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 133,
+        "lines": [
+          "<ce>                      \"=daedra_ ... oh, %oth ...",
+          "<ce>                       =daedra_ is out of me ...",
+          "<ce>                       but ... it's still here.\"",
+          "<ce>                          _child_ runs away.",
+          "<ce>                  And you can, indeed, feel an alien",
+          "<ce>                         presence in _house_."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 141,
+        "lines": [
+          "<ce>                          Oh, %oth, %oth ...",
+          "<ce>                      I feel ... so much better.",
+          "<ce>                          _guardian_ told me",
+          "<ce>                         that the _item_ would",
+          "<ce>                          help us, and %g was",
+          "<ce>                       right. Oh thank you, kind",
+          "<ce>                            %pct. I'll keep",
+          "<ce>                      this _item_ for protection.",
+          "<ce>                               Goodbye!"
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 152,
+        "lines": [
+          "<ce>                  Gruh, you colly-eyed mortal greel,",
+          "<ce>                    I would open all your veins and",
+          "<ce>                  swim in your blood, steaming. They",
+          "<ce>                         call me =daedra_, the",
+          "<ce>                       licker of cat droppings!",
+          "                                     <--->",
+          "<ce>                         Poor little _child_,",
+          "<ce>                   %g's rotting in Oblivion, and no",
+          "<ce>                  one will help %g2, but kind, kind,",
+          "<ce>                     kind, kind, kind, kind, kind,",
+          "<ce>                     kind, kind, kind, kind, kind,",
+          "<ce>                         kind, kind =daedra_.",
+          "                                     <--->",
+          "<ce>                  There once was a girl named Vivian,",
+          "<ce>                     Who met =daedra_ of Oblivion,",
+          "<ce>                         They decided to mate,",
+          "<ce>                          and later they ate",
+          "<ce>                    _child_, their child, yum, yum."
+        ]
+      },
+      {
+        "id": 1018,
+        "firstLine": 172,
+        "lines": [
+          "<ce>                        I'm sorry, %pcf, but I",
+          "<ce>                       can't give _item_ to just",
+          "<ce>                anyone who suspects they know a victim",
+          "<ce>                 of possession. It's far too rare and",
+          "<ce>                 expensive. You're going to have to at",
+          "<ce>                 least see the child before I agree to",
+          "<ce>                       parting with the _item_."
+        ]
+      },
+      {
+        "id": 1019,
+        "firstLine": 181,
+        "lines": [
+          "<ce>                         =daedra_? _child_ did",
+          "<ce>                      mention the name =daedra_?",
+          "<ce>                Well, if this possession is a sham, it",
+          "<ce>                  is at least a well-researched one.",
+          "<ce>                       Here then is the _item_.",
+          "<ce>                  Just hold it with you when you next",
+          "<ce>                 speak with the child. But beware, the",
+          "<ce>                       daedra _child_ mentioned",
+          "<ce>                  is a Daedroth of great power. When",
+          "<ce>                   the exorcism is complete, it will",
+          "<ce>                    leave %g2 and appear elsewhere",
+          "<ce>                      in _house_. Be ready for a",
+          "<ce>                    battle when it does. Good luck,",
+          "<ce>                        %pcf. %god be with you."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 197,
+        "lines": [
+          "%qdt:",
+          " I don't know who =daedra_ is, but that was the name",
+          " _child_ spoke",
+          " when I saw %g2. That =child_",
+          " is possessed, mad, or the best",
+          " actor in ___house_. It may be",
+          " a good time to see the exorcist",
+          " in __house3_, _priest_",
+          " in _house3_."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 208,
+        "lines": [
+          "<ce>                       Good %pcf, I cannot thank",
+          "<ce>                   you enough for what you have done",
+          "<ce>                           for _child_. Now",
+          "<ce>                      %g's a happy, normal child",
+          "<ce>                       again. I've told _qgiver_",
+          "<ce>                       at your __qgiver_ as such",
+          "<ce>                    and %g's eager to congratulate",
+          "<ce>                      you. Once again, thank you."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 218,
+        "lines": [
+          "<ce>                       I can tell you where that",
+          "<ce>                        =guardian_, _guardian_",
+          "<ce>                  slipped off to, sure. But until you",
+          "<ce>                    got fifty gold to spare for the",
+          "<ce>                      info, I don't know nothing."
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 225,
+        "lines": [
+          "<ce>                        Good day to thee, %pct.",
+          "<ce>                   You're probably looking for that",
+          "<ce>                        =guardian_, _guardian_,",
+          "<ce>                     who slipped out of here after",
+          "<ce>                   boasting about stealing some kind",
+          "<ce>                       of _item_ from __qgiver_.",
+          "<ce>                   If you have fifty gold pieces to",
+          "<ce>                    spare a friend, I could let you",
+          "<ce>                         know where _guardian_",
+          "<ce>                        went. What do you say?"
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 237,
+        "lines": [
+          "<ce>                     Nice doing business with you,",
+          "<ce>                           %pcf. You'll find",
+          "<ce>                         that =guardian_ over",
+          "<ce>                             in _house2_."
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 243,
+        "lines": [
+          "<ce>                      \"Don't hurt me!\" _guardian_",
+          "<ce>                         hands you the _item_",
+          "<ce>                              and flees."
+        ]
+      },
+      {
+        "id": 1026,
+        "firstLine": 248,
+        "lines": [
+          "%qdt:",
+          " _hooker_, a =hooker_ over at",
+          " _tavern_ told me (for fifty gold",
+          " pieces) that that _guardian_ ran to",
+          " _house2_ after _child_",
+          " stole the _item_ from me. The possession was obviously",
+          " a scam, and _priest_ and",
+          " _qgiver_ will want the _item_ back."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 295,
+        "lines": [
+          "Item _item_ religious"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 296,
+        "lines": [
+          "Item _reward_ religious"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 297,
+        "lines": [
+          "Item _gold_ gold range 50 to 50"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 299,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 300,
+        "lines": [
+          "Person _child_ face 1 faction Children local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 301,
+        "lines": [
+          "Person _guardian_ face 1 factiontype Knightly_Guard local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 302,
+        "lines": [
+          "Person _priest_ face 104 factiontype Temple remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 303,
+        "lines": [
+          "Person _hooker_ face 1 faction The_Prostitutes local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 305,
+        "lines": [
+          "Place _house_ local house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 306,
+        "lines": [
+          "Place _house2_ local house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 307,
+        "lines": [
+          "Place _house3_ remote random"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 308,
+        "lines": [
+          "Place _tavern_ local tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 310,
+        "lines": [
+          "Clock _queston_ 5.00:00 10.00:00 flag 17 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 312,
+        "lines": [
+          "Foe _daedra_ is Daedroth"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 315,
+        "lines": [
+          "dialog link for location _house2_ person _hooker_ ",
+          "start timer _queston_ ",
+          "log 1010 step 0 ",
+          "pick one of _sham_ _real_",
+          "place npc _child_ at _house_ ",
+          "place npc _guardian_ at _tavern_ ",
+          "place npc _priest_ at _house3_",
+          "have _item_ set _haverelic_  "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 324,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 327,
+        "lines": [
+          "_talkguardian_ task:",
+          "clicked npc _guardian_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 330,
+        "lines": [
+          "variable _real_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 331,
+        "lines": [
+          "variable _sham_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 332,
+        "lines": [
+          "_realtalk_ task:",
+          "when _talkguardian_ and _real_ ",
+          "log 1013 step 1 ",
+          "say 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 337,
+        "lines": [
+          "_shamtalk_ task:",
+          "when _talkguardian_ and _sham_ and not _revealsham_",
+          "log 1014 step 2 ",
+          "say 1012 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 342,
+        "lines": [
+          "_clickchild_ task:",
+          "clicked npc _child_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 345,
+        "lines": [
+          "_exorcise_ task:",
+          "when _haverelic_ and _real_ and _clickchild_",
+          "take _item_ from pc ",
+          "hide npc _child_ ",
+          "say 1015 ",
+          "place foe _daedra_ at _house_ ",
+          "clear _talkguardian_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 356,
+        "lines": [
+          "_revealsham_ task:",
+          "when _haverelic_ and _sham_ and _clickchild_ ",
+          "take _item_ from pc",
+          "hide npc _child_ ",
+          "say 1016 ",
+          "place npc _guardian_ at _house2_ ",
+          "place npc _hooker_ at _tavern_ ",
+          "clear _talkguardian_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 365,
+        "lines": [
+          "variable _haverelic_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 366,
+        "lines": [
+          "_firstclickchild_ task:",
+          "when _clickchild_ and not _haverelic_ ",
+          "log 1020 step 3 ",
+          "say 1017 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 372,
+        "lines": [
+          "_clickpriest_ task:",
+          "clicked npc _priest_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 375,
+        "lines": [
+          "_rebuff_ task:",
+          "when _clickpriest_ and not _firstclickchild_ and not _rescueitem_ and not _exorcise_ and not _givenitem_",
+          "say 1018 ",
+          "clear _clickpriest_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 380,
+        "lines": [
+          "_priestgivesitem_ task:",
+          "when _clickpriest_ and _firstclickchild_ and not _exorcise_ and not _rescueitem_",
+          "say 1019 ",
+          "start task _givenitem_",
+          "get item _item_ ",
+          "clear _clickpriest_",
+          "clear _clickchild_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 391,
+        "lines": [
+          "variable _givenitem_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 392,
+        "lines": [
+          "_thanks_ task:",
+          "when _talkguardian_ and _exorcise_ ",
+          "say 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 396,
+        "lines": [
+          "_hookerconfess_ task:",
+          "add dialog for location _house2_ ",
+          "log 1026 step 6 ",
+          "say 1024 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 401,
+        "lines": [
+          "_toopoor_ task:",
+          "say 1022 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 404,
+        "lines": [
+          "_bribe_ task:",
+          "clicked _hooker_ and at least 50 gold otherwise do _toopoor_ ",
+          "prompt 1023 yes _hookerconfess_ no _refuseconfess_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 408,
+        "lines": [
+          "_refuseconfess_ task:",
+          "get item _gold_ ",
+          "make _gold_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 412,
+        "lines": [
+          "_rescueitem_ task:",
+          "when _talkguardian_ and _revealsham_ ",
+          "get item _item_ ",
+          "hide npc _guardian_ ",
+          "say 1025 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 427,
+        "lines": [
+          "_victory_ task:",
+          "when _qgclicked_ and _rescueitem_",
+          "when _qgclicked_ and _exorcise_ ",
+          "when _clickpriest_ and _rescueitem_",
+          "when _clickpriest_ and _exorcise_",
+          "give pc _reward_ ",
+          "end quest"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 435,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 438,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _rescueitem_ and not _exorcise_",
+          "clear _qgclicked_ _clearclick_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

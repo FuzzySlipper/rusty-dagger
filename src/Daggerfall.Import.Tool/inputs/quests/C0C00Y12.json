@@ -1,0 +1,327 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/C0C00Y12.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "cab4595f978624736ee4ecceb9e4d3ff88f1a20aa1ba3e2fdb5da7fb599d8e08",
+    "byteLength": 6129
+  },
+  "document": {
+    "fileName": "C0C00Y12.txt",
+    "questName": "C0C00Y12",
+    "questNameLine": 8,
+    "displayName": "The Stolen Item",
+    "header": [
+      {
+        "name": "quest",
+        "value": "C0C00Y12"
+      },
+      {
+        "name": "displayname",
+        "value": "The Stolen Item"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                       Normally I would not give",
+          "<ce>                         work to someone not a",
+          "<ce>                          member of __qgiver_.",
+          "<ce>                      However, we are short-handed",
+          "<ce>                       right now. A brazen thief",
+          "<ce>                          stole a _religitem_",
+          "<ce>                       from the temple. A priest",
+          "<ce>                    got a good look at the criminal.",
+          "<ce>                    It was a common street thief, a",
+          "<ce>                         =thief_ named _thief_",
+          "<ce>                   who was in the temple on that day,",
+          "<ce>                         pretending to worship.",
+          "<ce>                  Track down this thief and return our",
+          "<ce>                     stolen _religitem_, and I will",
+          "<ce>                    speak well of you in the future."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                      I give you a chance and you",
+          "<ce>                      spit in my face. Don't come",
+          "<ce>                       looking to me for favors."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                        You need to get it back",
+          "<ce>                       within =traveltime_ days.",
+          "<ce>                       By then our knightly order",
+          "<ce>                        will be able to dispatch",
+          "<ce>                      a search party and you will",
+          "<ce>                         have lost your chance."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                       All praises to you, %pcn.",
+          "<ce>                          The _religitem_ has",
+          "<ce>                      been restored to the temple.",
+          "<ce>                       You have earned the favor",
+          "<ce>                                of %god."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 50,
+        "lines": [
+          "<ce>     _thief_ is holed up in _thiefplace_ in __thiefplace_.  A good",
+          "<ce>                     place to hide from __qgiver_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 54,
+        "lines": [
+          "__qgiver_ will never get that _religitem_ back it seems."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 57,
+        "lines": [
+          "_thief_ was brought to justice, and __qgiver_ got their _religitem_ back."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 60,
+        "lines": [
+          "Don't think that I forgot who brought us our _religitem_ already, %pcf."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 63,
+        "lines": [
+          "Our _religitem_ is lost forever and you want to talk. Unbelievable."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 66,
+        "lines": [
+          "%qdt:",
+          " _qgiver_, of __qgiver_",
+          " in ___qgiver_, has given me",
+          " the chance to find the _religitem_",
+          " which had been stolen by a",
+          " =thief_ named _thief_.",
+          " I have =traveltime_ days to get it back."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 75,
+        "lines": [
+          "<ce>                       %oth!  The temple hired a",
+          "<ce>                       bounty hunter just to get",
+          "<ce>                   back their worthless _religitem_?",
+          "<ce>                       %oth, it sure ain't worth",
+          "<ce>                      dying over.  Here, take it.",
+          "<ce>                      Now, we'll see if you think",
+          "<ce>                        it's worth dying over...",
+          "<ce>                       Help!!  This %ra is making",
+          "<ce>                           off with our loot!"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 86,
+        "lines": [
+          "<ce>                      Intruder! Raise the alarm!",
+          "<ce>                      There is an intruder in the",
+          "<ce>                               building!"
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 91,
+        "lines": [
+          "<ce>      _thief_... The name sounds familiar, but I can't place it.",
+          "<ce>     I'm thinking maybe someone I ran into in __thiefplace_?  Sorry",
+          "<ce>                        I can't be more helpful.",
+          "                                     <--->",
+          "<ce>          A =decoy_?  Sure, I know %g2.  Lives in ___decoy_.",
+          "                                     <--->",
+          "<ce>   If you're talking about a =thief_, %g sounds like a little weasel",
+          "<ce>          from __thiefplace_ who tried to pick my pocket once."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 101,
+        "lines": [
+          "<ce>  Sure, I know that squirrelly little sneak.  Check out _thiefplace_",
+          " in __thiefplace_.",
+          "<ce>                                   ",
+          "<ce> _thief_?  Yeah, %g's \"laying low\" over at _thiefplace_ in __thiefplace_.",
+          "<ce> Not keeping too low a profile though, since you and I know where %g is!"
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 108,
+        "lines": [
+          "<ce>                  _thief_ tosses you the _religitem_,",
+          "<ce>                    then vanishes into the shadows.",
+          "<ce>                        Now to make your escape!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 136,
+        "lines": [
+          "Item _religitem_ religious"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 138,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 139,
+        "lines": [
+          "Person _thief_ face 229 faction The_Thieves_Guild male remote anyInfo 1014 rumors 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 140,
+        "lines": [
+          "Person _decoy_ face 92 group Local_3.1 male remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 142,
+        "lines": [
+          "Place _thiefplace_ remote house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 144,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 146,
+        "lines": [
+          "Foe _burglar_ is Burglar"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 147,
+        "lines": [
+          "Foe _rogue_ is Rogue"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 150,
+        "lines": [
+          "dialog link for person _decoy_ ",
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "pc at _thiefplace_ set _S.04_ ",
+          "place npc _thief_ at _thiefplace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 156,
+        "lines": [
+          "_traveltime_ task:",
+          "make _religitem_ permanent ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 160,
+        "lines": [
+          "_questdone_ task:",
+          "toting _religitem_ and _qgiver_ clicked ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 165,
+        "lines": [
+          "_S.02_ task:",
+          "injured _rogue_ saying 1012 ",
+          "injured _burglar_ saying 1012 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 169,
+        "lines": [
+          "_S.03_ task:",
+          "clicked npc _thief_ ",
+          "get item _religitem_ saying 1011",
+          "hide npc _thief_ ",
+          "say 1020"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 176,
+        "lines": [
+          "variable _S.04_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 177,
+        "lines": [
+          "_S.05_ task:",
+          "when _S.04_ and _S.03_ ",
+          "create foe _rogue_ every 5 minutes 2 times with 80% success ",
+          "create foe _burglar_ every 5 minutes 2 times with 70% success "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

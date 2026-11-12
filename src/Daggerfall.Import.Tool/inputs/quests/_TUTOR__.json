@@ -1,0 +1,844 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/_TUTOR__.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "69c36bbb32bebf74a258f9743d0aeb8321b7b159f3e486c3b744005075e2ebdd",
+    "byteLength": 16134
+  },
+  "document": {
+    "fileName": "_TUTOR__.txt",
+    "questName": "_TUTOR__",
+    "questNameLine": 7,
+    "displayName": "Tutorial",
+    "header": [
+      {
+        "name": "quest",
+        "value": "_TUTOR__"
+      },
+      {
+        "name": "displayname",
+        "value": "Tutorial"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1006,
+        "firstLine": 13,
+        "lines": [
+          "I'll give you a hint %ra. If you want to succeed in magic, join the Mages Guild.",
+          "                                     <--->",
+          "A small tip for you. Put your money in the bank of %reg. Have them give you letters of credit. They hardly weigh a thing.",
+          "                                     <--->",
+          "Specialty shops are the best place to find unusual items.",
+          "                                     <---> ",
+          "They just passed a vagrancy law. You can't sleep in the streets. The guards even patrol outside the walls. You have to get a room at an Inn.",
+          "                                     <--->",
+          "Everyone should join a temple. The only question is what god is best for you? I'd check into them all.",
+          "                                    <--->",
+          "Things are really heating up in the city of Daggerfall. You should go there if you want adventure.",
+          "                                     <--->",
+          "I've heard that the royalty of Wayrest is stirring things up. It's a great opportunity for anyone with the guts to actually ask the king or queen for work.",
+          "                                     <--->",
+          "I've heard that Sentinel is a good place to earn quick gold and the opportunity for a bit of adventure. The royal family is hiring heroes for dangerous work."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 35,
+        "lines": [
+          "<ce>             Daggerfall Unity has an updated tutorial.",
+          "<ce>             It will teach you the basics of gameplay.",
+          "<ce>          Make sure to take notes on the info it presents.",
+          "<ce>                 Do you want to use this tutorial?"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                           Page 1",
+          "<ce>                                    ",
+          "<ce>           The very first thing you want to do is to check",
+          "<ce>           your controls. Press Escape and click on Controls.",
+          "<ce>           The most important ones for now are movement (WASD)",
+          "<ce>           and Swing Weapon (right mouse click by default).",
+          "<ce>           Attacking may involve holding the Swing Weapon button",
+          "<ce>           down and moving the mouse, OR clicking the Swing Weapon",
+          "<ce>           button, OR holding it down. This can be changed",
+          "<ce>           in the Advanced section of the Controls screen.",
+          "<ce>           ",
+          "<ce>           Make sure your controls are acceptable,",
+          "<ce>           and another message will appear in 10 seconds."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 56,
+        "lines": [
+          "<ce>                           Page 2",
+          "<ce>                                    ",
+          "<ce>          Now press F6 to open your inventory. Equip any armor",
+          "<ce>           available to you, and the best weapon you have.",
+          "<ce>           \"Best weapon\" refers to a weapon that your character is skilled in,",
+          "<ce>           and/or is a very strong material (e.g. Elven, Dwarven).",
+          "<ce>           Without those two advantages, you will almost never hit enemies.",
+          "<ce>           ",
+          "<ce>           (Next message in 15 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 67,
+        "lines": [
+          "<ce>                           Page 3",
+          "<ce>                                    ",
+          "<ce>        Equipping a weapon requires a short delay. When it's ready,",
+          "<ce>        press Z to bring it out. You can also use your fist if your",
+          "<ce>        Hand-to-Hand skill is high. Practice some attacks with the",
+          "<ce>        Swing Weapon button.",
+          "<ce>           ",
+          "<ce>           (Next message in 10 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 77,
+        "lines": [
+          "<ce>                           Page 4",
+          "<ce>                                    ",
+          "<ce>          Press R to rest when you need to regain health, stamina,",
+          "<ce>        or magicka. Those indicators are at the bottom-left of the screen.",
+          "<ce>          You don't need to rest right now, but remember it for later.",
+          "<ce>           ",
+          "<ce>           (Next message in 5 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 86,
+        "lines": [
+          "<ce>                           Page 5",
+          "<ce>                                    ",
+          "<ce>         Characters with magic available can also try casting spells,",
+          "<ce>         though enemies will often resist them. Press Backspace",
+          "<ce>         to open your spellbook, if you are a spellcaster. Double-click",
+          "<ce>         on a spell to cast it.",
+          "<ce>         ",
+          "<ce>         Some spells require a target, while others are cast automatically",
+          "<ce>         on yourself. If it's a targeted spell, use left mouse click",
+          "<ce>         to fire it after it's cast. Use Q to re-cast the most recent",
+          "<ce>         spell, so you can rapid-fire spells as needed.",
+          "<ce>           ",
+          "<ce>           (Next message in 10 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 101,
+        "lines": [
+          "<ce>                           Page 6",
+          "<ce>                                    ",
+          "<ce>         If you haven't saved the game yet, do so now. Press Escape and",
+          "<ce>         click on Save Game. The Quicksave button, defined in",
+          "<ce>         Controls -> Advanced (at the bottom of the Controls screen)",
+          "<ce>         is something you can also use to save.",
+          "<ce>           ",
+          "<ce>           (Next message in 10 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 111,
+        "lines": [
+          "<ce>                         Page 7",
+          "<ce>           ",
+          "<ce>           Your first step to escaping this cave is to exit this room.",
+          "<ce>           Go down the hallway opposite the campfire.",
+          "<ce>           After the turn, you will find a door resembling a brick wall.",
+          "<ce>           Click on the door to open it. Beyond, you will see a small room",
+          "<ce>           with a rat, and a treasure pile on an altar.",
+          "<ce>           ",
+          "<ce>           Clicking on the treasure pile will open the inventory.",
+          "<ce>           You will see the treasure pile's contents on the right side",
+          "<ce>           of the inventory screen. With the \"Remove\" option highlighted,",
+          "<ce>           click on the items to grab them for yourself.",
+          "<ce>           ",
+          "<ce>           You can also loot enemies after killing them,",
+          "<ce>            but the rat will have no treasure.",
+          "<ce>           ",
+          "<ce>           (Next message in 45 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1035,
+        "firstLine": 130,
+        "lines": [
+          "<ce>                           Page 8",
+          "<ce>                                    ",
+          "<ce>         Continue through the dungeon. You can choose to fight",
+          "<ce>        or escape from the enemies.",
+          "<ce>                                    ",
+          "<ce>         You will need weapons made of stronger materials to hit",
+          "<ce>         some monsters. The upcoming imp monster can't be hurt with",
+          "<ce>         iron weapons. You need steel or stronger to hurt it.",
+          "<ce>         Your fists will also work, but you need",
+          "<ce>         a high Hand-to-Hand skill before it will succeed.",
+          "<ce>           ",
+          "<ce>           (Next message in 5 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 144,
+        "lines": [
+          "<ce>                           Page 9",
+          "<ce>                                    ",
+          "<ce>         Some monsters are stronger than you. You can escape from them",
+          "<ce>         without consequence. If an enemy is giving you a lot of trouble,",
+          "<ce>         run away and leave it behind. Character growth is tied to skill",
+          "<ce>         usage, rather than killing challenging enemies.",
+          "<ce>           ",
+          "<ce>           (Next message in 5 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 154,
+        "lines": [
+          "<ce>                           Page 10",
+          "<ce>         ",
+          "<ce>         Some objects can be interacted with. In the main hall of this",
+          "<ce>        dungeon, you will find a throne with a lever next to it.",
+          "<ce>        When you see the lever, click on it to raise the throne",
+          "<ce>        like an elevator. Other dungeons will have objects",
+          "<ce>         with more effects, such as wheels and secret switches.",
+          "<ce>",
+          "<ce>         To escape this dungeon, you need to look for a dark, stone",
+          "<ce>        archway set into a wall, about the same height as you.",
+          "<ce>        When you click on it, you will exit the dungeon and arrive",
+          "<ce>        outdoors.",
+          "<ce>           ",
+          "<ce>           (Next message when you exit the dungeon. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1042,
+        "firstLine": 170,
+        "lines": [
+          "<ce>                           Page 11",
+          "<ce>                                    ",
+          "<ce>         The world of Daggerfall is immense",
+          "<ce>         and generally can't be traveled in real time.",
+          "<ce>         ",
+          "<ce>         Open the travel map (normally by pressing V).",
+          "<ce>        The region that you are in is highlighted in red.",
+          "<ce>         Click on that region and you get a focused map.",
+          "<ce>        Click FIND and type in DAGGERFALL.",
+          "<ce>         ",
+          "<ce>           For now, keep the travel settings on CAUTIOUSLY and INNS.",
+          "<ce>               These settings will ensure you arrive in the morning.",
+          "<ce>             You do not want to arrive in Daggerfall City at night.",
+          "<ce>           ",
+          "<ce>           (Next message when you travel to a city. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1045,
+        "firstLine": 187,
+        "lines": [
+          "<ce>                           Page 12",
+          "<ce>    ",
+          "<ce>    Find a townsperson nearby. Press F4 to set your mode",
+          "<ce>        to Dialogue, and then click on the person. You will",
+          "<ce>        enter a conversation window. You can use the window",
+          "<ce>        to ask for directions to places. If a person is unfriendly or",
+          "<ce>    doesn't know, find another peasant.",
+          "<ce>    ",
+          "<ce>    Once a peasant tells you what direction a building is in,",
+          "<ce>        you can keep repeating the request until they mark it",
+          "<ce>        on your map. This is very important for finding",
+          "<ce>    locations easily in a large city like this one.",
+          "<ce>           ",
+          "<ce>           (Next message in 45 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1047,
+        "firstLine": 203,
+        "lines": [
+          "<ce>                          Page 13",
+          "<ce>  ",
+          "<ce>    The conversation window also has options for",
+          "<ce>        finding people and asking for news,",
+          "<ce>    including for local quests as \"Work.\" Look at the top-left",
+          "<ce>        corner of the conversation window when it's open to see",
+          "<ce>        the different topics you can ask about.",
+          "<ce>           ",
+          "<ce>           (Next message in 15 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1048,
+        "firstLine": 214,
+        "lines": [
+          "<ce>                          Page 14",
+          "<ce>  ",
+          "<ce>       If you gained treasure in the starting dungeon,",
+          "<ce>        you will want to sell it. A pawn shop is most useful",
+          "<ce>        for this, though general stores and armorsmiths",
+          "<ce>       can also buy some kinds of goods. Find one such store",
+          "<ce>        somewhere in town. You can ask peasants for directions",
+          "<ce>        to them, or press F3 to change to Info mode, and click",
+          "<ce>        on the buildings to learn what they are from a distance.",
+          "<ce>       ",
+          "<ce>       General stores open at 6 AM. Pawn shops and armorsmiths",
+          "<ce>        open later. Check the current time in-game (usually the 'i' key).",
+          "<ce>        If the stores are still closed, press the Rest button",
+          "<ce>        to loiter (not rest) until they open.",
+          "<ce>       ",
+          "<ce>       Note that if you loiter right now,",
+          "<ce>        the next tutorial message will appear immediately.",
+          "<ce>       ",
+          "<ce>           (Next message in 10 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 235,
+        "lines": [
+          "<ce>                          Page 15",
+          "<ce>                                    ",
+          "<ce>      Most characters want to join at least one guild.",
+          "<ce>        As you rise in rank in a guild, you get more benefits.",
+          "<ce>        To rise in rank, you must improve skills the guild",
+          "<ce>        cares about, and perform quests on a regular basis",
+          "<ce>        to improve your reputation with them.",
+          "<ce>                                    ",
+          "<ce>        All spellcasters should join the Mages Guild. Fighter type",
+          "<ce>        characters can join the Fighters Guild and a knightly order.",
+          "<ce>        You can also pick a temple to join.",
+          "<ce>        ",
+          "<ce>        You can only be a member of one temple and one knightly order. ",
+          "<ce>                                    ",
+          "<ce>         There are other, hidden, guilds in the game as well.",
+          "<ce>           ",
+          "<ce>           (Next message in 10 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1055,
+        "firstLine": 254,
+        "lines": [
+          "<ce>                          Page 16",
+          "<ce>                                    ",
+          "<ce>        The last task of all is to find a quest.",
+          "<ce>        Daggerfall's quests are radiant, choosing locations",
+          "<ce>        around you as places where things will happen.",
+          "<ce>  ",
+          "<ce>        Guild quests can be the most beneficial ones,",
+          "<ce>        so they may be a priority for you.",
+          "<ce>        After you have joined a guild, find someone inside the",
+          "<ce>        guild building with the button \"Get Quest.\"",
+          "<ce>         Accept or reject the quest you are given.",
+          "<ce>        Rejecting a quest has no consequences, so long as",
+          "<ce>        it's unrelated to the main story.",
+          "<ce>",
+          "<ce>     (Next message will appear immediately. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1056,
+        "firstLine": 273,
+        "lines": [
+          "<ce>             Page 17",
+          "<ce>",
+          "<ce>  Many quests will send you to other towns.",
+          "<ce>  If they do, enter your logbook (normally L) and click",
+          "<ce>  on the quest log entry about that quest.",
+          "<ce>        Many times, it will automatically plan",
+          "<ce>  travel to your quest destination.",
+          "<ce>        Otherwise, you can open the travel screen",
+          "<ce>  and choose the location yourself.",
+          "<ce>  ",
+          "<ce>  You can also find quests among random townspeople.",
+          "<ce>        Click on people in taverns, who tend to",
+          "<ce>  have quests. You can also get them from shopkeepers",
+          "<ce>        with the \"Talk\" button.",
+          "<ce>  Asking for \"Any work?\" can lead you to possible questgivers.",
+          "<ce>           ",
+          "<ce>           (Next message in 10 seconds. Press No to end tutorial.)"
+        ]
+      },
+      {
+        "id": 1057,
+        "firstLine": 292,
+        "lines": [
+          "<ce>       This is the end of the tutorial. Daggerfall is a game with many",
+          "<ce>       unique and intricate mechanics, so learn from other players",
+          "<ce>       about the game's quirks. You can also add mods to the game",
+          "<ce>       once you understand the basic mechanics.",
+          "<ce>       ",
+          "<ce>       Welcome to your new obsession..."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "place",
+        "firstLine": 302,
+        "lines": [
+          "Place pirateerHold permanent PirateerHold2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 304,
+        "lines": [
+          "Clock _page1_ 00:02"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 305,
+        "lines": [
+          "Clock _page2_ 00:03"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 306,
+        "lines": [
+          "Clock _page3_ 00:02"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 307,
+        "lines": [
+          "Clock _page4_ 00:01"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 308,
+        "lines": [
+          "Clock _page5_ 00:02"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 309,
+        "lines": [
+          "Clock _page6_ 00:03"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 310,
+        "lines": [
+          "Clock _page6a_ 00:09"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 311,
+        "lines": [
+          "Clock _page7_ 00:01"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 312,
+        "lines": [
+          "Clock _page8_ 00:01"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 313,
+        "lines": [
+          "Clock _page11_ 00:09"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 314,
+        "lines": [
+          "Clock _page12_ 00:03"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 315,
+        "lines": [
+          "Clock _page13_ 00:02"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 316,
+        "lines": [
+          "Clock _page14_ 00:02"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 317,
+        "lines": [
+          "Clock _page15_ 00:02"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 321,
+        "lines": [
+          "prompt 1010 yes _yes_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 323,
+        "lines": [
+          "variable _exitstarter_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 324,
+        "lines": [
+          "_yes_ task:",
+          "pc at pirateerHold set _exitstarter_ ",
+          "start timer _page1_ ",
+          "say 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 333,
+        "lines": [
+          "_page1_ task:",
+          "prompt 1013 yes _yes1_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 336,
+        "lines": [
+          "_yes1_ task:",
+          "start timer _page2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 339,
+        "lines": [
+          "_page2_ task:",
+          "prompt 1015 yes _yes2_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 342,
+        "lines": [
+          "_yes2_ task:",
+          "start timer _page3_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 345,
+        "lines": [
+          "_page3_ task:",
+          "prompt 1020 yes _yes3_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 348,
+        "lines": [
+          "_yes3_ task:",
+          "start timer _page4_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 351,
+        "lines": [
+          "_page4_ task:",
+          "prompt 1025 yes _yes4_ no _no_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 354,
+        "lines": [
+          "_yes4_ task:",
+          "start timer _page5_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 357,
+        "lines": [
+          "_page5_ task:",
+          "prompt 1030 yes _yes5_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 360,
+        "lines": [
+          "_yes5_ task:",
+          "start timer _page6_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 363,
+        "lines": [
+          "_page6_ task:",
+          "prompt 1031 yes _yes6_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 366,
+        "lines": [
+          "_yes6_ task:",
+          "start timer _page6a_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 369,
+        "lines": [
+          "_page6a_ task:",
+          "prompt 1035 yes _yes6a_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 372,
+        "lines": [
+          "_yes6a_ task:",
+          "start timer _page7_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 375,
+        "lines": [
+          "_page7_ task:",
+          "prompt 1040 yes _yes7_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 378,
+        "lines": [
+          "_yes7_ task:",
+          "start timer _page8_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 381,
+        "lines": [
+          "_page8_ task:",
+          "prompt 1041 yes _yes8_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 384,
+        "lines": [
+          "variable _yes8_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 386,
+        "lines": [
+          "_escape_ task:",
+          "when _yes8_ and not _exitstarter_",
+          "prompt 1042 yes _yes9_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 390,
+        "lines": [
+          "variable _yes9_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 391,
+        "lines": [
+          "_arrival_ task:",
+          "when pc enters city",
+          "start task _page10_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 395,
+        "lines": [
+          "_page10_ task:",
+          "prompt 1045 yes _yes10_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 398,
+        "lines": [
+          "_yes10_ task:",
+          "start timer _page11_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 401,
+        "lines": [
+          "_page11_ task:",
+          "prompt 1047 yes _yes11_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 404,
+        "lines": [
+          "_yes11_ task:",
+          "start timer _page12_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 407,
+        "lines": [
+          "_page12_ task:",
+          "prompt 1048 yes _yes12_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 410,
+        "lines": [
+          "_yes12_ task:",
+          "start timer _page13_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 413,
+        "lines": [
+          "_page13_ task:",
+          "prompt 1050 yes _yes13_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 416,
+        "lines": [
+          "_yes13_ task:",
+          "start timer _page14_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 419,
+        "lines": [
+          "_page14_ task:",
+          "prompt 1055 yes _yes14_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 422,
+        "lines": [
+          "_yes14_ task:",
+          "prompt 1056 yes _yes15_ no _no_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 425,
+        "lines": [
+          "_yes15_ task:",
+          "start timer _page15_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 428,
+        "lines": [
+          "_page15_ task:",
+          "say 1057",
+          "start task _no_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 432,
+        "lines": [
+          "_no_ task:",
+          "start quest 977 977 ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

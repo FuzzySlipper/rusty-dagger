@@ -1,0 +1,395 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/C0C00Y11.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "de6beaacee3f29974f61bb12ef5aeef78df9ac32d370adbb907cda6f6538ade3",
+    "byteLength": 4783
+  },
+  "document": {
+    "fileName": "C0C00Y11.txt",
+    "questName": "C0C00Y11",
+    "questNameLine": 9,
+    "displayName": "The Spook",
+    "header": [
+      {
+        "name": "quest",
+        "value": "C0C00Y11"
+      },
+      {
+        "name": "displayname",
+        "value": "The Spook"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                        You are not a member of",
+          "<ce>                            __qgiver_, %pcn.",
+          "<ce>                        However, you seem honest",
+          "<ce>                      enough. I'll tell you what.",
+          "<ce>                        A house over in __house_",
+          "<ce>                        is being haunted by some",
+          "<ce>                        sort of undead. We need",
+          "<ce>                        someone to exorcise the",
+          "<ce>                         spirit. Do this and it",
+          "<ce>                         may change how we feel",
+          "<ce>                               about you."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                       This isn't going to look",
+          "<ce>                           good to __qgiver_."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                       If the haunt is too tough",
+          "<ce>                      for you to handle yourself,",
+          "<ce>                       don't do anything stupid.",
+          "<ce>                       Go to _house_ in __house_.",
+          "<ce>                    You have =traveltime_ days or we",
+          "<ce>                        send someone else out to",
+          "<ce>                              do the job."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 40,
+        "lines": [
+          "<ce>                    So you exorcised the place, eh?",
+          "<ce>                    This will look good for you when",
+          "<ce>                   I speak with the temple hierarchs."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 45,
+        "lines": [
+          "_house_ is haunted by many powerful, evil spirits, they say."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 48,
+        "lines": [
+          "_house_ is still haunted, despite the attempts of ==qgiver_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 51,
+        "lines": [
+          "At last, _house_ has only good, household spirits within."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 54,
+        "lines": [
+          "Oh, hullo, my friend, the exorcist. How may I help thee?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 57,
+        "lines": [
+          "I gave thee a chance before, and it was a waste of breath.",
+          "<--->",
+          "Do you think that I forgot _house_ already, %pct?"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 62,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of __qgiver_,",
+          " in ___qgiver_ has given",
+          " me the chance to rid _house_",
+          " in __house_ of an",
+          " undead haunting. I have =traveltime_",
+          " days to do the job."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                      In life I built this house.",
+          "<ce>                     What right do the living have",
+          "<ce>                    to interrupt my deathly dreams?"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                    Well, at least you tried. I'll",
+          "<ce>                     not speak ill of you, but that",
+          "<ce>                      is all I can promise, %pcn."
+        ]
+      },
+      {
+        "id": 1080,
+        "firstLine": 81,
+        "lines": [
+          "<ce>                      In addition, here is a map",
+          "<ce>                           to ___newdung_, an",
+          "<ce>                    unclean pit of a place if there",
+          "<ce>                     ever was one.  Do %reg a favor",
+          "<ce>                       and exterminate the vermin",
+          "<ce>                             infesting it."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 106,
+        "lines": [
+          "Item boobyprize gold range 2 to 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 108,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 110,
+        "lines": [
+          "Place _house_ remote house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 111,
+        "lines": [
+          "Place _newdung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 113,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 115,
+        "lines": [
+          "Foe _ghost_ is Ghost"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 116,
+        "lines": [
+          "Foe _skeleton_ is Skeletal_warrior"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 117,
+        "lines": [
+          "Foe _wraith_ is Wraith"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 118,
+        "lines": [
+          "Foe _zombie_ is Zombie"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 121,
+        "lines": [
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "pick one of _map_ _nomap_ _nomap_ ",
+          "pick one of _S.02_ _S.03_ _S.04_ _S.05_ ",
+          "pc at _house_ set _S.08_ ",
+          "create npc at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 128,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 131,
+        "lines": [
+          "_questdone_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 134,
+        "lines": [
+          "_success_ task:",
+          "when _questdone_ and _S.06_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 139,
+        "lines": [
+          "_S.02_ task:",
+          "place foe _ghost_ at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 142,
+        "lines": [
+          "_S.03_ task:",
+          "place foe _skeleton_ at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 145,
+        "lines": [
+          "_S.04_ task:",
+          "place foe _wraith_ at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 148,
+        "lines": [
+          "_S.05_ task:",
+          "place foe _zombie_ at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 151,
+        "lines": [
+          "_S.06_ task:",
+          "killed 1 _ghost_ ",
+          "killed 1 _skeleton_ ",
+          "killed 1 _wraith_ ",
+          "killed 1 _zombie_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 157,
+        "lines": [
+          "_S.07_ task:",
+          "injured _wraith_ saying 1011 ",
+          "injured _zombie_ saying 1011 ",
+          "injured _ghost_ saying 1011 ",
+          "injured _skeleton_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 163,
+        "lines": [
+          "_S.08_ task:",
+          "               start task _try_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 166,
+        "lines": [
+          "variable _try_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 167,
+        "lines": [
+          "_S.09_ task:",
+          "when _try_ and _questdone_ and not _S.06_ ",
+          "say 1012 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 172,
+        "lines": [
+          "_clearclick_ task:",
+          "when _questdone_ and not _S.06_ ",
+          "clear _questdone_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 176,
+        "lines": [
+          "variable _map_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 177,
+        "lines": [
+          "variable _nomap_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 178,
+        "lines": [
+          "_S.13_ task:",
+          "when _map_ and _questdone_ ",
+          "    say 1080 ",
+          "reveal _newdung_ readmap"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

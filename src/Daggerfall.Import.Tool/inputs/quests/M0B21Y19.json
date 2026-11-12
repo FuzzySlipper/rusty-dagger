@@ -1,0 +1,660 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/M0B21Y19.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "38a4a1994d675bb46c45ebd7041c656bdb8c6f0f89051c30f741b9d6d59b4461",
+    "byteLength": 9077
+  },
+  "document": {
+    "fileName": "M0B21Y19.txt",
+    "questName": "M0B21Y19",
+    "questNameLine": 9,
+    "displayName": "Standard Protection",
+    "header": [
+      {
+        "name": "quest",
+        "value": "M0B21Y19"
+      },
+      {
+        "name": "displayname",
+        "value": "Standard Protection"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                    How are you, %pcf?  If you need",
+          "<ce>                   work, I've got somethin' for you.",
+          "<ce>                 Standard protection job.  Interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 19,
+        "lines": [
+          "<ce>               Sure, you're lookin' for more high-class",
+          "<ce>                        work these days, right?"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                   All right.  The client's name is",
+          "<ce>                    _victim_, over at _victimhouse_",
+          "<ce>                just up the street from here.  %G wants",
+          "<ce>                   you over there right away.  Seemed",
+          "<ce>                   very agitated, you know the type.",
+          "<ce>                     %G'll give you all the details",
+          "<ce>                          when you get there."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 32,
+        "lines": [
+          "<ce>                Dead? That's bad. You've got to get to the bottom",
+          "<ce>                   of this one way or another, so stick with it."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                 I don't know how I can thank you for",
+          "<ce>                  saving my life, as well as avenging",
+          "<ce>                 my father's death.  Please accept this",
+          "<ce>                _reward_.  It belonged to my father, and",
+          "<ce>                      I would like you to have it."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 43,
+        "lines": [
+          "<ce>     Too bad about _victim_, eh?  Apparently he was in more danger",
+          "<ce>                           than he realized."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 47,
+        "lines": [
+          "<ce>     I know it wasn't your fault, but that business with _victim_",
+          "<ce>        still makes me feel bad.  I shoulda taken the poor chap",
+          "<ce>                        more seriously, I guess."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 52,
+        "lines": [
+          "<ce>   _darkb_ lives in ___darkb_, I think.  %G's always hanging around",
+          "<ce>    with sinister types, though, so don't go looking for %g2 unless",
+          "<ce>                      you're looking for trouble.",
+          "                                     <--->",
+          "<ce>              _darkb_ hangs around in ___darkb_, mainly."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 59,
+        "lines": [
+          "<ce>     _darkb_ is one of the leaders of the local Dark Brotherhood.",
+          "<ce>             %G3 headquarters is in __darkb_ in ___darkb_."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 63,
+        "lines": [
+          "%qdt:",
+          " The Fighters Guild of ___questgiver_",
+          " has sent me to _victimhouse_",
+          " to meet with a client, _victim_,",
+          " who is in need of some protection.",
+          " _victim_ will give me the full",
+          " details himself."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 72,
+        "lines": [
+          "%qdt:",
+          " I was too late.  I surprised the",
+          " assassins at _victimhouse_, but",
+          " _victim_ was already dead.",
+          " "
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 79,
+        "lines": [
+          "%qdt:",
+          " I received a note from _daughter_,",
+          " who says she is _victim_'s daughter.",
+          " She asked me to come visit her at",
+          " _daughterhouse_ in __daughterhouse_",
+          " if I get the chance."
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 87,
+        "lines": [
+          "%qdt:",
+          " I went to meet _daughter_, but",
+          " it turned out to be an ambush.",
+          " I fought my way free, and am now",
+          " on my way to _safehouse_ in",
+          " __safehouse_ with _daughter_."
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 95,
+        "lines": [
+          "%qdt:",
+          " _victim_ was slain by the Dark Brotherhood.",
+          " The trail has gone cold for now."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 100,
+        "lines": [
+          "This is what happens",
+          " to people who don't",
+          " listen to my warnings.",
+          " ",
+          "<ce>                                _darkb_"
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 107,
+        "lines": [
+          "Dear %pcn:",
+          " ",
+          "   My name is _daughter_, daughter",
+          " of _victim_.  When I heard of your",
+          " heroic action in avenging my father's",
+          " death, I wanted to thank you myself.",
+          " I would be grateful if you could come",
+          " see me, if you have time.",
+          " ",
+          "<ce>                               _daughter_",
+          "<ce>                            _daughterhouse_,",
+          "<ce>                            __daughterhouse_"
+        ]
+      },
+      {
+        "id": 1035,
+        "firstLine": 121,
+        "lines": [
+          "<ce>               Back off, mate, or we'll do you the same",
+          "<ce>                    way we did _victim_ over there."
+        ]
+      },
+      {
+        "id": 1036,
+        "firstLine": 125,
+        "lines": [
+          "<ce>                     You should spend as much time",
+          "<ce>                     sharpening your wits as you do",
+          "<ce>                         sharpening your blade,",
+          "<ce>                       %pcn.  Nothing is simpler",
+          "<ce>                       than laying an ambush for",
+          "<ce>                       you Fighters Guild thugs."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 133,
+        "lines": [
+          "<ce>       Did you hear about _victim_?  Cut down in broad daylight",
+          "<ce>                            in his own home.",
+          "                                     <--->",
+          "<ce>         Everyone knows the Dark Brotherhood killed _victim_,",
+          "<ce>             but no one is willing to do anything about it."
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 140,
+        "lines": [
+          "<ce>           The Dark Brotherhood is furious over some %ra who",
+          "<ce>                    killed one of their higher-ups.",
+          "                                     <--->",
+          "<ce>         The Dark Brotherhood has vowed to track down whoever",
+          "<ce>              broke into their headquarters in ___darkb_.",
+          "<ce>                 I'm sure glad it's not me they're after."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 148,
+        "lines": [
+          "<ce>               Yes...?  Wait, you're that Fighters Guild",
+          "<ce>                  musclehead poor old _victim_ thought",
+          "<ce>                     could protect him, aren't you?",
+          "<ce>                       Who let this %ra in here?!"
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 154,
+        "lines": [
+          "<ce>                            %pcn, look out!",
+          "<ce>                              It's a trap!"
+        ]
+      },
+      {
+        "id": 1052,
+        "firstLine": 158,
+        "lines": [
+          "<ce>                    Thank you from rescuing me from",
+          "<ce>                     those assassins.  If you could",
+          "<ce>                        get me to _safehouse_ in",
+          "<ce>                      __safehouse_, I can make my",
+          "<ce>                 escape from %reg on my own from there."
+        ]
+      },
+      {
+        "id": 1070,
+        "firstLine": 165,
+        "lines": [
+          "<ce>                    A dusty courier flags you down.",
+          "<ce>                      \"%pcn?  Thank %god, at last.",
+          "<ce>                        This letter is for you.\""
+        ]
+      },
+      {
+        "id": 1071,
+        "firstLine": 170,
+        "lines": [
+          "<ce>                       Thank you for your help,",
+          "<ce>                    but I'll go on my own from here."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 175,
+        "lines": [
+          "Item _note_ letter used 1030"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 176,
+        "lines": [
+          "Item _reward_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 177,
+        "lines": [
+          "Item _I.02_ dead_body"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 178,
+        "lines": [
+          "Item _letter_ letter used 1031"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 180,
+        "lines": [
+          "Person _victim_ face 5 faction People_of_Sentinel male remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 181,
+        "lines": [
+          "Person _questgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 182,
+        "lines": [
+          "Person _daughter_ face 3 faction People_of_Sentinel female remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 183,
+        "lines": [
+          "Person _darkb_ faction The_Dark_Brotherhood remote anyInfo 1015 rumors 1016"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 185,
+        "lines": [
+          "Place _victimhouse_ local house4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 186,
+        "lines": [
+          "Place _daughterhouse_ remote house4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 187,
+        "lines": [
+          "Place _safehouse_ remote house3"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 189,
+        "lines": [
+          "Clock _qtime_ 00:00 0 flag 1 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 190,
+        "lines": [
+          "Clock _S.03_ 3.00:00 5.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 193,
+        "lines": [
+          "Clock _S.04_ 00:00 0 flag 1 range 0 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 195,
+        "lines": [
+          "Foe _enemy_ is Assassin"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 196,
+        "lines": [
+          "Foe _F.01_ is Nightblade"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 197,
+        "lines": [
+          "Foe _F.02_ is 4 Assassin"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 200,
+        "lines": [
+          "dialog link for location _daughterhouse_ person _daughter_ ",
+          "dialog link for person _darkb_ ",
+          "start timer _qtime_ ",
+          "log 1020 step 0 ",
+          "place npc _victim_ at _victimhouse_",
+          "hide npc _victim_",
+          "pc at _victimhouse_ set _S.05_ ",
+          "_note_ used do _readnote_",
+          "have _I.02_ set _deadbody_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 210,
+        "lines": [
+          "variable _qtime_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 211,
+        "lines": [
+          "_readnote_ task:",
+          "add dialog for person _darkb_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 214,
+        "lines": [
+          "_S.02_ task:",
+          "injured _enemy_ ",
+          "say 1035 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 218,
+        "lines": [
+          "_S.03_ task:",
+          "_letter_ used do _readletter_ ",
+          "start timer _S.04_ ",
+          "give pc _letter_ notify 1070 ",
+          "place npc _daughter_ at _daughterhouse_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 224,
+        "lines": [
+          "_S.04_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 227,
+        "lines": [
+          "_S.05_ task:",
+          "start task _insidespawn_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 231,
+        "lines": [
+          "_insidespawn_ task:",
+          "create foe _enemy_ every 0 minutes 4 times with 100% success ",
+          "place item _I.02_ at _victimhouse_ ",
+          "place item _note_ at _victimhouse_ ",
+          "log 1021 step 1 ",
+          "rumor mill 1040 ",
+          "hide npc _victim_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 241,
+        "lines": [
+          "_deadbody_ task:",
+          "take _I.02_ from pc"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 245,
+        "lines": [
+          "_S.06_ task:",
+          "clicked npc _darkb_ ",
+          "create foe _enemy_ every 3 minutes 5 times with 100% success ",
+          "create foe _F.01_ every 0 minutes 1 times with 100% success ",
+          "hide npc _darkb_ ",
+          "say 1050 ",
+          "start timer _S.03_ ",
+          "log 1024 step 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 257,
+        "lines": [
+          "_S.07_ task:",
+          "killed 1 _F.01_ ",
+          "rumor mill 1041 ",
+          "change repute with _daughter_ by +10 ",
+          "change repute with _darkb_ by -15 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 263,
+        "lines": [
+          "_S.08_ task:",
+          "clicked npc _daughter_ ",
+          "pc at _daughterhouse_ set _S.12_ ",
+          "create foe _F.02_ every 0 minutes 1 times with 100% success ",
+          "say 1051 ",
+          "add _daughter_ face ",
+          "hide npc _daughter_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 273,
+        "lines": [
+          "_readletter_ task:",
+          "log 1022 step 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 276,
+        "lines": [
+          "_S.10_ task:",
+          "when _qtime_ and not _S.07_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 280,
+        "lines": [
+          "_S.11_ task:",
+          "injured _F.02_ ",
+          "say 1036 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 284,
+        "lines": [
+          "variable _S.12_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 285,
+        "lines": [
+          "_S.13_ task:",
+          "pc at _safehouse_ set _S.14_ ",
+          "when _S.08_ and not _S.12_ ",
+          "log 1023 step 1",
+          "say 1052"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 293,
+        "lines": [
+          "_S.14_ task:",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 297,
+        "lines": [
+          "_S.15_ task:",
+          "when _S.04_ and not _S.14_ ",
+          "say 1071 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 301,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _questgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 304,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _insidespawn_",
+          "clear _qgclicked_ _clearclick_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 308,
+        "lines": [
+          "_feedback_ task:",
+          "when _qgclicked_ and _insidespawn_",
+          "say 1003"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

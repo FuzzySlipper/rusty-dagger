@@ -1,0 +1,244 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000106.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "e8d969d8b23f17f2803c3d366ebe26038ceac5468b49e09ee855f83ce2d550c3",
+    "byteLength": 2114
+  },
+  "document": {
+    "fileName": "S0000106.txt",
+    "questName": "S0000106",
+    "questNameLine": 5,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000106"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 9,
+        "lines": []
+      },
+      {
+        "id": 1001,
+        "firstLine": 12,
+        "lines": []
+      },
+      {
+        "id": 1002,
+        "firstLine": 15,
+        "lines": []
+      },
+      {
+        "id": 1003,
+        "firstLine": 18,
+        "lines": []
+      },
+      {
+        "id": 1004,
+        "firstLine": 21,
+        "lines": []
+      },
+      {
+        "id": 1005,
+        "firstLine": 24,
+        "lines": []
+      },
+      {
+        "id": 1006,
+        "firstLine": 27,
+        "lines": []
+      },
+      {
+        "id": 1007,
+        "firstLine": 30,
+        "lines": []
+      },
+      {
+        "id": 1008,
+        "firstLine": 33,
+        "lines": []
+      },
+      {
+        "id": 1009,
+        "firstLine": 36,
+        "lines": []
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 45,
+        "lines": [
+          "Person _gothryd_ named King_Gothryd atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 46,
+        "lines": [
+          "Person _eadwyre_ named King_Eadwyre atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 47,
+        "lines": [
+          "Person _akorithi_ face 240 named Queen_Akorithi atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 48,
+        "lines": [
+          "Person _magesguild_ face 97 faction The_Mages_Guild remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 49,
+        "lines": [
+          "Person _fightersguild_ face 72 faction The_Fighters_Guild remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 50,
+        "lines": [
+          "Person _thievesguild_ face 1 faction The_Thieves_Guild remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 51,
+        "lines": [
+          "Person _darkbrother_ face 201 faction The_Dark_Brotherhood remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 52,
+        "lines": [
+          "Person _kynareth_ face 1 faction The_Temple_of_Kynareth remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 53,
+        "lines": [
+          "Person _stendarr_ face 217 faction The_Temple_of_Stendarr remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 54,
+        "lines": [
+          "Person _julianos_ faction The_School_of_Julianos remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 55,
+        "lines": [
+          "Person _mara_ face 1 faction The_Benevolence_of_Mara remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 56,
+        "lines": [
+          "Person _dibella_ face 1 faction The_House_of_Dibella remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 57,
+        "lines": [
+          "Person _akatosh_ face 97 faction The_Akatosh_Chantry remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 58,
+        "lines": [
+          "Person _arkay_ face 1 faction The_Order_of_Arkay remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 59,
+        "lines": [
+          "Person _zen_ face 1 faction The_Resolution_of_Z'en remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 60,
+        "lines": [
+          "Person _merchants_ face 1 faction The_Merchants remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 63,
+        "lines": [
+          "Clock _delay_ 00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 67,
+        "lines": [
+          "start timer _delay_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 69,
+        "lines": [
+          "_delay_ task:",
+          "change repute with _akatosh_ by +100 ",
+          "change repute with _akorithi_ by +100 ",
+          "change repute with _arkay_ by +100 ",
+          "change repute with _darkbrother_ by +100 ",
+          "change repute with _dibella_ by +100 ",
+          "change repute with _eadwyre_ by +100 ",
+          "change repute with _fightersguild_ by +100 ",
+          "change repute with _gothryd_ by +100 ",
+          "change repute with _julianos_ by +100 ",
+          "change repute with _kynareth_ by +100 ",
+          "change repute with _magesguild_ by +100 ",
+          "change repute with _mara_ by +100 ",
+          "change repute with _merchants_ by +100 ",
+          "change repute with _stendarr_ by +100 ",
+          "change repute with _thievesguild_ by +100 ",
+          "change repute with _zen_ by +100 ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

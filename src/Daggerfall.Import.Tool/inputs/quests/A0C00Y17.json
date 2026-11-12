@@ -1,0 +1,556 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C00Y17.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "7f2261ce54bbc6deabae16bab492fe5f41dbfcfc275807f2dd8fc76523697861",
+    "byteLength": 8004
+  },
+  "document": {
+    "fileName": "A0C00Y17.txt",
+    "questName": "A0C00Y17",
+    "questNameLine": 8,
+    "displayName": "The Escort",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C00Y17"
+      },
+      {
+        "name": "displayname",
+        "value": "The Escort"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                          I am _questgiver_.",
+          "<ce>              I am in need of an escort. Would you protect",
+          "<ce>                  me on my journey to __destination_?",
+          "<ce>               It's less than =traveltime_ days from here.",
+          "                                     <--->",
+          "<ce>                       My name is _questgiver_.",
+          "<ce>                  I have to get out of ___questgiver_",
+          "<ce>             right away. I want to hire you to guard me on",
+          "<ce>                     my journey to __destination_.",
+          "<ce>                   I can pay you _gold_ gold pieces.",
+          "                                     <--->",
+          "<ce>             You have to help me! My name is _questgiver_.",
+          "<ce>                 I need to get to __destination_ within",
+          "<ce>                =traveltime_ days and I need an escort."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                   I guess I'll have to find someone",
+          "<ce>                   else to protect me on my journey.",
+          "                                     <--->",
+          "<ce>                            Heartless oaf!"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                       Blessings upon you, %pcn.",
+          "<ce>                  I travel light, so I'm ready to go.",
+          "<ce>                    I know you don't work for free.",
+          "<ce>                      Take me to _destination_ in",
+          "<ce>              __destination_ and I'll pay you _gold_ gold",
+          "<ce>                           when we get there."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                        Ah! _destination_! You",
+          "<ce>                    have fulfilled your part of the",
+          "<ce>                      bargain. Here is the gold I",
+          "<ce>                             promised you."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 49,
+        "lines": [
+          "<ce>                   I hear the guards are looking for",
+          "<ce>                 _questgiver_. %G had to flee town.",
+          "                                     <--->",
+          "<ce>                 Don't you know? The Thieves Guild is",
+          "<ce>                   after _questgiver_. Or was it the",
+          "<ce>                      Dark Brotherhood? I forget.",
+          "                                     <--->",
+          "<ce>                     I heard _questgiver_ has been",
+          "<ce>                   forced to marry. %G has to get to",
+          "<ce>                       __destination_ before the",
+          "<ce>                       pregnancy begins to show."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 62,
+        "lines": [
+          "<ce>                     They caught _questgiver_. %G",
+          "<ce>                      will stand trial next week."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 66,
+        "lines": [
+          "<ce>                    Did you hear? Some %ra smuggled",
+          "<ce>                     _questgiver_ out of town just",
+          "<ce>                   in time. Otherwise they would have",
+          "<ce>                         beheaded %g2 for sure."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 72,
+        "lines": [
+          "<ce>                   Thanks for getting me out of that",
+          "<ce>                     town, %pcf. I have recommended",
+          "<ce>                     you to several of my friends."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 77,
+        "lines": [
+          "<ce>                    You! Because you wouldn't help",
+          "<ce>                    me get out of town, the Thieves",
+          "<ce>                     Guild took my shop! Go away."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 82,
+        "lines": [
+          "%qdt:",
+          " I met _questgiver_",
+          " in ___questgiver_. %G",
+          " will pay me to escort %g2 to",
+          " _destination_ in __destination_.",
+          " In particular, %g needs to get to _destination_",
+          " within =traveltime_ days."
+        ]
+      },
+      {
+        "id": 1019,
+        "firstLine": 91,
+        "lines": [
+          "<ce>                        _questgiver_ says, \"Ha!",
+          "<ce>                     I hired this %ra to protect me",
+          "<ce>                        from this. %pcn, are you",
+          "<ce>                        going to turn me over?\""
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 97,
+        "lines": [
+          "<ce>                    Halt! I have a warrant for the",
+          "<ce>                     arrest of _questgiver_ in the",
+          "<ce>                    name of %reg. We don't want you,",
+          "<ce>                    just %g2. Turn %g2 over and you",
+          "<ce>                              can go free."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 104,
+        "lines": [
+          "<ce>                   There is no need for us to fight.",
+          "<ce>                   Our quarrel is with _questgiver_.",
+          "<ce>                    The Mages Guild does not accept",
+          "<ce>                     treachery lightly. Give %g2 to",
+          "<ce>                     us and you can be on your way."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 111,
+        "lines": [
+          "<ce>                      Out of the way, %ra. We want",
+          "<ce>                         _questgiver_, and you",
+          "<ce>                   can't stop us. Just turn %g2 over.",
+          "<ce>                         Hey, _questgiver_. You",
+          "<ce>                    didn't think you could cheat the",
+          "<ce>                    Thieves Guild and live, did you?"
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 119,
+        "lines": [
+          "<ce>                           Stand aside, %ra.",
+          "<ce>                       _questgiver_ is wanted by",
+          "<ce>                       the Dark Brotherhood. You",
+          "<ce>                      aren't such a fool as to try",
+          "<ce>                        to protect %g2, are you?"
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 126,
+        "lines": [
+          "<ce>                         _questgiver_ is slain",
+          "<ce>                        right before your eyes."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 130,
+        "lines": [
+          "<ce>                  Have it your way. Kill them both!"
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 133,
+        "lines": [
+          "<ce>                          Are you lost, %pcn?",
+          "<ce>                      I guess I'll have to find my",
+          "<ce>                       own way to __destination_.",
+          "<ce>                     Thanks for nothing, worthless",
+          "<ce>                                wretch."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 157,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 159,
+        "lines": [
+          "Person _questgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 160,
+        "lines": [
+          "Person _mage_ faction The_Mages_Guild remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 161,
+        "lines": [
+          "Person _thief_ faction The_Thieves_Guild remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 162,
+        "lines": [
+          "Person _darkb_ faction The_Dark_Brotherhood remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 164,
+        "lines": [
+          "Place _destination_ remote random"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 166,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 1 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 167,
+        "lines": [
+          "Clock _extratime_ 03:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 169,
+        "lines": [
+          "Foe _mages_ is 2 Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 170,
+        "lines": [
+          "Foe _F.01_ is 2 Thief"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 171,
+        "lines": [
+          "Foe _guards_ is 2 Warrior"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 172,
+        "lines": [
+          "Foe _F.03_ is 2 Assassin"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 175,
+        "lines": [
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "pick one of _S.01_ _S.02_ _S.14_ _S.03_ ",
+          "hide npc _questgiver_ ",
+          "add _questgiver_ face ",
+          "create npc at _destination_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 182,
+        "lines": [
+          "variable _traveltime_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 183,
+        "lines": [
+          "_S.01_ task:",
+          "create foe _guards_ every 5 minutes 5 times with 20% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 186,
+        "lines": [
+          "_S.02_ task:",
+          "create foe _mages_ every 5 minutes 3 times with 25% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 189,
+        "lines": [
+          "_S.03_ task:",
+          "create foe _F.01_ every 5 minutes 3 times with 25% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 192,
+        "lines": [
+          "variable _S.04_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 193,
+        "lines": [
+          "_S.05_ task:",
+          "injured _mages_ saying 1021 ",
+          "injured _guards_ saying 1020 ",
+          "injured _F.03_ saying 1023 ",
+          "injured _F.01_ saying 1022 ",
+          "prompt 1019 yes _yes_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 201,
+        "lines": [
+          "_S.06_ task:",
+          "give pc _gold_ ",
+          "drop _questgiver_ face ",
+          "place npc _questgiver_ at _destination_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 207,
+        "lines": [
+          "_extratime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 210,
+        "lines": [
+          "_yes_ task:",
+          "start timer _extratime_ ",
+          "say 1030 ",
+          "drop _questgiver_ face "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 215,
+        "lines": [
+          "until _yes_ performed:",
+          "pc at _destination_ set _S.06_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 218,
+        "lines": [
+          "_no_ task:",
+          "say 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 221,
+        "lines": [
+          "variable _S.10_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 222,
+        "lines": [
+          "_S.11_ task:",
+          "when _yes_ and _S.01_ ",
+          "legal repute +10 ",
+          "restrain foe _guards_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 227,
+        "lines": [
+          "_S.12_ task:",
+          "when _yes_ and _S.02_ ",
+          "change repute with _mage_ by +10 ",
+          "restrain foe _mages_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 232,
+        "lines": [
+          "_S.13_ task:",
+          "when _yes_ and _S.03_ ",
+          "change repute with _thief_ by +10 ",
+          "restrain foe _F.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 237,
+        "lines": [
+          "_S.14_ task:",
+          "create foe _F.03_ every 5 minutes 3 times with 25% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 240,
+        "lines": [
+          "_S.15_ task:",
+          "when _yes_ and _S.14_ ",
+          "change repute with _darkb_ by +10 ",
+          "restrain foe _F.03_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 245,
+        "lines": [
+          "_S.16_ task:",
+          "when _no_ and _S.03_ ",
+          "change repute with _thief_ by -20 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 249,
+        "lines": [
+          "_S.17_ task:",
+          "when _no_ and _S.01_ ",
+          "legal repute -20 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 253,
+        "lines": [
+          "_S.18_ task:",
+          "when _no_ and _S.02_ ",
+          "change repute with _mage_ by -20 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 257,
+        "lines": [
+          "_S.19_ task:",
+          "when _no_ and _S.14_ ",
+          "change repute with _darkb_ by -20 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 261,
+        "lines": [
+          "_S.20_ task:",
+          "when _traveltime_ and not _S.06_ ",
+          "say 1050 ",
+          "drop _questgiver_ face ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

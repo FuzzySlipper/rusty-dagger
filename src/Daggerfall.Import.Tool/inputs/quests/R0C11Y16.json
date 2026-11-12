@@ -1,0 +1,338 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C11Y16.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "9a896e79a193d7286d0795935a209ab95db81422bf480c27ae22abd322b62b03",
+    "byteLength": 5866
+  },
+  "document": {
+    "fileName": "R0C11Y16.txt",
+    "questName": "R0C11Y16",
+    "questNameLine": 8,
+    "displayName": "Espionage Equipment",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C11Y16"
+      },
+      {
+        "name": "displayname",
+        "value": "Espionage Equipment"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                If you have a couple days to spare and",
+          "<ce>                wouldn't mind being _reward_ gold pieces",
+          "<ce>                   richer, I have a mission requiring",
+          "<ce>                        some speed and delicacy."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 19,
+        "lines": [
+          "<ce>                     No? I wasn't expecting you to",
+          "<ce>                   turn down _reward_ gold for a few",
+          "<ce>                  days' work. How many peasants would",
+          "<ce>                   murder for that kind of money? Ah,",
+          "<ce>                      well. Your life, I suppose."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                     Excellent, %pcf. Now, I have",
+          "<ce>                       a spy, _npc1_ in ___npc1_",
+          "<ce>                 who needs a telescope to continue %g3",
+          "<ce>                  surveillance activities. I am given",
+          "<ce>                  to understand %g has found something",
+          "<ce>                   of interest to a mutual friend of",
+          "<ce>                  ours, which needs to be delivered as",
+          "<ce>                 well. So, here is the telescope. Take",
+          "<ce>                           it to a =npc1_ in",
+          "<ce>                       a place called __npc1_ in",
+          "<ce>                        ___npc1_, and there you",
+          "<ce>                  will get further instructions. Good",
+          "<ce>                           luck to you, %pcf."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                  Hanging around here won't make you",
+          "<ce>                          any wealthier, %pcf."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 45,
+        "lines": [
+          "<ce>                           You must be %pcn.",
+          "<ce>                     _npc1_ told me to expect you.",
+          "<ce>                          I am _npc2_. Let me",
+          "<ce>                    have a look at that relic. Very",
+          "<ce>                    interesting, indeed. Well, here's",
+          "<ce>                  your _reward_ gold pieces. You never",
+          "<ce>                            saw me, got it?"
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 54,
+        "lines": [
+          "If _questgiver_ really has a spy network, it must be pretty well-hidden.",
+          "<--->",
+          "It's said that _npc1_ is a spy, but %g never leaves __npc1_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 59,
+        "lines": [
+          "Turns out they caught _npc1_ and confiscated %g3 ill-gotten loot.",
+          "<--->",
+          "They say _npc1_ was a spy in the service of _questgiver_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 64,
+        "lines": [
+          "I always get the feeling I'm being watched everywhere in ___npc1_.",
+          "<--->",
+          "I wonder if they'll ever find that relic that was lifted from the palace."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 69,
+        "lines": [
+          "Well, if it isn't my favorite spy. How goes it with you, young %pcf?",
+          "<--->",
+          "I understand that the enterprise went off without a hitch. Well done, %pcf."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 74,
+        "lines": [
+          "<ce>                  That quest I sent you on was rather",
+          "<ce>                 a failure, wasn't it? There isn't any",
+          "<ce>                  pressing reason why I should talk to",
+          "<ce>                         you at all, is there?"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 80,
+        "lines": [
+          "<ce>                     Excellent timing, %pcf. Allow",
+          "<ce>                   me to introduce myself. My name is",
+          "<ce>                          _npc1_ and I believe",
+          "<ce>                  that's my telescope you're carrying.",
+          "<ce>                        _questgiver_, I believe,",
+          "<ce>                   told you I would have a little job",
+          "<ce>                    for you. Take this relic over to",
+          "<ce>                         a =npc2_ in ___npc2_.",
+          "<ce>                         The name's _npc2_ and",
+          "<ce>                      you'll find %g2 at __npc2_.",
+          "<ce>                Your gold will be waiting for you there,",
+          "<ce>                  as well. Better be on your way; %g",
+          "<ce>                 expects you there in =2ndparton_ days."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 95,
+        "lines": [
+          "%qdt:",
+          " A spy in the employ of",
+          " _questgiver_ of ___questgiver_",
+          " needs a telescope and I have been asked",
+          " to deliver it. I have =1stparton_ days",
+          " to get to _npc1_ in",
+          " ___npc1_ at a place called __npc1_.",
+          " Once there, I will be given further",
+          " instructions."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 106,
+        "lines": [
+          "%qdt:",
+          " I gave _npc1_ %g3",
+          " telescope and %g sent me on to someone named",
+          " _npc2_ of ___npc2_ with",
+          " a relic of some kind. I have =2ndparton_",
+          " days to get to _npc2_'s",
+          " place in ___npc2_, __npc2_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 139,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 140,
+        "lines": [
+          "Item _item1_ telescope"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 141,
+        "lines": [
+          "Item _item2_ Holy_relic"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 143,
+        "lines": [
+          "Person _questgiver_ face 140 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 144,
+        "lines": [
+          "Person _npc1_ group Local_3.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 145,
+        "lines": [
+          "Person _npc2_ face 248 group Local_3.1 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 148,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 149,
+        "lines": [
+          "Clock _2ndparton_ 00:00 0 flag 1 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 153,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1015 step 0 ",
+          "get item _item1_ ",
+          "create npc _npc1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 158,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _item2_ and _npc2_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 163,
+        "lines": [
+          "variable _pchasitem1_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 164,
+        "lines": [
+          "variable _pchasitem2_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 165,
+        "lines": [
+          "_S.03_ task:",
+          "toting _item1_ and _npc1_ clicked ",
+          "start timer _2ndparton_ ",
+          "log 1016 step 1 ",
+          "get item _item2_ ",
+          "say 1010 ",
+          "create npc _npc2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 173,
+        "lines": [
+          "variable _S.04_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 174,
+        "lines": [
+          "_queston_ task:",
+          "when _1stparton_ and not _S.03_ ",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 179,
+        "lines": [
+          "_1stparton_ task:",
+          "make _item1_ permanent "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 182,
+        "lines": [
+          "_2ndparton_ task:",
+          "make _item2_ permanent ",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

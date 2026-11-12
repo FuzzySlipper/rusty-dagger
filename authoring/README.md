@@ -35,8 +35,8 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
   `export-terrain`. Each writes `local/art/reference/<name>/`: an `index.html` catalogue, a CSV index, JSON manifests and
   native-resolution PNGs with their source record and frame. Missing source art is recorded, not skipped.
 - `--output DIR` writes somewhere else. Use a fresh directory for a new export: existing ones are kept experiments.
-- `--arena2 DIR` relocates the source (default `local/inputs/arena2`); `export-items --donor DIR` relocates the Daggerfall
-  Unity tables (default `data/daggerfall-unity`).
+- `--arena2 DIR` relocates the source (default `local/inputs/arena2`); `export-items --inputs DIR` relocates the
+  importer's item tables (default `src/Daggerfall.Import.Tool/inputs`).
 - `export-directional-sprites` writes `local/art/reference/daggerfall-remaining-directional-unmirrored-r01/`, compared
   against `--baseline` (default `local/art/reference/daggerfall-mobile-idle-unmirrored-r01`).
 - `tools/ui/export.py` writes the screens and portraits from an import's staging, so run the import first.

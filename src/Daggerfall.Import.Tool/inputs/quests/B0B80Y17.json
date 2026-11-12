@@ -1,0 +1,266 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/B0B80Y17.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "64dfc3dcfbbb345e94885ad298526b1ead910005dd365496a28422e60a3423b9",
+    "byteLength": 3602
+  },
+  "document": {
+    "fileName": "B0B80Y17.txt",
+    "questName": "B0B80Y17",
+    "questNameLine": 9,
+    "displayName": "The Army of Undead",
+    "header": [
+      {
+        "name": "quest",
+        "value": "B0B80Y17"
+      },
+      {
+        "name": "displayname",
+        "value": "The Army of Undead"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                      I am _qgiver_ of ==qgiver_.",
+          "<ce>                     I have a most dangerous quest",
+          "<ce>                        %pcn. You are one of the",
+          "<ce>                      few that could possibly take",
+          "<ce>                      it on. A lich is raising an",
+          "<ce>                    army of undead. We need someone",
+          "<ce>                     to go in and put a stop to it."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                          I understand, %pcn.",
+          "<ce>                     This is too dangerous even for",
+          "<ce>                    you. There are one or two other",
+          "<ce>                      heroes that might be able to",
+          "<ce>                     pull this one off. I'll go ask",
+          "<ce>                                 them."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                    You are brave indeed. The lich",
+          "<ce>                       has made ___dungeon_ into",
+          "<ce>                     its lair. Go there and destroy",
+          "<ce>                    the foul thing. In =2dung_ days",
+          "<ce>                     we will send out someone else,",
+          "<ce>                         should you not return."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 39,
+        "lines": [
+          "<ce>                        Hail to the hero, %pcn!",
+          "<ce>                      Well done! Your name will be",
+          "<ce>                     recorded in all the histories."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 44,
+        "lines": [
+          "The Great Lich of ___dungeon_ is awake again."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 47,
+        "lines": [
+          "The Lich of ___dungeon_ went across the Bay, I hear.",
+          "<--->",
+          "The Lich is gathering forces outside of %reg."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 52,
+        "lines": [
+          "Thank %god for ==qgiver_. They saved us all.",
+          "<--->",
+          "A %ra from ==qgiver_ destroyed the Lich of ___dungeon_."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 57,
+        "lines": [
+          "I would be honored to help you in any way, hero."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 60,
+        "lines": [
+          "After the ___dungeon_ debacle, you have a lot of nerve returning.",
+          "<--->",
+          "I trusted you to slay that lich. Think of my situation!"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 65,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of",
+          " ==qgiver_ in ___qgiver_",
+          " charged me with the duty of",
+          " destroying the lich of",
+          " ___dungeon_. I have =2dung_",
+          " days to finish the task."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 74,
+        "lines": [
+          "<ce>                       The lich is dead. Without",
+          "<ce>                        his magical support, the",
+          "<ce>                     army of undead will return to",
+          "<ce>                               the grave."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 95,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 96,
+        "lines": [
+          "Person _local_ face 1 group Resident2 local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 98,
+        "lines": [
+          "Place _dungeon_ remote dungeon0"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 100,
+        "lines": [
+          "Clock _2dung_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 102,
+        "lines": [
+          "Foe _F.00_ is Ancient_lich"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 103,
+        "lines": [
+          "Foe _F.01_ is Lich"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 106,
+        "lines": [
+          "start timer _2dung_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 ",
+          "pick one of _old_ _S.04_ _S.04_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 111,
+        "lines": [
+          "_2dung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 114,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _F.00_ saying 1011 ",
+          "killed 1 _F.01_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 118,
+        "lines": [
+          "_S.02_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 121,
+        "lines": [
+          "_success_ task:",
+          "when _S.02_ and _S.01_ ",
+          "give pc nothing ",
+          "change repute with _local_ by +4 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 127,
+        "lines": [
+          "_clearclick_ task:",
+          "when _S.02_ and not _S.01_ ",
+          "clear _S.02_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 131,
+        "lines": [
+          "_S.04_ task:",
+          "place foe _F.01_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 134,
+        "lines": [
+          "_old_ task:",
+          "place foe _F.00_ at _dungeon_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

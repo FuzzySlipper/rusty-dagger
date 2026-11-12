@@ -1,0 +1,426 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/P0B00L04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "45388613aeb75ca2b2958ab0077a08faaa678f8d4791b464c847ee02555e8ca9",
+    "byteLength": 7270
+  },
+  "document": {
+    "fileName": "P0B00L04.txt",
+    "questName": "P0B00L04",
+    "questNameLine": 8,
+    "displayName": "An Old Enemy",
+    "header": [
+      {
+        "name": "quest",
+        "value": "P0B00L04"
+      },
+      {
+        "name": "displayname",
+        "value": "An Old Enemy"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "Error: Questtext 1000 called."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 16,
+        "lines": [
+          "Error: Questtext 1001 called."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 19,
+        "lines": [
+          "Error: Questtext 1002 called."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                Is that a hint of sorrow on your brow,",
+          "<ce>                       %pcf? I quite understand.",
+          "<ce>                I have on more than one occasion had to",
+          "<ce>                slay an offspring of mine. You must try",
+          "<ce>                to rise above this mawkish mortal regard",
+          "<ce>                 for propagation. What you have had to",
+          "<ce>                  do is lamentable, but you must chill",
+          "<ce>                your blood to truly become one of %vam.",
+          "<ce>                 You have made a step toward that, for",
+          "<ce>                   which you deserve congratulations."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 34,
+        "lines": [
+          "The grave of =vampire_ must have been robbed. It's all ... torn up.",
+          "<--->",
+          "There's been a lot of activity around ___mondung_ lately. At night."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 39,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 68,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 97,
+        "lines": [
+          "Error: Questtext 1008 Called"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 100,
+        "lines": [
+          "Error: Questtext 1009 Called"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 103,
+        "lines": [
+          "                     __vamp_",
+          "                      ___vamp_",
+          " ",
+          " ",
+          " My Dear %pcn,",
+          " ",
+          "      Perhaps you remember a warrior",
+          " you met once, =vampire_?  Taut,",
+          " succulent, slightly thin-blooded,",
+          " but all in all, a memorable meal. Well,",
+          " %g's back from the grave now.",
+          " ",
+          "      %vam have rather",
+          " mixed emotions about your progeny's",
+          " existence. Come see me and we'll discuss",
+          " it.",
+          " ",
+          " ",
+          "                    Yours in Death,",
+          " ",
+          "                    _vamp_"
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 126,
+        "lines": [
+          "<ce>                    A pale young boy slips a letter",
+          "<ce>                     into your hand and disappears,",
+          "<ce>                            nimble as a rat."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 131,
+        "lines": [
+          "%qdt:",
+          " _vamp_ of %vam sent",
+          " me a letter, asking for my",
+          " immediate presence in ___vamp_",
+          " at a place called __vamp_."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 138,
+        "lines": [
+          "<ce>              Ah, good evening to you, blood of my blood.",
+          "<ce>               We have a problem, you and I. One of your",
+          "<ce>               old meals has come back out of the grave.",
+          "<ce>                  =vampire_? I don't know if the name",
+          "<ce>                 means anything to you. In any case, we",
+          "<ce>                 have been watching %g2, as we watched",
+          "<ce>               you, to see if %g3 response to immortality",
+          "<ce>                      is worthy of %g3 bloodline.",
+          "<ce>               It has not been. With every drop of blood",
+          "<ce>                %g drinks, %g3 thirst increases tenfold.",
+          "<ce>               A mad, virgin vampire loose in the region",
+          "<ce>                 is a threat to all civilized vampiric",
+          "<ce>                      business. Go to ___mondung_",
+          "<ce>               and slay this troublesome child of yours.",
+          "<ce>                  It is unpleasant business, but it is",
+          "<ce>                   your responsibility. I will expect",
+          "<ce>                  to see you again in =queston_ nights",
+          "<ce>                   with the deed completed. Farewell."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 158,
+        "lines": [
+          "%qdt:",
+          " _vamp_ has sent me to",
+          " ___mondung_ where",
+          " I am to slay =vampire_, a",
+          " vampire I created. I have",
+          " =queston_ nights to do",
+          " this duty and report back to",
+          " ___vamp_."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 168,
+        "lines": [
+          "<ce>                     Better not spare that rod, my",
+          "<ce>                        parent. You'll spoil me.",
+          "                                     <--->",
+          "<ce>                     I know you. You were the last",
+          "<ce>                      face I saw, smeared with the",
+          "<ce>                    blood of my body. Come, my dear",
+          "<ce>                        creator, let us embrace.",
+          "                                     <--->",
+          "<ce>                      Your face is the face of my",
+          "<ce>                          nightmare, %pcn. You",
+          "<ce>                      are the one who cursed me to",
+          "<ce>                         this life, aren't you?"
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 182,
+        "lines": [
+          "<ce>                            =vampire_ dies",
+          "<ce>                         at last a true death.",
+          "<ce>                        You must return to tell",
+          "<ce>                            _vamp_ that the",
+          "<ce>                             deed is done."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 210,
+        "lines": [
+          "Item _letter_ letter used 1010"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 212,
+        "lines": [
+          "Person _vamp_ factiontype Vampire_Clan local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 214,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 216,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 217,
+        "lines": [
+          "Clock _S.05_ 00:00 0 flag 17 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 219,
+        "lines": [
+          "Foe _vampire_ is Vampire"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 222,
+        "lines": [
+          "dialog link for location _mondung_ person _vamp_ ",
+          "_letter_ used do _readletter_ ",
+          "have _letter_ set _S.08_ ",
+          "give pc _letter_ notify 1011 ",
+          "place foe _vampire_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 228,
+        "lines": [
+          "_vampclicked_ task:",
+          "clicked npc _vamp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 231,
+        "lines": [
+          "_S.07_ task:",
+          "when _vampclicked_ ",
+          "reveal _mondung_ ",
+          "log 1014 step 1 ",
+          "say 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 237,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _vampire_ ",
+          "say 1016 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 241,
+        "lines": [
+          "until _S.01_ performed:",
+          "clear _vampclicked_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 244,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 247,
+        "lines": [
+          "_S.03_ task:",
+          "injured _vampire_ ",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 251,
+        "lines": [
+          "_reward_ task:",
+          "when _vampclicked_ and _S.01_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 256,
+        "lines": [
+          "variable _S.05_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 257,
+        "lines": [
+          "_readletter_ task:",
+          "add dialog for person _vamp_ ",
+          "log 1012 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 261,
+        "lines": [
+          "_S.08_ task:",
+          "start timer _queston_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

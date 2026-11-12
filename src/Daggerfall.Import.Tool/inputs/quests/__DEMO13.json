@@ -1,0 +1,100 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO13.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "7c574b1bc93df4738f570f80ac62e7344efe825fcecd5da51516414929f2a8ff",
+    "byteLength": 1022
+  },
+  "document": {
+    "fileName": "__DEMO13.txt",
+    "questName": "__DEMO13",
+    "questNameLine": 4,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO13"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1020,
+        "firstLine": 9,
+        "lines": [
+          "<ce>That's five of the beasts. Time to escape this place."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 12,
+        "lines": [
+          "%qdt:",
+          " I have been drugged and imprisoned inside a dungeon",
+          " somewhere. Harpies are circling, but damned if I'm",
+          " going to be their dinner. I plan on killing at least",
+          " five of them before escaping this place and tracking",
+          " down who left me here to die."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 20,
+        "lines": [
+          "<ce>Your head spins after drinking from the cup.",
+          "<ce>You realise too late that you've been drugged!",
+          "<ce>Some time later, you awaken entombed to dark place.",
+          "<ce>You can hear screeching nearby."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "place",
+        "firstLine": 29,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 30,
+        "lines": [
+          "Foe _monster_ is Harpy"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 33,
+        "lines": [
+          "say 1040",
+          "log 1030 step 0",
+          "teleport pc to _mondung_",
+          "pc at _mondung_ set _S.04_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 38,
+        "lines": [
+          "_S.04_ task:",
+          "create foe _monster_ every 8 minutes 10 times with 100% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 41,
+        "lines": [
+          "_mondead_ task:",
+          "killed 5 _monster_ saying 1020",
+          "remove log step 0"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

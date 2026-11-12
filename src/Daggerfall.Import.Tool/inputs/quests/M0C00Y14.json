@@ -1,0 +1,248 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/M0C00Y14.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "86a4f6eca0249426732a8ce403c0f44141eeed995e4566f57035d3863eda0933",
+    "byteLength": 3738
+  },
+  "document": {
+    "fileName": "M0C00Y14.txt",
+    "questName": "M0C00Y14",
+    "questNameLine": 9,
+    "displayName": "A Rat Infestation",
+    "header": [
+      {
+        "name": "quest",
+        "value": "M0C00Y14"
+      },
+      {
+        "name": "displayname",
+        "value": "A Rat Infestation"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                         My name is _qgiver_.",
+          "<ce>             We only give jobs to guild members. However,",
+          "<ce>               from time to time there are jobs that are",
+          "<ce>                too menial for fighters of the guild to",
+          "<ce>               accept. I have one such job. If you take",
+          "<ce>              it, it will show that you really want to be",
+          "<ce>                  on our good side. What do you say?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                  Obviously you have no love for the",
+          "<ce>                 Fighters Guild. I will make sure to",
+          "<ce>                   tell them what you really think."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                   Giant rats have infested _house_.",
+          "<ce>                There may be as many as half a dozen of",
+          "<ce>                 them. Go there and kill them all and",
+          "<ce>               I'll see what strings I can pull on your",
+          "<ce>                 behalf. I can only give you one day."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                    Killing rats, even giant ones,",
+          "<ce>                      doesn't take much skill. It",
+          "<ce>                      does put you in favor with",
+          "<ce>                        us, though. Good work."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                   Some idiot bought four barrels of",
+          "<ce>                  cheese. Now he's got giant rats in",
+          "<ce>                              his house."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 46,
+        "lines": [
+          "<ce>                  Some woman had to abandon her home.",
+          "<ce>                It was overrun with giant rats and she",
+          "<ce>                  didn't have enough gold to pay the",
+          "<ce>                     Fighters Guild to kill them."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 52,
+        "lines": [
+          "<ce>                 I heard the Fighters Guild sent some",
+          "<ce>                   %ra over to kill the rats in that",
+          "<ce>                 woman's home. They didn't even charge",
+          "<ce>                              her for it."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 58,
+        "lines": [
+          "<ce>                 So you killed the rats. Don't get too",
+          "<ce>                full of yourself. They were only rats."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 62,
+        "lines": [
+          "<ce>                 You couldn't even take care of giant",
+          "<ce>                     rats. You are hopeless %pcn."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 66,
+        "lines": [
+          "%qdt:",
+          " The Fighters Guild of",
+          " ___qgiver_ has",
+          " offered to let me rid _house_",
+          " of a giant rat infestation.",
+          " I have one day to get it done."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 74,
+        "lines": [
+          "<ce>  This building smells terribly of rats.",
+          "<ce>  Your entry has likely disturbed them into activity."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 78,
+        "lines": [
+          "<ce>                   That's most of them. The Fighters",
+          "<ce>                  Guild won't quibble over the rest."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 94,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 96,
+        "lines": [
+          "Place _house_ local random"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 98,
+        "lines": [
+          "Clock _2dung_ 1.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 100,
+        "lines": [
+          "Foe _monster_ is Giant_rat"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 103,
+        "lines": [
+          "start timer _2dung_ ",
+          "reveal _house_ ",
+          "log 1010 step 0 ",
+          "pc at _house_ set _S.04_ ",
+          "create npc at _house_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 109,
+        "lines": [
+          "_2dung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 112,
+        "lines": [
+          "_S.01_ task:",
+          "killed 4 _monster_ ",
+          "say 1020"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 116,
+        "lines": [
+          "_S.02_ task:",
+          "when _qgclicked_ and _S.01_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 121,
+        "lines": [
+          "_qgclicked_ task:",
+          "    clicked npc _qgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 124,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.01_ ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 128,
+        "lines": [
+          "_S.04_ task:",
+          "say 1011",
+          "create foe _monster_ every 2 minutes 7 times with 100% success "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,102 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO16.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "3e44046d41f5f38a0e0eb64f2e9ad214964f3054e4cb7d5b0677317835d2ca54",
+    "byteLength": 1830
+  },
+  "document": {
+    "fileName": "__DEMO16.txt",
+    "questName": "__DEMO16",
+    "questNameLine": 13,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO16"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 17,
+        "lines": [
+          "<ce>            There is quite a talk lately about a mysterious person. Would you be willing to find out more about the rumors?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>                I am sorry to hear that. I understand,",
+          "<ce>                  of course, but it is disappointing."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 24,
+        "lines": [
+          "<ce>             That's good to hear. You need to ask around for news and rumors..."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 27,
+        "lines": [
+          "%qdt:",
+          " I need to ask around for news and rumors about a mysterious person"
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 31,
+        "lines": [
+          "_thief_ was said to be a master thief.",
+          "<--->",
+          "_thief_ does all of the thieves guild footwork.",
+          "<--->",
+          "The _thief_ is that =thief_ down at _tavern_."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 38,
+        "lines": [
+          "_thief_ is in town. You should try to meet %g2. Just ask around where you can find _thief_.",
+          "<--->",
+          "There are rumors about a mysterious person in town, but unfortunately I cannot provide a name."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 45,
+        "lines": [
+          "Person _thief_ face 81 faction The_Thieves_Guild anyInfo 1011 rumors 1020"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 46,
+        "lines": [
+          "Place _tavern_ local tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 49,
+        "lines": [
+          "dialog link for person _thief_ ",
+          "log 1010 step 0  ",
+          "create npc _thief_ ",
+          "place npc _thief_ at _tavern_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

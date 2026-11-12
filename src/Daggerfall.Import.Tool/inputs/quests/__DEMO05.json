@@ -1,0 +1,78 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO05.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "02fcd2348e86f5132bf341eeefa3bf153ed8e4d9931a7d36345e20d6169dc2e4",
+    "byteLength": 738
+  },
+  "document": {
+    "fileName": "__DEMO05.txt",
+    "questName": "__DEMO05",
+    "questNameLine": 3,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO05"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1010,
+        "firstLine": 8,
+        "lines": [
+          "%qdt",
+          "    You have been summoned to _TestBuilding_",
+          " at __TestBuilding_ in ____TestBuilding_.",
+          " Please make haste, %pcn. There's no time to lose!"
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 14,
+        "lines": [
+          "You have arrived at _TestBuilding_ in __TestBuilding_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "place",
+        "firstLine": 21,
+        "lines": [
+          "Place _TestBuilding_ remote house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 25,
+        "lines": [
+          "log 1010 step 0"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 29,
+        "lines": [
+          "_PlayerArrived_ task:",
+          "pc at _TestBuilding_ set _ShowResult_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 34,
+        "lines": [
+          "_ShowResult_ task:",
+          "say 1050",
+          "remove log step 0",
+          "end quest"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

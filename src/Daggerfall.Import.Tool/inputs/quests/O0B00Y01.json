@@ -1,0 +1,440 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/O0B00Y01.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "be244715740f96123d8be8e7743e9fce910c701f104e1a9d5f366004a447e043",
+    "byteLength": 6723
+  },
+  "document": {
+    "fileName": "O0B00Y01.txt",
+    "questName": "O0B00Y01",
+    "questNameLine": 9,
+    "displayName": "Arms Supply",
+    "header": [
+      {
+        "name": "quest",
+        "value": "O0B00Y01"
+      },
+      {
+        "name": "displayname",
+        "value": "Arms Supply"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                    Awright, %pcf, this is a simple",
+          "<ce>                sort of assignment. One you should have",
+          "<ce>                  no trouble with. All you gotta do is",
+          "<ce>               bring this _weapons_ over to our agent in",
+          "<ce>                          ___contact_, get %g3",
+          "<ce>                   payment for it, and bring it back.",
+          "<ce>                    Think you can handle that, %pcf?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                   No? How much more simple you want",
+          "<ce>                   yer assignment to be? Stand still",
+          "<ce>                    while I slap you with eels? And",
+          "<ce>                   that might not be such a bad idea!",
+          "<ce>                          %oth, what a waste."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                     Okay then, your contact is a",
+          "<ce>                            =contact_, about",
+          "<ce>                   what you'd expect. Supposed to be",
+          "<ce>                    hanging around a nook they call",
+          "<ce>                       __contact_ in ___contact_.",
+          "<ce>                           Now, _contact_ has",
+          "<ce>                    picked up some loot out there in",
+          "<ce>                         ___contact_ and wants",
+          "<ce>                   you to bring it back to us. If you",
+          "<ce>                  think you can handle all that, we'll",
+          "<ce>                expect you back here in =1stparton_ days",
+          "<ce>                  with no excuses. All right then. Go."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 44,
+        "lines": [
+          "<ce>                    Yeah, you're back, but where's",
+          "<ce>                           _contact_'s loot?",
+          "<ce>                   You're not thinking about getting",
+          "<ce>                      smart on us, are you, %pcf?",
+          "<ce>                    'Cause if you are, think again."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                       Oh, that's a nice _gems_.",
+          "<ce>                           _contact_ gave you",
+          "<ce>                      that? %oth, %g must be doing",
+          "<ce>                        okay out in ___contact_.",
+          "<ce>                        Good going, %pcf. Here's",
+          "<ce>                    _reward_ gold for your trouble."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 59,
+        "lines": [
+          "The city guards are watching everyone with weapons like hawks these days.",
+          "<--->",
+          "The %t is apparently scared of assassination. The guards are out in force."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 64,
+        "lines": [
+          "They arrested some =contact_. Apparently, %g was an arms dealer.",
+          "<--->",
+          "The Thieves Guild isn't so hot. One of them got arrested in __contact_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 69,
+        "lines": [
+          "I hear they're smuggling _weapons_s in. That takes a lot of nerve.",
+          "<--->",
+          "The %t was paranoid about the Thieves Guild's smuggling, but %g's over it now."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 74,
+        "lines": [
+          "Yeah, whatcha want, %pcf? The _gems_ back, maybe?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 77,
+        "lines": [
+          "<ce>               If you ain't got nothing from _contact_,",
+          "<ce>                  I ain't innerested in talking, %pcf."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 81,
+        "lines": [
+          "<ce>                      Well done, %pcf. I couldn't",
+          "<ce>                  have made it here as easily carrying",
+          "<ce>                   that _weapons_. Here's a sample of",
+          "<ce>                  what I've stolen so far... a _gems_.",
+          "<ce>                   Bring it back to _questgiver_ and",
+          "<ce>                     let %g2 know I'm fine. Thanks",
+          "<ce>                      again, %pcf. See you later."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 90,
+        "lines": [
+          "<ce>                       Halt in the name of %nrn!",
+          "<ce>                        I know you are smuggling",
+          "<ce>                       weapons. Surrender or face",
+          "<ce>                           the consequences."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 96,
+        "lines": [
+          "<ce>                      I heard you were smuggling",
+          "<ce>                       _weapons_s for the Thieves",
+          "<ce>                       Guild. Give them to me and",
+          "<ce>                        I will spare your life."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 102,
+        "lines": [
+          "<ce>                       We want those _weapons_s.",
+          "<ce>                         Turn them over and we",
+          "<ce>                      won't rough you up too bad."
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 107,
+        "lines": [
+          "<ce>                      Now get out of here before",
+          "<ce>                             you get hurt."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 111,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of the Thieves Guild",
+          " in ___questgiver_ has asked that I",
+          " deliver this _weapons_ to _contact_",
+          " in __contact_ in ___contact_,",
+          " who will then give me some loot to bring back.",
+          " I have =1stparton_ days to complete the task."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 141,
+        "lines": [
+          "Item _reward_ gold range 25 to 75"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 142,
+        "lines": [
+          "Item _weapons_ weapon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 143,
+        "lines": [
+          "Item _gems_ gem"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 145,
+        "lines": [
+          "Person _questgiver_ face 72 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 146,
+        "lines": [
+          "Person _contact_ face 80 group Group_5.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 149,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 18 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 151,
+        "lines": [
+          "Foe _guards_ is Warrior"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 152,
+        "lines": [
+          "Foe _F.01_ is 2 Thief"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 153,
+        "lines": [
+          "Foe _F.02_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 156,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1030 step 0 ",
+          "get item _weapons_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 160,
+        "lines": [
+          "variable _pcgetsgold_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 161,
+        "lines": [
+          "_qgclicked_ task:",
+          "toting _gems_ and _questgiver_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 166,
+        "lines": [
+          "_npcclicked_ task:",
+          "toting _weapons_ and _contact_ clicked ",
+          "get item _gems_ ",
+          "say 1010 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 171,
+        "lines": [
+          "until _npcclicked_ performed:",
+          "create foe _guards_ every 150 minutes 4 times with 5% success ",
+          "create foe _F.02_ every 179 minutes 4 times with 5% success ",
+          "create foe _F.01_ every 163 minutes 4 times with 5% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 176,
+        "lines": [
+          "_qgtalk_ task:",
+          "clicked npc _questgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 179,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgtalk_ and not _qgclicked_",
+          "say 1003",
+          "clear _clearclick_ _qgtalk_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 185,
+        "lines": [
+          "_1stparton_ task:",
+          "make _weapons_ permanent ",
+          "make _gems_ permanent ",
+          "have _weapons_ set _S.11_ ",
+          "have _gems_ set _keptgems_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 192,
+        "lines": [
+          "variable _pchasitem1_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 193,
+        "lines": [
+          "variable _pchasitem2_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 194,
+        "lines": [
+          "_S.06_ task:",
+          "injured _F.01_ ",
+          "prompt 1022 yes _yes_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 198,
+        "lines": [
+          "_yes_ task:",
+          "take _weapons_ from pc saying 1023 ",
+          "change repute with _questgiver_ by -20 ",
+          "restrain foe _guards_ ",
+          "restrain foe _F.02_ ",
+          "restrain foe _F.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 205,
+        "lines": [
+          "variable _no_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 206,
+        "lines": [
+          "_S.09_ task:",
+          "injured _F.02_ ",
+          "prompt 1021 yes _yes_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 210,
+        "lines": [
+          "_greklith_ task:",
+          "injured _guards_ ",
+          "prompt 1020 yes _yes_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 214,
+        "lines": [
+          "_S.11_ task:",
+          "change repute with _questgiver_ by -10 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 217,
+        "lines": [
+          "_keptgems_ task:",
+          "change repute with _questgiver_ by -20 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

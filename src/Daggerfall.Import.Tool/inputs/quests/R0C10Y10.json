@@ -1,0 +1,242 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C10Y10.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "b8a5b6b4944c0160f374cab1eb26c1356c395ded4823e90deb911b1f74d9d2cb",
+    "byteLength": 3915
+  },
+  "document": {
+    "fileName": "R0C10Y10.txt",
+    "questName": "R0C10Y10",
+    "questNameLine": 8,
+    "displayName": "Weapon Supply",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C10Y10"
+      },
+      {
+        "name": "displayname",
+        "value": "Weapon Supply"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>               If you are interested in earning _reward_",
+          "<ce>                    gold for doing nothing more than",
+          "<ce>                    delivering a little parcel to an",
+          "<ce>                      agent of mine, speak up now.",
+          "                                     <--->",
+          "<ce>                I could use the services of someone of",
+          "<ce>               moderate talent, above-average discretion,",
+          "<ce>                 and willingness to assume the position",
+          "<ce>                  of a lowly courier for _reward_ gold",
+          "<ce>                      pieces. Are you that person?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                 Really? Too busy, perhaps? Your loss."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                    Excellent. Here's the _weapon_.",
+          "<ce>                    Now, _contact_ needs to have it",
+          "<ce>                      in ___contact_ in =queston_",
+          "<ce>            days. That ought to be just enough time, I hope.",
+          "<ce>                    You will recognize _contact_ --",
+          "<ce>                       just look for a =contact_.",
+          "<ce>                        Good luck and thank you."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 37,
+        "lines": [
+          "<ce>             Couldn't accomplish a simple little delivery,",
+          "<ce>                %pcf? I certainly hope you weren't still",
+          "<ce>                          expecting a reward."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                   Ah, good to see you %pcf. And the",
+          "<ce>                  _weapon_, too. Excellent. Here's the",
+          "<ce>                _reward_ gold pieces I believe you were",
+          "<ce>                       promised by _questgiver_."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 48,
+        "lines": [
+          "_questgiver_ is still in the smuggling business, I hear.",
+          "<--->",
+          "There's been an extraordinary increase in smuggling lately."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 53,
+        "lines": [
+          "Someone found a very lovely _weapon_ around here recently.",
+          "<--->",
+          "I hear _questgiver_ is mad as hell at some %ra adventurer."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 58,
+        "lines": [
+          "Someone named _contact_ has been waving around some _weapon_.",
+          "<--->",
+          "The smuggling of religious artifacts is apparently the big new crime."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 63,
+        "lines": [
+          "Oh, it's my old courier. How charming. How may I help you?",
+          "<--->",
+          "You look familiar. You made a little delivery for me recently, didn't you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 68,
+        "lines": [
+          "<ce>                     You look almost exactly like",
+          "<ce>                      a %ra who failed a delivery",
+          "<ce>                     for me. Curious. Go away now."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 73,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of",
+          " __questgiver_, ___questgiver_",
+          " has sent me to deliver a _weapon_",
+          " to an ally named _contact_.",
+          " I need to have the _weapon_ in",
+          " _contact_'s hands in =queston_",
+          " days. The =contact_",
+          " can apparently be found in a place called",
+          " __contact_ in ___contact_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 103,
+        "lines": [
+          "Item _weapon_ weapon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 104,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 106,
+        "lines": [
+          "Person _questgiver_ face 112 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 107,
+        "lines": [
+          "Person _contact_ group Local_3.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 110,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 1 range 1 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 114,
+        "lines": [
+          "start timer _queston_ ",
+          "log 1010 step 0 ",
+          "get item _weapon_ ",
+          "create npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 119,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _weapon_ and _contact_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 124,
+        "lines": [
+          "variable _pchasitem_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 125,
+        "lines": [
+          "variable _npcclicked_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 126,
+        "lines": [
+          "_queston_ task:",
+          "make _weapon_ permanent ",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 131,
+        "lines": [
+          "variable _1stparton_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,424 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/W0C00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "4b1fd1cbb2791b442f5ce504c719c24ccbff1eb1ac03aaa7222ffbb48cb9b8b2",
+    "byteLength": 6639
+  },
+  "document": {
+    "fileName": "W0C00Y00.txt",
+    "questName": "W0C00Y00",
+    "questNameLine": 8,
+    "displayName": "Hermaeus Mora's Quest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "W0C00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Hermaeus Mora's Quest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                Power, yes, is an allusive but eloquent",
+          "<ce>               prosecution. One of my minions possesses",
+          "<ce>              an ancient tome called the Oghma Infinium,",
+          "<ce>               which bequeaths great power on those who",
+          "<ce>                 read its pages. If you exterminate a",
+          "<ce>                 certain scrofulous patrician who has",
+          "<ce>                aroused my displeasure, I will arrange",
+          "<ce>                  a meeting between you and the book.",
+          "<ce>                          Is this agreeable?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 24,
+        "lines": [
+          "<ce>               You answer negatively. Am I to understand",
+          "<ce>                that you sought power, but seek it for",
+          "<ce>                 free? You ought to have sought wisdom",
+          "<ce>                 instead, for that is what you need. I",
+          "<ce>                 bid you a very disappointed goodbye."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                Very well. This socialite I referred to",
+          "<ce>                  resides at the palace of __palace_.",
+          "<ce>                For the record, the name of your quarry",
+          "<ce>                              is _enemy_.",
+          "<ce>                 Kill %g2 and proceed to ___contact_,",
+          "<ce>                      where my servant _contact_",
+          "<ce>                 will wait for you in a library. I do",
+          "<ce>                   not think there is anything to be",
+          "<ce>                 gained by continuing this interview.",
+          "<ce>                    Fail me not in this, %pcf, and",
+          "<ce>                 the power thou craves will be thine."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 44,
+        "lines": [
+          "<ce>                        Listen, if you're %pcf,",
+          "<ce>                       go back and kill _enemy_",
+          "<ce>                     again. Hermaeus Mora tells me",
+          "<ce>                       not to give you the book,",
+          "<ce>                       'cause %g's still alive.",
+          "<ce>                      I'm sorry, but that's that."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 52,
+        "lines": [
+          "<ce>                %pcf, I underestimated you. I told Mora",
+          "<ce>             you couldn't do it, but here you are, and all",
+          "<ce>                  %reg is in an uproar over _enemy_'s",
+          "<ce>                death. As promised, the book. Remember:",
+          "<ce>                      you can only read it once.",
+          "<ce>                         See you later, maybe."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 60,
+        "lines": [
+          "They say _enemy_ got all %g3 power direct from the daedra themselves.",
+          "<--->",
+          "_enemy_ must have made a deal with the daedra. No one can be that lucky."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 65,
+        "lines": [
+          "_enemy_ left %reg quick as you like. I guess %g3 past caught up with %g2.",
+          "<--->",
+          "You can cheat the daedra. _enemy_ did. Had to run away, but %g's still alive."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 70,
+        "lines": [
+          "What goes around, comes around. _enemy_ tried to cheat fate, so they say.",
+          "<--->",
+          "I can still hear _enemy_ bragging about cheating the daedra. What a fool."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 75,
+        "lines": [
+          "Just a =contact_ who deals with the daedra.",
+          "<--->",
+          "Some =contact_ who practically lives at __contact_."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 80,
+        "lines": [
+          "The Daedra Prince of Forbidden Knowledge, the wisest of the infernal ones.",
+          "<--->",
+          "Hermaeus Mora has a mind as old as Tamriel. And a body of slime."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 85,
+        "lines": [
+          "The Oghma Infinium is the book of knowledge. But knowledge can be forgotten.",
+          "<--->",
+          "It is the book that gifts its readers with stronger bodies and abler minds."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 90,
+        "lines": [
+          "%qdt:",
+          " The Daedric Prince Hermaeus Mora",
+          " wants me to assassinate a spellsword who went",
+          " back on a contract with him. _enemy_",
+          " resides in the Palace of __palace_.",
+          " In exchange for killing %g2 and getting to",
+          " Hermaeus Mora's contact in ___contact_,",
+          " _contact_, in =1stparton_ days or",
+          " less, I will be given the book of knowledge,",
+          " the Oghma Infinium. _contact_",
+          " will be waiting in a library there."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 103,
+        "lines": [
+          "<ce>                    Hermaeus Mora will be pleased--",
+          "<ce>                        you have slain _enemy_."
+        ]
+      },
+      {
+        "id": 1035,
+        "firstLine": 107,
+        "lines": [
+          "<ce>             No!  Wait!  I swear, I meant to pay Lord Mora",
+          "<ce>                  back.  Don't kill me, I beg of you!",
+          "<ce>            Here, spare my life and take this _magic_ back",
+          "<ce>              to him as a token of my goodwill and a down",
+          "<ce>               payment on what I owe.  Please, will you?"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 114,
+        "lines": [
+          "<ce>             Hmm, well, thanks for the _magic_, I guess...",
+          "<ce>                   Now, let's get down to business."
+        ]
+      },
+      {
+        "id": 1045,
+        "firstLine": 118,
+        "lines": [
+          "<ce>              You're telling me you let that little worm",
+          "<ce>             live, and you bring me this pathetic _magic_",
+          "<ce>               instead of _enemy_'s blood on your hands?",
+          "<ce>             Hermaeus Mora will be very unhappy with this",
+          "<ce>                                 news."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 142,
+        "lines": [
+          "Item _artifact_ artifact Oghma_Infinium anyInfo 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 143,
+        "lines": [
+          "Item _magic_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 145,
+        "lines": [
+          "Person _questgiver_ face 112 named Hermaeus_Mora anyInfo 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 146,
+        "lines": [
+          "Person _contact_ group Librarian remote anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 147,
+        "lines": [
+          "Person _enemy_ face 1 factiontype Province remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 149,
+        "lines": [
+          "Place _palace_ remote palace"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 150,
+        "lines": [
+          "Place _L.01_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 152,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 154,
+        "lines": [
+          "Foe _monster_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 155,
+        "lines": [
+          "Foe _guard1_ is Barbarian"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 156,
+        "lines": [
+          "Foe _guard2_ is Ranger"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 159,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1020 step 0 ",
+          "pc at _palace_ set _S.06_ ",
+          "place npc _enemy_ at _palace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 164,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 167,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 168,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _npcclicked_ and _mondead_ ",
+          "when _S.10_ and _mondead_ ",
+          "give pc _artifact_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 175,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ ",
+          "create foe _guard2_ every 3 minutes 5 times with 50% success ",
+          "say 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 180,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 183,
+        "lines": [
+          "_clearclick_ task:",
+          "when not _mondead_ and _npcclicked_",
+          "say 1003 ",
+          "clear _npcclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 188,
+        "lines": [
+          "_S.06_ task:",
+          "hide npc _enemy_ ",
+          "restrain foe _monster_ ",
+          "place foe _monster_ at _palace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 193,
+        "lines": [
+          "_S.07_ task:",
+          "injured _monster_ ",
+          "prompt 1035 yes yes no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 197,
+        "lines": [
+          "yes task:",
+          "get item _magic_ ",
+          "place foe _monster_ at _L.01_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 201,
+        "lines": [
+          "_no_ task:",
+          "create foe _guard1_ every 2 minutes 5 times with 35% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 204,
+        "lines": [
+          "_S.10_ task:",
+          "toting _magic_ and _contact_ clicked ",
+          "say 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 208,
+        "lines": [
+          "_S.11_ task:",
+          "when _S.10_ and not _mondead_ ",
+          "say 1045 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

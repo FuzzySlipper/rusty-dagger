@@ -1,0 +1,330 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/F0B00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "eb2c4e53a84c02b75193c34a1850f83d7dfe9e0ffe0fc8e47e88f725b6d5d0d8",
+    "byteLength": 6200
+  },
+  "document": {
+    "fileName": "F0B00Y00.txt",
+    "questName": "F0B00Y00",
+    "questNameLine": 8,
+    "displayName": "Desired Artwork",
+    "header": [
+      {
+        "name": "quest",
+        "value": "F0B00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Desired Artwork"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                One of the more important functions of",
+          "<ce>                the House of Dibella is the preservation",
+          "<ce>                 of great works of art. We have scouts",
+          "<ce>                 all over Tamriel who look for rare and",
+          "<ce>                 beautiful pieces. Are you available to",
+          "<ce>                  retrieve one such masterpiece? It is",
+          "<ce>                 not far from here, and we will gladly",
+          "<ce>                  pay you _reward_ gold pieces for it.",
+          "                                     <--->",
+          "<ce>                  In over four thousand years of high",
+          "<ce>                 civilization in Tamriel, the House of",
+          "<ce>                 Dibella has worked tirelessly to save",
+          "<ce>                 and preserve objects of antiquity and",
+          "<ce>                  artistry from ruin at the avaricious",
+          "<ce>                   and uncouth hands of time. We have",
+          "<ce>                  developed a sophisticated network of",
+          "<ce>                 archaeologists, dealers, and couriers",
+          "<ce>                   who are goodly paid to procure art",
+          "<ce>                   for the house. Would you assist in",
+          "<ce>                       one such enterprise, %pcf?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                     Alas, it saddens me that time",
+          "<ce>                     is considered too precious to",
+          "<ce>                       spend on that most rare of",
+          "<ce>                      all pleasures, true beauty."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                Oh marvelous. Now, the procurer of this",
+          "<ce>                particular work is a rather funny little",
+          "<ce>                            =contact_ named",
+          "<ce>                           _contact_. What %g",
+          "<ce>                  has found is apparently so rare and",
+          "<ce>                  wondrous, %g fears bandits will rob",
+          "<ce>                   %g2 before %g gets to our House. I",
+          "<ce>                  do not know how dangerous it is, but",
+          "<ce>                     if you would go to __contact_",
+          "<ce>                         in ___contact_ and get",
+          "<ce>                 the artifact from %g2, I would be most",
+          "<ce>                 appreciative. Time is of the essence,",
+          "<ce>                  for %g says that %g will abandon the",
+          "<ce>                  artifact if someone is not there to",
+          "<ce>               take it in =1stparton_ days. Meanwhilst, I",
+          "<ce>             will expect you back here in =1stparton_ days.",
+          "<ce>                     Fare thee well and may Dibella",
+          "<ce>                           lighten thy load."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 62,
+        "lines": [
+          "<ce>                       Hello, %pcf. You haven't",
+          "<ce>                      forgotten about the artifact",
+          "<ce>                        in __contact_, have you?"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 67,
+        "lines": [
+          "<ce>            It's beautiful! See how the symmetrical lines,",
+          "<ce>              the stylized figures, the delicate folds and",
+          "<ce>                   ornamentation... Oh, %pcf, what a",
+          "<ce>               gift you've given us with this icon. Your",
+          "<ce>           _reward_ gold pieces is certainly the least we can",
+          "<ce>                       offer. Dibella bless you."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 75,
+        "lines": [
+          "That quivering =contact_ is really annoying with %g3 conspiracy theories.",
+          "<--->",
+          "I wonder if that =contact_ actually has something worth stealing or not."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 80,
+        "lines": [
+          "The House of Dibella acts as if losing that icon were the end of the world.",
+          "<--->",
+          "The House is so trusting, no wonder that %ra mercenary took advantage of them."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 85,
+        "lines": [
+          "After all those rumors, I hear that icon was just a forgery anyhow.",
+          "<--->",
+          "Wonder whether the House of Dibella is going to show the icon or just store it."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 90,
+        "lines": [
+          "What can I do for the %ra who brought us the lovely icon?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 93,
+        "lines": [
+          "When you failed art, you failed the House, %pcf. Begone!"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 96,
+        "lines": [
+          "<ce>                 By Dibella, I've been a nervous wreck",
+          "<ce>                 waitin' for you to show up. Here's the",
+          "<ce>                icon -- I'm glad to be rid of it. I can",
+          "<ce>                   feel every cutthroat's eyes on it.",
+          "<ce>                You better get back to the House before",
+          "<ce>                    they think you ran off with it."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 104,
+        "lines": [
+          "_contact_ is a common archaeologist-adventurer who works for the House of Dibella.",
+          "<--->",
+          "That =contact_ over in __contact_? Just some kind of thief or mercenary."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 109,
+        "lines": [
+          "It's a fake, I bet. But the House probably won't know the difference.",
+          "<--->",
+          "A forgery, in all probability. But very pretty, nevertheless."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 114,
+        "lines": [
+          "%qdt:",
+          " The House of Dibella has hired",
+          " me to meet with an archaeologist",
+          " who has uncovered an icon for them, pay for it,",
+          " and bring the icon back to the House. This",
+          " _contact_ is in __contact_",
+          " in ___contact_. I need to have",
+          " the icon back to _questgiver_",
+          " in ___questgiver_ in =1stparton_ days."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 142,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 143,
+        "lines": [
+          "Item _item_ scarab anyInfo 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 145,
+        "lines": [
+          "Person _questgiver_ face 112 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 146,
+        "lines": [
+          "Person _contact_ group Innkeeper remote anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 149,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 153,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1030 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 156,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 159,
+        "lines": [
+          "variable _pcgetsgold_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 160,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _contact_ ",
+          "get item _item_ ",
+          "say 1010 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 165,
+        "lines": [
+          "_qgclicked_ task:",
+          "toting _item_ and _questgiver_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_qgclick2_ task:",
+          "clicked npc _questgiver_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 173,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclick2_ and not _qgclicked_",
+          "say 1003",
+          "clear _clearclick_ _qgclick2_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 178,
+        "lines": [
+          "variable _S.04_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 179,
+        "lines": [
+          "variable _S.05_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 180,
+        "lines": [
+          "_S.06_ task:",
+          "when _npcclicked_ and _1stparton_ ",
+          "make _item_ permanent "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

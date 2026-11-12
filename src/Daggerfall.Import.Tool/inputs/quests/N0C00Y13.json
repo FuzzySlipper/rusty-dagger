@@ -1,0 +1,334 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/N0C00Y13.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "54326873a8b006d91a888f58a76c84646576aa598996cb9c5090311d6bdc150c",
+    "byteLength": 6213
+  },
+  "document": {
+    "fileName": "N0C00Y13.txt",
+    "questName": "N0C00Y13",
+    "questNameLine": 8,
+    "displayName": "An Ancient Scroll",
+    "header": [
+      {
+        "name": "quest",
+        "value": "N0C00Y13"
+      },
+      {
+        "name": "displayname",
+        "value": "An Ancient Scroll"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                   Hmmph. You're not a guild member.",
+          "<ce>                    I really shouldn't give out jobs",
+          "<ce>                    to non-members. However, I have",
+          "<ce>                    something that I need done that",
+          "<ce>                    I don't really want anyone else",
+          "<ce>                    in the guild to find out about.",
+          "<ce>                    If you do this for me for free,",
+          "<ce>                     I'll spread it around that you",
+          "<ce>                       are our kind of %ra. What",
+          "<ce>                            do you say %pcf?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                        Go away. You bother me.",
+          "                                     <--->",
+          "<ce>                               Ingrate."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 30,
+        "lines": [
+          "<ce>                       My name is _questgiver_.",
+          "<ce>                  There is an ancient text supposedly",
+          "<ce>                         hidden in ___dungeon_.",
+          "<ce>              Bring it back to me within =traveltime_ days",
+          "<ce>                    and I'll consider the job done."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 37,
+        "lines": [
+          "<ce>                Excellent. I remembered to warn you not",
+          "<ce>                to read this, didn't I?  Could be quite",
+          "<ce>                dangerous if you pronounced \"nagog\" with",
+          "<ce>            the hard g, as laymen are apt.  Well, thanks for",
+          "<ce>                     your help, %pcn. Keep this up",
+          "<ce>                 and we'll consider you for membership",
+          "<ce>                          in the Mages Guild."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 46,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has some good points and bad ones."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 75,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has some good points and bad ones."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 104,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has some good points and bad ones."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 133,
+        "lines": [
+          "Certainly I remember you, %pcf. You brought me that text, right?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 136,
+        "lines": [
+          "<ce>               I can't imagine a simpler assignment than",
+          "<ce>               the one I gave you -- just find a rare old",
+          "<ce>               scroll. Now, I can't imagine a reason why",
+          "<ce>                    I should keeping talking to you."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 142,
+        "lines": [
+          "%qdt:",
+          " I met _questgiver_",
+          " of the Mages Guild of ___questgiver_",
+          " who sent me on a quest to find an",
+          " ancient text hidden in ___dungeon_.",
+          " I have =traveltime_ days to get it to %g2."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 150,
+        "lines": [
+          "Zephrim alga n' nagog. Carti",
+          " alga n' belyl. Azuth Zephrim ne'",
+          " nagog. Partik aloy partik frae i",
+          " eyominathraq n' toyl. Berik azuth",
+          " n' nagog. Charlaq gimle n' maluk",
+          " Zephrim qork."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 158,
+        "lines": [
+          "<ce>                      This must be the parchment",
+          "<ce>                     _questgiver_ sent you to find."
+        ]
+      },
+      {
+        "id": 1045,
+        "firstLine": 162,
+        "lines": [
+          "<ce>                      As you read the final word,",
+          "<ce>                      a frigid blast almost whirls",
+          "<ce>                      the paper out of your hands."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 184,
+        "lines": [
+          "Item _ingredient_ letter used 1020"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 186,
+        "lines": [
+          "Person _questgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 188,
+        "lines": [
+          "Place _dungeon_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 190,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 192,
+        "lines": [
+          "Foe _atronach_ is Ice_atronach"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 195,
+        "lines": [
+          "place item _ingredient_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 196,
+        "lines": [
+          "start timer _traveltime_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 200,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 203,
+        "lines": [
+          "_S.01_ task:",
+          "toting _ingredient_ and _questgiver_ clicked ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 208,
+        "lines": [
+          "_S.02_ task:",
+          "clicked item _ingredient_ ",
+          "_ingredient_ used do _S.03_ ",
+          "say 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 214,
+        "lines": [
+          "_S.03_ task:",
+          "say 1045",
+          "create foe _atronach_ every 1 minutes 1 times with 100% success "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

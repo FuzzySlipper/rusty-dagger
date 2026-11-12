@@ -1,0 +1,369 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/C0B3XY09.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "b0b700b7eccf4d05fa1b1bf4964daff6ef28b09cba622cda8579439e703f0d09",
+    "byteLength": 5343
+  },
+  "document": {
+    "fileName": "C0B3XY09.txt",
+    "questName": "C0B3XY09",
+    "questNameLine": 9,
+    "displayName": "The Great Evil",
+    "header": [
+      {
+        "name": "quest",
+        "value": "C0B3XY09"
+      },
+      {
+        "name": "displayname",
+        "value": "The Great Evil"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                           %pcn, my name is",
+          "<ce>                          _qgiver_. %god has",
+          "<ce>                        prophesied a great evil",
+          "<ce>                        growing in the heart of",
+          "<ce>                         a nearby dungeon. We",
+          "<ce>                        need you to go destroy",
+          "<ce>                         this thing. Will you",
+          "<ce>                                do it?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                       I have no time to spare.",
+          "<ce>                        I must find someone to",
+          "<ce>                          take up this quest."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                      There is no time to waste.",
+          "<ce>                      Travel to the ___dungeon_.",
+          "<ce>                        There you will find the",
+          "<ce>                        _evilfocus_. Destroy it",
+          "<ce>                   within =traveltime_ days and all",
+          "<ce>                         will be well again. A",
+          "<ce>                        sign will appear in the",
+          "<ce>                       temple when this is done.",
+          "<ce>                        Return to me and I will",
+          "<ce>                             pay you well."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                          %pcn, you have the",
+          "<ce>                       thanks of all our clergy.",
+          "<ce>                             The evil has",
+          "<ce>                         been destroyed. As I",
+          "<ce>                     promised, here is _gold_ gold",
+          "<ce>                        pieces for your reward."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 49,
+        "lines": [
+          "__qgiver_ are very interested in ___dungeon_ suddenly."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 52,
+        "lines": [
+          "The Evil is still within ___dungeon_, but it's changed its form."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 55,
+        "lines": [
+          "__qgiver_ destroyed an Evil within ___dungeon_ few knew existed."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 58,
+        "lines": [
+          "You're the destroyer of The _evilfocus_, of course, I remember you."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 61,
+        "lines": [
+          "The _evilfocus_ yet thrives. I have nothing for you but scorn."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 64,
+        "lines": [
+          "%qdt:",
+          " A member of __qgiver_",
+          " in ___qgiver_ named",
+          " _qgiver_ charged me",
+          " with the task of destroying",
+          " the evil _evilfocus_ in",
+          " the ___dungeon_. It",
+          " must be done within =traveltime_",
+          " days or the evil will be",
+          " unleashed upon an innocent",
+          " world. Or mostly innocent anyway."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 77,
+        "lines": [
+          "<ce>                   As you reach for the _evilfocus_",
+          "<ce>                 it transforms into a beautiful woman.",
+          "<ce>                                    ",
+          "<ce>                      \"What a tasty young mortal!",
+          "<ce>                       I see you came to destroy",
+          "<ce>                        the _evilfocus_. I have",
+          "<ce>                       a better idea. If I give",
+          "<ce>                      you this magic _magicitem_,",
+          "<ce>                       you go back to the temple",
+          "<ce>                        and tell them that you",
+          "<ce>                    couldn't find the _evilfocus_.",
+          "<ce>                      They can hardly blame you,",
+          "<ce>                        and you get to keep the",
+          "<ce>                             _magicitem_.\""
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 93,
+        "lines": [
+          "<ce>                        \"Then die like the pious",
+          "<ce>                            mortal you are!\""
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 97,
+        "lines": [
+          "<ce>  The curse is lifted. You should report to _qgiver_."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 100,
+        "lines": [
+          "<ce>  __qgiver_'s wrath will not",
+          "<ce> be easily placated for this betrayal."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 118,
+        "lines": [
+          "Item _evilfocus_ religious"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 119,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 120,
+        "lines": [
+          "Item _magicitem_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 122,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 124,
+        "lines": [
+          "Place _dungeon_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 126,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 128,
+        "lines": [
+          "Foe _guardian_ is Daedra_seducer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 129,
+        "lines": [
+          "Foe _spiders_ is 6 Spider"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 130,
+        "lines": [
+          "Foe _F.02_ is Gargoyle"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 131,
+        "lines": [
+          "Foe _F.03_ is Harpy"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 132,
+        "lines": [
+          "Foe _lesserdaedra_ is Daedroth"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 135,
+        "lines": [
+          "place item _evilfocus_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 136,
+        "lines": [
+          "start timer _traveltime_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_S.01_ task:",
+          "clicked item _evilfocus_ ",
+          "place foe _guardian_ at _dungeon_ ",
+          "prompt 1011 yes _yes_ no _no_ ",
+          "take _evilfocus_ from pc"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 149,
+        "lines": [
+          "_yes_ task:",
+          "remove foe _guardian_",
+          "get item _magicitem_ ",
+          "make _magicitem_ permanent ",
+          "change repute with _qgiver_ by -10 ",
+          "say 1014",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 158,
+        "lines": [
+          "_no_ task:",
+          "create foe _F.02_ every 5 minutes 1 times with 100% success ",
+          "create foe _spiders_ every 9 minutes 1 times with 100% success ",
+          "create foe _lesserdaedra_ every 7 minutes 1 times with 100% success ",
+          "create foe _F.03_ every 3 minutes 1 times with 100% success ",
+          "say 1012 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 165,
+        "lines": [
+          "_S.04_ task:",
+          "killed 1 _guardian_ ",
+          "say 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_questdone_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 173,
+        "lines": [
+          "_success_ task:",
+          "when _questdone_ and _S.04_",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 178,
+        "lines": [
+          "_clearclick_ task:",
+          "when _questdone_ and not _S.04_ ",
+          "clear _questdone_ _clearclick_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

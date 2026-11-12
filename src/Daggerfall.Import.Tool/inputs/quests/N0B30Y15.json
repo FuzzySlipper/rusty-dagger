@@ -1,0 +1,324 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/N0B30Y15.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "2d6635d06589a4bd8d1d0e6075319eb9f9b635aeae92cc603dab5c250e58add9",
+    "byteLength": 4531
+  },
+  "document": {
+    "fileName": "N0B30Y15.txt",
+    "questName": "N0B30Y15",
+    "questNameLine": 9,
+    "displayName": "Rogue Imp",
+    "header": [
+      {
+        "name": "quest",
+        "value": "N0B30Y15"
+      },
+      {
+        "name": "displayname",
+        "value": "Rogue Imp"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                       My name is _questgiver_.",
+          "<ce>                    We need someone to kill a rogue",
+          "<ce>                    imp for us. Are you interested?",
+          "<ce>                     The job does pay _gold_ gold."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>                               Too bad.",
+          "                                     <--->",
+          "<ce>                             What a pity.",
+          "                                     <--->",
+          "<ce>                      I see. Toddle off somewhere",
+          "<ce>                            else then, %pcn."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                       Fine attitude %pcn. There",
+          "<ce>                    is one thing I did not tell you.",
+          "<ce>                   This imp was a familiar to a very",
+          "<ce>                    high-ranking mage. It seems the",
+          "<ce>                  imp fell into an experimental spell",
+          "<ce>                  and has been imbued with all manner",
+          "<ce>                   of spell-like powers. You can find",
+          "<ce>                      the creature at _palace_ of",
+          "<ce>                        __palace_. Apparently it",
+          "<ce>                thinks it is fit to rule. Do be careful",
+          "<ce>                       %pcn. If you are not back",
+          "<ce>               within =traveltime_ days, we shall assume",
+          "<ce>                           that you are dead."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                   Tough little beggar, eh? Well you",
+          "<ce>                    have certainly earned your pay."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 47,
+        "lines": [
+          "Something's going on at _palace_ of __palace_. Something strange.",
+          "<--->",
+          "Everyone in __palace_ is wondering what's going on in _palace_ there."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 52,
+        "lines": [
+          "Some kind of creature flew out of _palace_ of __palace_ and off to the south."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 55,
+        "lines": [
+          "Thank %god that %ra mercenary was in __palace_ to slay that imp.",
+          "<--->",
+          "That imp could've caused some damage in __palace_ if that %ra hadn't helped."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 60,
+        "lines": [
+          "I haven't forgotten you, %pcf. You're the %ra who slew that pesky imp."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 63,
+        "lines": [
+          "<ce>                    __palace_ was nearly destroyed",
+          "<ce>                  by that imp, and you did nothing to",
+          "<ce>                      help. That, to me, is quite",
+          "<ce>                           despicable, %pcf."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 69,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of the Mages",
+          " Guild of ___questgiver_ has charged",
+          " me with the duty of destroying a",
+          " rogue imp. The beast is lurking",
+          " in _palace_ of __palace_.",
+          " I have =traveltime_ days to succeed."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 94,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 96,
+        "lines": [
+          "Person _questgiver_ face 8 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 98,
+        "lines": [
+          "Place _palace_ remote palace"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 100,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 101,
+        "lines": [
+          "Clock _S.02_ 00:04 00:20"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 102,
+        "lines": [
+          "Clock _Gothryd_ 00:04"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 104,
+        "lines": [
+          "Clock _S.08_ 00:04"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 105,
+        "lines": [
+          "Clock _S.09_ 00:04"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 108,
+        "lines": [
+          "Foe _imp_ is Imp"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 111,
+        "lines": [
+          "start timer _traveltime_ ",
+          "log 1010 step 0 ",
+          "pc at _palace_ set _S.01_ ",
+          "place foe _imp_ at _palace_ ",
+          "create npc at _palace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 117,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 120,
+        "lines": [
+          "_S.01_ task:",
+          "start timer _S.02_ ",
+          "cast Spell_Shield spell on _imp_ ",
+          "cast Troll's_Blood spell on _imp_ ",
+          "cast Shield spell on _imp_ ",
+          "cast Shield spell on _imp_ ",
+          "cast Invisibility spell on _imp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 128,
+        "lines": [
+          "_S.02_ task:",
+          "start timer _Gothryd_ ",
+          "cast Shield spell on _imp_ ",
+          "cast Troll's_Blood spell on _imp_ ",
+          "cast Spell_Shield spell on _imp_ ",
+          "cast Invisibility spell on _imp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 135,
+        "lines": [
+          "_S.03_ task:",
+          "killed 1 _imp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 138,
+        "lines": [
+          "_S.04_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 141,
+        "lines": [
+          "_clearclick_ task:",
+          "when _S.04_ and not _S.03_ ",
+          "clear _S.04_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 145,
+        "lines": [
+          "_S.06_ task:",
+          "when _S.04_ and _S.03_ ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_Gothryd_ task:",
+          "start timer _S.08_ ",
+          "cast Invisibility spell on _imp_ ",
+          "cast Spell_Shield spell on _imp_ ",
+          "cast Troll's_Blood spell on _imp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 156,
+        "lines": [
+          "_S.08_ task:",
+          "cast Spell_Shield spell on _imp_ ",
+          "cast Troll's_Blood spell on _imp_ ",
+          "cast Shield spell on _imp_ ",
+          "cast Invisibility spell on _imp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 162,
+        "lines": [
+          "variable _S.09_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

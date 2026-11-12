@@ -1,0 +1,441 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/80C0XY00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "4ca2a853cdd32275f399c1ce53bb8f025a54480fe8e572d255620dcb02ca23e0",
+    "byteLength": 8452
+  },
+  "document": {
+    "fileName": "80C0XY00.txt",
+    "questName": "80C0XY00",
+    "questNameLine": 9,
+    "displayName": "Malacath's Quest",
+    "header": [
+      {
+        "name": "quest",
+        "value": "80C0XY00"
+      },
+      {
+        "name": "displayname",
+        "value": "Malacath's Quest"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>              Yes, I know someone else who was interested",
+          "<ce>              in power. A little panikosa in Oblivion who",
+          "<ce>              dreamed of power, who asked me to supply it",
+          "<ce>                with the beauty and grace it had always",
+          "<ce>               desired. And when I made it beautiful, it",
+          "<ce>               fought against me, resisting my will as if",
+          "<ce>                 I had not made it. Perhaps you are the",
+          "<ce>               same. If I made you strong and beautiful,",
+          "<ce>                you would respect the gift I gave, would",
+          "<ce>                                you not?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                      Witless %ra, don't you even",
+          "<ce>                  know enough to lie? Do not waste my",
+          "<ce>                   time with your pathetic yearnings."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                        I believe you, %pcn. In",
+          "<ce>               exchange for the death of the treacherous",
+          "<ce>              seducer I once trusted, I will give you the",
+          "<ce>                 _artifact_, my most prized possession",
+          "<ce>             in your world. It will make you most powerful",
+          "<ce>               indeed. You will find the loathed creature",
+          "<ce>                  in ___mondung_. Slay her and meet my",
+          "<ce>                  dear and trusted subject, _qgfriend_",
+          "<ce>                  in ___qgfriend_. I will tell %g2 to",
+          "<ce>             meet you at the palace there for convenience.",
+          "<ce>               I don't think the whole affair should take",
+          "<ce>                 more than =1stparton_ days if done as",
+          "<ce>               efficiently as it should be. Go then into the",
+          "<ce>                     world and do my bidding, %pcn."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 47,
+        "lines": [
+          "<ce>                     Get lost you slobbering %ra.",
+          "<ce>                 I'm looking for an actual human being."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                       So you're %pcn. Malacath",
+          "<ce>                described you perfectly. Good work with",
+          "<ce>                     old =monster_. She just didn't",
+          "<ce>               know how to keep her mouth shut, you know?",
+          "<ce>                  Anyhow, here's the _artifact_. Not a",
+          "<ce>             half-bad smasher. And who knows? You might have",
+          "<ce>                 to use it on Malacath himself one day.",
+          "<ce>                             I'm joking ...",
+          "<ce>                               of course."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 62,
+        "lines": [
+          "_murder_ was found dead, right in %g3 palace in ___ruler_.",
+          "<--->",
+          "Most daedra seducers have a mission. The one in ___mondung_ is just waiting."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 67,
+        "lines": [
+          "I'm still thinking about that woman's laughter I heard coming from the sky.",
+          "<--->",
+          "Don't know where, but a lot of people saw her flying around some nights ago."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 72,
+        "lines": [
+          "I hear that seducer was murdered by her master's agents for falling in love.",
+          "<--->",
+          "Made me nervous -- that seducer just sitting in that hole, waiting for something."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 77,
+        "lines": [
+          "_qgfriend_ is a noble, rumored to have had a secret romance with a dark lady.",
+          "<--->",
+          "_qgfriend_ is a noble with a lot of secret allegiances."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 82,
+        "lines": [
+          "Malacath is the Daedra Prince of Lies, Deception, and Hypocrisy.",
+          "<--->",
+          "Malacath breeds lies like a dead dog breeds maggots."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 87,
+        "lines": [
+          "<ce>      The _artifact_ is a war hammer of great power, able to sap",
+          "<ce>                      the strength of its victims."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 92,
+        "lines": [
+          "=monster_ is dead."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 95,
+        "lines": [
+          "%qdt:",
+          " I summoned the Daedra Prince Malacath",
+          " who has offered the _artifact_ in exchange for",
+          " the death of =monster_, a daedra seducer",
+          " formerly affiliated with him. The seducer has sought",
+          " refuge in a place called ___mondung_.",
+          " If I can kill =monster_ and get to the Palace of",
+          " ___qgfriend_ within =1stparton_ days,",
+          " a =qgfriend_ named _qgfriend_ will give",
+          " me the _artifact_."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 107,
+        "lines": [
+          "=monster_,",
+          " ",
+          "      Malacath wishes _murder_ dead.",
+          " %G3 agents have uncovered one too many of",
+          " our plots.  %G must be stopped before all",
+          " our plans for %reg are ruined.  You will",
+          " find %g2 in the Palace of ___ruler_.  Make",
+          " sure %g3 death cannot be traced back to us.",
+          "     Once you have carried out the assassination,",
+          " wait for me in ___mondung_.  I will bring",
+          " your reward and your next assignment from",
+          " Malacath.",
+          " ",
+          "<ce>                               _qgfriend_"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 123,
+        "lines": [
+          "<ce>                     %oth!  _qgfriend_ was behind",
+          "<ce>                    _murder_'s death?  And involved",
+          "<ce>                   in a daedric plot as well?  We may",
+          "<ce>                 never have solved this murder without",
+          "<ce>                   your help, %pcn.  Your loyalty to",
+          "<ce>                     the %rt will not be forgotten."
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 131,
+        "lines": [
+          "<ce>                       Do you give _qgfriend_'s",
+          "<ce>                            note to _ruler_?"
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 135,
+        "lines": [
+          "<ce>_murder_'s death is still a mystery.  _ruler_ is leading the investigation,",
+          "<ce>                        but so far has no leads.",
+          "                                     <--->",
+          "<ce>I'm sure _murder_ was killed because of %g3 investigation of corruption",
+          "<ce>                                in %reg."
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 142,
+        "lines": [
+          "<ce>  _murder_ was investigating a plot to overthrow %rt %rn when %g was",
+          "<ce> \"mysteriously\" killed.  _ruler_ is trying to find out who was responsible,",
+          "<ce>                but %g'll never get to the bottom of it.",
+          "                                     <--->",
+          "<ce>_murder_ was found dead in the Palace of ___ruler_, and all %g3 notes on %g3",
+          "<ce>    investigation into high-level treason were stolen.  _ruler_ was",
+          "<ce>      sent to track down the killer, but %g has nothing to go on."
+        ]
+      },
+      {
+        "id": 1052,
+        "firstLine": 151,
+        "lines": [
+          "<ce>      _ruler_ is leading the investigation into _murder_'s death,",
+          "<ce>                        but so far has no leads.",
+          "                                     <--->",
+          "<ce> _ruler_ is investigating _murder_'s death at the Palace of ___ruler_."
+        ]
+      },
+      {
+        "id": 1053,
+        "firstLine": 157,
+        "lines": [
+          "<ce>_ruler_ is trying to find out who was responsible for _murder_'s death,",
+          "<ce>                but %g'll never get to the bottom of it.",
+          "                                     <--->",
+          "<ce>_ruler_ was sent to track down _murder_'s killer, but has nothing to go on."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 188,
+        "lines": [
+          "Item _artifact_ artifact Volendrung anyInfo 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 189,
+        "lines": [
+          "Item _note_ letter used 1030"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 191,
+        "lines": [
+          "Person _questgiver_ face 112 named Malacath anyInfo 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 192,
+        "lines": [
+          "Person _qgfriend_ group Noble male remote anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 193,
+        "lines": [
+          "Person _murder_ face 1 factiontype Province remote anyInfo 1050 rumors 1051"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 194,
+        "lines": [
+          "Person _ruler_ group Noble remote anyInfo 1052 rumors 1053"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 196,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 198,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 18 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 200,
+        "lines": [
+          "Foe _monster_ is Daedra_seducer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 203,
+        "lines": [
+          "dialog link for person _ruler_ ",
+          "dialog link for person _murder_ ",
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1020 step 0 ",
+          "give item _note_ to _monster_ ",
+          "_note_ used do _readnote_ ",
+          "place foe _monster_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 212,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 215,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 216,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _npcclicked_ and _mondead_ ",
+          "give pc _artifact_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 222,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ ",
+          "say 1015 ",
+          "create npc _qgfriend_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 227,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _qgfriend_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 231,
+        "lines": [
+          "_clearclick_ task:",
+          "when _npcclicked_ and not _mondead_",
+          "say 1003",
+          "clear _npcclicked_ _clearclick_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 236,
+        "lines": [
+          "_readnote_ task:",
+          "add dialog for person _murder_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 239,
+        "lines": [
+          "_rulerclicked_ task:",
+          "toting _note_ and _ruler_ clicked ",
+          "prompt 1041 yes _S.09_ no _school_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 243,
+        "lines": [
+          "_S.09_ task:",
+          "say 1040 ",
+          "change repute with _murder_ by +15 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 247,
+        "lines": [
+          "_school_ task:",
+          "get item _note_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

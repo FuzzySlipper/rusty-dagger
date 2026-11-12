@@ -1,0 +1,328 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/P0B01L02.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "e32b1c3f4c5ca8dbeebaf854ee1f18adf568b78a56ae442c6d90a25c5b9c70d8",
+    "byteLength": 4958
+  },
+  "document": {
+    "fileName": "P0B01L02.txt",
+    "questName": "P0B01L02",
+    "questNameLine": 8,
+    "displayName": "The Vampire Relic",
+    "header": [
+      {
+        "name": "quest",
+        "value": "P0B01L02"
+      },
+      {
+        "name": "displayname",
+        "value": "The Vampire Relic"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "My dear %pcf,",
+          " ",
+          "    We have a small task for you to perform to",
+          " prove your resolution to be one of us. There is",
+          " a _vamprelic_ of ours sequestered like a",
+          " bit of trite incunabula in the Mages Guild of",
+          " __itemdung_. Liberate it from its prison",
+          " within =1stparton_ days when they plan to move it",
+          " to a more secure location.",
+          "    Once you have the _vamprelic_, come to me.",
+          " I will wait for you for =1stparton_ days at",
+          " __vampire_ in ___vampire_. I am",
+          " easy to recognize. Look for a =vampire_.",
+          "    I am looking forward to making your acquaintance",
+          " less formally, %pcf. Do not fail to come.",
+          " ",
+          "<ce>                               In Death,",
+          "<ce>                           _vampire_ of %vam"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 33,
+        "lines": [
+          "Error: Dagtext 1001 Called."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 36,
+        "lines": [
+          "Error: Dagtext 1002 Called."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 39,
+        "lines": [
+          "<ce>                  Pleased to meet you at last, %pcf.",
+          "<ce>                      I, of course, am _vampire_.",
+          "<ce>                            %vam tribe will",
+          "<ce>                       take proper possession of",
+          "<ce>                       the _vamprelic_. Don't get",
+          "<ce>                     any silly ideas about getting",
+          "<ce>                     paid for this. It is an honor",
+          "<ce>                          just to serve %vam."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 49,
+        "lines": [
+          "The Mages Guild is getting rid of a lot of its old useless junk, I hear.",
+          "<--->",
+          "I hear there's a dump where all the Mages Guilds are sending their old stuff."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 54,
+        "lines": [
+          "With all the security at the Mages Guild, there's something worth stealing.",
+          "<--->",
+          "They sent that load of old dusty junk out of the Mages Guild at last."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 59,
+        "lines": [
+          "The three stars of Locanda glowed last night. That stands for unholy alliances.",
+          "<--->",
+          "The Mages Guild is perplexed about that burglary. Who would want that thing?"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 64,
+        "lines": [
+          "Salutations, %pcn. Thank you again for the _vamprelic_."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 67,
+        "lines": [
+          "<ce>                       %pcf, now is not the time",
+          "<ce>                   to test the limits of my patience.",
+          "<ce>                    My letter expressly asked you to",
+          "<ce>                         bring the _vamprelic_,",
+          "<ce>                      but where is it? A very poor",
+          "<ce>                       showing, %pcf.  Very poor."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 75,
+        "lines": [
+          "A sinister-looking character by that name is %di of here in __vampire_.",
+          "<--->",
+          "An odd =vampire_ named _vampire_ is staying at __vampire_, %di of here."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 80,
+        "lines": [
+          "_vampire_ is a member of %vam tribe, a mentor to its youthlings.",
+          "<--->",
+          "_vampire_ is a fairly young member of %vam, but proud and strong too."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 85,
+        "lines": [
+          "Just a _vamprelic_. Not a very pretty sight.",
+          "<--->",
+          "A weird-looking _vamprelic_."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 90,
+        "lines": [
+          "From what I hear, it's a _vamprelic_ of the elder circle of %vam.",
+          "<--->",
+          "It's a _vamprelic_ used in certain secret rituals of %vam masters."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 95,
+        "lines": [
+          "%qdt:",
+          " I received a letter from _vampire_",
+          " of ___vampire_ who has given me =1stparton_ nights",
+          " to steal a _vamprelic_ out of its secured chamber",
+          " in the Mages Guild of __itemdung_. Once",
+          " the deed has been done, I am to bring the _vamprelic_",
+          " to _vampire_ at __vampire_."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 104,
+        "lines": [
+          "<ce>                   A rolled parchment on the ground",
+          "<ce>                     catches your eye.  As you take",
+          "<ce>                   a closer look, you are astonished",
+          "<ce>                  to see that it is addressed to you."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 125,
+        "lines": [
+          "Item _vamprelic_ religious anyInfo 1013 used 1015"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 126,
+        "lines": [
+          "Item _letter_ letter used QuestorOffer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 128,
+        "lines": [
+          "Person _vampire_ factiontype Vampire_Clan remote anyInfo 1011 rumors 1010"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 130,
+        "lines": [
+          "Place _itemdung_ remote magery"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 132,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 134,
+        "lines": [
+          "Foe _mages_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 135,
+        "lines": [
+          "Foe _battlemage_ is Battle_mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 138,
+        "lines": [
+          "place item _vamprelic_ at _itemdung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 139,
+        "lines": [
+          "_letter_ used do _readletter_ ",
+          "have _letter_ set _S.06_ ",
+          "give pc _letter_ notify 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 143,
+        "lines": [
+          "variable _pcgetsgold_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 144,
+        "lines": [
+          "_vampclicked_ task:",
+          "toting _vamprelic_ and _vampire_ clicked ",
+          "give pc nothing ",
+          "change repute with _vampire_ by +5 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_pchasitem_ task:",
+          "clicked item _vamprelic_ ",
+          "create foe _mages_ every 2 minutes 2 times with 25% success ",
+          "create foe _battlemage_ every 1 minutes 4 times with 25% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 155,
+        "lines": [
+          "_1stparton_ task:",
+          "make _vamprelic_ permanent ",
+          "change repute with _vampire_ by -5 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 160,
+        "lines": [
+          "variable _clearclick_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 161,
+        "lines": [
+          "_readletter_ task:",
+          "log 1020 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 164,
+        "lines": [
+          "_S.06_ task:",
+          "start timer _1stparton_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

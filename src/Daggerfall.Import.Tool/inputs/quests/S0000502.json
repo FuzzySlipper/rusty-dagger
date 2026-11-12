@@ -1,0 +1,571 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000502.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "0250a3f49b86da2b5fa9674926e90bf4b00f5f4fc82bee6f903af472aa927907",
+    "byteLength": 7905
+  },
+  "document": {
+    "fileName": "S0000502.txt",
+    "questName": "S0000502",
+    "questNameLine": 5,
+    "displayName": "Former Student Part II",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000502"
+      },
+      {
+        "name": "displayname",
+        "value": "Former Student Part II"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1004,
+        "firstLine": 10,
+        "lines": [
+          "<ce>            Here's a little something I've been working on.",
+          "<ce>                    See how you like it.  I'm off!"
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 14,
+        "lines": [
+          "%qdt:",
+          " _rebel_, the rebel mage",
+          " who was once my quarry, has",
+          " asked me to meet his messenger",
+          " in _tavern_ in __tavern_",
+          " of ____tavern_."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 22,
+        "lines": [
+          "%qdt:",
+          " An atronach sent by _rebel_",
+          " informed me that he would like me",
+          " to help him explore Direnni Tower",
+          " on the Isle of Balfiera.",
+          " _rebel_ will meet me there,",
+          " somewhere."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 31,
+        "lines": [
+          "%pcn:  Greetings!",
+          " ",
+          " I hope this note finds you well.",
+          " Are you interested in a little",
+          " adventure?  If so, meet my messenger",
+          " at _tavern_ in __tavern_",
+          " in ____tavern_.",
+          " ",
+          "<ce>                 Your partner in Unsanctioned Magery,",
+          "<ce>                                    ",
+          "<ce>                                _rebel_"
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 44,
+        "lines": [
+          "<ce>                 A faint scent of brimstone greets you",
+          "<ce>                     as you walk through the door.",
+          "<ce>                    Is that an atronach over there?",
+          "<ce>                       With a note pinned to its",
+          "<ce>                        back saying, \"HIT ME\"?"
+        ]
+      },
+      {
+        "id": 1032,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                     The atronach intones stonily:",
+          "<ce>                                    ",
+          "<ce>                    \"Hello %pcn.  I am =atronach_,",
+          "<ce>                      humble servant of _rebel_.",
+          "<ce>                 He asks if you would like to explore",
+          "<ce>                 Direnni Tower on the Isle of Balfiera",
+          "<ce>                  with him.  A magical place full of",
+          "<ce>                 wonders beyond imagining.  My master",
+          "<ce>               will wait inside for =towertime_ days.\"",
+          "<ce>                                    ",
+          "<ce>                   With that, =atronach_ disappears",
+          "<ce>                          in a puff of smoke."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 65,
+        "lines": [
+          "<ce>                     %pcf, good to see you again!",
+          "<ce>                   You seem to have started without",
+          "<ce>                   me -- that chest you're carrying",
+          "<ce>                  is exactly the thing I was looking",
+          "<ce>                   for.  You don't mind if I borrow",
+          "<ce>                     it, do you?  Thanks so much!"
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 73,
+        "lines": [
+          "<ce>                   %pcf, I'm glad you could join my",
+          "<ce>                  little party.  Listen, I'm looking",
+          "<ce>                   for one specific thing, a _item_",
+          "<ce>                  which I believe is somewhere within",
+          "<ce>                 Direnni Tower.  You can keep anything",
+          "<ce>                 else we find, all I want is that box.",
+          "<ce>               Well then, let's be on our way, shall we?"
+        ]
+      },
+      {
+        "id": 1042,
+        "firstLine": 82,
+        "lines": [
+          "<ce>               Ah, this is the _item_ I was looking for.",
+          "<ce>              Hmm, I was expecting there to be some kind",
+          "<ce>                        of guardian... uh oh..."
+        ]
+      },
+      {
+        "id": 1043,
+        "firstLine": 87,
+        "lines": [
+          "<ce>                       Well then, it's been fun.",
+          "<ce>                        Perhaps we can do this",
+          "<ce>                        again sometime.  Ta ta!"
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 92,
+        "lines": [
+          "<ce>                       Take that! And that! You",
+          "<ce>                           moldy old thing!"
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 96,
+        "lines": [
+          "<ce>                        That's the spirit!  How",
+          "<ce>                     about a little of this, too!"
+        ]
+      },
+      {
+        "id": 1052,
+        "firstLine": 100,
+        "lines": [
+          "<ce>                      Bloody hell, let's get out",
+          "<ce>                        of here!  If I can just",
+          "<ce>                       get this spell to work..."
+        ]
+      },
+      {
+        "id": 1070,
+        "firstLine": 105,
+        "lines": [
+          "<ce>                A raven circles overhead, then alights",
+          "<ce>                 on your shoulder.  Most unusually, it",
+          "<ce>               is carrying an engraved card in its beak.",
+          "<ce>              It fixes you with one beady eye, tucks the",
+          "<ce>                 card into your shirt, and flaps away."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 129,
+        "lines": [
+          "Item _letter_ letter used 1030"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 130,
+        "lines": [
+          "Item _item_ item class 1 subclass 10"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 131,
+        "lines": [
+          "Item _reward_ item class 4 subclass 3"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 133,
+        "lines": [
+          "Person _rebel_ face 1 named Baltham_Greyman"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 135,
+        "lines": [
+          "Place _tavern_ remote tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 136,
+        "lines": [
+          "Place _direni1_ permanent DirenniTower2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 137,
+        "lines": [
+          "Place _direni2_ permanent DirenniTower3"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 143,
+        "lines": [
+          "Clock _S.00_ 31.06:00 93.18:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 144,
+        "lines": [
+          "Clock _S.03_ 30.00:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 145,
+        "lines": [
+          "Clock _towertime_ 31.06:00 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 146,
+        "lines": [
+          "Clock _S.18_ 00:01 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 147,
+        "lines": [
+          "Clock _outgoing_ 62.12:00 97.05:20"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 153,
+        "lines": [
+          "Foe _atronach_ is Iron_atronach"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 154,
+        "lines": [
+          "Foe _guardian_ is Fire_daedra"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 155,
+        "lines": [
+          "Foe _monster1_ is Mummy"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 156,
+        "lines": [
+          "Foe _monster2_ is Zombie"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 159,
+        "lines": [
+          "start timer _S.00_ ",
+          "pc at _direni1_ set _S.10_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 162,
+        "lines": [
+          "_S.00_ task:",
+          "pc at _tavern_ set _S.05_ ",
+          "_letter_ used do _readletter_ ",
+          "place item _item_ at _direni2_ ",
+          "start timer _S.03_ ",
+          "give pc _letter_ notify 1070 ",
+          "place npc _rebel_ at _direni1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_S.01_ task:",
+          "injured _atronach_ ",
+          "start timer _towertime_ ",
+          "log 1021 step 1 ",
+          "reveal _direni1_ in province 9 at 204718 ",
+          "say 1032 ",
+          "remove foe _atronach_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 179,
+        "lines": [
+          "_readletter_ task:",
+          "log 1020 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 182,
+        "lines": [
+          "variable _S.03_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 183,
+        "lines": [
+          "_S.04_ task:",
+          "clicked npc _rebel_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 186,
+        "lines": [
+          "_S.05_ task:",
+          "say 1031 ",
+          "restrain foe _atronach_ ",
+          "place foe _atronach_ at _tavern_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 191,
+        "lines": [
+          "_S.06_ task:",
+          "clicked item _item_ ",
+          "place foe _guardian_ at _direni2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 195,
+        "lines": [
+          "_S.07_ task:",
+          "when _S.04_ and not _S.06_ ",
+          "hide npc _rebel_ ",
+          "say 1041 ",
+          "add _rebel_ face ",
+          "start task _accompany_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 202,
+        "lines": [
+          "variable _accompany_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 206,
+        "lines": [
+          "_S.08_ task:",
+          "toting _item_ and _rebel_ clicked ",
+          "hide npc _rebel_",
+          "say 1040 ",
+          "give pc _reward_ ",
+          "start task _goout_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 213,
+        "lines": [
+          "_outgoing_ task:",
+          "start quest 503 503 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 221,
+        "lines": [
+          "_S.09_ task:",
+          "when _S.06_ and _accompany_ ",
+          "start timer _S.18_ ",
+          "say 1042"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 228,
+        "lines": [
+          "variable _S.10_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 229,
+        "lines": [
+          "_S.11_ task:",
+          "when _S.10_ and _accompany_ and not _goout_",
+          "create foe _monster2_ every 7 minutes 10 times with 20% success ",
+          "create foe _monster1_ every 5 minutes 10 times with 20% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 234,
+        "lines": [
+          "_S.12_ task:",
+          "injured _monster1_ ",
+          "say 1050 ",
+          "cast Gods'_Fire spell on _monster1_ ",
+          "unset _S.12_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 240,
+        "lines": [
+          "_S.13_ task:",
+          "injured _monster2_ ",
+          "say 1051 ",
+          "cast Lightning spell on _monster2_ ",
+          "unset _S.13_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 246,
+        "lines": [
+          "_S.14_ task:",
+          "when _S.03_ and not _S.01_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 250,
+        "lines": [
+          "variable _towertime_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 251,
+        "lines": [
+          "_S.16_ task:",
+          "when not _S.10_ and _accompany_ ",
+          "when _towertime_ and _accompany_ ",
+          "say 1043 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 256,
+        "lines": [
+          "_S.17_ task:",
+          "when _S.16_ and _S.09_ ",
+          "give pc _reward_ ",
+          "start task _goout_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 261,
+        "lines": [
+          "_goout_ task:",
+          "remove log step 0",
+          "remove log step 1",
+          "drop _rebel_ face",
+          "take _item_ from pc",
+          "start timer _outgoing_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 270,
+        "lines": [
+          "_S.18_ task:",
+          "say 1052 ",
+          "cast Banish_Daedra spell on _guardian_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 274,
+        "lines": [
+          "_timeup_ task:",
+          "when _towertime_ and not _goout_",
+          "when _S.16_ and not _goout_",
+          "end quest"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

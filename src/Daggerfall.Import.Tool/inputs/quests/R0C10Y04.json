@@ -1,0 +1,368 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C10Y04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "e0aecdb846984b5a8b54be26a615e12220b7c8f698d07e97fd170484d26bf588",
+    "byteLength": 5216
+  },
+  "document": {
+    "fileName": "R0C10Y04.txt",
+    "questName": "R0C10Y04",
+    "questNameLine": 8,
+    "displayName": "The Evil Wizard",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C10Y04"
+      },
+      {
+        "name": "displayname",
+        "value": "The Evil Wizard"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>              The whining peasants who work my land near",
+          "<ce>                    ___mondung_ have long complained",
+          "<ce>                 about evil wizardry being practiced in",
+          "<ce>                that dungeon. It appears that this time",
+          "<ce>                 they may be right. I am in need of an",
+          "<ce>                 assassin with enough time to travel to",
+          "<ce>                      ___mondung_ and destroy the",
+          "<ce>               necromantic sorcerer there. I am prepared",
+          "<ce>             to pay _reward_ gold pieces for this service.",
+          "<ce>                          Are you interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>            Really? I would have thought this was your sort",
+          "<ce>                  of an assignment. How inconvenient."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                %oth, that's grand. I need to have this",
+          "<ce>          wizard extinguished in =1stparton_ days, so you will",
+          "<ce>           probably want to get on the road right away. Good",
+          "<ce>                     luck, %pcf, and show no mercy."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 35,
+        "lines": [
+          "<ce>           I don't want to see you again until that sorcerer",
+          "<ce>                                is dead."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 39,
+        "lines": [
+          "<ce>          The mighty hero returns! The farmers are overjoyed",
+          "<ce>             that their land is free of black magic, and I",
+          "<ce>           share their joy. Accept the _reward_ gold pieces,",
+          "<ce>                        %pcf, with my gratitude."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 45,
+        "lines": [
+          "You can almost feel the malevolent magicka building.",
+          "<--->",
+          "Some sorcerer has vowed to reduce _questgiver_'s land to rubble."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 50,
+        "lines": [
+          "That sorcerer in ___mondung_ has apparently moved on.",
+          "<--->",
+          "Apparently some adventurer spooked the sorcerer out of ___mondung_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 55,
+        "lines": [
+          "The Mad Wizard of ___mondung_ was apparently slain by a brave %ra.",
+          "<--->",
+          "Had that sorcerer survived, _questgiver_ would have been in deep trouble."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 60,
+        "lines": [
+          "Ah, the slayer of the mad wizard is back. How are you, my friend?",
+          "<--->",
+          "A pleasure to see you again, o killer of mad wizards."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 65,
+        "lines": [
+          "<ce>                  You weren't expecting a reward for",
+          "<ce>                  your failure to slay that wizard, I",
+          "<ce>                    hope. You're lucky I don't have",
+          "<ce>                              you flogged.",
+          "                                     <--->",
+          "<ce>                         So, the %ra returns.",
+          "<ce>                   So, I imagine, will the wizard you",
+          "<ce>                     failed to slay. Run along now."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 75,
+        "lines": [
+          "<ce>              _questgiver_ is a noble with a real hatred",
+          "<ce>                   for a sorcerer called _fakename_.",
+          "                                     <--->",
+          "<ce>             _questgiver_ is a noble who has been plagued",
+          "<ce>                    by a sorcerer called _fakename_."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 82,
+        "lines": [
+          "_fakename_ the wizard is dead."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 85,
+        "lines": [
+          "%qdt:",
+          "_questgiver_",
+          " of __questgiver_ in ___questgiver_",
+          " has sent me to ___mondung_,",
+          " where I am to slay a mad wizard.",
+          " If I can have the deed accomplished",
+          " and be back to %g2 in =1stparton_ days,",
+          " I will earn my gold."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 95,
+        "lines": [
+          "<ce>                   You must be the latest poor fool",
+          "<ce>                    _questgiver_ has hired to try to",
+          "<ce>                  kill me.  Your bones will soon join",
+          "<ce>                  those of your compatriots, scattered",
+          "<ce>                           about my dungeon!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 118,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 120,
+        "lines": [
+          "Person _questgiver_ face 112 group Questor anyInfo 1011 rumors 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 121,
+        "lines": [
+          "Person _fakename_ group Local_4.0 female remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 123,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 125,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 127,
+        "lines": [
+          "Foe _F.00_ is Sorceror"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 128,
+        "lines": [
+          "Foe _battlemage_ is Battle_mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 129,
+        "lines": [
+          "Foe _F.02_ is Orc_shaman"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 130,
+        "lines": [
+          "Foe _mage_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 133,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1015 step 0 ",
+          "pick one of _week_ _plot_ _time_ _vend_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 138,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _S.02_ ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 146,
+        "lines": [
+          "_S.02_ task:",
+          "killed 1 _battlemage_ ",
+          "killed 1 _F.02_ ",
+          "killed 1 _F.00_ ",
+          "killed 1 _mage_ ",
+          "say 1012 ",
+          "change repute with _fakename_ by -20 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 154,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 155,
+        "lines": [
+          "_1stparton_ task:",
+          "change repute with _questgiver_ by -15 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 159,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _S.02_ ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 163,
+        "lines": [
+          "_week_ task:",
+          "place foe _battlemage_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 166,
+        "lines": [
+          "_plot_ task:",
+          "place foe _mage_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 169,
+        "lines": [
+          "_time_ task:",
+          "place foe _F.02_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 172,
+        "lines": [
+          "_vend_ task:",
+          "place foe _F.00_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 175,
+        "lines": [
+          "_dummy_ task:",
+          "injured _mage_ ",
+          "injured _battlemage_ ",
+          "injured _F.00_ ",
+          "injured _F.02_ ",
+          "say 1020 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

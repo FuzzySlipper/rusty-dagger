@@ -1,7 +1,8 @@
+using System.Text.Json;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
-using System.Text.Json;
+using Daggerfall.Source.Tool.Donor;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -40,7 +41,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
         Assert.Equal("place", decoded.ResourceReferences[0].RecordKind);
     }
 
-    [CorpusAndDonorFact([], ["Assets/StreamingAssets/Quests", "Assets/StreamingAssets/Tables"])]
+    [CorpusFact]
     public void Publishes_all_original_stems_with_real_selections_and_one_sided_availability()
     {
         DaggerfallQuestOriginalSourceSet sources = BuildSources();
@@ -60,7 +61,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
         Assert.Contains("not enabled", resourceOnly.Availability, StringComparison.OrdinalIgnoreCase);
     }
 
-    [CorpusAndDonorFact([], ["Assets/StreamingAssets/Quests", "Assets/StreamingAssets/Tables"])]
+    [CorpusFact]
     public void Retains_actual_repeated_qrc_records_and_reports_rewrite_identity_differences()
     {
         DaggerfallQuestOriginalSource peryite = Assert.Single(BuildSources().Quests, source => source.Stem == "50C00Y00");
@@ -80,7 +81,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
         Assert.Contains(peryite.RewrittenResourceMessageReferences, reference => string.Equals(reference, "anyinfo:1011", StringComparison.OrdinalIgnoreCase));
     }
 
-    [CorpusAndDonorFact([], ["Assets/StreamingAssets/Quests", "Assets/StreamingAssets/Tables"])]
+    [CorpusFact]
     public void Retains_exact_text_matches_as_well_as_explicit_mismatches()
     {
         IReadOnlyList<DaggerfallQuestMessageComparison> comparisons = [.. BuildSources().Quests.SelectMany(source => source.MessageComparisons)];
@@ -107,28 +108,13 @@ public sealed class DaggerfallQuestOriginalSourceTests
     private static DaggerfallQuestOriginalSourceSet BuildSources()
     {
         string root = TestData.RepositoryRoot;
-        string questText = TestData.Donor("Assets/StreamingAssets/Quests");
-        string tables = TestData.Donor("Assets/StreamingAssets/Tables");
         IReadOnlyList<SourceInventoryRow> manifest = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(root, "data/content-source-manifest.csv")));
-        IReadOnlyDictionary<string, int> messages = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-StaticMessages.txt")), "Tables/Quests-StaticMessages.txt").Lookup;
-        IReadOnlyDictionary<string, int> globals = DaggerfallQuestTableReader.Read(File.ReadAllBytes(Path.Combine(tables, "Quests-GlobalVars.txt")), "Tables/Quests-GlobalVars.txt", globals: true).Lookup;
-        List<QuestSourceDocument> documents = [];
+        QuestDocumentInput[] ours = [.. Directory.EnumerateFiles(TestData.Input("quests"), "*.json")
+            .Select(path => TakenTable.Read<QuestDocumentInput>(File.ReadAllBytes(path), path))
+            .OrderBy(quest => quest.Source.Path, StringComparer.Ordinal)];
+        List<QuestSourceDocument> documents = [.. ours.Select(quest => quest.Document).OfType<QuestSourceDocument>()];
         List<(string FileName, string QuestName, int Line, string Reason)> failures = [];
-        long bytes = 0;
-        foreach (string path in Directory.EnumerateFiles(questText, "*.txt").Order(StringComparer.Ordinal))
-        {
-            string text = File.ReadAllText(path);
-            bytes += new FileInfo(path).Length;
-            try
-            {
-                documents.Add(QuestSourceReader.Read(text, Path.GetFileName(path), messages, globals));
-            }
-            catch (Arena2FormatException exception)
-            {
-                failures.Add((Path.GetFileName(path), Path.GetFileNameWithoutExtension(path), exception.Offset, exception.Message));
-            }
-        }
-
+        long bytes = ours.Sum(quest => quest.Source.ByteLength);
         DaggerfallQuestPack rewritten = DaggerfallQuestPackBuilder.Build(documents, failures, "donor/StreamingAssets/Quests", new byte[bytes], manifest);
         return DaggerfallQuestOriginalSourceBuilder.Build(TestData.CorpusRoot, ReadInventory(), rewritten);
     }

@@ -9,6 +9,10 @@
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- The drift check builds the base pack's internal text with the import's own text tokenizer. -->
+    <InternalsVisibleTo Include="Daggerfall.Source.Tool" />
+  </ItemGroup>
   <!-- Stamps ImporterBuild.Revision, the importer revision the data container records. -->
   <PropertyGroup>
     <ImporterRevisionNamespace>Daggerfall.Import</ImporterRevisionNamespace>

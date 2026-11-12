@@ -1,0 +1,548 @@
+{
+  "itemEnums": {
+    "path": "daggerfall-unity/Assets/Scripts/Game/Items/ItemEnums.cs",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "312b1c1d9f34e5e3dc9c6666597fc57360c1eaf93ad29ece1b9b878453daefd8",
+    "byteLength": 15163
+  },
+  "itemHelper": {
+    "path": "daggerfall-unity/Assets/Scripts/Game/Items/ItemHelper.cs",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "48fcfe19262d2c9a07ec22971dd23238ad509b2ee9e150b45e121c147a42a0dd",
+    "byteLength": 72087
+  },
+  "itemsFile": {
+    "path": "daggerfall-unity/Assets/Scripts/API/ItemsFile.cs",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "71b8b94c1e11860c5aad61d6ac06849fc269593188ead13c481b9dbaf4fcd002",
+    "byteLength": 16320
+  },
+  "templateCount": 288,
+  "groups": [
+    {
+      "id": 0,
+      "name": "Drugs",
+      "templateIndices": true,
+      "values": [
+        78,
+        79,
+        80,
+        81
+      ]
+    },
+    {
+      "id": 1,
+      "name": "UselessItems1",
+      "templateIndices": true,
+      "values": [
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Armor",
+      "templateIndices": true,
+      "values": [
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Weapons",
+      "templateIndices": true,
+      "values": [
+        113,
+        114,
+        115,
+        116,
+        117,
+        118,
+        119,
+        120,
+        121,
+        122,
+        123,
+        124,
+        125,
+        126,
+        127,
+        128,
+        129,
+        130,
+        131
+      ]
+    },
+    {
+      "id": 4,
+      "name": "MagicItems",
+      "templateIndices": false,
+      "values": [
+        0
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Artifacts",
+      "templateIndices": false,
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        -1
+      ]
+    },
+    {
+      "id": 6,
+      "name": "MensClothing",
+      "templateIndices": true,
+      "values": [
+        141,
+        142,
+        143,
+        144,
+        145,
+        146,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155,
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        168,
+        169,
+        170,
+        171,
+        172,
+        173,
+        174,
+        175,
+        176,
+        177,
+        178,
+        179,
+        180,
+        181
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Books",
+      "templateIndices": true,
+      "values": [
+        277,
+        277,
+        277,
+        277
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Furniture",
+      "templateIndices": true,
+      "values": [
+        217,
+        218,
+        219,
+        220,
+        221,
+        222,
+        223,
+        224,
+        225,
+        226,
+        227,
+        228,
+        229,
+        230,
+        231,
+        232,
+        233,
+        234,
+        235,
+        236,
+        237,
+        238,
+        239,
+        240,
+        241,
+        242,
+        243,
+        244,
+        245
+      ]
+    },
+    {
+      "id": 9,
+      "name": "UselessItems2",
+      "templateIndices": true,
+      "values": [
+        247,
+        248,
+        249,
+        252,
+        253,
+        279
+      ]
+    },
+    {
+      "id": 10,
+      "name": "ReligiousItems",
+      "templateIndices": true,
+      "values": [
+        258,
+        259,
+        260,
+        261,
+        262,
+        263,
+        264,
+        265,
+        267,
+        268,
+        269,
+        270,
+        271
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Maps",
+      "templateIndices": true,
+      "values": [
+        287
+      ]
+    },
+    {
+      "id": 12,
+      "name": "WomensClothing",
+      "templateIndices": true,
+      "values": [
+        182,
+        183,
+        184,
+        185,
+        186,
+        187,
+        188,
+        189,
+        190,
+        191,
+        192,
+        193,
+        194,
+        195,
+        196,
+        197,
+        198,
+        199,
+        200,
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        215,
+        216
+      ]
+    },
+    {
+      "id": 13,
+      "name": "Paintings",
+      "templateIndices": true,
+      "values": [
+        284
+      ]
+    },
+    {
+      "id": 14,
+      "name": "Gems",
+      "templateIndices": true,
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "id": 15,
+      "name": "PlantIngredients1",
+      "templateIndices": true,
+      "values": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        23,
+        25
+      ]
+    },
+    {
+      "id": 16,
+      "name": "PlantIngredients2",
+      "templateIndices": true,
+      "values": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        15,
+        16,
+        17,
+        21,
+        22,
+        24,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32
+      ]
+    },
+    {
+      "id": 17,
+      "name": "CreatureIngredients1",
+      "templateIndices": true,
+      "values": [
+        33,
+        35,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        50,
+        51,
+        53,
+        54,
+        61
+      ]
+    },
+    {
+      "id": 18,
+      "name": "CreatureIngredients2",
+      "templateIndices": true,
+      "values": [
+        46,
+        47,
+        48,
+        49,
+        52
+      ]
+    },
+    {
+      "id": 19,
+      "name": "CreatureIngredients3",
+      "templateIndices": true,
+      "values": [
+        34,
+        36,
+        37
+      ]
+    },
+    {
+      "id": 20,
+      "name": "MiscellaneousIngredients1",
+      "templateIndices": true,
+      "values": [
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        62,
+        63,
+        64
+      ]
+    },
+    {
+      "id": 21,
+      "name": "MetalIngredients",
+      "templateIndices": true,
+      "values": [
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75
+      ]
+    },
+    {
+      "id": 22,
+      "name": "MiscellaneousIngredients2",
+      "templateIndices": true,
+      "values": [
+        76,
+        77
+      ]
+    },
+    {
+      "id": 23,
+      "name": "Transportation",
+      "templateIndices": true,
+      "values": [
+        93,
+        94,
+        95,
+        96,
+        97,
+        98
+      ]
+    },
+    {
+      "id": 24,
+      "name": "Deeds",
+      "templateIndices": true,
+      "values": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "id": 25,
+      "name": "Jewellery",
+      "templateIndices": true,
+      "values": [
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140
+      ]
+    },
+    {
+      "id": 26,
+      "name": "QuestItems",
+      "templateIndices": true,
+      "values": [
+        254,
+        255,
+        256,
+        257,
+        280,
+        281,
+        282,
+        283
+      ]
+    },
+    {
+      "id": 27,
+      "name": "MiscItems",
+      "templateIndices": true,
+      "values": [
+        132,
+        274,
+        275,
+        276,
+        278,
+        281,
+        285,
+        286,
+        287
+      ]
+    },
+    {
+      "id": 28,
+      "name": "Currency",
+      "templateIndices": true,
+      "values": [
+        276
+      ]
+    }
+  ]
+}

@@ -1,0 +1,419 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/C0C00Y10.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "b0cff85d230715d79966b903f779cbbb121c1b10f23ffe0fec90818c6d45c802",
+    "byteLength": 6411
+  },
+  "document": {
+    "fileName": "C0C00Y10.txt",
+    "questName": "C0C00Y10",
+    "questNameLine": 8,
+    "displayName": "The Healing",
+    "header": [
+      {
+        "name": "quest",
+        "value": "C0C00Y10"
+      },
+      {
+        "name": "displayname",
+        "value": "The Healing"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                   The best way to get in good with",
+          "<ce>                   the temple is to heal someone. I",
+          "<ce>                   know of a case that might do the",
+          "<ce>                         trick for you, %pcn.",
+          "<ce>                           Are you willing?",
+          "                                     <--->",
+          "<ce>                           I am _giver_. You",
+          "<ce>                     aren't high in the hierarchy",
+          "<ce>                             of __giver_.",
+          "<ce>                       I might be able to speak",
+          "<ce>                    favorably of you if you were to",
+          "<ce>                  find a way to cure someone I know."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                     If you aren't even willing or",
+          "<ce>                    able to do a simple healing, I",
+          "<ce>                     surely can't recommend you to",
+          "<ce>                            temple leaders."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 33,
+        "lines": [
+          "<ce>                       _cousin_ in ___cousin_ is",
+          "<ce>                  suffering from an unusual disease.",
+          "<ce>                   I was about to dispatch a cleric",
+          "<ce>                   to treat %g2. I will delay them a",
+          "<ce>                   day or so. If you can find a cure",
+          "<ce>                   it would increase your favor with",
+          "<ce>                         __giver_. I can only",
+          "<ce>                      give you =questtime_ days."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 43,
+        "lines": [
+          "%qdt:",
+          " I have been given the chance by",
+          " _giver_ of __giver_",
+          " in ___giver_ to heal",
+          " _cousin_ of ___cousin_.",
+          " If I do not have %g2 healed in =questtime_ days",
+          " someone else will be sent to do the",
+          " job instead."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 53,
+        "lines": [
+          "<ce>                            _cousin_ looks",
+          "<ce>                        much healthier to you.",
+          "<ce>                        Obviously, %g is cured."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 58,
+        "lines": [
+          "Poor _cousin_. How that =cousin_ suffers!"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 61,
+        "lines": [
+          "_giver_ of __giver_ is plenty furious with that %ra."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 64,
+        "lines": [
+          "That _cousin_ who was cured was _giver_ of __giver_'s cousin."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 67,
+        "lines": [
+          "I have heard that _cousin_ was cured. %god bless thee, %pcf. What do you need?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 70,
+        "lines": [
+          "_cousin_ has died, and I blame thee, %pcf."
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 73,
+        "lines": [
+          "<ce>                  I'll be watching you. Remember, the",
+          "<ce>                    patient's name is _cousin_ and",
+          "<ce>                     %g is in ___cousin_. You have",
+          "<ce>                  =questtime_ days to prove yourself."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 81,
+        "lines": [
+          "<ce>                     I feel so weak. I don't know",
+          "<ce>                 what is wrong with me. Have you come",
+          "<ce>             to help me? Yes? Do you have the cure? If so,",
+          "<ce>               please use it on me, so that I may heal."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 87,
+        "lines": [
+          "<ce>                          Wilt thou do this?"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 90,
+        "lines": [
+          "I heard about %g3 disease. Some say that _healer_ of ___healer_ has a cure.",
+          "<--->",
+          "I did hear something of %g2. Something about a disease and someone named _healer_ in ___healer_ who had a cure."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 95,
+        "lines": [
+          "<ce>                   Hello there. Yes, I have heard of",
+          "<ce>                    _cousin_ of ___cousin_ and %g3",
+          "<ce>                    problem. Caliron's Curse it is.",
+          "<ce>                    Often mistaken for Gray Fever.",
+          "<ce>                     Anyway, I do have a some Hoar",
+          "<ce>                     Frost Root that will cure it.",
+          "<ce>                   It can only be used once though.",
+          "<ce>                   I'll sell it to you for 20 gold."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 105,
+        "lines": [
+          "<ce>                Do you wish to buy the Hoar Frost Root?"
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 108,
+        "lines": [
+          "<ce>                   I'm sorry, you don't seem to have",
+          "<ce>                  enough gold for the Hoar Frost Root."
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 112,
+        "lines": [
+          "<ce>           Thank you, %pcn. I will use the Hoar Frost Root.",
+          "<ce>                I really can't thank you enough. I hope",
+          "<ce>              the rest of your travels are safe for you."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 117,
+        "lines": [
+          "%qdt:",
+          " I have bought some Hoar Frost Root",
+          " from _healer_ of ___healer_",
+          " that cures Caliron's Curse, the",
+          " disease that is inflicting _cousin_."
+        ]
+      },
+      {
+        "id": 1018,
+        "firstLine": 124,
+        "lines": [
+          "%qdt:",
+          " I have given Hoar Frost Root to _cousin_",
+          " and cured %g2 of the Caliron's Curse.",
+          " Maybe now __giver_ will think",
+          " more highly of me."
+        ]
+      },
+      {
+        "id": 1019,
+        "firstLine": 131,
+        "lines": [
+          "<ce>                 The Hoar Frost Root dissolves quickly",
+          "<ce>                            as you use it."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 157,
+        "lines": [
+          "Item _talisman_ root_tendrils"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 160,
+        "lines": [
+          "Person _giver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 161,
+        "lines": [
+          "Person _cousin_ group Local_3.0 remote anyInfo 1012 rumors 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 162,
+        "lines": [
+          "Person _healer_ face 64 group Chemist remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 165,
+        "lines": [
+          "Clock _questtime_ 00:00 0 flag 1 range 3 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 168,
+        "lines": [
+          "start timer _questtime_ ",
+          "prompt 1011 yes _S.01_ no _S.02_ ",
+          "pick one of _S.06_ _S.07_ ",
+          "_talisman_ used do _S.08_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 173,
+        "lines": [
+          "_questtime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 176,
+        "lines": [
+          "_S.01_ task:",
+          "log 1003 step 0 ",
+          "say 1025 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 180,
+        "lines": [
+          "_S.02_ task:",
+          "say 1005",
+          "end quest"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 185,
+        "lines": [
+          "_S.03_ task:",
+          "clicked npc _cousin_ ",
+          "say 1010 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 189,
+        "lines": [
+          "_S.04_ task:",
+          "when _S.03_ and _S.06_ ",
+          "make pc ill with Swamp_Rot "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 193,
+        "lines": [
+          "variable _S.05_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 194,
+        "lines": [
+          "variable _S.06_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 195,
+        "lines": [
+          "variable _S.07_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 196,
+        "lines": [
+          "_S.08_ task:",
+          "take _talisman_ from pc saying 1019 ",
+          "cure Swamp_Rot "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 200,
+        "lines": [
+          "_S.09_ task:",
+          "toting _talisman_ and _cousin_ clicked ",
+          "log 1018 step 2 ",
+          "say 1016 ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 209,
+        "lines": [
+          "_S.10_ task:",
+          "clicked npc _healer_ say 1013 ",
+          "prompt 1014 yes _S.11_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 213,
+        "lines": [
+          "_no_ task:",
+          "clear _S.10_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 216,
+        "lines": [
+          "_S.11_ task:",
+          "clicked _healer_ and at least 20 gold otherwise do _S.12_ ",
+          "log 1017 step 1 ",
+          "get item _talisman_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 221,
+        "lines": [
+          "_S.12_ task:",
+          "say 1015 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,475 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C4XY23.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "26b617bad1868fd27d74fb5c5a2bf579f50c4d65d50100ea9cc6317a3525f42a",
+    "byteLength": 7659
+  },
+  "document": {
+    "fileName": "R0C4XY23.txt",
+    "questName": "R0C4XY23",
+    "questNameLine": 8,
+    "displayName": "The Daedric Book",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C4XY23"
+      },
+      {
+        "name": "displayname",
+        "value": "The Daedric Book"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>               %pcf, old friend, am I glad you're here.",
+          "<ce>             I am in trouble with a group of daedra and am",
+          "<ce>                 looking for someone to purvey a rare",
+          "<ce>                   manuscript to an acquaintance of",
+          "<ce>              mine. The reward will be extremely liberal,",
+          "<ce>              but the possibility of daedric intervention",
+          "<ce>                  is quite high.  Are you interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                     I understand, %pcf. You are a",
+          "<ce>                               busy %ra."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                  Excellent. Here's the book, _item_.",
+          "<ce>                    Now, _contact_ needs to have it",
+          "<ce>                   in __contact_ in =queston_ days.",
+          "<ce>                    You can still make it, I think.",
+          "<ce>                 Just be on guard against the daedra.",
+          "<ce>                              Good luck."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 34,
+        "lines": [
+          "<ce>              Unless you have already delivered the book,",
+          "<ce>                    we have nothing to talk about."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 38,
+        "lines": [
+          "<ce>                     Ah, good to see you %pcf. And",
+          "<ce>                  _item_ too. Excellent.  I hope the",
+          "<ce>                   daedra didn't cause you too much",
+          "<ce>                  difficulty.  Ha!  If they actually",
+          "<ce>                 knew what I can use this little book",
+          "<ce>                  for, they would have sent twice the",
+          "<ce>                   number to stop you!  Here is your",
+          "<ce>                      reward for a job well done."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 48,
+        "lines": [
+          "The daedra are excited tonight. You can feel it in the air.",
+          "<--->",
+          "What could _questgiver_ have done to infuriate the daedra so?"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 53,
+        "lines": [
+          "Someone found a very rare book around here recently.",
+          "<--->",
+          "I hear _questgiver_ is mad as hell at some %ra adventurer."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 58,
+        "lines": [
+          "<ce>Some =contact_ was just here, waving around some old book and cackling to %g2-",
+          "<ce>                                 self.",
+          "                                     <--->",
+          "Some jewelry store has reported the theft of a big ruby, I hear."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 64,
+        "lines": [
+          "I told my contact that you were tougher than any daedra. Guess you proved it.",
+          "<--->",
+          "Hail to thee, circumventer of daedra. What can your friend do for you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 69,
+        "lines": [
+          "<ce>                 The daedra proved to be too much, eh,",
+          "<ce>                     %pcf? I'm disappointed. I had",
+          "<ce>                    expected much better from you."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 74,
+        "lines": [
+          "%qdt:",
+          "_questgiver_ has",
+          " sent me to ___contact_ to deliver a certain",
+          " book, _item_, to _contact_ in",
+          " ___contact_. I have =queston_ days",
+          " to deliver it to get my reward. A group of",
+          " daedra apparently wants my mission to fail."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 83,
+        "lines": [
+          "<ce>             Greetings, %pcn.  I have been expecting you.",
+          "<ce>             I am _oblivion_, at your service.  My friends",
+          "<ce>              in Oblivion tell me that you have involved",
+          "<ce>          yourself in their affairs.  I may still be able to",
+          "<ce>           placate them, but I must have the book you carry.",
+          "<ce>             I should warn you, daedra have long memories.",
+          "<ce>              Now, give it to me, before it is too late!"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 92,
+        "lines": [
+          "<ce>               As you hand over the book, a shadowy form",
+          "<ce>                             materializes:",
+          "<ce>                                    ",
+          " \"Oblivion appreciates your service, %pcf.",
+          " We have been watching you. It would seem that our",
+          " interest has been justifiable.\"",
+          "<ce>                                    ",
+          "<ce>                   You feel the book disappear from",
+          "<ce>               your grasp as the figure vanishes again."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 103,
+        "lines": [
+          "_oblivion_ is a powerful mage living in ___oblivion_.",
+          "<--->",
+          "_oblivion_ of ___oblivion_?  %G's in league with the Daedra, I hear."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 108,
+        "lines": [
+          "_oblivion_ is some kind of sorcerer, I think.  Try __oblivion_ in ___oblivion_.",
+          "<--->",
+          "<ce>  A dangerous meddler in daedric affairs.  You'll find _oblivion_ in",
+          "<ce>                     ___oblivion_, at __oblivion_."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 114,
+        "lines": [
+          "<ce>                You deal the daedra a fearful blow, but",
+          "<ce>             it remains upright for a moment, eyes locked",
+          "<ce>             with yours, and a harsh voice issues from its",
+          "<ce>                            bloody throat:",
+          "<ce>                                    ",
+          " \"You may slay my mortal form, %pcn,",
+          " but my brethren will harry you mercilessly",
+          " until we pluck the book from",
+          " your lifeless hand.  If you wish to avoid",
+          " this fate, seek out _oblivion_",
+          " and surrender it to %g2.  As the",
+          " mediator between your world and mine,",
+          " %g alone can persuade my Lord to call",
+          " us off the hunt.\""
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 130,
+        "lines": [
+          "<ce>             Insolent puppy!  You come here asking for my",
+          "<ce>         help, then refuse my advice?  May Oblivion take you!"
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 134,
+        "lines": [
+          "<ce>                This parchment reveals the location of",
+          "<ce>                 Skeffington Coven in Ykalon, whatever",
+          "<ce>                             that may be."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 160,
+        "lines": [
+          "Item _reward_ ruby"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 161,
+        "lines": [
+          "Item _item_ book2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 162,
+        "lines": [
+          "Item _map_ letter used 1030"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 164,
+        "lines": [
+          "Person _questgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 165,
+        "lines": [
+          "Person _contact_ faction Dancers remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 168,
+        "lines": [
+          "Person _oblivion_ factiontype Daedra remote anyInfo 1013 rumors 1014"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 170,
+        "lines": [
+          "Place _skeffingcoven_ permanent SkeffingtonCoven"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 172,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 1 range 3 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 174,
+        "lines": [
+          "Foe _firedaedra_ is Fire_daedra"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 175,
+        "lines": [
+          "Foe _frostdaedra_ is Frost_daedra"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 176,
+        "lines": [
+          "Foe _seducer_ is Daedra_seducer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 177,
+        "lines": [
+          "Foe _lesserdaedra_ is Daedroth"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 180,
+        "lines": [
+          "dialog link for person _oblivion_ ",
+          "start timer _queston_ ",
+          "log 1010 step 0 ",
+          "get item _item_ ",
+          "pick one of _yesmap_ _nomap_ _nomap_ _nomap_ ",
+          "_map_ used do _readmap_ ",
+          "create npc _oblivion_ ",
+          "create npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 189,
+        "lines": [
+          "variable _pcgetsgold_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 190,
+        "lines": [
+          "variable _pchasitem_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 191,
+        "lines": [
+          "_queston_ task:",
+          "make _item_ permanent ",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 196,
+        "lines": [
+          "_npcclicked_ task:",
+          "toting _item_ and _contact_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 201,
+        "lines": [
+          "_thankyou_ task:",
+          "say 1012 ",
+          "change repute with _oblivion_ by +20 ",
+          "end quest"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 207,
+        "lines": [
+          "until _thankyou_ performed:",
+          "create foe _firedaedra_ every 6 minutes 7 times with 25% success ",
+          "create foe _seducer_ every 12 minutes 7 times with 50% success ",
+          "create foe _lesserdaedra_ every 3 minutes 7 times with 12% success ",
+          "create foe _frostdaedra_ every 4 minutes 7 times with 17% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 213,
+        "lines": [
+          "_clickoblivion_ task:",
+          "toting _item_ and _oblivion_ clicked ",
+          "prompt 1011 yes _thankyou_ no _gimmegimme_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 217,
+        "lines": [
+          "_gimmegimme_ task:",
+          "get item _item_ ",
+          "say 1025 ",
+          "change repute with _oblivion_ by -10 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 222,
+        "lines": [
+          "_killmon_ task:",
+          "killed 1 _seducer_ ",
+          "add dialog for person _oblivion_ ",
+          "say 1020 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 227,
+        "lines": [
+          "_hitseducer_ task:",
+          "injured _seducer_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 230,
+        "lines": [
+          "_readmap_ task:",
+          "reveal _skeffingcoven_ in province 38 at 5531 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 233,
+        "lines": [
+          "variable _yesmap_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 234,
+        "lines": [
+          "variable _nomap_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 235,
+        "lines": [
+          "_placemap_ task:",
+          "when _yesmap_ and _hitseducer_ ",
+          "give item _map_ to _seducer_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -2,6 +2,8 @@ using System.Buffers.Binary;
 using System.Text;
 using System.Text.Json.Nodes;
 using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Publication;
+using Daggerfall.Source.Tool.Donor;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -12,10 +14,10 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class Arena2MobileCatalogDocumentTests
 {
-    [DonorFact("Assets/Scripts/Utility/EnemyBasics.cs")]
+    [Fact]
     public void Published_human_sprite_archives_match_both_donor_genders()
     {
-        var donor = Arena2MobileTable.Read(File.ReadAllText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs")));
+        var donor = Ours().Mobiles;
         foreach (var source in MobileSourceMetadata.All.Where(source => source.Id.Value >= 128))
         {
             var row = Assert.Single(donor, value => value.Id == source.Id.Value);
@@ -24,10 +26,10 @@ public sealed class Arena2MobileCatalogDocumentTests
         }
     }
 
-    [DonorFact("Assets/Scripts/Utility/EnemyBasics.cs")]
+    [Fact]
     public void Publishes_soul_glow_shadow_and_ranged_preference_from_source()
     {
-        var publication = Arena2MobileCatalogDocument.Build(File.ReadAllText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs")), "donor/EnemyBasics.cs");
+        var publication = Arena2MobileCatalogDocument.Build(Ours());
         var rows = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
         JsonNode Row(int id) => rows.Single(row => row!["donorId"]!.GetValue<int>() == id)!;
         Assert.Equal(3000, Row(21)["soulPoints"]!.GetValue<int>());
@@ -43,7 +45,7 @@ public sealed class Arena2MobileCatalogDocumentTests
     [Fact]
     public void PublishesEveryDonorParameterAndIdentityWithoutJoiningTheAuthoredActors()
     {
-        Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(Donor(), "donor/EnemyBasics.cs");
+        Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(Excerpt());
         JsonObject document = JsonNode.Parse(publication.Json)!.AsObject();
 
         Assert.Equal(5, publication.Mobiles);
@@ -85,12 +87,10 @@ public sealed class Arena2MobileCatalogDocumentTests
         Assert.Contains("Horse", horse["donorName"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
-    [DonorFact("Assets/Scripts/Utility/EnemyBasics.cs")]
+    [Fact]
     public void PublishesTheRealDonorTableWhenItIsAvailable()
     {
-        string donorPath = TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs");
-
-        Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(File.ReadAllText(donorPath), "donor/EnemyBasics.cs");
+        Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(Ours());
         Assert.Equal(62, publication.Mobiles);
         JsonArray mobiles = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
         // The donor's human-mobile space: 19 records, two of which the authored pack places as actors.
@@ -129,7 +129,7 @@ public sealed class Arena2MobileCatalogDocumentTests
             EnemyArchive(("ENEMY000.CFG", configuration)), "MONSTER.BSA");
 
         Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
-            Donor(), "donor/EnemyBasics.cs", enemyConfigurations: enemyConfigurations);
+            Excerpt(), enemyConfigurations: enemyConfigurations);
         JsonArray mobiles = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
 
         Assert.Equal(0x04, mobiles.Single(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["attackModifierFlags"]!.GetValue<int>());
@@ -137,15 +137,13 @@ public sealed class Arena2MobileCatalogDocumentTests
             mobile => Assert.Equal(0, mobile!["attackModifierFlags"]!.GetValue<int>()));
     }
 
-    [CorpusAndDonorFact(["MONSTER.BSA"], ["Assets/Scripts/Utility/EnemyBasics.cs"])]
+    [CorpusFact("MONSTER.BSA")]
     public void TheRealEnemyConfigurationsCarryTheClassicBonusForTheVampireAndItsKin()
     {
-        string donorPath = TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs");
         string archivePath = TestData.Corpus("MONSTER.BSA");
 
         Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
-            File.ReadAllText(donorPath),
-            donorPath,
+            Ours(),
             enemyConfigurations: MonsterArchiveInventory.Enumerate(File.ReadAllBytes(archivePath), "MONSTER.BSA"));
         JsonArray mobiles = JsonNode.Parse(publication.Json)!["mobiles"]!.AsArray();
 
@@ -187,6 +185,13 @@ public sealed class Arena2MobileCatalogDocumentTests
 
         return archive;
     }
+
+    /// <summary>Our mobile table, as the import reads it.</summary>
+    private static MobileTable Ours() => TakenTable.Read<MobileTable>(File.ReadAllBytes(TestData.Input("mobiles.json")), "mobiles.json");
+
+    /// <summary>The donor-shaped excerpt below, taken as the drift check takes the donor's table.</summary>
+    private static MobileTable Excerpt() =>
+        new(TakenFrom.Of("donor/EnemyBasics.cs", "test", Encoding.UTF8.GetBytes(Donor())), DonorMobileTable.Read(Donor()));
 
     private static string Donor() => """
         public static MobileEnemy[] Enemies = new MobileEnemy[]

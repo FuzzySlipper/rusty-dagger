@@ -1,0 +1,322 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO11.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "f68904489fd4afd79bb0dd8d49e31cde6f7cb2f588fe5eaada2e3cc7b82ad704",
+    "byteLength": 5853
+  },
+  "document": {
+    "fileName": "__DEMO11.txt",
+    "questName": "__DEMO11",
+    "questNameLine": 1,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO11"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 5,
+        "lines": [
+          "<ce>                            I am _qgiver_.",
+          "<ce>                   As a rule, only guild members are",
+          "<ce>                   paid for work. However, I do have",
+          "<ce>                  a small task that needs to be done.",
+          "<ce>                    If you were to do it for free, I",
+          "<ce>                    would put in a good word for you",
+          "<ce>                    with the guild. Are you willing?",
+          "                                     <--->",
+          "<ce>                       I am _qgiver_. Guild work",
+          "<ce>                   for guild members only. However, I",
+          "<ce>                  do have a small job that nobody else",
+          "<ce>                   is willing to do. One of our more",
+          "<ce>                    eccentric masters is absolutely",
+          "<ce>                    insistent we get her a sample of",
+          "<ce>                       _ingredient_, which we are",
+          "<ce>                   fresh out of. If you got some for",
+          "<ce>                     me, I would be very grateful.",
+          "<ce>                      You standing with the guild",
+          "<ce>                         would surely improve."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                     Should have known. I am tired",
+          "<ce>                       of this conversation %pcn.",
+          "<ce>                               Good day."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                      An excellent attitude %pcf.",
+          "<ce>                       I need some _ingredient_.",
+          "<ce>                     The only specimen I know of at",
+          "<ce>                      the moment is to be found in",
+          "<ce>                         ___dungeon_. You have",
+          "<ce>                  =traveltime_ days to bring it back."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 39,
+        "lines": [
+          "<ce>                     I've seen better samples. Did",
+          "<ce>                   you sit on it the whole way back?",
+          "<ce>                     In any event, it will do. I'll",
+          "<ce>                    make sure that you are spoken of",
+          "<ce>                     with favor in the guild halls."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 46,
+        "lines": [
+          "That crazy mage at the Guild insists that ___dungeon_ has the best _ingredient_"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 49,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has it good points and bad ones."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 78,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has it good points and bad ones."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 107,
+        "lines": [
+          "I haven't forgotten you, %pcf. You're the %ra who got the _ingredient_."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 110,
+        "lines": [
+          "<ce>               It wasn't a very difficult thing I asked",
+          "<ce>                      you to do, %pcf. Just get me",
+          "<ce>                 some _ingredient_. And you couldn't do",
+          "<ce>                      that. Why should I waste my",
+          "<ce>                             breath on you?"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 117,
+        "lines": [
+          "%qdt, I was",
+          " asked to find a sample of",
+          " _ingredient_ that is",
+          " supposed to be hidden away",
+          " in ___dungeon_.",
+          " _qgiver_ of the Mages",
+          " Guild of ___qgiver_",
+          " gave me =traveltime_ days to get",
+          " it back to %g2."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 128,
+        "lines": [
+          "<ce>                     This must be the _ingredient_",
+          "<ce>                      _qgiver_ asked you to find."
+        ]
+      },
+      {
+        "id": 1080,
+        "firstLine": 132,
+        "lines": [
+          "<ce>                     As a special thanks from the",
+          "<ce>                    Mages Guild, allow me to present",
+          "<ce>                   you with this map to ___newdung_.",
+          "<ce>                   I understand that people like you",
+          "<ce>                       salivate over such things."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 159,
+        "lines": [
+          "Item _ingredient_ organs"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 161,
+        "lines": [
+          "Person _qgiver_ group Questor male"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 163,
+        "lines": [
+          "Place _dungeon_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 164,
+        "lines": [
+          "Place _newdung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 166,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 170,
+        "lines": [
+          "place item _ingredient_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 171,
+        "lines": [
+          "start timer _traveltime_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 ",
+          "pick one of _map_ _nomap_ _nomap_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 176,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 179,
+        "lines": [
+          "_giveingredient_ task:",
+          "toting _ingredient_ and _qgiver_ clicked ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 184,
+        "lines": [
+          "_dummymage_ task:",
+          "clicked item _ingredient_ ",
+          "say 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 188,
+        "lines": [
+          "variable _map_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 189,
+        "lines": [
+          "variable _nomap_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 190,
+        "lines": [
+          "_S.05_ task:",
+          "when _map_ and _giveingredient_ ",
+          "reveal _newdung_ saying 1080 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,281 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C01Y01.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "6bc59eb47ef7786d91e1949771e67b170a3bc7fa395ff4c059bb53cadbc25e59",
+    "byteLength": 3841
+  },
+  "document": {
+    "fileName": "A0C01Y01.txt",
+    "questName": "A0C01Y01",
+    "questNameLine": 1,
+    "displayName": "The Bodyguard",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C01Y01"
+      },
+      {
+        "name": "displayname",
+        "value": "The Bodyguard"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 6,
+        "lines": [
+          "<ce>                    %pcn, I fear for my very life.",
+          "<ce>                    Will you protect me? _villains_s",
+          "<ce>              have threatened to kill me tonight because I",
+          "<ce>                have refused to sell my land. I can pay",
+          "<ce>                            you _gold_ gold.",
+          "                                     <--->",
+          "<ce>               You find me in desperate straits, my dear",
+          "<ce>                  %ra. I have received word from some",
+          "<ce>                 %cn thugs that they intend to ransack",
+          "<ce>                my house tonight. I don't suppose you'd",
+          "<ce>                  be available to do a little creative",
+          "<ce>                 facial rearrangement on these fellows?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>                    Fear not for my safety, %pcn. I",
+          "<ce>                shall find another protector... somehow."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 24,
+        "lines": [
+          "<ce>             Thank you and bless you! They will strike at",
+          "<ce>                 _qgiverhome_ in the three hours before",
+          "<ce>              midnight. Be there and wait with me for that",
+          "<ce>               time. Once they have been defeated, I will",
+          "<ce>                          be safe once again."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                 You have saved my life, %pcf. I will",
+          "<ce>                 gladly pay you our agreed upon amount."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                    _qgiver_ is in trouble with the",
+          "<ce>                Thieves Guild. I hear they are going to",
+          "<ce>                             rough %g2 up."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 40,
+        "lines": [
+          "<ce>                    I saw _qgiver_ recently. %G was",
+          "<ce>                        beaten up by some thugs."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 44,
+        "lines": [
+          "<ce>                        Aren't you the %ra that",
+          "<ce>                  chased off those thugs that tried to",
+          "<ce>                           beat up _qgiver_?"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 49,
+        "lines": [
+          "<ce>                 I still remember what you did for me,",
+          "<ce>                     %pcf. Chasing off those thugs",
+          "<ce>                        leaves me in your debt."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 54,
+        "lines": [
+          "<ce>                I still have the scars from when those",
+          "<ce>                 thugs found me. I hired you to protect",
+          "<ce>                 me and you blew it. Get away from me."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 59,
+        "lines": [
+          "On %qdt,",
+          " _qgiver_ of ___qgiver_ asked",
+          " me to protect %g2. _villains_s have",
+          " threatened to assault %g2 between",
+          " 9 and midnight at _qgiverhome_."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 66,
+        "lines": [
+          "<ce>               This is not your problem, stranger. Leave",
+          "<ce>                   _qgiver_ to us or we will cut you",
+          "<ce>                         down where you stand!"
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                  This must be the place. It fits the",
+          "<ce>                     description _qgiver_ gave you."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 76,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 78,
+        "lines": [
+          "Person _qgiver_ face 1 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 80,
+        "lines": [
+          "Place _qgiverhome_ local house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 82,
+        "lines": [
+          "Clock _timer_ 1.03:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 85,
+        "lines": [
+          "Foe _villains_ is 2 Assassin"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 88,
+        "lines": [
+          "start timer _timer_ ",
+          "log 1010 step 0 ",
+          "pc at _qgiverhome_ set _inside_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 93,
+        "lines": [
+          "_timer_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 96,
+        "lines": [
+          "_nighttime_ task:",
+          "daily from 21:00 to 23:59",
+          "place npc _qgiver_ at _qgiverhome_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 101,
+        "lines": [
+          "_slain_ task:",
+          "killed 2 _villains_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 104,
+        "lines": [
+          "_questdone_ task:",
+          "when _clickqgiver_ and _slain_ ",
+          "give pc _gold_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 108,
+        "lines": [
+          "_clickqgiver_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 111,
+        "lines": [
+          "_inside_ task:",
+          "say 1013"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 114,
+        "lines": [
+          "_inj_ task:",
+          "injured _villains_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 117,
+        "lines": [
+          "_clearclick_ task:",
+          "when not _slain_ and _clickqgiver_ ",
+          "clear _clickqgiver_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 121,
+        "lines": [
+          "_spawnenemy_ task:",
+          "when _inside_ and _nighttime_",
+          "create foe _villains_ every 10 minutes 1 times with 100% success "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

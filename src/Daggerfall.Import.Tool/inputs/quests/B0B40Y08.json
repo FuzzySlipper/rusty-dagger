@@ -1,0 +1,216 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/B0B40Y08.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "df18bc0eec7b0caae58bf41e47304d4344260dc5c10d905240371a1ecfa76bd8",
+    "byteLength": 3115
+  },
+  "document": {
+    "fileName": "B0B40Y08.txt",
+    "questName": "B0B40Y08",
+    "questNameLine": 9,
+    "displayName": "Still More Trouble with Orcs",
+    "header": [
+      {
+        "name": "quest",
+        "value": "B0B40Y08"
+      },
+      {
+        "name": "displayname",
+        "value": "Still More Trouble with Orcs"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                        They call me _qgiver_.",
+          "<ce>                       I have a quest for you, if",
+          "<ce>                      you are feeling up to it. A",
+          "<ce>                       powerful orc band has been",
+          "<ce>                       raiding caravans in %reg.",
+          "<ce>                     Someone needs to slay the orc",
+          "<ce>                        warlord that leads them."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                                 Wimp."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                    The orcs are using ___dungeon_",
+          "<ce>                        as a base of operations.",
+          "<ce>                      Kill as many of them as you",
+          "<ce>                        want, but be sure to cut",
+          "<ce>                          =monster_'s throat.",
+          "<ce>                     He's their warlord. If I hear",
+          "<ce>                     from you within =2dung_ days,",
+          "<ce>                    your honor will be untarnished."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                        The orc menace has been",
+          "<ce>                           stricken from %reg.",
+          "<ce>                             All hail %pcn!"
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 41,
+        "lines": [
+          "The orcs of ___dungeon_ are making life for the merchants of ___qgiver_ difficult."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 44,
+        "lines": [
+          "The orcs of ___dungeon_ went to plunder someone else. But for how long?"
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 47,
+        "lines": [
+          "___dungeon_ has been cleared of orcs, thanks to a brave %ra."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 50,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of",
+          " ==qgiver_ in ___qgiver_",
+          " gave me the chance to slay",
+          " =monster_, the _monster_",
+          " of a powerful orc band in",
+          " ___dungeon_. I have =2dung_ days",
+          " to save %reg from being overrun."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 60,
+        "lines": [
+          "<ce>                          =monster_ is dead.",
+          "<ce>                       The orcs will no longer be",
+          "<ce>                            a theat to %reg."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 83,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 84,
+        "lines": [
+          "Person _local_ face 207 group Resident2 female local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 86,
+        "lines": [
+          "Place _dungeon_ remote dungeon1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 88,
+        "lines": [
+          "Clock _2dung_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 90,
+        "lines": [
+          "Foe _monster_ is Orc_warlord"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 93,
+        "lines": [
+          "start timer _2dung_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 ",
+          "place foe _monster_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 98,
+        "lines": [
+          "_2dung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 101,
+        "lines": [
+          "_S.01_ task:",
+          "killed 1 _monster_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 104,
+        "lines": [
+          "_S.02_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 107,
+        "lines": [
+          "_success_ task:",
+          "when _S.02_ and _S.01_ ",
+          "give pc nothing ",
+          "change repute with _local_ by +4 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 113,
+        "lines": [
+          "_clearclick_ task:",
+          "when _S.02_ and not _S.01_ ",
+          "clear _S.02_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

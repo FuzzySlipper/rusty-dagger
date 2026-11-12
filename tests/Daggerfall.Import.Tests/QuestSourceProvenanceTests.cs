@@ -1,4 +1,5 @@
 using Daggerfall.Import.Arena2;
+using Daggerfall.Source.Tool.Donor;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -14,7 +15,7 @@ public sealed class QuestSourceProvenanceTests
     [Fact]
     public void Retains_physical_QRC_and_QBN_lines_after_leading_metadata_and_blanks()
     {
-        QuestSourceDocument document = QuestSourceReader.Read(
+        QuestSourceDocument document = DonorQuestScript.Read(
             "-- donor header\n\nQuest: Q\nDisplayName: Fixture\n\nQRC:\n\n-- QRC comment\nQuestorOffer: [not-an-id]\nOffer text\n\nQBN:\n\nClock timer 1 day 1\n",
             "fixture.txt", MessageIds, new Dictionary<string, int>());
 
@@ -25,7 +26,7 @@ public sealed class QuestSourceProvenanceTests
     [Fact]
     public void Reports_malformed_QRC_header_at_its_physical_source_line()
     {
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => QuestSourceReader.Read(
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => DonorQuestScript.Read(
             "-- donor header\n\nQuest: Q\n\nQRC:\n\n-- QRC comment\nUnrecognizedHeader: 7\nQBN:\nClock timer 1 day 1\n",
             "fixture.txt", MessageIds, new Dictionary<string, int>()));
 

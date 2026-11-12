@@ -1,0 +1,406 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C10Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "bc032a48a779dea4899989c8f112ecf1331106e97ed5866af076a0ff00107611",
+    "byteLength": 6017
+  },
+  "document": {
+    "fileName": "R0C10Y00.txt",
+    "questName": "R0C10Y00",
+    "questNameLine": 8,
+    "displayName": "Jewel Smuggling",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C10Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "Jewel Smuggling"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>             If you are available for hire, I need someone",
+          "<ce>            reliable to carry out a certain, covert mission.",
+          "<ce>            It might be rather time-consuming, but I assure",
+          "<ce>             you that you will be suitably compensated. Are",
+          "<ce>                            you interested?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 20,
+        "lines": [
+          "<ce>              Really? Too busy, perhaps. That is a shame."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 23,
+        "lines": [
+          "<ce>            Very good. I'm giving you an emerald for you to",
+          "<ce>                       give my contact, _npc1_ of",
+          "<ce>                    ___npc1_.  %G will be waiting in",
+          "<ce>                      __npc1_.  The item needs to",
+          "<ce>               be there in =1stparton_ days. That's very",
+          "<ce>                important. Once you've made it that far,",
+          "<ce>                        _npc1_ will have further",
+          "<ce>            instructions. I am counting on your discretion,",
+          "<ce>                     %pcf, and you will be watched.",
+          "<ce>                        Good luck and thank you."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 35,
+        "lines": [
+          "<ce>           I don't believe we have anything else to discuss",
+          "<ce>                               right now.",
+          "                                     <--->",
+          "<ce>                            Do I know you?"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 41,
+        "lines": [
+          "<ce>                   Ah, good to see you %pcf. And the",
+          "<ce>          _item2_ too. Excellent. And here is a _reward_ gold",
+          "<ce>           reward for your effort and, I might add, for your",
+          "<ce>              discretion. Your name will not be forgotten."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 47,
+        "lines": [
+          "<ce>       _questgiver_ is still in the smuggling business, I hear.",
+          "                                     <--->",
+          "<ce>      There's been an extraordinary increase in smuggling lately."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 52,
+        "lines": [
+          "<ce>      I hear _questgiver_ is mad as hell at some %ra adventurer."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 55,
+        "lines": [
+          "<ce>     No one knows who the kingpin is behind the _item2_ smuggling."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 58,
+        "lines": [
+          "<ce>            Ah, my occasional smuggler. How may I help you?",
+          "                                     <--->",
+          "<ce>       Hello again. I'm afraid I have no more deliveries needed."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 63,
+        "lines": [
+          "<ce>                Crawling back to apologize for failing",
+          "<ce>                 that mission, eh? Well, it's too late.",
+          "                                     <--->",
+          "<ce>                       You're the %ra who failed",
+          "<ce>                   that delivery mission, aren't you?",
+          "<ce>                            Go to Oblivion."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                Ah good. The last carrier _questgiver_",
+          "<ce>           hired never found me and we had to hunt him down.",
+          "<ce>             Most unpleasant.  Here's the _item2_. It goes",
+          "<ce>                         to _npc2_, this =npc2_",
+          "<ce>                         in ___npc2_. You need",
+          "<ce>             to get it there in less than =2ndparton_ days.",
+          "<ce>                            Good luck, %pcf."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 80,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of __questgiver_",
+          " in ___questgiver_ has sent me to",
+          " __npc1_ in ___npc1_",
+          " to deliver an emerald to _npc1_.",
+          " I have =1stparton_ days to accomplish this.",
+          " Once there, I may be given further instructions."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 89,
+        "lines": [
+          "%qdt:",
+          " _npc1_ sent me",
+          " on to ___npc2_ with a _item2_",
+          " to bring to _npc2_ in a place",
+          " called __npc2_. _npc1_",
+          " described _npc2_ as a",
+          " =npc2_. _npc2_ will",
+          " give me my reward if I make it to %g2",
+          " in =2ndparton_ days."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 100,
+        "lines": [
+          "<ce>                    The Thieves Guild has word that",
+          "<ce>                     you are carrying a gemstone of",
+          "<ce>                    considerable value. Hand it over",
+          "<ce>                       and I'll let you off easy."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 106,
+        "lines": [
+          "<ce>                    Like taking coin from a child.",
+          "<ce>                     Now, get out of my sight, you",
+          "<ce>                          weak-kneed courier."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 135,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 136,
+        "lines": [
+          "Item _item1_ emerald"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 137,
+        "lines": [
+          "Item _item2_ drug"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 139,
+        "lines": [
+          "Person _questgiver_ face 136 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 140,
+        "lines": [
+          "Person _npc1_ group Local_3.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 141,
+        "lines": [
+          "Person _npc2_ face 248 group Shopkeeper remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 143,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 144,
+        "lines": [
+          "Clock _2ndparton_ 00:00 0 flag 1 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 146,
+        "lines": [
+          "Foe _thief_ is Thief"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 149,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1011 step 0 ",
+          "get item _item1_ ",
+          "create npc _npc1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 154,
+        "lines": [
+          "variable _pcgetsgold_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 155,
+        "lines": [
+          "variable _pchasitem1_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 156,
+        "lines": [
+          "variable _pchasitem2_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 157,
+        "lines": [
+          "_S.03_ task:",
+          "toting _item1_ and _npc1_ clicked ",
+          "start timer _2ndparton_ ",
+          "log 1012 step 1 ",
+          "get item _item2_ ",
+          "say 1010 ",
+          "create npc _npc2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 165,
+        "lines": [
+          "until _S.03_ performed:",
+          "create foe _thief_ every 10 minutes 5 times with 50% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 168,
+        "lines": [
+          "_S.04_ task:",
+          "toting _item2_ and _npc2_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 174,
+        "lines": [
+          "_queston_ task:",
+          "when _1stparton_ and not _S.03_ ",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 179,
+        "lines": [
+          "variable _1stparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 180,
+        "lines": [
+          "_2ndparton_ task:",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 184,
+        "lines": [
+          "_S.08_ task:",
+          "injured _thief_ ",
+          "prompt 1020 yes _yes_ no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 188,
+        "lines": [
+          "_yes_ task:",
+          "have _item1_ set _S.11_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 191,
+        "lines": [
+          "variable _no_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 192,
+        "lines": [
+          "_S.11_ task:",
+          "give item _item1_ to _thief_ ",
+          "say 1021 ",
+          "restrain foe _thief_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 197,
+        "lines": [
+          "_S.13_ task:",
+          "when _queston_ or _2ndparton_ ",
+          "make _item2_ permanent ",
+          "make _item1_ permanent "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,570 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000015.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "5627a95d985b7697cce29d070a4334ef580412fd351373623641a749cdc590b3",
+    "byteLength": 9003
+  },
+  "document": {
+    "fileName": "S0000015.txt",
+    "questName": "S0000015",
+    "questNameLine": 5,
+    "displayName": "Lysandus' Revenge",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000015"
+      },
+      {
+        "name": "displayname",
+        "value": "Lysandus' Revenge"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1005,
+        "firstLine": 10,
+        "lines": [
+          "There were some strange men here asking about a %ra named %pcn.",
+          "<--->",
+          "Didn't like the look of those thugs. Thank %god they moved on."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 15,
+        "lines": [
+          "The stars foretell dreams that will never come true.",
+          "<--->",
+          "There are dangerous portents the oracles of %reg have foreseen."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 20,
+        "lines": [
+          "I hear things are getting kind of rocky in Wayrest.",
+          "<--->",
+          "I heard that they found the body of King Lysandus!"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 25,
+        "lines": [
+          "That looks like Lord Woodborne's private journal.",
+          "<--->",
+          "Lord Woodborne's private journal."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 30,
+        "lines": [
+          "Page 7",
+          " ",
+          " from childhood. I know that Gothryd would not refuse",
+          " his aid, but I must bide my time to ask. After all,",
+          " Elysana is still heiress of Wayrest and I am her",
+          " betrothed. So it should be that when Eadwyre dies",
+          " (which he is bound to do, sooner rather than later)",
+          " I will be king.",
+          "    If it weren't for that bitch queen and her brats,",
+          " I would and could be patient. Never trust a dark elf,",
+          " the old saying goes, for you cannot read truth in",
+          " their eyes. If Barenziah has her way, Helseth will",
+          " be heir and Elysana will be married off to some far-",
+          " off kingdom. Morgiah is already promised to the",
+          " heir of Firsthold, but they keep her around to spread",
+          " the poison against Elysana, and especially, me.",
+          "    Barenziah doesn't trust me, this I can tell.",
+          " I will deal with her just as I did with Lysandus.",
+          " The fool should have agreed to support me. Gortwog",
+          " and his orcs almost saved him. I'll deal with those",
+          " sub-humans once I sit upon the throne of Wayrest.",
+          "    First it is important to solidify my power base.",
+          " I can (almost certainly) rely on Gothryd to support",
+          " my bid for the throne, if Helseth is made heir. I",
+          " have a spy network equaling that of Eadwyre, Gothryd,",
+          " Akorithi, or the Emperor. Perhaps the Necromancers",
+          " and the Underking's networks are more extensive, but",
+          " I doubt it. The problem is raw physical power. I do",
+          " not have a standing army. I need the gold to raise"
+        ]
+      },
+      {
+        "id": 1018,
+        "firstLine": 61,
+        "lines": [
+          "%qdt:",
+          " I found a most-damning couple of pages",
+          " in Woodborne Hall. I'm sure Lord Woodborne",
+          " would be quite livid if they were to fall",
+          " into the wrong hands."
+        ]
+      },
+      {
+        "id": 1019,
+        "firstLine": 68,
+        "lines": [
+          "%qdt:",
+          " Lysandus' ghost appeared to me and told me",
+          " that only the death or humiliation of his",
+          " murderer, Lord Woodborne, would lay his soul",
+          " to rest. Lord Woodborne is a noble of Wayrest",
+          " and betrothed to Princess Elysana. He has a",
+          " castle in the wilderness of Wayrest."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 77,
+        "lines": [
+          "I hear Lord Woodborne was beheaded for treason.",
+          "<--->",
+          "They caught Lord Woodborne and tried him for treason."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 82,
+        "lines": [
+          "I heard a flock of Daedra descended upon Lord Woodborne and carried him off.",
+          "<--->",
+          "Things from beyond the grave rose and assaulted Woodborne Hall!",
+          "--added \"and\" to fix poor grammar",
+          "<--->",
+          "I hear Lord Woodborne cheated the Mages Guild. They sent demons to kill him.",
+          "--added \"to\" to fix poor grammar"
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 91,
+        "lines": [
+          "I heard that Lord Woodborne will be marrying Princess Elysana.",
+          "<--->",
+          "Lord Woodborne is in high favor these days at Castle Wayrest."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 96,
+        "lines": [
+          "<ce>             This means little to me. It is trash fit only",
+          "<ce>            for being burnt. Gothryd and Woodborne plotting",
+          "<ce>                  to kill Lysandus. Really! Go away."
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 101,
+        "lines": [
+          "<ce>             This is atrocious! After all the affection we",
+          "<ce>          showered on that fool Woodborne! We nearly married",
+          "<ce>           that villainous swine to Elysana -- nearly handed",
+          "<ce>          the throne of Wayrest to a cad of the first order!",
+          "<ce>           Good %pcf, it was the right thing to do to bring",
+          "<ce>             this to our attention. Rest assured that Lord",
+          "<ce>            Woodborne will be arrested and executed for his",
+          "<ce>           treason, his name barred from the books of honor,",
+          "<ce>              his acquaintances interrogated, his fortune",
+          "<ce>            confiscated. As a gift, please allow me to give",
+          "<ce>             you _reward_ gold pieces as your share of his",
+          "<ce>                        property confiscations."
+        ]
+      },
+      {
+        "id": 1032,
+        "firstLine": 115,
+        "lines": [
+          "<ce>                Lord Woodborne is the slayer of my dear",
+          "<ce>               Lysandus. There shall be justice, and it",
+          "<ce>              shall come from my hand! You would do best",
+          "<ce>              to stay clear of Woodborne Hall and Wayrest",
+          "<ce>                          for some time, %pcn."
+        ]
+      },
+      {
+        "id": 1033,
+        "firstLine": 122,
+        "lines": [
+          "<ce>               This information is quite valuable, %pcf.",
+          "<ce>              Let me gift you with _gold_ gold for giving",
+          "<ce>               it to me. This will be quite handy in the",
+          "<ce>                           coming conflict."
+        ]
+      },
+      {
+        "id": 1034,
+        "firstLine": 128,
+        "lines": [
+          "<ce>               You were completely correct to bring this",
+          "<ce>               to me. Otherwise, it might have gotten out",
+          "<ce>               where it could do Lord Woodborne damage.",
+          "<ce>                        Guards! Kill this %ra!"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 134,
+        "lines": [
+          "<ce>                      You! You're that %ra %pcn.",
+          "<ce>              You have been a thorn in my side for a long",
+          "<ce>                 time now. A wiser %ra would have let",
+          "<ce>              sleeping kings lie. Especially when I have",
+          "<ce>             gone to such great lengths to kill them. Yes",
+          "<ce>               %pcf, I killed King Lysandus. And now it",
+          "<ce>               will be a pleasure to slay you. En garde!"
+        ]
+      },
+      {
+        "id": 1045,
+        "firstLine": 143,
+        "lines": [
+          "<ce>                  \"I am...done in. It is up...to...to",
+          "<ce>                  Gothryd now. May you...rot in hell",
+          "<ce>                   %pcn. I most...certainly shall.\"",
+          "<ce>                                    ",
+          "<ce>                        Lord Woodborne is dead."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 163,
+        "lines": [
+          "Item WoodborneDiary letter used 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 169,
+        "lines": [
+          "Item _reward_ gold range 10000 to 20000"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 170,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 172,
+        "lines": [
+          "Person Barenziah face 8 named Queen_Barenziah atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 173,
+        "lines": [
+          "Person Eadwyre named King_Eadwyre atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 174,
+        "lines": [
+          "Person _medora_ named Medora atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 175,
+        "lines": [
+          "Person _helseth_ named Prince_Helseth atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 176,
+        "lines": [
+          "Person Gothryd face 152 named King_Gothryd atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 177,
+        "lines": [
+          "Person _aubki_ named Queen_Aubk-i atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 178,
+        "lines": [
+          "Person _akorithi_ named Queen_Akorithi atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 179,
+        "lines": [
+          "Person KingOfWorms0 named King_of_Worms atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 180,
+        "lines": [
+          "Person _gortwog_ named Gortwog atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 181,
+        "lines": [
+          "Person _mynisera_ named Mynisera atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 182,
+        "lines": [
+          "Person _nulfaga_ named Nulfaga atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 184,
+        "lines": [
+          "Place WoodbourneHall2 permanent WoodbourneHall4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 185,
+        "lines": [
+          "Place WoodbourneHall1 permanent WoodbourneHall5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 188,
+        "lines": [
+          "Foe Woodborne is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 189,
+        "lines": [
+          "Foe _F.01_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 192,
+        "lines": [
+          "place item WoodborneDiary at WoodbourneHall2 marker 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 193,
+        "lines": [
+          "log 1019 step 2 ",
+          "reveal WoodbourneHall1 in province 23 at 194859 ",
+          "WoodborneDiary used do _S.01_ ",
+          "place foe Woodborne at WoodbourneHall1 marker 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 198,
+        "lines": [
+          "_grabdiary_ task:",
+          "clicked item WoodborneDiary",
+          "say 1010"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 202,
+        "lines": [
+          "_S.00_ task:",
+          "killed 1 Woodborne ",
+          "say 1045 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 206,
+        "lines": [
+          "_S.01_ task:",
+          "log 1018 step 3 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 209,
+        "lines": [
+          "_S.02_ task:",
+          "injured Woodborne ",
+          "say 1040 ",
+          "cast Spell_Reflection spell on Woodborne ",
+          "cast Heal spell on Woodborne ",
+          "cast Shield spell on Woodborne "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 216,
+        "lines": [
+          "_S.03_ task:",
+          "toting WoodborneDiary and Eadwyre clicked ",
+          "toting WoodborneDiary and _helseth_ clicked ",
+          "toting WoodborneDiary and Barenziah clicked ",
+          "get item _reward_ ",
+          "rumor mill 1021 ",
+          "say 1031 ",
+          "make _reward_ permanent ",
+          "change repute with Eadwyre by +50 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 226,
+        "lines": [
+          "_S.04_ task:",
+          "toting WoodborneDiary and _nulfaga_ clicked ",
+          "toting WoodborneDiary and _medora_ clicked ",
+          "toting WoodborneDiary and _mynisera_ clicked ",
+          "rumor mill 1022 ",
+          "say 1032 ",
+          "change repute with _nulfaga_ by +25 ",
+          "change repute with _medora_ by +25 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 235,
+        "lines": [
+          "_S.05_ task:",
+          "toting WoodborneDiary and _akorithi_ clicked ",
+          "say 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 239,
+        "lines": [
+          "_S.06_ task:",
+          "toting WoodborneDiary and _aubki_ clicked ",
+          "toting WoodborneDiary and Gothryd clicked ",
+          "create foe _F.01_ every 1 minutes 5 times with 100% success ",
+          "say 1034 ",
+          "change repute with Gothryd by -40 ",
+          "change repute with Eadwyre by -40 ",
+          "legal repute -50 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 248,
+        "lines": [
+          "_S.07_ task:",
+          "toting WoodborneDiary and _gortwog_ clicked ",
+          "toting WoodborneDiary and KingOfWorms0 clicked ",
+          "get item _gold_ ",
+          "say 1033 ",
+          "make _gold_ permanent ",
+          "change repute with _gortwog_ by +20 ",
+          "change repute with KingOfWorms0 by +20"
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 257,
+        "lines": [
+          "LiftedCurse _S.08_",
+          "when _S.03_ or _S.04_ or _S.00_ ",
+          "play video 13",
+          "remove log step 2",
+          "remove log step 3"
+        ],
+        "global": 0
+      },
+      {
+        "kind": "task",
+        "firstLine": 265,
+        "lines": [
+          "_S.09_ task:",
+          "when _S.05_ or _S.07_ or _S.06_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 269,
+        "lines": [
+          "MyniseraSatisfied _S.10_"
+        ],
+        "global": 29
+      },
+      {
+        "kind": "global",
+        "firstLine": 270,
+        "lines": [
+          "GothrydGotTotem _S.11_"
+        ],
+        "global": 1
+      },
+      {
+        "kind": "task",
+        "firstLine": 272,
+        "lines": [
+          "_S.13_ task:",
+          "when _S.08_ and _S.10_ and _S.12_ ",
+          "start quest 8 8 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 277,
+        "lines": [
+          "KingOfWormsSatisfied _S.12_"
+        ],
+        "global": 33
+      }
+    ]
+  },
+  "refusal": null
+}

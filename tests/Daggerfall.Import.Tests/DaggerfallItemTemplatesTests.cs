@@ -1,6 +1,7 @@
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
+using Daggerfall.Source.Tool.Donor;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -11,12 +12,10 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 public sealed class DaggerfallItemTemplatesTests
 {
-    [DonorFact("Assets/Scripts/Game/Items/ItemEnums.cs", "Assets/Scripts/Game/Items/ItemHelper.cs")]
+    [Fact]
     public void Retains_runtime_group_ordinals_with_aliases_and_implicit_members()
     {
-        var groups = ItemTemplateBaseline.ReadGroupEnumerations(
-            File.ReadAllText(TestData.Donor("Assets/Scripts/Game/Items/ItemEnums.cs")),
-            File.ReadAllText(TestData.Donor("Assets/Scripts/Game/Items/ItemHelper.cs")), "donor item groups");
+        var groups = Table<ItemGroupTable>("item-groups.json").Groups;
         Assert.Equal(29, groups.Count);
         Assert.Equal([277, 277, 277, 277], groups.Single(group => group.Id == 7).Values);
         Assert.Equal([132, 274, 275, 276, 278, 281, 285, 286, 287], groups.Single(group => group.Id == 27).Values);
@@ -29,25 +28,24 @@ public sealed class DaggerfallItemTemplatesTests
     [Fact]
     public void Refuses_malformed_substitute_tables()
     {
-        Assert.Throws<Arena2FormatException>(() => ItemTemplateReader.ReadTemplates("[]", "substitute"));
-        Assert.Throws<Arena2FormatException>(() => ItemTemplateReader.ReadTemplates("[{}]", "substitute"));
-        Assert.Throws<Arena2FormatException>(() => ItemTemplateReader.ReadTemplates("nope", "substitute"));
-        Assert.Empty(ItemTemplateReader.ReadMagic("[]", "substitute"));
-        Assert.Throws<InvalidOperationException>(() => DaggerfallItemTemplatesBuilder.Build([], [], "donor/Assets/Resources/ItemTemplates.txt", [1], Inventory()));
+        Assert.Throws<Arena2FormatException>(() => DonorItemTemplates.ReadTemplates("[]", "substitute"));
+        Assert.Throws<Arena2FormatException>(() => DonorItemTemplates.ReadTemplates("[{}]", "substitute"));
+        Assert.Throws<Arena2FormatException>(() => DonorItemTemplates.ReadTemplates("nope", "substitute"));
+        Assert.Empty(DonorItemTemplates.ReadMagic("[]", "substitute"));
+        Assert.Throws<InvalidOperationException>(() => DaggerfallItemTemplatesBuilder.Build([], [], "donor/Assets/Resources/ItemTemplates.txt", 1, Inventory()));
     }
 
-    [DonorFact("Assets/Resources/ItemTemplates.txt", "Assets/Resources/MagicItemTemplates.txt")]
+    [Fact]
     public void Builds_the_template_catalog_end_to_end()
     {
-        string items = TestData.Donor("Assets/Resources/ItemTemplates.txt");
-        string magic = TestData.Donor("Assets/Resources/MagicItemTemplates.txt");
+        ItemTemplateTable items = Table<ItemTemplateTable>("item-templates.json");
 
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
         DaggerfallItemTemplates catalog = DaggerfallItemTemplatesBuilder.Build(
-            ItemTemplateReader.ReadTemplates(File.ReadAllText(items), "donor/Assets/Resources/ItemTemplates.txt"),
-            ItemTemplateReader.ReadMagic(File.ReadAllText(magic), "donor/Assets/Resources/MagicItemTemplates.txt"),
-            "donor/Assets/Resources/ItemTemplates.txt",
-            File.ReadAllBytes(items),
+            items.Templates,
+            Table<MagicItemTemplateTable>("magic-item-templates.json").Templates,
+            items.Source.Path,
+            items.Source.ByteLength,
             inventory);
         catalog.Validate();
 
@@ -71,6 +69,8 @@ public sealed class DaggerfallItemTemplatesTests
         // Every template names a donor group.
         Assert.DoesNotContain(catalog.Templates, template => template.Groups.Count == 0);
     }
+
+    private static T Table<T>(string file) where T : class => TakenTable.Read<T>(File.ReadAllBytes(TestData.Input(file)), file);
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
     [

@@ -1,0 +1,384 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/Q0C4XY04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "498bf784e13886939506669850d447785012465cd417bbeb6b4e66f0b067a233",
+    "byteLength": 5355
+  },
+  "document": {
+    "fileName": "Q0C4XY04.txt",
+    "questName": "Q0C4XY04",
+    "questNameLine": 8,
+    "displayName": "The Daedra's Heart",
+    "header": [
+      {
+        "name": "quest",
+        "value": "Q0C4XY04"
+      },
+      {
+        "name": "displayname",
+        "value": "The Daedra's Heart"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                 ==questgiver_ must once again call on",
+          "<ce>                 thy kindness and might. We require a",
+          "<ce>                 heart of a daedra for our spellcraft",
+          "<ce>                    but the heart must be recently",
+          "<ce>                    plucked and by thou. Wilt thou",
+          "<ce>                     find and murder a daedra for",
+          "<ce>                           your dear aunts?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                       No? Oh, sorrowful night."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                    The Goddess smiles on us, %pcn,",
+          "<ce>                 for there is a dungeon near that has",
+          "<ce>                   a daedric infestation. Any daedra",
+          "<ce>                   heart will do but that of a Lord,",
+          "<ce>                   for theirs is putrid with worms.",
+          "<ce>                        Go thou to ___mondung_,",
+          "<ce>                           %pcn, slay for us",
+          "<ce>                   a daedra and bring it before the",
+          "<ce>                      sun sets =1stparton_ days."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                           The heart, %pcn,",
+          "<ce>                           is in ___mondung_",
+          "<ce>                       in the breast of a daedra.",
+          "<ce>                         Look not for it here."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                   Look, see how it still steams and",
+          "<ce>                            beats in %pcn's",
+          "<ce>                  bloody hand! Into the brackish soup",
+          "<ce>                  it goes, before it loses heat. Ah,",
+          "<ce>                         %pcn, take thee this",
+          "<ce>                       _reward_ for thy trouble.",
+          "<ce>                   Thou art good to us poor witches."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 51,
+        "lines": [
+          "The daedra of ___mondung_ must be up to something. What a congregation!",
+          "<--->",
+          "%god has cursed us. Why else would the daedra have fallen on ___mondung_?"
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 56,
+        "lines": [
+          "Praise %god, the daedra have left ___mondung_. I couldn't sleep for nights!",
+          "<--->",
+          "The daedra left ___mondung_ as mysteriously as they arrived. Good riddance I say."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 61,
+        "lines": [
+          "When the stars darken like last night, it is to mark the death of a daedra.",
+          "<--->",
+          "Did you hear music in the woods last night? The witches must be celebrating."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 66,
+        "lines": [
+          "Friend to the ==questgiver_, how goes it with thee and thy _reward_?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 69,
+        "lines": [
+          "<ce>                   We had hoped for a heart for our",
+          "<ce>                       stew, %pcf. If thou wert",
+          "<ce>                  too busy, thou should have told us.",
+          "<ce>                    Plans were made that had to be",
+          "<ce>                    destroyed. Thou art our friend,",
+          "<ce>                       but still ... sad are we."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 77,
+        "lines": [
+          "_questgiver_ is a =questgiver_ and one of ==questgiver_.",
+          "<--->",
+          "She's one of the witches who makes her home in %reg."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 82,
+        "lines": [
+          "I heard that ___mondung_ is a vampire lair.",
+          "<--->",
+          "The night folk live in ___mondung_. They never come out in the day.",
+          "<--->",
+          "___mondung_? Isn't that an orc stronghold?",
+          "<--->",
+          "Undead wander the halls of ___mondung_. I'd stay away from it."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 91,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of",
+          " ==questgiver_ has sent me to",
+          " ___mondung_ to take the heart of",
+          " a daedra from any seducer, daedroth,",
+          " fire, or frost daedra I come across.",
+          " The heart must be back in ___questgiver_",
+          " in =1stparton_ days or less."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 101,
+        "lines": [
+          "<ce>                  You pluck a perfect heart from the",
+          "<ce>                        still-quivering corpse."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 120,
+        "lines": [
+          "Item _reward_ malachite"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 121,
+        "lines": [
+          "Item _heart_ daedra_heart"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 123,
+        "lines": [
+          "Person _questgiver_ group Questor anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 125,
+        "lines": [
+          "Place _mondung_ remote dungeon8 anyInfo 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 127,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 129,
+        "lines": [
+          "Foe _seducer_ is Daedra_seducer"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 130,
+        "lines": [
+          "Foe _daedroth_ is Daedroth"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 131,
+        "lines": [
+          "Foe _firedaedra_ is Fire_daedra"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 132,
+        "lines": [
+          "Foe _F.03_ is Frost_daedra"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 135,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1015 step 0 ",
+          "pc at _mondung_ set _exitstarter_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _heart_ and _questgiver_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 145,
+        "lines": [
+          "_S.01_ task:",
+          "clicked item _heart_ say 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 148,
+        "lines": [
+          "variable _S.02_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 149,
+        "lines": [
+          "variable _qgclicked_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 150,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 151,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 154,
+        "lines": [
+          "_S.06_ task:",
+          "injured _firedaedra_ ",
+          "give item _heart_ to _firedaedra_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 158,
+        "lines": [
+          "_S.07_ task:",
+          "injured _F.03_ ",
+          "give item _heart_ to _F.03_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 162,
+        "lines": [
+          "_S.08_ task:",
+          "injured _seducer_ ",
+          "give item _heart_ to _seducer_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 166,
+        "lines": [
+          "_S.09_ task:",
+          "injured _daedroth_ ",
+          "give item _heart_ to _daedroth_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 170,
+        "lines": [
+          "_S.10_ task:",
+          "when not _S.11_ and _exitstarter_ ",
+          "create foe _seducer_ every 15 minutes 7 times with 10% success ",
+          "create foe _F.03_ every 20 minutes 6 times with 30% success ",
+          "create foe _firedaedra_ every 18 minutes 5 times with 25% success ",
+          "create foe _daedroth_ every 12 minutes 5 times with 20% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 177,
+        "lines": [
+          "_S.11_ task:",
+          "when _S.06_ or _S.07_ or _S.09_ or _S.08_ ",
+          "clear _S.10_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 181,
+        "lines": [
+          "variable _exitstarter_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

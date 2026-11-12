@@ -1,0 +1,283 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C10Y21.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "288cf620a45fc2fdb249e6d3d7a9f1fe30df3dccfc3ec7ac65762b02017f2ca0",
+    "byteLength": 4864
+  },
+  "document": {
+    "fileName": "R0C10Y21.txt",
+    "questName": "R0C10Y21",
+    "questNameLine": 8,
+    "displayName": "The Temple of the Orcs",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C10Y21"
+      },
+      {
+        "name": "displayname",
+        "value": "The Temple of the Orcs"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                        My cousin, _qgfriend_,",
+          "<ce>                 has appealed to me for aid in a rather",
+          "<ce>                 distasteful situation. It appears that",
+          "<ce>                 there is a ... temple of some variety",
+          "<ce>                being consecrated, if that's the proper",
+          "<ce>                   phrase for these disgusting orcish",
+          "<ce>                  activities. Well, obviously, we need",
+          "<ce>                  to crush it while it's budding. I am",
+          "<ce>                willing to go as high as _reward_ gold.",
+          "<ce>                    Can I count on your help, %pcf?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                      What are you, some kind of",
+          "<ce>                      orc-friend? %oth, get out of",
+          "<ce>                               my sight!"
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                 Thank you in advance for this, %pcf.",
+          "<ce>                 What I think would be the best use of",
+          "<ce>              your abilities is to infiltrate ___mondung_",
+          "<ce>           and eliminate the so-called shaman of the temple.",
+          "<ce>                  If we can kill it before our assault",
+          "<ce>              in =1stparton_ days that would make our job",
+          "<ce>               much easier. When the deed is done, report",
+          "<ce>                 to my cousin's palace in ___qgfriend_.",
+          "<ce>                  %G's the one who's going to pay you",
+          "<ce>                             for all this."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                Better get on the road to ___mondung_,",
+          "<ce>               %pcf.  The plan is already in motion, and",
+          "<ce>                         we're counting on you."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                     Greetings to you, %pcf. First",
+          "<ce>                  rate job with that stinking, rancid",
+          "<ce>                  shaman. How dare they set up one of",
+          "<ce>                   their cannibal temples in my land!",
+          "<ce>                    The leaderless rabble should be",
+          "<ce>                  easier to deal with now. Here's your",
+          "<ce>                     _reward_ gold pieces. Go wild."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 57,
+        "lines": [
+          "There's an orc community in ___mondung_ that's been bothering _qgfriend_.",
+          "<--->",
+          "___mondung_ was, I think, an orc temple years ago. Now they're bringing it back."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 62,
+        "lines": [
+          "That whole orcish community got a whiff of _qgfriend_ and it's moved on.",
+          "<--->",
+          "Poor _qgfriend_ didn't get to exact his revenge on the orcs in ___mondung_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 67,
+        "lines": [
+          "That'll teach those pig-faced degenerate cannibals to come to %reg.",
+          "<--->",
+          "%god bless _qgfriend_ and _questgiver_ and that unknown %ra soldier."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 72,
+        "lines": [
+          "Heard any good orc jokes lately? My cousin told me what a good job you did.",
+          "<--->",
+          "My cousin was mightily impressed with your work on that orc shaman, my friend."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 77,
+        "lines": [
+          "<ce>                       My cousin says you didn't",
+          "<ce>                    kill that orc shaman after all.",
+          "<ce>                     I'm not interested in speaking",
+          "<ce>                        on the subject anymore."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 83,
+        "lines": [
+          "=qgfriend_, yes? A possible ally of _questgiver_ with a problem with orcs.",
+          "<--->",
+          "_qgfriend_ is a violent bigot when it comes to orcs."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 88,
+        "lines": [
+          "<ce>                    You have killed the orc shaman."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 91,
+        "lines": [
+          "%qdt:",
+          " I have =1stparton_ days to slay an orc shaman",
+          " in ___mondung_, and then get to _qgfriend_'s",
+          " palace in ___qgfriend_.  %G",
+          " will pay me my _reward_ gold pieces",
+          " for the shaman's death."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 117,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 119,
+        "lines": [
+          "Person _questgiver_ face 112 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 120,
+        "lines": [
+          "Person _qgfriend_ group Noble remote anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 121,
+        "lines": [
+          "Person _dummyorc_ faction Orsinium remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 123,
+        "lines": [
+          "Place _mondung_ remote dungeon4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 125,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 2 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 127,
+        "lines": [
+          "Foe _monster_ is Orc_shaman"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 130,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1015 step 0 ",
+          "place foe _monster_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 135,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 138,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _mondead_ and _npcclicked_ ",
+          "give pc _reward_ ",
+          "change repute with _qgfriend_ by +20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 144,
+        "lines": [
+          "variable _queston_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 145,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _monster_ ",
+          "say 1012 ",
+          "change repute with _dummyorc_ by -30 ",
+          "create npc _qgfriend_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 151,
+        "lines": [
+          "_npcclicked_ task:",
+          "clicked npc _qgfriend_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

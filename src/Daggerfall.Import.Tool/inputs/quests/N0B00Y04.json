@@ -1,0 +1,296 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/N0B00Y04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "e54190c8cfd9a76e024c47aba81da21f8e3ea2e2fec08ddf49b00d7f00cb1c7f",
+    "byteLength": 5565
+  },
+  "document": {
+    "fileName": "N0B00Y04.txt",
+    "questName": "N0B00Y04",
+    "questNameLine": 9,
+    "displayName": "Retrieve an Ingredient",
+    "header": [
+      {
+        "name": "quest",
+        "value": "N0B00Y04"
+      },
+      {
+        "name": "displayname",
+        "value": "Retrieve an Ingredient"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                       We need you to get a rare",
+          "<ce>                       ingredient that is hidden",
+          "<ce>                       away in a nearby dungeon.",
+          "<ce>                        You will get a finder's",
+          "<ce>                       fee of _gold_ gold pieces.",
+          "<ce>                          Are you interested?",
+          "                                     <--->",
+          "<ce>                  One of our more brilliant students",
+          "<ce>                    is absolutely mad for something",
+          "<ce>                          called _ingredient_,",
+          "<ce>                   which we haven't had much call for",
+          "<ce>                   before. Would you, if it's not too",
+          "<ce>                    much of a bother, scurry on over",
+          "<ce>                     to this particular locale and",
+          "<ce>                           grab some for us?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                     Humph. I hope the next guild",
+          "<ce>                        member is more helpful."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                         An excellent attitude",
+          "<ce>                         %pcf. You are looking",
+          "<ce>                        for _ingredient_, which",
+          "<ce>                      can be found in ___dungeon_.",
+          "<ce>                     You have =traveltime_ days to",
+          "<ce>                             bring it back."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                        I suppose this will do.",
+          "<ce>                       Couldn't you have brought",
+          "<ce>                       back a fresher sample? The",
+          "<ce>                        quality of guild members",
+          "<ce>                       just isn't what it used to",
+          "<ce>                         be. Well, here is your",
+          "<ce>                          finder's fee, %pcf."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 52,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has its good points and bad ones."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 81,
+        "lines": [
+          "_qgiver_ has been complaining about the quality of Mages Guild members."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 84,
+        "lines": [
+          "I got a boil the other day ... but it healed.",
+          "<--->",
+          "I just had a three hour conversation about the weather.",
+          "<--->",
+          "The weather is pretty usual for this time of year.",
+          "<--->",
+          "It seems a trifle coolish in %cn for this time of year.",
+          "<--->",
+          "It sure is a lot warmer today than this time last year.",
+          "<--->",
+          "My great aunt is going to a specialist across the Bay.",
+          "<--->",
+          "It's always funny what time it gets dark around here.",
+          "<--->",
+          "We should erect a war statue around here.",
+          "<--->",
+          "The kids these days with their magic. %oth, I don't know.",
+          "<--->",
+          "I had the weirdest dream last night.",
+          "<--->",
+          "I heard a great joke. %jok",
+          "<--->",
+          "%jok Actually, that's a joke.",
+          "<--->",
+          "%jok Can you explain that to me?",
+          "<--->",
+          "The legal system in %reg has some good points and bad ones."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 113,
+        "lines": [
+          "Well, after getting that _ingredient_, how can I not be happy to see you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 116,
+        "lines": [
+          "<ce>                  We really needed that _ingredient_.",
+          "<ce>                I guess we know better now than to trust",
+          "<ce>                   you with any important assignment."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 121,
+        "lines": [
+          "%qdt:",
+          " I was asked to find a sample of",
+          " _ingredient_ that is",
+          " supposed to be hidden away",
+          " in ___dungeon_.",
+          " _qgiver_ of the Mages",
+          " Guild of ___qgiver_",
+          " gave me =traveltime_ days to get",
+          " it back to %g2."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 132,
+        "lines": [
+          "<ce>                   This looks like the _ingredient_",
+          "<ce>                            _qgiver_ wanted."
+        ]
+      },
+      {
+        "id": 1045,
+        "firstLine": 136,
+        "lines": [
+          "<ce>                      You suddenly remember that",
+          "<ce>                       _qgiver_ had asked you to",
+          "<ce>                      bring him a _ingredient_ by",
+          "<ce>                      today.  %G will no doubt be",
+          "<ce>                             disappointed."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 162,
+        "lines": [
+          "Item _ingredient_ organs"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 163,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 165,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 167,
+        "lines": [
+          "Place _dungeon_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 169,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 173,
+        "lines": [
+          "place item _ingredient_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 174,
+        "lines": [
+          "start timer _traveltime_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 178,
+        "lines": [
+          "_traveltime_ task:",
+          "make _ingredient_ permanent",
+          "                say 1045 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 183,
+        "lines": [
+          "_S.01_ task:",
+          "clicked item _ingredient_ ",
+          "say 1040 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 187,
+        "lines": [
+          "_questdone_ task:",
+          "toting _ingredient_ and _qgiver_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

@@ -1,0 +1,67 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO10.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "dc7c3b44028b1c37fa1a00f221671117ad59f712bbc32dfe61f9accf43d9746a",
+    "byteLength": 314
+  },
+  "document": {
+    "fileName": "__DEMO10.txt",
+    "questName": "__DEMO10",
+    "questNameLine": 3,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO10"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1010,
+        "firstLine": 8,
+        "lines": [
+          "%qdt:",
+          " I need to find the item",
+          " at _tavern_ in __tavern_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 16,
+        "lines": [
+          "Item _item1_ organs"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 17,
+        "lines": [
+          "Item _item2_ artifact Chrysamere"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 19,
+        "lines": [
+          "Place _tavern_ local tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 22,
+        "lines": [
+          "log 1010 step 0",
+          "place item _item1_ at _tavern_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

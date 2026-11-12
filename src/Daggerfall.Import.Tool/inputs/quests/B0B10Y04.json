@@ -1,0 +1,396 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/B0B10Y04.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "e9ac1aa4e0397b96461afba654e7a829aefb826feeb54304e7f0e24010604ec1",
+    "byteLength": 6131
+  },
+  "document": {
+    "fileName": "B0B10Y04.txt",
+    "questName": "B0B10Y04",
+    "questNameLine": 8,
+    "displayName": "The Crazed Mercenary",
+    "header": [
+      {
+        "name": "quest",
+        "value": "B0B10Y04"
+      },
+      {
+        "name": "displayname",
+        "value": "The Crazed Mercenary"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                           Welcome %pcn. My",
+          "<ce>                      name is _qgiver_. The order",
+          "<ce>                  has just been told of a crazed, orc",
+          "<ce>                  mercenary that needs to be stopped.",
+          "<ce>                    Are you willing to take up this",
+          "<ce>                                 quest?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                    Your modesty does you justice,",
+          "<ce>                       %pcf. Feel free to return",
+          "<ce>                   when you are less faint of heart."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 26,
+        "lines": [
+          "<ce>               Very well. In a dark pit not too far away,",
+          "<ce>                   a cursed place called ___mondung_,",
+          "<ce>                      an _soldier_ named =soldier_",
+          "<ce>              has been conspiring with a group of renegade",
+          "<ce>              mages, even worse than the Necromancers, to",
+          "<ce>                  destroy %reg. Perhaps he feels that",
+          "<ce>                he was wronged by the %t, perhaps it is",
+          "<ce>              merely the unreasoning hate that orcs often",
+          "<ce>             exhibit toward humans. The important thing is",
+          "<ce>             that he must be stopped, before his blind fury",
+          "<ce>                 and the magic of the mages have truly",
+          "<ce>                   disastrous results. Stop him, %pcf",
+          "<ce>               any way you can. If you have not returned",
+          "<ce>            with the situation remedied in =2mondung_ days,",
+          "<ce>              if it isn't too late, we knights will do the",
+          "<ce>            job ourselves. Pray, do not let it come to that."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 44,
+        "lines": [
+          "<ce>                         Should you not be in",
+          "<ce>                         ___mondung_ now, %pcf?"
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 48,
+        "lines": [
+          "<ce>                 Well done, %pcf. The orcs are moving",
+          "<ce>                out of ___mondung_, so your mission must",
+          "<ce>                 have been successful. You are truly a",
+          "<ce>                      worthy member of our order."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 54,
+        "lines": [
+          "___mondung_ is a perfect location for the orcs to gather -- it's so remote.",
+          "<--->",
+          "The orcs and the renegade mages are planning something horrible for %reg."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 59,
+        "lines": [
+          "The land has been cursed by the mages. It may be war, plague, famine, or all.",
+          "<--->",
+          "No one could do anything to stop the unholy alliance of orc and mage."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 64,
+        "lines": [
+          "The orcs have left ___mondung_ suddenly. Their leader was sick or even dead.",
+          "<--->",
+          "%reg was saved by the sacrifice of a brave and resourceful %ra mercenary."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 69,
+        "lines": [
+          "Greetings, %pct. How goes it with you, Orc Slayer?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 72,
+        "lines": [
+          "Dashed pity about those orcs and mages getting away. Well, it happens."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 75,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of __qgiver_",
+          " in ___qgiver_ wants me",
+          " to stop an _soldier_ bent on destroying",
+          " %reg. The orc lives in a hole",
+          " called ___mondung_ with",
+          " his troops. I have =2mondung_ days to deal",
+          " with this threat and return to",
+          " __qgiver_."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 86,
+        "lines": [
+          "<ce>                   You are handed a smudged note by",
+          "<ce>                 an even more smudged little boy. He's",
+          "<ce>               obviously not a professional courier, but",
+          "<ce>                 he moves almost as quickly as he runs",
+          "<ce>                                 away."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 93,
+        "lines": [
+          "<ce>                     You have slain the _soldier_."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 96,
+        "lines": [
+          "<ce>              Ah, that hair. So, she lives yet ... I must",
+          "<ce>                 tell Skullsplitter that his lady love",
+          "<ce>               has not left %reg. Thank you for bringing",
+          "<ce>                 it to my attention, %pcf. If my master",
+          "<ce>                had brought death to %reg with the help",
+          "<ce>               of his mage allies, he might have slain a",
+          "<ce>               woman that means more to him that the most",
+          "<ce>                bloody revenge he could have on the %t.",
+          "<ce>                    Once again, I thank you, friend."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 107,
+        "lines": [
+          "<ce>                  I heared you were a godsend, %pct.",
+          "<ce>                     %god bless you and keep you. I",
+          "<ce>               wish I could give ya something to aspress",
+          "<ce>               my gratitude. Here, I got this from a lady",
+          "<ce>                who felt sorry for me. It is so fine and",
+          "<ce>                lovely, I couldn sell even when I was so",
+          "<ce>                 hunger. Please take it for my thanks."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 135,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 137,
+        "lines": [
+          "Place _mondung_ remote dungeon1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 138,
+        "lines": [
+          "Place tavern local tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 140,
+        "lines": [
+          "Clock _2mondung_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 141,
+        "lines": [
+          "Clock _2letter_ 00:50 2.18:40"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 143,
+        "lines": [
+          "Foe _soldier_ is Orc_warlord"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 144,
+        "lines": [
+          "Foe _note_ is 2 Orc"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 145,
+        "lines": [
+          "Foe _F.02_ is Orc_sergeant"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 146,
+        "lines": [
+          "Foe _hunter_ is Orc_shaman"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 149,
+        "lines": [
+          "start timer _2mondung_ ",
+          "reveal _mondung_ ",
+          "log 1010 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 153,
+        "lines": [
+          "_2mondung_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 156,
+        "lines": [
+          "variable _2letter_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 157,
+        "lines": [
+          "_S.02_ task:",
+          "when _qgclicked_ and _questdone_ ",
+          "give pc nothing ",
+          "change repute with _qgiver_ by +10 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 163,
+        "lines": [
+          "variable _S.03_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 164,
+        "lines": [
+          "variable _S.04_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 165,
+        "lines": [
+          "until _S.04_ performed:",
+          "pc at _mondung_ set _S.07_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 168,
+        "lines": [
+          "_S.05_ task:",
+          "killed 1 _soldier_ ",
+          "say 1014 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 172,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 175,
+        "lines": [
+          "_S.07_ task:",
+          "create foe _note_ every 100 minutes 100 times with 12% success ",
+          "create foe _F.02_ every 107 minutes 50 times with 10% success ",
+          "create foe _hunter_ every 113 minutes 20 times with 8% success ",
+          "place foe _soldier_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 181,
+        "lines": [
+          "_questdone_ task:",
+          "when _S.05_ or _S.04_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 184,
+        "lines": [
+          "_S.09_ task:",
+          "when _2mondung_ and not _questdone_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 187,
+        "lines": [
+          "variable _S.10_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 188,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _questdone_",
+          "say 1003 ",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

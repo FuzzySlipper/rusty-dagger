@@ -9,18 +9,16 @@ namespace Daggerfall.Source.Tool.ReferenceExports;
 internal static class ItemReferenceExport
 {
     private static readonly string[] Morphologies = ["argonian", "elf", "human", "khajiit"];
+    /// <summary>The donor's <c>ItemHelper.artifactTextureIndexMappings</c>, as the ruleset's paper doll also carries it.</summary>
+    private static readonly int[] ArtifactRecords = [12, 13, 10, 8, 19, 16, 25, 18, 21, 2, 24, 26, 0, 15, 3, 9, 23, 17, 7, 1, 22, 20, 5];
     private static readonly string[] Actions = ["idle", "strike-down", "strike-down-left", "strike-left", "strike-right", "strike-down-right", "strike-up"];
 
-    public static void Run(string arena2, string donor, string output)
+    public static void Run(string arena2, string inputs, string output)
     {
-        string Donor(string file) => Path.Combine(donor, "Assets", file);
-        string helper = File.ReadAllText(Donor("Scripts/Game/Items/ItemHelper.cs"));
-        IReadOnlyList<ItemGroupEnumeration> groups = ItemTemplateBaseline.ReadGroupEnumerations(
-            File.ReadAllText(Donor("Scripts/Game/Items/ItemEnums.cs")), helper, "daggerfall-unity item groups");
-        IReadOnlyList<SubstituteItemTemplate> templates = ItemTemplateReader.ReadTemplates(
-            File.ReadAllText(Donor("Resources/ItemTemplates.txt")), "daggerfall-unity/Assets/Resources/ItemTemplates.txt");
-        IReadOnlyList<SubstituteMagicTemplate> magic = ItemTemplateReader.ReadMagic(
-            File.ReadAllText(Donor("Resources/MagicItemTemplates.txt")), "daggerfall-unity/Assets/Resources/MagicItemTemplates.txt");
+        T Table<T>(string file) where T : class => TakenTable.Read<T>(File.ReadAllBytes(Path.Combine(inputs, file)), file);
+        IReadOnlyList<ItemGroupEnumeration> groups = [.. Table<ItemGroupTable>("item-groups.json").Groups.OrderBy(group => group.Id)];
+        IReadOnlyList<SubstituteItemTemplate> templates = Table<ItemTemplateTable>("item-templates.json").Templates;
+        IReadOnlyList<SubstituteMagicTemplate> magic = Table<MagicItemTemplateTable>("magic-item-templates.json").Templates;
         ReferenceExport export = new(arena2, output);
         Dictionary<int, string> directories = [];
         List<int> withoutWorldArt = [], withoutPlayerArt = [];
@@ -65,8 +63,7 @@ internal static class ItemReferenceExport
         }
 
         // ItemHelper.LoadMagicItemTemplates retains artifact order; its parallel record table addresses that order.
-        Match mapping = Regex.Match(helper, @"artifactTextureIndexMappings\s*=\s*\{([^}]+)\}");
-        int[] artifactRecords = mapping.Success ? mapping.Groups[1].Value.Split(',').Select(value => int.Parse(value.Trim(), System.Globalization.CultureInfo.InvariantCulture)).ToArray() : [];
+        int[] artifactRecords = ArtifactRecords;
         SubstituteMagicTemplate[] artifacts = magic.Where(template => template.Type.StartsWith("ArtifactClass", StringComparison.Ordinal)).ToArray();
         if (artifactRecords.Length != artifacts.Length)
             throw new InvalidOperationException($"The donor has {artifacts.Length} artifacts but {artifactRecords.Length} texture mappings; exporting them would pair names with the wrong images.");

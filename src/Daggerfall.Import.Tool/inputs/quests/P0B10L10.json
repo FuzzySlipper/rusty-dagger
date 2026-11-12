@@ -1,0 +1,367 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/P0B10L10.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "8009a8c253fe82e865ff37a91c1f552636bc6db0272e5560e7428342a53fb609",
+    "byteLength": 5224
+  },
+  "document": {
+    "fileName": "P0B10L10.txt",
+    "questName": "P0B10L10",
+    "questNameLine": 8,
+    "displayName": "The Chaperone",
+    "header": [
+      {
+        "name": "quest",
+        "value": "P0B10L10"
+      },
+      {
+        "name": "displayname",
+        "value": "The Chaperone"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "Error: Questtext 1000 Called."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 16,
+        "lines": [
+          "Error: Questtext 1001 Called."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 19,
+        "lines": [
+          "Error: Questtext 1002 Called."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 22,
+        "lines": [
+          "<ce>                  It is not an easy thing for one of",
+          "<ce>                   our kind to travel. With the added",
+          "<ce>                        encumbrance of _vamp_,",
+          "<ce>                  I can only imagine your tribulation.",
+          "<ce>                 Add to it the terror of that venomous",
+          "<ce>                         =mage_, and I can see",
+          "<ce>                        why %vam speak so highly",
+          "<ce>                           of you, good %pcf."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 32,
+        "lines": [
+          "=mage_ is the only decent vampire-hunter left in %reg, according to some.",
+          "<--->",
+          "=mage_ could give most vampires a decent fight."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 37,
+        "lines": [
+          "Some =vamp2_ in __vamp2_ was looking for a %ra named %pcn."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 40,
+        "lines": [
+          "=mage_ apparently isn't the vampire-hunter %g claims to be.",
+          "<--->",
+          "=mage_ was supposed to be a great vampire-hunter. Guess %g wasn't so great."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 45,
+        "lines": [
+          "Error: Questtext 1008 Called."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 48,
+        "lines": [
+          "Error: Questtext 1009 Called."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 51,
+        "lines": [
+          "                    __vamp_",
+          "                     ___vamp_",
+          " ",
+          " Dear %pcn,",
+          " ",
+          "      %vam need you.",
+          " Come immediately.",
+          " ",
+          " ",
+          "                    Yours in Death,",
+          " ",
+          "                    _vamp_"
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 65,
+        "lines": [
+          "%qdt:",
+          " I have received",
+          " a letter from _vamp_,",
+          " a vampire of %vam urgently",
+          " requesting my presence in",
+          " ___vamp_ at a",
+          " place called __vamp_."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 74,
+        "lines": [
+          "<ce>                Thank you for coming so promptly. There",
+          "<ce>               is a dangerous enemy of our tribe here in",
+          "<ce>                      %reg, a mage called =mage_.",
+          "<ce>                I myself had an unfortunate meeting with",
+          "<ce>                   %g2. It is imperative that I speak",
+          "<ce>                          with _vamp2_ over in",
+          "<ce>                      ___vamp2_ about this matter,",
+          "<ce>                       but I know that =mage_ is",
+          "<ce>               looking for me. I am too weak to make the",
+          "<ce>                 journey myself. You must escort me to",
+          "<ce>                         __vamp2_ in ___vamp2_,",
+          "<ce>                and we must hurry before the devil mage",
+          "<ce>                brings in more allies. =queston_ nights,",
+          "<ce>                          %pcf. It isn't long,",
+          "<ce>                            but we must try."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 91,
+        "lines": [
+          "<ce>                     A bloodsucker with some sting",
+          "<ce>                    left. This ought to make things",
+          "<ce>                           more interesting!"
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 96,
+        "lines": [
+          "%qdt:",
+          " I am escorting _vamp_",
+          " to _vamp2_ in ___vamp2_.",
+          " I must make it to __vamp2_",
+          " before the mage who is stalking us",
+          " has a chance to call reinforcements."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 104,
+        "lines": [
+          "<ce>                         \"%pcf!\" says _vamp_,",
+          "<ce>                        \"You have slain =mage_,",
+          "<ce>                         the scourge of %vam!\""
+        ]
+      },
+      {
+        "id": 1016,
+        "firstLine": 109,
+        "lines": [
+          "<ce>                          \"You are taking too",
+          "<ce>                          long,\" says _vamp_,",
+          "<ce>                       staggering off on %g3 own."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 114,
+        "lines": [
+          "<ce>                        A pale, fierce-eyed boy",
+          "<ce>                      hands you a letter and then",
+          "<ce>                      disappears into the shadows."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 142,
+        "lines": [
+          "Item _letter_ letter used 1010"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 144,
+        "lines": [
+          "Person _vamp_ factiontype Vampire_Clan local"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 145,
+        "lines": [
+          "Person _vamp2_ factiontype Vampire_Clan remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 148,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 1 range 1 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 150,
+        "lines": [
+          "Foe _mage_ is Mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 153,
+        "lines": [
+          "dialog link for person _vamp2_ ",
+          "dialog link for person _vamp_ ",
+          "_letter_ used do _readletter_ ",
+          "have _letter_ set _S.10_ ",
+          "give pc _letter_ notify 1017 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 159,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 162,
+        "lines": [
+          "_vampclicked_ task:",
+          "clicked npc _vamp_ ",
+          "log 1014 step 1 ",
+          "hide npc _vamp_ ",
+          "say 1012 ",
+          "add _vamp_ face ",
+          "create npc _vamp2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 170,
+        "lines": [
+          "variable _S.02_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 171,
+        "lines": [
+          "_S.03_ task:",
+          "when _vampclicked_ and not _S.04_ ",
+          "create foe _mage_ every 15 minutes 5 times with 50% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 175,
+        "lines": [
+          "_S.04_ task:",
+          "injured _mage_ ",
+          "say 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 179,
+        "lines": [
+          "variable _reward_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 180,
+        "lines": [
+          "_S.06_ task:",
+          "killed 1 _mage_ ",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 184,
+        "lines": [
+          "_S.07_ task:",
+          "clicked npc _vamp2_ ",
+          "give pc nothing ",
+          "change repute with _vamp_ by +5 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 190,
+        "lines": [
+          "_S.08_ task:",
+          "when _queston_ and not _S.07_ ",
+          "say 1016 ",
+          "change repute with _vamp_ by -10 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 195,
+        "lines": [
+          "_readletter_ task:",
+          "add dialog for person _vamp_ ",
+          "log 1011 step 0 ",
+          "create npc _vamp_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 200,
+        "lines": [
+          "_S.10_ task:",
+          "start timer _queston_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

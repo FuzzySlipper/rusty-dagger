@@ -1,0 +1,532 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/Q0C10Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "f8277872db25233af9bf5c068dcaecd77513b8eece7350d7c961fc6402ed44d5",
+    "byteLength": 6632
+  },
+  "document": {
+    "fileName": "Q0C10Y00.txt",
+    "questName": "Q0C10Y00",
+    "questNameLine": 9,
+    "displayName": "A Great Errand",
+    "header": [
+      {
+        "name": "quest",
+        "value": "Q0C10Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "A Great Errand"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                    If thou wisheth the help of the",
+          "<ce>                         ==qgiver_, first thou",
+          "<ce>                     must help us. Will thou bring",
+          "<ce>                      us the three ingredients we",
+          "<ce>                       need to complete our brew?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                 Then get thee from our coven ground,",
+          "<ce>                    for ill favor follows those who",
+          "<ce>                      expect the world for aught."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 26,
+        "lines": [
+          "<ce>                   We witches need three ingredients",
+          "<ce>                   we cannot find to make our brew of",
+          "<ce>                   weather weaving.  First, a perfect",
+          "<ce>                       _item1_ from ___dungeon1_.",
+          "<ce>                    Second, search ___dungeon2_ for",
+          "<ce>                  _item2_, which will make the clouds",
+          "<ce>                  boil.  Lastly, the most efficacious",
+          "<ce>                      _item3_ thou must bring from",
+          "<ce>                     ___dungeon3_.  Bring us these",
+          "<ce>                        things in =queston_ days",
+          "<ce>                       before our stew doth cool."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 39,
+        "lines": [
+          "<ce>                       We need _item1_, _item2_,",
+          "<ce>                           and _item3_, %pcn.",
+          "<ce>                     We have not time for chatter."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 44,
+        "lines": [
+          "<ce>                  Quick, sister, take this %ra's load.",
+          "<ce>                           Mince the _item1_,",
+          "<ce>                         peel the _item2_, and",
+          "<ce>                          grind the _item3_ to",
+          "<ce>                  bits. Here, we have three glittering",
+          "<ce>                 baubles we have no use for. Take them,",
+          "<ce>                   %pcn, as our way of thanking thee."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 53,
+        "lines": [
+          "The weather has been predictable lately. The Witches must be sleeping.",
+          "<--->",
+          "One of those witches tried to come to town on business, but we chased her out."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 58,
+        "lines": [
+          "Remember when the witches cursed our %t? Guess they're losing their spark.",
+          "<--->",
+          "It's said that the ==qgiver_ are losing their skills."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 63,
+        "lines": [
+          "You can almost feel the energy. Like the air is getting ready to explode.",
+          "<--->",
+          "Whoever says the ==qgiver_ are losing their skills is a doomed fool."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 68,
+        "lines": [
+          "For the _item1_, _item2_, and _item3_, I am at thy service, %pcf."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                  I asked thee for ingredients three,",
+          "<ce>                     but thou didst fail ==qgiver_.",
+          "<ce>                        Get thee from my sight."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 76,
+        "lines": [
+          "She's one of the ==qgiver_. Someone to be polite to.",
+          "<--->",
+          "She's a mighty prophetess, affiliated with the ==qgiver_."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 81,
+        "lines": [
+          "%qdt:",
+          " If I want to win the regard of _qgiver_,",
+          " I must retrieve three items for %g2",
+          " and bring them back to the",
+          " ==qgiver_ in =queston_ days. The",
+          " three items -- _item1_, _item2_,",
+          " and _item3_ -- must be brought",
+          " from ___dungeon1_, ___dungeon2_,",
+          " and ___dungeon3_ respectively.",
+          " I seem to have my work cut out for me."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 93,
+        "lines": [
+          "<ce>                      You have found the _item1_",
+          "<ce>                        that _qgiver_ asked for."
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 97,
+        "lines": [
+          "<ce>                       This must be the _item2_",
+          "<ce>                         that _qgiver_ wanted."
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 101,
+        "lines": [
+          "<ce>                      This looks like the _item3_",
+          "<ce>                         that _qgiver_ needed."
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 105,
+        "lines": [
+          "<ce>  You offer up the _item1_."
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 108,
+        "lines": [
+          "<ce>  You offer up the _item2_."
+        ]
+      },
+      {
+        "id": 1026,
+        "firstLine": 111,
+        "lines": [
+          "<ce>  You offer up the _item3_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 133,
+        "lines": [
+          "Item _item1_ mythic"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 134,
+        "lines": [
+          "Item _item2_ mineral"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 135,
+        "lines": [
+          "Item _item3_ organs"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 136,
+        "lines": [
+          "Item _reward1_ malachite"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 137,
+        "lines": [
+          "Item _reward2_ turquoise"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 138,
+        "lines": [
+          "Item _reward3_ jade"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 141,
+        "lines": [
+          "Person _qgiver_ group Questor anyInfo 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 143,
+        "lines": [
+          "Place _dungeon1_ remote dungeon6"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 144,
+        "lines": [
+          "Place _dungeon2_ remote dungeon12"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 145,
+        "lines": [
+          "Place _dungeon3_ remote dungeon10"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 147,
+        "lines": [
+          "Clock _queston_ 6.22:40 10.10:00 flag 17 range 0 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 149,
+        "lines": [
+          "Foe _F.00_ is Gargoyle"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 150,
+        "lines": [
+          "Foe _wereboar_ is Wereboar"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 151,
+        "lines": [
+          "Foe _spriggan_ is Spriggan"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 152,
+        "lines": [
+          "Foe _mummy_ is Mummy"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 153,
+        "lines": [
+          "Foe _zombie_ is Zombie"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 154,
+        "lines": [
+          "Foe _skeleton_ is Skeletal_warrior"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 157,
+        "lines": [
+          "place item _item3_ at _dungeon3_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 158,
+        "lines": [
+          "place item _item2_ at _dungeon2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 159,
+        "lines": [
+          "place item _item1_ at _dungeon1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 160,
+        "lines": [
+          "start timer _queston_ ",
+          "reveal _dungeon3_ ",
+          "reveal _dungeon2_ ",
+          "reveal _dungeon1_ ",
+          "log 1015 step 0 ",
+          "pc at _dungeon1_ set _S.10_ ",
+          "pc at _dungeon2_ set _S.14_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 168,
+        "lines": [
+          "_pchasitem1_ task:",
+          "toting _item1_ and _qgiver_ clicked",
+          "say 1024"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 172,
+        "lines": [
+          "_pchasitem2_ task:",
+          "toting _item2_ and _qgiver_ clicked ",
+          "say 1025"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 176,
+        "lines": [
+          "_pchasitem3_ task:",
+          "toting _item3_ and _qgiver_ clicked ",
+          "say 1026"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 180,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 183,
+        "lines": [
+          "_a1_ task:",
+          "create foe _zombie_ every 15 minutes 5 times with 5% success ",
+          "place foe _zombie_ at _dungeon1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 187,
+        "lines": [
+          "_a2_ task:",
+          "create foe _mummy_ every 10 minutes 5 times with 5% success ",
+          "place foe _mummy_ at _dungeon1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 191,
+        "lines": [
+          "_a3_ task:",
+          "create foe _skeleton_ every 12 minutes 5 times with 5% success ",
+          "place foe _skeleton_ at _dungeon1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 195,
+        "lines": [
+          "_a4_ task:",
+          "create foe _F.00_ every 10 minutes 5 times with 5% success ",
+          "place foe _F.00_ at _dungeon2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 199,
+        "lines": [
+          "_a5_ task:",
+          "create foe _spriggan_ every 15 minutes 5 times with 5% success ",
+          "place foe _spriggan_ at _dungeon2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 203,
+        "lines": [
+          "_a6_ task:",
+          "create foe _wereboar_ every 12 minutes 5 times with 5% success ",
+          "place foe _wereboar_ at _dungeon2_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 207,
+        "lines": [
+          "_S.10_ task:",
+          "pick one of _a1_ _a2_ _a3_ _a1_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 210,
+        "lines": [
+          "_batty_ task:",
+          "clicked item _item1_ say 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 213,
+        "lines": [
+          "_S.12_ task:",
+          "clicked item _item2_ say 1022"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 216,
+        "lines": [
+          "_S.13_ task:",
+          "clicked item _item3_ say 1023 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 219,
+        "lines": [
+          "_S.14_ task:",
+          "pick one of _a4_ _a5_ _a6_ _a4_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 222,
+        "lines": [
+          "_S.15_ task:",
+          "when _pchasitem1_ and _pchasitem2_ and _pchasitem3_ ",
+          "give pc _reward1_",
+          "give pc _reward2_",
+          "give pc _reward3_ ",
+          "end quest "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

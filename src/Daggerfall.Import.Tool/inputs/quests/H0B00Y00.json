@@ -1,0 +1,315 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/H0B00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "ba2f5e6c68af71474b2cd6176574b4e9f058e8215978dc4e7a707d2451bd1ccc",
+    "byteLength": 4378
+  },
+  "document": {
+    "fileName": "H0B00Y00.txt",
+    "questName": "H0B00Y00",
+    "questNameLine": 8,
+    "displayName": "A Powerful Spirit",
+    "header": [
+      {
+        "name": "quest",
+        "value": "H0B00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "A Powerful Spirit"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>              The whole philosophy of the Benevolence of",
+          "<ce>                 Mara forbids us to harm another living",
+          "<ce>                creature willingly. We do, however, have",
+          "<ce>                a situation that unfortunately calls for",
+          "<ce>                direct and fatal action. If we agreed to",
+          "<ce>              pay you _reward_ gold, would you be prepared",
+          "<ce>                  to destroy an unclean spirit that is",
+          "<ce>                  haunting one of our sacred shrines?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 23,
+        "lines": [
+          "<ce>                  It is an assignment of considerable",
+          "<ce>                 danger, but I'm disappointed that you",
+          "<ce>                       will not even consider it."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                 There is an abandoned temple, not too",
+          "<ce>                   far from here called ___mondung_.",
+          "<ce>               It has been sacred to our Benevolence for",
+          "<ce>                centuries. We do not worship there, but",
+          "<ce>             we attempt to keep it free of evil influence.",
+          "<ce>                Unfortunately, the spirit that haunts it",
+          "<ce>                is too powerful for us to repel. If you",
+          "<ce>                  are not back in =1stparton_ days, we",
+          "<ce>               will assume that you have failed and send",
+          "<ce>               the Maran Knights instead. Obviously, your",
+          "<ce>                  reward will then be forfeit. Go with",
+          "<ce>                      the blessing of the Goddess."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 42,
+        "lines": [
+          "<ce>                       Why do you linger, %pcf?",
+          "<ce>                The spirit still desecrates our temple."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 46,
+        "lines": [
+          "<ce>                 You have done a great service to the",
+          "<ce>                       Benevolence of Mara, %pcf.",
+          "<ce>                     A favor that will not soon be",
+          "<ce>                  forgotten. Enjoy your _reward_ gold",
+          "<ce>                           -- you deserve it."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 53,
+        "lines": [
+          "That ___mondung_ has always been creepy. Now it's supposed to be haunted.",
+          "<--->",
+          "As far as I'm concerned, leave the haunt alone. No one goes near it anyway."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 58,
+        "lines": [
+          "I wish they had just left ___mondung_ alone. Now the wraith's out here with us.",
+          "<--->",
+          "Typical. They chase the ghosts out to where they can do real harm."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 63,
+        "lines": [
+          "You know, even with ___mondung_ free of ghosts, I ain't going there.",
+          "<--->",
+          "The Benevolence of Mara's happy that their ___mondung_ is clean again."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 68,
+        "lines": [
+          "After trudging through ___mondung_ for us, the least I can do is say hello."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 71,
+        "lines": [
+          "___mondung_ is still cursed with spirits, damn you, %pcf!"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 74,
+        "lines": [
+          "%qdt:",
+          " _questgiver_ of",
+          " ___questgiver_ asked me to",
+          " rid ___mondung_, a holy",
+          " place for the Benevolence of Mara,",
+          " of a haunting spirit of some sort.",
+          " I have =1stparton_ days to cleanse",
+          " ___mondung_ of its haunt."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 84,
+        "lines": [
+          "<ce>                  \"My spirit will now rest at peace.\"",
+          "<ce>                     ___mondung_ has been cleansed."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 99,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 101,
+        "lines": [
+          "Person _questgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 103,
+        "lines": [
+          "Place _mondung_ remote dungeon4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 105,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 107,
+        "lines": [
+          "Foe _wraith_ is Wraith"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 108,
+        "lines": [
+          "Foe _ghost_ is Ghost"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 109,
+        "lines": [
+          "Foe _zombie_ is Zombie"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 110,
+        "lines": [
+          "Foe _mummy_ is Mummy"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 113,
+        "lines": [
+          "start timer _1stparton_ ",
+          "reveal _mondung_ ",
+          "log 1010 step 0 ",
+          "pick one of _S.05_ _S.06_ _S.07_ _S.08_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 118,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _qgclicked_ and _mondead_ ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 123,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _mummy_ saying 1020 ",
+          "killed 1 _ghost_ saying 1020 ",
+          "killed 1 _wraith_ saying 1020 ",
+          "killed 1 _zombie_ saying 1020 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 129,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _questgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 132,
+        "lines": [
+          "_1stparton_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 135,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _mondead_ ",
+          "say 1003",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 140,
+        "lines": [
+          "_S.05_ task:",
+          "place foe _ghost_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 143,
+        "lines": [
+          "_S.06_ task:",
+          "place foe _mummy_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 146,
+        "lines": [
+          "_S.07_ task:",
+          "place foe _zombie_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 149,
+        "lines": [
+          "_S.08_ task:",
+          "place foe _wraith_ at _mondung_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

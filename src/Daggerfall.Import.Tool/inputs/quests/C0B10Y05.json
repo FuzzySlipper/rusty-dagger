@@ -1,0 +1,331 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/C0B10Y05.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "eb7eebebfa09b04fecacb0ae7c6f306485058ddfec4643fd53d9d6177aefb4a8",
+    "byteLength": 4637
+  },
+  "document": {
+    "fileName": "C0B10Y05.txt",
+    "questName": "C0B10Y05",
+    "questNameLine": 9,
+    "displayName": "The Cursed Weapon",
+    "header": [
+      {
+        "name": "quest",
+        "value": "C0B10Y05"
+      },
+      {
+        "name": "displayname",
+        "value": "The Cursed Weapon"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                            %pcn, we have a",
+          "<ce>                  very dangerous mission for you. The",
+          "<ce>                  temple has come into the possession",
+          "<ce>                    of an evil, magical weapon long",
+          "<ce>                   sought by the orcs. The temple has",
+          "<ce>                   already been attacked twice by the",
+          "<ce>                   creatures. It needs to be taken to",
+          "<ce>                   a safehaven. Will you do this for",
+          "<ce>                  us? The temple will pay _gold_ gold."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                        I am saddened that your",
+          "<ce>                        loyalty to the temple is",
+          "<ce>                        so low. But in light of",
+          "<ce>                       the danger, I forgive you."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 31,
+        "lines": [
+          "<ce>                         Take this _evilitem_.",
+          "<ce>                            In ___dungeon_,",
+          "<ce>                       you will find _custodian_,",
+          "<ce>                   a servant of this temple for many",
+          "<ce>                   years. %G will safeguard the item",
+          "<ce>                  and keep it out of the hands of the",
+          "<ce>                  orcs. We have bound it in spells to",
+          "<ce>                   protect you from its evil effects.",
+          "<ce>                  However, these spells will wear off",
+          "<ce>                         in =traveltime_ days."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 43,
+        "lines": [
+          "<ce>                         Ah, this is the evil",
+          "<ce>                        _evilitem_ that _qgiver_",
+          "<ce>                       spoke of. I shall keep it",
+          "<ce>                       here, where there are many",
+          "<ce>                       defenses to keep it safe.",
+          "<ce>                          _qgiver_ said that I",
+          "<ce>                       should pay you _gold_ gold",
+          "<ce>                       pieces for safe delivery."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 53,
+        "lines": [
+          "The orcs have been attacking __qgiver_ caravans."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 56,
+        "lines": [
+          "The orcs finally got that _evilitem_."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 59,
+        "lines": [
+          "The _evilitem_ is safe from the hands of the orcs."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 62,
+        "lines": [
+          "I heard that you got rid of the _evilitem_. Now, what can I help you with?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 65,
+        "lines": [
+          "I trusted you with the _evilitem_ and look what happened."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 68,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of __qgiver_,",
+          " in ___qgiver_, gave me an",
+          " evil _evilitem_ to",
+          " deliver to the ___dungeon_",
+          " so that the orcs could not",
+          " get it. I have =traveltime_ days",
+          " to make the delivery."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 78,
+        "lines": [
+          "<ce>                       You must be the bearer of",
+          "<ce>                       Manshrieker, the holy orc",
+          "<ce>                        weapon of war. Kill the",
+          "<ce>                        human! We must have that",
+          "<ce>                              _evilitem_."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 85,
+        "lines": [
+          "<ce>            The evil _evilitem_ sparks and disintegrates.",
+          "<ce>                      You suddenly feel very sick."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 104,
+        "lines": [
+          "Item _evilitem_ weapon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 105,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 107,
+        "lines": [
+          "Person _qgiver_ face 1 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 108,
+        "lines": [
+          "Person _custodian_ face 1 group Group_5.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 110,
+        "lines": [
+          "Place _dungeon_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 112,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 1 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 114,
+        "lines": [
+          "Foe _orc1_ is Orc_shaman"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 115,
+        "lines": [
+          "Foe _orc2_ is Orc_warlord"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 116,
+        "lines": [
+          "Foe _orc3_ is 2 Orc_sergeant"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 117,
+        "lines": [
+          "Foe _orc4_ is 3 Orc"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 120,
+        "lines": [
+          "start timer _traveltime_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 ",
+          "get item _evilitem_ ",
+          "place npc _custodian_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 126,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 129,
+        "lines": [
+          "_S.01_ task:",
+          "toting _evilitem_ and _custodian_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 134,
+        "lines": [
+          "until _S.01_ performed:",
+          "create foe _orc2_ every 21 minutes 20 times with 5% success ",
+          "create foe _orc4_ every 41 minutes 20 times with 5% success ",
+          "create foe _orc1_ every 21 minutes 20 times with 5% success ",
+          "create foe _orc3_ every 31 minutes 20 times with 5% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 140,
+        "lines": [
+          "variable _gem1_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 141,
+        "lines": [
+          "variable _bear_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 142,
+        "lines": [
+          "variable _gem3_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 143,
+        "lines": [
+          "variable _gem4_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 144,
+        "lines": [
+          "_S.06_ task:",
+          "injured _orc2_ saying 1011 ",
+          "injured _orc4_ saying 1011 ",
+          "injured _orc3_ saying 1011 ",
+          "injured _orc1_ saying 1011 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 150,
+        "lines": [
+          "_S.07_ task:",
+          "when _traveltime_ and not _S.01_ ",
+          "make pc ill with Witches'_Pox",
+          "say 1012 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

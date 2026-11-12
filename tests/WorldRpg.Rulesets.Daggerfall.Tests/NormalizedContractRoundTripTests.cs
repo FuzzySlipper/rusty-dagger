@@ -41,7 +41,6 @@ public sealed class NormalizedContractRoundTripTests
         ("questTables", typeof(Normalized.DaggerfallQuestTables)),
         ("questSources", typeof(DaggerfallQuestPack)),
         ("cinematics", typeof(DaggerfallCinematicPack)),
-        ("buildingNames", typeof(Normalized.DaggerfallBuildingNameInputs)),
     ];
 
     /// <summary>
@@ -97,18 +96,18 @@ public sealed class NormalizedContractRoundTripTests
     /// builder writes each donor mobile's loot key and map chance from the donor table, and the ruleset's
     /// read, which corpse loot rolls from, must carry the same values for every mobile.
     /// </summary>
-    [DonorFact("Assets/Scripts/Utility/EnemyBasics.cs")]
+    [Fact]
     public void Mobile_loot_inputs_the_importer_writes_read_back_through_the_ruleset()
     {
-        string enemyBasics = TestContentFiles.ReadText(TestData.Donor("Assets/Scripts/Utility/EnemyBasics.cs"));
+        global::Daggerfall.Import.Arena2.MobileTable mobileTable = TakenTable.Read<global::Daggerfall.Import.Arena2.MobileTable>(
+            TestContentFiles.ReadCopy(TestData.Input("mobiles.json")), "mobiles.json");
         byte[] authored = TestContentFiles.ReadCopy(TestData.PackPayload("daggerfall.base"));
-        global::Daggerfall.Import.Arena2.Arena2MobileCatalogPublication publication = global::Daggerfall.Import.Arena2.Arena2MobileCatalogDocument.Build(
-            enemyBasics, "donor/EnemyBasics.cs");
+        global::Daggerfall.Import.Arena2.Arena2MobileCatalogPublication publication = global::Daggerfall.Import.Arena2.Arena2MobileCatalogDocument.Build(mobileTable);
         string mobiles = JsonNode.Parse(publication.Json)!.ToJsonString(PublishedJson.SectionCompact);
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(authored, RewriteImportedPayload(
             new Dictionary<string, string>(StringComparer.Ordinal) { ["mobiles"] = mobiles }), TestPayload.Data);
 
-        IReadOnlyList<global::Daggerfall.Import.Arena2.Arena2MobileTableEntry> table = global::Daggerfall.Import.Arena2.Arena2MobileTable.Read(enemyBasics);
+        IReadOnlyList<global::Daggerfall.Import.Arena2.Arena2MobileTableEntry> table = mobileTable.Mobiles;
         Assert.Equal(
             table.Select(entry => (entry.Id, entry.LootTableKey, entry.MapChance)).OrderBy(value => value.Id),
             definitions.Mobiles.Mobiles.Values.Select(mobile => (mobile.DonorId, mobile.LootTableKey, mobile.MapChance)).OrderBy(value => value.DonorId));

@@ -1,0 +1,435 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/A0C00Y11.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "2e823449fae5865e4f2e7bce6a25a34afa6d2d530d059810aac8f88667357810",
+    "byteLength": 8412
+  },
+  "document": {
+    "fileName": "A0C00Y11.txt",
+    "questName": "A0C00Y11",
+    "questNameLine": 9,
+    "displayName": "The Cure",
+    "header": [
+      {
+        "name": "quest",
+        "value": "A0C00Y11"
+      },
+      {
+        "name": "displayname",
+        "value": "The Cure"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                  Excuse me, are you a doctor or have",
+          "<ce>               you any healing abilities? I really need",
+          "<ce>                    someone that can heal my cousin.",
+          "                                     <--->",
+          "<ce>                 My cousin is dying! Can you help me?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                  Damn. I could have used some help.",
+          "                                     <--->",
+          "<ce>                     Just my luck. Thanks anyway.",
+          "                                     <--->",
+          "<ce>                     I'm sorry to bother you then."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                         Thank you, thank you!",
+          "<ce>                          My name is _giver_.",
+          "<ce>                I recently received word that my cousin",
+          "<ce>                         _cousin_ of ___cousin_",
+          "<ce>                is deathly ill and will probably die in",
+          "<ce>                =questtime_ days! Whatever you can do to",
+          "<ce>                 cure %g2 will be greatly appreciated.",
+          "<ce>                  Here is _gold1_ gold. I will pay you",
+          "<ce>                 _gold2_ gold more if you can heal %g2."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 39,
+        "lines": [
+          "<ce>                   Oh, you've brought me the healing",
+          "<ce>                      Talisman! Thank you, %pcn.",
+          "<ce>                  Here is the rest of the gold that my",
+          "<ce>               cousin promised you. I really can't thank",
+          "<ce>              you enough. I hope the rest of your travels",
+          "<ce>                           are safe for you."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 47,
+        "lines": [
+          "<ce>                     It's too bad about _giver_'s",
+          "<ce>                  cousin. I hear it's a fatal ailment."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                        _cousin_ of ___cousin_",
+          "<ce>                 died of Wizard Bane. I hear the plague",
+          "<ce>                       might break out there now.",
+          "                                     <--->",
+          "<ce>                      _giver_ is overwrought with",
+          "<ce>                    grief. %G3 cousin in ___cousin_",
+          "<ce>                             died recently."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 60,
+        "lines": [
+          "<ce>                 Did you hear? There's been a miracle",
+          "<ce>                          cure in ___cousin_!",
+          "                                     <--->",
+          "<ce>                      _giver_ has donated a large",
+          "<ce>                       sum of gold to the temple.",
+          "<ce>               I hear %g3 cousin was cured miraculously.",
+          "                                     <--->",
+          "<ce>                  Aren't you the %ra that cured that",
+          "<ce>                       poor person in ___cousin_?"
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 71,
+        "lines": [
+          "<ce>                  Bless you, %pcf. I will never forget",
+          "<ce>                    what you did for _cousin_ and I.",
+          "<ce>                    %G has fully recovered from the",
+          "<ce>                              Wizard Bane."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 77,
+        "lines": [
+          "<ce>                   %pcn! You foul the very air with",
+          "<ce>                  your breath. My cousin died because",
+          "<ce>                         of you. Out! Out! Out!"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 82,
+        "lines": [
+          "%qdt:",
+          " _giver_ of ___giver_ has",
+          " paid me to heal %g3 cousin,",
+          " _cousin_ of ___cousin_.",
+          " %G will most likely die in =questtime_ days.",
+          " I will receive another _gold2_ gold when I",
+          " have saved %g2."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 91,
+        "lines": [
+          "%qdt:",
+          " I have seen _cousin_. %G3 condition",
+          " is even worse than _giver_ said.",
+          " _cousin_ says that _healer_ in",
+          " ___healer_ might have a cure."
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 98,
+        "lines": [
+          "<ce>               I heard about %g3 disease. So far none of",
+          "<ce>                  the local healers has found a cure.",
+          "                                     <--->",
+          "<ce>                I did hear something of %g2. Something",
+          "<ce>             about a mysterious, fatal illness. Very sad.",
+          "                                     <--->",
+          "<ce>              Yes, I know the story. Sounds like Wizard",
+          "<ce>                              Bane to me.",
+          "                                     <--->",
+          "<ce>                No one knows what's wrong with %g2, but",
+          "<ce>                   they say %g has only days to live.",
+          "                                     <--->",
+          "<ce>             A most unfortunate case.  No one knows what's",
+          "<ce>             wrong with %g2. You might try a healer named",
+          "<ce>                    _healer_, who is said to have an",
+          "<ce>              encyclopedic knowledge of obscure diseases.",
+          "                                     <--->",
+          "<ce>               Oh, yes, the one with the wasting fever."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 118,
+        "lines": [
+          "<ce>                   Hello there. Yes, I have heard of",
+          "<ce>                     _cousin_ of ___cousin_ and %g3",
+          "<ce>               problem. Wizard Bane, it is. I should know.",
+          "<ce>             Anyway, I do have a special Talisman that will",
+          "<ce>               cure it. It can only be used once, though.",
+          "<ce>                 I'll sell it to you for 20 gold. Here",
+          "<ce>                     you go. Thank you very much."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 127,
+        "lines": [
+          "<ce>                   Hello there. Yes, I have heard of",
+          "<ce>                     _cousin_ of ___cousin_ and %g3",
+          "<ce>               problem. Wizard Bane, it is. I should know.",
+          "<ce>             Anyway, I do have a special Talisman that will",
+          "<ce>               cure it. It can only be used once, though.",
+          "<ce>             I'd sell it to you for 20 gold, but you don't",
+          "<ce>                   seem to have enough to pay for it."
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 136,
+        "lines": [
+          "%qdt:",
+          " I have bought a Talisman from _healer_ of",
+          " ___healer_ that cures Wizard Bane, the",
+          " disease that is afflicting _cousin_."
+        ]
+      },
+      {
+        "id": 1019,
+        "firstLine": 142,
+        "lines": [
+          "<ce>            You use the Talisman and it magically vanishes."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 145,
+        "lines": [
+          "<ce>              I feel so weak. I don't know what is wrong",
+          "<ce>                with me. My cousin _giver_ sent you to",
+          "<ce>               help me? Oh, thank you, thank you! I have",
+          "<ce>                 just heard of a healer named _healer_",
+          "<ce>                     in ___healer_ who may be able",
+          "<ce>                to help me. Please go to %g2 and bring",
+          "<ce>                  me the cure before it is too late!"
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 154,
+        "lines": [
+          "<ce>                   They say _healer_ specializes in",
+          "<ce>                       the most obscure diseases.",
+          "                                     <--->",
+          "<ce>              _healer_? Lives in ___healer_, I believe."
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 160,
+        "lines": [
+          "<ce>             _healer_'s the best healer around, they say.",
+          "<ce>                     You'll find %g2 in ___healer_.",
+          "                                     <--->",
+          "<ce>                 I've heard of _healer_ of ___healer_.",
+          "<ce>    %G has quite a reputation for healing the most difficult cases."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 188,
+        "lines": [
+          "Item _gold1_ gold range 5 to 25"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 189,
+        "lines": [
+          "Item _gold2_ gold range 10 to 50"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 190,
+        "lines": [
+          "Item talisman talisman"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 192,
+        "lines": [
+          "Person _giver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 193,
+        "lines": [
+          "Person _cousin_ group Resident4 remote anyInfo 1012 rumors 1012"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 194,
+        "lines": [
+          "Person _healer_ face 64 group Chemist remote anyInfo 1040 rumors 1041"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 196,
+        "lines": [
+          "Clock _questtime_ 00:00 0 flag 1 range 3 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 199,
+        "lines": [
+          "dialog link for person _healer_ item talisman ",
+          "start timer _questtime_ ",
+          "log 1010 step 0 ",
+          "get item _gold1_ ",
+          "pick one of _S.04_ _S.05_ ",
+          "make _gold1_ permanent ",
+          "talisman used do _S.06_ ",
+          "create npc _healer_ ",
+          "create npc _cousin_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 209,
+        "lines": [
+          "_questtime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 212,
+        "lines": [
+          "_S.01_ task:",
+          "clicked npc _cousin_ say 1030 ",
+          "log 1011 step 1 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 216,
+        "lines": [
+          "_S.02_ task:",
+          "when _S.01_ and _S.04_ ",
+          "make pc ill with Wizard_Fever "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 220,
+        "lines": [
+          "variable _S.03_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 221,
+        "lines": [
+          "variable _S.04_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 222,
+        "lines": [
+          "variable _S.05_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 223,
+        "lines": [
+          "_S.06_ task:",
+          "take talisman from pc saying 1019 ",
+          "cure Wizard_Fever "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 227,
+        "lines": [
+          "_S.07_ task:",
+          "toting talisman and _cousin_ clicked ",
+          "give pc _gold2_",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 233,
+        "lines": [
+          "_S.08_ task:",
+          "clicked npc _healer_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 236,
+        "lines": [
+          "_S.09_ task:",
+          "clicked _healer_ and at least 20 gold otherwise do _S.10_ ",
+          "log 1017 step 2 ",
+          "get item talisman ",
+          "say 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 242,
+        "lines": [
+          "_S.10_ task:",
+          "say 1015 ",
+          "clear _S.08_ _S.09_ _S.10_"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

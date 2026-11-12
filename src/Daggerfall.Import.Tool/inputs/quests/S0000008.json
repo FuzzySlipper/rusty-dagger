@@ -1,0 +1,1289 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/S0000008.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "c9efe4e46b6a27607385ab095ec93aebad2efe5228f658e10f1a50c3178c1044",
+    "byteLength": 18793
+  },
+  "document": {
+    "fileName": "S0000008.txt",
+    "questName": "S0000008",
+    "questNameLine": 1,
+    "displayName": "Who Gets the Totem",
+    "header": [
+      {
+        "name": "quest",
+        "value": "S0000008"
+      },
+      {
+        "name": "displayname",
+        "value": "Who Gets the Totem"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 6,
+        "lines": [
+          "<ce>                     %pcf, I'm glad you could meet",
+          "<ce>               me here. The Blades and your emperor need",
+          "<ce>                you again. You may or may not be aware",
+          "<ce>                that the Totem of Tiber Septim has been",
+          "<ce>               found. For a brief time Lord Woodborne of",
+          "<ce>                Wayrest had it. Where he got it from is",
+          "<ce>                still a mystery. The Blades mounted an",
+          "<ce>                assault upon Woodborne Hall to retrieve",
+          "<ce>                it. Although the Hall fell, many of our",
+          "<ce>                         number fell with it.",
+          "<ce>                                    ",
+          "<ce>                 We sacked the Woodborne Hall, but the",
+          "<ce>               Totem was gone. I have reason to believe",
+          "<ce>               that Gothryd has the Totem. The Blades no",
+          "<ce>                longer have the men to mount an assault",
+          "<ce>                 on Castle Daggerfall. You have shown",
+          "<ce>                yourself to be quite adept at getting in",
+          "<ce>               and out of these places. Would you go into",
+          "<ce>               Castle Daggerfall and retrieve the Totem",
+          "<ce>                           of Tiber Septim?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 28,
+        "lines": [
+          "<ce>                These are dark times, indeed. If Gothryd",
+          "<ce>                gets the Mantella as well, Tamriel will",
+          "<ce>                      be thrown into a civil war."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 33,
+        "lines": [
+          "<ce>                   I knew I could count on you, %pcf.",
+          "<ce>              The Totem is most likely in the Daggerfall",
+          "<ce>                  treasury. It is a huge room, quite",
+          "<ce>                unmistakable. I am leaving in a couple",
+          "<ce>                of days. I shall send word to you where",
+          "<ce>               you can meet me after you get the Totem.",
+          "<ce>                  Should you succeed, the Emperor has",
+          "<ce>                    instructed me to gift you with",
+          "<ce>                an artifact of great power and renown.",
+          "<ce>                             _artifact4_!"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 45,
+        "lines": [
+          "%qdt:",
+          " Lady Brisienna has asked me to bring her",
+          " the Totem of Tiber Septim. It is hidden",
+          " in the treasury of Castle Daggerfall.",
+          " She fears that assassins are after her,",
+          " and will send me a letter revealing her",
+          " current whereabouts when I escape the",
+          " castle. Whoever holds the Totem has the",
+          " potential to control mighty Numidium and",
+          " forge a new empire, just like Tiber Septim",
+          " did so long ago."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 58,
+        "lines": [
+          "%pcn,",
+          " ",
+          " Come at once to __tavern_ in",
+          " ____tavern_. I will be waiting at",
+          " _tavern_ for you. The fate",
+          " of the empire could be at stake.",
+          " ",
+          "<ce>                           -- Lady Brisienna"
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 68,
+        "lines": [
+          "<ce>                    A voice in your head intones...",
+          "<ce>                                    ",
+          "<ce>                     \"You are %pcn. You are my new",
+          "<ce>            host. Know this now and resolutely. You are not",
+          "<ce>            worthy to carry the Totem of Tiber Septim. Only",
+          "<ce>             those of his blood line may carry me. I will",
+          "<ce>            give you a year and a day to accomplish this.\""
+        ]
+      },
+      {
+        "id": 1017,
+        "firstLine": 77,
+        "lines": [
+          "%qdt:",
+          " The Totem of Tiber Septim spoke to me in my",
+          " head! It claims that only those with royal",
+          " blood can lay claim to the Totem. It has given",
+          " me one year and one day to decide who shall",
+          " be its true wielder."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 85,
+        "lines": [
+          "%pcn,",
+          " ",
+          " You are on a quest to retrieve the Totem of",
+          " Tiber Septim. Do not deny it. My spies have",
+          " confirmed this. The Totem is not for commoners,",
+          " and you cannot use it. Bring the Totem to me",
+          " and I will pay you 100,000 gold pieces.",
+          " It is a king's ransom by any measure.",
+          " ",
+          " You should be warned, neither Wayrest nor",
+          " Daggerfall are loyal to the throne. I am the",
+          " only regent on the Iliac Bay that can be trusted.",
+          " The others will only use it to destroy me.",
+          " ",
+          "<ce>                               Akorithi",
+          "<ce>                           Queen of Sentinel"
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 103,
+        "lines": [
+          "Noble %pcf,",
+          " ",
+          " My ears have picked up rumors that you are",
+          " searching for the Totem of Tiber Septim. I",
+          " too have hunted for this wondrous artifact",
+          " for many years. Should you find it, I would",
+          " pay you a healthy ransom, enough to buy your",
+          " own ship. I will match or exceed any price",
+          " that Gothryd or Akorithi might offer. Never",
+          " forget your real friends.",
+          " ",
+          "<ce>                             King Eadwyre,",
+          "<ce>                              of Wayrest"
+        ]
+      },
+      {
+        "id": 1022,
+        "firstLine": 118,
+        "lines": [
+          "%pcn,",
+          " ",
+          " You are not orcish. How could you possibly",
+          " understand what it is like? My people are",
+          " treated like barbarians. Slaughtered upon",
+          " sight. Is it so unusual that we respond in",
+          " kind? Violence begets violence.",
+          " ",
+          " I aspire to raise my race from the mire. I",
+          " will bring them to equal standing with the",
+          " other races of Tamriel. To do this I must",
+          " have the Totem of Tiber Septim. I will not",
+          " insult you by promising that no blood will",
+          " be shed. I do swear by my crown and by my",
+          " heirs I shall not attempt to hold sway",
+          " beyond the borders of Orsinium. My goal is",
+          " not to conquer Tamriel, but to create the",
+          " orcish homeland. I am in possession of an",
+          " artifact that I am sure you would want to",
+          " possess. It is yours if you but give me",
+          " the Totem of Tiber Septim.",
+          " ",
+          "<ce>                     -- Gortwog, Warlord and King"
+        ]
+      },
+      {
+        "id": 1023,
+        "firstLine": 143,
+        "lines": [
+          "%pcn,",
+          " ",
+          " You will soon have the Totem of Tiber Septim",
+          " in your hands. It is foreseen in the stars,",
+          " and I have read them. Know you this. All of",
+          " mortal stature are filled with pride and greed.",
+          " To give the Totem to any of them is to let",
+          " loose mortal vanity upon this world. They will",
+          " destroy the very thing they covet.",
+          "    I have no earthly desires. I have no mortal",
+          " pride, no petty greed. Only one such as I",
+          " can wield the Totem safely, for I would take",
+          " it into the Aetherius and leave behind this",
+          " earthly shell. So long as the Totem exists,",
+          " it is a danger to all on Tamriel. Bring me",
+          " the Totem and I will safeguard the world.",
+          "    I will not offer you gold or gems. I will",
+          " offer you what only I can give. Fame. Your",
+          " reputation throughout Tamriel will soar.",
+          " ",
+          "<ce>                       Lord of the Necromancers,",
+          "<ce>                           King of the Worms"
+        ]
+      },
+      {
+        "id": 1024,
+        "firstLine": 167,
+        "lines": [
+          "%pcn,",
+          " ",
+          " Centuries ago, Tiber Septim ruled the land",
+          " and forged an empire with great Numidium. The",
+          " secret of Numidium's power lies in its heart,",
+          " carried within the Mantella. It is the heart",
+          " of Tiber Septim's battlemage. It is my heart. It",
+          " is my Mantella. It is my Totem. It belongs to",
+          " me, and to none other.",
+          " ",
+          " I have won and lost an empire. I have no desire",
+          " to tamper further with mortal affairs. I have in",
+          " my possession the _artifact2_, one of the",
+          " world's greatest artifacts. You may have it",
+          " in exchange for the Totem.",
+          " ",
+          " My most loyal agent will await your arrival in",
+          " __temple_ of ____temple_,",
+          " at _temple_.",
+          " ",
+          "<ce>                               Underking"
+        ]
+      },
+      {
+        "id": 1025,
+        "firstLine": 190,
+        "lines": [
+          "%pcn,",
+          " ",
+          " If you are reading this, you must have gotten",
+          " the Totem and escaped from the dungeons of",
+          " Castle Daggerfall. I am in __newplace_,",
+          " of ____newplace_ at _newplace_.",
+          " Bring the Totem there as soon as possible.",
+          "<ce> ",
+          "                      -- Lady Brisienna"
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 201,
+        "lines": [
+          "<ce>            A page dressed in the livery of Sentinel hands",
+          "<ce>                you a letter, and silently walks away."
+        ]
+      },
+      {
+        "id": 1031,
+        "firstLine": 205,
+        "lines": [
+          "<ce>             A portly man bearing the standard of Wayrest",
+          "<ce>               approaches you with a letter. His somber",
+          "<ce>              expression never changes, and he speaks not",
+          "<ce>             a word. He leaves as silently as he arrived."
+        ]
+      },
+      {
+        "id": 1032,
+        "firstLine": 211,
+        "lines": [
+          "<ce>             A heavily-cloaked figure shuffles toward you.",
+          "<ce>             As you prepare to defend yourself, a gnarled",
+          "<ce>            green hand shoots forth with a letter. Stunned,",
+          "<ce>              you do nothing as the figure shuffles away."
+        ]
+      },
+      {
+        "id": 1033,
+        "firstLine": 217,
+        "lines": [
+          "<ce>            A hand grips your wrist from behind. Spinning,",
+          "<ce>             you open your mouth to shout for the guards.",
+          "<ce>           A skeletal hand stuffs a letter into your mouth.",
+          "<ce>            The heavily-robed skeleton releases your wrist",
+          "<ce>             and turns away, unnoticed by other passersby."
+        ]
+      },
+      {
+        "id": 1034,
+        "firstLine": 224,
+        "lines": [
+          "<ce>              A letter floats through the air toward you.",
+          "<ce>              Strangely, nobody else seems to notice it.",
+          "<ce>                The letter tucks itself into your pack."
+        ]
+      },
+      {
+        "id": 1040,
+        "firstLine": 229,
+        "lines": [
+          "<ce>              Hand over the Totem, or we'll slaughter you",
+          "<ce>             where you stand. Well? Are you going to give",
+          "<ce>                it to us, or make us take it from you?"
+        ]
+      },
+      {
+        "id": 1041,
+        "firstLine": 234,
+        "lines": [
+          "<ce>                   Then we'll just have to take it."
+        ]
+      },
+      {
+        "id": 1042,
+        "firstLine": 237,
+        "lines": [
+          "<ce>                 Coward. Now get lost. Oh yeah. I was",
+          "<ce>                    told you should go see Nalfuga,",
+          "<ce>                           whoever that is."
+        ]
+      },
+      {
+        "id": 1043,
+        "firstLine": 242,
+        "lines": [
+          "<ce>               You don't even have it?! Now I'm going to",
+          "<ce>                   kill you just for the fun of it."
+        ]
+      },
+      {
+        "id": 1050,
+        "firstLine": 246,
+        "lines": [
+          "<ce>             The Totem of Tiber Septim! It is a priceless",
+          "<ce>             artifact. I shall guard it well and keep the",
+          "<ce>              rebellious powers of Daggerfall and Wayrest",
+          "<ce>                 in check. Take your reward, %pcf. You",
+          "<ce>              have earned it tenfold. You must keep your",
+          "<ce>              keen eyes open for the Mantella. Any rumors",
+          "<ce>              must be hunted down with vigor. Without the",
+          "<ce>                    Mantella, the Totem is useless."
+        ]
+      },
+      {
+        "id": 1051,
+        "firstLine": 256,
+        "lines": [
+          "<ce>              Fool! Did you really think I would pay you",
+          "<ce>                     for the Totem? Kill the %ra!"
+        ]
+      },
+      {
+        "id": 1052,
+        "firstLine": 260,
+        "lines": [
+          "<ce>               A nation of Orcs is within my grasp. You",
+          "<ce>               have given my people a chance at freedom,",
+          "<ce>                     %pcn. Should you ever recover",
+          "<ce>                the Mantella itself, I shall reward you",
+          "<ce>                          thrice over for it."
+        ]
+      },
+      {
+        "id": 1053,
+        "firstLine": 267,
+        "lines": [
+          "<ce>             I see you have come to your senses. I should",
+          "<ce>           have you slain, but I have more honor than that.",
+          "<ce>           Instead I shall reward you. Here, take _goldgoth_",
+          "<ce>            gold pieces for your turnabout loyalty. Deliver",
+          "<ce>             the Mantella to me, and my trust in you will",
+          "<ce>                        be once again restored."
+        ]
+      },
+      {
+        "id": 1054,
+        "firstLine": 275,
+        "lines": [
+          "<ce>               The Totem! At last it is within my grasp.",
+          "<ce>                   You have done well, %pcf. I shall",
+          "<ce>                remember this when I have transformed.",
+          "<ce>               Search now for the Mantella. Without it,",
+          "<ce>               the Totem is worthless. In the mean time,",
+          "<ce>                   enjoy the adoration of the world."
+        ]
+      },
+      {
+        "id": 1055,
+        "firstLine": 283,
+        "lines": [
+          "<ce>                The Underking will be most pleased. He",
+          "<ce>               has searched many lifetimes for this lost",
+          "<ce>             item. I have been instructed to give you this",
+          "<ce>             object. Use it wisely. Should you ever locate",
+          "<ce>               the Mantella, the Underking would be most",
+          "<ce>                             appreciative."
+        ]
+      },
+      {
+        "id": 1056,
+        "firstLine": 291,
+        "lines": [
+          "<ce>             Your Emperor will be most grateful. The Totem",
+          "<ce>              could have started a civil war in the wrong",
+          "<ce>                  hands. Thank you %pcf. Now you must",
+          "<ce>               away to Nulfaga. She holds the key to the",
+          "<ce>             Mantella. Free the Mantella, and the Emperor",
+          "<ce>              controls Great Numidium through the Totem."
+        ]
+      },
+      {
+        "id": 1057,
+        "firstLine": 299,
+        "lines": [
+          "<ce>   You check among your belongings",
+          "<ce>   and find that the Totem is gone."
+        ]
+      },
+      {
+        "id": 1060,
+        "firstLine": 303,
+        "lines": [
+          "<ce>               The unmistakable voice of Nulfaga speaks",
+          "<ce>              softly in your head, \"I see that the Totem",
+          "<ce>              has found its way into the hands of someone",
+          "<ce>               with royal blood. I think it is time you",
+          "<ce>               paid me another visit here in Shedungent",
+          "<ce>                   %pcn. Your work is not yet done.\""
+        ]
+      },
+      {
+        "id": 1061,
+        "firstLine": 311,
+        "lines": [
+          "%qdt:",
+          " _nulfaga_ has summoned me to ___shedungent_",
+          " in the ____shedungent_",
+          " regarding the matter of the Totem."
+        ]
+      },
+      {
+        "id": 1070,
+        "firstLine": 319,
+        "lines": [
+          "<ce>               A cheerful young woman hands you a letter",
+          "<ce>                    and then walks away, whistling."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 324,
+        "lines": [
+          "Item _letter_ letter used 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 325,
+        "lines": [
+          "Item _totem_ totem"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 326,
+        "lines": [
+          "Item totemLetter1 letter used 1020"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 327,
+        "lines": [
+          "Item _letter4_ letter used 1022"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 328,
+        "lines": [
+          "Item totemLetter3 letter used 1024"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 329,
+        "lines": [
+          "Item totemLetter4 letter used 1023"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 330,
+        "lines": [
+          "Item totemLetter5 letter used 1021"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 331,
+        "lines": [
+          "Item totemReward1 gold range 25000 to 25000"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 332,
+        "lines": [
+          "Item _goldgoth_ gold range 10000 to 10000"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 333,
+        "lines": [
+          "Item _artifact2_ artifact Necromancers_Amulet"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 334,
+        "lines": [
+          "Item totemLetter6 letter used 1025"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 335,
+        "lines": [
+          "Item _artifact4_ artifact Warlocks_Ring"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 336,
+        "lines": [
+          "Item _I.12_ artifact Chrysamere"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 337,
+        "lines": [
+          "Item totemReward2 gold range 25000 to 25000"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 338,
+        "lines": [
+          "Item totemReward3 gold range 25000 to 25000"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 339,
+        "lines": [
+          "Item totemReward4 gold range 25000 to 25000"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 341,
+        "lines": [
+          "Person Brisienna face 1 named Lady_Brisienna"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 342,
+        "lines": [
+          "Person _Gothryd_ named King_Gothryd atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 343,
+        "lines": [
+          "Person Eadwyre named King_Eadwyre atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 344,
+        "lines": [
+          "Person _Akorithi_ named Queen_Akorithi atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 345,
+        "lines": [
+          "Person Gortwog named Gortwog atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 346,
+        "lines": [
+          "Person _Underking_ face 1 faction Agents_of_The_Underking remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 347,
+        "lines": [
+          "Person _Kingoworms_ named King_of_Worms atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 348,
+        "lines": [
+          "Person _nulfaga_ named Nulfaga atHome"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 350,
+        "lines": [
+          "Place _daggerfall_ permanent DaggerfallCastle2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 351,
+        "lines": [
+          "Place _tavern_ remote tavern"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 352,
+        "lines": [
+          "Place _temple_ remote temple"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 353,
+        "lines": [
+          "Place _newplace_ remote house2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 354,
+        "lines": [
+          "Place _shedungent_ permanent Shedungent2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 356,
+        "lines": [
+          "Clock _brisiennafirstletter_ 7.00:00 14.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 357,
+        "lines": [
+          "Clock _delay_ 00:02 0 flag 1 range 0 1"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 358,
+        "lines": [
+          "Clock _oneyear_ 366.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 359,
+        "lines": [
+          "Clock _akorithiletter_ 7.00:00 14.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 360,
+        "lines": [
+          "Clock _eadwyreletter_ 7.00:00 14.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 361,
+        "lines": [
+          "Clock _orcletter_ 3.00:00 9.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 362,
+        "lines": [
+          "Clock _kowletter_ 7.00:00 14.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 363,
+        "lines": [
+          "Clock _underkingletter_ 3.00:00 7.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 364,
+        "lines": [
+          "Clock _brisiennasecondletter_ 7.00:00 14.00:00"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 366,
+        "lines": [
+          "Foe _knights_ is 3 Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 367,
+        "lines": [
+          "Foe _mage_ is Battle_mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 370,
+        "lines": [
+          "start timer _brisiennafirstletter_ ",
+          "have _totem_ set _holdtotem_ ",
+          "pc at _daggerfall_ set _indaggerfall_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 374,
+        "lines": [
+          "_brisiennafirstletter_ task:",
+          "give pc _letter_ notify 1070 ",
+          "place npc Brisienna at _tavern_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 378,
+        "lines": [
+          "_meetladyb_ task:",
+          "clicked npc Brisienna ",
+          "prompt QuestorOffer yes _brisyes_ no _brisno_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 382,
+        "lines": [
+          "_brisyes_ task:",
+          "place item _totem_ at _daggerfall_ marker 5",
+          "log 1010 step 0 ",
+          "say AcceptQuest ",
+          "add Brisienna as questor "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 388,
+        "lines": [
+          "_brisno_ task:",
+          "say RefuseQuest ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 392,
+        "lines": [
+          "_clicktotem_ task:",
+          "clicked item _totem_ ",
+          "start timer _delay_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 396,
+        "lines": [
+          "_delay_ task:",
+          "start timer _oneyear_ ",
+          "log 1017 step 1 ",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 401,
+        "lines": [
+          "variable _indaggerfall_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 402,
+        "lines": [
+          "_activatechoice_ task:",
+          "when not _indaggerfall_ and _clicktotem_ ",
+          "create foe _knights_ every 1300 minutes 100 times with 100% success ",
+          "start timer _brisiennasecondletter_ ",
+          "repute with _Akorithi_ exceeds 5 do _happyakor_ ",
+          "repute with Eadwyre exceeds 15 do _happyead_ ",
+          "repute with Gortwog exceeds 10 do _happywog_ ",
+          "repute with _Underking_ exceeds 0 do _happyunk_ ",
+          "repute with _Kingoworms_ exceeds 0 do _happykow_ ",
+          "add Gortwog as questor ",
+          "add _Akorithi_ as questor ",
+          "add _Gothryd_ as questor ",
+          "add Eadwyre as questor ",
+          "place npc Brisienna at _newplace_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 417,
+        "lines": [
+          "_oneyear_ task:",
+          "take _totem_ from pc ",
+          "say 1057"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 421,
+        "lines": [
+          "_happyakor_ task:",
+          "start timer _akorithiletter_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 424,
+        "lines": [
+          "_akorithiletter_ task:",
+          "give pc totemLetter1 notify 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 427,
+        "lines": [
+          "_akorithirevenge_ task:",
+          "when not _happyakor_ and _activatechoice_ ",
+          "start quest 100 100 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 431,
+        "lines": [
+          "_happyead_ task:",
+          "start timer _eadwyreletter_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 434,
+        "lines": [
+          "_eadwyreletter_ task:",
+          "give pc totemLetter5 notify 1031 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 437,
+        "lines": [
+          "_eadwyrerevenge_ task:",
+          "when not _happyead_ and _activatechoice_ ",
+          "start quest 101 101 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 441,
+        "lines": [
+          "_happywog_ task:",
+          "start timer _orcletter_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 444,
+        "lines": [
+          "_happyunk_ task:",
+          "start timer _underkingletter_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 447,
+        "lines": [
+          "_happykow_ task:",
+          "start timer _kowletter_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 450,
+        "lines": [
+          "_orcletter_ task:",
+          "give pc _letter4_ notify 1032 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 453,
+        "lines": [
+          "_kowletter_ task:",
+          "give pc totemLetter4 notify 1033 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 456,
+        "lines": [
+          "_underkingletter_ task:",
+          "give pc totemLetter3 notify 1034 ",
+          "place npc _Underking_ at _temple_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 460,
+        "lines": [
+          "_gortwogrevenge_ task:",
+          "when not _happywog_ and _activatechoice_ ",
+          "start quest 102 102 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 464,
+        "lines": [
+          "_injknight_ task:",
+          "injured _knights_ ",
+          "prompt 1040 yes _surrenderchoice_ no _resistsurrender_  "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 468,
+        "lines": [
+          "_kowrevenge_ task:",
+          "when not _happykow_ and _activatechoice_ ",
+          "start quest 103 103 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 472,
+        "lines": [
+          "_underkingrevenge_ task:",
+          "when not _happyunk_ and _activatechoice_ ",
+          "start quest 104 104 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 476,
+        "lines": [
+          "variable _surrenderchoice_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 477,
+        "lines": [
+          "_resistsurrender_ task:",
+          "say 1041 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 480,
+        "lines": [
+          "variable _holdtotem_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 482,
+        "lines": [
+          "_completesurrender_ task:",
+          "when _holdtotem_ and _surrenderchoice_ ",
+          "start task _giventodaggerfall_",
+          "start task _S.31_ ",
+          "take _totem_ from pc",
+          "say 1042"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 489,
+        "lines": [
+          "variable _giventodaggerfall_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 491,
+        "lines": [
+          "_invalidsurrender_ task:",
+          "when _surrenderchoice_ and not _holdtotem_ and not _giventodaggerfall_",
+          "say 1043 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "global",
+        "firstLine": 495,
+        "lines": [
+          "AkorithiGotTotem _S.30_",
+          "toting _totem_ and _Akorithi_ clicked ",
+          "get item totemReward4 ",
+          "get item totemReward3 ",
+          "get item totemReward2 ",
+          "get item totemReward1 ",
+          "say 1050 ",
+          "make totemReward3 permanent ",
+          "make totemReward2 permanent ",
+          "make totemReward4 permanent ",
+          "make totemReward1 permanent "
+        ],
+        "global": 4
+      },
+      {
+        "kind": "global",
+        "firstLine": 507,
+        "lines": [
+          "GothrydGotTotem _S.31_"
+        ],
+        "global": 1
+      },
+      {
+        "kind": "global",
+        "firstLine": 508,
+        "lines": [
+          "BrisiennaGotTotem _S.32_",
+          "toting _totem_ and Brisienna clicked ",
+          "get item _artifact4_ ",
+          "say 1056 ",
+          "make _artifact4_ permanent "
+        ],
+        "global": 8
+      },
+      {
+        "kind": "global",
+        "firstLine": 514,
+        "lines": [
+          "KingOfWormsGotTotem _S.33_",
+          "toting _totem_ and _Kingoworms_ clicked ",
+          "start quest 106 106 ",
+          "say 1054 "
+        ],
+        "global": 2
+      },
+      {
+        "kind": "global",
+        "firstLine": 519,
+        "lines": [
+          "GortwogGotTotem _S.34_",
+          "toting _totem_ and Gortwog clicked ",
+          "get item _I.12_ ",
+          "say 1052 ",
+          "make _I.12_ permanent "
+        ],
+        "global": 3
+      },
+      {
+        "kind": "global",
+        "firstLine": 525,
+        "lines": [
+          "UnderkingGotTotem _S.35_",
+          "toting _totem_ and _Underking_ clicked ",
+          "get item _artifact2_ ",
+          "say 1055 ",
+          "make _artifact2_ permanent "
+        ],
+        "global": 6
+      },
+      {
+        "kind": "global",
+        "firstLine": 531,
+        "lines": [
+          "EadwyreGotTotem _S.36_",
+          "toting _totem_ and Eadwyre clicked ",
+          "create foe _mage_ every 0 minutes 5 times with 100% success ",
+          "say 1051 "
+        ],
+        "global": 7
+      },
+      {
+        "kind": "task",
+        "firstLine": 538,
+        "lines": [
+          "_brisiennasecondletter_ task:",
+          "give pc totemLetter6 notify 1070 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 541,
+        "lines": [
+          "_deliveredtotem_ task:",
+          "when _S.30_ or _S.31_ or _S.32_ or _S.33_ or _S.34_ or _S.35_ or _S.36_",
+          "clear _holdtotem_",
+          "stop timer _oneyear_",
+          "remove foe _knights_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 551,
+        "lines": [
+          "_advancequest_ task:",
+          "when _deliveredtotem_ and _activatechoice_ and _clicknulfaga_",
+          "start quest 16 16 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 557,
+        "lines": [
+          "_clicknulfaga_ task:",
+          "clicked npc _nulfaga_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 560,
+        "lines": [
+          "_clearnulfaga_ task:",
+          "when _clicknulfaga_ and not _deliveredtotem_",
+          "clear _clicknulfaga_ _clearnulfaga_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 564,
+        "lines": [
+          "_totemspeaks_ task:",
+          "when _deliveredtotem_ and _activatechoice_ ",
+          "say 1060 ",
+          "log 1061 step 1",
+          "reveal _shedungent_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 570,
+        "lines": [
+          "_questcleanup_ task:",
+          "when _oneyear_ or _advancequest_ ",
+          "drop _Akorithi_ as questor ",
+          "drop Brisienna as questor ",
+          "drop Eadwyre as questor ",
+          "drop Gortwog as questor ",
+          "drop _Gothryd_ as questor ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 579,
+        "lines": [
+          "_givetogothryd_ task:",
+          "toting _totem_ and _Gothryd_ clicked",
+          "    get item _goldgoth_",
+          "    say 1053 ",
+          "    make _goldgoth_ permanent  ",
+          "start task _S.31_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

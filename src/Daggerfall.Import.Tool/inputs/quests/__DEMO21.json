@@ -1,0 +1,77 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/__DEMO21.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "9dd93c8e81a21d4f4ed88fd39e26c4b22a2d63e9e7e62dac64540ce150751b9c",
+    "byteLength": 421
+  },
+  "document": {
+    "fileName": "__DEMO21.txt",
+    "questName": "__DEMO21",
+    "questNameLine": 3,
+    "displayName": "",
+    "header": [
+      {
+        "name": "quest",
+        "value": "__DEMO21"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1010,
+        "firstLine": 8,
+        "lines": [
+          "%qdt",
+          "    Survive the wave of rats until they flee!"
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 12,
+        "lines": [
+          "The rats all scurry back to their holes!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "foe",
+        "firstLine": 18,
+        "lines": [
+          "Foe _rat_ is Giant_rat"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 19,
+        "lines": [
+          "Clock _timer1_ 0.0:15"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 22,
+        "lines": [
+          "log 1010 step 0",
+          "create foe _rat_ every 2 minutes indefinitely with 100% success ",
+          "start timer _timer1_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 26,
+        "lines": [
+          "_timer1_ task:",
+          "say 1030",
+          "remove foe _rat_",
+          "end quest"
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

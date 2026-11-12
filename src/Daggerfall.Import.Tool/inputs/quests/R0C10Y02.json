@@ -1,0 +1,405 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/R0C10Y02.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "57eb2e3b7c96aa54cb0521cbbf025f86ad97057fb921b1fa122181cb2172d9d2",
+    "byteLength": 6269
+  },
+  "document": {
+    "fileName": "R0C10Y02.txt",
+    "questName": "R0C10Y02",
+    "questNameLine": 8,
+    "displayName": "Gold Smuggling",
+    "header": [
+      {
+        "name": "quest",
+        "value": "R0C10Y02"
+      },
+      {
+        "name": "displayname",
+        "value": "Gold Smuggling"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                 I need someone to bring an item to a",
+          "<ce>                    contact of mine in ___contact_.",
+          "<ce>               You will receive an item in return. If you",
+          "<ce>             bring that item back to me, I will be happy to",
+          "<ce>                 reward you with _reward_ gold pieces.",
+          "<ce>                             Do you agree?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 21,
+        "lines": [
+          "<ce>                No? What a shame. I was prepared to be",
+          "<ce>                            quite generous."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 25,
+        "lines": [
+          "<ce>                   Very good. Take this bar of gold",
+          "<ce>                  and bring it to a certain =contact_",
+          "<ce>                   called _contact_ in a place called",
+          "<ce>                       __contact_ in ___contact_.",
+          "<ce>             You will need to move quickly. If you are not",
+          "<ce>                   at __contact_ in =1stparton_ days,",
+          "<ce>                       _contact_ will leave, and",
+          "<ce>               none of us will be happy. Especially you.",
+          "<ce>                   Very well, good luck to you, %pcf."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                You either haven't started yet or else",
+          "<ce>              you've come to apologize your failure. Have",
+          "<ce>                      you, %pcf? Well, I am indeed",
+          "<ce>                disappointed, gravely disappointed. Your",
+          "<ce>               ineptitude has complicated matters. Well,",
+          "<ce>              I suppose I'll know better next time, shan't",
+          "<ce>                      I? Get a move on, %pcf. Now."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 45,
+        "lines": [
+          "<ce>                   Excellent, %pcf, you've returned",
+          "<ce>                   with my _item2_ as promised. Your",
+          "<ce>             valor and bravery are great indeed. I am sure",
+          "<ce>             we will appreciate your further service in the",
+          "<ce>                        near future. Thank you."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 52,
+        "lines": [
+          "<ce>   There was this =contact_ here recently asking if I'd seen a %ra.",
+          "                                     <--->",
+          "<ce>   Some =contact_ was looking for a %ra with a _item1_ a while back."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 57,
+        "lines": [
+          "<ce>              Well, _questgiver_ is, I've heard, furious",
+          "<ce>                         at some %ra mercenary.",
+          "                                     <--->",
+          "<ce>             _questgiver_ is still relying on mercenaries",
+          "<ce>                    and I've heard %g's been burned."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 64,
+        "lines": [
+          "<ce>               I hear that _questgiver_ finally got some",
+          "<ce>                           _item2_ %g needed.",
+          "                                     <--->",
+          "<ce>        _questgiver_ has been singing the praises of a certain",
+          "<ce>                             %ra mercenary."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 71,
+        "lines": [
+          "Hello again, my young friend. I haven't forgotten your services.",
+          "<--->",
+          "Ah, %pcf. It's a pleasure to see you again."
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                       Why, it's the inept %ra.",
+          "<ce>               You have a lot of nerve coming back here.",
+          "                                     <--->",
+          "<ce>                      Well, if it isn't the inept",
+          "<ce>                      courier. Why don't you crawl",
+          "<ce>                             away now, hmm?"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 85,
+        "lines": [
+          "%qdt:",
+          "_questgiver_",
+          " of ___questgiver_ sent me to a",
+          " contact _contact_ of ___contact_",
+          " to deliver a bar of gold to this",
+          " =contact_'s base in __contact_.",
+          " The gold needs to be in %g3 hands in",
+          " =1stparton_ days for me to get my due",
+          " reward."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 96,
+        "lines": [
+          "%qdt:",
+          "I delivered the gold to",
+          " _contact_, who gave me a _item2_",
+          " to take back to _questgiver_."
+        ]
+      },
+      {
+        "id": 1020,
+        "firstLine": 102,
+        "lines": [
+          "<ce>                      That gold bar must be quite",
+          "<ce>                       heavy. How about I relieve",
+          "<ce>                      you of it? Just hand it over",
+          "<ce>                          and I'll let you go."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 108,
+        "lines": [
+          "<ce>                     Such a brave little courier.",
+          "<ce>                      I'll be sure to tell all my",
+          "<ce>                      friends how helpful you can",
+          "<ce>                              be to them."
+        ]
+      },
+      {
+        "id": 1030,
+        "firstLine": 114,
+        "lines": [
+          "<ce>                     Ah, you must be the courier.",
+          "<ce>                    Excellent, excellent.  Now, take",
+          "<ce>                   this _item2_ back to _questgiver_",
+          "<ce>            immediately, and %g will reward you as promised.",
+          "<ce>                  A pleasure doing business with you,",
+          "<ce>                                 %pcf!"
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 140,
+        "lines": [
+          "Item _reward_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 141,
+        "lines": [
+          "Item _item1_ gold_bar"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 142,
+        "lines": [
+          "Item _item2_ magic_item"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 144,
+        "lines": [
+          "Person _questgiver_ face 76 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 145,
+        "lines": [
+          "Person _contact_ face 80 group Local_3.0 remote"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 148,
+        "lines": [
+          "Clock _1stparton_ 00:00 0 flag 1 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 149,
+        "lines": [
+          "Clock _2ndparton_ 00:00 0 flag 1 range 1 4"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 151,
+        "lines": [
+          "Foe _thief_ is Spellsword"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 154,
+        "lines": [
+          "start timer _1stparton_ ",
+          "log 1010 step 0 ",
+          "get item _item1_ ",
+          "create npc _contact_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 159,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "toting _item2_ and _questgiver_ clicked ",
+          "give pc _reward_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 164,
+        "lines": [
+          "_queston_ task:",
+          "when _1stparton_ and not _npcclicked_ ",
+          "when _2ndparton_ ",
+          "change repute with _questgiver_ by -20 ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 170,
+        "lines": [
+          "variable _qgclicked_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 171,
+        "lines": [
+          "_npcclicked_ task:",
+          "toting _item1_ and _contact_ clicked ",
+          "start timer _2ndparton_ ",
+          "log 1011 step 1 ",
+          "get item _item2_ saying 1030 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 177,
+        "lines": [
+          "until _npcclicked_ performed:",
+          "create foe _thief_ every 5 minutes 5 times with 25% success "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 180,
+        "lines": [
+          "variable _1stparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 181,
+        "lines": [
+          "variable _pchasitem1_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 182,
+        "lines": [
+          "variable _pchasitem2_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 183,
+        "lines": [
+          "yes task:",
+          "have _item1_ set _S.09_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 186,
+        "lines": [
+          "variable _no_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 187,
+        "lines": [
+          "_S.09_ task:",
+          "give item _item1_ to _thief_",
+          "say 1021",
+          "restrain foe _thief_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 193,
+        "lines": [
+          "_S.10_ task:",
+          "injured _thief_ ",
+          "prompt 1020 yes yes no _no_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 197,
+        "lines": [
+          "variable _2ndparton_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 198,
+        "lines": [
+          "_S.12_ task:",
+          "when _queston_ or _pcgetsgold_ ",
+          "make _item2_ permanent ",
+          "make _item1_ permanent "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

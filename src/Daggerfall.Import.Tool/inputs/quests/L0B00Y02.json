@@ -1,0 +1,357 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/L0B00Y02.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "9582c049f09f6002a10c560d6816f71c8c554b048e030c1d379f983d77dba9e1",
+    "byteLength": 6039
+  },
+  "document": {
+    "fileName": "L0B00Y02.txt",
+    "questName": "L0B00Y02",
+    "questNameLine": 9,
+    "displayName": "Disagreeable Competition",
+    "header": [
+      {
+        "name": "quest",
+        "value": "L0B00Y02"
+      },
+      {
+        "name": "displayname",
+        "value": "Disagreeable Competition"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 14,
+        "lines": [
+          "<ce>                 There is another assassination group",
+          "<ce>                      budding in %reg, which must",
+          "<ce>                 be crushed before it can bloom. I want",
+          "<ce>                 you to move in, account the assassin,",
+          "<ce>                 and then the man or woman who ordered",
+          "<ce>                  the assassination. You do have time",
+          "<ce>                        for this endeavor, yes?",
+          "                                     <--->",
+          "<ce>                 The Dark Brotherhood has been the sole",
+          "<ce>                 assassin's guild in Tamriel since the",
+          "<ce>                   Second Era. We intend to keep that",
+          "<ce>                monopoly. There is a freelance assassin",
+          "<ce>                who has been flaunting us for some time,",
+          "<ce>                         but =assassin_'s luck",
+          "<ce>                  has ended. I want you to teach %g2 a",
+          "<ce>                 permanent lesson, and then repeat the",
+          "<ce>                    lesson for %g3 foolish employer."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 33,
+        "lines": [
+          "<ce>                    No? How strange and troubling."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 36,
+        "lines": [
+          "<ce>                   Good. Now then, we know that the",
+          "<ce>                         assassin, =assassin_,",
+          "<ce>                  has pursued %g3 quarry to a dungeon",
+          "<ce>                         called ___mondung_. If",
+          "<ce>                  you have not found any clues to the",
+          "<ce>                  employer's whereabouts, return here.",
+          "<ce>                   I would, of course, prefer for you",
+          "<ce>                         to account =assassin_",
+          "<ce>                   and %g3 employer both, but I'd be",
+          "<ce>                    reasonably satisfied with merely",
+          "<ce>                    the freelancer's death. Take no",
+          "<ce>                     longer than =queston_ days for",
+          "<ce>                           both accountings."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 51,
+        "lines": [
+          "<ce>                       Excellent, %pct. We would",
+          "<ce>               have been happy with just the termination",
+          "<ce>                       of =assassin_, but now the",
+          "<ce>                        acquaintances of =boss_",
+          "<ce>                will know that the Dark Brotherhood does",
+          "<ce>                 not take well to amateur competition."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 59,
+        "lines": [
+          "That =assassin_ has been a freelance assassin in %reg for years now.",
+          "<--->",
+          "=assassin_ isn't the best in the business, but %g has a lot of enthusiasm."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 64,
+        "lines": [
+          "=assassin_ just proves you can work outside of the Brotherhood.",
+          "<--->",
+          "Apparently the Brotherhood can't stop all the freelancers in Tamriel."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 69,
+        "lines": [
+          "=boss_ thought %g could save a few gold pieces by hiring =assassin_ ... idiot.",
+          "<--->",
+          "It just doesn't pay to use assassins other than the Brotherhood, ask =boss_."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 74,
+        "lines": [
+          "And how are you, slayer of the rogue _assassin_?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 77,
+        "lines": [
+          "<ce>             You're that worthless thug who can't account",
+          "<ce>                 a bumbling freelancer like =assassin_.",
+          "<ce>                  Why should I waste my breath on you?"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 82,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of the Dark",
+          " Brotherhood in ___qgiver_",
+          " has me paying a visit on =assassin_,",
+          " a competing assassin, where %g is completing a contract",
+          " in ___mondung_. If I can find any",
+          " clues about =assassin_'s employer,",
+          " I am to account him or her also.",
+          " Either way, the whole bloody business needs",
+          " to be done in =queston_ days."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 94,
+        "lines": [
+          "After slaying %n,",
+          " go to ___stronghold_ in",
+          " the wilderness of %reg",
+          " for your reward.",
+          " ",
+          " ",
+          " =boss_"
+        ]
+      },
+      {
+        "id": 1012,
+        "firstLine": 103,
+        "lines": [
+          "%qdt:",
+          " I found a note on =assassin_'s body.",
+          " %G3 employer is =boss_, and %g3",
+          " stronghold is ___stronghold_."
+        ]
+      },
+      {
+        "id": 1013,
+        "firstLine": 109,
+        "lines": [
+          "<ce>                      You have slain =assassin_.",
+          "<ce>                    The Brotherhood will be pleased."
+        ]
+      },
+      {
+        "id": 1014,
+        "firstLine": 113,
+        "lines": [
+          "<ce>                    =boss_ has joined %g3 employee.",
+          "<ce>                    The Brotherhood will be pleased."
+        ]
+      },
+      {
+        "id": 1015,
+        "firstLine": 117,
+        "lines": [
+          "<ce>                 We would have preferred it if you had",
+          "<ce>                         accounted =assassin_'s",
+          "<ce>                 boss as well. But it's enough to know",
+          "<ce>                         that =assassin_ can no",
+          "<ce>                    longer be counted as part of the",
+          "<ce>                              competition."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 147,
+        "lines": [
+          "Item _letter_ letter used 1011"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 149,
+        "lines": [
+          "Person _qgiver_ face 110 group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 151,
+        "lines": [
+          "Place _mondung_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 152,
+        "lines": [
+          "Place _stronghold_ remote dungeon2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 154,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 5"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 156,
+        "lines": [
+          "Foe _assassin_ is Assassin"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 157,
+        "lines": [
+          "Foe _boss_ is Knight"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 160,
+        "lines": [
+          "start timer _queston_ ",
+          "reveal _mondung_ ",
+          "log 1010 step 0 ",
+          "give item _letter_ to _assassin_ ",
+          "_letter_ used do _S.05_ ",
+          "place foe _boss_ at _stronghold_ ",
+          "place foe _assassin_ at _mondung_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 168,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 171,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "variable",
+        "firstLine": 174,
+        "lines": [
+          "variable _reward_"
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 175,
+        "lines": [
+          "_S.03_ task:",
+          "killed 1 _assassin_ ",
+          "say 1013 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 179,
+        "lines": [
+          "_S.04_ task:",
+          "killed 1 _boss_ ",
+          "say 1014 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 183,
+        "lines": [
+          "_S.05_ task:",
+          "reveal _stronghold_ readmap",
+          "log 1012 step 1 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 187,
+        "lines": [
+          "_S.06_ task:",
+          "when _S.03_ and not _S.04_ and _qgclicked_ ",
+          "say 1015 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 191,
+        "lines": [
+          "_S.07_ task:",
+          "when _S.03_ and _S.04_ and _qgclicked_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 196,
+        "lines": [
+          "_S.08_ task:",
+          "when not _S.03_ and not _S.04_ and _qgclicked_ ",
+          "clear _qgclicked_ _S.08_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

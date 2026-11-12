@@ -10,14 +10,14 @@ internal static class ReferenceExportCommands
     private static readonly CommandOption[] ItemOptions =
     [
         Arena2,
-        CommandOption.Optional("--donor", "DONOR_DIR"),
+        CommandOption.Staged("--inputs", "IMPORTER_INPUTS_DIR", ImportLayout.Inputs),
         Output,
     ];
 
     public static ToolCommand Items { get; } = new("export-items", ItemOptions, args =>
     {
         ItemReferenceExport.Run(args.Optional("--arena2") ?? ImportLayout.Arena2,
-            args.Optional("--donor") ?? "data/daggerfall-unity",
+            args["--inputs"],
             args.Optional("--output") ?? "local/art/reference/items");
         return 0;
     }, Program.Tool);

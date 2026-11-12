@@ -1,0 +1,297 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/L0B00Y00.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "6c617fcd5d0fdcc4367d0fe06386c4cf6def16a781548127d810bb5ff61e645d",
+    "byteLength": 3926
+  },
+  "document": {
+    "fileName": "L0B00Y00.txt",
+    "questName": "L0B00Y00",
+    "questNameLine": 8,
+    "displayName": "A Renegade Member",
+    "header": [
+      {
+        "name": "quest",
+        "value": "L0B00Y00"
+      },
+      {
+        "name": "displayname",
+        "value": "A Renegade Member"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                There is a traitor in the Brotherhood.",
+          "<ce>               You will perform the necessary accounting",
+          "<ce>                   on this liability, will you not?",
+          "                                     <--->",
+          "<ce>                 From time to time, the Brotherhood is",
+          "<ce>                 forced to do an accounting in our own",
+          "<ce>                books. A traitor has been found within",
+          "<ce>                our order who must be settled. You have",
+          "<ce>                    been selected to do the honors."
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                 An ignoble reply. I expected better."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 27,
+        "lines": [
+          "<ce>                   Very good. The traitor has taken",
+          "<ce>                         refuge in ___mondun_",
+          "<ce>                 to the %di. If you have not returned",
+          "<ce>                 in =queston_ days, your honor will be",
+          "<ce>               forfeit and another will take your place.",
+          "<ce>                     Do not fail us in this, %pcf."
+        ]
+      },
+      {
+        "id": 1003,
+        "firstLine": 35,
+        "lines": [
+          "<ce>                  The traitor is not dead. Do not try",
+          "<ce>                       to convince me otherwise."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 39,
+        "lines": [
+          "<ce>                Well done. You have reason to be proud."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 42,
+        "lines": [
+          "That assassin ran off to ___mondun_ like the hounds of hell were behind him.",
+          "<--->",
+          "_qgiver_ can't just let that traitor go, after what %g did to the Brotherhood."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 47,
+        "lines": [
+          "That traitor is apparently tougher than _qgiver_ thought. What an escape.",
+          "<--->",
+          "<ce>              The nightblade has moved north I hear, but",
+          " the memory still plagues the Brotherhood."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 53,
+        "lines": [
+          "The traitor's story just proves it: you don't play around with the Brotherhood.",
+          "<--->",
+          "I never thought the Brotherhood would be merciful to a dolt like that traitor assassin."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 58,
+        "lines": [
+          "What do you need, o slayer of the traitor?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 61,
+        "lines": [
+          "<ce>                  I am ill at ease speaking with you.",
+          "<ce>                  After all, I trusted you to account",
+          "<ce>                       that traitor, didn't I?"
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 66,
+        "lines": [
+          "%qdt:",
+          " The Dark Brotherhood in ___qgiver_ has",
+          " sent me to find and slay a traitor to the guild.",
+          " The rogue assassin is hiding out in ___mondun_.",
+          " I have =queston_ days to accomplish this."
+        ]
+      },
+      {
+        "id": 1021,
+        "firstLine": 73,
+        "lines": [
+          "<ce>                        \"I am not...the traitor",
+          "<ce>                     you...think I am. The...real",
+          "<ce>            traitor is...\" The contract has been fulfilled."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "person",
+        "firstLine": 91,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 93,
+        "lines": [
+          "Place _mondun_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 95,
+        "lines": [
+          "Clock _queston_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 97,
+        "lines": [
+          "Foe _assassin_ is Assassin"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 98,
+        "lines": [
+          "Foe _nightblade_ is Nightblade"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 99,
+        "lines": [
+          "Foe _acrobat_ is Acrobat"
+        ],
+        "global": null
+      },
+      {
+        "kind": "foe",
+        "firstLine": 100,
+        "lines": [
+          "Foe _battlemage_ is Battle_mage"
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 103,
+        "lines": [
+          "start timer _queston_ ",
+          "reveal _mondun_ ",
+          "log 1010 step 0 ",
+          "pick one of _S.05_ _S.06_ _S.07_ _S.08_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 108,
+        "lines": [
+          "_queston_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 111,
+        "lines": [
+          "_pcgetsgold_ task:",
+          "when _mondead_ and _qgclicked_ ",
+          "give pc nothing ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 116,
+        "lines": [
+          "_mondead_ task:",
+          "killed 1 _nightblade_ saying 1021 ",
+          "killed 1 _battlemage_ saying 1021 ",
+          "killed 1 _acrobat_ saying 1021 ",
+          "killed 1 _assassin_ saying 1021 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 122,
+        "lines": [
+          "_qgclicked_ task:",
+          "clicked npc _qgiver_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 125,
+        "lines": [
+          "_clearclick_ task:",
+          "when _qgclicked_ and not _mondead_ ",
+          "say 1003",
+          "clear _qgclicked_ _clearclick_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 130,
+        "lines": [
+          "_S.05_ task:",
+          "place foe _nightblade_ at _mondun_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 133,
+        "lines": [
+          "_S.06_ task:",
+          "place foe _battlemage_ at _mondun_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 136,
+        "lines": [
+          "_S.07_ task:",
+          "place foe _acrobat_ at _mondun_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 139,
+        "lines": [
+          "_S.08_ task:",
+          "place foe _assassin_ at _mondun_ "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}

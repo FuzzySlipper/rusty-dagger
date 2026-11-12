@@ -6,8 +6,8 @@ using Daggerfall.Import.Publication;
 namespace Daggerfall.Import.Tool.Commands;
 
 /// <summary>
-/// Reads donor-shaped quest text into the imported payload when asked, so a quest source resolves to its
-/// messages and finite top-level QBN blocks rather than to a binary blob. Action bodies remain ordered source
+/// Reads our quest documents and tables (taken from the donor's quest scripts) into the imported payload when asked,
+/// so a quest source resolves to its messages and finite top-level QBN blocks rather than to a binary blob. Action bodies remain ordered source
 /// lines for later action compilation; an unclaimed top-level line diagnoses the source. The original-source
 /// selections feed the quest corpus payloads, which carry what a session reads; nothing at runtime reads the
 /// selections themselves, so they go to the import records.
@@ -15,47 +15,30 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class QuestsCommand
 {
     public static ToolCommand Command { get; } = new("quests",
-        [Options.Arena2, CommandOption.Required("--quest-text", "SOURCE_DIR"), CommandOption.Required("--tables", "TABLE_DIR"), Options.Pack, Options.Records, Options.Inventory, Options.Update], Run);
-
-    /// <summary>The donor directory the quest tables are published under.</summary>
-    private static readonly string Tables = PublishedSourcePath.Donor("Assets/StreamingAssets/Tables/");
+        [Options.Arena2, CommandOption.Required("--quest-documents", "QUESTS_DIR"), CommandOption.Required("--quest-tables", "QUEST_TABLES.json"),
+         CommandOption.Required("--quest-list", "QUEST_LIST.json"), Options.Pack, Options.Records, Options.Inventory, Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {
-        string tablesDirectory = args["--tables"];
-        byte[] Table(string name) => File.ReadAllBytes(Path.Combine(tablesDirectory, name));
-        DaggerfallQuestTables tables = new(
-            DaggerfallQuestTableReader.Read(Table("Quests-GlobalVars.txt"), Tables + "Quests-GlobalVars.txt", globals: true),
-            DaggerfallQuestTableReader.Read(Table("Quests-StaticMessages.txt"), Tables + "Quests-StaticMessages.txt"),
-            DaggerfallQuestPlaceReader.Read(Table("Quests-Places.txt"), Tables + "Quests-Places.txt"),
-            DaggerfallQuestTableReader.Read(Table("Quests-Sounds.txt"), Tables + "Quests-Sounds.txt"),
-            DaggerfallQuestTableReader.Read(Table("Quests-Diseases.txt"), Tables + "Quests-Diseases.txt"),
-            DaggerfallQuestTableReader.Read(Table("Quests-Spells.txt"), Tables + "Quests-Spells.txt"),
-            DaggerfallQuestActorItemTableReader.Read(
-                Table("Quests-Items.txt"), Tables + "Quests-Items.txt",
-                Table("Quests-Factions.txt"), Tables + "Quests-Factions.txt",
-                Table("Quests-Foes.txt"), Tables + "Quests-Foes.txt"));
+        string tablesFile = args["--quest-tables"], listFile = args["--quest-list"];
+        DaggerfallQuestTables tables = TakenTable.Read<QuestTablesInput>(File.ReadAllBytes(tablesFile), tablesFile).Tables;
+        DaggerfallQuestCatalog catalog = TakenTable.Read<QuestListInput>(File.ReadAllBytes(listFile), listFile).Catalog;
         List<QuestSourceDocument> documents = [];
         List<(string FileName, string QuestName, int Line, string Reason)> failures = [];
         long totalBytes = 0;
-        foreach (string path in Directory.EnumerateFiles(args["--quest-text"], "*.txt").Order(StringComparer.Ordinal))
+        foreach (QuestDocumentInput quest in Directory.EnumerateFiles(args["--quest-documents"], "*.json")
+                     .Select(path => TakenTable.Read<QuestDocumentInput>(File.ReadAllBytes(path), path))
+                     .OrderBy(quest => quest.Source.Path, StringComparer.Ordinal))
         {
-            string fileName = Path.GetFileName(path);
-            totalBytes += new FileInfo(path).Length;
-            try
-            {
-                documents.Add(QuestSourceReader.Read(File.ReadAllText(path), fileName, tables.StaticMessages.Lookup, tables.Globals.Lookup));
-            }
-            catch (Arena2FormatException exception)
-            {
-                failures.Add((fileName, Path.GetFileNameWithoutExtension(path), exception.Offset, exception.Message));
-            }
+            totalBytes += quest.Source.ByteLength;
+            string fileName = Path.GetFileName(quest.Source.Path);
+            if (quest.Document is { } document) documents.Add(document);
+            else if (quest.Refusal is { } refusal) failures.Add((fileName, Path.GetFileNameWithoutExtension(fileName), refusal.Line, refusal.Reason));
+            else throw new InvalidDataException($"Quest document '{fileName}' carries neither a document nor a refusal.");
         }
 
+        // The pack cites the donor's quest directory by its total length, as it did when the scripts were read there.
         DaggerfallQuestPack pack = DaggerfallQuestPackBuilder.Build(documents, failures, PublishedSourcePath.Donor("Assets/StreamingAssets/Quests"), new byte[totalBytes], Options.ReadInventory(args));
-        DaggerfallQuestCatalog catalog = DaggerfallQuestCatalogReader.Read(
-            Table("QuestList-Classic.txt"), Tables + "QuestList-Classic.txt",
-            Directory.EnumerateFiles(args["--quest-text"], "*.txt"));
         DaggerfallQuestOriginalSourceSet originals = DaggerfallQuestOriginalSourceBuilder.Build(args["--arena2"], QuestSources(args["--arena2"]), pack);
         Console.WriteLine($"classic catalog: {catalog.Rows.Count(row => row.Active)} active, {catalog.Rows.Count(row => !row.Active)} disabled, {catalog.Rows.Count(row => row.SourceDisposition == "missing")} missing sources");
         Console.WriteLine($"quests: {pack.Quests.Count} sources, {pack.Quests.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Compiled)} compiled");

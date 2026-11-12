@@ -1,0 +1,229 @@
+{
+  "source": {
+    "path": "daggerfall-unity/Assets/StreamingAssets/Quests/C0B20Y08.txt",
+    "commit": "81e89e90c27bc3c1a7a61871e545fad129174dec",
+    "contentDigest": "3fd348b8402147cecddf22e51e202f9a89eafc434808e964cf3a13117cdb244e",
+    "byteLength": 3609
+  },
+  "document": {
+    "fileName": "C0B20Y08.txt",
+    "questName": "C0B20Y08",
+    "questNameLine": 8,
+    "displayName": "The Rite of Atonement",
+    "header": [
+      {
+        "name": "quest",
+        "value": "C0B20Y08"
+      },
+      {
+        "name": "displayname",
+        "value": "The Rite of Atonement"
+      }
+    ],
+    "messages": [
+      {
+        "id": 1000,
+        "firstLine": 13,
+        "lines": [
+          "<ce>                They tell me that you are quite loyal to",
+          "<ce>                 the temple. I need you to perform a vital",
+          "<ce>                   task for us. %god has become angry",
+          "<ce>                 with us. You need not concern yourself",
+          "<ce>                  with why. Our only hope is to hold a",
+          "<ce>                rite of atonement. We need _ingredient_",
+          "<ce>                  for the ceremony. My sources tell me",
+          "<ce>                 that some can be found in ___dungeon_.",
+          "<ce>                        Will you bring it to us?"
+        ]
+      },
+      {
+        "id": 1001,
+        "firstLine": 24,
+        "lines": [
+          "<ce>                      Your loyalty to the temple",
+          "<ce>                        is not what I thought it",
+          "<ce>                               was, %pcn."
+        ]
+      },
+      {
+        "id": 1002,
+        "firstLine": 29,
+        "lines": [
+          "<ce>                       The ceremony must be held",
+          "<ce>                     within =traveltime_ days. The",
+          "<ce>                         temple will reward you",
+          "<ce>                       with _gold_ gold for this.",
+          "<ce>                      Only untainted _ingredient_",
+          "<ce>                        will do. %god's blessing",
+          "<ce>                        is upon you so that you",
+          "<ce>                         will know it when you",
+          "<ce>                                find it."
+        ]
+      },
+      {
+        "id": 1004,
+        "firstLine": 40,
+        "lines": [
+          "<ce>                      You have it? _ingredient_!",
+          "<ce>                         %god will be pacified.",
+          "<ce>                      You have done well. Here is",
+          "<ce>                              your reward."
+        ]
+      },
+      {
+        "id": 1005,
+        "firstLine": 46,
+        "lines": [
+          "Things have been rather ... tense around __qgiver_ lately.",
+          "<--->",
+          "There was supposedly an unauthorized orgy in __qgiver_.",
+          "<--->",
+          "Someone spoke %god's name backwards in a ceremony at __qgiver_."
+        ]
+      },
+      {
+        "id": 1006,
+        "firstLine": 53,
+        "lines": [
+          "__qgiver_ is still out of favor with their god."
+        ]
+      },
+      {
+        "id": 1007,
+        "firstLine": 56,
+        "lines": [
+          "__qgiver_ is back in favor with their god."
+        ]
+      },
+      {
+        "id": 1008,
+        "firstLine": 59,
+        "lines": [
+          "You have pacified %god, %pct. Of course, how can I help you?"
+        ]
+      },
+      {
+        "id": 1009,
+        "firstLine": 62,
+        "lines": [
+          "While %god hates __qgiver_, I shall hate thee, %pct."
+        ]
+      },
+      {
+        "id": 1010,
+        "firstLine": 65,
+        "lines": [
+          "%qdt:",
+          " _qgiver_ of __qgiver_,",
+          " in ___qgiver_, told me that %g3 god was",
+          " angered. %G needs untainted",
+          " _ingredient_ from ___dungeon_",
+          " for a rite of atonement. It",
+          " must be in _qgiver_'s",
+          " hands at __qgiver_",
+          " within =traveltime_ days."
+        ]
+      },
+      {
+        "id": 1011,
+        "firstLine": 76,
+        "lines": [
+          "<ce>                      This is it! I can feel the",
+          "<ce>                      purity of the _ingredient_.",
+          "<ce>                         Now to get it back to",
+          "<ce>                               _qgiver_."
+        ]
+      }
+    ],
+    "blocks": [
+      {
+        "kind": "item",
+        "firstLine": 99,
+        "lines": [
+          "Item _ingredient_ organs"
+        ],
+        "global": null
+      },
+      {
+        "kind": "item",
+        "firstLine": 100,
+        "lines": [
+          "Item _gold_ gold"
+        ],
+        "global": null
+      },
+      {
+        "kind": "person",
+        "firstLine": 102,
+        "lines": [
+          "Person _qgiver_ group Questor"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 104,
+        "lines": [
+          "Place _dungeon_ remote dungeon"
+        ],
+        "global": null
+      },
+      {
+        "kind": "clock",
+        "firstLine": 106,
+        "lines": [
+          "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+        ],
+        "global": null
+      },
+      {
+        "kind": "place",
+        "firstLine": 110,
+        "lines": [
+          "place item _ingredient_ at _dungeon_ "
+        ],
+        "global": null
+      },
+      {
+        "kind": "headless",
+        "firstLine": 111,
+        "lines": [
+          "start timer _traveltime_ ",
+          "reveal _dungeon_ ",
+          "log 1010 step 0 "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 115,
+        "lines": [
+          "_traveltime_ task:",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 118,
+        "lines": [
+          "_questdone_ task:",
+          "toting _ingredient_ and _qgiver_ clicked ",
+          "give pc _gold_ ",
+          "end quest "
+        ],
+        "global": null
+      },
+      {
+        "kind": "task",
+        "firstLine": 123,
+        "lines": [
+          "_S.02_ task:",
+          "clicked item _ingredient_ say 1011 "
+        ],
+        "global": null
+      }
+    ]
+  },
+  "refusal": null
+}
