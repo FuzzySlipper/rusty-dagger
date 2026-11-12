@@ -33,11 +33,11 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
 
 # The corpus suites skip, with a stated reason, when their data is absent, so a green run means different
-# things with and without them. Say up front whether this run has it. The Daggerfall Unity files the import
-# reads are tracked in data/daggerfall-unity; DAGGER_DONOR_ROOT points the tests at a full checkout instead.
+# things with and without them. Say up front whether this run has it. The repository carries no Daggerfall Unity
+# file: the tests that compare our tables with the donor run only when DAGGER_DONOR_ROOT names a checkout.
 arena2_root=${DAGGER_ARENA2:-local/inputs/arena2}
-donor_root=${DAGGER_DONOR_ROOT:-data/daggerfall-unity}
-corpora="Arena2 corpus $arena2_root: $([[ -d "$arena2_root" ]] && echo present || echo absent); donor files $donor_root"
+donor_root=${DAGGER_DONOR_ROOT:-}
+corpora="Arena2 corpus $arena2_root: $([[ -d "$arena2_root" ]] && echo present || echo absent); Daggerfall Unity checkout ${donor_root:-none named}"
 echo "corpora: $corpora"
 
 # The Arena2-derived content is not tracked: the import command packs it into local/data/daggerfall-data.rpak,
@@ -141,7 +141,7 @@ dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 # records directory is what says an import has run.
 import_stamp=local/build/verify/import-suite.stamp
 import_inputs() {
-  find src/Daggerfall.Import src/Daggerfall.Import.Tool src/Daggerfall.Source.Tool data content \
+  find src/Daggerfall.Import src/Daggerfall.Import.Tool src/Daggerfall.Source.Tool content \
       tests/Daggerfall.Import.Tests tests/Shared tests/SharedEngine \( -name bin -o -name obj \) -prune -o -type f -print \
     | LC_ALL=C sort | xargs sha256sum
   sha256sum src/ImporterRevision.targets tests/Directory.Build.props Directory.Build.props
@@ -150,7 +150,7 @@ import_inputs() {
   for path in local/build/import/staging local/build/import/records; do
     [[ -d "$path" ]] && find "$path" -type f -printf '%p %s %T@\n' | LC_ALL=C sort
   done
-  git -C "$donor_root" rev-parse HEAD 2>/dev/null || true
+  [[ -n "$donor_root" ]] && git -C "$donor_root" rev-parse HEAD 2>/dev/null || true
 }
 import_key=$(import_inputs | sha256sum | cut -d' ' -f1)
 if [[ "$import" == false && -f "$import_stamp" && "$(cat "$import_stamp")" == "$import_key" ]]; then

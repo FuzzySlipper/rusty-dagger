@@ -65,7 +65,7 @@ internal static class ImportLayout
     public const string Inputs = "src/Daggerfall.Import.Tool/inputs";
 
     /// <summary>The tracked file that marks the repository root the import works in.</summary>
-    public const string Inventory = "data/content-source-manifest.csv";
+    public const string Inventory = $"{Inputs}/content-source-manifest.csv";
 
     /// <summary>
     /// The release the tool was installed into by <c>rusty build --release</c>, which puts it in

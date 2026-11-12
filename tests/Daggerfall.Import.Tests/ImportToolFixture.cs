@@ -50,7 +50,7 @@ internal sealed partial class ImportToolFixture : IDisposable
         File.Copy(ImportedContent.RecordPath("daggerfall.blocks.json"), At("blocks.json"));
         File.WriteAllBytes(At("buildings.json"), ImportedContent.Read("worldrpg/payloads/daggerfall.blocks.json"));
         Copy("content/worldrpg/packs/daggerfall.base/payload.json", Authored);
-        Copy("data/content-source-manifest.csv", Inventory);
+        Copy("src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv", Inventory);
         foreach (string file in Directory.EnumerateFiles(Root, "*", SearchOption.AllDirectories)) File.SetLastWriteTimeUtc(file, OldTime);
     }
 
@@ -105,7 +105,7 @@ internal sealed partial class ImportToolFixture : IDisposable
             ["--region"] = name == "rmb-spatial" ? RmbRegion.ToString(System.Globalization.CultureInfo.InvariantCulture) : "17",
             ["--location"] = name == "rmb-spatial" ? RmbLocation : "Privateer's Hold",
             ["--source-manifest"] = At("site.sources.json"), ["--profile"] = Interior ? "interior" : "exterior",
-            ["--ui-authored-assets"] = Repo("data/ui-authored-assets.json"), ["--ui-original"] = AuthoredUiArt,
+            ["--ui-authored-assets"] = Repo("content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-authored-assets.json"), ["--ui-original"] = AuthoredUiArt,
             ["--shared"] = Shared, ["--classic-group"] = ClassicGroup,
             // Coverage reads the import's staging tree over the repository's content, with its import records.
             ["--content"] = ImportedContent.Staged(""), ["--import-records"] = TestData.ImportRecords,

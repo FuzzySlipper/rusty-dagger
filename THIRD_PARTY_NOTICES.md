@@ -13,8 +13,8 @@ converted from it. The operator supplies their own copy of the game's `ARENA2` d
 
 A release (`rusty build --release`) carries the product, the Engine host with its own third-party
 licences in `share/third-party/`, the .NET runtime (MIT, its licence and notices in `dotnet/`), the game
-UI's typefaces with their licences (below), and the import tool with the tracked files it reads, among them the Daggerfall Unity files in
-`tools/Daggerfall.Import.Tool/data/daggerfall-unity/` with their licence below. It carries nothing derived
+UI's typefaces with their licences (below), and the import tool with the tracked files it reads, among them
+our tables taken from Daggerfall Unity (below). It carries no Daggerfall Unity file, and nothing derived
 from *The Elder Scrolls II: Daggerfall*: the player's import writes `daggerfall-data.rpak` and `music.rpak`
 on their own machine.
 
@@ -37,13 +37,22 @@ text sits beside them:
 ## Daggerfall Unity
 
 [Daggerfall Unity](https://github.com/Interkarma/daggerfall-unity) is this project's behaviour and
-content reference. No Daggerfall Unity code is compiled into the product. The Daggerfall Unity files the
-import reads are copied unmodified into `data/daggerfall-unity/`, at their Daggerfall Unity paths, with its
-licence beside them: the enemy table in `EnemyBasics.cs`, the race, item and maps sources, the item and
-magic-item templates, the spell-cost tables in `FormulaHelper.cs`, the internal string and flat-caption
-tables, the classic quest list and quest tables, and the rewritten classic quest scripts of
-`StreamingAssets/Quests`. The values the import takes from them land in the data container it writes on the
-player's machine. Daggerfall Unity is distributed under the following licence:
+content reference. No Daggerfall Unity code is compiled into the product, and the repository carries no
+Daggerfall Unity file. Values were taken once from its files into tables of our own, each naming the
+Daggerfall Unity file and commit it came from:
+
+- in `src/Daggerfall.Import.Tool/inputs/`, which the import reads and a release ships beside the import
+  tool: the race exposure flags (`RaceTemplate.cs`), the item groups (`ItemEnums.cs`, `ItemHelper.cs`,
+  `ItemsFile.cs`), the item and magic-item templates (`ItemTemplates.txt`, `MagicItemTemplates.txt`),
+  the spell-cost tables (`FormulaHelper.cs`), the static mobile table (`EnemyBasics.cs`), the classic quest
+  list and quest tables (`StreamingAssets/Tables`), and the rewritten classic quest scripts of
+  `StreamingAssets/Quests`, each as a quest document of ours carrying the same text;
+- in the `buildingNames`, `internalText` and `npcCaptions` sections of
+  `content/worldrpg/packs/daggerfall.base/payload.json`: the region name banks and names (`MapsFile.cs`)
+  and the internal string and flat-caption tables (`Internal_Strings.csv`, `Internal_Flats.csv`).
+
+`daggerfall-source-tool donor-drift --donor DIR` compares them with a Daggerfall Unity checkout. Daggerfall
+Unity is distributed under the following licence:
 
 ```text
 MIT License

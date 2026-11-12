@@ -624,7 +624,7 @@ public sealed class TextResourceTests
         "en");
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() =>
-        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
+        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")));
 
     /// <summary>
     /// A text resource carrying the supplied records, laid out the way the file does: a declared

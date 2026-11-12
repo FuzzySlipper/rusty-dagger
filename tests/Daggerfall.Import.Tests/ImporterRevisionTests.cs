@@ -39,8 +39,8 @@ public sealed class ImporterRevisionTests
                 "src/Daggerfall.Import/Publication/WorldBlocksPublication.cs",
                 "src/Daggerfall.Import.Tool/Commands/ImportCommand.cs",
                 "src/Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj",
-                "data/content-source-manifest.csv",
-                "data/ui-authored-assets.json",
+                "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv",
+                "content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-authored-assets.json",
                 "src/Daggerfall.Import.Tool/inputs/item-templates.json",
                 "content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-title-v2.png",
             ];
@@ -49,7 +49,8 @@ public sealed class ImporterRevisionTests
                 "src/Daggerfall.Source.Tool/ReferenceExports/ItemReferenceExport.cs",
                 "src/Daggerfall.Source.Tool/Commands/MapArtCommand.cs",
                 "src/Daggerfall.Source.Tool/Program.cs",
-                "data/README.md",
+                // The drift check reads Daggerfall Unity; the import never does.
+                "src/Daggerfall.Source.Tool/Donor/DonorTakes.cs",
                 "content/worldrpg/packs/daggerfall.art-replacements/payload.json",
                 "content/worldrpg/packs/daggerfall.art-replacements/media/ui/screens--title.webp",
                 "content/worldrpg/packs/daggerfall.art-replacements/first-person/daggerfall.held.json",
@@ -148,8 +149,8 @@ public sealed class ImporterRevisionTests
 
         Assert.True(outside.Count == 0, $"import steps read repository files outside the importer revision: {string.Join(", ", outside.Distinct().Take(20))}");
         Assert.DoesNotContain("content/worldrpg/packs/daggerfall.base/payload.json", checkedPaths);
-        Assert.Contains("data/content-source-manifest.csv", checkedPaths);
-        Assert.Contains("data/ui-authored-assets.json", checkedPaths);
+        Assert.Contains(ImportLayout.Inventory, checkedPaths);
+        Assert.Contains(AuthoredUi.ManifestFile, checkedPaths);
         Assert.Contains(checkedPaths, path => path.StartsWith(AuthoredUi.ProductDirectory + "/", StringComparison.Ordinal));
         Assert.Contains(checkedPaths, path => path.StartsWith(ImportLayout.Inputs + "/quests/", StringComparison.Ordinal));
     }

@@ -122,7 +122,7 @@ public sealed class DaggerfallQuestPackTests
     [Fact]
     public void Builds_the_pack_from_our_quest_documents()
     {
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")));
         IReadOnlyList<QuestDocumentInput> ours = OurDocuments();
         List<QuestSourceDocument> documents = [.. ours.Select(quest => quest.Document).OfType<QuestSourceDocument>()];
         List<(string, string, int, string)> failures = [];

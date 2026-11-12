@@ -135,7 +135,7 @@ public sealed class RmbExteriorNormalizerTests
         BsaArchive maps = BsaArchive.Parse(sources.Require("MAPS.BSA").Bytes.Span, "arena2/MAPS.BSA");
         BsaArchive blocks = BsaArchive.Parse(sources.Require("BLOCKS.BSA").Bytes.Span, "arena2/BLOCKS.BSA");
         DaggerfallBlocks catalog = DaggerfallBlocksBuilder.Build(sources.Require("BLOCKS.BSA").Bytes.ToArray(), "arena2/BLOCKS.BSA",
-            Daggerfall.Import.Publication.SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv"))));
+            Daggerfall.Import.Publication.SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv"))));
         DaggerfallBlockBuildingSet compact = DaggerfallBlockBuildingSet.From(catalog);
         MapsExteriorLayout layout = MapsDecoder.DecodeExteriorLayout(maps, 17, "Charing");
         var selection = layout.Blocks.SelectMany(block => compact.QuestMarkers

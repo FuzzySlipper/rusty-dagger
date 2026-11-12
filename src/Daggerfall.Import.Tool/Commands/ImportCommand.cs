@@ -25,7 +25,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class ImportCommand
 {
     private const string Inventory = ImportLayout.Inventory;
-    private const string UiAssets = "data/ui-authored-assets.json";
+    private const string UiAssets = AuthoredUi.ManifestFile;
     private const string UiOriginal = AuthoredUi.ProductDirectory;
 
     private static readonly string[] Arena2Files =

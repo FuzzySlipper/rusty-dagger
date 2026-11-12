@@ -78,7 +78,7 @@ public sealed class DaggerfallBooksTests
         }
 
         Assert.Equal(90, supplied.Count);
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")));
         (DaggerfallBooks books, _, IReadOnlyList<DaggerfallTextRecord> records) = DaggerfallBooksBuilder.Build(supplied, inventory, "en");
         books.Validate();
 

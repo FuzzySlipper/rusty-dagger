@@ -11,7 +11,7 @@ public sealed class DaggerfallClassQuestionnaireTests
     public void Published_questions_and_every_recommendation_match_the_classic_source_and_donor()
     {
         byte[] classes = File.ReadAllBytes(TestData.Corpus("CLASSES.DAT"));
-        var text = DaggerfallTextBuilder.Build(File.ReadAllBytes(TestData.Corpus("TEXT.RSC")), "arena2/TEXT.RSC", SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv"))), "en");
+        var text = DaggerfallTextBuilder.Build(File.ReadAllBytes(TestData.Corpus("TEXT.RSC")), "arena2/TEXT.RSC", SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv"))), "en");
         var questions = DaggerfallClassQuestionnaireBuilder.Build(classes, text);
         string donor = File.ReadAllText(TestData.Donor("Assets/Scripts/Game/UserInterfaceWindows/CreateCharClassQuestions.cs"));
         string table = Regex.Match(donor, @"answerTable\s*=\s*\{([^}]+)\}", RegexOptions.Singleline).Groups[1].Value;

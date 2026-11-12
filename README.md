@@ -61,10 +61,10 @@ say what may be deleted:
   `--arena2` the folder Daggerfall is installed in) and the song folder as
   `local/inputs/Sound`. A link is fine.
 - Import once, and again after a pull that changes the importer revision: its
-  inputs are `src/Daggerfall.Import`, `src/Daggerfall.Import.Tool`, the data
-  files under `data/` and the authored UI art (`src/ImporterRevision.targets`
-  lists them). The import never reads the authored base payload, so editing it
-  needs no import. The entry screen says when the data is missing, damaged or
+  inputs are `src/Daggerfall.Import` and `src/Daggerfall.Import.Tool`, whose
+  `inputs/` holds the source inventory and our tables, and the authored UI art
+  with its manifest (`src/ImporterRevision.targets` lists them). The import never
+  reads the authored base payload, so editing it needs no import. The entry screen says when the data is missing, damaged or
   from another importer.
 
   ```bash
@@ -103,8 +103,12 @@ say what may be deleted:
 - `local/data/first-person.rpak` is optional: 3D first-person arms built from
   purchased art by `authoring/tools/fp-arms/build.sh`. Without it a 3D `viewmodel.style`
   draws the classic weapon sprites, with a warning.
-- The Daggerfall Unity tables and quest scripts the import reads are tracked in
-  `data/daggerfall-unity`; no donor checkout is needed.
+- The values the import takes from Daggerfall Unity are tables of our own in
+  `src/Daggerfall.Import.Tool/inputs/`, the quest scripts among them as quest
+  documents, each naming the Daggerfall Unity file and commit it was taken
+  from; the import reads no Daggerfall Unity file and needs no donor checkout.
+  `dotnet run --project src/Daggerfall.Source.Tool -- donor-drift --donor DIR`
+  reports where they differ from a Daggerfall Unity checkout.
 - A checkout from before this layout moves its files once with
   `scripts/split-local.sh` (`--dry-run` first), while nothing imports, promotes
   art or runs the game from it or a worktree that links it.
@@ -131,21 +135,24 @@ link back `first-person.rpak` if it needs one, then import. Build
 
 Rules for the tracked side:
 
-- Nothing converted from Daggerfall is ever committed. Git tracks `content/` and
-  `data/`; an untracked file under `content/` fails the architecture tests.
+- Nothing converted from Daggerfall is ever committed. An untracked file under
+  `content/` fails the architecture tests.
 - A content pack is one folder, `content/worldrpg/packs/<id>/`: its `pack.json`,
   the `payload.json` it names and any media it owns. A tuning profile is
   `content/worldrpg/tuning/<id>/` the same way; bundles stay in `bundles/`. All the
   game's own art is in `packs/daggerfall.art-replacements/`: the refreshed art in
-  `media/<area>/`, the authored UI kit in `authored-ui/` and the held definition
-  and models in `first-person/`.
-- `daggerfall.base` is authored by hand and `daggerfall.imported` is generated.
+  `media/<area>/`, the authored UI kit in `authored-ui/` (its
+  `ui-authored-assets.json` is written by `authoring/tools/ui/ui-art-kit.py
+  manifest`) and the held definition and models in `first-person/`.
+- `daggerfall.base` is authored and `daggerfall.imported` is generated. A few base
+  sections (`buildingNames`, `internalText`, `npcCaptions`) were taken from
+  Daggerfall Unity, need nothing from arena2, and are checked by `donor-drift`.
   A payload section belongs to one of them: the reader refuses a section both carry.
-- In `data/content-source-manifest.csv`, never renumber or recreate a `CNT-` ID;
+- In `src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv`, never renumber or recreate a `CNT-` ID;
   reclassify a file by changing its `family_id`. Only `Daggerfall.Source.Tool`'s
   `source-manifest --update-inventory` writes the disposition column.
-- An edit to an importer revision input, including any file under `data/` but its
-  README, makes every machine's data stale. Make one deliberately. An import step
+- An edit to an importer revision input, including any of our tables in
+  `inputs/`, makes every machine's data stale. Make one deliberately. An import step
   never reads the authored base payload: a join between authored and imported
   sections belongs in the ruleset's content reader. A command that does not feed the containers goes in
   `Daggerfall.Source.Tool`, never `Daggerfall.Import.Tool`, whose every file is an input.
@@ -216,7 +223,7 @@ rusty-dagger[.exe]          the launcher a player starts; the game opens its own
 product.rpak                the product: UI, tracked content and refreshed art (no Daggerfall data)
 coreclr/ | native/          the product's code
 bin/, share/, dotnet/       the Engine host, its licences and the .NET runtime
-tools/Daggerfall.Import.Tool/   the import, with the tracked files it reads
+tools/Daggerfall.Import.Tool/   the import, with the tracked files it reads (no Daggerfall Unity file)
 daggerfall-data.rpak, music.rpak   written by the import from the player's own files
 ```
 

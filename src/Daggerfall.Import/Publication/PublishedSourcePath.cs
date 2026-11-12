@@ -4,7 +4,7 @@ namespace Daggerfall.Import.Publication;
 /// The one vocabulary every published source path is written in, whatever directory the operator supplied
 /// the bytes from: an Arena2 file is <c>arena2/NAME</c> and a Daggerfall Unity file is
 /// <c>daggerfall-unity/PATH</c>, relative to that checkout's root. The documented inventory
-/// (<c>data/content-source-manifest.csv</c>) spells its rows the same way, so a section that checks its
+/// (<c>content-source-manifest.csv</c>, beside the importer) spells its rows the same way, so a section that checks its
 /// label against the inventory compares like with like.
 /// </summary>
 public static class PublishedSourcePath

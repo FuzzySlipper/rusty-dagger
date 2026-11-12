@@ -11,7 +11,7 @@ public sealed class QuestMarkerSourceTests
     [CorpusFact]
     public void Compact_block_catalog_retains_every_source_quest_marker_and_no_other_editor_flat()
     {
-        DaggerfallBlocks blocks = DaggerfallBlocksBuilder.Build(File.ReadAllBytes(TestData.Corpus("BLOCKS.BSA")), "arena2/BLOCKS.BSA", SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv"))));
+        DaggerfallBlocks blocks = DaggerfallBlocksBuilder.Build(File.ReadAllBytes(TestData.Corpus("BLOCKS.BSA")), "arena2/BLOCKS.BSA", SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv"))));
         DaggerfallBlockBuildingSet compact = DaggerfallBlockBuildingSet.From(blocks);
         int expected = blocks.Records.Sum(record =>
             (record.Objects?.FlatPlacements.Count(flat => flat.TextureArchive == 199 && flat.TextureRecord is 11 or 18) ?? 0)

@@ -98,7 +98,7 @@ internal sealed partial class ImportToolFixture
                     .. Directory.EnumerateFiles(TestData.ImportRecords, "*.json", SearchOption.AllDirectories)
                         .Select(file => new SourceCoverageArtifact("import-records/" + Path.GetRelativePath(TestData.ImportRecords, file).Replace('\\', '/'), file))], Rows);
                 var imported = inputs.Consumers.Where(c => !c.ContextOnly && c.SourcePath.StartsWith("arena2/", StringComparison.Ordinal)).Select(c => c.SourcePath["arena2/".Length..]).Distinct().ToArray();
-                var request = new SourceManifestRequest("arena2", "data/content-source-manifest.csv", Arena2, imported, [], Rows.Where(row => row.Disposition == "excluded").Select(row => row.PathOrPattern.StartsWith("arena2/", StringComparison.Ordinal) ? row.PathOrPattern["arena2/".Length..] : row.PathOrPattern).ToArray());
+                var request = new SourceManifestRequest("arena2", "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv", Arena2, imported, [], Rows.Where(row => row.Disposition == "excluded").Select(row => row.PathOrPattern.StartsWith("arena2/", StringComparison.Ordinal) ? row.PathOrPattern["arena2/".Length..] : row.PathOrPattern).ToArray());
                 var coverage = SourceCoverageReconciler.Build(SourceManifestBuilder.Scan(request, File.ReadAllBytes(Inventory)), inputs.Consumers, inputs.Quests, inputs.Unsupported, Rows);
                 result.Add(At("report.json"), SourceCoverageReconciler.Serialize(coverage)); break;
             case "write":
@@ -119,7 +119,7 @@ internal sealed partial class ImportToolFixture
         }
     }
 
-    private Arena2ClassicMediaProfile ClassicProfile() => AuthoredUiAssetSet.Read(File.ReadAllBytes(Repo("data/ui-authored-assets.json")), file => File.ReadAllBytes(Path.Combine(AuthoredUiArt, file)));
+    private Arena2ClassicMediaProfile ClassicProfile() => AuthoredUiAssetSet.Read(File.ReadAllBytes(Repo("content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-authored-assets.json")), file => File.ReadAllBytes(Path.Combine(AuthoredUiArt, file)));
 
     private void ExpectedQuestSections(Dictionary<string, string> sections, Dictionary<string, string> records)
     {

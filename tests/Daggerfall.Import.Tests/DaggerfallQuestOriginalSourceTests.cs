@@ -108,7 +108,7 @@ public sealed class DaggerfallQuestOriginalSourceTests
     private static DaggerfallQuestOriginalSourceSet BuildSources()
     {
         string root = TestData.RepositoryRoot;
-        IReadOnlyList<SourceInventoryRow> manifest = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(root, "data/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> manifest = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(root, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")));
         QuestDocumentInput[] ours = [.. Directory.EnumerateFiles(TestData.Input("quests"), "*.json")
             .Select(path => TakenTable.Read<QuestDocumentInput>(File.ReadAllBytes(path), path))
             .OrderBy(quest => quest.Source.Path, StringComparer.Ordinal)];

@@ -389,7 +389,7 @@ public sealed class DaggerfallCatalogTests
     private static DaggerfallRaceTable RaceTemplate() => TakenTable.Read<DaggerfallRaceTable>(File.ReadAllBytes(TestData.Input("races.json")), "races.json");
 
     private static IReadOnlyList<SourceInventoryRow> ReadInventory() =>
-        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
+        SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")));
 
     private static List<(string FileName, byte[] Bytes)> ReadCareers() =>
         [.. Directory.EnumerateFiles(TestData.CorpusRoot, "CLASS*.CFG")

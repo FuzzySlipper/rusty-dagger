@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates and processes the authored UI art kit (#10110) with the recipe the owner chose on #10120.
+"""Generates and processes the authored UI art kit (#10110) with the recipe Patch chose on #10120.
 
     authoring/tools/ui/ui-art-kit.py generate [SOURCE ...] [--host den-m5|den-nimo] [--seeds 1-2]
     authoring/tools/ui/ui-art-kit.py process  [--pick SOURCE=SEED ...]
@@ -7,7 +7,7 @@
 
 This is an operator tool, not a step of the import: it needs the LAN GPU hosts. Its output is the processed
 originals in content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ (committed product content the ruleset reads in place) and their
-entries in data/ui-authored-assets.json; the import then lists them in the classic media inventory. The recipe
+entries in ui-authored-assets.json beside them; the import then lists them in the classic media inventory. The recipe
 (Den document rusty-dagger/ui-art-recipe):
 
 1. Generate: Krea 2 turbo (krea2_turbo_fp8_scaled, qwen3vl_4b_fp8_scaled, qwen_image_vae; 8 steps, cfg 1, euler,
@@ -42,7 +42,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")
 PIPELINE = os.environ.get("ASSET_PIPELINE", "/home/agent/dev/asset-pipeline")
 RAW = os.environ.get("RAW", os.path.join(ROOT, "local", "scratch", "ui-art-kit"))
 ORIGINALS = os.path.join(ROOT, "content", "worldrpg", "packs", "daggerfall.art-replacements", "authored-ui")
-MANIFEST = os.path.join(ROOT, "data", "ui-authored-assets.json")
+MANIFEST = os.path.join(ORIGINALS, "ui-authored-assets.json")
 HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188"}
 REFINER_HOST = "den-m5"
 
@@ -51,7 +51,7 @@ LORA = "civitai_retro_dark_fantasy_krea2.safetensors"
 LORA_STRENGTH = 0.8
 TRIGGER = "dark_fantasy_illustration, "
 GROUND = "isolated on a plain flat solid pure green background, original design not copied from any game, no text, no letters"
-# The provenance each entry of data/ui-authored-assets.json records, naming the kit where it was made.
+# The provenance each entry of ui-authored-assets.json records, naming the kit where it was made.
 GENERATOR = (f"Krea 2 turbo ({UNET}) + Retro Dark Fantasy Illustration LoRA (Civitai 1041229/3358183) at {LORA_STRENGTH}, "
              "seed {seed}; keyed, fitted within {size}, {states}envy-ai Krea2PixelArtRefiner 0b01ea37 palette pass (grid 1, 64 colours, "
              "hard alpha 128); scripts/ui-art-kit.py")

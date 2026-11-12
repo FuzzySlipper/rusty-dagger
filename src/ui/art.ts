@@ -1,4 +1,4 @@
-/// How an authored kit image is drawn, as its author stated it in data/ui-authored-assets.json: CSS pixels
+/// How an authored kit image is drawn, as its author stated it in the art pack's authored-ui/ui-authored-assets.json: CSS pixels
 /// per image pixel at UI scale 1, 9-slice insets (top, right, bottom, left) and a cursor hotspot (x, y), both in
 /// image pixels. A frame's CSS `border-image-slice` takes the insets as they are and its `border-image-width`
 /// is the insets times the scale.

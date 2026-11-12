@@ -85,7 +85,7 @@ public sealed class DataContainerImportTests : IDisposable
         Assert.Contains($"tracked file '{ImportLayout.Inputs}/mobiles.json'", missing);
         Assert.Contains($"tracked directory '{ImportLayout.Inputs}/quests'", missing);
         Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/inputs/Sound'", StringComparison.Ordinal));
-        Assert.Contains("tracked file 'data/content-source-manifest.csv'", missing);
+        Assert.Contains($"tracked file '{ImportLayout.Inventory}'", missing);
         // The import does not read the authored base payload, so its absence is no missing input.
         Assert.DoesNotContain(missing, entry => entry.Contains("daggerfall.base", StringComparison.Ordinal));
 
@@ -107,8 +107,8 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void An_import_with_missing_inputs_is_refused_without_writing()
     {
-        Directory.CreateDirectory(Path.Combine(root, "data"));
-        File.WriteAllText(Path.Combine(root, "data/content-source-manifest.csv"), "id\n");
+        Directory.CreateDirectory(Path.Combine(root, ImportLayout.Inputs));
+        File.WriteAllText(Path.Combine(root, ImportLayout.Inventory), "id\n");
         string before = Directory.GetCurrentDirectory();
 
         InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(() => Program.Commands["import"].Invoke(

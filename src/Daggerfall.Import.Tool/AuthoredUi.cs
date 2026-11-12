@@ -14,7 +14,10 @@ internal static class AuthoredUi
     /// <summary>The tracked directory the authored UI originals live in, as the product's content root carries them.</summary>
     public const string ProductDirectory = "content/worldrpg/" + AuthoredUiAssetSet.RelativeRoot;
 
-    public static readonly CommandOption Manifest = CommandOption.Staged("--ui-authored-assets", "FILE", "data/ui-authored-assets.json");
+    /// <summary>The authored UI manifest, beside the images it describes.</summary>
+    public const string ManifestFile = ProductDirectory + "/" + AuthoredUiAssetSet.ManifestLabel;
+
+    public static readonly CommandOption Manifest = CommandOption.Staged("--ui-authored-assets", "FILE", ManifestFile);
     public static readonly CommandOption Originals = CommandOption.Staged("--ui-original", "DIR", ProductDirectory);
 
     /// <summary>

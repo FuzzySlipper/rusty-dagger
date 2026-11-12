@@ -40,7 +40,7 @@ public sealed class DaggerfallItemTemplatesTests
     {
         ItemTemplateTable items = Table<ItemTemplateTable>("item-templates.json");
 
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")));
         DaggerfallItemTemplates catalog = DaggerfallItemTemplatesBuilder.Build(
             items.Templates,
             Table<MagicItemTemplateTable>("magic-item-templates.json").Templates,

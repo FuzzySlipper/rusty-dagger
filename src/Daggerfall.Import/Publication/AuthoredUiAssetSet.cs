@@ -5,7 +5,7 @@ using Daggerfall.Import.Normalization;
 namespace Daggerfall.Import.Publication;
 
 /// <summary>
-/// Reads the tracked authored UI manifest (<c>data/ui-authored-assets.json</c>) into the classic media
+/// Reads the tracked authored UI manifest (<c>ui-authored-assets.json</c>, beside the images in the art pack's <c>authored-ui/</c>) into the classic media
 /// profile. The caller supplies the manifest bytes and reads each named original, so this owner receives
 /// only portable labels and copied bytes and never discovers a directory.
 /// </summary>

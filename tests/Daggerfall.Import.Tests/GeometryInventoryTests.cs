@@ -436,7 +436,7 @@ public sealed class GeometryInventoryTests
         [.. geometry.Records.Select(value => value.Ordinal == ordinal ? record : value)];
 
     private static IReadOnlyList<SourceInventoryRow> Inventory() => SourceManifestBuilder.ReadInventory(
-        File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
+        File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")));
 
     /// <summary>A minimal v2.7 mesh record: a version, no planes, and a point list that starts after it.</summary>
     private static byte[] Mesh()

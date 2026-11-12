@@ -43,7 +43,7 @@ public sealed class DaggerfallTerrainTests
     {
         string arena2 = TestData.CorpusRoot;
 
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")));
         byte[] bytes = File.ReadAllBytes(Path.Combine(arena2, "WOODS.WLD"));
         DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(bytes, "arena2/WOODS.WLD", inventory);
         terrain.Validate();

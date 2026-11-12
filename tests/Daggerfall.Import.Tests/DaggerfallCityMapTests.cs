@@ -28,7 +28,7 @@ public sealed class DaggerfallCityMapTests
     [CorpusFact]
     public void Every_compacted_map_roundtrips_the_ordinary_source_cells_without_losing_block_identity()
     {
-        var inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv")));
+        var inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")));
         var blocks = DaggerfallBlocksBuilder.Build(File.ReadAllBytes(TestData.Corpus("BLOCKS.BSA")), "arena2/BLOCKS.BSA", inventory);
         var published = DaggerfallBlockBuildingSet.From(blocks);
         Assert.Equal(920, published.Maps.Count);

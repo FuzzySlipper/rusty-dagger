@@ -35,7 +35,7 @@ internal static class SourceCoverageCommand
             .. Artifacts(records, "").Select(pair => new SourceCoverageArtifact("import-records/" + pair.Key, pair.Value))];
         var inputs = SourceCoverageInputReader.Read(artifacts.Where(artifact => Path.GetFullPath(artifact.File) != output), inventory);
         string[] imported = [.. inputs.Consumers.Where(value => !value.ContextOnly && value.SourcePath.StartsWith("arena2/", StringComparison.Ordinal)).Select(value => value.SourcePath["arena2/".Length..]).Distinct()];
-        var request = new SourceManifestRequest("arena2", "data/content-source-manifest.csv", args["--arena2"], imported, [],
+        var request = new SourceManifestRequest("arena2", ImportLayout.Inventory, args["--arena2"], imported, [],
             [.. inventory.Where(row => row.Disposition == "excluded").Select(row => row.PathOrPattern.StartsWith("arena2/", StringComparison.Ordinal) ? row.PathOrPattern["arena2/".Length..] : row.PathOrPattern)]);
         var manifest = SourceManifestBuilder.Scan(request, csv);
         var report = SourceCoverageReconciler.Build(manifest, inputs.Consumers, inputs.Quests, inputs.Unsupported, inventory);

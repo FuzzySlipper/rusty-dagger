@@ -72,5 +72,5 @@ public sealed class CharacterMediaAdmissionTests
         || name.EndsWith(".CIF", StringComparison.OrdinalIgnoreCase)
         || name.EndsWith(".IMG", StringComparison.OrdinalIgnoreCase);
 
-    private static string ManifestPath() => Path.Combine(TestData.RepositoryRoot, "data/content-source-manifest.csv");
+    private static string ManifestPath() => Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv");
 }
