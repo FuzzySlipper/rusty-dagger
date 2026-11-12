@@ -247,7 +247,7 @@ internal static partial class DaggerfallBaseContent
     /// The text section and the sections whose readers resolve their keys against it. No other reader or
     /// cross-section check consults any of them, or the sets they produce.
     /// </summary>
-    internal static readonly IReadOnlyList<string> TextSectionNames = ["text", "names", "rumors", "dialogueWorldRules", "biographies", "books"];
+    internal static readonly IReadOnlyList<string> TextSectionNames = ["text", "internalText", "names", "rumors", "dialogueWorldRules", "biographies", "books"];
 
     /// <summary>
     /// Reads the text section and then every section that resolves text keys through it, so each key

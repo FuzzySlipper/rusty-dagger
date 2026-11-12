@@ -70,10 +70,11 @@ public sealed class PublishedContentDeliveryTests
 
         // Each content group has its own generated index, so the classic index accounts for the classic
         // group and the character index accounts for the character canvases; the classic index also names the
-        // authored UI kit, which the art pack's folder carries. An artifact no index names
+        // authored UI kit, which the art pack's folder carries beside the manifest describing it. An artifact no index names
         // fails here, which is what makes a hand-written artifact or a dropped entry visible.
         HashSet<string> published = [.. GeneratedContentFiles(content).Concat(ContentFiles(content, DaggerfallUiArt.AuthoredRoot.TrimEnd('/')))
             .Where(path => !path.EndsWith("classic-media-inventory.json", StringComparison.Ordinal)
+                && path != DaggerfallUiArt.AuthoredRoot + "ui-authored-assets.json"
                 && !path.Contains("/character/", StringComparison.Ordinal)
                 && !path.Contains("/cinematics/", StringComparison.Ordinal)
                 && !path.Contains("/music/", StringComparison.Ordinal)
