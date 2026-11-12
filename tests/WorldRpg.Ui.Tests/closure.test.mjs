@@ -44,7 +44,7 @@ const rulesetSources = (() => {
 
 /** Every wire the ruleset's action table admits, read from the table itself. */
 function rulesetWires() {
-  const source = readFileSync(join(ruleset, 'Presentation/DaggerfallUiAction.cs'), 'utf8');
+  const source = readFileSync(join(ruleset, 'UiProjection/DaggerfallUiAction.cs'), 'utf8');
   const table = /DaggerfallUiActionRule> Rules =\s*\[(?<rules>[\s\S]*?)\n\s*\];/.exec(source)?.groups?.rules;
   assert.ok(table, 'DaggerfallUiAction.Rules was not found');
   const constant = name => {
@@ -128,7 +128,7 @@ test('every action the DOM sends is one the ruleset admits, and every admitted a
   }
 
   // The payload contract the actions travel under is one name on both sides.
-  const csharp = /Contract => "([^"]+)"u8/.exec(readFileSync(join(ruleset, 'Presentation/DaggerfallUiAction.cs'), 'utf8'))?.[1];
+  const csharp = /Contract => "([^"]+)"u8/.exec(readFileSync(join(ruleset, 'UiProjection/DaggerfallUiAction.cs'), 'utf8'))?.[1];
   const dom = /const UI_ACTION_CONTRACT = '([^']+)'/.exec(readFileSync(join(ui, 'projection.ts'), 'utf8'))?.[1];
   assert.ok(csharp);
   assert.equal(dom, csharp);
