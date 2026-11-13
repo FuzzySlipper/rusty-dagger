@@ -29,6 +29,15 @@ internal sealed partial class DaggerfallSession
         ApplyControlSettings(candidate);
     }
 
+    internal bool ActionDrivenPlay => _controlSettings.ActionDrivenTime;
+
+    private void ChangePlayerTime(bool enabled)
+    {
+        _controlSettings.SetActionDrivenTime(enabled);
+        _playerTime.Select(enabled);
+        _preferencesToSave = _controlSettings.Serialize();
+    }
+
     internal void ApplyControlSettings(DaggerfallControlSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
@@ -36,7 +45,7 @@ internal sealed partial class DaggerfallSession
         if (outcome != InputMappingReplacementOutcome.Staged)
             throw new InvalidOperationException($"Control bindings were not applied: {outcome}.");
         _controlSettings = settings;
-        PlayerTime.Select(settings.ActionDrivenTime);
+        _playerTime.Select(settings.ActionDrivenTime);
         _input.ConfigureLook(_tuning.PlayerControl.LookSensitivity * settings.LookSensitivity, settings.InvertVertical);
         // Direct key observations and Engine-mapped directions share the chosen bindings.
         _input.Rebind(DaggerfallInput.Controls with

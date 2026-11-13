@@ -1,3 +1,4 @@
+using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
@@ -101,7 +102,7 @@ internal sealed partial class DaggerfallSession
                 // rather than being overwritten by it. Reactions to modal-own actions (a loot take above) deliver
                 // here rather than waiting for a playing step: the batch is stable and reentrant appends wait
                 // for the next one.
-                if (elapsedSubmitted) _pendingWorldAction = false;                                // Session
+                if (elapsedSubmitted) _playerTime.ClearWorldAction();                             // Time
                 _input.Neutralize();                                                              // Character
                 _locomotion.Neutralize();                                                         // Character
                 NeutralizeGuard();                                                                // Combat
@@ -110,11 +111,11 @@ internal sealed partial class DaggerfallSession
             }
             else
             {
-                ObservePlayerInput(input, (float)facts.HostElapsedSeconds, firstStep);            // Time
+                ObservePlayerInput(input, (float)facts.HostElapsedSeconds, firstStep);            // Session: the input's list, below
                 if (facts.AdmittedStepCount == 0)
                 {
                     _camera.Update(State.PlayerControl);                                          // Character
-                    ApplyIdleInterfaceActions();                                                  // Time
+                    ApplyIdleInterfaceActions();                                                  // UiProjection
                     DeliverFacts();                                                               // Session
                     PublishPresentation();                                                        // UiProjection
                 }
@@ -187,7 +188,7 @@ internal sealed partial class DaggerfallSession
             // is real once the step applied it, and the director is told once per admitted update.
             AdvanceMusic();                                                                       // Scene
         }
-        UpdatePlayerTime(facts);                                                                  // Time
+        UpdatePlayerTime(facts);                                                                  // Session: player time's hand-off, below
         // Play time counts the time the world runs in play; menus, the title and held moments do not.
         if (_mode == ProductMode.Playing && facts.LifecycleState == ProductLifecycleState.Running
             && double.IsFinite(facts.FixedDeltaSeconds) && facts.FixedDeltaSeconds > 0)
@@ -368,7 +369,7 @@ internal sealed partial class DaggerfallSession
         long? swimmingMinuteBefore = null, long? swimmingMinuteAfter = null)
     {
         if (LegalModalOpen) return;
-        _pendingWorldAction = false;                                                              // Session
+        _playerTime.ClearWorldAction();                                                           // Time
         _latestUpdateGeneration = generation;                                                     // Session
         _latestSimulationStep = simulationStep;                                                   // Session
         if (State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? actionGraph))
@@ -482,7 +483,7 @@ internal sealed partial class DaggerfallSession
     internal void Update(ProductUpdateState update)
     {
         _enemyBehavior.BeginAdmittedUpdate();                                                     // Actors
-        ObservePlayerInput(update.Inputs.ToArray(), update.DeltaSeconds, update);                 // Time
+        ObservePlayerInput(update.Inputs.ToArray(), update.DeltaSeconds, update);                 // Session: the input's list, below
         SimulateStep(update, 0, 0);                                                               // Session: the step's list
         DeliverFacts();                                                                           // Session
         ApplyDeferredPlayerActs();                                                                // Character
@@ -544,6 +545,52 @@ internal sealed partial class DaggerfallSession
         _restPresentation.Publish(result);                                                        // UiProjection
         Presentation.SetOutcome(result.Message ?? (result.Accepted ? "Rest complete." : "Rest refused."));   // UiProjection
         return result;
+    }
+
+    /// <summary>The input's list: one update's input slice, observed by each owner that reads it.</summary>
+    private void ObservePlayerInput(ReadOnlySpan<ProductInputEvent> input, float lookSeconds, ProductUpdateState firstStep)
+    {
+        _input.Observe(State.PlayerControl, input, lookSeconds, firstStep.PlanarIntent);         // Character
+        foreach (var action in firstStep.RequestedActions) _input.Request(action);               // Character
+        _locomotion.Observe(input);                                                               // Character
+        _guard.Observe(input, PadBindings);                                                       // Combat
+        _attackClock.Observe(input, PadBindings);                                                 // Combat
+    }
+
+    /// <summary>
+    /// Player time's hand-off: what the world needs time for this update, read from the domain that knows each part,
+    /// for Time's owner to select the world's rate from.
+    /// </summary>
+    private void UpdatePlayerTime(ProductUpdateFacts facts)
+    {
+        bool presentation = _mode == ProductMode.Title || _openingCinematics.IsActive || Cinematics?.ActiveSource is not null;
+        bool playing = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen
+            && !State.Actors.Player.IsDefeated && !LegalModalOpen && !Summoning.PendingOffer
+            && State.Quests.PendingOffer is null && _pendingDispel is null
+            && _pendingIdentify is null && _pendingCreateItem is null;
+        CharacterMotion motion = State.PlayerControl.Motion;
+        // Slowfall uses Engine vertical drive too, but it is still passive descent. Only
+        // the ruleset's actual hover/support modes let an idle airborne player hold time.
+        bool falling = !motion.Grounded && !State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId)
+            && !State.Swimming.IsSwimming && !_climbing.IsAttached;
+        // Ignore numerical controller residue smaller than a centimetre per second.
+        bool movement = _input.ObservedPlanarIntent != Vector2.Zero || _locomotion.HasPendingJump
+            || _locomotion.ObservedInput.JumpHeld
+            || (_locomotion.ObservedInput.CrouchHeld && (_spatial.IsVerticalDriven || State.Swimming.IsSwimming))
+            || _locomotion.HasPendingStanceChange
+            // Ground adhesion retains downward controller velocity while standing. Only planar
+            // momentum needs settling here; airborne gravity is covered by falling above.
+            || falling || new Vector2(motion.ControlledVelocity.X, motion.ControlledVelocity.Z).LengthSquared() > .0001f
+            || motion.ExternalVelocity.LengthSquared() > .0001f;
+        bool action = _playerTime.WorldActionPending || _input.HasPendingActions || _guard.WantsTime || _attackClock.Busy || !_combat.PlayerWeaponReady
+            || State.Actors.Player.Attack.ReadyAtStep > facts.SimulationStep
+            || _combat.HasPlayerRangedFlight
+            || Casting.PendingRangedFlights.Any(flight => flight.CasterId == DaggerfallActorIdentity.PlayerEntityId)
+            || _doors.AnyMoving
+            || _sites.Projection.Motion.IsMoving;
+        if (_playerTime.Update(ActionDrivenPlay, new(presentation, playing, movement, action),
+                _hitStopSteps > 0 ? _tuning.Attacks.Strike.HitStopRate : 1d))                    // Time
+            PublishPresentation();                                                                // UiProjection
     }
 
     /// <summary>Condition's swimming roll for the player as the session holds them now.</summary>

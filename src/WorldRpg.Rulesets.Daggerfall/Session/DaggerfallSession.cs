@@ -107,6 +107,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly World.DaggerfallWorldTime _time;
     private readonly World.DaggerfallHolidays _holidays = new();
     private readonly DaggerfallRest _rest;
+    private readonly World.DaggerfallPlayerTime _playerTime;
+
+    /// <summary>Whether action-driven play is holding the world still now.</summary>
+    internal bool PlayerTimeHeld => _playerTime.Held;
     private readonly World.DaggerfallSiteContext _site;
 
     /// <summary>The holiday announcement the calendar currently names for the session's site, or null.</summary>
@@ -124,6 +128,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>The player's active block.</summary>
     private readonly DaggerfallContactGuard _guard;
+
+    /// <summary>Whether the player's guard is raised now; never under a ruleset with no guard.</summary>
+    internal bool PlayerGuardRaised => _guard.Raised;
     private readonly DaggerfallContactTouch _touch;
 
     /// <summary>A focus, mode, rest or travel change drops a held guard with the rest of the held input.</summary>

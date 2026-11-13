@@ -94,6 +94,7 @@ internal sealed partial class DaggerfallSession
         try
         {
             _engine = engine;
+            _playerTime = new World.DaggerfallPlayerTime(engine.GameplayTime);
             _composition = composition;
             _loading = composition.Loading;
             _newGameInitialized = saved is not null;

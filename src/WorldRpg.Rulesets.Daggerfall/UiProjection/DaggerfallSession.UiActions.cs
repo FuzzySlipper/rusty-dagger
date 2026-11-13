@@ -89,7 +89,7 @@ internal sealed partial class DaggerfallSession
         if (action.Kind is DaggerfallUiActionKind.SpellCast or DaggerfallUiActionKind.InventoryUse
             or DaggerfallUiActionKind.InventoryMove or DaggerfallUiActionKind.InventoryDrop
             or DaggerfallUiActionKind.TransportSelect)
-            _pendingWorldAction = true;
+            _playerTime.RequestWorldAction();
     }
 
     private void ApplyUiAction(DaggerfallPlayerUiAction action, ProductUpdateState firstStep, bool opensInteraction, ref bool elapsedSubmitted)
@@ -322,5 +322,23 @@ internal sealed partial class DaggerfallSession
             _lootUi.Complete(result);
         }
         if (report) Presentation.SetOutcome(_lootUi.Message);
+    }
+
+    // Opening a panel or preparing a spell must work without spending a world step. Physical
+    // attack/use edges remain queued in the input owner until an Engine-admitted step consumes them.
+    private void ApplyIdleInterfaceActions()
+    {
+        bool panel = false;
+        foreach (var (action, name) in new[]
+        {
+            (DaggerfallInput.Inventory, DaggerfallPanel.Inventory),
+            (DaggerfallInput.Character, DaggerfallPanel.Character),
+            (DaggerfallInput.Map, DaggerfallPanel.Map),
+            (DaggerfallInput.Menu, DaggerfallPanel.Menu),
+        })
+            if (_input.TakeAction(action)) { RequestPanel(name); panel = true; }
+        foreach (string shortcut in DaggerfallInput.Shortcuts)
+            if (_input.TakeAction(DaggerfallInput.Shortcut(shortcut))) { ApplyShortcut(shortcut); panel = true; }
+        if (panel) _input.ClearPendingActions();
     }
 }
