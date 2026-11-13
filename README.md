@@ -262,10 +262,10 @@ and runs its suites there until den-agents has imported it. A test host that
 holds more than three quarters of its worker's memory (at most 32 GiB) is stopped,
 and the run names the tests it was running.
 
-`scripts/route.py main` is one round of `main`'s own check: the newest `main`
-commit gets the verify lane when a worker is free, a pass is noted in
-`refs/notes/verify`, a failure in `refs/notes/verify-failures`, and the first
-failure is posted on the crew board. On den-agents,
+`scripts/route.py main` gives the newest `main` commit the verify lane when a
+worker is free. It records passes in `refs/notes/verify` and failures in
+`refs/notes/verify-failures`. A round started from a Claude Code session also
+posts the first failure after a pass to the crew board. On den-agents,
 `rusty-dagger-main-check.timer` runs this round every half hour using the
 installed build config. Read its journal with
 `journalctl --user -u rusty-dagger-main-check.service`.
