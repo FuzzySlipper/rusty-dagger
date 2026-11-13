@@ -230,7 +230,7 @@ internal sealed partial class DaggerfallSession
         // visible immediately and rest/travel cannot outrun the blessing through catch-up limits.
         _ = DaggerfallTempleBlessingEffects.ExpireDue(State.Effects, _time);                      // Economy
         _locomotion.SetAthletics(
-            PlayerSpecials.Athleticism,
+            _passives.PlayerSpecials.Athleticism,
             State.HeldEnchantments.Talents.Athleticism);                                          // Character
         RefreshPassiveMagery();                                                                   // Character
         DaggerfallCalendar after = _time.Calendar;
@@ -331,6 +331,30 @@ internal sealed partial class DaggerfallSession
                 _definitions.TextPresentation) is { } line)                                       // Time
             Presentation.SetOutcome(line);                                                        // UiProjection
     }
+
+    /// <summary>
+    /// The career's passive rounds in an interval: every fourth magic round regenerates or harms the player, as the
+    /// career and where the player stands decide, until the player falls.
+    /// </summary>
+    private void AdvancePassiveRounds(long roundBefore, long minutes)
+    {
+        DaggerfallCalendar calendar = _time.Calendar;
+        DaggerfallPassiveRounds rounds = _passives.Rounds(roundBefore, minutes, DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds,
+            vampire: State.RacialOverrides.Current?.IsVampire == true, travelling: State.Travel.IsExecuting, InHolyPlace,
+            dark: !calendar.IsDay || _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon,
+            sunlight: calendar.IsDay && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior,
+            swimming: State.Swimming.IsSwimming);                                                 // Character
+        var player = State.Actors.Player;
+        for (long round = 0; round < rounds.Count && !player.IsDefeated; round++)
+        {
+            if (rounds.Regenerates) _vitality.RestoreSpellTrack(player.Actor, TrackId.Parse("health"), 1);                  // Condition
+            if (rounds.Damage > 0) AppendEffectDamage(new(_vitality.ResolvePassiveDamage(player.Actor, rounds.Damage)));   // Condition
+        }
+    }
+
+    /// <summary>The career's magery penalty on maximum magicka, in the light where the player is.</summary>
+    private void RefreshPassiveMagery() =>
+        _passives.RefreshMagery(State.Actors.Player.Stats, State.Actors.Player.Actor.Entity, dark: !InSunlight());   // Character
 
     /// <summary>
     /// The round's list: the calendar minutes of one interval as magic rounds. A normal game minute of ordinary play
@@ -524,7 +548,7 @@ internal sealed partial class DaggerfallSession
         // A consequence of the hour itself (a poison round, a quest) may have ended the player.
         DeliverFacts();                                                                           // Session
         if (State.Actors.Player.IsDefeated) return;
-        (bool rapidHealing, bool noRegeneration) = _rest.CharacterTraits(PlayerSpecials, _activeProfileKey.Kind);   // Time
+        (bool rapidHealing, bool noRegeneration) = _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind);   // Time
         if (!_condition.RecoverFromCollapse(State.Actors.Player.Stats, rapidHealing, noRegeneration)) return;   // Condition
         State.SkillUses.Record(new DaggerfallSkillUse("medical", DaggerfallSkillUseReason.MedicalRest,
             DaggerfallSkillUseOutcome.Accepted));                                                 // Character
@@ -564,7 +588,7 @@ internal sealed partial class DaggerfallSession
         Func<long, DaggerfallRestTimeAdvance> advanceTime, bool rapidHealing = false, bool noRegeneration = false)
     {
         DaggerfallRestResult result = _rest.Apply(request, eligibility, State.Actors.Player.Stats, this, advanceTime,
-            rapidHealing, noRegeneration, () => _rest.CharacterTraits(PlayerSpecials, _activeProfileKey.Kind));   // Time
+            rapidHealing, noRegeneration, () => _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind));   // Time
         if (result.Accepted && result.ElapsedSeconds > 0) CompleteTimeIncrease();                // Session: the increase's end
         _restPresentation.Publish(result);                                                        // UiProjection
         Presentation.SetOutcome(result.Message ?? (result.Accepted ? "Rest complete." : "Rest refused."));   // UiProjection

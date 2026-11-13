@@ -115,6 +115,17 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>Whether action-driven play is holding the world still now.</summary>
     internal bool PlayerTimeHeld => _playerTime.Held;
 
+    // What the career's special abilities do from moment to moment.
+    private readonly DaggerfallCareerPassives _passives;
+    internal float EnemyAudibleRange => _passives.EnemyAudibleRange(State.HeldEnchantments.Talents.AcuteHearing);
+
+    /// <summary>
+    /// Career absorption for any target, as the donor applies it to every entity: a career that absorbs spells in
+    /// the light where the player is absorbs every one.
+    /// </summary>
+    private DaggerfallMagicDefense CareerMagicDefense(long actorId) =>
+        _passives.AbsorbsSpells(actorId, InSunlight()) ? new(100, 0, []) : DaggerfallMagicDefense.None;
+
     // Character creation from the title screen.
     private readonly DaggerfallCharacterCreation _creation;
     // The player's control settings: bindings, look, pad, sound levels, ground cover and action-driven time.

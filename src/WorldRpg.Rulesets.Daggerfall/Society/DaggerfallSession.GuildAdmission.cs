@@ -71,7 +71,7 @@ internal sealed partial class DaggerfallSession
         var building = CurrentInteriorBuilding();
         if (building is null || !TryResolveGuildProvider(npc, building, null, out var guild, out var provider, out _)) return null;
         int day = checked((int)_time.Calendar.DayNumber);
-        (_, bool noRegen) = _rest.CharacterTraits(PlayerSpecials, _activeProfileKey.Kind);
+        (_, bool noRegen) = _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind);
         List<string> messages = [];
         foreach ((DaggerfallConcreteGuildService service, string trackId, string message) in new[] {
             (DaggerfallConcreteGuildService.FreeHealing, "health", "The temple restores your health."),

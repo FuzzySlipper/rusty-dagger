@@ -219,7 +219,7 @@ internal sealed partial class DaggerfallSession
         {
             if (quote.Options.SpeedCautious)
             {
-                (_, bool noRegen) = _rest.CharacterTraits(PlayerSpecials, _activeProfileKey.Kind);
+                (_, bool noRegen) = _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind);
                 DaggerfallRestRecoveryModule.RecoverForCautiousTravel(State.Actors.Player.Stats, noRegen,
                     quote.Options.SleepModeInn ? 1 : _tuning.Rest.InnFatigueMultiplier);
             }
@@ -254,7 +254,7 @@ internal sealed partial class DaggerfallSession
                     _sites.ClearReturnDestination();
                 }
                 long delay = TravelArrivalDelay(_time.Calendar,
-                    State.RacialOverrides.Current?.IsVampire == true || PlayerSpecials.SunDamage,
+                    State.RacialOverrides.Current?.IsVampire == true || _passives.PlayerSpecials.SunDamage,
                     quote.Options.SpeedCautious);
                 // Effects and deadlines of the arrival adjustment run at the actual destination
                 // through the shared calendar.

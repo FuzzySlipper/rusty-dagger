@@ -332,6 +332,7 @@ internal sealed partial class DaggerfallSession
                 () => assembled.PlayerControl.Position, () => DaggerfallActorRoster.NearbyCreatures(actors, authored, npcs.IsGameplayActive), InSunlight, _itemCondition, InHolyPlace,
                 amount => AppendEffectDamage(new(_vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount))), social, DrainNearbyHealth);
             effects.UseHeldDefense(actors.Player.DurableId, _heldEnchantments);
+            _passives = new DaggerfallCareerPassives(character, definitions, authored, actors.Player.DurableId);
             effects.UseCareerDefense(CareerMagicDefense);
             partiallyConstructed.Add(_heldEnchantments);
             _equipmentMoves.Changed += _ =>
@@ -364,7 +365,7 @@ internal sealed partial class DaggerfallSession
                 _tuning.Attacks,
                 targetUnaware: id => EnemyBehavior.Unaware(id),
                 alertTarget: id => EnemyBehavior.Provoke(id, _time.Calendar.MinuteNumber),
-                playerRush: () => CareerSpecialsFor(actors.Player.DurableId).AdrenalineRush
+                playerRush: () => _passives.SpecialsFor(actors.Player.DurableId).AdrenalineRush
                     ? new DaggerfallAdrenalineRush(_heldEnchantments.Talents.AdrenalineRush) : null,
                 _contact, StrikePose, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion),
                 // Only the player's own controller reports a velocity; site actors step between poses.

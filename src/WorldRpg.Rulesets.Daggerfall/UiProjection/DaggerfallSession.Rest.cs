@@ -24,7 +24,7 @@ internal sealed partial class DaggerfallSession
         };
         DaggerfallRestRequest request = new(mode, mode == DaggerfallRestMode.UntilHealed ? 0 : action.Hours ?? 0);
         DaggerfallRestEligibility eligibility = _rest.Eligibility(mode, State.Actors.Player.Stats, this);
-        (bool rapidHealing, bool noRegeneration) = _rest.CharacterTraits(PlayerSpecials, _activeProfileKey.Kind);
+        (bool rapidHealing, bool noRegeneration) = _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind);
         DaggerfallRestResult result = ApplyRest(request, eligibility,
             seconds => _rest.PassInterval(seconds, mode, State.Actors.Player.Stats, this), rapidHealing, noRegeneration);
         // An encounter ends the donor's rest window: the player faces it rather than a menu.
