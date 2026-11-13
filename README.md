@@ -240,23 +240,35 @@ There is no hosted CI: most suites read the Arena2 corpus and the content made
 from it, so the recorded local run is the gate's record. Without the data
 container the script says so, skips the ruleset suite and refuses `--play`.
 
-On our network a whole suite or a full verify runs on the build workers (den-k8,
-den-nimo, den-m5), not on den-agents while one of them can take it; per-task
-checks stay focused and local. From a worktree on den-agents, for a commit
-(`HEAD` by default, pushed or not; uncommitted changes are not in it):
+On our network a task lands on its focused checks. Whole suites and the full
+verify run on the build workers (den-k8, den-nimo, den-m5), not on den-agents
+while one of them can take them, and nobody waits for them. From a worktree on
+den-agents, for a commit (`HEAD` by default, pushed or not; uncommitted changes
+are not in it):
 
 ```bash
-scripts/route.py ruleset    # the ruleset suite in parts across the workers: one result, each part's log
-scripts/route.py import     # the import suite; `verify` is verify.sh --import --play
+scripts/route.py ruleset --notify ADDRESS --task N   # the ruleset suite in parts across the workers
+scripts/route.py import                              # the import suite, waiting for it; `verify` is verify.sh --import --play
 ```
 
-It sends the lanes in [scripts/lane.sh](scripts/lane.sh) through the build router
+With `--notify` (your crew address, given at your session's start) or `--task`
+it returns at once, and the result, with each part's log and the tests that
+failed, arrives at that address and on that Den task. The lanes are
+[scripts/lane.sh](scripts/lane.sh), run through the build router
 (`den-tool build run`). A lane takes den-agents' data when its own is not at the
 commit's importer revision, and refuses, naming both, when den-agents' is not
 either: a branch that changes the importer's inputs imports in its own worktree
-and runs its suites there until den-agents has imported it. Until den-services
-installs the lanes in the router's config, add
-`--config /mnt/den-nas-backup/data/evidence/rusty-dagger/10774-router-lanes/den-build.json`.
+and runs its suites there until den-agents has imported it. A test host that
+holds more than three quarters of its worker's memory (at most 32 GiB) is stopped,
+and the run names the tests it was running.
+
+`scripts/route.py main` is one round of `main`'s own check: the newest `main`
+commit gets the verify lane when a worker is free, a pass is noted in
+`refs/notes/verify` and a failure in `refs/notes/verify-failures`, and the first
+failure is posted on the crew board. Until den-services installs the lanes and a
+timer for the round, add
+`--config /mnt/den-nas-backup/data/evidence/rusty-dagger/10774-router-lanes/den-build.json`
+and run a round by hand.
 
 A plain `dotnet build` does not stage the product. To stage only:
 

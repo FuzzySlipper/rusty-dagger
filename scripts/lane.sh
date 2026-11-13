@@ -43,10 +43,12 @@ kept=$(dirname "$root")/kept
 source=${DAGGER_DATA_SOURCE:-den-agents:dev/rusty-dagger}
 donor_source=${DAGGER_DONOR_SOURCE:-den-agents:/home/research/daggerfall-unity}
 out=$DEN_BUILD_OUTPUT_DIR
-mkdir -p "$kept"/{inputs/arena2,data,import} "$out" local/build
+# What an import wrote is kept together, apart from the inputs, so that one place says which revision is held.
+imported=$kept/imported
+mkdir -p "$kept"/inputs/arena2 "$imported"/{data,import} "$out" local/build
 ln -sfn "$kept/inputs" local/inputs
-ln -sfn "$kept/data" local/data
-ln -sfn "$kept/import" local/build/import
+ln -sfn "$imported/data" local/data
+ln -sfn "$imported/import" local/build/import
 started=$SECONDS
 step() { echo "lane: $* ($((SECONDS - started)) s)"; }
 step "run $(basename "$out") of $lane${part:+ part $part} on $(hostname) at $commit"
@@ -88,16 +90,35 @@ rsync -rtl --delete "$donor_source/" "$kept/daggerfall-unity/"
 export DAGGER_DONOR_ROOT=$kept/daggerfall-unity
 step "data at importer revision $wanted"
 
+# A test host may hold at most this much, resident plus swapped: a runaway would otherwise take the worker down
+# (one reached 31 GiB resident and 79 GiB of swap on den-agents). The whole ruleset suite peaks near 13 GiB.
+total_gib=$(($(awk '/^MemTotal/ { print $2 }' /proc/meminfo) / 1024 / 1024))
+ceiling_gib=${DAGGER_TEST_CEILING_GIB:-$((total_gib * 3 / 4 < 32 ? total_gib * 3 / 4 : 32))}
+# dotnet-stack, into the kept directory, names the tests a stopped host was running.
+[[ -x $kept/tools/dotnet-stack ]] || dotnet tool install --tool-path "$kept/tools" dotnet-stack --version 10.0.745401
+step "test hosts are stopped past $ceiling_gib GiB"
+
 # Runs a step and says how long it took and the most memory the lane's processes held together (the router starts
-# the lane as its own process group; sampled every two seconds).
+# the lane as its own process group), sampled every two seconds. A test host past the ceiling has its managed stacks
+# written beside the run's outputs and is stopped, and the step fails naming the tests on those stacks.
 measured() {
-  local name=$1 began=$SECONDS peak=$out/$1.peak sampler status=0
+  local name=$1 began=$SECONDS peak=$out/$1.peak breach=$out/$1.ceiling sampler status=0
   shift
   (
     group=$(ps -o pgid= -p $BASHPID | tr -d ' ') most=0
     while sleep 2; do
       now=$(ps -eo pgid=,rss= | awk -v group="$group" '$1 == group { sum += $2 } END { print sum + 0 }')
       ((now > most)) && most=$now && echo "$most" >"$peak"
+      for host in $(ps -eo pid=,pgid=,args= | awk -v group="$group" '$2 == group && /exec --runtimeconfig .*Tests\.runtimeconfig\.json/ { print $1 }'); do
+        held=$(awk '/^(VmRSS|VmSwap):/ { sum += $2 } END { print int(sum / 1024 / 1024) }' "/proc/$host/status" 2>/dev/null || echo 0)
+        ((held > ceiling_gib)) || continue
+        timeout 120 "$kept/tools/dotnet-stack" report -p "$host" >"$breach.stacks" 2>&1 || true
+        kill -KILL "$host" 2>/dev/null || true
+        # Each thread's outermost frame in a test assembly is the test method it runs.
+        running=$(awk '/^ *Thread / { if (test) print test; test = "" } /Tests![^ ]/ { sub(/.*Tests!/, ""); sub(/\(.*/, ""); test = $0 } END { if (test) print test }' \
+          "$breach.stacks" | sort -u | paste -sd ' ')
+        echo "test host $host held $held GiB, past the $ceiling_gib GiB ceiling; running: ${running:-(no test frame on its stacks)}" >"$breach"
+      done
     done
   ) &
   sampler=$!
@@ -105,11 +126,17 @@ measured() {
   kill "$sampler"
   wait "$sampler" 2>/dev/null || true
   echo "lane: $name took $((SECONDS - began)) s, peak memory $(($(cat "$peak" 2>/dev/null || echo 0) / 1024)) MiB"
+  if [[ -f $breach ]]; then
+    echo "lane: $name stopped: $(cat "$breach"); stacks $(hostname):$breach.stacks" >&2
+    return 4
+  fi
   return "$status"
 }
 case $lane in
   ruleset)
     project=tests/WorldRpg.Rulesets.Daggerfall.Tests/WorldRpg.Rulesets.Daggerfall.Tests.csproj
+    # The staged product manifest is what the suite's [StagedProductFact]s read; only staging the Host writes it.
+    measured stage rusty build --project src/WorldRpg.Host/WorldRpg.Host.csproj
     measured build dotnet build "$project"
     filter=()
     if [[ -n $part ]]; then
