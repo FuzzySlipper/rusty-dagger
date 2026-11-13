@@ -31,7 +31,8 @@ zstd (which `scripts/data-sync.sh` uses). The product consumes one immutable
 Engine SDK/runtime pair, pinned by `<RustyEnginePackageVersion>` in
 `Directory.Build.props`. The Engine's `rusty` command installs, updates and runs
 it. Get `rusty` once with the Engine bootstrap
-(`curl -fsSL https://raw.githubusercontent.com/FuzzySlipper/rusty-engine/main/scripts/install-rusty.sh | bash`),
+(`curl -fsSL https://raw.githubusercontent.com/FuzzySlipper/rusty-engine/main/scripts/install-rusty.sh | bash`;
+on Windows `irm https://raw.githubusercontent.com/FuzzySlipper/rusty-engine/main/scripts/install-rusty.ps1 | iex`),
 and again when `rusty install` says `rusty` is older than the pinned pair, then:
 
 ```bash
