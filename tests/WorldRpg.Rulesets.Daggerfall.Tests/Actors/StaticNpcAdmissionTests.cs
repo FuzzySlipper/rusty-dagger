@@ -83,9 +83,9 @@ public sealed class StaticNpcAdmissionTests
         Track magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         magicka.Maximum.BaseValue = 1000;
         magicka.SetCurrent(1000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, session.ReadyPlayerSpell("spell.024").Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, session.SpellRelease.ReadyPlayerSpell("spell.024").Outcome);
         Assert.Equal(DaggerfallCastOutcome.Missed,
-            session.ReleaseReadySpell(session.State.Actors.Player.DurableId, Vector3.UnitZ).Outcome);
+            session.SpellRelease.ReleaseReadySpell(session.State.Actors.Player.DurableId, Vector3.UnitZ).Outcome);
 
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave());
         DaggerfallNpcEntry savedNpc = Assert.Single(saved.Npcs.Entries, value => value.DurableId == npc.DurableId);

@@ -124,7 +124,7 @@ public sealed class DaggerfallTransferEffectsTests
         using Fixture f = new(); var s = f.Session; const long target = 2000;
         var sourceTrack = Track(s, 1, track); var targetTrack = Track(s, target, track);
         sourceTrack.SetCurrent(1); targetTrack.Maximum.BaseValue = 1000; targetTrack.SetCurrent(1); Fund(s, 1);
-        s.State.Character.LearnSpell(key); Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell(key).Outcome);
+        s.State.Character.LearnSpell(key); Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell(key).Outcome);
         var bundle = s.Casting.Release(1, true).Bundle!; s.Casting.Deliver(bundle, [target]);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome);
         Assert.True(sourceTrack.Current > 1); Assert.Equal(0, targetTrack.Current); Assert.Empty(s.State.Effects.Active);

@@ -231,7 +231,7 @@ public sealed class ItemCastTriggerSessionTests
         Assert.Equal(0, ready.Cost); Assert.Equal(1490, f.Condition);
         Assert.Equal(ready, DaggerfallSavePayload.Read(s.CaptureSave()).ReadySpell);
         using var restored = f.Restore(); Assert.Equal(ready, restored.Casting.ReadyFor(1));
-        var release = restored.ReleaseReadySpell(1, Vector3.UnitZ);
+        var release = restored.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.Released, release.Outcome);
         Assert.Equal(f.Source, release.Bundle!.ItemId); Assert.Null(restored.Casting.ReadyFor(1));
         restored.State.ItemInstances.RemoveUnique(f.Source);
@@ -255,7 +255,7 @@ public sealed class ItemCastTriggerSessionTests
         var dangling = saved with { ReadySpell = saved.ReadySpell! with { ItemId = 987_654_321UL } };
         var error = Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(f.Engine.Context, f.Composition, DaggerfallSavePayload.Encode(dangling)));
         Assert.Contains("missing item", error.Message);
-        Assert.Equal(DaggerfallCastOutcome.Released, s.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Released, s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
         long sequence = s.Casting.NextSequence; f.Use(); Assert.Equal(sequence, s.Casting.NextSequence);
         Assert.Contains("broken", f.Message);
     }

@@ -63,8 +63,8 @@ public sealed class AdditionalControlSessionTests
         session.State.Character.LearnSpell("spell.075");
         var magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         magicka.Maximum.BaseValue = 1000; magicka.SetCurrent(1000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, session.ReadyPlayerSpell("spell.075").Outcome);
-        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, session.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, session.SpellRelease.ReadyPlayerSpell("spell.075").Outcome);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, session.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
         magicka.Maximum.BaseValue = 1000; magicka.SetCurrent(1000);
         Press(session, "recast");
         Assert.True(session.Casting.ReadyFor(1)?.SpellKey == "spell.075", session.Presentation.LastOutcome);

@@ -57,7 +57,7 @@ public sealed class DaggerfallHealingEffectsTests
             var spell = TestPayload.Definitions.Magic.Spells.Values.First(spell => spell.Element == 4 && spell.RangeType == 0
                 && spell.Effects.Count == 1 && spell.Effects[0].Type == 10 && spell.Effects[0].SubType == subtype);
             var track = Track(s, subtype == 8 ? "health" : "fatigue"); track.SetCurrent(1); Fund(s); s.State.Character.LearnSpell(spell.Key);
-            Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell(spell.Key).Outcome);
+            Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell(spell.Key).Outcome);
             var bundle = s.Casting.Release(1, true).Bundle!; s.Casting.Deliver(bundle, [1]);
             Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome); Assert.True(track.Current > 1); Assert.Empty(s.State.Effects.Active);
         }
@@ -111,7 +111,7 @@ public sealed class DaggerfallHealingEffectsTests
     private static DaggerfallCasting Casting(DaggerfallSession s, DaggerfallSpellDefinition spell) => new(
         TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } }, s.State.Effects,
         id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null,
-        s.MagicProfile, _ => true, _ => { }, _ => { }, RandomMinimum.Create(), 1, playerKnowsSpell: _ => true, casterLevel: _ => 1);
+        s.SpellTargets.MagicProfile, _ => true, _ => { }, _ => { }, RandomMinimum.Create(), 1, playerKnowsSpell: _ => true, casterLevel: _ => 1);
     private static DaggerfallCastOutcome Heal(DaggerfallSession s, int subtype, int amount)
     {
         var spell = Spell(subtype, amount); var casting = Casting(s, spell); Fund(s);

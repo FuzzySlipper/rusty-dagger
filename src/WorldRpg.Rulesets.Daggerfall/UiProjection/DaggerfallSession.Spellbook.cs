@@ -32,7 +32,7 @@ internal sealed partial class DaggerfallSession
     {
         var result=action.Kind switch
         {
-            WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallUiActionKind.SpellReady=>ReadyPlayerSpell(action.Key!),
+            WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallUiActionKind.SpellReady=>SpellRelease.ReadyPlayerSpell(action.Key!),
             _=>Casting.Cancel(State.Actors.Player.DurableId),
         };
         ReportCast(result.Outcome);

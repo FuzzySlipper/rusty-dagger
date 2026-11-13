@@ -128,7 +128,7 @@ public sealed class RangedCombatSessionTests
 
         // The mesh is drawn on the arrow's own line: it leaves the archer's eye, one step along by the
         // time it is first drawn, and falls toward the player's lower eye.
-        float eye = session.State.Actors.Get(archer).Position.Y + DaggerfallSession.ActorContactBody.Height * .9f;
+        float eye = session.State.Actors.Get(archer).Position.Y + DaggerfallContactBody.Envelope.Height * .9f;
         Assert.InRange(released.Transform.Translation.Y, eye - .1f, eye);
     }
 

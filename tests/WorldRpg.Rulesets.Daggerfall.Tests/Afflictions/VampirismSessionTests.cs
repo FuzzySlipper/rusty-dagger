@@ -78,7 +78,7 @@ public sealed class VampirismSessionTests
         s.State.Character.LearnSpell(spells[0]);
         s.State.RacialOverrides.Select(DaggerfallRacialKind.Vampire, "vampire", Minute(s), vampireClan: 153);
         var mana = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); mana.Maximum.BaseValue = 10000; mana.SetCurrent(10000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell(spells[1]).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell(spells[1]).Outcome);
         Assert.Equal(5, s.Casting.ReadyFor(1)!.Cost);
         using var restored = f.Restore();
         Assert.Equal(s.State.RacialOverrides.Current, restored.State.RacialOverrides.Current);

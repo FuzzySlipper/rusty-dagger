@@ -46,7 +46,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
         using Fixture f = new(); var s = f.Session; const long target = 2000;
         foreach (string track in new[] {"health","fatigue","magicka"}) { var t=Track(s,target,track); t.Maximum.BaseValue=10000;t.SetCurrent(10000); }
         Fund(s); s.State.Character.LearnSpell(key);
-        Assert.Equal(DaggerfallCastOutcome.Ready,s.ReadyPlayerSpell(key).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready,s.SpellRelease.ReadyPlayerSpell(key).Outcome);
         var bundle=s.Casting.Release(1,true).Bundle!; s.Casting.Deliver(bundle,[target]);
         Assert.Equal(DaggerfallCastOutcome.Applied,bundle.Results[0].Outcome);
         double after=Track(s,target,name).Current; Assert.True(after<10000);
@@ -65,7 +65,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     {
         using Fixture f = new(); var s=f.Session; Fund(s);
         s.State.Character.LearnSpell(key);
-        Assert.Equal(DaggerfallCastOutcome.UnknownSpell,s.ReadyPlayerSpell(key).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.UnknownSpell,s.SpellRelease.ReadyPlayerSpell(key).Outcome);
         var setting=TestPayload.Definitions.Magic.Spells[key].Effects.Single(e=>e.Type==1);
         const long target=2000;
         var track=Track(s,target,name);track.Maximum.BaseValue=10000;track.SetCurrent(10000);
@@ -119,7 +119,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     public void Shield_absorbs_periodic_health_damage_and_terminal_target_ends_all_periodic_payloads_once()
     {
         using Fixture f=new();var s=f.Session;Fund(s);Track(s,1,"health").SetCurrent(10);
-        s.State.Character.LearnSpell("spell.017");s.ReadyPlayerSpell("spell.017");s.ReleaseReadySpell(1,Vector3.UnitZ);
+        s.State.Character.LearnSpell("spell.017");s.SpellRelease.ReadyPlayerSpell("spell.017");s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ);
         var shield=s.State.Effects.Active.Single(e=>e.Definition.Key=="shield");
         int pool=DaggerfallAlterationEffects.ReadShield(shield.State).Remaining;
         Start(s,"health",0,100);Assert.Equal(10,Track(s,1,"health").Current);
@@ -253,7 +253,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     {
         var catalog=TestPayload.Definitions.Magic with {Spells=new Dictionary<string,DaggerfallSpellDefinition>{[spell.Key]=spell}};
         return new(catalog,s.State.Effects,id=>id==1?s.State.Actors.Player.Actor:s.State.Actors.TryGet(id,out var actor)?actor.Actor:null,
-            s.MagicProfile,_=>true,_=>{},_=>{},DaggerfallCastingTests.SaveDice.Create(100),1,playerKnowsSpell:_=>true,casterLevel:_=>1);
+            s.SpellTargets.MagicProfile,_=>true,_=>{},_=>{},DaggerfallCastingTests.SaveDice.Create(100),1,playerKnowsSpell:_=>true,casterLevel:_=>1);
     }
     private sealed class Fixture:IDisposable
     {

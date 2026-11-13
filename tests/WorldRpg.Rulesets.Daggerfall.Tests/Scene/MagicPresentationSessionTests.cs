@@ -17,9 +17,9 @@ public sealed class MagicPresentationSessionTests
     public void Real_cast_delivers_one_release_and_impact_and_live_status_without_replaying_on_restore()
     {
         using Fixture f = new(); var s = f.Session; Fund(s);
-        s.State.Character.LearnSpell("spell.023"); s.ReadyPlayerSpell("spell.023");
+        s.State.Character.LearnSpell("spell.023"); s.SpellRelease.ReadyPlayerSpell("spell.023");
         var health=s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health"));health.SetCurrent(health.Maximum.Value-1);
-        var bundle = s.ReleaseReadySpell(1,Vector3.UnitZ).Bundle!;
+        var bundle = s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ).Bundle!;
         Assert.Equal(1,Assert.Single(Pending(s).OfType<SpellTrackRestoredFact>()).Restored);
         Assert.Equal(2, Pending(s).OfType<SpellCastFact>().Count());
         Assert.Single(Pending(s).OfType<MagicEffectFact>(), fact => fact.Outcome.Kind == DaggerfallEffectOutcomeKind.Started);
@@ -41,7 +41,7 @@ public sealed class MagicPresentationSessionTests
     {
         using Fixture f = new(); var s = f.Session; Fund(s);
         var item = s.State.Inventory.Read().UniqueItems.First(); var id = s.State.Inventory.GetDurableItemId(item.Entity).Value;
-        s.Casting.Ready(1,"spell.023",id); s.ReleaseReadySpell(1,Vector3.UnitZ); f.Update();
+        s.Casting.Ready(1,"spell.023",id); s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ); f.Update();
         // The effect row names the source item and the remaining game time, not ids or magic rounds.
         var row = Assert.Single(s.ReadActiveEffects());
         Assert.Contains($"From {s.EffectItemName(id)}.", row.Detail, StringComparison.Ordinal);
@@ -52,7 +52,7 @@ public sealed class MagicPresentationSessionTests
         Assert.Equal(1, EffectCount(Visual(s)));
         s.State.Effects.CancelItemReferences(id); f.Update(); Assert.Equal(0, EffectCount(Visual(s)));
         Assert.Empty(s.ReadActiveEffects());
-        s.State.Character.LearnSpell("spell.023"); s.ReadyPlayerSpell("spell.023"); s.ReleaseReadySpell(1,Vector3.UnitZ); f.Update();
+        s.State.Character.LearnSpell("spell.023"); s.SpellRelease.ReadyPlayerSpell("spell.023"); s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ); f.Update();
         s.State.Effects.AdvanceElapsedRounds(100000); f.Update();
         Assert.Empty(s.ReadActiveEffects()); Assert.Equal(0, EffectCount(Visual(s)));
     }
@@ -64,7 +64,7 @@ public sealed class MagicPresentationSessionTests
         var spell = TestPayload.Definitions.Magic.Spells.Values.First(spell => !spell.Name.StartsWith('!') && spell.RangeType == 0
             && spell.Effects.Any(effect => effect.Type == 10 && effect.SubType == 8) && s.Casting.AvailableSpellCost(1,spell.Key) is not null);
         var health = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")); health.SetCurrent(health.Maximum.Value-1);
-        s.State.Character.LearnSpell(spell.Key); s.ReadyPlayerSpell(spell.Key); s.ReleaseReadySpell(1,Vector3.UnitZ);
+        s.State.Character.LearnSpell(spell.Key); s.SpellRelease.ReadyPlayerSpell(spell.Key); s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ);
         var fact = Assert.Single(Pending(s).OfType<SpellTrackRestoredFact>());
         Assert.Equal("health",fact.Track); Assert.Equal(1,fact.Restored); Assert.True(fact.Requested>=1);
         f.Update(); Assert.True(EffectCount(Visual(s))>0);
@@ -75,11 +75,11 @@ public sealed class MagicPresentationSessionTests
     public void Cure_before_delivery_and_death_clear_feedback_and_status_without_stale_rows()
     {
         using Fixture f = new(); var s = f.Session; Fund(s);
-        s.State.Character.LearnSpell("spell.023"); s.ReadyPlayerSpell("spell.023"); s.ReleaseReadySpell(1,Vector3.UnitZ);
+        s.State.Character.LearnSpell("spell.023"); s.SpellRelease.ReadyPlayerSpell("spell.023"); s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ);
         var effect = Assert.Single(s.State.Effects.Active);
         s.State.Effects.Cure(effect.Context.Instance); f.Update();
         Assert.Equal(0,EffectCount(Visual(s))); Assert.Empty(s.ReadActiveEffects());
-        s.ReadyPlayerSpell("spell.023");s.ReleaseReadySpell(1,Vector3.UnitZ);f.Update();Assert.Equal(1,EffectCount(Visual(s)));
+        s.SpellRelease.ReadyPlayerSpell("spell.023");s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ);f.Update();Assert.Equal(1,EffectCount(Visual(s)));
         s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0);s.PublishInitial();
         Assert.Equal(0,EffectCount(Visual(s)));Assert.Empty(s.ReadActiveEffects());
     }

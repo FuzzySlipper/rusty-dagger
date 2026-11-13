@@ -219,7 +219,7 @@ public sealed class DaggerfallCureEffectsTests
     private static DaggerfallLiveSpell Cast(DaggerfallSession s, string key)
     {
         Magicka(s).Maximum.BaseValue = 10000; Magicka(s).SetCurrent(10000);
-        s.State.Character.LearnSpell(key); Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell(key).Outcome);
+        s.State.Character.LearnSpell(key); Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell(key).Outcome);
         var bundle = s.Casting.Release(1, true).Bundle!; s.Casting.Deliver(bundle, [1]); return bundle;
     }
     private static Track Magicka(DaggerfallSession s) => s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
@@ -228,7 +228,7 @@ public sealed class DaggerfallCureEffectsTests
     {
         var catalog = TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } };
         return new(catalog, s.State.Effects, id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null,
-            s.MagicProfile, _ => true, _ => { }, _ => { }, DaggerfallCastingTests.SaveDice.Create(draw), 1, playerKnowsSpell: _ => true);
+            s.SpellTargets.MagicProfile, _ => true, _ => { }, _ => { }, DaggerfallCastingTests.SaveDice.Create(draw), 1, playerKnowsSpell: _ => true);
     }
 
     /// <summary>

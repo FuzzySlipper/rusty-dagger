@@ -23,22 +23,22 @@ public sealed class DaggerfallAlterationEffectsTests
         var element = (DaggerfallMagicResistanceElement)elementValue;
         Assert.NotNull(DaggerfallMagicCostMetadata.For(8, (int)element));
         using Fixture f = new(); var s = f.Session;
-        var before = s.MagicProfile(1).ResistanceModifiers;
+        var before = s.SpellTargets.MagicProfile(1).ResistanceModifiers;
         Resistance(s, "weak", element, 0, 10);
         Resistance(s, "strong", element, 80, 20);
         Resistance(s, "partial", element, 30, 30);
-        Assert.Equal(100, Assert.Single(s.MagicProfile(1).ActiveResistances).Chance);
-        Assert.Equal(before, s.MagicProfile(1).ResistanceModifiers);
+        Assert.Equal(100, Assert.Single(s.SpellTargets.MagicProfile(1).ActiveResistances).Chance);
+        Assert.Equal(before, s.SpellTargets.MagicProfile(1).ResistanceModifiers);
         using var restored = f.Restore(s.CaptureSave());
-        Assert.Equal(100, Assert.Single(restored.MagicProfile(1).ActiveResistances).Chance);
+        Assert.Equal(100, Assert.Single(restored.SpellTargets.MagicProfile(1).ActiveResistances).Chance);
         restored.State.Effects.Cancel(EffectInstanceId.Parse("strong"));
-        Assert.Equal(30, Assert.Single(restored.MagicProfile(1).ActiveResistances).Chance);
+        Assert.Equal(30, Assert.Single(restored.SpellTargets.MagicProfile(1).ActiveResistances).Chance);
         restored.State.Effects.Cancel(EffectInstanceId.Parse("partial"));
-        var zero = Assert.Single(restored.MagicProfile(1).ActiveResistances);
+        var zero = Assert.Single(restored.SpellTargets.MagicProfile(1).ActiveResistances);
         Assert.Equal(element, zero.Element); Assert.Equal(0, zero.Chance);
         restored.State.Effects.AdvanceElapsedRounds(10);
-        Assert.Empty(restored.MagicProfile(1).ActiveResistances);
-        Assert.Equal(before, restored.MagicProfile(1).ResistanceModifiers);
+        Assert.Empty(restored.SpellTargets.MagicProfile(1).ActiveResistances);
+        Assert.Equal(before, restored.SpellTargets.MagicProfile(1).ResistanceModifiers);
     }
 
     [Theory]
@@ -49,10 +49,10 @@ public sealed class DaggerfallAlterationEffectsTests
     {
         var element = (DaggerfallMagicResistanceElement)elementValue;
         using Fixture f = new(); var s = f.Session; PrepareCast(s, key);
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell(key).Outcome);
-        var result = s.ReleaseReadySpell(1, Vector3.UnitZ);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell(key).Outcome);
+        var result = s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(result.Bundle!.Results).Outcome);
-        Assert.Equal(element, Assert.Single(s.MagicProfile(1).ActiveResistances).Element);
+        Assert.Equal(element, Assert.Single(s.SpellTargets.MagicProfile(1).ActiveResistances).Element);
         Assert.Equal(1, s.State.Progression.SkillUses["alteration"]);
         Assert.Equal(DaggerfallCastOutcome.AlreadyDelivered, s.Casting.Deliver(result.Bundle, [1]).Outcome);
         Assert.Equal(1, s.State.Progression.SkillUses["alteration"]);
@@ -71,7 +71,7 @@ public sealed class DaggerfallAlterationEffectsTests
         Resistance(s, "disease-ward", DaggerfallMagicResistanceElement.DiseaseOrPoison, chance, 10);
         Assert.Equal(expected, s.Diseases.Inflict(new("exposure", "monster-hit", 1, 1, [DaggerfallClassicDisease.BloodRot])));
         s.State.Effects.Cancel(EffectInstanceId.Parse("disease-ward"));
-        Assert.Empty(s.MagicProfile(1).ActiveResistances);
+        Assert.Empty(s.SpellTargets.MagicProfile(1).ActiveResistances);
         Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("after-ward", "monster-hit", 1, 1, [DaggerfallClassicDisease.BloodRot])));
     }
 
@@ -79,8 +79,8 @@ public sealed class DaggerfallAlterationEffectsTests
     public void Shield_cast_partial_damage_restore_topup_depletion_and_expiry_use_one_canonical_application()
     {
         using Fixture f = new(); var s = f.Session; PrepareCast(s, "spell.017");
-        s.ReadyPlayerSpell("spell.017");
-        var cast = s.ReleaseReadySpell(1, Vector3.UnitZ);
+        s.SpellRelease.ReadyPlayerSpell("spell.017");
+        var cast = s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(cast.Bundle!.Results).Outcome);
         var effect = Assert.Single(s.State.Effects.Active);
         var initial = DaggerfallAlterationEffects.ReadShield(effect.State);
@@ -94,8 +94,8 @@ public sealed class DaggerfallAlterationEffectsTests
         var savedEffect = Assert.Single(restored.State.Effects.Active);
         uint? priorRounds = savedEffect.Lifecycle.RemainingRounds;
         Assert.Equal(initial.Starting - 2, DaggerfallAlterationEffects.ReadShield(savedEffect.State).Remaining);
-        restored.ReadyPlayerSpell("spell.017");
-        var topup = restored.ReleaseReadySpell(1, Vector3.UnitZ);
+        restored.SpellRelease.ReadyPlayerSpell("spell.017");
+        var topup = restored.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.Refreshed, Assert.Single(topup.Bundle!.Results).Outcome);
         Assert.Equal(initial.Starting, DaggerfallAlterationEffects.ReadShield(savedEffect.State).Remaining);
         Assert.True(savedEffect.Lifecycle.RemainingRounds > priorRounds);
@@ -103,7 +103,7 @@ public sealed class DaggerfallAlterationEffectsTests
         var hit = restored.State.Kit.Rules.ApplyToHealth(new(restored.State.Actors.Player.Actor, restored.State.Actors.Player.Actor, "poison"), initial.Starting + 3, restoredHealth);
         Assert.Equal(3, hit.ActualHealthLost); Assert.Equal(before - 3, restoredHealth.Current);
         Assert.Empty(restored.State.Effects.Active); Assert.Empty(restored.State.Actors.Player.Actor.Get<CombatContributions>().Rules);
-        restored.ReadyPlayerSpell("spell.017"); restored.ReleaseReadySpell(1, Vector3.UnitZ);
+        restored.SpellRelease.ReadyPlayerSpell("spell.017"); restored.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         restored.State.Effects.AdvanceElapsedRounds(100);
         Assert.Empty(restored.State.Effects.Active); Assert.Empty(restored.State.Actors.Player.Actor.Get<CombatContributions>().Rules);
         var after = restored.State.Kit.Rules.ApplyToHealth(new(restored.State.Actors.Player.Actor, restored.State.Actors.Player.Actor, "melee"), 1, restoredHealth);
@@ -114,7 +114,7 @@ public sealed class DaggerfallAlterationEffectsTests
     public void Shield_does_not_spend_on_dead_targets_and_exact_depletion_removes_it_without_health_loss()
     {
         using Fixture f = new(); var s = f.Session; PrepareCast(s, "spell.017");
-        s.ReadyPlayerSpell("spell.017"); s.ReleaseReadySpell(1, Vector3.UnitZ);
+        s.SpellRelease.ReadyPlayerSpell("spell.017"); s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         var effect = Assert.Single(s.State.Effects.Active); var initial = DaggerfallAlterationEffects.ReadShield(effect.State);
         var player = s.State.Actors.Player; var health = player.Stats.GetTrack(TrackId.Parse("health"));
         health.SetCurrent(0);
@@ -132,7 +132,7 @@ public sealed class DaggerfallAlterationEffectsTests
         using Fixture f = new(); var s = f.Session;
         var item = s.State.Inventory.Read().UniqueItems.First();
         ulong source = s.State.Inventory.GetDurableItemId(item.Entity).Value;
-        s.Casting.Ready(1, "spell.017", source); s.ReleaseReadySpell(1, Vector3.UnitZ);
+        s.Casting.Ready(1, "spell.017", source); s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         var saved = DaggerfallSavePayload.Read(s.CaptureSave()); var effect = Assert.Single(saved.ActiveEffects);
         var malformed = saved with { ActiveEffects = [effect with { State = DaggerfallAlterationEffects.ShieldState(new(1, 2)) }] };
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(malformed)));

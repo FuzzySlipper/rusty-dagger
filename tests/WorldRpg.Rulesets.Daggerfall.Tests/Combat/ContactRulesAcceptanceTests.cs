@@ -228,7 +228,7 @@ public sealed class ContactRulesAcceptanceTests
         {
             if (DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType) != target) continue;
             session.State.Character.LearnSpell(spell.Key);
-            if (session.ReadyPlayerSpell(spell.Key).Outcome != DaggerfallCastOutcome.Ready) continue;
+            if (session.SpellRelease.ReadyPlayerSpell(spell.Key).Outcome != DaggerfallCastOutcome.Ready) continue;
             session.Casting.Cancel(Player);
             return spell.Key;
         }

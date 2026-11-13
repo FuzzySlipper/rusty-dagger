@@ -39,14 +39,14 @@ public sealed class SpellMakerSessionTests
         Assert.Contains(custom.Key, game.State.Character.KnownSpells);
         Assert.DoesNotContain(custom.Key, TestPayload.Definitions.Magic.Spells.Keys);
         Assert.DoesNotContain(game.SpellSales.Offers(Seller(game), 10), offer => offer.Key == custom.Key);
-        Magicka(game); Assert.Equal(DaggerfallCastOutcome.Ready, game.ReadyPlayerSpell(custom.Key).Outcome);
+        Magicka(game); Assert.Equal(DaggerfallCastOutcome.Ready, game.SpellRelease.ReadyPlayerSpell(custom.Key).Outcome);
         Assert.Equal(quote.SpellPoints, game.ReadSpells().Available.Single(spell => spell.Key == custom.Key).Cost);
         game.ChangeSpellbook(new("spell-info", Key: custom.Key));
         Assert.Contains("duration 3 + 7 per 2", game.ReadSpells().Information!.Details[0]);
         using var restored = f.Restore(game.CaptureSave());
         Assert.Equal(custom.Key, restored.ReadSpells().Ready);
         Assert.Equal(custom, Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).CustomSpells) with { Effects = custom.Effects });
-        var cast = restored.ReleaseReadySpell(1, Vector3.UnitZ);
+        var cast = restored.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, cast.Outcome);
         Assert.Equal("free-action", Assert.Single(restored.State.Effects.Active).Definition.Key);
         restored.ChangeSpellbook(new("spell-delete", Key: custom.Key, Confirm: true));
@@ -98,7 +98,7 @@ public sealed class SpellMakerSessionTests
         game.SpellMaker.SetDraft(spell); var quote = game.SpellMaker.Quote(provider)!;
         Assert.True(quote.Eligible); Assert.True(game.SpellMaker.Buy(provider, quote.Key, (ulong)quote.Gold, true).Accepted);
         var key = Assert.Single(game.State.Character.KnownSpells);
-        Assert.Equal(DaggerfallCastOutcome.Ready, game.ReadyPlayerSpell(key).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, game.SpellRelease.ReadyPlayerSpell(key).Outcome);
         long target = game.SpawnActor("rat", new(new(11, 0, 11), 0));
         var bundle = game.Casting.Release(1, true).Bundle!; game.Casting.Deliver(bundle, [target]);
         Assert.Equal(2, bundle.Results.Count);
@@ -143,11 +143,11 @@ public sealed class SpellMakerSessionTests
         Assert.True(game.SpellSales.Buy(seller, 10, offer.Key, offer.Price, true).Accepted);
         Assert.Equal("AlreadyKnown", game.SpellSales.Buy(seller, 10, offer.Key, offer.Price, true).Outcome);
         Assert.Equal(before - offer.Price, game.State.Currency.Read().Gold);
-        Assert.Equal(DaggerfallCastOutcome.Ready, game.ReadyPlayerSpell(eligible.Key).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, game.SpellRelease.ReadyPlayerSpell(eligible.Key).Outcome);
         using var restored = f.Restore(game.CaptureSave());
         Assert.Equal(eligible.Key, restored.ReadSpells().Ready);
         Assert.Empty(DaggerfallSavePayload.Read(restored.CaptureSave()).CustomSpells);
-        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, restored.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, restored.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
         Assert.Equal("free-action", Assert.Single(restored.State.Effects.Active).Definition.Key);
     }
 

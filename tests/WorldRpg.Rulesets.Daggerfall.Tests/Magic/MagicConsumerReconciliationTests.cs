@@ -35,8 +35,8 @@ public sealed class MagicConsumerReconciliationTests
         magicka.Maximum.BaseValue = 10_000; magicka.SetCurrent(10_000);
         string levitate = fixture.Definitions.Magic.Spells.Values.Single(spell => !spell.IsCustom && spell.Name == "Levitate").Key;
         session.State.Character.LearnSpell(levitate);
-        Assert.Equal(DaggerfallCastOutcome.Ready, session.ReadyPlayerSpell(levitate).Outcome);
-        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, session.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, session.SpellRelease.ReadyPlayerSpell(levitate).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, session.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
         int recipe = fixture.Definitions.Magic.PotionRecipes.Values.Single(value => value.Name == "Levitation").Key;
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, session.Casting.DrinkPotion(player, recipe).Outcome);
 

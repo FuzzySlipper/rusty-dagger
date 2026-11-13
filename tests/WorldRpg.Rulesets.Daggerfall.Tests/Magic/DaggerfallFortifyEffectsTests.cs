@@ -38,7 +38,7 @@ public sealed class DaggerfallFortifyEffectsTests
         var spell = new DaggerfallSpellDefinition("fortify.test", 1, false, "Fortify", 4, 0, 0, 0, [Setting(subtype, 20)]);
         var casting = new DaggerfallCasting(TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } },
             s.State.Effects, id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null,
-            s.MagicProfile, _ => true, _ => { }, _ => { }, RandomMinimum.Create(), 1, playerKnowsSpell: _ => true, casterLevel: _ => 1);
+            s.SpellTargets.MagicProfile, _ => true, _ => { }, _ => { }, RandomMinimum.Create(), 1, playerKnowsSpell: _ => true, casterLevel: _ => 1);
         Fund(s); Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
         var bundle = casting.Release(1, true).Bundle!; casting.Deliver(bundle, [1]);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome); Assert.Equal(100, stat.Value); Assert.Equal(95, stat.BaseValue);
@@ -57,7 +57,7 @@ public sealed class DaggerfallFortifyEffectsTests
         using Fixture f = new(); var s = f.Session; var stat = Stat(s, 1, 0); stat.BaseValue = 50;
         DaggerfallStatModifiers.RefreshPlayerDerivedMaxima(s.State.Actors.Player.Stats, s.State.Character.Career);
         var track = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")); double maximum = track.Maximum.Value;
-        Fund(s); s.State.Character.LearnSpell("spell.075"); Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("spell.075").Outcome);
+        Fund(s); s.State.Character.LearnSpell("spell.075"); Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell("spell.075").Outcome);
         var bundle = s.Casting.Release(1, true).Bundle!; s.Casting.Deliver(bundle, [1]);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome); Assert.True(stat.Value > 50); Assert.True(track.Maximum.Value > maximum);
         using var restored = f.Restore(s.CaptureSave()); Assert.Equal(stat.Value, Stat(restored, 1, 0).Value);

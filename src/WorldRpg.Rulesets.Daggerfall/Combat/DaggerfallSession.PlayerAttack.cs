@@ -1,3 +1,5 @@
+using System.Numerics;
+using WorldRpg.Kit.Controls;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
@@ -108,6 +110,20 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     private bool IsCivilian(long actor) => _roster.Definitions.TryGetValue(actor, out DaggerfallActorDefinition? definition) && definition.Kind == DaggerfallActorKinds.Civilian;
 
     /// <summary>Whether a player's attack goes through a body: always an ally, and a civilian unless it started aimed at one.</summary>
+    /// <summary>
+    /// Where an actor strikes or looses from and which way it faces: the player from the camera eye along
+    /// the current look, a site actor from near the top of its body along its heading.
+    /// </summary>
+    private DaggerfallStrikePose? StrikePose(long actor)
+    {
+        if (actor == State.Actors.Player.DurableId)
+            return State.PlayerControl.Position is WorldPoint player
+                ? new(player.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight, _input.ResolveCurrentLook(State.PlayerControl).Forward)
+                : null;
+        return State.Actors.TryGet(actor, out ActorState site) && !site.IsDefeated
+            ? new(site.Position.ToVector() + Vector3.UnitY * (DaggerfallContactBody.Envelope.Height * DaggerfallContactBody.EyeFraction), ActorHeading.Forward(site.HeadingYawRadians))
+            : null;
+    }
     internal bool PassesThrough(long actor, bool harmsCivilians) => IsPlayerAlly(actor) || !harmsCivilians && IsCivilian(actor);
 
     bool IDaggerfallPlayerAttacks.Start(string attack)
@@ -116,7 +132,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
         _attackHarmsCivilians = AimedAtCivilian();
         if (attack == DaggerfallAttackIds.Cast)
         {
-            if (!ReadyCast()) return false;
+            if (!SpellRelease.Ready(ReportCast)) return false;
             _attack = attack;
             StepGuard(0d, generation, simulationStep);
             return true;
@@ -151,7 +167,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
 
     void IDaggerfallPlayerAttacks.Impact()
     {
-        if (_attack == DaggerfallAttackIds.Cast) { ReleaseCast(); return; }
+        if (_attack == DaggerfallAttackIds.Cast) { SpellRelease.Release(_input.ResolveCurrentLook(State.PlayerControl).Forward, _attackHarmsCivilians, ReportCast); return; }
         if (State.Actors.Player.Actor.Get<AttackState>().Pending is not { } pending) return;
         _playerImpacts.Add(new AttackImpactNotice(DaggerfallActorIdentity.PlayerEntityId, pending.Request.TargetId ?? 0,
             pending.Request.Generation, pending.Request.SimulationStep, Expired: false));

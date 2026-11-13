@@ -69,7 +69,7 @@ public sealed class DaggerfallAttributeDrainEffectsTests
         using Fixture f = new(); var s = f.Session; const long target = 2000;
         Fund(s, 1); s.State.Character.LearnSpell("spell.009");
         double before = Stat(s, target, 0).Value, magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current;
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("spell.009").Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell("spell.009").Outcome);
         var bundle = s.Casting.Release(1, true).Bundle!; s.Casting.Deliver(bundle, [target]);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome);
         Assert.True(Stat(s, target, 0).Value < before);
@@ -160,7 +160,7 @@ public sealed class DaggerfallAttributeDrainEffectsTests
     {
         var catalog = TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } };
         return new(catalog, s.State.Effects, id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null,
-            id => s.MagicProfile(id) with { LiveWillpower = 50, PlayerRace = null, BiographyMagicResistance = 0 },
+            id => s.SpellTargets.MagicProfile(id) with { LiveWillpower = 50, PlayerRace = null, BiographyMagicResistance = 0 },
             _ => true, _ => { }, _ => { }, DaggerfallCastingTests.SaveDice.Create(saveRoll), 1, playerKnowsSpell: _ => true, casterLevel: _ => 1);
     }
     private sealed class Fixture : IDisposable

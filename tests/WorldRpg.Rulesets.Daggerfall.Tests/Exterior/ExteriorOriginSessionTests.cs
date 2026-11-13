@@ -864,7 +864,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             var magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
             magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(10000);
             DaggerfallCasting casting = new(definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } },
-                session.State.Effects, _ => session.State.Actors.Player.Actor, session.MagicProfile,
+                session.State.Effects, _ => session.State.Actors.Player.Actor, session.SpellTargets.MagicProfile,
                 _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1,
                 nextSequence: nextSequence, playerKnowsSpell: _ => true, casterLevel: _ => 1);
             Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);

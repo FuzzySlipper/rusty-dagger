@@ -242,7 +242,7 @@ public sealed class DaggerfallDoorMagicSessionTests
             string key = lockDoor ? "spell.019" : "spell.018"; s.State.Character.LearnSpell(key);
             var magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(10000);
             Assert.Equal(DaggerfallCastOutcome.Ready, s.Casting.Ready(1, key, item, source).Outcome);
-            return Assert.Single(s.ReleaseReadySpell(1, Vector3.UnitZ).Bundle!.Results).Outcome;
+            return Assert.Single(s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ).Bundle!.Results).Outcome;
         }
         internal void Mode(DaggerfallSession s, string mode) => s.Update(new ProductUpdate(OuterUpdate(++Step), [Input(InputEventKind.DirectDigital) with
             { ValueKind = InputValueKind.ProductPayload, PayloadContract = "dagger.ui.action.v1"u8.ToArray(), PayloadData = Encoding.UTF8.GetBytes("{\"action\":\"activation-mode\",\"mode\":\"" + mode + "\"}") }]));

@@ -499,7 +499,7 @@ public sealed class DaggerfallContactRulesTests
         string spell = TouchSpellThePlayerCanReady(game);
         spatial.OverlapContactsRequests.Clear();
 
-        DaggerfallCastResult result = game.ReleaseReadySpell(Player, Vector3.UnitZ);
+        DaggerfallCastResult result = game.SpellRelease.ReleaseReadySpell(Player, Vector3.UnitZ);
 
         Assert.Equal(DaggerfallCastOutcome.Missed, result.Outcome);
         Assert.True(magicka.Current < 1000, $"Releasing '{spell}' spent no magicka.");
@@ -514,7 +514,7 @@ public sealed class DaggerfallContactRulesTests
         {
             if (DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType) != DaggerfallSpellTarget.ByTouch) continue;
             game.State.Character.LearnSpell(spell.Key);
-            if (game.ReadyPlayerSpell(spell.Key).Outcome == DaggerfallCastOutcome.Ready) return spell.Key;
+            if (game.SpellRelease.ReadyPlayerSpell(spell.Key).Outcome == DaggerfallCastOutcome.Ready) return spell.Key;
         }
         throw new InvalidOperationException("No stock touch spell can be readied.");
     }

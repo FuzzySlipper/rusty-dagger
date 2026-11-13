@@ -153,7 +153,7 @@ public sealed class DaggerfallDetectionEffectsTests
         var track = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); track.Maximum.BaseValue = 10000; track.SetCurrent(10000);
         return new(TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } }, s.State.Effects,
             id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null,
-            s.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1,
+            s.SpellTargets.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1,
             nextSequence: Interlocked.Increment(ref _nextCast), playerKnowsSpell: _ => true, casterLevel: _ => 1);
     }
     private static DaggerfallLiveSpell Cast(DaggerfallSession s, DaggerfallSpellEffectDefinition setting)

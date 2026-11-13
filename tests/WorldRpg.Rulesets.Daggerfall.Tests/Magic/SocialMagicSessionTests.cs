@@ -72,7 +72,7 @@ public sealed class SocialMagicSessionTests
     {
         var spell=Spell(40,-1);
         using Fixture f=new(spell);var s=f.Session;Fund(s);var item=Stock(s);
-        s.State.Character.LearnSpell(spell.Key);s.ReadyPlayerSpell(spell.Key);s.ReleaseReadySpell(1,Vector3.UnitZ);f.Submit();
+        s.State.Character.LearnSpell(spell.Key);s.SpellRelease.ReadyPlayerSpell(spell.Key);s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ);f.Submit();
         Assert.NotNull(s.IdentifyChoice.View);Assert.True(s.Interactions.IsOpen(DaggerfallInteractionScreen.Identify));Assert.True(s.Interactions.HoldsWorldOpen);
         Assert.Contains("identify",System.Text.Json.JsonSerializer.Serialize(f.Engine.Published()));
         var view=s.IdentifyChoice.View!;Magicka(s).SetCurrent(0);f.Submit(new{action="identify-select",revision=view.Revision,key="all"});
@@ -125,7 +125,7 @@ public sealed class SocialMagicSessionTests
     private static DaggerfallCastOutcome Cast(DaggerfallSession s,DaggerfallSpellDefinition spell,long target,ulong? sourceItem=null)
     {
         Fund(s);var casting=new DaggerfallCasting(TestPayload.Definitions.Magic with {Spells=new Dictionary<string,DaggerfallSpellDefinition>{{spell.Key,spell}}},s.State.Effects,
-            id=>id==1?s.State.Actors.Player.Actor:s.State.Actors.Get(id).Actor,s.MagicProfile,_=>true,_=>{},_=>{},RandomMaximum.Create(),playerId:1);
+            id=>id==1?s.State.Actors.Player.Actor:s.State.Actors.Get(id).Actor,s.SpellTargets.MagicProfile,_=>true,_=>{},_=>{},RandomMaximum.Create(),playerId:1);
         Assert.Equal(DaggerfallCastOutcome.Ready,casting.Ready(1,spell.Key,itemId:sourceItem).Outcome);
         var bundle=casting.Release(1,true).Bundle!;casting.Deliver(bundle,[target]);return Assert.Single(bundle.Results).Outcome;
     }

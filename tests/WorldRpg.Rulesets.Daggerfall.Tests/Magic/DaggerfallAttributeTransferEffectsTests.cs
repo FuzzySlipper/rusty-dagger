@@ -115,7 +115,7 @@ public sealed class DaggerfallAttributeTransferEffectsTests
         var spell = TestPayload.Definitions.Magic.Spells["spell.009"] with { Key = "transfer.test", Effects = [Setting(11, subtype, amount)] };
         var magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(10000);
         var casting = new DaggerfallCasting(TestPayload.Definitions.Magic with { Spells = new Dictionary<string,DaggerfallSpellDefinition> { [spell.Key] = spell } }, s.State.Effects,
-            id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null, s.MagicProfile, _ => true, _ => { }, _ => { },
+            id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null, s.SpellTargets.MagicProfile, _ => true, _ => { }, _ => { },
             RandomMaximum.Create(), 1, nextSequence: Interlocked.Increment(ref _sequence), playerKnowsSpell: _ => true, casterLevel: _ => 1);
         Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome); var bundle = casting.Release(1, true).Bundle!; casting.Deliver(bundle, [2000]);
         Assert.Equal(expected, Assert.Single(bundle.Results).Outcome); Assert.True(Assert.Single(s.State.Effects.Active.Where(effect => effect.Context.Target.Value == 2000)).BundleSequence > 0);

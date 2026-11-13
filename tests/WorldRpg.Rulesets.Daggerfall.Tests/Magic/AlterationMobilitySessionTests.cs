@@ -124,7 +124,7 @@ public sealed class AlterationMobilitySessionTests
         f.Session.State.Character.LearnSpell(spell.Key);
         var mana = f.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         mana.Maximum.BaseValue = 10000; mana.SetCurrent(10000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, f.Session.ReadyPlayerSpell(spell.Key).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, f.Session.SpellRelease.ReadyPlayerSpell(spell.Key).Outcome);
         var bundle = f.Session.Casting.Release(1, true).Bundle!;
         Assert.Equal(DaggerfallCastOutcome.InvalidTarget, f.Session.Casting.Deliver(bundle, [2000]).Outcome);
         Assert.False(f.Session.State.Effects.GrantsSlowfall(2000));
@@ -179,8 +179,8 @@ public sealed class AlterationMobilitySessionTests
         session.State.Character.LearnSpell(spell.Key);
         var magicka = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(10000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, session.ReadyPlayerSpell(spell.Key).Outcome);
-        var result = session.ReleaseReadySpell(1, Vector3.UnitZ);
+        Assert.Equal(DaggerfallCastOutcome.Ready, session.SpellRelease.ReadyPlayerSpell(spell.Key).Outcome);
+        var result = session.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Contains(Assert.Single(result.Bundle!.Results).Outcome, new[] { DaggerfallCastOutcome.Applied, DaggerfallCastOutcome.Refreshed });
         Assert.True(Capability(session, type));
     }

@@ -29,7 +29,7 @@ public sealed class PotionUseSessionTests
         var health = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health"));
         var magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         health.Maximum.BaseValue = 100; health.SetCurrent(10); magicka.Maximum.BaseValue = 1000; magicka.SetCurrent(1000);
-        s.State.Character.LearnSpell("spell.023"); Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("spell.023").Outcome);
+        s.State.Character.LearnSpell("spell.023"); Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell("spell.023").Outcome);
         var ready = s.Casting.ReadyFor(s.State.Actors.Player.DurableId);
         magicka.SetCurrent(50);
         var heal = Add(f, 4975678, 1); var power = Add(f, 5188896, 1); f.Update();

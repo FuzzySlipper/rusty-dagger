@@ -54,7 +54,7 @@ internal sealed partial class DaggerfallSession
             // per-step movement path was introduced.
             if (bundle.Target is not (DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange))
             {
-                _ = DeliverSpellImpact(bundle, from, from);
+                _ = SpellRelease.DeliverSpellImpact(bundle, from, from);
                 continue;
             }
 
@@ -74,7 +74,7 @@ internal sealed partial class DaggerfallSession
             {
                 Vector3 next = from + direction * displacement;
                 bundle.DungeonFlightElapsedSeconds += fixedDeltaSeconds;
-                DaggerfallCastResult impact = DeliverSpellImpact(bundle, from, next);
+                DaggerfallCastResult impact = SpellRelease.DeliverSpellImpact(bundle, from, next);
                 if (impact.Outcome != DaggerfallCastOutcome.Released || bundle.Delivered) break;
                 from = next;
                 bundle.ReleaseOrigin = from;

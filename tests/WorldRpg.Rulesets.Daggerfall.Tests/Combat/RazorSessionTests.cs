@@ -42,9 +42,9 @@ public sealed class RazorSessionTests
         var health = session.State.Actors.Get(enemy).Stats.GetTrack(TrackId.Parse("health"));
         health.Maximum.BaseValue = 1000; health.SetCurrent(1000);
         DaggerfallAlterationEffectsTests.Resistance(session, "magic-ward", DaggerfallMagicResistanceElement.Magic, 100, 20, enemy, wardId);
-        Assert.Equal(100, Assert.Single(session.MagicProfile(enemy).ActiveResistances).Chance);
+        Assert.Equal(100, Assert.Single(session.SpellTargets.MagicProfile(enemy).ActiveResistances).Chance);
         using var restored = DaggerfallSession.Restore(Engine().Context, composition, session.CaptureSave());
-        Assert.Equal(100, Assert.Single(restored.MagicProfile(enemy).ActiveResistances).Chance);
+        Assert.Equal(100, Assert.Single(restored.SpellTargets.MagicProfile(enemy).ActiveResistances).Chance);
         FinishEquipmentDelay(restored);
         restored.State.Kit.Rules.RegisterAction(definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, new CertainStrike());
         restored.Strike(new(1, enemy, 1, 1, .125));
@@ -58,7 +58,7 @@ public sealed class RazorSessionTests
             restored.State.Actors.Entities.Destroy(new(WorldRpg.Kit.World.DurableIdentityKind.Item, wardId));
         }
         else restored.State.Effects.AdvanceElapsedRounds(20);
-        Assert.Empty(restored.MagicProfile(enemy).ActiveResistances);
+        Assert.Empty(restored.SpellTargets.MagicProfile(enemy).ActiveResistances);
         using var unprotected = DaggerfallSession.Restore(Engine().Context, composition, restored.CaptureSave());
         unprotected.State.Kit.Rules.RegisterAction(definitions.RequireActor(new DaggerfallActorId("player")).ActionId!, new CertainStrike());
         unprotected.State.Kit.AttackExecution.ObserveTimeline(1, 1);

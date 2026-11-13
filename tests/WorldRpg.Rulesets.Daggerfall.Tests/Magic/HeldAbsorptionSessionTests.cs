@@ -50,7 +50,7 @@ public sealed class HeldAbsorptionSessionTests
         Assert.Equal(DaggerfallItemConditionOutcome.Enchanted,s.ItemEnchanting.Enchant(weapon,"enchantment.9.-1").Outcome);
         Assert.Equal(EquipmentMoveOutcome.Applied,s.EquipmentMoves.MoveToSlot(weapon,new EquipmentSlotId("right-hand")).Outcome);
         Fund(s,1); s.State.Character.LearnSpell("spell.045");
-        s.ReadyPlayerSpell("spell.045"); s.ReleaseReadySpell(1,Vector3.UnitZ);
+        s.SpellRelease.ReadyPlayerSpell("spell.045"); s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ);
         Assert.Equal(100,Defense(s).AbsorptionChance);
         Assert.Equal(new[]{Id(s,stock),identity.Value}.Order(),Defense(s).AbsorptionItems);
         var save = s.CaptureSave();
@@ -108,7 +108,7 @@ public sealed class HeldAbsorptionSessionTests
         Assert.Equal(DaggerfallCastOutcome.Absorbed,Assert.Single(exact.Results).Outcome);
         Assert.Equal(cost,magicka.Current);
         Fund(s,1); s.State.Character.LearnSpell("spell.023");
-        s.ReadyPlayerSpell("spell.023"); var healing=s.ReleaseReadySpell(1,Vector3.UnitZ).Bundle!;
+        s.SpellRelease.ReadyPlayerSpell("spell.023"); var healing=s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ).Bundle!;
         Assert.NotEqual(DaggerfallCastOutcome.Absorbed,Assert.Single(healing.Results).Outcome);
         Assert.Empty(healing.Absorptions);
         magicka.SetCurrent(0);

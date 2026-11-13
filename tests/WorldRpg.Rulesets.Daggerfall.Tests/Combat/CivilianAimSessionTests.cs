@@ -95,10 +95,10 @@ public sealed class CivilianAimSessionTests
     {
         using Stage stage = new();
         stage.Ready(DaggerfallSpellTarget.AreaAroundCaster);
-        stage.Session.ReadyPlayerSpell(stage.Spell);
+        stage.Session.SpellRelease.ReadyPlayerSpell(stage.Spell);
         int queries = stage.Perception.Requests.Count;
 
-        stage.Session.ReleaseReadySpell(Player, -Vector3.UnitZ, harmsCivilians: aimed);
+        stage.Session.SpellRelease.ReleaseReadySpell(Player, -Vector3.UnitZ, harmsCivilians: aimed);
 
         PerceptionTarget[] candidates = stage.Perception.Requests.Skip(queries).SelectMany(request => request.Targets.ToArray()).ToArray();
         Assert.Equal(aimed, candidates.Any(target => target.Entity == checked((ulong)stage.Civilian)));
@@ -111,12 +111,12 @@ public sealed class CivilianAimSessionTests
         using Stage stage = new();
         stage.Ready(DaggerfallSpellTarget.ByTouch);
         stage.Spatial.OverlapContactsResult = _ => Touching(stage.CivilianBody);
-        stage.Session.ReadyPlayerSpell(stage.Spell);
+        stage.Session.SpellRelease.ReadyPlayerSpell(stage.Spell);
 
-        Assert.Equal(DaggerfallCastOutcome.Missed, stage.Session.ReleaseReadySpell(Player, -Vector3.UnitZ).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Missed, stage.Session.SpellRelease.ReleaseReadySpell(Player, -Vector3.UnitZ).Outcome);
 
-        stage.Session.ReadyPlayerSpell(stage.Spell);
-        Assert.NotEqual(DaggerfallCastOutcome.Missed, stage.Session.ReleaseReadySpell(Player, -Vector3.UnitZ, harmsCivilians: true).Outcome);
+        stage.Session.SpellRelease.ReadyPlayerSpell(stage.Spell);
+        Assert.NotEqual(DaggerfallCastOutcome.Missed, stage.Session.SpellRelease.ReleaseReadySpell(Player, -Vector3.UnitZ, harmsCivilians: true).Outcome);
     }
 
     [Fact]
@@ -125,9 +125,9 @@ public sealed class CivilianAimSessionTests
         using Stage stage = new();
         stage.Ready(DaggerfallSpellTarget.ByTouch, harmful: false);
         stage.Spatial.OverlapContactsResult = _ => Touching(stage.CivilianBody);
-        stage.Session.ReadyPlayerSpell(stage.Spell);
+        stage.Session.SpellRelease.ReadyPlayerSpell(stage.Spell);
 
-        Assert.NotEqual(DaggerfallCastOutcome.Missed, stage.Session.ReleaseReadySpell(Player, -Vector3.UnitZ).Outcome);
+        Assert.NotEqual(DaggerfallCastOutcome.Missed, stage.Session.SpellRelease.ReleaseReadySpell(Player, -Vector3.UnitZ).Outcome);
     }
 
     [Theory]
@@ -139,9 +139,9 @@ public sealed class CivilianAimSessionTests
         long ally = stage.Ally();
         stage.Ready(DaggerfallSpellTarget.ByTouch, harmful);
         stage.Spatial.OverlapContactsResult = _ => Touching(stage.Session.State.Actors.Get(ally).Actor.Entity.Value);
-        stage.Session.ReadyPlayerSpell(stage.Spell);
+        stage.Session.SpellRelease.ReadyPlayerSpell(stage.Spell);
 
-        DaggerfallCastOutcome outcome = stage.Session.ReleaseReadySpell(Player, -Vector3.UnitZ, harmsCivilians: true).Outcome;
+        DaggerfallCastOutcome outcome = stage.Session.SpellRelease.ReleaseReadySpell(Player, -Vector3.UnitZ, harmsCivilians: true).Outcome;
 
         Assert.Equal(harmful, outcome == DaggerfallCastOutcome.Missed);
     }
@@ -151,10 +151,10 @@ public sealed class CivilianAimSessionTests
     {
         using Stage stage = new();
         stage.Ready(DaggerfallSpellTarget.AreaAroundCaster, harmful: false);
-        stage.Session.ReadyPlayerSpell(stage.Spell);
+        stage.Session.SpellRelease.ReadyPlayerSpell(stage.Spell);
         int queries = stage.Perception.Requests.Count;
 
-        stage.Session.ReleaseReadySpell(Player, -Vector3.UnitZ);
+        stage.Session.SpellRelease.ReleaseReadySpell(Player, -Vector3.UnitZ);
 
         Assert.Contains(stage.Perception.Requests.Skip(queries).SelectMany(request => request.Targets.ToArray()), target => target.Entity == checked((ulong)stage.Civilian));
     }
@@ -247,7 +247,7 @@ public sealed class CivilianAimSessionTests
             {
                 if (DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType) != target || spell.Effects.Any(DaggerfallMagicHarm.Harms) != harmful) continue;
                 Session.State.Character.LearnSpell(spell.Key);
-                if (Session.ReadyPlayerSpell(spell.Key).Outcome != DaggerfallCastOutcome.Ready) continue;
+                if (Session.SpellRelease.ReadyPlayerSpell(spell.Key).Outcome != DaggerfallCastOutcome.Ready) continue;
                 Spell = spell.Key;
                 return;
             }

@@ -88,11 +88,11 @@ public sealed class DaggerfallRestorationEffectsTests
     public void Published_regeneration_uses_real_calendar_and_current_save_without_repeating_initial_heal()
     {
         using Fixture f = new(); var s = f.Session; Fund(s); Health(s).SetCurrent(10);
-        s.State.Character.LearnSpell("spell.023"); s.ReadyPlayerSpell("spell.023");
-        var result = s.ReleaseReadySpell(1, Vector3.UnitZ);
+        s.State.Character.LearnSpell("spell.023"); s.SpellRelease.ReadyPlayerSpell("spell.023");
+        var result = s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(result.Bundle!.Results).Outcome);
         Assert.Equal(12, Health(s).Current);
-        s.ReadyPlayerSpell("spell.023"); var refresh = s.ReleaseReadySpell(1, Vector3.UnitZ);
+        s.SpellRelease.ReadyPlayerSpell("spell.023"); var refresh = s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.Refreshed, Assert.Single(refresh.Bundle!.Results).Outcome);
         Assert.Equal(12, Health(s).Current); Assert.Single(s.State.Effects.Active);
         s.AdvanceElapsedTime(120); Assert.Equal(16, Health(s).Current);
@@ -148,10 +148,10 @@ public sealed class DaggerfallRestorationEffectsTests
     public void Published_absorption_retains_incumbent_settings_and_uses_receivers_live_level_after_restore()
     {
         using Fixture f = new(); var s = f.Session; Fund(s); s.State.Character.LearnSpell("spell.045");
-        s.ReadyPlayerSpell("spell.045"); var cast = s.ReleaseReadySpell(1, Vector3.UnitZ);
+        s.SpellRelease.ReadyPlayerSpell("spell.045"); var cast = s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(cast.Bundle!.Results).Outcome);
         Assert.Equal(15, s.State.Effects.MagicDefenseFor(1).AbsorptionChance);
-        s.ReadyPlayerSpell("spell.045"); var refresh = s.ReleaseReadySpell(1, Vector3.UnitZ);
+        s.SpellRelease.ReadyPlayerSpell("spell.045"); var refresh = s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.Refreshed, Assert.Single(refresh.Bundle!.Results).Outcome);
         Assert.Single(s.State.Effects.Active);
         using var restored = f.Restore(s.CaptureSave()); Assert.Equal(15, restored.State.Effects.MagicDefenseFor(1).AbsorptionChance);

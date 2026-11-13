@@ -19,12 +19,12 @@ public sealed class QuestMagicTests
         string spell = TestPayload.Definitions.Magic.Spells.Values.First(value => !value.IsCustom && value.Identity == 4).Key;
         s.State.Character.LearnSpell(spell);
         var mana = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); mana.Maximum.BaseValue = 10000; mana.SetCurrent(0);
-        Assert.Equal(DaggerfallCastOutcome.InsufficientMagicka, s.ReadyPlayerSpell(spell).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.InsufficientMagicka, s.SpellRelease.ReadyPlayerSpell(spell).Outcome);
         Advance(s); Assert.False(Assert.Single(s.State.Quests.All).Tasks[1].IsSet);
         mana.SetCurrent(10000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell(spell).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell(spell).Outcome);
         Advance(s); Assert.False(Assert.Single(s.State.Quests.All).Tasks[1].IsSet);
-        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, s.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
         Assert.NotNull(Assert.Single(s.State.Quests.All).Tasks[0].OperationState[0].ObservedCastSequence);
         using var restored = f.Restore(); Advance(restored); Advance(restored);
         var quest = Assert.Single(restored.State.Quests.All);

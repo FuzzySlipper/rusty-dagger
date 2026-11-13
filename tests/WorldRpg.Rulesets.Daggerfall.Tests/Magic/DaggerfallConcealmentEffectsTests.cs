@@ -71,7 +71,7 @@ public sealed class DaggerfallConcealmentEffectsTests
     public void Real_stock_invisibility_perception_and_appearance_clear_with_item_source_and_actor_cleanup()
     {
         using Fixture f = new(); var s = f.Session; Fund(s); s.State.Character.LearnSpell("spell.006");
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("spell.006").Outcome); var bundle = s.Casting.Release(1, true).Bundle!; s.Casting.Deliver(bundle, [1]);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell("spell.006").Outcome); var bundle = s.Casting.Release(1, true).Bundle!; s.Casting.Deliver(bundle, [1]);
         Assert.True(s.State.Effects.PerceptionFor(1).Invisible); s.PublishInitial(); Assert.Contains(s.Slots.Read(), row => row.Owner == "magic.concealment");
         s.State.Effects.CancelSource("spell.spell.006"); s.PublishInitial(); Assert.False(s.State.Effects.PerceptionFor(1).Invisible); Assert.DoesNotContain(s.Slots.Read(), row => row.Owner == "magic.concealment");
         long target = s.SpawnActor("rat", new(new(11, 0, 11), 0)); Start(s, "actor", 13, 1, 10, target: target); s.PublishInitial();
@@ -133,7 +133,7 @@ public sealed class DaggerfallConcealmentEffectsTests
     private static DaggerfallCasting Casting(DaggerfallSession s, DaggerfallSpellDefinition spell) => new(
         TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } }, s.State.Effects,
         id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null,
-        id => s.MagicProfile(id) with { LiveWillpower = 50, PlayerRace = null, BiographyMagicResistance = 0 }, _ => true, _ => { }, _ => { }, DaggerfallCastingTests.SaveDice.Create(100),
+        id => s.SpellTargets.MagicProfile(id) with { LiveWillpower = 50, PlayerRace = null, BiographyMagicResistance = 0 }, _ => true, _ => { }, _ => { }, DaggerfallCastingTests.SaveDice.Create(100),
         1, playerKnowsSpell: _ => true, casterLevel: _ => 1);
     private static void Fund(DaggerfallSession s) { var track = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); track.Maximum.BaseValue = 10000; track.SetCurrent(10000); }
     private sealed class Fixture : IDisposable

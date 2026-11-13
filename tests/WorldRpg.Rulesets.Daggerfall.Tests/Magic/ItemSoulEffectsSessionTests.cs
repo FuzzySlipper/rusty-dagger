@@ -43,7 +43,7 @@ public sealed class ItemSoulEffectsSessionTests
         var magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(10000);
         var casting = new DaggerfallCasting(TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } }, s.State.Effects,
             id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null,
-            s.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1, playerKnowsSpell: _ => true);
+            s.SpellTargets.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1, playerKnowsSpell: _ => true);
         Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
         var bundle = casting.Release(1, true).Bundle!; casting.Deliver(bundle, [target]);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome);
@@ -112,7 +112,7 @@ public sealed class ItemSoulEffectsSessionTests
         var spell = new DaggerfallSpellDefinition("test.create", 1, false, "Create Item", 4, 0, 0, 0, [Setting(2), Setting(2)]);
         var magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(10000);
         var casting = new DaggerfallCasting(TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } }, s.State.Effects,
-            id => id == 1 ? s.State.Actors.Player.Actor : null, s.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1, playerKnowsSpell: _ => true);
+            id => id == 1 ? s.State.Actors.Player.Actor : null, s.SpellTargets.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1, playerKnowsSpell: _ => true);
         Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
         var bundle = casting.Release(1, true).Bundle!; double paid = magicka.Current;
         casting.Deliver(bundle, [1]); Assert.NotNull(s.CreateItemChoice.View);

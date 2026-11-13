@@ -87,7 +87,7 @@ public sealed class LycanthropySessionTests
     public void Morph_without_curse_has_no_success_or_retained_effect()
     {
         using var s = FreshSession(); s.State.Character.LearnSpell("spell.085");
-        Assert.Equal(DaggerfallCastOutcome.UnknownSpell, s.ReadyPlayerSpell("spell.085").Outcome);
+        Assert.Equal(DaggerfallCastOutcome.UnknownSpell, s.SpellRelease.ReadyPlayerSpell("spell.085").Outcome);
         Assert.Null(s.State.RacialOverrides.Current);
         Assert.Empty(s.State.Effects.Active);
     }
@@ -157,14 +157,14 @@ public sealed class LycanthropySessionTests
         s.State.RacialOverrides.Select(DaggerfallRacialKind.Werewolf, "curse", 0);
         var mana = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         mana.SetCurrent(mana.Maximum.Value);
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("spell.085").Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell("spell.085").Outcome);
         Assert.Equal(5, s.Casting.ReadyFor(1)!.Cost);
         using var restored = Restore(s.CaptureSave());
         Assert.Equal(5, restored.Casting.ReadyFor(1)!.Cost);
         var bundle = Assert.IsType<DaggerfallLiveSpell>(restored.Casting.Release(1, true).Bundle);
         Assert.Equal(DaggerfallCastOutcome.InvalidTarget, restored.Casting.Deliver(bundle, [2000]).Outcome);
         Assert.False(restored.State.RacialOverrides.Current!.State.BeastForm);
-        Assert.Equal(DaggerfallCastOutcome.Ready, restored.ReadyPlayerSpell("spell.085").Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, restored.SpellRelease.ReadyPlayerSpell("spell.085").Outcome);
         Assert.True(restored.Lycanthropy.Cure());
         Assert.Null(restored.Casting.ReadyFor(1));
     }
@@ -214,7 +214,7 @@ public sealed class LycanthropySessionTests
     {
         var mana = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         mana.Maximum.BaseValue = 10000; mana.SetCurrent(10000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("spell.085").Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell("spell.085").Outcome);
         var bundle = Assert.IsType<DaggerfallLiveSpell>(s.Casting.Release(1, true).Bundle);
         s.Casting.Deliver(bundle, [DaggerfallActorIdentity.PlayerEntityId]);
     }

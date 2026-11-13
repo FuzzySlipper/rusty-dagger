@@ -129,7 +129,7 @@ public sealed class KnownReadySpellSessionTests
         Assert.Equal(quoted,restored.Casting.ReadyFor(1)!.Cost);
         // Classic admits payment on selection and consumes the latched quote on release,
         // even if magicka was drained while the spell was held ready.
-        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted,restored.ReleaseReadySpell(1,System.Numerics.Vector3.UnitZ).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted,restored.SpellRelease.ReleaseReadySpell(1,System.Numerics.Vector3.UnitZ).Outcome);
         Assert.Equal(0,Magicka(restored).Current);Assert.Single(restored.State.Effects.Active);
         Assert.Null(restored.Casting.ReadyFor(1));
         var raw=DaggerfallSavePayload.Read(save);

@@ -72,9 +72,9 @@ public sealed class LawSessionTests
         health.Maximum.BaseValue = 1000; health.SetCurrent(lethal ? 1 : 1000);
         var mana = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); mana.Maximum.BaseValue = 10000; mana.SetCurrent(10000);
         s.State.Character.LearnSpell("custom-spell.1");
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("custom-spell.1").Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell("custom-spell.1").Outcome);
         s.Touches(target);
-        var result = s.ReleaseReadySpell(1, Vector3.UnitZ, harmsCivilians: true);
+        var result = s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ, harmsCivilians: true);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, result.Outcome);
         Assert.True(health.Current < (lethal ? 1 : 1000));
         var incident = Assert.Single(s.State.Crime.Incidents);
@@ -149,9 +149,9 @@ public sealed class LawSessionTests
         var health = s.State.Actors.Get(target).Stats.GetTrack(TrackId.Parse("health")); health.Maximum.BaseValue = 1000; health.SetCurrent(lethal ? 15 : 1000);
         var mana = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); mana.Maximum.BaseValue = 10000; mana.SetCurrent(10000);
         s.State.Character.LearnSpell("custom-spell.1");
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("custom-spell.1").Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell("custom-spell.1").Outcome);
         s.Touches(target);
-        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, s.ReleaseReadySpell(1, Vector3.UnitZ, harmsCivilians: true).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ, harmsCivilians: true).Outcome);
         Assert.True(health.Current <= 980);
         Assert.Equal(lethal ? 2 : 1, s.State.Crime.Incidents.Count);
         Assert.Single(s.State.Crime.Incidents, incident => incident.Crime == DaggerfallCrimeKind.Assault);

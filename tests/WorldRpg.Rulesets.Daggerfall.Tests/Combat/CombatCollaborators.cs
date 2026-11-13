@@ -73,7 +73,7 @@ internal static class CombatCollaborators
 
     /// <summary>Actor contact over a fixture's actor bodies, answered by the spatial system's fake.</summary>
     internal static ActorContact Contact(ActorsState actors, SpatialMovementSystem spatial, Func<WorldPoint?> playerPosition) =>
-        new(actors, spatial, () => new PlayerControlState(playerPosition() ?? new WorldPoint(0f, 0f, 0f), 0f, 0f), DaggerfallSession.ActorContactBody, _ => true);
+        new(actors, spatial, () => new PlayerControlState(playerPosition() ?? new WorldPoint(0f, 0f, 0f), 0f, 0f), DaggerfallContactBody.Envelope, _ => true);
 
     /// <summary>Lands the enemy blows a session's delivery holds for their wind-up, as the admitted steps after the frame would.</summary>
     internal static void LandWindUps(DaggerfallSession session, ulong generation, ulong frameStep)

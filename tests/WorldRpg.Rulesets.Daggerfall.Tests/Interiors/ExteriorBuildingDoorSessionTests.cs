@@ -364,7 +364,7 @@ public sealed class ExteriorBuildingDoorSessionTests
             magicka.Maximum.BaseValue = 10000;
             magicka.SetCurrent(10000);
             Assert.Equal(DaggerfallCastOutcome.Ready, Session.Casting.Ready(1, spell).Outcome);
-            Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Session.ReleaseReadySpell(1, Vector3.UnitZ).Bundle!.Results).Outcome);
+            Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Session.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ).Bundle!.Results).Outcome);
         }
 
         /// <summary>Stands in front of the building's door, facing it, with only that door seen.</summary>

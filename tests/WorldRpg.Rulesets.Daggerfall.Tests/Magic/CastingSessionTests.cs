@@ -17,20 +17,20 @@ public sealed class CastingSessionTests
     {
         using Fixture f = new("spell.075");
         var s = f.Session;
-        Assert.Equal(DaggerfallCastOutcome.UnknownSpell, s.ReadyPlayerSpell(f.Spell.Key).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.UnknownSpell, s.SpellRelease.ReadyPlayerSpell(f.Spell.Key).Outcome);
         s.State.Character.LearnSpell(f.Spell.Key);
         Track magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         magicka.Maximum.BaseValue = 1000; magicka.SetCurrent(1000);
         double strength = s.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).Value;
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell(f.Spell.Key).Outcome);
-        var result = s.ReleaseReadySpell(1, Vector3.UnitZ);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell(f.Spell.Key).Outcome);
+        var result = s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, result.Outcome);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(result.Bundle!.Results).Outcome);
         Assert.True(s.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).Value > strength);
         string school = TestPayload.Definitions.Magic.RequireEffectCost(f.Spell.Effects[0]).School;
         Assert.Equal(1, s.State.Progression.SkillUses[school]);
         Assert.Equal(1, f.Rounds);
-        s.ReadyPlayerSpell(f.Spell.Key);
+        s.SpellRelease.ReadyPlayerSpell(f.Spell.Key);
         var save = s.CaptureSave();
         var payload = DaggerfallSavePayload.Read(save);
         Assert.Equal(2, payload.NextCastSequence);
@@ -42,7 +42,7 @@ public sealed class CastingSessionTests
         Assert.Equal(s.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).Value,
             restored.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).Value);
         Assert.Equal(1, restored.State.Progression.SkillUses[school]);
-        Assert.Same(restored.State.Character.Race, restored.MagicProfile(1).PlayerRace);
+        Assert.Same(restored.State.Character.Race, restored.SpellTargets.MagicProfile(1).PlayerRace);
         restored.State.Effects.CancelActorReferences(1);
         Assert.Equal(strength, restored.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).Value);
     }
@@ -61,10 +61,10 @@ public sealed class CastingSessionTests
         long enemy = s.State.Actors.All.First(actor => !actor.IsDefeated).DurableId;
         var magicka = s.State.Actors.Get(enemy).Stats.GetTrack(TrackId.Parse("magicka"));
         magicka.Maximum.BaseValue = 1000; magicka.SetCurrent(1000);
-        Assert.Null(s.MagicProfile(enemy).PlayerRace);
+        Assert.Null(s.SpellTargets.MagicProfile(enemy).PlayerRace);
         Assert.Equal(DaggerfallCastOutcome.Ready, s.Casting.Ready(enemy, f.Spell.Key).Outcome);
         s.Touches(DaggerfallActorIdentity.PlayerEntityId);
-        var result = s.ReleaseReadySpell(enemy, Vector3.UnitZ);
+        var result = s.SpellRelease.ReleaseReadySpell(enemy, Vector3.UnitZ);
         Assert.Equal(immune ? DaggerfallCastOutcome.Immune : DaggerfallCastOutcome.Applied, Assert.Single(result.Bundle!.Results).Outcome);
         Assert.Equal(Math.Max(1, s.DefinitionsByActor[enemy].Level ?? 1), result.Bundle.CasterLevel);
         // The touch reaches by its volume, which never contacts its own caster.
@@ -72,7 +72,7 @@ public sealed class CastingSessionTests
         Assert.Equal(SpatialShapeKind.Box, volume.Shape.Kind);
         Assert.DoesNotContain(volume.Entities.ToArray(), collider => collider.Entity == s.State.Actors.Get(enemy).Actor.Entity.Value);
         using var restored = f.Restore(s.CaptureSave());
-        Assert.Equal(race, restored.MagicProfile(1).PlayerRace!.Id);
+        Assert.Equal(race, restored.SpellTargets.MagicProfile(1).PlayerRace!.Id);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class CastingSessionTests
         var metadata = s.State.ItemInstances.RequireUnique(id);
         s.State.ItemInstances.ReplaceUnique(id, metadata with { CurrentCondition = 10, MaximumCondition = 10 });
         Assert.Equal(DaggerfallCastOutcome.Ready, s.Casting.Ready(1, f.Spell.Key, id).Outcome); // Item source doesn't require learned spell.
-        var result = s.ReleaseReadySpell(1, Vector3.UnitZ);
+        var result = s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(0, result.Bundle!.Cost);
         Assert.Single(s.State.Effects.Active);
         // The donor ties only held bundles to their item: a used item's effect survives its break
@@ -120,13 +120,13 @@ public sealed class CastingSessionTests
             [new(career.Attributes[0],rolled.AttributeBonusPool)],
             [new(career.PrimarySkills[0],6),new(career.MajorSkills[0],6),new(career.MinorSkills[0],6)]);
         character.ReplacePending(draft with { Background = allocated }); character.CommitChoices();
-        var profile = s.MagicProfile(1);
+        var profile = s.SpellTargets.MagicProfile(1);
         Assert.Equal(allocated.Modifiers.MagicResistance,profile.BiographyMagicResistance);
         Assert.Equal(allocated.Modifiers.PoisonResistance,profile.BiographyPoisonResistance);
         Assert.Equal(allocated.Modifiers.DiseaseResistance,profile.BiographyDiseaseResistance);
         Assert.NotEqual(0,modifier == "MR" ? profile.BiographyMagicResistance : modifier == "RP" ? profile.BiographyPoisonResistance : profile.BiographyDiseaseResistance);
         long enemy = s.State.Actors.All.First(actor => !actor.IsDefeated).DurableId;
-        var enemyProfile = s.MagicProfile(enemy);
+        var enemyProfile = s.SpellTargets.MagicProfile(enemy);
         Assert.Equal(0,enemyProfile.BiographyMagicResistance); Assert.Equal(0,enemyProfile.BiographyPoisonResistance); Assert.Equal(0,enemyProfile.BiographyDiseaseResistance);
         var magicka = s.State.Actors.Get(enemy).Stats.GetTrack(TrackId.Parse("magicka"));
         magicka.Maximum.BaseValue = 1000; magicka.SetCurrent(1000);
@@ -138,7 +138,7 @@ public sealed class CastingSessionTests
         Assert.InRange(expected,1,99);
         Assert.Equal(expected,Assert.Single(cast.Results).SavePercent);
         using var restored = f.Restore(s.CaptureSave());
-        var rebuilt = restored.MagicProfile(1);
+        var rebuilt = restored.SpellTargets.MagicProfile(1);
         Assert.Equal(profile.BiographyMagicResistance,rebuilt.BiographyMagicResistance);
         Assert.Equal(profile.BiographyPoisonResistance,rebuilt.BiographyPoisonResistance);
         Assert.Equal(profile.BiographyDiseaseResistance,rebuilt.BiographyDiseaseResistance);
@@ -153,18 +153,18 @@ public sealed class CastingSessionTests
         s.State.Character.LearnSpell(f.Spell.Key);
         var magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         magicka.Maximum.BaseValue = 1000; magicka.SetCurrent(1000);
-        s.ReadyPlayerSpell(f.Spell.Key);
-        var release = s.ReleaseReadySpell(1, Vector3.UnitZ);
+        s.SpellRelease.ReadyPlayerSpell(f.Spell.Key);
+        var release = s.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.Released, release.Outcome);
         Assert.Empty(s.State.Effects.Active);
-        Assert.Equal(DaggerfallCastOutcome.Released, s.DeliverSpellImpact(release.Bundle!, Vector3.Zero, Vector3.UnitZ).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Released, s.SpellRelease.DeliverSpellImpact(release.Bundle!, Vector3.Zero, Vector3.UnitZ).Outcome);
         Assert.DoesNotContain(f.InitialEngine.EmittedAudio, request => request.SignalId.Contains("spell-impact"));
         long target = s.State.Actors.All.First(actor => !actor.IsDefeated).DurableId;
         f.Spatial.FloorHit = _ => default(SpatialHit) with { Present = true, Kind = SpatialHitKind.Entity, Entity = s.State.Actors.Get(target).Actor.Entity.Value };
-        var applied = s.DeliverSpellImpact(release.Bundle!, Vector3.Zero, Vector3.UnitZ);
+        var applied = s.SpellRelease.DeliverSpellImpact(release.Bundle!, Vector3.Zero, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, applied.Outcome);
         Assert.Single(applied.Bundle!.Results);
-        Assert.Equal(DaggerfallCastOutcome.AlreadyDelivered, s.DeliverSpellImpact(release.Bundle!, Vector3.Zero, Vector3.UnitZ).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.AlreadyDelivered, s.SpellRelease.DeliverSpellImpact(release.Bundle!, Vector3.Zero, Vector3.UnitZ).Outcome);
         Assert.Single(f.InitialEngine.EmittedAudio, request => request.SignalId.Contains("spell-impact"));
     }
 

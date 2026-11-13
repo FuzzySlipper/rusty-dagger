@@ -34,7 +34,7 @@ public sealed class DaggerfallMysticismEffectsTests
         var track = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         track.Maximum.BaseValue = 10000; track.SetCurrent(10000);
         var casting = new DaggerfallCasting(TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } }, s.State.Effects,
-            id => id == 1 ? s.State.Actors.Player.Actor : null, s.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1, playerKnowsSpell: _ => true);
+            id => id == 1 ? s.State.Actors.Player.Actor : null, s.SpellTargets.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1, playerKnowsSpell: _ => true);
         Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
         void Silence(string id) => s.State.Effects.Start(new(id, "silence", "spell.foreign", 2000, 1, "silence", "Magic", null, 1, 10,
             JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(19, -1, 100), 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
@@ -261,7 +261,7 @@ public sealed class DaggerfallMysticismEffectsTests
         var spell = new DaggerfallSpellDefinition($"test.{setting.Type}.{setting.SubType}", 1, false, "Mysticism", 4, 0, 0, 0, [setting, .. extra]);
         var track = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); if (track.Maximum.BaseValue < 10000) { track.Maximum.BaseValue = 10000; track.SetCurrent(10000); }
         var casting = new DaggerfallCasting(TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } }, s.State.Effects,
-            id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null, s.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1,
+            id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null, s.SpellTargets.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1,
             nextSequence: Interlocked.Increment(ref _nextTestCast), playerKnowsSpell: _ => true, casterLevel: _ => 1);
         Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome); var bundle = casting.Release(1, true).Bundle!;
         casting.Deliver(bundle, [1]); return bundle;

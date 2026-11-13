@@ -122,16 +122,16 @@ public sealed class DaggerfallParalysisEffectsTests
         using Fixture f = new(); var s = f.Session; long target = s.State.Actors.All.First().DurableId;
         s.State.Progression.AdvanceTo(0, 100); s.State.Character.LearnSpell(key);
         var magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(10000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell(key).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell(key).Outcome);
         var bundle = s.Casting.Release(1,true).Bundle!; s.Casting.Deliver(bundle,[target]);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome);
         Assert.True(s.State.Effects.ControlsFor(target).Movement);
         DaggerfallParalysisEffects.Cure(s.State.Effects,target);
         var immunity = s.State.Actors.Get(target).Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.ImmunityParalysis.Value)); immunity.BaseValue = 1;
-        s.ReadyPlayerSpell(key); bundle = s.Casting.Release(1,true).Bundle!; s.Casting.Deliver(bundle,[target]);
+        s.SpellRelease.ReadyPlayerSpell(key); bundle = s.Casting.Release(1,true).Bundle!; s.Casting.Deliver(bundle,[target]);
         Assert.Equal(DaggerfallCastOutcome.Immune, Assert.Single(bundle.Results).Outcome); Assert.Empty(s.State.Effects.Active);
         immunity.BaseValue = 0; DaggerfallAlterationEffectsTests.Resistance(s,"ward",DaggerfallMagicResistanceElement.Magic,100,10,target);
-        s.ReadyPlayerSpell(key); bundle = s.Casting.Release(1,true).Bundle!; s.Casting.Deliver(bundle,[target]);
+        s.SpellRelease.ReadyPlayerSpell(key); bundle = s.Casting.Release(1,true).Bundle!; s.Casting.Deliver(bundle,[target]);
         Assert.Equal(DaggerfallCastOutcome.Resisted, Assert.Single(bundle.Results).Outcome); Assert.False(s.State.Effects.ControlsFor(target).Movement);
     }
 
@@ -202,7 +202,7 @@ public sealed class DaggerfallParalysisEffectsTests
         s.State.Character.LearnSpell("spell.047");
         var magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); magicka.Maximum.BaseValue=10000; magicka.SetCurrent(10000);
         Start(s, "player", 1, 1, 10);
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell("spell.047").Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell("spell.047").Outcome);
         var bundle = s.Casting.Release(1,true).Bundle!; s.Casting.Deliver(bundle,[s.State.Actors.All.First().DurableId]);
         Assert.Equal(DaggerfallCastOutcome.ChanceFailed, Assert.Single(bundle.Results).Outcome);
         Assert.Equal("player", Assert.Single(s.State.Effects.Active).Context.Instance.Value);
@@ -215,7 +215,7 @@ public sealed class DaggerfallParalysisEffectsTests
         Start(s, "condition",1,target.DurableId,10);
         s.State.Progression.AdvanceTo(0,100); s.State.Character.LearnSpell("spell.052");
         var magicka=s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); magicka.Maximum.BaseValue=10000;magicka.SetCurrent(10000);
-        s.ReadyPlayerSpell("spell.052"); var bundle=s.Casting.Release(1,true).Bundle!;s.Casting.Deliver(bundle,[target.DurableId]);
+        s.SpellRelease.ReadyPlayerSpell("spell.052"); var bundle=s.Casting.Release(1,true).Bundle!;s.Casting.Deliver(bundle,[target.DurableId]);
         s.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.True(target.IsDefeated); Assert.True(s.Corpses.ContainsKey(target.DurableId));
         Assert.Equal(default,s.State.Effects.ControlsFor(target.DurableId)); Assert.Empty(s.State.Effects.Active);

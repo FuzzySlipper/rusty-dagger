@@ -179,7 +179,7 @@ public sealed class DaggerfallDestructionEffectsTests
         session.State.Progression.AdvanceTo(0, lethal ? 100 : 1);
         session.State.Character.LearnSpell(key);
         var source = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); source.Maximum.BaseValue = 10000; source.SetCurrent(10000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, session.ReadyPlayerSpell(key).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, session.SpellRelease.ReadyPlayerSpell(key).Outcome);
         var released = session.Casting.Release(1, true).Bundle!;
         session.Casting.Deliver(released, [target.DurableId]);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(released.Results).Outcome);

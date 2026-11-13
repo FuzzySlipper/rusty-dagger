@@ -81,7 +81,7 @@ public sealed class NormalLightSessionTests
         s.State.Character.LearnSpell(spell.Key);
         var mana = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka"));
         mana.Maximum.BaseValue = 10000; mana.SetCurrent(10000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, s.ReadyPlayerSpell(spell.Key).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell(spell.Key).Outcome);
         return Assert.IsType<DaggerfallLiveSpell>(s.Casting.Release(1, true).Bundle);
     }
     private sealed class Fixture : IDisposable

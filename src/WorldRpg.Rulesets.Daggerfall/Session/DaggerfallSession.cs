@@ -936,6 +936,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal DaggerfallItemSouls ItemSouls { get; } = null!;
     internal DaggerfallTeleport TeleportChoice { get; } = null!;
     internal DaggerfallDetectors Detectors { get; } = null!;
+    internal DaggerfallCasting Casting { get; private set; } = null!;
+    internal DaggerfallSpellTargets SpellTargets { get; } = null!;
+    internal DaggerfallSpellRelease SpellRelease { get; } = null!;
     /// <summary>The end of an item's life: unique retirement, stack consumption, a quest's items taken back.</summary>
     internal DaggerfallItemLifetime ItemLifetime => _itemLifetime;
     /// <summary>The Mages Guild's enchanting service (Economy).</summary>

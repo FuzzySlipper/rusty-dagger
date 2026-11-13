@@ -35,7 +35,7 @@ public sealed class SpellSalesSessionTests
         Assert.Equal(before - offer.Price, game.State.Currency.Read().Gold);
         game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Maximum.BaseValue = 10_000;
         game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).SetCurrent(10_000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, game.ReadyPlayerSpell(offer.Key).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.Ready, game.SpellRelease.ReadyPlayerSpell(offer.Key).Outcome);
         using var restored = fixture.Restore(game.CaptureSave());
         Assert.Contains(offer.Key, restored.State.Character.KnownSpells);
         Assert.Equal(offer.Key, restored.ReadSpells().Ready);
