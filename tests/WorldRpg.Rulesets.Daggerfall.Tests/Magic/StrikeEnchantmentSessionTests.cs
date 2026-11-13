@@ -179,7 +179,7 @@ public sealed class StrikeEnchantmentSessionTests
         var id = s.UniqueItemAllocator.AllocateReference();
         var item = s.State.Equipment.Materialize(id, created.Item);
         s.State.ItemInstances.RegisterUnique(id.Value, created.Metadata);
-        Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, s.ItemCondition.Enchant(item, $"enchantment.{type}.{parameter}").Outcome);
+        Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, s.ItemEnchanting.Enchant(item, $"enchantment.{type}.{parameter}").Outcome);
         return (item, id.Value);
     }
     private static long Spawn(SanguineRoseSessionTests.Fixture f, DaggerfallEnemyGroup group)

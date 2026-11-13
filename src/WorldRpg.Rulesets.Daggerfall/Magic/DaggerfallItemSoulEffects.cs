@@ -9,14 +9,6 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal sealed record DaggerfallConjuredItem([property: JsonRequired] string Source, [property: JsonRequired] long ExpiresAtMinute)
-{
-    internal void Validate()
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(Source);
-        if (ExpiresAtMinute < 0) throw new ArgumentOutOfRangeException(nameof(ExpiresAtMinute));
-    }
-}
 internal sealed record DaggerfallCreateItemRequest([property: JsonRequired] string Instance, [property: JsonRequired] uint Duration, [property: JsonRequired] DaggerfallCreateItemRequest? Next = null)
 {
     internal void Validate()

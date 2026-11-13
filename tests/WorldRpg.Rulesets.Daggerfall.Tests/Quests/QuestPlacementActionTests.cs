@@ -333,7 +333,7 @@ public sealed class QuestPlacementActionTests
         var started = Start(f, definitions, castle);
         var state = f.Session.State;
         var (item, id) = ItemEnchantmentMutationTests.Weapon(f);
-        f.Session.ItemCondition.Enchant(item, "enchantment.11.-1");
+        f.Session.ItemEnchanting.Enchant(item, "enchantment.11.-1");
         var metadata = state.ItemInstances.RequireUnique(id) with { QuestId = started.InstanceId, QuestItemSymbol = "gift" };
         state.ItemInstances.ReplaceUnique(id, metadata);
         var resource = started.Resources.Single(value => value.Symbol == "gift");
@@ -351,7 +351,7 @@ public sealed class QuestPlacementActionTests
         var moved = inactive.State.ItemInstances.RequireUnique(id);
         Assert.Equal("ground", moved.Owner.Scope);
         var owner = inactive.State.Containers.Entities.Resolve(new(DurableIdentityKind.Container, checked((ulong)moved.Owner.Id)));
-        Assert.Equal(100UL, inactive.State.Containers.Read(owner).Capacity.Single(value => value.Metric == DaggerActorFactory.ClassicWeightMetric).Used);
+        Assert.Equal(100UL, inactive.State.Containers.Read(owner).Capacity.Single(value => value.Metric == DaggerfallEncumbrancePolicy.ClassicWeightMetric).Used);
     }
 
     private sealed class DefeatingHit : ICombatContribution

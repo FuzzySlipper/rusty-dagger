@@ -14,7 +14,7 @@ internal static class DaggerfallEnchantmentConstruction
         var definition = definitions.RequireItem(new(item.ItemId));
         if (!IsEligible(definition, item)) throw new ArgumentException("Choose an ordinary enchantable item other than arrows.");
         var made = new DaggerfallMadeEnchantment(name.Trim(), Expand(definitions.Magic, selected), definition.Value);
-        made.Validate(definitions.Magic);
+        Validate(definitions.Magic, made);
         var settings = made.Settings.Select(value => definitions.Magic.EnchantmentSettings[value.Key]).ToArray();
         if (definition.Weapon is null && made.Settings.Where(value => value.Parent is null).Select(value => definitions.Magic.EnchantmentSettings[value.Key]).Any(value => value.Type is 2 or 4 or 20))
             throw new ArgumentException("The selected enchantment requires a weapon.");
@@ -24,6 +24,16 @@ internal static class DaggerfallEnchantmentConstruction
         int capacity = DaggerfallMagicCostPolicy.ItemEnchantmentPower(definition, item);
         if (power > capacity) throw new ArgumentException($"The item has {capacity} enchantment power; these settings require {power}.");
         return new(made, capacity, power, checked(settings.Where(value => value.Cost > 0).Sum(value => value.Cost) * 10));
+    }
+
+    /// <summary>A made enchantment's shape, then that every setting it names is published and they agree.</summary>
+    internal static void Validate(DaggerfallMagicCatalogSet magic, DaggerfallMadeEnchantment made)
+    {
+        made.ValidateShape();
+        foreach (var setting in made.Settings)
+            if (!magic.EnchantmentSettings.ContainsKey(setting.Key))
+                throw new ArgumentException($"Made item names unavailable setting '{setting.Key}'.");
+        ValidateSettings(magic, made.Settings);
     }
 
     internal static bool IsEligible(DaggerfallItemDefinition definition, DaggerfallItemInstanceMetadata item) =>

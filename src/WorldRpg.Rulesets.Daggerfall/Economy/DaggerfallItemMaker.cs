@@ -25,7 +25,7 @@ internal sealed record DaggerfallItemMakerView(string Revision, string Provider,
 internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, DaggerfallNpcRegistry npcs,
     DaggerfallConcreteGuildServiceRuntime guildServices, DaggerfallServiceTransactions services,
     MechanicsInventoryCoordinator inventory, DaggerfallItemInstances instances,
-    DaggerfallItemConditionService conditions, DaggerfallSoulGems souls, DaggerfallUniqueItemAllocator identities,
+    DaggerfallItemEnchanting enchanting, DaggerfallSoulGems souls, DaggerfallUniqueItemAllocator identities,
     Func<DaggerfallCalendar> calendar)
 {
     private DaggerfallItemMakerDraft? _draft;
@@ -123,7 +123,7 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
         if (selected.Unique is KitItem unique)
         {
             paid = DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.GrantUnavailable);
-            var result = conditions.TryEnchantMade(unique, made, changes =>
+            var result = enchanting.TryEnchantMade(unique, made, changes =>
             {
                 paid = services.Commit(payment.Quote, changes);
                 return paid.Accepted;
@@ -148,7 +148,7 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
             var entity = inventory.Entities.Resolve(identity);
             // Definition, soul, weight, and settings were admitted before the paid candidate;
             // the canonical mutation now performs its source callbacks and equipment notification.
-            conditions.CompleteGrantedEnchantment(new(entity.Value, new(definition.Id.Value)), made);
+            enchanting.CompleteGrantedEnchantment(new(entity.Value, new(definition.Id.Value)), made);
             itemId = identity.Value;
         }
         _draft = null; _revision = checked(_revision + 1);

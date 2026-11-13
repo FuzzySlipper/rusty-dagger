@@ -342,7 +342,7 @@ internal sealed class DaggerfallInventoryPresentation
     private static EquipmentSlotPresentation SlotPresentation(string id, string? itemKey)
     {
         int index = Array.FindIndex(SlotLayout, entry => entry.Id == id);
-        return index < 0 ? new(id, Label(id), itemKey) : new(id, SlotLayout[index].Label, itemKey, SlotLayout[index].Group);
+        return index < 0 ? new(id, DaggerfallIdLabel.For(id), itemKey) : new(id, SlotLayout[index].Label, itemKey, SlotLayout[index].Group);
     }
 
     /// <summary>Lays the pack out by tab, then by name, from the first cell.</summary>
@@ -723,13 +723,13 @@ internal sealed class DaggerfallInventoryPresentation
         // "Enhances Skill: Long Blade"); an artifact power or an unpublished setting keeps its meaning.
         string effects = string.Join(", ", magic.Enchantments.Select(enchantment =>
             definitions.Magic.EnchantmentSettings.TryGetValue($"enchantment.{enchantment.Type}.{enchantment.Param}", out DaggerfallEnchantmentSetting named)
-                ? named.DisplayName : Label(enchantment.ParamMeaning)));
+                ? named.DisplayName : DaggerfallIdLabel.For(enchantment.ParamMeaning)));
         return new(namedMagic, conditionDetail + Details(definition) + $"; Enchantment: {effects}", presentedCondition, true) { Facts = Facts($"Enchantment: {effects}") };
     }
 
     /// <summary>The creature a soul gem holds, named by the actor the pack publishes for that mobile.</summary>
     private string SoulName(int mobile) =>
-        definitions.Actors.Values.FirstOrDefault(actor => actor.MobileId == mobile) is { } actor ? Label(actor.Id.Value) : "an unknown creature";
+        definitions.Actors.Values.FirstOrDefault(actor => actor.MobileId == mobile) is { } actor ? DaggerfallIdLabel.For(actor.Id.Value) : "an unknown creature";
 
     /// <summary>How long a conjured item lasts, in game time from now.</summary>
     private string ConjurationRemaining(long expiresAtMinute)
@@ -768,10 +768,9 @@ internal sealed class DaggerfallInventoryPresentation
         stack = Rusty.Engine.Mechanics.InventoryStackId.Parse(row.Key.Substring("stack:".Length));
         return true;
     }
-    internal static string Label(string id) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
     private static string Details(DaggerfallItemDefinition item) => item.Weapon is { } weapon
-        ? $"Damage {weapon.MinimumDamage}–{weapon.MaximumDamage}; {Label(weapon.Material)}; {Label(weapon.Skill)}"
-        : item.Armor is { } armor ? $"Armor: {Label(armor.Material)}" : item.Shield is not null ? "Shield" : item.IsFungible ? "Stackable item" : "Equipment";
+        ? $"Damage {weapon.MinimumDamage}–{weapon.MaximumDamage}; {DaggerfallIdLabel.For(weapon.Material)}; {DaggerfallIdLabel.For(weapon.Skill)}"
+        : item.Armor is { } armor ? $"Armor: {DaggerfallIdLabel.For(armor.Material)}" : item.Shield is not null ? "Shield" : item.IsFungible ? "Stackable item" : "Equipment";
 }
 
 /// <summary>

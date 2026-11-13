@@ -52,7 +52,7 @@ internal sealed partial class DaggerfallSession
                 Math.Atan2(positions[pair.Key].X - origin.X, origin.Z - positions[pair.Key].Z), items.GetValueOrDefault(pair.Key) ?? [])
             {
                 Label = kind == DaggerfallDetection.Treasure ? "Treasure"
-                    : _roster.Definitions.TryGetValue(pair.Key, out var detected) ? WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallInventoryPresentation.Label(detected.Id.Value) : "Someone",
+                    : _roster.Definitions.TryGetValue(pair.Key, out var detected) ? DaggerfallIdLabel.For(detected.Id.Value) : "Someone",
             })
             .ToArray();
 

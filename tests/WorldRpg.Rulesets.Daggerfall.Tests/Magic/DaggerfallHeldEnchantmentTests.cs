@@ -866,6 +866,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         private readonly DaggerfallEncumbrancePolicy _encumbrance;
         private readonly DaggerfallHeldEnchantments _held;
         private readonly DaggerfallItemConditionService _conditions;
+        private readonly DaggerfallItemEnchanting _enchanting;
         private readonly InventoryComponent _inventory;
         internal DaggerfallSocialState Social { get; } = new(Definitions.Factions);
         private readonly Dictionary<ulong, WorldPoint> _positions = [];
@@ -881,7 +882,7 @@ public sealed class DaggerfallHeldEnchantmentTests
                 new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
             PlayerEntity = player.Actor.Entity;
             InventoryStore world = new();
-            world.RegisterInventory(new InventoryState(PlayerEntity, [new InventoryCapacityLimit(DaggerActorFactory.ClassicWeightMetric, ulong.MaxValue)]));
+            world.RegisterInventory(new InventoryState(PlayerEntity, [new InventoryCapacityLimit(DaggerfallEncumbrancePolicy.ClassicWeightMetric, ulong.MaxValue)]));
             world.RegisterEquipment(new EquipmentState(PlayerEntity));
             InventoryComponent inventory = new(world, PlayerEntity);
             _inventory = inventory;
@@ -896,6 +897,7 @@ public sealed class DaggerfallHeldEnchantmentTests
             _equipment = new MechanicsEquipmentCoordinator(inventory, equipment, _actors.Entities, items, slots);
             DaggerfallEquipmentMoves moves = new(coordinator, _equipment, Definitions, itemInstances: _instances);
             _conditions = new DaggerfallItemConditionService(Definitions, _instances, moves);
+            _enchanting = new DaggerfallItemEnchanting(Definitions, _instances, moves, _conditions);
             _held = new DaggerfallHeldEnchantments(_equipment, _instances, Definitions.Magic with { MagicItems = MagicItems }, player.Stats, _actors.Entities, PlayerEntity,
                 () => _calendar, () => _positions.TryGetValue(DaggerfallActorIdentity.PlayerEntityId, out WorldPoint position) ? position : new WorldPoint(0f, 0f, 0f),
                 () => _nearby, () => _sunlight, _conditions, () => InHolyPlace, DamagePlayer, Social);
@@ -909,7 +911,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         {
             Unequip(id);
             EntityId recipient = _actors.Entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 9303), new EntityTypeId("social-recipient"));
-            _inventory.Store.RegisterInventory(new InventoryState(recipient, [new InventoryCapacityLimit(DaggerActorFactory.ClassicWeightMetric, ulong.MaxValue)]));
+            _inventory.Store.RegisterInventory(new InventoryState(recipient, [new InventoryCapacityLimit(DaggerfallEncumbrancePolicy.ClassicWeightMetric, ulong.MaxValue)]));
             _inventory.TransferUnique(_actors.Entities.Resolve(new DurableIdentityReference(DurableIdentityKind.Item, id)), recipient);
         }
         internal void Wear(ulong id) => _equipment.Equip(
@@ -979,7 +981,7 @@ public sealed class DaggerfallHeldEnchantmentTests
             });
             WorldRpg.Kit.Inventory.UniqueInventoryItem item = _equipment.Materialize(
                 new DurableIdentityReference(DurableIdentityKind.Item, uniqueId), new InventoryItemId(itemId));
-            _conditions.Enchant(item, SettingKey(type, param));
+            _enchanting.Enchant(item, SettingKey(type, param));
             // Wear it where its own handedness allows, as the other fixtures do.
             HashSet<string> taken = [.. _equipment.Read().Assignments.Select(assignment => assignment.Slot.Value)];
             _equipment.Equip(item, definition.Weapon?.Handedness == "both"

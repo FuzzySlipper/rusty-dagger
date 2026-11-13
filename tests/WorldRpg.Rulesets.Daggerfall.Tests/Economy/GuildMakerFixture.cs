@@ -34,7 +34,7 @@ internal sealed class GuildMakerFixture : IDisposable
     internal DaggerfallCurrencyService Currency { get; }
     internal DaggerfallServiceTransactions Services { get; }
     internal DaggerfallConcreteGuildServiceRuntime GuildServices { get; }
-    internal DaggerfallItemConditionService Conditions { get; }
+    internal DaggerfallItemEnchanting Enchanting { get; }
     internal DaggerfallCalendar Calendar { get; } = DaggerfallCalendar.Start;
 
     internal GuildMakerFixture()
@@ -44,7 +44,7 @@ internal sealed class GuildMakerFixture : IDisposable
         var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
         InventoryStore world = new();
         EntityId player = Entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 1), new EntityTypeId("test.player"));
-        world.RegisterInventory(new InventoryState(player, [new InventoryCapacityLimit(DaggerActorFactory.ClassicWeightMetric, ulong.MaxValue)]));
+        world.RegisterInventory(new InventoryState(player, [new InventoryCapacityLimit(DaggerfallEncumbrancePolicy.ClassicWeightMetric, ulong.MaxValue)]));
         world.RegisterEquipment(new EquipmentState(player));
         InventoryComponent pack = new(world, player);
         EquipmentComponent worn = new(world, player);
@@ -65,10 +65,10 @@ internal sealed class GuildMakerFixture : IDisposable
         GuildServices = new(new DaggerfallGuildMembershipPolicy(Social, _ => 100, DaggerfallConcreteGuildCatalog.AllMembershipPolicies),
             Npcs, Services);
         DaggerfallEquipmentMoves moves = new(Inventory, Equipment, Definitions, itemInstances: Instances);
-        Conditions = new(Definitions, Instances, moves, Inventory, () => new DaggerfallSoulGems(Inventory, Instances, Definitions.Magic, UniqueItems));
+        Enchanting = new(Definitions, Instances, moves, new DaggerfallItemConditionService(Definitions, Instances, moves), Inventory, () => new DaggerfallSoulGems(Inventory, Instances, Definitions.Magic, UniqueItems));
     }
 
-    internal DaggerfallItemMaker ItemMaker() => new(Definitions, Npcs, GuildServices, Services, Inventory, Instances, Conditions,
+    internal DaggerfallItemMaker ItemMaker() => new(Definitions, Npcs, GuildServices, Services, Inventory, Instances, Enchanting,
         new DaggerfallSoulGems(Inventory, Instances, Definitions.Magic, UniqueItems), UniqueItems, () => Calendar);
 
     internal DaggerfallPotionMaking PotionMaker() => new(Definitions, Npcs, GuildServices, Inventory, Containers, Wagon, Instances,

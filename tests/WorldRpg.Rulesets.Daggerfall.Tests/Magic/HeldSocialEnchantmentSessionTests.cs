@@ -48,7 +48,7 @@ public sealed class HeldSocialEnchantmentSessionTests
             var item = session.State.Equipment.Materialize(itemIdentity, new InventoryItemId(definition.Id.Value));
             session.State.ItemInstances.RegisterDefaultUnique(durableId, definition, DaggerfallItemOwner.Player);
             baseline = session.State.Social.ReactionForFaction(factionId).Value;
-            Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, session.ItemCondition.Enchant(item, key).Outcome);
+            Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, session.ItemEnchanting.Enchant(item, key).Outcome);
             EquipmentMoveResult moved = session.EquipmentMoves.MoveToSlot(item, new EquipmentSlotId("left-hand"));
             Assert.True(moved.Outcome == EquipmentMoveOutcome.Applied, moved.Detail);
             Assert.Equal(baseline + amount, session.State.Social.ReactionForFaction(factionId).Value);

@@ -68,7 +68,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
             int initial = session.State.ItemInstances.RequireUnique(durableId).CurrentCondition;
             Assert.True(initial > 30, $"authored condition was {initial}");
             string setting = TestPayload.Definitions.Magic.EnchantmentSettings.Values.Single(value => value.Type == 16 && value.Param == 0).Key;
-            Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, session.ItemCondition.Enchant(item, setting).Outcome);
+            Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, session.ItemEnchanting.Enchant(item, setting).Outcome);
             EquipmentMoveResult equipped = session.EquipmentMoves.MoveToSlot(item, new EquipmentSlotId("right-hand"));
             Assert.True(equipped.Outcome == EquipmentMoveOutcome.Applied, equipped.Detail);
 

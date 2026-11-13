@@ -19,11 +19,11 @@ public sealed class ItemEnchantmentMutationTests
         ulong original = DaggerfallEncumbrancePolicy.ClassicWeightCost(TestPayload.Definitions.RequireItem(new(item.Definition.Value)));
         long before = s.State.Encumbrance.Read().CurrentClassicUnits;
         ulong expected = type == 23 ? original * 4 : 100;
-        s.ItemCondition.Enchant(item, $"enchantment.{type}.-1");
+        s.ItemEnchanting.Enchant(item, $"enchantment.{type}.-1");
         Assert.Equal(before - (long)original + (long)expected, s.State.Encumbrance.Read().CurrentClassicUnits);
         Assert.Equal(expected, s.State.ItemInstances.RequireUnique(id).WeightClassicUnits);
         Assert.Equal(1, s.State.ItemInstances.RequireUnique(id).CurrentCondition);
-        Assert.Throws<InvalidOperationException>(() => s.ItemCondition.Enchant(item, $"enchantment.{type}.-1"));
+        Assert.Throws<InvalidOperationException>(() => s.ItemEnchanting.Enchant(item, $"enchantment.{type}.-1"));
         var target = s.State.Actors.Get(f.Enemy).Actor.Entity;
         s.State.Containers.Transfer(s.State.Actors.Player.Actor.Entity, target, new(item.Definition, 1, UniqueEntityId: item.EntityId));
         s.State.ItemInstances.MoveUnique(id, DaggerfallItemOwner.Actor(f.Enemy));
@@ -42,7 +42,7 @@ public sealed class ItemEnchantmentMutationTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
         var (item, id) = Weapon(f); var before = s.State.ItemInstances.RequireUnique(id);
-        Assert.Throws<InvalidOperationException>(() => s.ItemCondition.Enchant(item, "enchantment.15.18"));
+        Assert.Throws<InvalidOperationException>(() => s.ItemEnchanting.Enchant(item, "enchantment.15.18"));
         Assert.Equal(before, s.State.ItemInstances.RequireUnique(id));
         ulong gem = Gem(f, 18);
         Assert.Throws<ArgumentException>(() => DaggerfallEnchantmentConstruction.Quote(TestPayload.Definitions, before, "Conflict", ["enchantment.15.18", "enchantment.23.-1"]));
@@ -55,7 +55,7 @@ public sealed class ItemEnchantmentMutationTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
         var (item, id) = Weapon(f); ulong gem = Gem(f, 18);
-        s.ItemCondition.Enchant(item, "enchantment.15.18");
+        s.ItemEnchanting.Enchant(item, "enchantment.15.18");
         Assert.False(s.State.ItemInstances.ContainsUnique(gem));
         var made = s.State.ItemInstances.RequireUnique(id).MadeEnchantment!;
         Assert.Equal(4, made.Settings.Length);
@@ -71,7 +71,7 @@ public sealed class ItemEnchantmentMutationTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
         var (item, id) = Weapon(f); Gem(f, 7);
-        s.ItemCondition.Enchant(item, "enchantment.15.7");
+        s.ItemEnchanting.Enchant(item, "enchantment.15.7");
         int before = s.State.Actors.All.Count();
         s.ItemCondition.Damage(item, 1);
         Assert.Equal(before + 1, s.State.Actors.All.Count());
@@ -89,7 +89,7 @@ public sealed class ItemEnchantmentMutationTests
     public void Failed_spatial_placement_keeps_pending_soul_through_save_and_retries_in_admitted_update()
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
-        var (item, id) = Weapon(f); Gem(f, 7); s.ItemCondition.Enchant(item, "enchantment.15.7");
+        var (item, id) = Weapon(f); Gem(f, 7); s.ItemEnchanting.Enchant(item, "enchantment.15.7");
         f.Spatial.FloorHit = _ => default;
         int before = s.State.Actors.All.Count(); s.ItemCondition.Damage(item, 1);
         Assert.Equal(before, s.State.Actors.All.Count());
@@ -111,7 +111,7 @@ public sealed class ItemEnchantmentMutationTests
         int skill = s.State.Actors.Player.Stats.GetStat(StatId.Parse("long-blade")).ValueInt;
         var quote = DaggerfallEnchantmentConstruction.Quote(TestPayload.Definitions, s.State.ItemInstances.RequireUnique(id),
             "Weighted listener", ["enchantment.10.29", "enchantment.13.0", "enchantment.23.-1"]);
-        s.ItemCondition.EnchantMade(item, quote.Enchantment);
+        s.ItemEnchanting.EnchantMade(item, quote.Enchantment);
         var equip = s.EquipmentMoves.MoveToSlot(item, new("right-hand"));
         Assert.True(equip.Outcome == EquipmentMoveOutcome.Applied, equip.Detail);
         Assert.Equal(skill + 15, s.State.Actors.Player.Stats.GetStat(StatId.Parse("long-blade")).ValueInt);
@@ -134,9 +134,9 @@ public sealed class ItemEnchantmentMutationTests
         var created = factory.Create(new("Magic", "star", DaggerfallItemOwner.Player, MagicItemKey: starDefinition.Key));
         var star = s.UniqueItemAllocator.AllocateReference(); factory.Materialize(created, s.State.Inventory, s.State.ItemInstances, unique: star);
         Assert.True(s.SoulGems.Capture(7)); ulong gem = Gem(f, 7);
-        var (item, id) = Weapon(f); s.ItemCondition.Enchant(item, "enchantment.15.7");
+        var (item, id) = Weapon(f); s.ItemEnchanting.Enchant(item, "enchantment.15.7");
         Assert.False(s.State.ItemInstances.ContainsUnique(gem)); Assert.Equal(7, s.State.ItemInstances.RequireUnique(star.Value).CapturedSoulMobileId);
-        var (second, secondId) = Weapon(f); s.ItemCondition.Enchant(second, "enchantment.15.7");
+        var (second, secondId) = Weapon(f); s.ItemEnchanting.Enchant(second, "enchantment.15.7");
         Assert.Null(s.State.ItemInstances.RequireUnique(star.Value).CapturedSoulMobileId);
         int before = s.State.Actors.All.Count(); s.State.Inventory.Destroy(item); s.State.ItemInstances.RemoveUnique(id);
         Assert.Equal(before, s.State.Actors.All.Count()); Assert.False(s.State.ItemInstances.RequireUnique(secondId).BoundSoulReleased);

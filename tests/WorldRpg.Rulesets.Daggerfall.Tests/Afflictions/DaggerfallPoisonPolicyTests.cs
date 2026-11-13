@@ -27,9 +27,9 @@ public sealed class DaggerfallPoisonPolicyTests
         Assert.Equal("Poison-Pyrrhic_Acid", DaggerfallPoisonPolicy.EffectKey(DaggerfallPoisonVariant.PyrrhicAcid));
         Assert.Equal("Poison-Quaesto_Vil", DaggerfallPoisonPolicy.EffectKey(DaggerfallPoisonVariant.QuaestoVil));
         Assert.Equal("Poison-Aegrotat", DaggerfallPoisonPolicy.EffectKey(DaggerfallPoisonVariant.Aegrotat));
-        Assert.Equal(DaggerfallPoisonVariant.Moonseed, DaggerfallPoisonPolicy.VariantFor(130));
-        Assert.Null(DaggerfallPoisonPolicy.VariantFor(127));
-        Assert.Null(DaggerfallPoisonPolicy.VariantFor(0));
+        Assert.Equal(130, (int)DaggerfallPoisonVariant.Moonseed);
+        Assert.False(Enum.IsDefined((DaggerfallPoisonVariant)127));
+        Assert.False(Enum.IsDefined((DaggerfallPoisonVariant)0));
     }
 
     [Fact]
@@ -53,8 +53,8 @@ public sealed class DaggerfallPoisonPolicyTests
         foreach (int template in (int[])[78, 79, 80, 81])
         {
             int variant = DaggerfallPoisonPolicy.VariantForDrugTemplate(template)!.Value;
-            Assert.NotNull(DaggerfallPoisonPolicy.VariantFor(variant));
-            Assert.Null(DaggerfallPoisonPolicy.VariantFor(template + 66));
+            Assert.True(Enum.IsDefined((DaggerfallPoisonVariant)variant));
+            Assert.False(Enum.IsDefined((DaggerfallPoisonVariant)(template + 66)));
         }
 
         // Anything that is not a drug template delivers no poison rather than a neighbouring one.

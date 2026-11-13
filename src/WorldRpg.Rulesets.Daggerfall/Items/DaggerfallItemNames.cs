@@ -8,7 +8,7 @@ internal static class DaggerfallItemNames
 {
     internal static string BaseName(DaggerfallDefinitions definitions, DaggerfallItemDefinition item) =>
         definitions.SourceTemplateFor(item) is { } template
-            ? template.Name : item.Template?.Name ?? DaggerfallInventoryPresentation.Label(item.Id.Value);
+            ? template.Name : item.Template?.Name ?? DaggerfallIdLabel.For(item.Id.Value);
 
     internal static string Label(DaggerfallDefinitions definitions, DaggerfallItemDefinition item, DaggerfallItemInstanceMetadata? metadata)
     {

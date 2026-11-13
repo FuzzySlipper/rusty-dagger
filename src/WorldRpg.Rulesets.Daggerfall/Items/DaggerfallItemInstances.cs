@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Rusty.Engine.Entities;
 using WorldRpg.Kit.World;
 using Rusty.Engine.Mechanics;
@@ -72,7 +73,7 @@ internal sealed record DaggerfallItemInstanceMetadata(
             throw new ArgumentException("Quest item identity requires both quest and symbol.");
         if (Race is { Length: 0 } || Gender is { Length: 0 } || Dye is { Length: 0 })
             throw new ArgumentException("Item appearance metadata cannot contain empty values.");
-        if (PoisonVariant is int poison && DaggerfallPoisonPolicy.VariantFor(poison) is null)
+        if (PoisonVariant is int poison && !Enum.IsDefined((DaggerfallPoisonVariant)poison))
             throw new ArgumentException($"Item poison variant {poison} is not one of the twelve classic poisons.", nameof(PoisonVariant));
         if (HealthLeechLastUsedMinute < 0)
             throw new ArgumentOutOfRangeException(nameof(HealthLeechLastUsedMinute));
@@ -414,3 +415,35 @@ internal sealed class DaggerfallItemInstances
 
 /// <summary>Why a unique item stopped being available as an effect source.</summary>
 internal enum DaggerfallItemSourceChange { Broken, Moved, Removed }
+
+internal sealed record DaggerfallHeldCastState(long CasterId, long LastRerollMinute, string[] ActiveEffectInstances, bool RerollPending = false);
+
+internal sealed record DaggerfallConjuredItem([property: JsonRequired] string Source, [property: JsonRequired] long ExpiresAtMinute)
+{
+    internal void Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(Source);
+        if (ExpiresAtMinute < 0) throw new ArgumentOutOfRangeException(nameof(ExpiresAtMinute));
+    }
+}
+
+/// <summary>
+/// The twelve classic poison types, in the donor's own order and with its classic values. The donor
+/// starts them at 128 and builds each variant's effect key as <c>Poison-{name}</c>; the names here are
+/// the pack's spelling of the same identities.
+/// </summary>
+internal enum DaggerfallPoisonVariant
+{
+    NuxVomica = 128,
+    Arsenic = 129,
+    Moonseed = 130,
+    Drothweed = 131,
+    Somnalius = 132,
+    PyrrhicAcid = 133,
+    Magebane = 134,
+    Thyrwort = 135,
+    Indulcet = 136,
+    Sursum = 137,
+    QuaestoVil = 138,
+    Aegrotat = 139,
+}

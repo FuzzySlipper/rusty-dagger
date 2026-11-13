@@ -286,7 +286,7 @@ public sealed class DaggerfallConcreteGuildRuntimeTests
                 .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
             InventoryStore store = new();
             EntityId owner = _entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 1), new EntityTypeId("test.player"));
-            store.RegisterInventory(new InventoryState(owner, [new InventoryCapacityLimit(DaggerActorFactory.ClassicWeightMetric, ulong.MaxValue)]));
+            store.RegisterInventory(new InventoryState(owner, [new InventoryCapacityLimit(DaggerfallEncumbrancePolicy.ClassicWeightMetric, ulong.MaxValue)]));
             InventoryComponent component = new(store, owner);
             _entities.Store.Add(owner, component);
             _inventory = new(component, _entities, items);

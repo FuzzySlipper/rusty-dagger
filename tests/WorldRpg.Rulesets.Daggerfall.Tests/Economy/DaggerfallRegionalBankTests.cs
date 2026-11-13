@@ -359,7 +359,7 @@ public sealed class DaggerfallRegionalBankTests
             Dictionary<InventoryItemId, ItemDefinition> items = _definitions.Items.Values.Concat(_definitions.TemplateItems.Values)
                 .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
             Player = _entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 1), new EntityTypeId("test.player"));
-            _store.RegisterInventory(new InventoryState(Player, [new InventoryCapacityLimit(DaggerActorFactory.ClassicWeightMetric, ulong.MaxValue)]));
+            _store.RegisterInventory(new InventoryState(Player, [new InventoryCapacityLimit(DaggerfallEncumbrancePolicy.ClassicWeightMetric, ulong.MaxValue)]));
             InventoryComponent component = new(_store, Player);
             _entities.Store.Add(Player, component);
             Inventory = new(component, _entities, items);

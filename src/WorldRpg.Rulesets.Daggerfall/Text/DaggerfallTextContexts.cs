@@ -61,7 +61,7 @@ internal static class DaggerfallTextContexts
             DamageModifier: Signed(DaggerfallFormulaPolicy.DamageModifier(strength)),
             EncumbranceMaximum: Number(DaggerfallFormulaPolicy.MaxEncumbrance(strength)),
             Magicka: Number(magicka.Current), MagickaMaximum: Number(magicka.Maximum.Value),
-            MasteredSkill: mastered is null ? "BLANK" : DaggerfallInventoryPresentation.Label(mastered),
+            MasteredSkill: mastered is null ? "BLANK" : DaggerfallIdLabel.For(mastered),
             MagicResistance: Number(DaggerfallFormulaPolicy.MagicResist(willpower)),
             ToHitModifier: Signed(DaggerfallFormulaPolicy.ToHitModifier(agility)),
             HitPointModifier: Signed(DaggerfallFormulaPolicy.HitPointsModifier(endurance)),
@@ -95,7 +95,7 @@ internal static class DaggerfallTextContexts
         if (potion is not null && definition.Template?.Index != 278)
             potion = Internal(definitions, "potionOf").Replace("%po", potion, StringComparison.Ordinal);
         string? soul = metadata.CapturedSoulMobileId is int mobile
-            ? DaggerfallInventoryPresentation.Label(definitions.Actors.Values.First(actor => actor.MobileId == mobile).Id.Value) : Internal(definitions, "Nothing");
+            ? DaggerfallIdLabel.For(definitions.Actors.Values.First(actor => actor.MobileId == mobile).Id.Value) : Internal(definitions, "Nothing");
         return new(ItemName: metadata.BookId is int bookId ? definitions.Books.Books[bookId].Title : name, BookAuthor: author, Amount: quantity.ToString(CultureInfo.InvariantCulture),
             Worth: checked((decimal)(value ?? definition.Value) * quantity).ToString(CultureInfo.InvariantCulture),
             Material: definition.Weapon is not null || definition.Armor is not null ? Internal(definitions, metadata.Material) : null,

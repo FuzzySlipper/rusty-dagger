@@ -86,7 +86,7 @@ public sealed class CareerPassiveSessionTests
         var identity = session.UniqueItemAllocator.AllocateReference();
         var item = session.State.Equipment.Materialize(identity, new WorldRpg.Kit.Inventory.InventoryItemId(definition.Id.Value));
         session.State.ItemInstances.RegisterDefaultUnique(identity.Value, definition, DaggerfallItemOwner.Player);
-        Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, session.ItemCondition.Enchant(item, "enchantment.13.0").Outcome);
+        Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, session.ItemEnchanting.Enchant(item, "enchantment.13.0").Outcome);
         session.EquipmentMoves.MoveToSlot(item, new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand"));
         Assert.Equal(24, session.EnemyAudibleRange);
         using var restored = Restore(session.CaptureSave());

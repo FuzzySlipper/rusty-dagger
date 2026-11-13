@@ -47,7 +47,7 @@ public sealed class HeldAbsorptionSessionTests
         var definition = TestPayload.Definitions.RequireItem(new DaggerfallItemId("template-121-daedric"));
         var weapon = s.State.Equipment.Materialize(identity,new InventoryItemId(definition.Id.Value));
         s.State.ItemInstances.RegisterDefaultUnique(identity.Value,definition,DaggerfallItemOwner.Player);
-        Assert.Equal(DaggerfallItemConditionOutcome.Enchanted,s.ItemCondition.Enchant(weapon,"enchantment.9.-1").Outcome);
+        Assert.Equal(DaggerfallItemConditionOutcome.Enchanted,s.ItemEnchanting.Enchant(weapon,"enchantment.9.-1").Outcome);
         Assert.Equal(EquipmentMoveOutcome.Applied,s.EquipmentMoves.MoveToSlot(weapon,new EquipmentSlotId("right-hand")).Outcome);
         Fund(s,1); s.State.Character.LearnSpell("spell.045");
         s.ReadyPlayerSpell("spell.045"); s.ReleaseReadySpell(1,Vector3.UnitZ);

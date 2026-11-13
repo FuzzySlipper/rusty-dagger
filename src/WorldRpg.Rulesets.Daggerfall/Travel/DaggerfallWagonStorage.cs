@@ -283,7 +283,7 @@ internal sealed class DaggerfallWagonStorage
     }
 
     private static long WeightClassicUnits(InventoryView inventory) =>
-        inventory.Capacity.Where(value => value.Metric == DaggerActorFactory.ClassicWeightMetric).Sum(value => checked((long)value.Used));
+        inventory.Capacity.Where(value => value.Metric == DaggerfallEncumbrancePolicy.ClassicWeightMetric).Sum(value => checked((long)value.Used));
 
     private static bool HasCart(InventoryView inventory) => inventory.UniqueItems.Any(item => item.Definition.Value == DaggerfallTransportPolicy.CartItemId);
 

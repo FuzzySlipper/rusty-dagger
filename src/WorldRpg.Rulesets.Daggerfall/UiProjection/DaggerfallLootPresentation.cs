@@ -42,7 +42,7 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         {
             contents = loot.ReadContents(actor);
             owner = DaggerfallItemOwner.Corpse(actor);
-            title = DaggerfallInventoryPresentation.Label(loot.ContainerName(actor)) + " — loot";
+            title = DaggerfallIdLabel.For(loot.ContainerName(actor)) + " — loot";
         }
         else return null;
         InventoryItemPresentation[] rows = contents is null ? [] : contents.Stacks

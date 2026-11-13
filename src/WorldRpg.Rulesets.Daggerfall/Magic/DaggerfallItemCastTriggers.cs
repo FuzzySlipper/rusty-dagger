@@ -9,8 +9,6 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Meaningful equipped-callback and cadence state, carried by the actual durable item.</summary>
 internal sealed record DaggerfallItemStrikeSource(ulong ItemId, string? Enchantment, DaggerfallMadeEnchantment? MadeEnchantment);
 
-internal sealed record DaggerfallHeldCastState(long CasterId, long LastRerollMinute, string[] ActiveEffectInstances, bool RerollPending = false);
-
 /// <summary>Item trigger policy; casting, equipment, calendar, condition and effects keep their one owners.</summary>
 internal sealed partial class DaggerfallItemCastTriggers(DaggerfallMagicCatalogSet magic, DaggerfallItemInstances instances,
     DaggerfallCasting casting, DaggerfallEffectLifecycle effects, EntityDirectory entities,

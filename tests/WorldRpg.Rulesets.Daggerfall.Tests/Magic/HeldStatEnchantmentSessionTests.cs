@@ -47,7 +47,7 @@ public sealed class HeldStatEnchantmentSessionTests
             durableId = itemIdentity.Value;
             var item = session.State.Equipment.Materialize(itemIdentity, new InventoryItemId(definition.Id.Value));
             session.State.ItemInstances.RegisterDefaultUnique(durableId, definition, DaggerfallItemOwner.Player);
-            Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, session.ItemCondition.Enchant(item, $"enchantment.{type}.{param}").Outcome);
+            Assert.Equal(DaggerfallItemConditionOutcome.Enchanted, session.ItemEnchanting.Enchant(item, $"enchantment.{type}.{param}").Outcome);
             var moved = session.EquipmentMoves.MoveToSlot(item, new EquipmentSlotId("right-hand"));
             Assert.True(moved.Outcome == EquipmentMoveOutcome.Applied, moved.Detail);
             equipped = Read(session);

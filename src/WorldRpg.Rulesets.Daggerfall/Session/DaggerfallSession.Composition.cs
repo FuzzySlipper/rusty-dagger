@@ -326,7 +326,8 @@ internal sealed partial class DaggerfallSession
                 seconds => AdvanceElapsedTime(seconds, deferSkillAdvancement: true, resting: true));
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
                 () => character.Career.ForbiddenEquipment, itemInstances, () => racialOverrides.Current?.State.BeastForm == true);
-            _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves, inventory, () => SoulGems);
+            _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves);
+            _itemEnchanting = new DaggerfallItemEnchanting(definitions, itemInstances, _equipmentMoves, _itemCondition, inventory, () => SoulGems);
             _itemCondition.Broken += ReleaseBoundSoul;
             _heldEnchantments = new DaggerfallHeldEnchantments(equipmentCoordinator, itemInstances, definitions.Magic,
                 playerStats, actors.Entities, playerEntity, () => _time.Calendar,
@@ -507,7 +508,7 @@ internal sealed partial class DaggerfallSession
                 dialogueWorld: new DaggerfallDialogueWorldState(saved?.DialogueWorld));
             _creation = new DaggerfallCharacterCreation(State.Character, definitions, _random);
             _itemMaker = new DaggerfallItemMaker(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
-                State.Inventory, State.ItemInstances, _itemCondition, SoulGems, _uniqueItems, () => _time.Calendar);
+                State.Inventory, State.ItemInstances, _itemEnchanting, SoulGems, _uniqueItems, () => _time.Calendar);
             _potionMaker = new DaggerfallPotionMaking(definitions, State.Npcs, State.ConcreteGuildServices, State.Inventory,
                 State.Containers, State.Wagon, State.ItemInstances, engine.Random, () => _time.Calendar);
             State.Quests.BindTextContext(QuestTextContext);
@@ -641,7 +642,7 @@ internal sealed partial class DaggerfallSession
                 damageSource: (id, amount) => AppendEffectDamage(new(_vitality.ResolveHeldEnchantmentDamage(RequireEffectActor(id), amount))),
                 restoreSource: (id, amount) => _vitality.RestoreSpellTrack(RequireEffectActor(id), TrackId.Parse("health"), amount),
                 strikeTuning: tuning.StrikeEnchantments);
-            _itemCondition.Enchanted += _itemCastTriggers.Enchanted;
+            _itemEnchanting.Enchanted += _itemCastTriggers.Enchanted;
             effects.Completed += _itemCastTriggers.EffectCompleted;
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
             _persistence.EquipCountdown = () => _combat.EquipCountdown;

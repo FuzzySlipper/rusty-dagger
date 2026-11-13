@@ -25,6 +25,8 @@ internal sealed class DaggerfallEncumbrancePolicy
 {
     private const string GoldPiece = "gold-piece";
     internal const int TemplateWeightToClassicUnits = 100;
+    /// <summary>The Engine capacity metric every Daggerfall inventory measures carried weight in, in classic units.</summary>
+    internal static CapacityMetricId ClassicWeightMetric { get; } = CapacityMetricId.Parse("daggerfall.classic-weight");
     private readonly MechanicsInventoryCoordinator _playerInventory;
     private readonly StatsComponent _playerStats;
     private readonly Func<double> _carryMultiplier;
@@ -77,7 +79,7 @@ internal sealed class DaggerfallEncumbrancePolicy
     private long CurrentClassicUnits(InventoryView inventory)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        ulong used = inventory.Capacity.Single(value => value.Metric == DaggerActorFactory.ClassicWeightMetric).Used;
+        ulong used = inventory.Capacity.Single(value => value.Metric == DaggerfallEncumbrancePolicy.ClassicWeightMetric).Used;
         return checked((long)used);
     }
 
@@ -94,7 +96,7 @@ internal sealed class DaggerfallEncumbrancePolicy
 
     internal static bool IsGold(DaggerfallItemDefinition definition) => definition.Id.Value == GoldPiece || definition.Template?.Index == 276;
     internal static ItemCapacityCost[]? CapacityOverride(ulong? weight) => weight is null ? null
-        : weight == 0 ? [] : [new(DaggerActorFactory.ClassicWeightMetric, weight.Value)];
+        : weight == 0 ? [] : [new(DaggerfallEncumbrancePolicy.ClassicWeightMetric, weight.Value)];
 
     /// <summary>
     /// What one of an item weighs in kilograms, as its information names it: its own recorded weight, a gold piece's one

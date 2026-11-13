@@ -11,27 +11,6 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// The twelve classic poison types, in the donor's own order and with its classic values. The donor
-/// starts them at 128 and builds each variant's effect key as <c>Poison-{name}</c>; the names here are
-/// the pack's spelling of the same identities.
-/// </summary>
-internal enum DaggerfallPoisonVariant
-{
-    NuxVomica = 128,
-    Arsenic = 129,
-    Moonseed = 130,
-    Drothweed = 131,
-    Somnalius = 132,
-    PyrrhicAcid = 133,
-    Magebane = 134,
-    Thyrwort = 135,
-    Indulcet = 136,
-    Sursum = 137,
-    QuaestoVil = 138,
-    Aegrotat = 139,
-}
-
-/// <summary>
 /// The twelve compiled poison effects, one per archetype, over this session's draw and vitality owners.
 /// The archetype's own key is the effect key, so a save names the poison it carries through the catalog
 /// that has to interpret it, and a key no archetype answers is refused rather than silently inert.
@@ -150,10 +129,6 @@ internal static class DaggerfallPoisonPolicy
     /// which is what the classic files carry.
     /// </summary>
     internal static int? VariantForDrugTemplate(int template) => template is >= 78 and <= 81 ? template + 58 : null;
-
-    /// <summary>The donor's own poison identity for a classic value, or null when nothing carries it.</summary>
-    internal static DaggerfallPoisonVariant? VariantFor(int classicValue) =>
-        Enum.IsDefined(typeof(DaggerfallPoisonVariant), classicValue) ? (DaggerfallPoisonVariant)classicValue : null;
 
     /// <summary>
     /// The decision before any throw: immunity is settled first and a bypass skips the saving throw, so

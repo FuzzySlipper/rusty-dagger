@@ -50,7 +50,7 @@ internal static class DaggerfallTransportProjection
         DaggerfallTransportAccessContext context, bool ownsShip, DaggerfallWagonStorage? wagon = null,
         Func<string, string, ulong, string>? itemLabel = null)
     {
-        itemLabel ??= (_, definition, _) => DaggerfallInventoryPresentation.Label(definition);
+        itemLabel ??= (_, definition, _) => DaggerfallIdLabel.For(definition);
         ArgumentNullException.ThrowIfNull(policy);
         ArgumentNullException.ThrowIfNull(player);
         context.Validate();
