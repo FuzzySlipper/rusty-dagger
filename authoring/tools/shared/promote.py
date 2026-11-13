@@ -47,9 +47,10 @@ The `effects` area promotes the effects the game animates: blood and the magic s
 inventory window's magic and coin glints (TEXTURE.434 records 5 and 6, from the `effects` finals). Each
 effect becomes one PNG atlas (the renderer reads PNG) of its frames in classic order, all cropped to one box that
 holds every frame's art and the classic frame's place on the generation canvas, so the frames keep their relative
-size and position. The entry states where the classic frame sits in that box (`classic`, fractions of the frame,
-top-down), from which the game sizes and anchors it as the classic. An effect missing an accepted frame stays
-classic. The area also writes the soft white glow (`effectGlow`) the game's spell trails and impact bursts tint
+size and position. Its placement states a frame's world size in metres and its pivot (fractions of the frame, from its
+left and bottom), the frames in playing order (`sequence`, indices of `frames`), their rate and whether it loops, and
+for a glint the part of a frame an inventory slot holds (`slot`, fractions, top-down). An effect missing an accepted
+frame stays classic. The area also writes the soft white glow (`effectGlow`) the game's spell trails and impact bursts tint
 in each element's colour, and the world meshes (`meshes`): the `effects` final `corpse-bones.glb`, a skull-free bone
 pile resting on the floor, stands in for TEXTURE.380 record 1 (the corpse every human enemy class shares, men and
 women alike, so it is no one in particular) and record 4 (the bone pile placed in dungeons). Each entry states the
@@ -86,8 +87,14 @@ is published beside it as its `icon`, which the inventory, shops and the ground 
 A worn image and an item icon is also what a dropped item stands as on the ground, and the renderer reads PNG, so
 each also has a `world` PNG, crunched as a world flat is at GROUND_CRUNCH pixels to a classic world pixel (an icon's
 classic pixels are the treasure pile's, a worn image's DOLL_UNIT to its doll unit), and a worn image's dye mask a `world`
-PNG the same size as the image's, clear wherever it is. The menus draw the smooth webp images. An item icon's `world` also states its classic image's size in classic pixels (its
-opaque box in the import's published image), from which the game sizes it on the ground as a worn image is sized from its doll rect.
+PNG the same size as the image's, clear wherever it is. The menus draw the smooth webp images. An item icon's placement
+states its height on the ground in metres (`ground`), as a worn image stands at its doll rect's height. The clothed
+body's states the row it is split at for clothing worn above and below (`waist`, doll units from its top).
+
+A placement is the entry's own. A new entry takes its values from the classic original once (the classic effect, the
+classic image's size at the treasure piles' scale, the classic body's waist), each marked `original` in its `from`;
+after that, promotion keeps every value the payload holds, so a value changed on purpose survives a re-promotion.
+`--set ID NAME VALUE` sets one, marked `hand`; `--recompute ID` (or `all`) takes them from the original again.
 
 Only finals whose ledger/AREA-notes.json status is `accepted` are promoted. Rerunning an area replaces that
 area's entries and files and keeps every other area's: it deletes the area's files and writes them all again, about ten
@@ -152,7 +159,14 @@ WORLD_EFFECTS = {
 }
 CANVAS, OCCUPANCY = 1024, 0.74   # the generation canvas and the share of it the classic frame filled (run.py)
 GROUND_CRUNCH = 2                # a dropped item's pixels to a classic world pixel, as a world flat's
-DOLL_UNIT = .01 / .025           # a paper-doll unit (1 cm on the body) in classic world pixels (2.5 cm)
+WORLD_PIXEL = .025               # a classic world pixel in metres
+DOLL_UNIT = .01 / WORLD_PIXEL    # a paper-doll unit (1 cm on the body) in classic world pixels
+# The classic ground-container billboards, whose first stands every dropped item's classic image at its scale.
+DUNGEON_MANIFEST = REPOSITORY / "local/build/import/staging/worldrpg/imports/shared/media/dungeon/manifest.json"
+TREASURE = 216
+WAIST = 40                       # the doll row, from the classic clothed body's top, the donor splits it at
+# Where a placement value came from: taken from the classic original at promotion, or set by hand (--set).
+ORIGINAL, HAND = "original", "hand"
 EFFECT_FRAME = 256               # pixels on an effect frame's longer side
 FLAT_CRUNCH = float(os.environ.get("FLAT_CRUNCH", "2"))   # a world billboard's pixels to a classic pixel
 PEOPLE_CRUNCH = 3   # a person's pixels to a classic pixel
@@ -237,9 +251,79 @@ def world_png(image, target):
 
 def world_image(image, height, doll=False):
     """An item's ground image, crunched as a world flat is: GROUND_CRUNCH pixels to a classic world pixel, for an image
-    `height` classic pixels tall (an icon), or with `doll`, doll units tall (a worn image)."""
+    `height` classic world pixels tall (an icon), or with `doll`, doll units tall (a worn image)."""
     k = GROUND_CRUNCH * (DOLL_UNIT if doll else 1) * height / image.height
     return reduce.crunch_sprites([image], (max(1, round(image.width * k)), max(1, round(image.height * k))))[0]
+
+
+# The placement each entry had in the payload before this run, by what it replaces, and its image's hash; and what
+# --recompute names (an id, or "all"), which takes those values from the original again.
+KEPT, KEPT_ART, RECOMPUTE = {}, {}, set()
+
+
+def own(replaces, names, original):
+    """An entry's placement: the values that size, anchor and time it, which are its own once written. A new entry, or
+    one --recompute names, takes them from the classic original (`original()`), each marked ORIGINAL in `from`; an entry
+    the payload already places keeps every value it has, however it was set, and takes only a missing one from the original."""
+    old = None if {replaces, "all"} & RECOMPUTE else KEPT.get(replaces)
+    if old is not None and all(name in old for name in names):
+        return old
+    values = original()
+    fresh = {**values, "from": {name: ORIGINAL for name in values}}
+    if old is None:
+        return fresh
+    return {**fresh, **{name: value for name, value in old.items() if name != "from"}, "from": {**fresh["from"], **old.get("from", {})}}
+
+
+def classic_layer(media):
+    """A classic character layer's doll rect, as the import publishes it."""
+    for layer in json.load(open(IMPORTED))["characterPresentation"]["layers"]:
+        if layer["mediaId"] == media:
+            return layer["placement"]
+    raise SystemExit(f"The import publishes no character layer {media}: run the import first.")
+
+
+def waist(media, doll):
+    """Where the clothed body is split for clothing worn above and below: the classic body's WAIST row, in doll units from
+    the top of the refreshed image."""
+    classic = classic_layer(media)
+    return round(min(max(classic["y"] + min(WAIST, classic["height"]) - doll["y"], 0), doll["height"]), 4)
+
+
+def metres_per_classic_pixel():
+    """The scale of a dropped item's classic image: the first treasure pile's world height over its frame's pixels."""
+    manifest = json.load(open(DUNGEON_MANIFEST))
+    pile = min((billboard for billboard in manifest["billboards"] if billboard["textureArchive"] == TREASURE), key=lambda billboard: billboard["textureRecord"])
+    return pile["worldSize"]["y"] / pile["frames"][0]["atlasFrame"]["height"]
+
+
+def classic_effect(media):
+    """A classic effect as the game reads it from the import's classic presentation: its world size (a metre on its
+    longer side, unless stated) and pivot (its middle, unless stated, from the frame's left and bottom), its frames in
+    playing order as indices of its frames, and its rate and loop."""
+    manifest = json.load(open(CLASSIC_MANIFEST))
+    resource = next(resource for resource in manifest["media"]["resources"] if resource["id"] == media)
+    timing = next(effect["timing"] for effect in manifest["effects"] if effect["mediaId"] == media)
+    ids = sorted(frame["frameIndex"] for frame in resource["frames"])
+    first = next(frame for frame in resource["frames"] if frame["frameIndex"] == 0)
+    longer = max(first["width"], first["height"])
+    size = resource["displaySize"] or {"x": first["width"] / longer, "y": first["height"] / longer}
+    pivot = resource["pivot"] or {"x": .5, "y": .5}
+    return size, pivot, [ids.index(frame) for frame in resource["sequence"] or ids], timing["framesPerSecond"], timing["loop"]
+
+
+def effect_placement(media, classic):
+    """An effect atlas frame's own size in metres and pivot, from where the classic frame sits in it (`classic`, fractions
+    of the frame, top-down): the classic size grows by the share that frame takes, and the classic pivot moves into it. A
+    glint also states that share as its `slot`, the part of a frame an inventory slot holds."""
+    size, pivot, sequence, rate, loops = classic_effect(media)
+    values = {"size": {"width": round(size["x"] / classic["width"], 6), "height": round(size["y"] / classic["height"], 6)},
+              "pivot": {"x": round(classic["x"] + pivot["x"] * classic["width"], 6),
+                        "y": round(1 - classic["y"] - classic["height"] + pivot["y"] * classic["height"], 6)},
+              "sequence": sequence, "framesPerSecond": rate, "loops": loops}
+    if media.startswith("effect.glint."):
+        values["slot"] = classic
+    return values
 
 
 def world_mask(mask, world):
@@ -312,6 +396,8 @@ def promote(area, key, path, rect=None, mediaId=None, name=None):
              "width": image.width, "height": image.height,
              "doll": {"x": round(x + box[0] / k, 4), "y": round(y + box[1] / k, 4),
                       "width": round(image.width / k, 4), "height": round(image.height / k, 4)}}
+    if classic.startswith("character.body-clothed."):
+        entry["placement"] = own(classic, ["waist"], lambda: {"waist": waist(classic, entry["doll"])})
     if area == "worn":
         ground = world_image(image, image.height / k, doll=True)
         entry["world"] = world_png(ground, f"{MEDIA}/{area}/{name}.png")
@@ -360,7 +446,8 @@ def inventory_icons():
         if final is None:
             classic.append(media)
             continue
-        entries.append(icon_entry(media, icon(final, "items"), name, world=classic_size(media)))
+        ground = own(media, ["ground"], lambda: {"ground": round(classic_size(media)["height"] * metres_per_classic_pixel(), 6)})
+        entries.append(icon_entry(media, icon(final, "items"), name, ground))
     if classic:
         print(f"items: {len(classic)} icons stay classic, their records have no accepted final: {', '.join(classic)}")
     return entries
@@ -458,7 +545,14 @@ def world_effects():
         if not sources or None in finals:
             classic.append(media)
             continue
-        entries.append({"replaces": media, **frame_atlas(media, sources, finals, f"{MEDIA}/effects/{media.replace('.', '-')}.png", EFFECT_FRAME)})
+        entry = {"replaces": media, **frame_atlas(media, sources, finals, f"{MEDIA}/effects/{media.replace('.', '-')}.png", EFFECT_FRAME)}
+        frame = entry.pop("classic")
+        names = ["size", "pivot", "sequence", "framesPerSecond", "loops", *(["slot"] if media.startswith("effect.glint.") else [])]
+        entry["placement"] = own(media, names, lambda: effect_placement(media, frame))
+        if any(not 0 <= index < len(entry["frames"]) for index in entry["placement"]["sequence"]):
+            raise SystemExit(f"{media}: its sequence {entry['placement']['sequence']} names a frame its {len(entry['frames'])} frames lack; "
+                             f"set it (--set {media} sequence '[...]') or --recompute {media}.")
+        entries.append(entry)
     if classic:
         print(f"effects: {len(classic)} effects stay classic, a frame has no accepted final: {', '.join(classic)}")
     return entries
@@ -500,7 +594,8 @@ def world_meshes():
 
 def classic_size(media):
     """The opaque box of the classic image the game draws for an icon, in classic pixels, read from the import's
-    published media: a template's image under the paper doll's, an icon of the classic media by its inventory."""
+    published media: a template's image under the paper doll's, an icon of the classic media by its inventory. On the
+    ground it stands at the treasure piles' metres per classic pixel."""
     if m := ITEM_IMAGE.fullmatch(media):
         path = CLASSIC / f"item-{m[1]}-{m[2]}.png"
     else:
@@ -609,23 +704,35 @@ def people_rig():
                            for name, publication in sets.items()}}
 
 
-def icon_entry(replaces, image, name, world=None):
-    """An icon's entry; with its classic size, also its world PNG."""
+def icon_entry(replaces, image, name, placement=None):
+    """An icon's entry; with a placement, which states its height on the ground in metres, also its world PNG."""
     entry = {"replaces": replaces, "mediaId": f"refreshed.{replaces}", **webp(image, f"{MEDIA}/{name}.webp"),
              "width": image.width, "height": image.height}
-    if world is not None:
-        entry["world"] = world_png(world_image(image, world["height"]), f"{MEDIA}/{name}.png") | {"classic": world}
+    if placement is not None:
+        entry["world"] = world_png(world_image(image, round(placement["ground"] / WORLD_PIXEL, 4)), f"{MEDIA}/{name}.png")
+        entry["placement"] = placement
     return entry
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--area", action="append", choices=AREAS, required=True)
+    ap.add_argument("--area", action="append", choices=AREAS, default=[])
     ap.add_argument("--key", action="append", help="promote only this accepted final of a paper-doll or worn --area, "
                     "leaving the area's other files and its tints as they are; a whole area deletes and rewrites its media")
+    ap.add_argument("--recompute", action="append", default=[], metavar="ID",
+                    help="take the placement of the entry replacing ID (or every promoted entry, with `all`) from the original again")
+    ap.add_argument("--set", action="append", nargs=3, default=[], metavar=("ID", "NAME", "VALUE"),
+                    help="set placement value NAME (size.width, framesPerSecond, ground, waist, ...) of the entry replacing ID "
+                    "to the JSON VALUE, marked as set by hand, after any --area")
     a = ap.parse_args()
+    if not a.area and not a.set:
+        ap.error("give an --area to promote or a --set")
+    RECOMPUTE.update(a.recompute)
     payload = json.loads(PAYLOAD.read_text()) if PAYLOAD.exists() else {"artReplacements": {"images": []}}
     images = payload["artReplacements"]["images"]
+    placed = lambda: [entry for entry in [*images, *payload["artReplacements"].get("effects", [])] if "placement" in entry]
+    for entry in placed():
+        KEPT[entry["replaces"]], KEPT_ART[entry["replaces"]] = entry["placement"], entry["sha256"]
     for area in a.area:
         if a.key:
             notes = ledger(area)
@@ -639,12 +746,15 @@ def main():
         if area == "effects":
             directory = CONTENT / MEDIA / "effects"
             directory.mkdir(parents=True, exist_ok=True)
-            for old in [*directory.glob("*.png"), *directory.glob("*.glb")]:
-                old.unlink()
+            # Files are rewritten in place and the stale ones removed after, so a refused effect leaves the area as it was.
             effects = payload["artReplacements"]["effects"] = world_effects()
             payload["artReplacements"]["effectGlow"] = effect_glow()
             payload["artReplacements"].pop("corpseMesh", None)
             payload["artReplacements"]["meshes"] = world_meshes()
+            written = {entry["path"] for entry in [*effects, payload["artReplacements"]["effectGlow"], *payload["artReplacements"]["meshes"]]}
+            for old in [*directory.glob("*.png"), *directory.glob("*.glb")]:
+                if f"{MEDIA}/effects/{old.name}" not in written:
+                    old.unlink()
             print(f"effects: {len(effects)} effects, {sum(entry['byteLength'] for entry in effects) / 1e6:.1f} MB", flush=True)
             continue
         if area == "flats":
@@ -698,6 +808,22 @@ def main():
             payload["artReplacements"]["dyeTints"] = dye_tints(clothing, DYES, "red") | dye_tints(metal, METALS, "daedric")
         size = sum(entry["byteLength"] + entry.get("dyeMask", {}).get("byteLength", 0) for entry in images if entry["path"].startswith(f"{MEDIA}/{area}/"))
         print(f"{area}: {len(accepted)} finals, {size / 1e6:.1f} MB", flush=True)
+    for entry in placed():
+        if entry["replaces"] in KEPT_ART and entry["sha256"] != KEPT_ART[entry["replaces"]] and entry["placement"] is KEPT[entry["replaces"]]:
+            print(f"{entry['replaces']}: new art kept its placement; check it, or --recompute {entry['replaces']}", flush=True)
+    for media, name, value in a.set:
+        entry = next((entry for entry in placed() if entry["replaces"] == media), None)
+        if entry is None:
+            raise SystemExit(f"No promoted entry replacing {media} has a placement.")
+        *path, last = name.split(".")
+        target = entry["placement"]
+        for step in path:
+            target = target[step]
+        if path and last not in target or not path and name not in entry["placement"]["from"]:
+            raise SystemExit(f"{media} has no placement value {name}: it has {', '.join(entry['placement']['from'])}.")
+        target[last] = json.loads(value)
+        entry["placement"]["from"][path[0] if path else name] = HAND
+        print(f"{media}: {name} = {value}, set by hand", flush=True)
     images.sort(key=lambda entry: entry["replaces"])
     PAYLOAD.write_text(json.dumps(payload, indent=1) + "\n")
 

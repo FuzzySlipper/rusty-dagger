@@ -10,7 +10,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// World effects drawn in refreshed art, and the spells in flight. A spell flies as its element's missile and lands
 /// as its impact, both classic animated sprites. The bright elements (fire, shock, magic) and the sparkle shine over
 /// their own colours through emission at <see cref="DaggerfallSiteLightingTuning.SpellGlow"/>, so above 1 they bloom,
-/// in either art. With refreshed art each effect draws its refreshed atlas at the classic world size and anchor, the
+/// in either art. With refreshed art each effect draws its refreshed atlas at its own size, anchor, frames and rate, the
 /// bright ones added to the scene rather than laid over it, and a flying spell trails glowing particles that burst where it lands. A human enemy whose corpse
 /// is the sprite every human class shares lies as the refreshed bone pile mesh instead, which is no one in particular,
 /// and a bone pile placed in a dungeon draws as the same mesh. Classic art draws the classic sprites alone.
@@ -30,8 +30,6 @@ internal sealed partial class DaggerfallSiteAppearance
     /// Admits the refreshed set's world effects and particle glow, drawn whenever <paramref name="refreshed"/> answers
     /// that the run does not draw classic art.
     /// </summary>
-    /// <exception cref="InvalidOperationException">A refreshed effect does not have its classic effect's frame count,
-    /// so its classic sequence would play the wrong frames.</exception>
     internal void UseEffectArt(IPresentationService presentation, IAnimationService animation, DaggerfallArtReplacements art, Func<bool> refreshed)
     {
         particles = presentation;
@@ -40,8 +38,6 @@ internal sealed partial class DaggerfallSiteAppearance
         foreach (NormalizedClassicEffect effect in classicEffects.Values.OrderBy(effect => effect.Name, StringComparer.Ordinal))
         {
             if (!art.Effects.TryGetValue(effect.MediaId, out DaggerfallEffectArt? effectArt)) continue;
-            if (effectArt.Frames.Count != effect.Frames.Count)
-                throw new InvalidOperationException($"Refreshed effect '{effect.MediaId}' has {effectArt.Frames.Count} frames; its classic effect has {effect.Frames.Count}.");
             RenderResourceInfo texture = appearance.OpenTexture(content, effectArt.Path, effectArt.Sha256, TextureFilter.Linear);
             ownedResources.Add(texture.Handle);
             refreshedEffects.Add(effect.Name, (texture.Handle, effectArt));
@@ -133,13 +129,12 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     /// <summary>
-    /// One effect's sprite, playing, in refreshed art when that is drawn: at its classic world size, or <paramref name="width"/>
-    /// metres wide; null when the effect is not published.
+    /// One effect's sprite, playing, in refreshed art when that is drawn: at its world size, or <paramref name="scale"/>
+    /// times it; null when the effect is not published.
     /// </summary>
-    private (SpriteAtlas Atlas, Appearance Visual, SpritePlayback Playback, bool Refreshed)? EffectSprite(string name, float? width = null)
+    private (SpriteAtlas Atlas, Appearance Visual, SpritePlayback Playback, bool Refreshed)? EffectSprite(string name, float scale = 1F)
     {
         if (!classicEffects.TryGetValue(name, out NormalizedClassicEffect? effect)) return null;
-        float scale = width is { } wanted ? wanted / effect.DisplaySize.X : 1F;
         bool refreshed = drawRefreshedEffects() && refreshedEffects.ContainsKey(name);
         SpriteAtlas? atlas = null;
         Appearance? visual = null;
@@ -147,21 +142,20 @@ internal sealed partial class DaggerfallSiteAppearance
         try
         {
             SpriteFromAtlasRequest request;
-            uint initialFrame = effect.Frames.Single(frame => frame.Id == effect.Sequence[0]).Id;
+            uint[] sequence;
+            float rate;
+            bool loops;
             if (refreshed)
             {
+                // The refreshed effect plays its own frames at its own size, anchor and rate: nothing of the classic effect places it.
                 (RenderResource texture, DaggerfallEffectArt art) = refreshedEffects[name];
                 SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height, art.Frames.Select((frame, index) =>
                     new NormalizedSpriteFrame((uint)index, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray());
                 atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture, frames));
-                // The refreshed frame is larger than the classic one it holds: scale the classic size by the share the
-                // classic frame takes of it, and move the classic anchor (a fraction of its frame, from the bottom) into it.
-                DaggerfallArtRect classic = art.Classic;
-                Vector2 size = effect.DisplaySize * scale / new Vector2((float)classic.Width, (float)classic.Height);
-                Vector2 pivot = new((float)(classic.X + effect.Pivot.X * classic.Width), (float)(1 - classic.Y - classic.Height + effect.Pivot.Y * classic.Height));
+                (sequence, rate, loops) = ([.. art.Sequence.Select(index => (uint)index)], art.FramesPerSecond, art.Loops);
                 SpriteMaterialDescriptor material = new(SpriteLightingMode.Unlit, default, default, 1f, 0f,
                     SpriteAlphaMode.Blend, .5f, SpriteShadowPolicy.None, Additive(name) ? SpriteBlendMode.Additive : SpriteBlendMode.Alpha, .15f);
-                request = new SpriteFromAtlasRequest(atlas, initialFrame, pivot, size, BillboardMode.Spherical, SpriteSizeMode.World, 0,
+                request = new SpriteFromAtlasRequest(atlas, sequence[0], art.Pivot, art.Size * scale, BillboardMode.Spherical, SpriteSizeMode.World, 0,
                     SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F), Additive(name) ? Glowing(material, texture, lighting.SpellGlow) : material);
             }
             else
@@ -170,13 +164,14 @@ internal sealed partial class DaggerfallSiteAppearance
                 SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(effect.AtlasWidth, effect.AtlasHeight,
                     effect.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
                 atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
-                request = new SpriteFromAtlasRequest(atlas, initialFrame, effect.Pivot, effect.DisplaySize * scale, BillboardMode.Cylindrical, SpriteSizeMode.World, 0,
+                (sequence, rate, loops) = ([.. effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id)], effect.FramesPerSecond, effect.Loops);
+                request = new SpriteFromAtlasRequest(atlas, sequence[0], effect.Pivot, effect.DisplaySize * scale, BillboardMode.Cylindrical, SpriteSizeMode.World, 0,
                     SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F));
                 if (Additive(name)) request = request with { Material = Glowing(request.Material, texture.Handle, lighting.SpellGlow) };
             }
             visual = appearance.CreateSpriteFromAtlas(request);
-            SpritePlaybackFrame[] playbackFrames = SpriteAtlasAdapter.ToPlaybackFrames(effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id).ToArray(), effect.FramesPerSecond);
-            playback = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual, atlas, playbackFrames, Array.Empty<SpritePlaybackMarker>(), effect.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
+            SpritePlaybackFrame[] playbackFrames = SpriteAtlasAdapter.ToPlaybackFrames(sequence, rate);
+            playback = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual, atlas, playbackFrames, Array.Empty<SpritePlaybackMarker>(), loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(playback, SpritePlaybackControl.Start));
             return (atlas, visual, playback, refreshed);
         }

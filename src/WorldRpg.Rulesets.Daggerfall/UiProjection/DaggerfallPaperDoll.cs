@@ -116,7 +116,8 @@ internal static class DaggerfallPaperDollPolicy
             { IsVampire: true } => presentation.RacialForms[$"vampire.{identity.RaceId}.{gender}"],
             _ => null,
         };
-        PaperDollLayerPresentation background = Refreshed(Background(frame, form?.BodyMediaId ?? race.Background.MediaId), art);
+        string backgroundId = form?.BodyMediaId ?? race.Background.MediaId;
+        PaperDollLayerPresentation background = Own("background", backgroundId, art) ?? Background(frame, backgroundId);
         if (racial?.State.BeastForm == true)
             return new PaperDollPresentation(frame.Width, frame.Height, background, [], []);
 
@@ -143,11 +144,13 @@ internal static class DaggerfallPaperDollPolicy
         layers.Add(Placed("body", unclothed.MediaId, unclothed.Placement, unclothed.MediaId, art));
         bool upperClothed = drawn.Any(item => item.Slot is "chest-clothes" or "chest-armor");
         bool lowerClothed = drawn.Any(item => item.Slot == "legs-clothes");
-        DaggerfallPaperDollPlacement clothedPlacement = clothed.Placement ?? throw Missing(clothed.MediaId);
+        PaperDollLayerPresentation clothedBody = Placed("body", clothed.MediaId, clothed.Placement, clothed.MediaId, art);
+        // The refreshed body splits at its own waist row; the classic one at the donor's.
+        double waist = art?.For(clothed.MediaId)?.Waist ?? Math.Min(WaistHeight, clothedBody.Height);
         if (!upperClothed)
-            layers.Add(Refreshed(Placed("body", clothed.MediaId, clothedPlacement, clothed.MediaId, null) with { ClipTop = 0, ClipBottom = Math.Min(WaistHeight, clothedPlacement.Height) }, art));
+            layers.Add(clothedBody with { ClipTop = 0, ClipBottom = waist });
         if (!lowerClothed)
-            layers.Add(Refreshed(Placed("body", clothed.MediaId, clothedPlacement, clothed.MediaId, null) with { ClipTop = Math.Min(WaistHeight, clothedPlacement.Height), ClipBottom = clothedPlacement.Height }, art));
+            layers.Add(clothedBody with { ClipTop = waist, ClipBottom = clothedBody.Height });
 
         if (form is not null)
             layers.Add(Placed("head", form.HeadMediaId, form.HeadPlacement, form.HeadMediaId, art));
@@ -179,34 +182,31 @@ internal static class DaggerfallPaperDollPolicy
     private static PaperDollLayerPresentation Background(DaggerfallPaperDollFrame frame, string mediaId) =>
         new("background", mediaId, frame.BackgroundX, frame.BackgroundY, frame.BackgroundWidth, frame.BackgroundHeight);
 
+    /// <summary>A layer at its replacement's own rect when the refreshed art replaces it, else at its classic placement.</summary>
     private static PaperDollLayerPresentation Placed(string kind, string mediaId, DaggerfallPaperDollPlacement? placement, string subject, DaggerfallArtReplacements? art)
     {
+        if (Own(kind, mediaId, art) is { } own) return own;
         DaggerfallPaperDollPlacement place = placement ?? throw Missing(subject);
-        return Refreshed(new PaperDollLayerPresentation(kind, mediaId, place.X, place.Y, place.Width, place.Height), art);
+        return new PaperDollLayerPresentation(kind, mediaId, place.X, place.Y, place.Width, place.Height);
     }
 
     /// <summary>
-    /// The layer as the refreshed art draws it, when its classic image has a replacement placed in the doll: the
-    /// replacement at its own rect, smoothed, a clip moved to the same doll rows (an end of the classic image stays
-    /// the end of the replacement, which may overhang it), and the mask kept at the classic image's rect.
+    /// The layer as the refreshed art draws it, when the image <paramref name="key"/> names has a replacement placed in
+    /// the doll: the replacement at its own rect, smoothed, read from the art set alone.
     /// </summary>
-    private static PaperDollLayerPresentation Refreshed(PaperDollLayerPresentation layer, DaggerfallArtReplacements? art, string? key = null)
-    {
-        if (art?.For(key ?? layer.MediaId) is not { Doll: { } rect } replacement) return layer;
-        double? Row(double? row) => row switch
-        {
-            null => null,
-            <= 0 => 0,
-            double end when end >= layer.Height => rect.Height,
-            double value => Math.Clamp(layer.Y + value - rect.Y, 0, rect.Height),
-        };
-        return layer with
-        {
-            MediaId = replacement.MediaId, X = rect.X, Y = rect.Y, Width = rect.Width, Height = rect.Height,
-            ClipTop = Row(layer.ClipTop), ClipBottom = Row(layer.ClipBottom),
-            MaskRect = layer.Mask is null ? null : new(layer.X, layer.Y, layer.Width, layer.Height), Smooth = true,
-        };
-    }
+    private static PaperDollLayerPresentation? Own(string kind, string key, DaggerfallArtReplacements? art) =>
+        art?.For(key) is { Doll: { } rect } replacement
+            ? new(kind, replacement.MediaId, rect.X, rect.Y, rect.Width, rect.Height, Smooth: true)
+            : null;
+
+    /// <summary>
+    /// A worn item's classic layer as the refreshed art draws it, when its image has a replacement: at the replacement's
+    /// own rect, the classic mask kept at the classic image's rect.
+    /// </summary>
+    private static PaperDollLayerPresentation Refreshed(PaperDollLayerPresentation layer, DaggerfallArtReplacements? art, string key) =>
+        Own(layer.Kind, key, art) is { } own
+            ? own with { Mask = layer.Mask, MaskRect = layer.Mask is null ? null : new(layer.X, layer.Y, layer.Width, layer.Height) }
+            : layer;
 
     private static InvalidOperationException Missing(string mediaId) =>
         new($"Paper-doll layer '{mediaId}' has no published placement.");

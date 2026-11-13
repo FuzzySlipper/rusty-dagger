@@ -61,6 +61,11 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - `matte.py` only once an area's finals are accepted. Never despeckle effects that carry embers.
 - `promote.py` takes only finals the ledger marks `accepted`. A whole-area run deletes and rewrites that area's
   files (about ten minutes for `worn`): don't interrupt it, and use `--key` for one final. The import must have run.
+- Effects, item icons and the clothed bodies carry their own `placement` (an effect's size in metres, pivot, frames,
+  rate and loop; an icon's ground height in metres; a body's waist row). A new entry takes it from the classic once;
+  after that, promotion keeps what the payload holds, so promote with `main` first. A redone effect with other frames
+  is refused until its `sequence` fits: set it with `--set ID NAME VALUE` (a JSON value, marked set by hand), or
+  take every value from the classic again with `--recompute ID`. Promotion says when new art kept an old placement.
 - Promotion writes only into the art pack's folder: commit with
   `git add -A content/worldrpg/packs/daggerfall.art-replacements`, which takes the payload and the area's new,
   changed and deleted files together. Nothing there is ignored, so no file needs `git add -f`.

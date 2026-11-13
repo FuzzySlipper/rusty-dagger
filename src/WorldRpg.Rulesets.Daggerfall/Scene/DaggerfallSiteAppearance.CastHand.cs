@@ -19,8 +19,11 @@ internal sealed partial class DaggerfallSiteAppearance
     /// <summary>The frame the spell leaves on, as the classic's casting hands release it.</summary>
     private const int CastReleaseFrame = 5;
 
-    /// <summary>How wide the element burns on the palm (metres).</summary>
-    private const float CastGlowWidth = .22F;
+    /// <summary>
+    /// How large the element burns on the palm, as a share of its missile in flight: the classic missiles are a metre
+    /// across, so 22 cm.
+    /// </summary>
+    private const float CastGlowScale = .22F;
 
     private ViewmodelVisual? castHand;
     // The element burning on the held arms' palm, from the cast's start until the spell leaves.
@@ -60,7 +63,7 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private void StartCastGlow(int element)
     {
-        if (DaggerfallSpellElements.Name(element) is not { } name || EffectSprite($"{name}Missile", CastGlowWidth) is not { } sprite) return;
+        if (DaggerfallSpellElements.Name(element) is not { } name || EffectSprite($"{name}Missile", CastGlowScale) is not { } sprite) return;
         castGlow = new EffectVisual(NextVisualEntityId(), WorldPoint.From(Vector3.Zero), sprite.Atlas, sprite.Visual, sprite.Playback) { Refreshed = sprite.Refreshed };
     }
 

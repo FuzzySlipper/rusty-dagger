@@ -242,7 +242,7 @@ public sealed class DaggerfallCharacterPresentationTests
     }
 
     [Fact]
-    public void Paper_doll_draws_refreshed_art_at_its_own_doll_rect_with_classic_clips_and_masks_and_clothing_and_armour_in_their_dye_or_metal()
+    public void Paper_doll_draws_refreshed_art_at_its_own_doll_rect_and_waist_with_the_classic_mask_and_clothing_and_armour_in_their_dye_or_metal()
     {
         using Fixture f = new();
         DaggerfallCharacterIdentity identity = new DaggerfallCharacterState(f.Definitions, f.Player.Stats, f.PlayerDefinition).Identity with { Gender = DaggerfallCharacterGender.Male };
@@ -271,6 +271,9 @@ public sealed class DaggerfallCharacterPresentationTests
             ["replaces"] = replaces, ["mediaId"] = $"refreshed.{replaces}", ["path"] = $"worldrpg/packs/daggerfall.art-replacements/media/paper-doll/{replaces}.webp", ["byteLength"] = 1,
             ["doll"] = new System.Text.Json.Nodes.JsonObject { ["x"] = x, ["y"] = y, ["width"] = width, ["height"] = height },
         };
+        // The clothed body states its own waist row, which is not where the classic body's would land in its rect.
+        System.Text.Json.Nodes.JsonObject clothedEntry = Entry(clothed.MediaId, 20.5, 30.25, 70, 150);
+        clothedEntry["placement"] = new System.Text.Json.Nodes.JsonObject { ["waist"] = 12.5, ["from"] = new System.Text.Json.Nodes.JsonObject { ["waist"] = "hand" } };
         // The shirt's refreshed record is one neutral image for every dye, standing in for the record as published undyed.
         string neutralShirt = classicShirt.MediaId[..classicShirt.MediaId.LastIndexOf('.')];
         System.Text.Json.Nodes.JsonObject shirtEntry = Entry(neutralShirt, 25, 40, 60, 50);
@@ -282,7 +285,7 @@ public sealed class DaggerfallCharacterPresentationTests
         {
             ["artReplacements"] = new System.Text.Json.Nodes.JsonObject
             {
-                ["images"] = new System.Text.Json.Nodes.JsonArray(Entry(nude.MediaId, 20.5, 30.25, 70, 150), Entry(clothed.MediaId, 20.5, 30.25, 70, 150),
+                ["images"] = new System.Text.Json.Nodes.JsonArray(Entry(nude.MediaId, 20.5, 30.25, 70, 150), clothedEntry,
                     Entry(classicHelm.MediaId, 40, 0, 30, 32), shirtEntry, cuirassEntry),
                 ["dyeTints"] = new System.Text.Json.Nodes.JsonObject
                 {
@@ -297,10 +300,13 @@ public sealed class DaggerfallCharacterPresentationTests
         // The body is drawn at the replacement's rect, smoothed.
         PaperDollLayerPresentation body = refreshed.Layers.First(layer => layer.Kind == "body");
         Assert.Equal(new PaperDollLayerPresentation("body", $"refreshed.{nude.MediaId}", 20.5, 30.25, 70, 150, Smooth: true), body);
-        // The shirt covers the upper body, so the clothed body's lower half is drawn from the waist row of the
-        // classic image, which in the replacement's rect is moved by the two rects' offset, down to its own bottom.
+        // The shirt covers the upper body, so the clothed body's lower half is drawn from its own waist row down to its
+        // own bottom: nothing of the classic body places it.
         PaperDollLayerPresentation lower = refreshed.Layers.Single(layer => layer.MediaId == $"refreshed.{clothed.MediaId}");
-        Assert.Equal((clothed.Placement!.Y + 40 - 30.25, 150d), (lower.ClipTop!.Value, lower.ClipBottom!.Value));
+        Assert.Equal((12.5, 150d), (lower.ClipTop!.Value, lower.ClipBottom!.Value));
+        PaperDollLayerPresentation upper = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, [], art).Layers
+            .First(layer => layer.MediaId == $"refreshed.{clothed.MediaId}");
+        Assert.Equal((0d, 12.5), (upper.ClipTop!.Value, upper.ClipBottom!.Value));
         // The helm keeps its classic mask, drawn where the classic helm was.
         PaperDollLayerPresentation helm = refreshed.Layers.Single(layer => layer.Slot == "head");
         Assert.Equal((helm.MediaId, helm.X, helm.Y, helm.Mask), ($"refreshed.{classicHelm.MediaId}", 40d, 0d, classicHelm.Mask));
@@ -323,6 +329,28 @@ public sealed class DaggerfallCharacterPresentationTests
         Assert.Equal(($"refreshed.{classicCuirass.MediaId}", 30d, true, new PaperDollTint("#ffd27a", 1.1, $"refreshed.{classicCuirass.MediaId}.dye")),
             (dwarven.MediaId, dwarven.X, dwarven.Smooth, dwarven.Tint));
         Assert.Equal(Cuirass("ebony", null), Cuirass("ebony", art));
+    }
+
+    [Theory]
+    [InlineData("character.body-clothed.male.00.0", "waist", "the clothed body 'refreshed.character.body-clothed.male.00.0'")]
+    [InlineData("item.200.10", "ground", "the world image of 'refreshed.item.200.10'")]
+    public void A_refreshed_entry_missing_its_own_placement_is_refused_by_name(string replaces, string value, string subject)
+    {
+        System.Text.Json.Nodes.JsonObject image = new()
+        {
+            ["replaces"] = replaces, ["mediaId"] = $"refreshed.{replaces}", ["path"] = $"worldrpg/packs/daggerfall.art-replacements/media/{replaces}.webp", ["byteLength"] = 1,
+            ["placement"] = new System.Text.Json.Nodes.JsonObject { ["from"] = new System.Text.Json.Nodes.JsonObject() },
+        };
+        if (value == "waist") image["doll"] = new System.Text.Json.Nodes.JsonObject { ["x"] = 20, ["y"] = 30, ["width"] = 70, ["height"] = 150 };
+        else image["world"] = new System.Text.Json.Nodes.JsonObject
+        {
+            ["path"] = $"worldrpg/packs/daggerfall.art-replacements/media/{replaces}.png", ["byteLength"] = 1, ["width"] = 16, ["height"] = 32,
+            ["sha256"] = "0000000000000001000000000000000200000000000000030000000000000004",
+        };
+        System.Text.Json.Nodes.JsonObject payload = new() { ["artReplacements"] = new System.Text.Json.Nodes.JsonObject { ["images"] = new System.Text.Json.Nodes.JsonArray(image) } };
+        InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() =>
+            DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), "test.art"));
+        Assert.Equal($"Content pack 'test.art' states no {value} in the placement of {subject}.", refused.Message);
     }
 
     [Fact]

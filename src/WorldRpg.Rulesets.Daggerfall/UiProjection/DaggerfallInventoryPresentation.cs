@@ -248,10 +248,12 @@ internal sealed class DaggerfallInventoryPresentation
         DaggerfallArtReplacements? set = art?.Invoke();
         return new(Glint(magic, set), Glint(coins, set));
 
+        // A refreshed glint turns through its own frames at its own rate, the slot holding the part of a frame it states.
         static InventoryGlintPresentation Glint(NormalizedClassicEffect effect, DaggerfallArtReplacements? set) =>
             set?.Effects.GetValueOrDefault(effect.MediaId) is { } refreshed
                 ? new(DaggerfallArtReplacements.EffectMediaId(effect.MediaId), refreshed.Width, refreshed.Height,
-                    [.. refreshed.Frames.Select(frame => ((int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height))], effect.FramesPerSecond, refreshed.Classic)
+                    [.. refreshed.Sequence.Select(index => refreshed.Frames[index]).Select(frame => ((int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height))],
+                    refreshed.FramesPerSecond, refreshed.Slot!)
                 : new(effect.MediaId, effect.AtlasWidth, effect.AtlasHeight,
                     [.. effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index)).Select(frame => (frame.X, frame.Y, frame.Width, frame.Height))],
                     effect.FramesPerSecond, new(0, 0, 1, 1));
@@ -584,11 +586,9 @@ internal sealed class DaggerfallInventoryPresentation
             : (UniqueKey(contents.UniqueItems.First().Entity.Value), contents.UniqueItems.First().Definition.Value);
         (string? media, PaperDollTint? tint) = Icon(definitions.RequireItem(new DaggerfallItemId(id)), Metadata(key, DaggerfallItemOwner.Ground(groundId)));
         if (media is null || set.ByMediaId(media) is not { World: { } world } replacement) return null;
-        // An icon is sized in classic pixels, a worn item's image in doll units.
-        (double height, bool doll) = world.Classic is { } classic ? (classic.Height, false) : (replacement.Doll!.Height, true);
-        if (tint is null) return new(world, null, null, 1, height, doll);
+        if (tint is null) return new(world, null, null, 1, replacement.GroundHeight);
         // A tinted image without a world mask would stand in bare steel or undyed cloth, which is not the item.
-        return replacement.DyeMask?.World is { } mask ? new(world, mask, tint.Color, tint.Brightness, height, doll) : null;
+        return replacement.DyeMask?.World is { } mask ? new(world, mask, tint.Color, tint.Brightness, replacement.GroundHeight) : null;
     }
 
     /// <summary>The potion template, whose items draw their recipe's bottle.</summary>
@@ -777,8 +777,7 @@ internal sealed class DaggerfallInventoryPresentation
 /// <summary>
 /// A ground pile of one kind of item standing as that item with refreshed art: its world image, and where it is in
 /// a metal or dye, the mask of what <paramref name="Color"/> (a CSS colour) brightened by <paramref name="Brightness"/>
-/// recolours. It is sized from its classic image, <paramref name="ClassicHeight"/> tall: in classic pixels for an icon,
-/// or for a worn item's image (<paramref name="Doll"/>), in paper-doll units, which are at a body's scale.
+/// recolours. It stands <paramref name="Height"/> metres tall, the entry's own ground height.
 /// </summary>
 internal sealed record DaggerfallGroundItemLook(DaggerfallArtWorldImage Image, DaggerfallArtWorldImage? Mask, string? Color, double Brightness,
-    double ClassicHeight, bool Doll);
+    double Height);

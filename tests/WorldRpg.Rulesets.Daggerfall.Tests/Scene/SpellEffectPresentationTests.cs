@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text;
+using System.Text.Json.Nodes;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using WorldRpg.Kit.Actors;
@@ -24,10 +25,10 @@ public sealed class SpellEffectPresentationTests
           "effects": [
             {"replaces": "effect.missile.fire", "path": "refreshed/fire-missile.png", "byteLength": 1, "sha256": "HASH", "width": 64, "height": 32,
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}, {"x": 32, "y": 0, "width": 32, "height": 32}],
-             "classic": {"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5}},
+             "placement": {"size": {"width": 0.8, "height": 0.8}, "pivot": {"x": 0.5, "y": 0.5}, "sequence": [0, 1], "framesPerSecond": 5, "loops": true}},
             {"replaces": "effect.impact.fire", "path": "refreshed/fire-impact.png", "byteLength": 1, "sha256": "HASH", "width": 64, "height": 32,
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}, {"x": 32, "y": 0, "width": 32, "height": 32}],
-             "classic": {"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5}}],
+             "placement": {"size": {"width": 0.8, "height": 0.8}, "pivot": {"x": 0.5, "y": 0.5}, "sequence": [0, 1], "framesPerSecond": 15, "loops": false}}],
           "effectGlow": {"path": "refreshed/glow.png", "byteLength": 1, "sha256": "HASH"},
           "meshes": [
             {"replaces": {"archive": 380, "record": 1}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15},
@@ -81,7 +82,7 @@ public sealed class SpellEffectPresentationTests
         Assert.Equal(SpriteBlendMode.Additive, missile.Material.Blend);
         Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.SpellGlow, missile.Material.EmissionIntensity);
         Assert.NotEqual(default, missile.Material.EmissionMap);
-        // The classic frame fills half the refreshed one, so the refreshed one draws twice the classic size about the same centre.
+        // The refreshed missile draws at its own size: the classic frame fills half of it, so twice the classic size about the same centre.
         Assert.Equal(new Vector2(.8F, .8F), missile.Size);
         Assert.Equal(new Vector2(.5F, .5F), missile.Pivot);
         PresentationParticleDescriptor trail = Assert.Single(particles.Created);
@@ -125,18 +126,59 @@ public sealed class SpellEffectPresentationTests
     }
 
     [Fact]
-    public void A_refreshed_effect_with_other_frames_than_its_classic_is_refused()
+    public void A_refreshed_effect_plays_its_own_frames_size_anchor_and_rate_whatever_its_classic_effect_states()
     {
+        // Three frames played last first, against a classic effect of two frames played in order: the classic effect's
+        // size, anchor, frames, rate and loop are withheld from the refreshed one, which reads them from its own entry.
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
-        content.Add("refreshed/fire-missile.png", Hash);
-        using DaggerfallSiteAppearance presentation = new(content, new AppearanceFake(releases), MediaInputs(classic: ClassicEffects(fireSpell: true)));
+        content.Add("refreshed/fire-impact.png", Hash);
+        AppearanceFake graphics = new(releases);
+        NormalizedClassicPresentation classic = ClassicEffects(fireSpell: true);
+        classic = classic with { Effects = [.. classic.Effects.Select(effect => effect.Name == "fireImpact"
+            ? effect with { DisplaySize = new Vector2(7F, 9F), Pivot = Vector2.Zero, Sequence = [1, 1, 0], FramesPerSecond = 99F, Loops = true } : effect)] };
+        using DaggerfallSiteAppearance presentation = new(content, graphics, MediaInputs(classic: classic));
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes(WithHash("""
             {"artReplacements": {"images": [], "effects": [
-              {"replaces": "effect.missile.fire", "path": "refreshed/fire-missile.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
-               "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0, "y": 0, "width": 1, "height": 1}}]}}
+              {"replaces": "effect.impact.fire", "path": "refreshed/fire-impact.png", "byteLength": 1, "sha256": "HASH", "width": 96, "height": 32,
+               "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}, {"x": 32, "y": 0, "width": 32, "height": 32}, {"x": 64, "y": 0, "width": 32, "height": 32}],
+               "placement": {"size": {"width": 1.2, "height": 0.6}, "pivot": {"x": 0.5, "y": 0.1}, "sequence": [2, 0, 1], "framesPerSecond": 8, "loops": false,
+                 "from": {"size": "original", "pivot": "original", "sequence": "hand", "framesPerSecond": "hand", "loops": "original"}}}]}}
             """)), "test.art");
-        Assert.Throws<InvalidOperationException>(() => presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => true));
+        presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => true);
+        using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
+
+        presentation.PlaySpellImpact(7, 0, new Vector3(1, 1, 4));
+        Publish(presentation, actors);
+        SpriteFromAtlasRequest impact = graphics.SpriteRequests[^1];
+        Assert.Equal(new Vector2(1.2F, .6F), impact.Size);
+        Assert.Equal(new Vector2(.5F, .1F), impact.Pivot);
+        SpritePlaybackCreateRequest playback = graphics.PlaybackRequests[^1];
+        Assert.Equal([2U, 0U, 1U], playback.Frames.Span.ToArray().Select(frame => frame.FrameId));
+        Assert.All(playback.Frames.Span.ToArray(), frame => Assert.Equal(1D / 8, frame.DurationSeconds, 6));
+        Assert.Equal(SpritePlaybackLoopMode.OneShot, playback.LoopMode);
+    }
+
+    [Theory]
+    [InlineData("size")]
+    [InlineData("pivot")]
+    [InlineData("sequence")]
+    [InlineData("framesPerSecond")]
+    [InlineData("loops")]
+    public void A_refreshed_effect_missing_a_placement_value_is_refused_by_name(string value)
+    {
+        JsonObject placement = new() { ["size"] = new JsonObject { ["width"] = 1, ["height"] = 1 }, ["pivot"] = new JsonObject { ["x"] = .5, ["y"] = .5 },
+            ["sequence"] = new JsonArray(0), ["framesPerSecond"] = 5, ["loops"] = true };
+        placement.Remove(value);
+        JsonObject effect = new()
+        {
+            ["replaces"] = "effect.missile.fire", ["path"] = "refreshed/fire-missile.png", ["byteLength"] = 1, ["sha256"] = HashHex, ["width"] = 32, ["height"] = 32,
+            ["frames"] = new JsonArray(new JsonObject { ["x"] = 0, ["y"] = 0, ["width"] = 32, ["height"] = 32 }), ["placement"] = placement,
+        };
+        JsonObject payload = new() { ["artReplacements"] = new JsonObject { ["images"] = new JsonArray(), ["effects"] = new JsonArray(effect) } };
+        InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() =>
+            DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), "test.art"));
+        Assert.Equal($"Content pack 'test.art' states no {value} in the placement of refreshed effect 'effect.missile.fire'.", refused.Message);
     }
 
     private static NormalizedActorSprite Corpse((int, int) source) =>

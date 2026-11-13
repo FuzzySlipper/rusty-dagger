@@ -10,8 +10,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <summary>
 /// Ground piles: dropped items and treasure. As in the classic, a pile stands as one of the treasure archive's piles,
 /// which one fixed by the container's identity as the classic picks one at random when the pile is made. With
-/// refreshed art, a pile of one item or one stack stands as that item instead, in its metal or dye, at the size its
-/// classic image would have at the treasure piles' scale.
+/// refreshed art, a pile of one item or one stack stands as that item instead, in its metal or dye, at its own height.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
@@ -64,21 +63,12 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     /// <summary>
-    /// Metres per paper-doll unit: the doll's 184 units hold a body about 1.8 m tall, so a worn item lies at its size on
-    /// that body.
-    /// </summary>
-    private const float MetresPerDollUnit = .01F;
-
-    /// <summary>
-    /// An item's billboard: its world image standing on the floor, as tall as its classic image (an icon at the treasure
-    /// piles' metres per classic pixel, a worn item's image at the doll's scale) and as wide as the refreshed image's
-    /// proportions make it, and where it is in a metal or dye, that colour multiplied into the pixels its mask covers.
+    /// An item's billboard: its world image standing on the floor at the height its entry states, as wide as the
+    /// image's proportions make it, and where it is in a metal or dye, that colour multiplied into the pixels its mask covers.
     /// </summary>
     private (Appearance, float) CreateGroundItem(DaggerfallGroundItemLook look)
     {
-        NormalizedBillboardSprite pile = groundContainerSprites[0];
-        float metresPerPixel = pile.Size.Y / pile.Frames.Single(frame => frame.Id == pile.InitialFrameId).Height;
-        float height = (float)look.ClassicHeight * (look.Doll ? MetresPerDollUnit : metresPerPixel);
+        float height = (float)look.Height;
         Vector2 size = new(height * look.Image.Width / look.Image.Height, height);
         SpriteAtlas atlas = GroundItemAtlas(look.Image);
         RenderResource? mask = look.Mask is { } image ? GroundItemMask(image) : null;

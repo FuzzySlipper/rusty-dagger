@@ -177,10 +177,10 @@ public sealed class SiteAppearanceLifecycleTests
         presentation.Publish(actors, piles);
         Assert.Equal(created, appearance.SpriteRequests.Count);
 
-        // The item stands on the floor (its pivot at its foot, unlifted), 40 classic pixels tall at the first pile's
-        // .65 m for 26 pixels, as wide as its image's proportions, in its colour through its mask.
-        DaggerfallGroundItemLook look = new(new(new("refreshed/item.png", Hash), 64, 128, (20, 40)),
-            new(new("refreshed/item-dye.png", Hash), 64, 128, null), "#ff8000", 1, 40, Doll: false);
+        // The item stands on the floor (its pivot at its foot, unlifted) at its own height, a metre, whatever size the
+        // piles are, as wide as its image's proportions, in its colour through its mask.
+        DaggerfallGroundItemLook look = new(new(new("refreshed/item.png", Hash), 64, 128),
+            new(new("refreshed/item-dye.png", Hash), 64, 128), "#ff8000", 1, 1);
         presentation.Publish(actors, piles, groundLook: id => id == odd.Id ? look : null);
         SpriteFromAtlasRequest item = appearance.SpriteRequests.Last();
         Assert.Equal(created + 1, appearance.SpriteRequests.Count);
@@ -193,16 +193,12 @@ public sealed class SiteAppearanceLifecycleTests
 
         // The same image untinted (bare steel) and then in a metal: the metal still draws through its mask, whichever
         // opened the shared image first.
-        DaggerfallGroundItemLook metal = look with { Image = new(new("refreshed/shared.png", Hash), 64, 128, null),
-            Mask = new(new("refreshed/shared-dye.png", Hash), 64, 128, null) };
+        DaggerfallGroundItemLook metal = look with { Image = new(new("refreshed/shared.png", Hash), 64, 128),
+            Mask = new(new("refreshed/shared-dye.png", Hash), 64, 128) };
         presentation.Publish(actors, piles, groundLook: id => id == odd.Id ? metal with { Mask = null, Color = null } : null);
         Assert.Equal(default, appearance.SpriteRequests.Last().Material.TintMask);
         presentation.Publish(actors, piles, groundLook: id => id == odd.Id ? metal : null);
         Assert.NotEqual(default, appearance.SpriteRequests.Last().Material.TintMask);
-
-        // A worn item's image is sized in doll units, at a body's scale: 65 units are .65 m.
-        presentation.Publish(actors, piles, groundLook: id => id == odd.Id ? look with { ClassicHeight = 65, Doll = true } : null);
-        Assert.Equal(.65F, appearance.SpriteRequests.Last().Size.Y, 4);
 
         presentation.Publish(actors, piles);
         Assert.Equal(large.Size, appearance.SpriteRequests.Last().Size);
