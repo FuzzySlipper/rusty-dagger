@@ -270,7 +270,15 @@ worker is free. It records passes in `refs/notes/verify` and failures in
 posts the first failure after a pass to the crew board. On den-agents,
 `rusty-dagger-main-check.timer` runs this round every half hour using the
 installed build config. Read its journal with
-`journalctl --user -u rusty-dagger-main-check.service`.
+`journalctl --user -u rusty-dagger-main-check.service`. Until crew-services
+#10797, the timer's rounds cannot post, so their failures are only in the note:
+no post does not mean green. The newest `main` commits with a failure note (the
+fetch finds no ref while no round has ever failed):
+
+```bash
+git fetch origin refs/notes/verify-failures:refs/notes/verify-failures
+git log -10 --notes=verify-failures --format='%h %s%n%N' origin/main
+```
 
 A plain `dotnet build` does not stage the product. To stage only:
 
