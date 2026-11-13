@@ -116,9 +116,7 @@ the one ignored folder. Its folders say what may be deleted:
   `revisions/<revision>`; no script deletes from the store.
 - A branch that changes the importer's inputs lands like any other: commit, run
   `scripts/route.py data <commit> --notify ADDRESS --task N`, route its suites once
-  that has published, and push. Until den-services #10804 installs the `data` and
-  `import-suite` lanes, add `--config
-  /mnt/den-nas-backup/data/evidence/rusty-dagger/10774-router-lanes/den-build.json`. Every checkout then pulls. No data is moved by hand,
+  that has published, and push. Every checkout then pulls. No data is moved by hand,
   and no checkout writes another's.
 - Windows (den-win11) runs the game and never imports or verifies. Its default
   install is a native clone, `C:\dev\rusty-dagger`, set up as above, which pulls
@@ -172,7 +170,9 @@ the store on first use), so no checkout copies 4 GB or can write what another
 reads. Run it again after a checkout that moves the importer revision, and for a
 branch that changes the importer's inputs once the `data` lane has published it.
 Tests that read the staging tree and records skip without them. The copies are a
-cache: remove one nobody links to at any time (`chmod -R u+w` first). Build
+cache, about 4 GB a revision: remove any but the one den-agents' shared checkout
+links to (`readlink ~/dev/rusty-dagger/local/data`), with `chmod -R u+w` first. A
+worktree that linked a removed one runs `link` again; Windows asks for `cache`. Build
 `first-person.rpak` in a folder of the checkout's own.
 
 Rules for the tracked side:
