@@ -101,7 +101,8 @@ public sealed class SpellSalesSessionTests
         for (int i = 0; i < 3; i++) game.State.Social.PromoteGuild(36, 0);
         Assert.NotEmpty(game.SpellSales.Offers(provider, 10));
         var date = new World.DaggerfallCalendar(405, 5, 0, 10, 0, 0);
-        var sales = new DaggerfallSpellSales(TestPayload.Definitions, game.State,
+        var sales = new DaggerfallSpellSales(TestPayload.Definitions, game.State.Npcs, game.State.ConcreteGuildServices,
+            game.State.Services, game.State.Character, game.State.Inventory, game.State.Actors.Player.Stats,
             key => game.Casting.AvailableSpellCost(1, key), () => date);
         ulong ordinary = sales.Offers(provider, 10).Single(offer => offer.Key == "spell.023").Price;
         date = Enumerable.Range(0, World.DaggerfallCalendar.DaysPerYear).Select(day =>

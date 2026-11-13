@@ -1,4 +1,5 @@
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -9,8 +10,13 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed record DaggerfallSpellOffer(string Key, string Name, int CastingCost, ulong Price, bool Known);
 internal sealed record DaggerfallSpellSaleResult(bool Accepted, string Outcome, ulong Paid = 0);
 
-/// <summary>Spell sales over canonical guild admission, casting prices, currency and known spells.</summary>
-internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, DaggerfallState state,
+/// <summary>
+/// Spell sales over canonical guild admission, casting prices, currency and known spells. A guild service, so
+/// Economy's, as the item maker is.
+/// </summary>
+internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, DaggerfallNpcRegistry npcs,
+    DaggerfallConcreteGuildServiceRuntime guildServices, DaggerfallServiceTransactions services,
+    DaggerfallCharacterState character, MechanicsInventoryCoordinator inventory, StatsComponent playerStats,
     Func<string, int?> castingCost, Func<DaggerfallCalendar> calendar)
 {
     // DFLocation.Holidays.Witches_Festival, whose date is owned by the existing calendar.
@@ -37,25 +43,25 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
         if (offer.Known) return new(false, "AlreadyKnown");
         if (offer.Price != quotedPrice) return new(false, "PriceChanged");
         if (!HasSpellbook()) return new(false, "SpellbookRequired");
-        var guild = GuildForProvider(state.Npcs.Require(provider.NpcId).Appearance.FactionId)!;
+        var guild = GuildForProvider(npcs.Require(provider.NpcId).Appearance.FactionId)!;
         guild.TryGetService(DaggerfallConcreteGuildService.BuySpells, out var policy);
-        var quote = state.Services.Quote(new($"spell-sale-{checked(++_nextRequest)}", provider),
+        var quote = services.Quote(new($"spell-sale-{checked(++_nextRequest)}", provider),
             new(policy.RequiresMembership, policy.MinimumRank ?? 0, guild.FactionId), new(offer.Price));
         if (quote.Quote is null) return new(false, quote.Outcome.Denial.ToString());
-        var payment = state.Services.Commit(quote.Quote);
+        var payment = services.Commit(quote.Quote);
         if (!payment.Accepted) return new(false, payment.Denial.ToString());
         // All definition, membership and duplicate checks preceded payment in this admitted update.
-        state.Character.LearnSpell(key);
+        character.LearnSpell(key);
         return new(true, "Purchased", payment.PaidGold);
     }
 
     private bool CanUse(DaggerfallServiceProvider provider)
     {
         DaggerfallNpc npc;
-        try { npc = state.Npcs.Require(provider.NpcId); }
+        try { npc = npcs.Require(provider.NpcId); }
         catch (InvalidOperationException) { return false; }
         var guild = GuildForProvider(npc.Appearance.FactionId);
-        return guild is not null && state.ConcreteGuildServices.Evaluate(guild.FactionId,
+        return guild is not null && guildServices.Evaluate(guild.FactionId,
             DaggerfallConcreteGuildService.BuySpells, checked((int)calendar().DayNumber), new(provider)).CanUse;
     }
 
@@ -64,13 +70,13 @@ internal sealed class DaggerfallSpellSales(DaggerfallDefinitions definitions, Da
         if (!definitions.Magic.Spells.TryGetValue(key, out var spell) || !spell.SpellsForSale || castingCost(key) is not int cost) return null;
         int presented = checked(cost * 4);
         if (calendar().GetHolidayId(0) == WitchesFestival) presented = Math.Max(1, presented >> 1);
-        var stats = state.Actors.Player.Stats;
+        var stats = playerStats;
         int price = DaggerfallRegionalEconomyPolicy.CalculateTradePrice(presented, quality, false,
             Math.Clamp(stats.GetStat(StatId.Parse("mercantile")).ValueInt, 0, 100),
             Math.Clamp(stats.GetStat(StatId.Parse("personality")).ValueInt, 0, 100), 0);
-        return new(key, spell.Name, cost, checked((ulong)price), state.Character.KnownSpells.Contains(key));
+        return new(key, spell.Name, cost, checked((ulong)price), character.KnownSpells.Contains(key));
     }
 
-    private bool HasSpellbook() => state.Inventory.Read().UniqueItems.Any(item =>
+    private bool HasSpellbook() => inventory.Read().UniqueItems.Any(item =>
         definitions.RequireItem(new(item.Definition.Value)).Template?.Index == 132);
 }

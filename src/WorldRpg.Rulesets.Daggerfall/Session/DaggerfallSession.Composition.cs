@@ -511,6 +511,11 @@ internal sealed partial class DaggerfallSession
                 State.Inventory, State.ItemInstances, _itemEnchanting, SoulGems, _uniqueItems, () => _time.Calendar);
             _potionMaker = new DaggerfallPotionMaking(definitions, State.Npcs, State.ConcreteGuildServices, State.Inventory,
                 State.Containers, State.Wagon, State.ItemInstances, engine.Random, () => _time.Calendar);
+            SpellSales = new DaggerfallSpellSales(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
+                State.Character, State.Inventory, State.Actors.Player.Stats,
+                key => Casting.AvailableSpellCost(State.Actors.Player.DurableId, key), () => _time.Calendar);
+            SpellMaker = new DaggerfallSpellMaker(definitions, State.Effects.Catalog, State.Npcs, State.ConcreteGuildServices,
+                State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar);
             State.Quests.BindTextContext(QuestTextContext);
             DaggerfallNames questNames = new(definitions, engine.Random);
             npcs.BindNames(questNames.NpcName);

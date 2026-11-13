@@ -22,7 +22,8 @@ internal sealed class GuildMakerFixture : IDisposable
     private readonly IRandomService _random = RandomMinimum.Create();
 
     internal EntityDirectory Entities { get; } = new();
-    internal DaggerfallDefinitions Definitions { get; } = TestPayload.Definitions;
+    // A session catalog, so a spell the spellmaker records stays in this fixture.
+    internal DaggerfallDefinitions Definitions { get; } = TestPayload.Definitions.ForSession([]);
     internal DaggerfallItemInstances Instances { get; } = new();
     internal DaggerfallUniqueItemAllocator UniqueItems { get; } = new(5_000);
     internal DaggerfallNpcRegistry Npcs { get; } = new();
@@ -35,7 +36,9 @@ internal sealed class GuildMakerFixture : IDisposable
     internal DaggerfallServiceTransactions Services { get; }
     internal DaggerfallConcreteGuildServiceRuntime GuildServices { get; }
     internal DaggerfallItemEnchanting Enchanting { get; }
-    internal DaggerfallCalendar Calendar { get; } = DaggerfallCalendar.Start;
+    internal DaggerfallCalendar Calendar { get; set; } = DaggerfallCalendar.Start;
+    internal StatsComponent Stats { get; }
+    internal DaggerfallCharacterState Character { get; }
 
     internal GuildMakerFixture()
     {
@@ -57,8 +60,9 @@ internal sealed class GuildMakerFixture : IDisposable
             DaggerfallTuning.Defaults.Transport);
 
         DaggerfallActorDefinition actor = Definitions.RequireActor(new DaggerfallActorId("player"));
-        StatsComponent stats = new DaggerfallMechanicsState().CreateStats(actor,
+        StatsComponent stats = Stats = new DaggerfallMechanicsState().CreateStats(actor,
             DaggerfallPlayerVitals.Initial(actor.Stats, Definitions.Catalogs.RequireCareer("class00")));
+        Character = new DaggerfallCharacterState(Definitions, stats, actor);
         Social = new(Definitions.Factions);
         Currency = new(Definitions, Inventory, Instances, new DaggerfallEncumbrancePolicy(Inventory, stats), UniqueItems);
         Services = new(Npcs, Social, Inventory, Instances, Currency, UniqueItems, () => Calendar, () => _site);
@@ -73,6 +77,21 @@ internal sealed class GuildMakerFixture : IDisposable
 
     internal DaggerfallPotionMaking PotionMaker() => new(Definitions, Npcs, GuildServices, Inventory, Containers, Wagon, Instances,
         _random, () => Calendar);
+
+    internal DaggerfallSpellSales SpellSales(Func<string, int?> castingCost) => new(Definitions, Npcs, GuildServices, Services,
+        Character, Inventory, Stats, castingCost, () => Calendar);
+
+    internal DaggerfallSpellMaker SpellMaker(DaggerfallEffectCatalog effects) => new(Definitions, effects, Npcs, GuildServices,
+        Services, Character, Inventory, Stats, () => Calendar);
+
+    /// <summary>One item of <paramref name="template"/> in the pack: the spellbook is 132.</summary>
+    internal void Carry(string group, int template, ulong quantity = 1)
+    {
+        DaggerfallItemFactory factory = new(Definitions, _random);
+        string key = $"carried.{template}";
+        factory.Materialize(factory.Create(new(group, key, DaggerfallItemOwner.Player, Quantity: quantity, TemplateIndex: template)),
+            Inventory, Instances, InventoryStackId.Parse(key), template == 132 ? UniqueItems.AllocateReference() : null);
+    }
 
     /// <summary>A guild member of <paramref name="rank"/> talking to a provider of <paramref name="service"/>.</summary>
     internal DaggerfallServiceProvider Provider(string service, int guild, int providerFaction, int rank)

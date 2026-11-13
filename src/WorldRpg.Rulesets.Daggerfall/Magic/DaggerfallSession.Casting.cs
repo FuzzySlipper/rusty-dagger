@@ -26,35 +26,7 @@ internal sealed partial class DaggerfallSession
 
     private const int SpellbookTemplateIndex = 132;
 
-    private string _spellResult="";
     private string? _lastPlayerSpell;
-    internal DaggerfallSpellbookView ReadSpells() => new(
-        State.Character.KnownSpells.Select(key =>
-        {
-            int? cost = Casting.AvailableSpellCost(State.Actors.Player.DurableId, key);
-            DaggerfallSpellDefinition spell = _definitions.Magic.Spells[key];
-            string school = spell.Effects.Count == 0 ? string.Empty : _definitions.Magic.RequireEffectCost(spell.Effects[0]).School;
-            return new DaggerfallKnownSpellView(key, State.Character.IsGrantedSpell(key) ? spell.Name.TrimStart('!') : spell.Name, cost ?? 0, cost is not null,
-                Math.Clamp(spell.Icon, 0, DaggerfallSpellConstruction.IconCount - 1), school);
-        }).ToArray(),
-        Casting.ReadyFor(State.Actors.Player.DurableId) is { Source: DaggerfallCastSource.Spell or DaggerfallCastSource.DungeonAction } ready ? ready.SpellKey : null,
-        _spellResult, ReadSpellSale(), ReadSpellInformation(), ReadSpellMaker(), ReadPotionMaker(), ReadItemMaker(), ReadSummoning(),
-        DrawnArt is { } art ? DaggerfallSpellArt.From(art) : null);
-    private void ChangeSpell(WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallPlayerUiAction action)
-    {
-        var result=action.Kind switch
-        {
-            WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallUiActionKind.SpellReady=>ReadyPlayerSpell(action.Key!),
-            _=>Casting.Cancel(State.Actors.Player.DurableId),
-        };
-        ReportCast(result.Outcome);
-    }
-
-    private void ReportCast(DaggerfallCastOutcome outcome)
-    {
-        _spellResult=CastOutcomeText(outcome);
-        Presentation.SetOutcome(_spellResult);
-    }
 
     /// <summary>Readies the spell a cast will release: the one ready, or else the last one cast, which a spellbook recalls.</summary>
     private bool ReadyCast()
@@ -85,19 +57,6 @@ internal sealed partial class DaggerfallSession
         if (ready is { Source: DaggerfallCastSource.Spell } chosen && Casting.ReadyFor(player) is null && State.Character.KnownSpells.Contains(chosen.SpellKey))
             Casting.RestoreReadySpell(chosen with { Cost = Casting.AvailableSpellCost(player, chosen.SpellKey) ?? chosen.Cost });
     }
-
-    /// <summary>Player wording for the result of readying, cancelling or releasing the player's spell.</summary>
-    internal static string CastOutcomeText(DaggerfallCastOutcome outcome) => outcome switch
-    {
-        DaggerfallCastOutcome.Ready=>"Spell ready.",
-        DaggerfallCastOutcome.Cancelled or DaggerfallCastOutcome.Unready=>"No spell ready.",
-        DaggerfallCastOutcome.UnknownSpell or DaggerfallCastOutcome.SourceUnavailable=>"That spell is not known or available.",
-        DaggerfallCastOutcome.UnsupportedEffect=>"That spell has unavailable effects.",
-        DaggerfallCastOutcome.InsufficientMagicka=>"Not enough magicka.",
-        DaggerfallCastOutcome.InvalidTarget or DaggerfallCastOutcome.TargetUnavailable=>"Aim at a valid spell target.",
-        DaggerfallCastOutcome.Silenced=>"You cannot cast while silenced.",
-        _=>"Spell cast.",
-    };
 
     internal DaggerfallMagicTargetProfile MagicProfile(long id) => DaggerfallMagicProfiles.Create(
         (CastActor(id) ?? throw new ArgumentException($"Casting actor {id} is unavailable.")).Get<StatsComponent>(),
@@ -277,24 +236,4 @@ internal sealed partial class DaggerfallSession
     }
     private static bool ValidDirection(Vector3 value) => float.IsFinite(value.X) && float.IsFinite(value.Y)
         && float.IsFinite(value.Z) && value.LengthSquared() > .000001f;
-}
-
-/// <param name="Icon">The spell's index in the classic spell icon atlas.</param>
-/// <param name="School">The school of the spell's first effect, which the spellbook's tabs group by.</param>
-internal sealed record DaggerfallKnownSpellView(string Key, string Name, int Cost, bool CanCast = true, int Icon = 0, string School = "");
-/// <param name="Art">With refreshed art drawn, the replacement images of the spell icons and tiles.</param>
-internal sealed record DaggerfallSpellbookView(DaggerfallKnownSpellView[] Available, string? Ready, string Result,
-    DaggerfallSpellSaleView? Sale = null, DaggerfallSpellInformation? Information = null, DaggerfallSpellMakerView? Maker = null, DaggerfallPotionMakerView? PotionMaker = null, DaggerfallItemMakerView? ItemMaker = null, DaggerfallSummoningView? Summoning = null,
-    DaggerfallSpellArt? Art = null);
-
-/// <summary>Each classic spell icon atlas cell's, targeting tile's and element tile's replacement image, null where it has none.</summary>
-internal sealed record DaggerfallSpellArt(IReadOnlyList<string?> Icons, IReadOnlyList<string?> Targets, IReadOnlyList<string?> Elements)
-{
-    internal static DaggerfallSpellArt From(DaggerfallArtReplacements art)
-    {
-        string?[] Images(int count, Func<int, string> media) => [.. Enumerable.Range(0, count).Select(index => art.For(media(index))?.MediaId)];
-        return new(Images(DaggerfallSpellConstruction.IconCount, DaggerfallSpellConstruction.IconMedia),
-            Images(DaggerfallSpellConstruction.SelectorCount, DaggerfallSpellConstruction.TargetMedia),
-            Images(DaggerfallSpellConstruction.SelectorCount, DaggerfallSpellConstruction.ElementMedia));
-    }
 }

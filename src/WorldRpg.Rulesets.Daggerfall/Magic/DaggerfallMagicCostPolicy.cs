@@ -1,3 +1,4 @@
+using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Policies;
@@ -98,6 +99,18 @@ internal static class DaggerfallMagicCostPolicy
         }
         int points = ApplyTargetMultiplier(new DaggerfallMagicCost(0, checked((int)total)), target).SpellPoints;
         return new DaggerfallMagicCost(0, Math.Max(CastingFloor, points)).Validate();
+    }
+
+    /// <summary>What each spell the player knows costs now, by key, read from the schools' live skills once.</summary>
+    internal static Func<string, int> KnownSpellPoints(DaggerfallMagicCatalogSet catalog, StatsComponent stats, Func<string, bool> granted)
+    {
+        var schools = new[] { "destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism" }
+            .ToDictionary(key => key, key => Math.Clamp(stats.GetStat(StatId.Parse(key)).ValueInt, 0, 100));
+        return key =>
+        {
+            var spell = catalog.Spells[key];
+            return CalculateTotalEffectCosts(catalog, spell.Effects, TargetForRangeType(spell.RangeType), schools, granted(key)).SpellPoints;
+        };
     }
 
     /// <summary>Classic <c>GetSpellEnchantPtCost</c>, whose donor default uses the item-maker skill of fifty.</summary>
