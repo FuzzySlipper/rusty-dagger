@@ -1,0 +1,6 @@
+scripts/route.py main
+rusty-dagger verify at 359a31fedf63bf4c8355e2d3d2f6fd2182d2bffb FAILED in 1.5 min
+verify on den-nimo, 1.4 min, FAIL: /home/agent/dev/rusty-dagger/local/build/route/main-359a31fedf63-20261113T013001/verify.log
+    lane: run 8d06719b01c4155cb94df28591ed6de8 of verify on den-nimo at 359a31fedf63bf4c8355e2d3d2f6fd2182d2bffb (0 s)
+    skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run `dotnet run --project src/Daggerfall.Source.Tool -- export-items`
+    lane: verify took 49 s, peak memory 3267 MiB
