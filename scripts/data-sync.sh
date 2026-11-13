@@ -155,7 +155,14 @@ case $direction in
     # inside the share Windows maps as P:, so a Windows checkout pulls any revision held here.
     cache=${DAGGER_DATA_CACHE:-$HOME/.cache/rusty-dagger/data}
     entry=$cache/$revision
-    [[ $direction == cache || ! -L $root/local ]] || { echo "data-sync: local is a link to $(readlink "$root/local"); give this checkout its own local/ first" >&2; exit 1; }
+    # A parent that is a link would make the links below replace another checkout's.
+    if [[ $direction == link ]]; then
+      for folder in local local/build; do
+        [[ $folder == local/build && -z $import_tree ]] && continue
+        [[ ! -L $root/$folder ]] ||
+          { echo "data-sync: $folder is a link to $(readlink "$root/$folder"); give this checkout its own $folder/ first" >&2; exit 1; }
+      done
+    fi
     if [[ ! -f $entry/SHA256SUMS ]]; then
       at_store "test -d '$store_path'" || { echo "data-sync: $store is not reachable" >&2; exit 1; }
       held || { missing >&2; exit 1; }
