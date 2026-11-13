@@ -148,11 +148,12 @@ playback.
 - **Checks.** A task lands on focused checks run locally: its build, the test
   classes covering the change and the Architecture tests. Whole suites and the
   full verify go to the build workers, sent and not waited for
-  (`scripts/route.py ruleset|import|verify --notify ADDRESS --task N`; README,
-  Verify), never to den-agents while a worker can take them; `main` gets its own
-  full run, and what a run finds becomes a fix or a follow-up task. Imports stay
-  on den-agents. Window runs, UI tests and screenshots use at least 1920x1080,
-  which is the minimum supported window.
+  (`scripts/route.py ruleset|import-suite|verify --notify ADDRESS --task N`;
+  README, Verify), never to den-agents while a worker can take them; `main` gets
+  its own full run, and what a run finds becomes a fix or a follow-up task.
+  Imports run on a worker through `scripts/route.py data` (README, Game data).
+  Window runs, UI tests and screenshots use at least 1920x1080, which is the
+  minimum supported window.
 - **Tests** record intended behavior, not authority. When a change supersedes
   an expectation, update or remove the test in the same change.
 - **Failures.** A hard failure must name the loss it prevents: data loss, an

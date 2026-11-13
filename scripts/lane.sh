@@ -4,22 +4,26 @@
 #
 #   scripts/lane.sh ruleset        the whole ruleset suite
 #   scripts/lane.sh ruleset K/N    part K of the ruleset suite cut by domain folder (PARTS below)
-#   scripts/lane.sh import         the whole import suite
+#   scripts/lane.sh import-suite   the whole import suite
 #   scripts/lane.sh verify         scripts/verify.sh --import --play
+#   scripts/lane.sh data           imports the commit and publishes its data to the store under its importer revision
 #
-# Each run prepares the checkout by the README's steps (rusty, the pinned pair, npm ci) and links local/ to data
-# kept beside the router's checkout (BUILD_ROOT/rusty-dagger/kept), as a worktree links the main checkout's. It never
-# imports: when the kept data is not at this commit's importer revision it pulls den-agents' (DAGGER_DATA_SOURCE),
-# and when that is not at the commit's revision either it stops before testing, since a suite run against other
-# data is a silently wrong result.
+# Each run prepares the checkout by the README's steps (rusty, the pinned pair, npm ci) and links local/inputs to the
+# inputs kept beside the router's checkout (BUILD_ROOT/rusty-dagger/kept). The test lanes link local/data and
+# local/build/import to kept data, which they pull from the store (scripts/data-sync.sh) at the commit's importer
+# revision; when the store has none they stop before testing, since a suite run against other data is a silently
+# wrong result. The data lane imports into the checkout itself and publishes; it runs only on PUBLISHER, so that one
+# revision has one set of bytes.
 set -euo pipefail
 
-usage="usage: scripts/lane.sh ruleset [K/N] | import | verify"
+usage="usage: scripts/lane.sh ruleset [K/N] | import-suite | verify | data"
 lane=${1:-}
 part=${2:-}
 case $lane in
   ruleset) [[ -z $part || $part =~ ^[1-9][0-9]*/[1-9][0-9]*$ ]] || { echo "$usage" >&2; exit 2; } ;;
-  import|verify) [[ -z $part ]] || { echo "$usage" >&2; exit 2; } ;;
+  # Transition (#10775): import is import-suite's old name, until the router config drops it.
+  import) lane=import-suite; [[ -z $part ]] || { echo "$usage" >&2; exit 2; } ;;
+  import-suite|verify|data) [[ -z $part ]] || { echo "$usage" >&2; exit 2; } ;;
   *) echo "$usage" >&2; exit 2 ;;
 esac
 
@@ -32,6 +36,12 @@ PARTS=(
   ""
 )
 
+# The one worker that imports for the store. The cinematics' bytes depend on the machine as well as the importer
+# revision: libopus encodes the same audio differently on den-agents' Intel and den-k8's AMD with the same ffmpeg
+# build, and another ffmpeg version changes it again. The router's os pin sends the data lane here; moving it changes
+# only the revisions published after the move.
+PUBLISHER=den-k8
+
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$root"
 # The lane replaces local/ with links to the worker's kept data; in an ordinary checkout that would hide its own.
@@ -40,15 +50,24 @@ cd "$root"
 export PATH=$HOME/.local/bin:$HOME/.dotnet:$PATH MSBUILDDISABLENODEREUSE=1
 commit=$(git rev-parse HEAD)
 kept=$(dirname "$root")/kept
-source=${DAGGER_DATA_SOURCE:-den-agents:dev/rusty-dagger}
+inputs_source=${DAGGER_INPUTS_SOURCE:-den-agents:dev/rusty-dagger/local/inputs}
 donor_source=${DAGGER_DONOR_SOURCE:-den-agents:/home/research/daggerfall-unity}
+# The store, through the NAS mount where the worker has one and over ssh through den-agents where it does not.
+store=/mnt/den-nas-backup/data/rusty-dagger/lan
+[[ -d $store ]] || store=den-agents:$store
+export DAGGER_DATA_STORE=${DAGGER_DATA_STORE:-$store}
 out=$DEN_BUILD_OUTPUT_DIR
-# What an import wrote is kept together, apart from the inputs, so that one place says which revision is held.
+# What a test lane pulled from the store is kept together, apart from the inputs, so that one place says which
+# revision is held. The data lane writes its own, in the checkout, which the router clears before the next run.
 imported=$kept/imported
-mkdir -p "$kept"/inputs/arena2 "$imported"/{data,import} "$out" local/build
+mkdir -p "$kept"/inputs/{arena2,Sound} "$imported"/{data,import} "$out" local/build
 ln -sfn "$kept/inputs" local/inputs
-ln -sfn "$imported/data" local/data
-ln -sfn "$imported/import" local/build/import
+if [[ $lane == data ]]; then
+  mkdir -p local/data local/build/import
+else
+  ln -sfn "$imported/data" local/data
+  ln -sfn "$imported/import" local/build/import
+fi
 started=$SECONDS
 step() { echo "lane: $* ($((SECONDS - started)) s)"; }
 step "run $(basename "$out") of $lane${part:+ part $part} on $(hostname) at $commit"
@@ -60,35 +79,42 @@ rusty install || { bootstrap && rusty install; }
 npm ci --no-audit --no-fund
 step "pair and UI dependencies ready"
 
-# scripts/data-sync.sh status: this commit's importer revision, the container's (here, or on HOST:CHECKOUT), and
-# "partial" when the container departs from one whole import.
+# scripts/data-sync.sh status: this commit's importer revision, the container's, "partial" when the container departs
+# from one whole import, and "held" when the store keeps this revision.
 status() {
   local report
-  report=$(scripts/data-sync.sh status "$@")
-  printf '%s %s %s\n' "$(sed -n 's/^importer revision of this checkout: //p' <<<"$report")" \
+  report=$(scripts/data-sync.sh status)
+  printf '%s %s %s %s\n' "$(sed -n 's/^importer revision of this checkout: //p' <<<"$report")" \
     "$(sed -n 's/^importer revision of the container: \([0-9a-f]*\).*/\1/p' <<<"$report")" \
-    "$(grep -q 'not one whole import\|records no departures' <<<"$report" && echo partial || echo whole)"
+    "$(grep -q 'not one whole import\|records no departures' <<<"$report" && echo partial || echo whole)" \
+    "$(grep -q '^The store holds importer revision' <<<"$report" && echo held || echo missing)"
 }
-read -r wanted have whole < <(status)
+read -r wanted have whole stored < <(status)
 [[ $wanted =~ ^[0-9a-f]{64}$ ]] || { echo "lane: cannot compute this commit's importer revision" >&2; exit 1; }
-if [[ $have != "$wanted" || $whole != whole ]]; then
-  read -r _ there there_whole < <(status "$source")
-  if [[ $there != "$wanted" || $there_whole != whole ]]; then
-    echo "lane: refusing to test $commit: its importer revision is $wanted; the data on $source is at ${there:-no readable revision}${there_whole:+ ($there_whole)}." >&2
-    echo "lane: a suite against other data is a silently wrong result. Route it again once den-agents has imported $wanted;" >&2
-    echo "lane: a branch that changes the importer's inputs imports in its own worktree on den-agents and tests there." >&2
+# The inputs: the corpus the import and its suite read, and the score; changed files only.
+rsync -rtL --delete "$inputs_source/arena2/" "$kept/inputs/arena2/"
+rsync -rtL --delete "$inputs_source/Sound/" "$kept/inputs/Sound/"
+if [[ $lane == data ]]; then
+  if [[ $stored == held ]]; then
+    step "the store already holds importer revision $wanted; nothing to import"
+    exit 0
+  fi
+  [[ $(hostname) == "$PUBLISHER" ]] ||
+    { echo "lane: refusing to import on $(hostname): only $PUBLISHER publishes, since another machine encodes the cinematics' audio differently" >&2; exit 2; }
+elif [[ $have != "$wanted" || $whole != whole ]]; then
+  if [[ $stored != held ]]; then
+    echo "lane: refusing to test $commit: the store has no data for its importer revision $wanted, and a suite against" >&2
+    echo "lane: other data is a silently wrong result. Import it first: scripts/route.py data $commit" >&2
     exit 3
   fi
-  scripts/data-sync.sh pull "$source" --import-tree --mirror
-  read -r _ have whole < <(status)
+  scripts/data-sync.sh pull --import-tree --mirror
+  read -r _ have whole _ < <(status)
   [[ $have == "$wanted" && $whole == whole ]] ||
-    { echo "lane: the data pulled from $source is at ${have:-no revision} ($whole), not $wanted; is den-agents importing?" >&2; exit 3; }
+    { echo "lane: the data pulled from $DAGGER_DATA_STORE is at ${have:-no revision} ($whole), not $wanted" >&2; exit 3; }
 fi
-# The corpus the import suite reads, and the Daggerfall Unity checkout the donor comparisons read; changed files only.
-rsync -rtL --delete "$source/local/inputs/arena2/" "$kept/inputs/arena2/"
 rsync -rtl --delete "$donor_source/" "$kept/daggerfall-unity/"
 export DAGGER_DONOR_ROOT=$kept/daggerfall-unity
-step "data at importer revision $wanted"
+step "inputs and data ready for importer revision $wanted"
 
 # A test host may hold at most this much, resident plus swapped: a runaway would otherwise take the worker down
 # (one reached 31 GiB resident and 79 GiB of swap on den-agents). The whole ruleset suite peaks near 13 GiB.
@@ -170,7 +196,7 @@ EOF
     measured test dotnet test "$project" --no-build "${filter[@]}" --logger "trx;LogFileName=$out/ruleset.trx"
     echo "lane: results $(hostname):$out/ruleset.trx"
     ;;
-  import)
+  import-suite)
     measured test dotnet test tests/Daggerfall.Import.Tests/Daggerfall.Import.Tests.csproj --logger "trx;LogFileName=$out/import.trx"
     echo "lane: results $(hostname):$out/import.trx"
     ;;
@@ -180,6 +206,16 @@ EOF
     RUSTY_CHROMIUM_PATH=$(ls -d "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux64/chrome | sort -V | tail -n 1)
     export RUSTY_CHROMIUM_PATH
     measured verify scripts/verify.sh --import --play
+    ;;
+  data)
+    measured import dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound
+    # A stale terrain bake is rebaked and rewritten in the checkout; the change that made it stale commits it.
+    relief=src/Daggerfall.Import.Tool/inputs/relief
+    if [[ -n $(git status --porcelain -- "$relief") ]]; then
+      mkdir -p "$out/relief" && cp -a "$relief/." "$out/relief/"
+      echo "lane: the import rebaked the terrain; commit $(hostname):$out/relief/ as $relief/ with this change"
+    fi
+    measured publish scripts/data-sync.sh publish
     ;;
 esac
 step "$lane${part:+ part $part} passed at $commit"

@@ -55,7 +55,7 @@ the one ignored folder. Its folders say what may be deleted:
 | Folder | Holds | Lifecycle |
 | --- | --- | --- |
 | `local/inputs/` | `arena2`, `Sound`, `fp-melee` (purchased art) | supplied, never regenerated: keep a copy |
-| `local/data/` | `daggerfall-data.rpak`, `music.rpak`, `first-person.rpak` | what the game opens; rebuilt by the import and `authoring/tools/fp-arms/build.sh`, or pulled whole by `scripts/data-sync.sh` |
+| `local/data/` | `daggerfall-data.rpak`, `music.rpak`, `first-person.rpak` | what the game opens; rebuilt by the import and `authoring/tools/fp-arms/build.sh`, or pulled by `scripts/data-sync.sh` |
 | `local/build/` | import staging and records, the fp-arms build, verify stamps | regenerable |
 | `local/art/` | `reference/` exports, `generated/` finals and studies, `review/` pages | the art pipeline's working files ([authoring/README.md](authoring/README.md)) |
 | `local/scratch/` | experiments | deletable at any time |
@@ -64,7 +64,8 @@ the one ignored folder. Its folders say what may be deleted:
 - Supply the game's `ARENA2` directory as `local/inputs/arena2` (or pass
   `--arena2` the folder Daggerfall is installed in) and the song folder as
   `local/inputs/Sound`. A link is fine.
-- Import once, and again after a pull that changes the importer revision: its
+- A checkout needs the data of its own importer revision: import once, and again
+  after a pull that changes the importer revision. Its
   inputs are `src/Daggerfall.Import` and `src/Daggerfall.Import.Tool`, whose
   `inputs/` holds the source inventory and our tables (not the terrain bake in
   `inputs/relief/`, which cannot change what it writes), and the authored UI art
@@ -82,48 +83,58 @@ the one ignored folder. Its folders say what may be deleted:
   play as skipped.
 - To work on the importer, `import --only STEP,...` reruns named steps and repacks.
   The result records that it is a repack over an earlier run, so the entry screen
-  calls it stale (a warning under `rusty dev`) and `scripts/data-sync.sh push`
+  calls it stale (a warning under `rusty dev`) and `scripts/data-sync.sh publish`
   refuses it; only a full import reads as current.
-- On our own network only den-agents imports; every other machine copies its
-  containers with `scripts/data-sync.sh` and never imports. They are derived from
-  arena2, so they never leave the network.
+- On our own network nobody imports by hand: imports run on a build worker through
+  the router, and every machine pulls the data of its commit's importer revision
+  from the NAS store (`/mnt/den-nas-backup/data/rusty-dagger/lan`), which keeps one
+  set per revision: the containers, the import tree and their checksums. The data
+  is derived from arena2, so it never leaves the network.
 
   ```bash
-  scripts/data-sync.sh pull                                        # the containers, from the NAS store
-  scripts/data-sync.sh pull den-agents:dev/rusty-dagger --import-tree   # a box that runs the tests
-  scripts/data-sync.sh status                                      # is this copy stale?
+  scripts/data-sync.sh pull                  # the containers, at this checkout's importer revision
+  scripts/data-sync.sh pull --import-tree    # also local/build/import, for a box that runs the tests
+  scripts/data-sync.sh status                # is this copy current, and does the store hold this revision?
+  scripts/route.py data [REF]                # import a commit on a worker and publish its data (from den-agents)
   ```
 
-  The store holds only `local/data`. A box that runs the tests also needs
-  `local/build/import` (the staging, records and music records the importer and UI
-  tests read), which only den-agents' checkout has: pull it from there with
-  `--import-tree`, which brings the containers too, and copy the corpus the import
-  suite reads: `rsync -a den-agents:dev/rusty-dagger/local/inputs/arena2 local/inputs/`.
-  Pull right after cloning or checking out, and check that `status` reads current.
-  Over ssh only changed 8 KiB blocks travel, so a refresh after an import sends
-  tens of megabytes; to or from the store (`/mnt/den-nas-backup/data/rusty-dagger/lan`)
-  changed files go whole. After an import den-agents runs
-  `scripts/data-sync.sh push`, which keeps the store current. Nothing is deleted
-  unless you add `--mirror`.
+  Pull right after cloning, checking out or pulling, and check that `status` reads
+  current; that includes den-agents' shared checkout, which den-win11 reads. When
+  the store has no data for the revision, both say so and name the `route.py data`
+  command. A box that runs the tests also needs the corpus the import suite reads:
+  `rsync -a den-agents:dev/rusty-dagger/local/inputs/arena2 local/inputs/`.
+  Nothing is deleted unless you add `--mirror`.
+- The `data` lane runs only on den-k8 (`scripts/lane.sh` names it), since the
+  cinematics' bytes depend on the machine and its ffmpeg, which the importer
+  revision does not cover. Only the lane publishes, and it refuses to replace a
+  revision the store holds with other bytes. The store keeps every revision ever
+  published (about 2.5 GB each); `scripts/data-sync.sh
+  store` lists them. Old ones are pruned by hand, with Patch's say, by removing
+  `revisions/<revision>`; no script deletes from the store.
+- A branch that changes the importer's inputs lands like any other: commit, run
+  `scripts/route.py data <commit> --notify ADDRESS --task N`, route its suites once
+  that has published, and push. Every checkout then pulls. No data is moved by hand,
+  and no checkout writes another's.
 - Windows (den-win11) runs the game and never imports or verifies. Its default
   install is a native clone, `C:\dev\rusty-dagger`, set up as above, whose
-  containers come whole from den-agents' checkout through `P:` with
-  `powershell -File scripts\data-sync.ps1`. `P:`, den-agents' home, is mapped only
-  on the console desktop, so that pull and anything that opens a window run
+  containers come whole from den-agents' shared checkout through `P:` with
+  `powershell -File scripts\data-sync.ps1`, which copies only data at the clone's
+  own importer revision (the NAS store is not reachable from Windows). `P:`,
+  den-agents' home, is mapped only on the console desktop, so that pull and anything that opens a window run
   through `C:\Users\agent\crew\bin\run-on-desktop.ps1`. Running from a den-agents
   worktree over `P:` also works, for uncommitted work or a throwaway pin. Only the
   newest pairs publish win-x64 archives: `rusty install` says
   `RUSTY_INSTALL_NOT_PUBLISHED` for an older pin.
 - Every run prints the container's importer revision beside the checkout's. When
-  they differ the copy is stale for this tree (or the tree is ahead of the last
-  import): pull again once den-agents has imported that revision.
+  they differ the copy is stale for this tree: pull, and if the store has none,
+  import it through the `data` lane.
 - The terrain bake is tracked in `src/Daggerfall.Import.Tool/inputs/relief/`
   with the record of what it was baked from. The import's `relief` step takes it
   when the record matches the arena2 and this build's bake; otherwise it bakes
   (14 minutes or more), says which input differed and rewrites those files.
   **Refresh** it with any change to `src/Daggerfall.Import/Relief/` or the bake's
-  stages: run the full import on den-agents and commit the rewritten files with
-  that change. `KeptReliefTests` fails while they are stale. Git stores the
+  stages: the `data` lane's import rebakes, says where it left the rewritten
+  files on the worker, and you commit them with that change. `KeptReliefTests` fails while they are stale. Git stores the
   21 MB again only when the bytes change.
 - `local/data/first-person.rpak` is optional: 3D first-person arms built from
   purchased art by `authoring/tools/fp-arms/build.sh`. Without it a 3D `viewmodel.style`
@@ -149,12 +160,11 @@ Tests that read the import's staging tree and records skip without them. While
 the branch leaves the importer's inputs (the list above) alone, link those too:
 `mkdir -p local/build && ln -s "$main/local/build/import" local/build/`.
 
-The import refuses to write through any of these links, since it would replace
-what every checkout opens. A worktree whose branch changes the importer's inputs
-imports into its own: `rm local/data local/build/import && mkdir local/data`,
-link back `first-person.rpak` if it needs one, then import. Build
-`first-person.rpak` the same way. The import takes the tracked terrain bake, so
-there is nothing to copy for it.
+The import and `scripts/data-sync.sh pull` refuse to write through any of these
+links, since that would replace what every checkout opens. A worktree whose branch
+changes the importer's inputs gets its own data once the `data` lane has
+published its commit: `rm local/data local/build/import && scripts/data-sync.sh
+pull --import-tree`. Build `first-person.rpak` in a folder of its own the same way.
 
 Rules for the tracked side:
 
@@ -177,7 +187,8 @@ Rules for the tracked side:
   reclassify a file by changing its `family_id`. Only `Daggerfall.Source.Tool`'s
   `source-manifest --update-inventory` writes the disposition column.
 - An edit to an importer revision input, including any of our tables in
-  `inputs/`, makes every machine's data stale. Make one deliberately. An import step
+  `inputs/`, makes every machine's data stale until the `data` lane has published
+  it. Make one deliberately. An import step
   never reads the authored base payload: a join between authored and imported
   sections belongs in the ruleset's content reader. A command that does not feed the containers goes in
   `Daggerfall.Source.Tool`, never `Daggerfall.Import.Tool`, whose every file but the terrain bake is an input.
@@ -215,8 +226,8 @@ the CoreCLR product.
 
 Only verify needs these; a machine that only runs the game can skip them:
 
-- `local/inputs/arena2` and `local/build/import` (Game data says how a box that
-  does not import gets them), and `ffmpeg` on `PATH`: the import suite converts a
+- `local/inputs/arena2` and `local/build/import` (Game data says how a box gets
+  them), and `ffmpeg` on `PATH`: the import suite converts a
   cinematic with it.
 - For `--play`, a Chromium: `chromium` on `PATH`, or `RUSTY_CHROMIUM_PATH` naming
   one, such as Playwright's (`npx playwright install chromium`; add `--with-deps`
@@ -248,20 +259,19 @@ are not in it):
 
 ```bash
 scripts/route.py ruleset --notify ADDRESS --task N   # the ruleset suite in parts across the workers
-scripts/route.py import                              # the import suite, waiting for it; `verify` is verify.sh --import --play
+scripts/route.py import-suite                        # the import suite, waiting for it; `verify` is verify.sh --import --play
 ```
 
 With `--notify` (your crew address, given at your session's start) or `--task`
 it returns at once, and the result, with each part's log and the tests that
 failed, arrives at that address and on that Den task. It first says what each
-worker is doing, waits until one frees, and keeps long lanes (verify, import,
-`--whole`) off the last worker the router can use, so that a split run can always
+worker is doing, waits until one frees, and keeps long lanes (verify, import-suite,
+`--whole`; not `data`) off the last worker the router can use, so that a split run can always
 start. The lanes are
 [scripts/lane.sh](scripts/lane.sh), run through the build router
-(`den-tool build run`). A lane takes den-agents' data when its own is not at the
-commit's importer revision, and refuses, naming both, when den-agents' is not
-either: a branch that changes the importer's inputs imports in its own worktree
-and runs its suites there until den-agents has imported it. A test host that
+(`den-tool build run`). A lane pulls the data of the commit's importer revision
+from the store, and refuses when the store has none: route `data` for that commit
+first. A test host that
 holds more than three quarters of its worker's memory (at most 32 GiB) is stopped,
 and the run names the tests it was running.
 

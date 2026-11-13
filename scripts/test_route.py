@@ -8,7 +8,7 @@ import route
 
 HOSTS = [{'id': 'den-k8', 'enabled': True}, {'id': 'den-nimo', 'enabled': True, 'max_gpu_percent': 10},
          {'id': 'den-m5', 'enabled': True, 'max_gpu_percent': 10}]
-LANES = ['verify', 'ruleset-1', 'ruleset-2', 'ruleset-3']
+LANES = ['verify', 'data', 'ruleset-1', 'ruleset-2', 'ruleset-3']
 COMMIT = 'f' * 40
 
 
@@ -114,6 +114,12 @@ class AdmissionTest(unittest.TestCase):
         for send in sends:
             send.join()
         self.assertEqual(len(workers.started), 1)
+
+    def test_the_data_lane_takes_the_last_worker(self):
+        # Only den-k8 publishes data, and the commit's suites wait on it, so it does not leave den-k8 for a split run.
+        workers = Workers(building=['den-m5'], gpu_busy=['den-nimo'])
+        self.send(workers, 'data', host='den-k8')
+        self.assertEqual(workers.started, [('data', 'den-k8')])
 
     def test_a_split_run_takes_the_last_worker(self):
         workers = Workers(building=['den-k8'], gpu_busy=['den-nimo'])

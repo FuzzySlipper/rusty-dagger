@@ -3,19 +3,22 @@
 
     scripts/route.py ruleset [REF]           the ruleset suite in parts, one worker each, joined into one result
     scripts/route.py ruleset --whole [REF]   the ruleset suite on one worker
-    scripts/route.py import [REF]            the import suite
+    scripts/route.py import-suite [REF]      the import suite
     scripts/route.py verify [REF]            scripts/verify.sh --import --play
+    scripts/route.py data [REF]              imports the commit on den-k8 and publishes its data to the store under its
+                                             importer revision (nothing to do when the store holds it already)
     ... --notify ADDRESS --task N            send and leave: return at once; the result goes to that crew address
                                              (yours is in your session's start) and as a line on Den task N
     scripts/route.py main                    one round of main's own check (below)
 
 REF defaults to HEAD and may be any commit in den-agents' repository, pushed or not; uncommitted changes are not
 in it. The lanes are scripts/lane.sh; the router's config (--config, DEN_BUILD_CONFIG_PATH, else the installed one)
-names them. It first says what each worker is doing. A part waits until a worker frees (--wait MINUTES gives up),
-and a long lane (verify, --whole, import) leaves the last worker the router can use to split runs unless
---take-last; long lanes sent from den-agents are admitted one at a time, so together they leave it too. Stopping
-the command stops its lanes. Each lane's log is written under local/build/route/, and the command exits 0 only
-when every part passed.
+names them. The test lanes take the data of the commit's importer revision from the store and refuse when it has
+none: route `data` for that commit first. It first says what each worker is doing. A part waits until a worker frees
+(--wait MINUTES gives up), and a long lane (verify, --whole, import-suite) leaves the last worker the router can use
+to split runs unless --take-last; long lanes sent from den-agents are admitted one at a time, so together they leave
+it too. `data` is not a long lane: it has one worker, and the commit's suites wait on it. Stopping the command stops
+its lanes. Each lane's log is written under local/build/route/, and the command exits 0 only when every part passed.
 
 A round of `main` takes the newest origin/main commit unless it already has a result, and runs the verify lane on
 it if a worker is free now (otherwise the next round does). A pass is noted on the commit in refs/notes/verify, as
@@ -33,7 +36,7 @@ root = pathlib.Path(__file__).resolve().parent.parent
 routes = root / 'local/build/route'
 # What a result says of itself: verify.sh's own summary lines, the lane's, and the tests that failed.
 SUMMARY = re.compile(r'\s*(Passed!|Failed!|Failed [A-Z]\w*\.|play-smoke .* passed:|Verified Engine pair|skipped )'
-                     r'|lane: (run |refusing|.* took |.* stopped:)')
+                     r'|lane: (run |refusing|the import rebaked|the store already|.* took |.* stopped:)|data-sync: (published|refusing|the store already)')
 
 
 def git(*args, check=True):
@@ -112,9 +115,10 @@ def route(lane, commit, options, run):
     hosts = [host for host in workers if options.host in (None, host)]
     if not hosts:
         sys.exit(f'route: {options.config} enables no worker {options.host}')
-    # One long lane (verify, the whole ruleset suite, import) never takes the last free worker, so that a split
-    # run, eleven minutes on three workers, can always start; --take-last allows it.
-    long = parts == [lane] and not re.fullmatch(r'ruleset-\d+', lane)
+    # One long lane (verify, the whole ruleset suite, import-suite) never takes the last free worker, so that a split
+    # run, eleven minutes on three workers, can always start; --take-last allows it. The data lane has one worker and
+    # the commit's suites wait on it, so it takes that worker whenever it is free.
+    long = parts == [lane] and lane != 'data' and not re.fullmatch(r'ruleset-\d+', lane)
 
     print(f'route: {", ".join(parts)} at {commit} over {", ".join(hosts)}; logs in {run}', flush=True)
     for host, (reason, doing) in workers_now(enabled, resources()).items():
@@ -282,7 +286,8 @@ def main_round(options):
         print(f'route: no worker is free; the next round takes {newest[:12]}')
         return 0
     if 'lane: refusing' in report:
-        print(f'route: den-agents has not imported the importer revision of {newest[:12]} yet; the next round takes it')
+        print(f'route: the store has no data for the importer revision of {newest[:12]}; '
+              f'scripts/route.py data {newest} imports it, and the next round takes it')
         return 0
     record('verify' if passed else 'verify-failures', newest, f'scripts/route.py main\n{report}')
     if passed:
@@ -307,7 +312,7 @@ def main_round(options):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('lane', help='ruleset, import, verify, another configured rusty-dagger lane, or main')
+    parser.add_argument('lane', help='ruleset, import-suite, verify, data, another configured rusty-dagger lane, or main')
     parser.add_argument('ref', nargs='?', default='HEAD')
     parser.add_argument('--whole', action='store_true', help='run the ruleset suite on one worker, unsplit')
     parser.add_argument('--host', help='only this worker')
