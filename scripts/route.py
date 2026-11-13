@@ -137,17 +137,21 @@ def route(lane, commit, options, run):
             raise
 
     def attempt(host, part, log, gate):
-        """Sends one lane to one worker; returns its exit code and log. A long lane's admission ends once the router
-        has checked the job in on that worker, or has refused it."""
+        """Sends one lane to one worker; returns its exit code and log. A long lane's admission ends only once the
+        router has checked this job in on that worker (a live ledger row that was not there before it was sent), or
+        den-tool has exited: an older or stale row says nothing about this job."""
+        before = {entry.get('id') for entry in resources().get('work', [])} if gate else set()
+
+        def checked_in(entry):
+            return (entry.get('id') not in before and not entry.get('stale') and entry.get('state') == 'running'
+                    and entry.get('host') == host and entry.get('source') == 'build'
+                    and entry.get('title') == f'{REPO} / {part}' and commit in entry.get('note', ''))
         with log.open('w') as output:
             child = launch(['den-tool', 'build', 'run', '--repo', REPO, '--lane', part, '--ref', commit,
                             '--host', host, '--config', options.config], output)
             children.add(child)
             if gate:
-                deadline = time.monotonic() + 90
-                while child.poll() is None and time.monotonic() < deadline and not any(
-                        entry.get('host') == host and entry.get('source') == 'build' and entry.get('state') == 'running'
-                        for entry in resources().get('work', [])):
+                while child.poll() is None and not any(map(checked_in, resources().get('work', []))):
                     time.sleep(1)
                 gate.close()
             code = child.wait()

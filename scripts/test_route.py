@@ -2,7 +2,7 @@
 
     python3 -m unittest discover -s scripts -p 'test_*.py'
 """
-import contextlib, io, json, pathlib, tempfile, threading, time, types, unittest
+import contextlib, io, itertools, json, pathlib, tempfile, threading, time, types, unittest
 
 import route
 
@@ -24,20 +24,23 @@ class Job:
 
 class Workers:
     """The Resources state the router reads, and den-tool build run against it: a job on a worker the router would
-    refuse is refused, and an admitted one is checked in a moment after it starts."""
+    refuse is refused, and an admitted one is checked in a moment after it starts. A stale row is what an earlier
+    run left behind when its check-out failed."""
 
-    def __init__(self, building=(), gpu_busy=()):
+    ids = itertools.count()
+
+    def __init__(self, building=(), gpu_busy=(), stale=()):
         self.lock, self.started = threading.Lock(), []
-        self.work = [self.entry(host) for host in building]
+        self.work = [self.entry(host) for host in building] + [self.entry(host, 'verify', stale=True) for host in stale]
         self.hosts = [{'id': host['id'], 'status': 'quiet', 'stale': False, 'error': None,
                        'telemetry': {'gpus': [{'utilization_percent': 0}]},
                        'apps': [{'name': 'ComfyUI', 'online': True, 'stale': False,
                                  'running': 1 if host['id'] in gpu_busy else 0, 'queued': 0}]} for host in HOSTS]
 
-    @staticmethod
-    def entry(host):
-        return {'host': host, 'source': 'build', 'state': 'running', 'stale': False, 'title': 'rusty-dagger / x',
-                'note': f'Commit {COMMIT}', 'started_at': '2026-11-13T00:00:00.000000Z'}
+    @classmethod
+    def entry(cls, host, lane='x', stale=False):
+        return {'id': next(cls.ids), 'host': host, 'source': 'build', 'state': 'running', 'stale': stale,
+                'title': f'rusty-dagger / {lane}', 'note': f'Commit {COMMIT}', 'started_at': '2026-11-13T00:00:00.000000Z'}
 
     def state(self):
         with self.lock:
@@ -51,7 +54,7 @@ class Workers:
         with self.lock:
             self.started.append((lane, host))
         output.write(f'den-build: checkout at {COMMIT}\n')
-        job = self.entry(host)
+        job = self.entry(host, lane)
         threading.Timer(0.3, lambda: self.work.append(job)).start()
         done = time.monotonic() + 0.6
 
@@ -95,6 +98,16 @@ class AdmissionTest(unittest.TestCase):
 
     def test_long_lanes_sent_together_still_leave_one_worker(self):
         workers = Workers(building=['den-k8'])
+        sends = [threading.Thread(target=self.send, args=(workers, 'verify', host)) for host in ('den-nimo', 'den-m5')]
+        for send in sends:
+            send.start()
+        for send in sends:
+            send.join()
+        self.assertEqual(len(workers.started), 1)
+
+    def test_a_stale_row_does_not_admit_the_next_long_lane_early(self):
+        # Both free workers carry a stale row from an earlier verify; neither may stand in for the new check-in.
+        workers = Workers(building=['den-k8'], stale=['den-nimo', 'den-m5'])
         sends = [threading.Thread(target=self.send, args=(workers, 'verify', host)) for host in ('den-nimo', 'den-m5')]
         for send in sends:
             send.start()
