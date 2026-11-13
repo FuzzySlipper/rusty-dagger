@@ -12,7 +12,8 @@
 REF defaults to HEAD and may be any commit in den-agents' repository, pushed or not; uncommitted changes are not
 in it. The lanes are scripts/lane.sh; the router's config (--config, DEN_BUILD_CONFIG_PATH, else the installed one)
 names them. It first says what each worker is doing. A part waits until a worker frees (--wait MINUTES gives up),
-and a long lane (verify, --whole, import) leaves the last free worker to split runs unless --take-last. Stopping
+and a long lane (verify, --whole, import) leaves the last worker the router can use to split runs unless
+--take-last; long lanes sent from den-agents are admitted one at a time, so together they leave it too. Stopping
 the command stops its lanes. Each lane's log is written under local/build/route/, and the command exits 0 only
 when every part passed.
 
@@ -39,21 +40,61 @@ def git(*args, check=True):
     return subprocess.run(['git', '-C', str(root), *args], check=check, capture_output=True, text=True).stdout.strip()
 
 
-def activity():
-    """What each worker is doing now, from the Resources ledger: {host: ['TITLE (NOTE) for N min', ...]}."""
-    listing = subprocess.run(['den-tool', 'resources', '--json', 'work'], capture_output=True, text=True).stdout
+def resources():
+    """The Resources service's state: each host's telemetry and apps, and the work checked in."""
+    listing = subprocess.run(['den-tool', 'resources', '--json', 'status'], capture_output=True, text=True).stdout
     try:
-        work = json.loads(listing).get('work', [])
+        return json.loads(listing)
     except json.JSONDecodeError:
         return {}
-    now, busy = datetime.datetime.now(datetime.timezone.utc), {}
-    for entry in work:
-        if entry.get('state') in ('running', 'queued') and not entry.get('stale'):
-            began = datetime.datetime.fromisoformat(entry['started_at'][:26].rstrip('Z') + '+00:00')
-            note = entry.get('note', '').replace('Commit ', '')[:12]
-            busy.setdefault(entry['host'], []).append(
-                f'{entry["title"]}{f" ({note})" if note else ""} for {int((now - began).total_seconds() // 60)} min')
-    return busy
+
+
+def workers_now(hosts, state):
+    """For each configured worker: why den-tool build would not take a job there now (None when it would), by the
+    router's own host check, and what it is running."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    samples = {sample['id']: sample for sample in state.get('hosts', [])}
+    work = [entry for entry in state.get('work', []) if entry.get('state') in ('running', 'queued') and not entry.get('stale')]
+    found = {}
+    for host in hosts:
+        name, sample, limit = host['id'], samples.get(host['id']), host.get('max_gpu_percent')
+        mine = [entry for entry in work if entry.get('host') == name]
+        doing = [f'{entry["title"]}{f" ({note})" if (note := entry.get("note", "").replace("Commit ", "")[:12]) else ""} for '
+                 f'{int((now - datetime.datetime.fromisoformat(entry["started_at"][:26].rstrip("Z") + "+00:00")).total_seconds() // 60)} min'
+                 for entry in mine]
+        apps = [app['name'] for app in (sample or {}).get('apps', []) if app.get('online') and not app.get('stale')
+                and ((app.get('running') or 0) > 0 or (app.get('queued') or 0) > 0)]
+        use = [gpu['utilization_percent'] for gpu in (sample or {}).get('telemetry', {}).get('gpus', [])
+               if gpu.get('utilization_percent') is not None]
+        if not sample or sample.get('stale') or sample.get('error') or sample.get('status') in (None, '', 'unknown'):
+            reason = 'its Resources telemetry is unavailable or stale'
+        elif any(entry.get('source') == 'build' for entry in mine):
+            reason = 'a build is checked in'
+        elif limit is None:
+            reason = None
+        elif mine:
+            reason = 'work is checked in on the shared-memory host'
+        elif apps:
+            reason = f'{apps[0]} has GPU work running or queued'
+        elif not use:
+            reason = 'its GPU utilization is unavailable'
+        else:
+            reason = f'GPU utilization {max(use):.0f}% exceeds {limit:.0f}%' if max(use) > limit else None
+        found[name] = (reason, doing)
+    return found
+
+
+def admission():
+    """Long lanes on this machine are admitted one at a time, each holding this lock until the router has checked its
+    job in, so two of them never count each other's worker as the one left free."""
+    common = git('rev-parse', '--path-format=absolute', '--git-common-dir')
+    gate = (pathlib.Path(common) / 'route-admission.lock').open('a')
+    fcntl.flock(gate, fcntl.LOCK_EX)
+    return gate
+
+
+def launch(argv, output):
+    return subprocess.Popen(argv, stdout=output, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
 
 
 def route(lane, commit, options, run):
@@ -66,7 +107,8 @@ def route(lane, commit, options, run):
         parts = [lane]
     if not parts or any(part not in lanes for part in parts):
         sys.exit(f'route: {options.config} has no {REPO} lane {lane}; it has {", ".join(sorted(lanes))}')
-    workers = [host['id'] for host in config['hosts'] if host['enabled']]
+    enabled = [host for host in config['hosts'] if host['enabled']]
+    workers = [host['id'] for host in enabled]
     hosts = [host for host in workers if options.host in (None, host)]
     if not hosts:
         sys.exit(f'route: {options.config} enables no worker {options.host}')
@@ -75,9 +117,8 @@ def route(lane, commit, options, run):
     long = parts == [lane] and not re.fullmatch(r'ruleset-\d+', lane)
 
     print(f'route: {", ".join(parts)} at {commit} over {", ".join(hosts)}; logs in {run}', flush=True)
-    busy = activity()
-    for host in workers:
-        print(f'route: {host}: {"; ".join(busy.get(host, [])) or "free"}', flush=True)
+    for host, (reason, doing) in workers_now(enabled, resources()).items():
+        print(f'route: {host}: {f"busy, {reason}" if reason else "free"}{": " if doing else ""}{"; ".join(doing)}', flush=True)
     pending = queue.Queue()
     for part in parts:
         pending.put(part)
@@ -85,33 +126,61 @@ def route(lane, commit, options, run):
     began = time.monotonic()
 
     def worker(host):
+        held = [None]
+        try:
+            serve(host, held)
+        except Exception as error:
+            # The part this worker held gets a result, or every other worker would wait for it forever.
+            with lock:
+                if held[0] and held[0] not in results:
+                    results[held[0]] = (host, 1, 0.0, run / f'{held[0]}.log', f'lane: route.py stopped: {error!r}')
+            raise
+
+    def attempt(host, part, log, gate):
+        """Sends one lane to one worker; returns its exit code and log. A long lane's admission ends once the router
+        has checked the job in on that worker, or has refused it."""
+        with log.open('w') as output:
+            child = launch(['den-tool', 'build', 'run', '--repo', REPO, '--lane', part, '--ref', commit,
+                            '--host', host, '--config', options.config], output)
+            children.add(child)
+            if gate:
+                deadline = time.monotonic() + 90
+                while child.poll() is None and time.monotonic() < deadline and not any(
+                        entry.get('host') == host and entry.get('source') == 'build' and entry.get('state') == 'running'
+                        for entry in resources().get('work', [])):
+                    time.sleep(1)
+                gate.close()
+            code = child.wait()
+            children.discard(child)
+        return code, log.read_text(errors='replace')
+
+    def serve(host, held):
         waited_since, said = None, None
         # Until every part has a result: a part another worker had to give back may still come here.
         while len(results) < len(parts):
             try:
-                part = pending.get(timeout=20)
+                part = held[0] = pending.get(timeout=5)
             except queue.Empty:
                 continue
             log = run / f'{part}.log'
-            start, text, code, reason = time.monotonic(), '', None, None
-            if long and not options.take_last:
-                busy = activity()
-                if not any(other != host and not busy.get(other) for other in workers):
-                    reason = 'it is the last free worker, which a split run needs (--take-last takes it)'
-            if not reason:
-                with log.open('w') as output:
-                    child = subprocess.Popen(['den-tool', 'build', 'run', '--repo', REPO, '--lane', part, '--ref', commit,
-                                              '--host', host, '--config', options.config],
-                                             stdout=output, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
-                    children.add(child)
-                    code = child.wait()
-                    children.discard(child)
-                text = log.read_text(errors='replace')
-                # The worker prints its checkout line once the lane is about to start; without it the router refused the host.
-                if f' at {commit}\n' not in text or 'den-build: ' not in text:
-                    reason = text.strip().splitlines()[-1] if text.strip() else f'exit {code}'
+            start, text, code, reason, gate = time.monotonic(), '', None, None, None
+            try:
+                if long and not options.take_last:
+                    gate = admission()
+                    usable = workers_now(enabled, resources())
+                    if not any(usable[other][0] is None for other in workers if other != host):
+                        reason = 'it is the last worker the router can use, which a split run needs (--take-last takes it)'
+                if not reason:
+                    code, text = attempt(host, part, log, gate)
+                    # Without the worker's checkout line the router refused the host.
+                    if f' at {commit}\n' not in text or 'den-build: ' not in text:
+                        reason = text.strip().splitlines()[-1] if text.strip() else f'exit {code}'
+            finally:
+                if gate:
+                    gate.close()
             if reason:
                 pending.put(part)
+                held[0] = None
                 waited_since = waited_since or time.monotonic()
                 if options.wait is not None and time.monotonic() - waited_since >= options.wait * 60:
                     with lock:
@@ -128,6 +197,7 @@ def route(lane, commit, options, run):
             minutes = (time.monotonic() - start) / 60
             with lock:
                 results[part] = (host, code, minutes, log, text)
+                held[0] = None
                 print(f'route: {part} {"passed" if code == 0 else f"FAILED ({code})"} on {host} in {minutes:.1f} min: {log}',
                       flush=True)
 

@@ -119,6 +119,9 @@ else
   echo "skipped the art pipeline's tests: python3 lacks numpy, scipy or Pillow"
 fi
 
+# How scripts/route.py admits lanes to the build workers, with den-tool faked.
+python3 -m unittest discover -s scripts -p 'test_*.py'
+
 # The importer's tools are products of their own and nothing else in this script compiles them, so a
 # change to the import API could leave it broken while every test and build here stayed green. That
 # happened: a new field in an import record was passed by the tests and missed by the tool, and the

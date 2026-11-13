@@ -254,8 +254,9 @@ scripts/route.py import                              # the import suite, waiting
 With `--notify` (your crew address, given at your session's start) or `--task`
 it returns at once, and the result, with each part's log and the tests that
 failed, arrives at that address and on that Den task. It first says what each
-worker is doing, waits until one frees, and keeps a long lane (verify, import,
-`--whole`) off the last free worker so that a split run can always start. The lanes are
+worker is doing, waits until one frees, and keeps long lanes (verify, import,
+`--whole`) off the last worker the router can use, so that a split run can always
+start. The lanes are
 [scripts/lane.sh](scripts/lane.sh), run through the build router
 (`den-tool build run`). A lane takes den-agents' data when its own is not at the
 commit's importer revision, and refuses, naming both, when den-agents' is not
