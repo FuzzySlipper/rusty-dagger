@@ -17,6 +17,18 @@ internal sealed class CorpusTheoryAttribute : TheoryAttribute
     public CorpusTheoryAttribute(params string[] entries) => Skip = TestData.MissingCorpus(entries);
 }
 
+/// <summary>A fact that converts the named Arena2 cinematics, so needs the corpus entries and FFmpeg.</summary>
+internal sealed class CinematicFactAttribute : FactAttribute
+{
+    public CinematicFactAttribute(params string[] entries) => Skip = TestData.MissingCorpus(entries) ?? TestData.MissingFfmpeg();
+}
+
+/// <summary>A theory that converts the named Arena2 cinematics, so needs the corpus entries and FFmpeg.</summary>
+internal sealed class CinematicTheoryAttribute : TheoryAttribute
+{
+    public CinematicTheoryAttribute(params string[] entries) => Skip = TestData.MissingCorpus(entries) ?? TestData.MissingFfmpeg();
+}
+
 /// <summary>A fact that compares with a Daggerfall Unity checkout's named entries; it runs only when one is named.</summary>
 internal sealed class DonorFactAttribute : FactAttribute
 {

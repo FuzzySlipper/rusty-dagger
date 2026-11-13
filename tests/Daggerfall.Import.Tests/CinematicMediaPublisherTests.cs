@@ -7,7 +7,7 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class CinematicMediaPublisherTests
 {
-    [CorpusTheory("AZURA.FLC", "VAERNIMA.FLC")]
+    [CinematicTheory("AZURA.FLC", "VAERNIMA.FLC")]
     [InlineData("AZURA.FLC", 2.996)]
     [InlineData("VAERNIMA.FLC", 0.994)]
     public void Real_flc_publication_excludes_ring_frame_and_preserves_source_cadence(string name, double duration)
@@ -31,7 +31,7 @@ public sealed class CinematicMediaPublisherTests
         finally { if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true); }
     }
 
-    [CorpusFact("ANIM0011.VID")]
+    [CinematicFact("ANIM0011.VID")]
     public void Real_vid_publication_preserves_frames_and_regenerates_identically()
     {
         string source = TestData.Corpus("ANIM0011.VID");

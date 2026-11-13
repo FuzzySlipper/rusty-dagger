@@ -51,6 +51,18 @@ internal static class TestData
         return missing.Length == 0 ? null : $"generated content is absent ({string.Join(", ", missing)}); run `{RegenerationCommand}` with local/inputs/arena2 supplied.";
     }
 
+    /// <summary>
+    /// Why a test converting cinematics cannot run, or null when ffmpeg and ffprobe are on PATH. An import converts
+    /// them only when asked (import --cinematics), so no other machine needs FFmpeg.
+    /// </summary>
+    internal static string? MissingFfmpeg()
+    {
+        string[] missing = [.. new[] { "ffmpeg", "ffprobe" }.Where(tool => !(Environment.GetEnvironmentVariable("PATH") ?? "")
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Any(directory => File.Exists(Path.Combine(directory, tool)) || File.Exists(Path.Combine(directory, tool + ".exe"))))];
+        return missing.Length == 0 ? null : $"{string.Join(" and ", missing)} not on PATH; the cinematic conversion needs FFmpeg.";
+    }
+
     /// <summary>Why a test needing these corpus entries cannot run, or null when they are all present.</summary>
     internal static string? MissingCorpus(string[] entries) => Missing("Arena2 corpus", CorpusRoot, CorpusVariable, entries);
 

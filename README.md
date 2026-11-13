@@ -79,8 +79,10 @@ the one ignored folder. Its folders say what may be deleted:
 
 - It checks every input before writing anything, then packs
   `local/data/daggerfall-data.rpak` and `local/data/music.rpak`. `--music` is
-  optional, and so are `ffmpeg` and `ffprobe` on `PATH`: without them cinematics
-  play as skipped.
+  optional. The cinematics are left out, and the game plays them as skipped,
+  unless you add `--cinematics` (it needs `ffmpeg` and `ffprobe` on `PATH`). Their
+  bytes differ by machine, so data imported with them stays in your own checkout:
+  the store refuses it.
 - To work on the importer, `import --only STEP,...` reruns named steps and repacks.
   The result records that it is a repack over an earlier run, so the entry screen
   calls it stale (a warning under `rusty dev`) and `scripts/data-sync.sh publish`
@@ -99,14 +101,14 @@ the one ignored folder. Its folders say what may be deleted:
   ```
 
   Pull right after cloning, checking out or pulling, and check that `status` reads
-  current; that includes den-agents' shared checkout, which den-win11 reads. When
+  current. On den-agents `link` replaces `pull` (below), the shared checkout
+  included, which den-win11 reads. When
   the store has no data for the revision, both say so and name the `route.py data`
   command. A box that runs the tests also needs the corpus the import suite reads:
   `rsync -a den-agents:dev/rusty-dagger/local/inputs/arena2 local/inputs/`.
   Nothing is deleted unless you add `--mirror`.
-- The `data` lane runs only on den-k8 (`scripts/lane.sh` names it), since the
-  cinematics' bytes depend on the machine and its ffmpeg, which the importer
-  revision does not cover. Only the lane publishes, and it refuses to replace a
+- The `data` lane runs on any free worker: without the cinematics every machine
+  imports the same bytes. Only the lane publishes, and it refuses to replace a
   revision the store holds with other bytes. The store keeps every revision ever
   published (about 2.5 GB each); `scripts/data-sync.sh
   store` lists them. Old ones are pruned by hand, with Patch's say, by removing
@@ -121,7 +123,9 @@ the one ignored folder. Its folders say what may be deleted:
   install is a native clone, `C:\dev\rusty-dagger`, set up as above, whose
   containers come whole from den-agents' shared checkout through `P:` with
   `powershell -File scripts\data-sync.ps1`, which copies only data at the clone's
-  own importer revision (the NAS store is not reachable from Windows). `P:`,
+  own importer revision (the NAS store is not reachable from Windows). When it
+  refuses, the shared checkout is at another revision: check the clone out at the
+  shared checkout's commit, or wait until that checkout has pulled main. `P:`,
   den-agents' home, is mapped only on the console desktop, so that pull and anything that opens a window run
   through `C:\Users\agent\crew\bin\run-on-desktop.ps1`. Running from a den-agents
   worktree over `P:` also works, for uncommitted work or a throwaway pin. Only the
@@ -148,25 +152,26 @@ the one ignored folder. Its folders say what may be deleted:
   `dotnet run --project src/Daggerfall.Source.Tool -- donor-drift --donor DIR`
   reports where they differ from a Daggerfall Unity checkout.
 
-A worktree links only the inputs and the containers of the main checkout, so its
-build and art files stay its own; on den machines evidence links to the NAS:
+A worktree links the main checkout's inputs, so its build and art files stay its
+own, and links its data to its own importer revision; on den machines evidence
+links to the NAS:
 
 ```bash
 main=$(git worktree list --porcelain | head -n 1 | cut -d' ' -f2)
-mkdir -p local && ln -s "$main/local/inputs" "$main/local/data" local/
+mkdir -p local && ln -s "$main/local/inputs" local/
+scripts/data-sync.sh link --import-tree
 ln -s /mnt/den-nas-backup/data/evidence/rusty-dagger local/evidence
 ln -s "$main/node_modules" node_modules
 ```
 
-Tests that read the import's staging tree and records skip without them. While
-the branch leaves the importer's inputs (the list above) alone, link those too:
-`mkdir -p local/build && ln -s "$main/local/build/import" local/build/`.
-
-The import and `scripts/data-sync.sh pull` refuse to write through any of these
-links, since that would replace what every checkout opens. A worktree whose branch
-changes the importer's inputs gets its own data once the `data` lane has
-published its commit: `rm local/data local/build/import && scripts/data-sync.sh
-pull --import-tree`. Build `first-person.rpak` in a folder of its own the same way.
+`link` points `local/data` and `local/build/import` at the machine's one
+read-only copy of that revision (`~/.cache/rusty-dagger/data/<revision>`, made from
+the store on first use), so no checkout copies 4 GB or can write what another
+reads. Run it again after a checkout that moves the importer revision, and for a
+branch that changes the importer's inputs once the `data` lane has published it.
+Tests that read the staging tree and records skip without them. The copies are a
+cache: remove one nobody links to at any time (`chmod -R u+w` first). Build
+`first-person.rpak` in a folder of the checkout's own.
 
 Rules for the tracked side:
 
@@ -229,8 +234,8 @@ the CoreCLR product.
 Only verify needs these; a machine that only runs the game can skip them:
 
 - `local/inputs/arena2` and `local/build/import` (Game data says how a box gets
-  them), and `ffmpeg` on `PATH`: the import suite converts a
-  cinematic with it.
+  them). The import suite's cinematic conversion tests run where `ffmpeg` and
+  `ffprobe` are on `PATH` and skip by name where they are not.
 - For `--play`, a Chromium: `chromium` on `PATH`, or `RUSTY_CHROMIUM_PATH` naming
   one, such as Playwright's (`npx playwright install chromium`; add `--with-deps`
   once, with sudo, for its system libraries).

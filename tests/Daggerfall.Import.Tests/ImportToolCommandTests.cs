@@ -16,6 +16,13 @@ internal sealed class ImportToolDataTheoryAttribute : TheoryAttribute
 internal sealed class ImportToolDataFactAttribute : FactAttribute
 {
     public ImportToolDataFactAttribute() => Skip = MissingInputs();
+
+    /// <summary>The same, for a command that converts cinematics and so needs FFmpeg as well.</summary>
+    public bool Cinematics
+    {
+        get => field;
+        set { field = value; Skip = value ? MissingInputs() ?? TestData.MissingFfmpeg() : MissingInputs(); }
+    }
     internal static string? MissingInputs() => TestData.MissingGeneratedContent() ?? MissingStaging() ?? TestData.MissingCorpus([]);
 
     // The commands read publications from disk, so these tests read the staging tree an import leaves beside the
@@ -177,7 +184,7 @@ public sealed class ImportToolCommandTests
         fixture.AssertUnchanged(before);
     }
 
-    [ImportToolDataFact]
+    [ImportToolDataFact(Cinematics = true)]
     public void Flc_report_writes_nothing_and_update_publishes_the_selected_kind()
     {
         using ImportToolFixture fixture = new() { CinematicKind = Daggerfall.Import.Normalized.DaggerfallCinematicKind.Flc };

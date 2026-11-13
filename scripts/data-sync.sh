@@ -8,6 +8,8 @@
 #
 #   scripts/data-sync.sh pull                  # this checkout's revision into local/data, with first-person.rpak
 #   scripts/data-sync.sh pull --import-tree    # also local/build/import, for a box that runs the tests
+#   scripts/data-sync.sh link --import-tree    # instead of copying: link local/data and local/build/import to this
+#                                              # machine's one read-only copy of the revision (den-agents' checkouts)
 #   scripts/data-sync.sh status                # the container's revision beside this tree's, and whether the store has it
 #   scripts/data-sync.sh store                 # the revisions the store holds, with their size and publish time
 #   scripts/data-sync.sh publish               # the import lane only: this checkout's whole import into the store
@@ -28,7 +30,7 @@ root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 data=$root/local/data
 store=${DAGGER_DATA_STORE:-/mnt/den-nas-backup/data/rusty-dagger/lan}
 store=${store%/}
-usage="usage: scripts/data-sync.sh pull [--import-tree] [--mirror] | status | store | publish"
+usage="usage: scripts/data-sync.sh pull|link [--import-tree] [--mirror] | status | store | publish"
 
 direction=${1:-}
 shift || true
@@ -120,7 +122,8 @@ case $direction in
       for folder in local local/data local/build local/build/import; do
         [[ -L $root/$folder ]] || continue
         echo "data-sync: $folder is a link to $(readlink "$root/$folder"); a pull here would replace what every checkout" \
-          "sharing it opens. Give this checkout its own (rm $folder), then pull." >&2
+          "sharing it opens. Link this checkout to its revision instead (scripts/data-sync.sh link), or give it its own" \
+          "copy (rm $folder) and pull." >&2
         exit 1
       done
     fi
@@ -140,6 +143,44 @@ case $direction in
     fi
     report
     ;;
+  link)
+    # One copy of each revision on this machine's own disk, read-only, which every checkout and worktree here links
+    # to: nothing copies the data per checkout, and no checkout can write what another reads.
+    cache=${DAGGER_DATA_CACHE:-$HOME/.cache/rusty-dagger/data}
+    entry=$cache/$revision
+    [[ ! -L $root/local ]] || { echo "data-sync: local is a link to $(readlink "$root/local"); give this checkout its own local/ first" >&2; exit 1; }
+    if [[ ! -f $entry/SHA256SUMS ]]; then
+      at_store "test -d '$store_path'" || { echo "data-sync: $store is not reachable" >&2; exit 1; }
+      held || { missing >&2; exit 1; }
+      from=$store/revisions/$revision incoming=$cache/.incoming-$revision-$$
+      mkdir -p "$incoming/data" "$incoming/import"
+      trap 'chmod -R u+w "$incoming" 2>/dev/null; rm -rf "$incoming"' EXIT
+      rsync "${options[@]}" "$from/daggerfall-data.rpak" "$from/music.rpak" "$incoming/data/"
+      rsync "${options[@]}" "$from/import.tar.zst" "$from/SHA256SUMS" "$incoming/"
+      zstd -dcq "$incoming/import.tar.zst" | tar -xf - -C "$incoming/import"
+      rm "$incoming/import.tar.zst"
+      (cd "$incoming" && sha256sum --check --quiet SHA256SUMS) ||
+        { echo "data-sync: the copy of importer revision $revision does not match its sums; nothing was linked" >&2; exit 1; }
+      ln -s ../../first-person.rpak "$incoming/data/first-person.rpak"
+      chmod -R a-w "$incoming/data" "$incoming/import"
+      # When another link got there first, its copy is the same revision, checked the same way.
+      mv -T "$incoming" "$entry" 2>/dev/null || true
+    fi
+    # first-person.rpak is not an import output: one copy here serves every revision, refreshed from the store's root.
+    if at_store "test -f '$store_path/first-person.rpak'" 2>/dev/null; then rsync "${options[@]}" "$store/first-person.rpak" "$cache/"; fi
+    folders=(local/data)
+    [[ -n $import_tree ]] && folders+=(local/build/import)
+    for folder in "${folders[@]}"; do
+      path=$root/$folder
+      if [[ -L $path ]]; then rm "$path"
+      elif [[ -d $path ]]; then
+        rmdir "$path" 2>/dev/null || { echo "data-sync: $folder holds data of its own, perhaps the only copy of an import; move it aside, then link" >&2; exit 1; }
+      fi
+      mkdir -p "$(dirname "$path")"
+      ln -s "$entry/${folder##*/}" "$path"
+    done
+    report
+    ;;
   status)
     report
     if held; then echo "The store holds importer revision $revision."
@@ -154,6 +195,11 @@ case $direction in
     report
     [[ $(sed -n 1p <<<"$description") == "$revision" && $(sed -n 2p <<<"$description") == whole ]] ||
       { echo "data-sync: refusing to publish: the container is not one whole import at importer revision $revision" >&2; exit 1; }
+    # Cinematics (import --cinematics) encode differently on another machine, so they stay in the importing checkout.
+    if [[ -n $(find "$root/local/build/import/staging/worldrpg/media/cinematics" -type f -print -quit 2>/dev/null) ]]; then
+      echo "data-sync: refusing to publish: this import converted the cinematics, whose bytes differ by machine; import without --cinematics" >&2
+      exit 1
+    fi
     mine=$(mktemp) && chmod 644 "$mine"
     archive=$(mktemp -p "$root/local/build" publish-XXXXXX.tar.zst)
     trap 'rm -f "$mine" "$archive"' EXIT

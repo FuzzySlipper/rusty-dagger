@@ -206,10 +206,10 @@ public sealed class DataContainerImportTests : IDisposable
     }
 
     [Fact]
-    public void Without_FFmpeg_the_import_converts_no_cinematics_and_changes_nothing_else()
+    public void The_import_converts_the_cinematics_only_when_asked_and_that_changes_nothing_else()
     {
-        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", null));
-        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null, Cinematics: false));
+        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", null, Cinematics: true));
+        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null));
 
         Assert.Equal(["cinematic-media-vid", "cinematic-media-flc"], with.Select(step => step.Label).Where(label => label.StartsWith("cinematic-media", StringComparison.Ordinal)));
         Assert.Equal(

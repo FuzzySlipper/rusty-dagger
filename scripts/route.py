@@ -5,7 +5,7 @@
     scripts/route.py ruleset --whole [REF]   the ruleset suite on one worker
     scripts/route.py import-suite [REF]      the import suite
     scripts/route.py verify [REF]            scripts/verify.sh --import --play
-    scripts/route.py data [REF]              imports the commit on den-k8 and publishes its data to the store under its
+    scripts/route.py data [REF]              imports the commit on a worker and publishes its data to the store under its
                                              importer revision (nothing to do when the store holds it already)
     ... --notify ADDRESS --task N            send and leave: return at once; the result goes to that crew address
                                              (yours is in your session's start) and as a line on Den task N
@@ -17,7 +17,7 @@ names them. The test lanes take the data of the commit's importer revision from 
 none: route `data` for that commit first. It first says what each worker is doing. A part waits until a worker frees
 (--wait MINUTES gives up), and a long lane (verify, --whole, import-suite) leaves the last worker the router can use
 to split runs unless --take-last; long lanes sent from den-agents are admitted one at a time, so together they leave
-it too. `data` is not a long lane: it has one worker, and the commit's suites wait on it. Stopping the command stops
+it too. `data` is not a long lane: the commit's suites wait on it. Stopping the command stops
 its lanes. Each lane's log is written under local/build/route/, and the command exits 0 only when every part passed.
 
 A round of `main` takes the newest origin/main commit unless it already has a result, and runs the verify lane on
@@ -116,8 +116,8 @@ def route(lane, commit, options, run):
     if not hosts:
         sys.exit(f'route: {options.config} enables no worker {options.host}')
     # One long lane (verify, the whole ruleset suite, import-suite) never takes the last free worker, so that a split
-    # run, eleven minutes on three workers, can always start; --take-last allows it. The data lane has one worker and
-    # the commit's suites wait on it, so it takes that worker whenever it is free.
+    # run, eleven minutes on three workers, can always start; --take-last allows it. The commit's suites wait on the
+    # data lane, so it takes the last free worker too.
     long = parts == [lane] and lane != 'data' and not re.fullmatch(r'ruleset-\d+', lane)
 
     print(f'route: {", ".join(parts)} at {commit} over {", ".join(hosts)}; logs in {run}', flush=True)

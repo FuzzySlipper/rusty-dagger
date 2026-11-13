@@ -40,7 +40,7 @@ internal static class ImportCommand
     [
         CommandOption.Optional("--arena2", "DIR"), CommandOption.Optional("--music", "DIR"),
         CommandOption.Optional("--repository", "DIR"), CommandOption.Optional("--install", "DIR"), CommandOption.Optional("--only", "STEP[,STEP...]"),
-        CommandOption.Switch("--compress"),
+        CommandOption.Switch("--compress"), CommandOption.Switch("--cinematics"),
     ], Run);
 
     /// <summary>One import step: the label <c>--only</c> names it by, and the tool command it runs.</summary>
@@ -48,9 +48,11 @@ internal static class ImportCommand
 
     /// <summary>
     /// The inputs a run reads, as repository-relative paths where they lie inside the repository. The cinematics
-    /// are converted only when FFmpeg is on PATH; without it the game plays with none.
+    /// are converted only when asked (<c>--cinematics</c>, which needs FFmpeg); without them the game plays with none.
+    /// They are off by default because their bytes depend on the machine that encodes them (another CPU encodes the
+    /// same Opus audio differently), and a container must be the same wherever it is imported.
     /// </summary>
-    internal sealed record Inputs(string Arena2, string? Music, bool Cinematics = true);
+    internal sealed record Inputs(string Arena2, string? Music, bool Cinematics = false);
 
     private static int Run(CommandArguments args)
     {
@@ -62,7 +64,7 @@ internal static class ImportCommand
         string arena2 = args.Optional("--arena2")
             ?? (ImportLayout.ReleaseDirectory is null ? Environment.GetEnvironmentVariable("DAGGER_ARENA2") ?? Path.Combine(repository, ImportLayout.Arena2) : null)
             ?? throw args.Invalid("name the folder Daggerfall is installed in, or its ARENA2 folder.");
-        bool cinematics = FindOnPath("ffmpeg") is not null && FindOnPath("ffprobe") is not null;
+        bool cinematics = args.Switch("--cinematics");
         Inputs inputs = new(
             Portable(Arena2Folder(Path.GetFullPath(arena2, invoked)) ?? arena2, invoked, repository),
             args.Optional("--music") is { } music ? Portable(music, invoked, repository) : null,
@@ -91,8 +93,8 @@ internal static class ImportCommand
 
         // The cinematics' bytes depend on the FFmpeg build (each artifact records it), so name it up front.
         Console.WriteLine(cinematics
-            ? $"import: {FirstLine("ffmpeg", "-version")}"
-            : "import: warning: ffmpeg and ffprobe are not both on PATH, so the cinematics are not converted and the game plays without them; install FFmpeg and import again to add them.");
+            ? $"import: converting the cinematics with {FirstLine("ffmpeg", "-version")}"
+            : "import: the cinematics are not converted, and the game plays without them; --cinematics adds them (it needs ffmpeg and ffprobe on PATH).");
         long started = Environment.TickCount64;
         if (only is null)
         {
@@ -269,6 +271,9 @@ internal static class ImportCommand
         if (!IsDirectory(Path.Combine(ImportLayout.Inputs, "quests")))
             yield return $"tracked directory '{ImportLayout.Inputs}/quests'";
 
+        if (inputs.Cinematics)
+            foreach (string tool in new[] { "ffmpeg", "ffprobe" }.Where(tool => FindOnPath(tool) is null))
+                yield return $"{tool} on PATH (--cinematics converts the cinematics with it)";
         if (inputs.Music is { } music && !IsDirectory(music)) yield return $"music folder '{music}' (a folder of <track>.<ext> recordings, or leave out --music)";
         foreach (string file in new[] { Inventory, UiAssets }.Where(file => !IsFile(file)))
             yield return $"tracked file '{file}'";

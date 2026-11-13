@@ -12,8 +12,8 @@
 # inputs kept beside the router's checkout (BUILD_ROOT/rusty-dagger/kept). The test lanes link local/data and
 # local/build/import to kept data, which they pull from the store (scripts/data-sync.sh) at the commit's importer
 # revision; when the store has none they stop before testing, since a suite run against other data is a silently
-# wrong result. The data lane imports into the checkout itself and publishes; it runs only on PUBLISHER, so that one
-# revision has one set of bytes.
+# wrong result. The data lane imports into the checkout itself, without the cinematics (whose bytes differ by
+# machine), and publishes; any worker gives the same bytes.
 set -euo pipefail
 
 usage="usage: scripts/lane.sh ruleset [K/N] | import-suite | verify | data"
@@ -33,12 +33,6 @@ PARTS=(
   "Magic Content Afflictions Time Developer"
   ""
 )
-
-# The one worker that imports for the store. The cinematics' bytes depend on the machine as well as the importer
-# revision: libopus encodes the same audio differently on den-agents' Intel and den-k8's AMD with the same ffmpeg
-# build, and another ffmpeg version changes it again. The router's os pin sends the data lane here; moving it changes
-# only the revisions published after the move.
-PUBLISHER=den-k8
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$root"
@@ -98,8 +92,6 @@ if [[ $lane == data ]]; then
     step "the store already holds importer revision $wanted; nothing to import"
     exit 0
   fi
-  [[ $(hostname) == "$PUBLISHER" ]] ||
-    { echo "lane: refusing to import on $(hostname): only $PUBLISHER publishes, since another machine encodes the cinematics' audio differently" >&2; exit 2; }
 elif [[ $have != "$wanted" || $whole != whole ]]; then
   if [[ $stored != held ]]; then
     echo "lane: refusing to test $commit: the store has no data for its importer revision $wanted, and a suite against" >&2

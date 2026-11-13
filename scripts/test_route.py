@@ -116,10 +116,10 @@ class AdmissionTest(unittest.TestCase):
         self.assertEqual(len(workers.started), 1)
 
     def test_the_data_lane_takes_the_last_worker(self):
-        # Only den-k8 publishes data, and the commit's suites wait on it, so it does not leave den-k8 for a split run.
-        workers = Workers(building=['den-m5'], gpu_busy=['den-nimo'])
-        self.send(workers, 'data', host='den-k8')
-        self.assertEqual(workers.started, [('data', 'den-k8')])
+        # The commit's suites wait on its data, so the data lane does not leave the last worker for a split run.
+        workers = Workers(building=['den-k8'], gpu_busy=['den-nimo'])
+        self.send(workers, 'data')
+        self.assertEqual(workers.started, [('data', 'den-m5')])
 
     def test_a_split_run_takes_the_last_worker(self):
         workers = Workers(building=['den-k8'], gpu_busy=['den-nimo'])

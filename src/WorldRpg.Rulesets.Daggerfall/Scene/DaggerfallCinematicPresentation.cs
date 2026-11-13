@@ -22,7 +22,7 @@ internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, Dag
     {
         DaggerfallCinematicDefinition source = catalog.Resolve(sourceFile);
         Stop();
-        // An import without FFmpeg converts no cinematics; the game then plays on as if each one were skipped.
+        // An import converts the cinematics only when asked (import --cinematics); without them the game plays on as if each one were skipped.
         if (source.Artifact is not { } artifact)
         {
             SetResult(new(source.FileName, VideoRealizationFactKind.Skipped, null));
