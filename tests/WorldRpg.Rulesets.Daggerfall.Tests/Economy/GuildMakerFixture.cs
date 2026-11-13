@@ -38,6 +38,7 @@ internal sealed class GuildMakerFixture : IDisposable
     internal DaggerfallItemEnchanting Enchanting { get; }
     internal DaggerfallCalendar Calendar { get; set; } = DaggerfallCalendar.Start;
     internal StatsComponent Stats { get; }
+    internal EntityId PlayerEntity { get; }
     internal DaggerfallCharacterState Character { get; }
 
     internal GuildMakerFixture()
@@ -46,7 +47,7 @@ internal sealed class GuildMakerFixture : IDisposable
             .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
         var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
         InventoryStore world = new();
-        EntityId player = Entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 1), new EntityTypeId("test.player"));
+        EntityId player = PlayerEntity = Entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 1), new EntityTypeId("test.player"));
         world.RegisterInventory(new InventoryState(player, [new InventoryCapacityLimit(DaggerfallEncumbrancePolicy.ClassicWeightMetric, ulong.MaxValue)]));
         world.RegisterEquipment(new EquipmentState(player));
         InventoryComponent pack = new(world, player);
@@ -109,6 +110,17 @@ internal sealed class GuildMakerFixture : IDisposable
         DaggerfallItemFactory factory = new(Definitions, _random);
         factory.Materialize(factory.Create(new("Currency", "maker.gold", DaggerfallItemOwner.Player, Quantity: amount, TemplateIndex: 276)),
             Inventory, Instances, InventoryStackId.Parse("maker.gold"));
+    }
+
+    /// <summary>A carried magic item made from the catalog's <paramref name="magicItemKey"/>.</summary>
+    internal (UniqueItem Item, ulong Id) MagicItem(string magicItemKey)
+    {
+        DaggerfallCreatedItem created = new DaggerfallItemFactory(Definitions, _random)
+            .Create(new("Magic", "magic." + magicItemKey, DaggerfallItemOwner.Player, MagicItemKey: magicItemKey, Race: "breton", Gender: "male"));
+        DurableIdentityReference id = UniqueItems.AllocateReference();
+        UniqueItem item = Equipment.Materialize(id, created.Item);
+        Instances.RegisterUnique(id.Value, created.Metadata);
+        return (item, id.Value);
     }
 
     internal (UniqueItem Item, ulong Id) Weapon()

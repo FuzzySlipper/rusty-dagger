@@ -741,7 +741,7 @@ internal sealed partial class DaggerfallSession
                 _roster, _persistence, _groundContainers, _enemyBehavior, interiors, this,
                 projection, profiles, activeProfile, saved?.Site.ReturnProfile?.Require(),
                 composition.StartSite.ClassicPresentation);
-            TeleportChoice = new DaggerfallTeleport(_sites, _site, State.PlayerControl, State.Transport, () => State.Property.OwnedShip,
+            TeleportChoice = new DaggerfallTeleport(this, State.PlayerControl, State.Transport, () => State.Property.OwnedShip,
                 Presentation, saved?.PendingTeleport, saved?.TeleportAnchor);
             _grounding.FloorPending = () => _exterior.CollisionPending;
             if (composition.ArtReplacements is { } groundArt) _exterior.UseGroundArt(groundArt, () => DrawnArt is not null);

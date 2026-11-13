@@ -388,7 +388,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     {
         CloseTravelMap();
         Vector3 centre = feet + Vector3.UnitY * ((_spatial.CurrentController.Shape.StandingHeight * .5F) + FloorClearance);
-        Vector3 position = TeleportChoice.ProfilePosition(new WorldPoint(centre.X, centre.Y, centre.Z));
+        Vector3 position = ProfilePosition(new WorldPoint(centre.X, centre.Y, centre.Z));
         if (!_sites.TryRelocatePlayer(_activeProfileKey, new(anchor, new(position.X, position.Y, position.Z), yaw, pitch)))
             return Refused("The relocation was refused.");
         return Where();

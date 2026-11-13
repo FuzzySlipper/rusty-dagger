@@ -68,12 +68,29 @@ internal sealed record DaggerfallTeleportView(string Revision, bool AnchorSet)
 internal sealed record DaggerfallTeleportOption(string Id, string Label, bool Available);
 
 /// <summary>
+/// What the teleport asks of where the player stands and the site crossing, which the session answers: the active
+/// profile, the doorway's return, a point in the active profile's own frame, and relocation.
+/// </summary>
+internal interface IDaggerfallTeleportSites
+{
+    DaggerfallWorldProfileKey ActiveProfile { get; }
+    DaggerfallWorldProfileKey? ReturnProfile { get; }
+    DaggerfallSiteReturnPose? ReturnPose { get; }
+
+    /// <summary>A scene-local point in the active profile's own frame, as <see cref="TryRelocatePlayer"/> takes it.</summary>
+    Vector3 ProfilePosition(WorldPoint local);
+
+    bool TryRelocatePlayer(DaggerfallWorldProfileKey profile, DaggerfallSiteAnchor pose);
+    void RestoreReturnDestination(DaggerfallWorldProfileKey? profile, DaggerfallSiteReturnPose? pose);
+}
+
+/// <summary>
 /// The teleport choice a Teleport spell on the player opens: remember where the player stands (aboard a ship, the
 /// ship and its land return with it), or recall there through the site crossing. Relocation, so Travel's. The
 /// pending choice and the anchor are saved.
 /// </summary>
 /// <param name="ownedShip">The ship the player owns now, if any.</param>
-internal sealed class DaggerfallTeleport(DaggerfallSiteCrossing sites, DaggerfallSiteContext site, PlayerControlState playerControl,
+internal sealed class DaggerfallTeleport(IDaggerfallTeleportSites sites, PlayerControlState playerControl,
     DaggerfallTransportPolicy transport, Func<DaggerfallShipType?> ownedShip, PresentationState presentation,
     string? restoredPending, DaggerfallTeleportAnchor? restoredAnchor)
 {
@@ -86,15 +103,6 @@ internal sealed class DaggerfallTeleport(DaggerfallSiteCrossing sites, Daggerfal
 
     internal void Request(string request) => _pending = request;
 
-    /// <summary>
-    /// A scene-local point in the active profile's own frame, as <see cref="DaggerfallSiteCrossing.TryRelocatePlayer"/>
-    /// takes it. Exterior profiles author poses in the site's local frame; LocalToProfile is the map-global projection
-    /// used by live population and map reads, so feeding it back to a relocation resolves an impossible exterior cell.
-    /// </summary>
-    internal Vector3 ProfilePosition(WorldPoint local) => sites.ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior
-        ? sites.Exterior.ExteriorSitePosition(local).ToVector()
-        : sites.Exterior.LocalToProfile(local.ToVector());
-
     internal void Choose(string revision, string choice)
     {
         if (_pending != revision) { presentation.SetOutcome("Teleport choice is no longer current."); return; }
@@ -103,8 +111,8 @@ internal sealed class DaggerfallTeleport(DaggerfallSiteCrossing sites, Daggerfal
         if (choice == "anchor")
         {
             var player = playerControl;
-            var position = ProfilePosition(player.Position!.Value);
-            var returned = site.ReturnPose;
+            var position = sites.ProfilePosition(player.Position!.Value);
+            var returned = sites.ReturnPose;
             _anchor = new(DaggerfallWorldProfileKeySave.Capture(sites.ActiveProfile),
                 new(position.X, position.Y, position.Z, player.YawRadians, player.PitchRadians),
                 sites.ReturnProfile is { } profile ? DaggerfallWorldProfileKeySave.Capture(profile) : null,

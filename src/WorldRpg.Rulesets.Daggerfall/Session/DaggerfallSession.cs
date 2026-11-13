@@ -36,7 +36,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
 internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytestWorldInspectionSession, ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession, IGameBundleChoiceSession,
-    IDaggerfallSiteTransitionHost, IDaggerfallQuestWorldAdmission, IDaggerfallRestSurroundings, IDaggerfallTransformationConsumer,
+    IDaggerfallSiteTransitionHost, IDaggerfallQuestWorldAdmission, IDaggerfallRestSurroundings, IDaggerfallTeleportSites, IDaggerfallTransformationConsumer,
     IDaggerfallAfflictionQuests
 {
     private readonly IRandomService _random;
@@ -262,6 +262,24 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         AdmitResidentCivilianAppearances(projection);
 
     // What rest asks of the world, each read from the domain that knows it when the rest asks.
+    DaggerfallWorldProfileKey IDaggerfallTeleportSites.ActiveProfile => _activeProfileKey;
+    DaggerfallWorldProfileKey? IDaggerfallTeleportSites.ReturnProfile => _sites.ReturnProfile;
+    DaggerfallSiteReturnPose? IDaggerfallTeleportSites.ReturnPose => _site.ReturnPose;
+    Vector3 IDaggerfallTeleportSites.ProfilePosition(WorldPoint local) => ProfilePosition(local);
+    bool IDaggerfallTeleportSites.TryRelocatePlayer(DaggerfallWorldProfileKey profile, DaggerfallSiteAnchor pose) =>
+        _sites.TryRelocatePlayer(profile, pose);
+    void IDaggerfallTeleportSites.RestoreReturnDestination(DaggerfallWorldProfileKey? profile, DaggerfallSiteReturnPose? pose) =>
+        _sites.RestoreReturnDestination(profile, pose);
+
+    /// <summary>
+    /// A scene-local point in the active profile's own frame, as <see cref="DaggerfallSiteCrossing.TryRelocatePlayer"/>
+    /// takes it. Exterior profiles author poses in the site's local frame; LocalToProfile is the map-global projection
+    /// used by live population and map reads, so feeding it back to a relocation resolves an impossible exterior cell.
+    /// </summary>
+    private Vector3 ProfilePosition(WorldPoint local) => _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
+        ? _exterior.ExteriorSitePosition(local).ToVector()
+        : _exterior.LocalToProfile(local.ToVector());
+
     bool IDaggerfallRestSurroundings.MustFeed => _vampirism.MustFeed;
     bool IDaggerfallRestSurroundings.EncounterPending => _encounters.HasPending(_activeProfileKey.LogicalId);
     bool IDaggerfallRestSurroundings.EnemyNearby => HasNearbyRestEnemy();
