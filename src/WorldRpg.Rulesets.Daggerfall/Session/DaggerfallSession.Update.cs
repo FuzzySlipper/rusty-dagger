@@ -508,7 +508,7 @@ internal sealed partial class DaggerfallSession
         NeutralizeGuard();                                                                        // Combat
         State.Transport.Ride.Reset();                                                             // Travel
         bool inWater = State.Swimming.IsSwimming;
-        bool enemiesNearby = HasNearbyRestEnemy();                                                // Time: rest's enemy check
+        bool enemiesNearby = HasNearbyRestEnemy();                                                // Actors
         if (inWater || enemiesNearby)
         {
             var (death, line) =
@@ -523,12 +523,27 @@ internal sealed partial class DaggerfallSession
         // A consequence of the hour itself (a poison round, a quest) may have ended the player.
         DeliverFacts();                                                                           // Session
         if (State.Actors.Player.IsDefeated) return;
-        (bool rapidHealing, bool noRegeneration) = RestCharacterTraits();                         // Time
+        (bool rapidHealing, bool noRegeneration) = _rest.CharacterTraits(PlayerSpecials, _activeProfileKey.Kind);   // Time
         if (!_condition.RecoverFromCollapse(State.Actors.Player.Stats, rapidHealing, noRegeneration)) return;   // Condition
         State.SkillUses.Record(new DaggerfallSkillUse("medical", DaggerfallSkillUseReason.MedicalRest,
             DaggerfallSkillUseOutcome.Accepted));                                                 // Character
         DeliverFacts();                                                                           // Session
         Presentation.SetOutcome(_condition.AwakeningLine(_definitions.TextPresentation));         // UiProjection
+    }
+
+    /// <summary>
+    /// The rest's list: one rest choice, applied by the rest owner through <paramref name="advanceTime"/>, then what
+    /// it ends in other domains. A caller must not pass time separately before it.
+    /// </summary>
+    internal DaggerfallRestResult ApplyRest(DaggerfallRestRequest request, DaggerfallRestEligibility eligibility,
+        Func<long, DaggerfallRestTimeAdvance> advanceTime, bool rapidHealing = false, bool noRegeneration = false)
+    {
+        DaggerfallRestResult result = _rest.Apply(request, eligibility, State.Actors.Player.Stats, this, advanceTime,
+            rapidHealing, noRegeneration, () => _rest.CharacterTraits(PlayerSpecials, _activeProfileKey.Kind));   // Time
+        if (result.Accepted && result.ElapsedSeconds > 0) CompleteTimeIncrease();                // Session: the increase's end
+        _restPresentation.Publish(result);                                                        // UiProjection
+        Presentation.SetOutcome(result.Message ?? (result.Accepted ? "Rest complete." : "Rest refused."));   // UiProjection
+        return result;
     }
 
     /// <summary>Condition's swimming roll for the player as the session holds them now.</summary>

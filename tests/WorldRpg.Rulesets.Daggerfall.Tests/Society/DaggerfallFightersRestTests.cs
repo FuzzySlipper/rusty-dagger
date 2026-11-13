@@ -23,20 +23,20 @@ public sealed class DaggerfallFightersRestTests
         DaggerfallInteriorBuilding hall = new(2, 3, new("test-block", 0), 11, 41);
         DaggerfallInteriorBuilding otherHall = hall with { BlockX = 4, FactionId = 40 };
 
-        Assert.False(DaggerfallSession.FightersGuildRestAllowed(hall, guild, 17, 0));
+        Assert.False(DaggerfallConcreteGuildPolicy.FightersHallRestAllowed(hall, guild, 17, 0));
         Assert.True(guild.Admit(41, 0).Applied);
-        Assert.True(DaggerfallSession.FightersGuildRestAllowed(hall, guild, 17, 0));
-        Assert.False(DaggerfallSession.FightersGuildRestAllowed(otherHall, guild, 17, 0));
+        Assert.True(DaggerfallConcreteGuildPolicy.FightersHallRestAllowed(hall, guild, 17, 0));
+        Assert.False(DaggerfallConcreteGuildPolicy.FightersHallRestAllowed(otherHall, guild, 17, 0));
 
         DaggerfallSocialSave saved = social.Capture();
         Assert.True(guild.Expel(41, 1).Applied);
-        Assert.False(DaggerfallSession.FightersGuildRestAllowed(hall, guild, 17, 1));
+        Assert.False(DaggerfallConcreteGuildPolicy.FightersHallRestAllowed(hall, guild, 17, 1));
 
         DaggerfallSocialState restored = new(factions);
         restored.Restore(saved);
         DaggerfallGuildMembershipPolicy restoredGuild = new(restored,
             skill => skill switch { "archery" => 22, "axe" => 4, _ => 0 },
             [DaggerfallConcreteGuildCatalog.ForFaction(41).ToMembershipPolicyDefinition()]);
-        Assert.True(DaggerfallSession.FightersGuildRestAllowed(hall, restoredGuild, 17, 1));
+        Assert.True(DaggerfallConcreteGuildPolicy.FightersHallRestAllowed(hall, restoredGuild, 17, 1));
     }
 }

@@ -219,7 +219,7 @@ internal sealed partial class DaggerfallSession
         {
             if (quote.Options.SpeedCautious)
             {
-                (_, bool noRegen) = RestCharacterTraits();
+                (_, bool noRegen) = _rest.CharacterTraits(PlayerSpecials, _activeProfileKey.Kind);
                 DaggerfallRestRecoveryModule.RecoverForCautiousTravel(State.Actors.Player.Stats, noRegen,
                     quote.Options.SleepModeInn ? 1 : _tuning.Rest.InnFatigueMultiplier);
             }

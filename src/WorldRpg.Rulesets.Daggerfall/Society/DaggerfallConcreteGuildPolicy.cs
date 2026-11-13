@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Content;
 namespace WorldRpg.Rulesets.Daggerfall.Guilds;
 
 /// <summary>Why a source-backed guild admission or invitation is not currently eligible.</summary>
@@ -101,6 +102,18 @@ internal sealed record DaggerfallGuildServiceDecision(
 /// </summary>
 internal static class DaggerfallConcreteGuildPolicy
 {
+    /// <summary>Whether the building is a Fighters Guild hall whose rest service the player's standing admits today.</summary>
+    internal static bool FightersHallRestAllowed(DaggerfallInteriorBuilding? building,
+        DaggerfallGuildMembershipPolicy membership, int region, int day)
+    {
+        if (building is not { BuildingType: 11, FactionId: DaggerfallConcreteGuildCatalog.FightersFactionId })
+            return false;
+        DaggerfallGuildMembershipView member = membership.Read(DaggerfallConcreteGuildCatalog.FightersFactionId, day);
+        DaggerfallConcreteGuildDefinition guild = DaggerfallConcreteGuildCatalog.ForFaction(DaggerfallConcreteGuildCatalog.FightersFactionId);
+        return EvaluateService(guild, DaggerfallConcreteGuildService.Rest,
+            new DaggerfallGuildServiceContext(member.IsMember, member.Rank, CurrentRegion: region)).Eligible;
+    }
+
     internal static DaggerfallGuildAdmissionDecision AssessAdmission(
         DaggerfallConcreteGuildDefinition definition,
         DaggerfallGuildAdmissionContext context)

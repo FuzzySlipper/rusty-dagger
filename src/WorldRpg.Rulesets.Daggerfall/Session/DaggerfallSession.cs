@@ -36,7 +36,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
 internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytestWorldInspectionSession, ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession, IGameBundleChoiceSession,
-    IDaggerfallSiteTransitionHost, IDaggerfallQuestWorldAdmission
+    IDaggerfallSiteTransitionHost, IDaggerfallQuestWorldAdmission, IDaggerfallRestSurroundings
 {
     private readonly IRandomService _random;
     private readonly IEngineContext _engine;
@@ -106,6 +106,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     private readonly World.DaggerfallWorldTime _time;
     private readonly World.DaggerfallHolidays _holidays = new();
+    private readonly DaggerfallRest _rest;
     private readonly World.DaggerfallSiteContext _site;
 
     /// <summary>The holiday announcement the calendar currently names for the session's site, or null.</summary>
@@ -213,6 +214,54 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     void IDaggerfallExteriorHost.AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection) =>
         AdmitResidentCivilianAppearances(projection);
+
+    // What rest asks of the world, each read from the domain that knows it when the rest asks.
+    bool IDaggerfallRestSurroundings.MustFeed => VampireNeedsToFeed;
+    bool IDaggerfallRestSurroundings.EncounterPending => _encounters.HasPending(_activeProfileKey.LogicalId);
+    bool IDaggerfallRestSurroundings.EnemyNearby => HasNearbyRestEnemy();
+    bool IDaggerfallRestSurroundings.QuestPromptPending => State.Quests.Messages.Pending is not null;
+    bool IDaggerfallRestSurroundings.PlayerDefeated => State.Actors.Player.IsDefeated;
+    bool IDaggerfallRestSurroundings.HasPosition => State.PlayerControl.Position is not null;
+    DaggerfallWorldProfileKey IDaggerfallRestSurroundings.Profile => _activeProfileKey;
+    DaggerfallSiteRecord? IDaggerfallRestSurroundings.Site =>
+        _site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord site) ? site : null;
+
+    bool IDaggerfallRestSurroundings.InteriorPrivilege
+    {
+        get
+        {
+            DaggerfallInteriorBuilding? building = CurrentInteriorBuilding();
+            if (building is not null && State.Lodging.RemainingSeconds(_activeProfileKey.Site,
+                new(building.BlockX, building.BlockY, building.Building.Index), _time.Calendar.ToAbsoluteSeconds()) > 0)
+                return true;
+            if (building is not null && State.Property.HouseAccess(new(_activeProfileKey.Site, building.Building, building.BlockX, building.BlockY)).Allowed)
+                return true;
+            return DaggerfallConcreteGuildPolicy.FightersHallRestAllowed(building, State.GuildMembership, _activeProfileKey.Site.Region,
+                checked((int)_time.Calendar.DayNumber));
+        }
+    }
+
+    long? IDaggerfallRestSurroundings.TavernRoomSeconds =>
+        CurrentInteriorBuilding() is { BuildingType: DaggerfallLodgingState.TavernBuildingType } tavern
+            ? State.Lodging.RemainingSeconds(_activeProfileKey.Site,
+                new(tavern.BlockX, tavern.BlockY, tavern.Building.Index), _time.Calendar.ToAbsoluteSeconds())
+            : null;
+
+    int IDaggerfallRestSurroundings.ExteriorClimate
+    {
+        get
+        {
+            DaggerfallExteriorCellId cell = _exterior.CurrentExteriorCell();
+            return _definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y).Value;
+        }
+    }
+
+    bool IDaggerfallRestSurroundings.InSiteCell =>
+        _site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord site) && site.Exterior is { } exterior
+        && _exterior.CurrentExteriorCell() == new DaggerfallExteriorCellId(exterior.MapPixelX, exterior.MapPixelY);
+
+    bool IDaggerfallRestSurroundings.EncounterArrives(long minute) =>
+        WorldEncounterRequest(minute, resting: true) is { } encounter && QueueEncounter(encounter).Choice.MobileId is not null;
 
     /// <summary>
     /// A swing the departing projection was still timing ends with it: retire and hand its

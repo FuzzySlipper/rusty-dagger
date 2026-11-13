@@ -101,4 +101,28 @@ internal sealed partial class DaggerfallSession
                 State.Actors.Get(actorId).Position, playerPosition,
                 _activeProfileKey.Kind is not DaggerfallWorldProfileKind.Exterior)).Validate();
     }
+
+    /// <summary>
+    /// Whether a hostile actor is in sight or within twelve metres of the player, which bars rest and travel and makes
+    /// a collapse fatal.
+    /// </summary>
+    private bool HasNearbyRestEnemy()
+    {
+        if (State.PlayerControl.Position is not { } player) return false;
+        // As the donor's pending foe spawner sits on the player, a selected encounter still waiting for its
+        // placement is already an enemy nearby.
+        if (_encounters.HasPending(_activeProfileKey.LogicalId)) return true;
+        foreach (var actor in State.Actors.All)
+        {
+            if (actor.IsDefeated || _enemyBehavior.IsPacified(actor.DurableId)
+                || !_roster.Definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
+                || definition.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass)
+                || EffectiveFoeTeam(actor.DurableId) == "player-ally") continue;
+            bool inSight = _enemyBehavior.LastPerception.TryGetValue(actor.DurableId, out var perception)
+                && perception.InSight;
+            if (inSight || Vector3.DistanceSquared(actor.Position.ToVector(), player.ToVector()) <= 12f * 12f)
+                return true;
+        }
+        return false;
+    }
 }

@@ -315,6 +315,9 @@ internal sealed partial class DaggerfallSession
             character.BindCareerCommitted(skillUses.RebaseForCareerSelection);
             DaggerfallLevelUpState levelUps = new(progression, skillUses, playerStats,
                 definitions, () => character.Career, _random, _rewards);
+            // A rest slice passes through the elapsed interval's list; skills raise once, when the whole rest ends.
+            _rest = new DaggerfallRest(_time, tuning.Rest, skillUses, levelUps,
+                seconds => AdvanceElapsedTime(seconds, deferSkillAdvancement: true, resting: true));
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
                 () => character.Career.ForbiddenEquipment, itemInstances, () => character.RacialOverrides?.Current?.State.BeastForm == true);
             _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves, inventory, () => SoulGems);
