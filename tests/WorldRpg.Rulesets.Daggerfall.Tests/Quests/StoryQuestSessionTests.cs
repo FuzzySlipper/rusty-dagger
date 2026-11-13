@@ -90,7 +90,7 @@ public sealed class StoryQuestSessionTests
         Assert.Contains(session.State.Quests.All, quest => quest.SourceFile == "S0000008.txt");
     }
 
-    [Fact]
+    [CinematicsContentFact]
     public void A_controller_button_skips_a_playing_cinematic_as_a_key_does()
     {
         var media = new DaggerfallCinematicPresentationTests.Harness();
@@ -116,7 +116,7 @@ public sealed class StoryQuestSessionTests
         Assert.NotEqual("ANIM0003.VID", session.Cinematics.ActiveSource);
     }
 
-    [Theory]
+    [CinematicsContentTheory]
     [InlineData("Gothryd", 14, false)]
     [InlineData("Brisienna", 10, true)]
     [InlineData("KingOfWorms", 6, false)]

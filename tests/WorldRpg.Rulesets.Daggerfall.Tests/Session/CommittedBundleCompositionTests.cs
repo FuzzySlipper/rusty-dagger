@@ -104,7 +104,9 @@ public sealed class CommittedBundleCompositionTests
     {
         string root = TestData.RepositoryRoot;
         IReadOnlyCollection<string> carried = [.. TestDataContainers.Entries(TestDataContainers.Data).Keys];
-        string[] opened = [DaggerfallSkyMedia.LogicalRoot, DaggerfallCinematicPresentation.Root, DaggerfallWorldMedia.AudioRoot, DaggerfallWorldBlocks.Root];
+        // The cinematics' root is opened only for a converted cinematic, which an import makes only with --cinematics.
+        string[] opened = [DaggerfallSkyMedia.LogicalRoot, DaggerfallWorldMedia.AudioRoot, DaggerfallWorldBlocks.Root,
+            .. TestCinematics.Carried ? [DaggerfallCinematicPresentation.Root] : Array.Empty<string>()];
         Assert.All(opened, prefix => Assert.Contains(carried, path => path.StartsWith(prefix + "/", StringComparison.Ordinal)));
         ProductContent content = FullContent(root);
         ResolvedGameComposition composition = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();

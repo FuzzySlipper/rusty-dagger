@@ -33,7 +33,7 @@ public sealed class DaggerfallCinematicsContentTests
         Assert.All(definitions.Cinematics.Cinematics.Values, cinematic => Assert.True(cinematic.ByteLength > 0 && cinematic.Digest.Length == 64));
     }
 
-    [Fact]
+    [CinematicsContentFact]
     public void Every_published_video_is_indexed_by_its_source_and_matches_its_artifact()
     {
         string content = Path.Combine(TestData.RepositoryRoot, "content");
@@ -61,7 +61,7 @@ public sealed class DaggerfallCinematicsContentTests
         Assert.Equal(published.Select(value => value.Artifact!.Path).Order(), actual);
     }
 
-    [Fact]
+    [CinematicsContentFact]
     public void A_published_artifact_cannot_silently_change_source_identity_or_format()
     {
         JsonObject root = TestPayload.Sections("cinematics");

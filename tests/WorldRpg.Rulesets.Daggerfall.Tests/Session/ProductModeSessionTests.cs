@@ -86,7 +86,7 @@ public sealed class ProductModeSessionTests
         Assert.NotSame(title, ruleset.RequireSession());
     }
 
-    [Fact]
+    [CinematicsContentFact]
     public void Enabled_production_opening_refuses_to_begin_when_the_data_container_lacks_its_cinematics()
     {
         string root = TestData.RepositoryRoot;
@@ -111,7 +111,7 @@ public sealed class ProductModeSessionTests
         Assert.Contains("could not start its opening sequence", result.Reason, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [CinematicsContentFact]
     public void The_ordinary_product_plays_its_opening_through_Engine_video_facts_then_begins_play_with_its_music_cue()
     {
         string root = TestData.RepositoryRoot;

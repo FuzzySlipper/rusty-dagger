@@ -135,7 +135,7 @@ public sealed class DaggerfallTransformationInfectionTests
         Assert.Equal(DaggerfallInfectionCleanup.Cancelled, Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Infections.LastOutcomes).Outcome);
     }
 
-    [Fact]
+    [CinematicsContentFact]
     public void A_key_press_skips_a_playing_cinematic_as_the_donor_does()
     {
         var media = new DaggerfallCinematicPresentationTests.Harness(infections: true);
@@ -151,7 +151,7 @@ public sealed class DaggerfallTransformationInfectionTests
         Assert.Equal(DaggerfallInfectionStage.Warned, State(s).Stage);
     }
 
-    [Fact]
+    [CinematicsContentFact]
     public void Admitted_cinematic_results_and_skip_drive_stages_and_cure_releases_only_owned_playback()
     {
         var media = new DaggerfallCinematicPresentationTests.Harness(infections: true);
