@@ -874,14 +874,14 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
 
         Assert.True(session.TryTransitionTo(interior.ProfileKey));
         RequestTeleport();
-        session.ChooseTeleport(session.TeleportView!.Revision, "anchor");
+        session.TeleportChoice.Choose(session.TeleportChoice.View!.Revision, "anchor");
         Assert.True(session.TryTransitionTo(exterior.ProfileKey));
         session.State.PlayerControl.MoveTo(new Vector3(1000, 1, 5));
         session.Exterior.RebaseExteriorIfNeeded();
         RequestTeleport();
         engine.FailNextCameraUpdate();
         DaggerfallOriginCommitException failure = Assert.Throws<DaggerfallOriginCommitException>(
-            () => session.ChooseTeleport(session.TeleportView!.Revision, "recall"));
+            () => session.TeleportChoice.Choose(session.TeleportChoice.View!.Revision, "recall"));
         Assert.Contains("inconsistent world coordinates", failure.Message);
         Assert.Equal(exterior.ProfileKey, session.Sites.ActiveProfile);
         Assert.Equal(2, engine.OriginCommits.Count);

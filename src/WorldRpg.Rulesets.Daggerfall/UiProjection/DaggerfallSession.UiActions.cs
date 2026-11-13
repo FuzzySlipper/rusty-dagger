@@ -111,13 +111,13 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.ContentImportCancel:
                 break;
             case DaggerfallUiActionKind.LegalChoice: ChooseLegal(action.Revision!, action.Key!); break;
-            case DaggerfallUiActionKind.CreateItemSelect: ChooseCreateItem(action.Revision!, action.Key!); break;
-            case DaggerfallUiActionKind.CreateItemCancel: CancelCreateItem(action.Revision!); break;
-            case DaggerfallUiActionKind.IdentifySelect: ChooseIdentify(action.Revision!,action.Key); break;
-            case DaggerfallUiActionKind.IdentifyCancel: ChooseIdentify(action.Revision!,null); break;
-            case DaggerfallUiActionKind.TeleportSelect: ChooseTeleport(action.Revision!, action.Key!); break;
-            case DaggerfallUiActionKind.DispelSelect: ChooseDispel(action.Revision!, action.Key); break;
-            case DaggerfallUiActionKind.DispelCancel: ChooseDispel(action.Revision!, null); break;
+            case DaggerfallUiActionKind.CreateItemSelect: CreateItemChoice.Choose(action.Revision!, action.Key!); break;
+            case DaggerfallUiActionKind.CreateItemCancel: CreateItemChoice.Cancel(action.Revision!); break;
+            case DaggerfallUiActionKind.IdentifySelect: IdentifyChoice.Choose(action.Revision!,action.Key); break;
+            case DaggerfallUiActionKind.IdentifyCancel: IdentifyChoice.Choose(action.Revision!,null); break;
+            case DaggerfallUiActionKind.TeleportSelect: TeleportChoice.Choose(action.Revision!, action.Key!); break;
+            case DaggerfallUiActionKind.DispelSelect: DispelChoice.Choose(action.Revision!, action.Key); break;
+            case DaggerfallUiActionKind.DispelCancel: DispelChoice.Choose(action.Revision!, null); break;
             case DaggerfallUiActionKind.MapOpen: _mapOpen = action.Open; break;
             case DaggerfallUiActionKind.MapBuilding: SelectMapBuilding(action); break;
             case DaggerfallUiActionKind.MapNoteAdd:

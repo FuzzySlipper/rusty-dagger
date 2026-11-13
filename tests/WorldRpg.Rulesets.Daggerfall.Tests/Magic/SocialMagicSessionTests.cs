@@ -54,17 +54,17 @@ public sealed class SocialMagicSessionTests
     {
         using Fixture f=new();var s=f.Session;Fund(s);var first=Stock(s);var second=Stock(s);
         Assert.Equal(DaggerfallCastOutcome.Applied,Cast(s,Spell(40,-1,chance),1));
-        var view=s.IdentifyView!;Assert.Equal(3,view.Options.Count);Assert.Equal(new DaggerfallIdentifyOption("all","All unidentified items"),view.Options[^1]);Assert.True(view.Cost>=5);
-        var save=s.CaptureSave();using var restored=f.Restore(save);Assert.Equal(view.Revision,restored.IdentifyView!.Revision);Assert.Equal(view.Cost,restored.IdentifyView.Cost);Assert.Equal(view.Options,restored.IdentifyView.Options);
+        var view=s.IdentifyChoice.View!;Assert.Equal(3,view.Options.Count);Assert.Equal(new DaggerfallIdentifyOption("all","All unidentified items"),view.Options[^1]);Assert.True(view.Cost>=5);
+        var save=s.CaptureSave();using var restored=f.Restore(save);Assert.Equal(view.Revision,restored.IdentifyChoice.View!.Revision);Assert.Equal(view.Cost,restored.IdentifyChoice.View.Cost);Assert.Equal(view.Options,restored.IdentifyChoice.View.Options);
         double before=Magicka(restored).Current;
-        restored.ChooseIdentify("stale","all");Assert.Equal(before,Magicka(restored).Current);
+        restored.IdentifyChoice.Choose("stale","all");Assert.Equal(before,Magicka(restored).Current);
         f.Submit(restored,new{action="identify-select",revision=view.Revision,key="all"});Assert.Equal(before-view.Cost,Magicka(restored).Current);
         Assert.Equal(succeeds,restored.State.ItemInstances.RequireUnique(Id(s,first)).Identified);
         Assert.Equal(succeeds,restored.State.ItemInstances.RequireUnique(Id(s,second)).Identified);
-        Assert.Equal(succeeds?0:3,restored.IdentifyView!.Options.Count);
+        Assert.Equal(succeeds?0:3,restored.IdentifyChoice.View!.Options.Count);
         Assert.Equal(1,DaggerfallSavePayload.Read(restored.CaptureSave()).PendingIdentify!.Attempts);
         using var again=f.Restore(restored.CaptureSave());Assert.Equal(succeeds,again.State.ItemInstances.RequireUnique(Id(s,first)).Identified);
-        again.ChooseIdentify(view.Revision,null);Assert.Null(again.IdentifyView);
+        again.IdentifyChoice.Choose(view.Revision,null);Assert.Null(again.IdentifyChoice.View);
     }
 
     [Fact]
@@ -73,11 +73,11 @@ public sealed class SocialMagicSessionTests
         var spell=Spell(40,-1);
         using Fixture f=new(spell);var s=f.Session;Fund(s);var item=Stock(s);
         s.State.Character.LearnSpell(spell.Key);s.ReadyPlayerSpell(spell.Key);s.ReleaseReadySpell(1,Vector3.UnitZ);f.Submit();
-        Assert.NotNull(s.IdentifyView);Assert.True(s.Interactions.IsOpen(DaggerfallInteractionScreen.Identify));Assert.True(s.Interactions.HoldsWorldOpen);
+        Assert.NotNull(s.IdentifyChoice.View);Assert.True(s.Interactions.IsOpen(DaggerfallInteractionScreen.Identify));Assert.True(s.Interactions.HoldsWorldOpen);
         Assert.Contains("identify",System.Text.Json.JsonSerializer.Serialize(f.Engine.Published()));
-        var view=s.IdentifyView!;Magicka(s).SetCurrent(0);f.Submit(new{action="identify-select",revision=view.Revision,key="all"});
+        var view=s.IdentifyChoice.View!;Magicka(s).SetCurrent(0);f.Submit(new{action="identify-select",revision=view.Revision,key="all"});
         Assert.False(s.State.ItemInstances.RequireUnique(Id(s,item)).Identified);Assert.Equal(0,Magicka(s).Current);
-        f.Submit(new{action="identify-cancel",revision=view.Revision});Assert.Null(s.IdentifyView);
+        f.Submit(new{action="identify-cancel",revision=view.Revision});Assert.Null(s.IdentifyChoice.View);
         var malformed=DaggerfallSavePayload.Read(s.CaptureSave()) with {PendingIdentify=new("request",1,-1)};
         Assert.Throws<ArgumentOutOfRangeException>(()=>f.Restore(DaggerfallSavePayload.Encode(malformed)));
     }
@@ -93,9 +93,9 @@ public sealed class SocialMagicSessionTests
         var request = DaggerfallSavePayload.Read(s.CaptureSave()).PendingIdentify!;
         double before = Magicka(s).Current;
         f.Submit(new { action = "inventory-drop", revision = f.Engine.PublishedNested("inventory", "revision"), item = $"unique:{source.EntityId}", amount = 1 });
-        Assert.Null(s.IdentifyView);
+        Assert.Null(s.IdentifyChoice.View);
         Assert.NotEqual(DaggerfallItemOwner.Player, s.State.ItemInstances.RequireUnique(sourceId).Owner);
-        s.ChooseIdentify(request.Instance, "all");
+        s.IdentifyChoice.Choose(request.Instance, "all");
         Assert.Equal(before, Magicka(s).Current);
         Assert.False(s.State.ItemInstances.RequireUnique(targetId).Identified);
         var movedSave = DaggerfallSavePayload.Read(s.CaptureSave()) with { PendingIdentify = request };
@@ -116,7 +116,7 @@ public sealed class SocialMagicSessionTests
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(brokenSave)));
         var metadata = s.State.ItemInstances.RequireUnique(targetId);
         s.State.ItemInstances.ReplaceUnique(targetId, metadata with { CurrentCondition = 0 });
-        Assert.Null(s.IdentifyView);
+        Assert.Null(s.IdentifyChoice.View);
         Assert.Null(DaggerfallSavePayload.Read(s.CaptureSave()).PendingIdentify);
     }
 

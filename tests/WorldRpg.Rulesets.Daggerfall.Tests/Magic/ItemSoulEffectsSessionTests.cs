@@ -21,16 +21,16 @@ public sealed class ItemSoulEffectsSessionTests
             s.State.Inventory.Read().Stacks.Single(value => value.Id == coins), TestPayload.Definitions.RequireItem(new("gold-piece")));
         Create(s, "full");
         var before = DaggerfallSavePayload.Read(s.CaptureSave());
-        s.ChooseCreateItem("full", "weapon-113");
-        Assert.NotNull(s.CreateItemView);
+        s.CreateItemChoice.Choose("full", "weapon-113");
+        Assert.NotNull(s.CreateItemChoice.View);
         Assert.Contains("cannot carry", s.Presentation.LastOutcome);
         Assert.DoesNotContain(s.State.ItemInstances.UniqueItems, value => value.Value.Conjuration is not null);
         var after = DaggerfallSavePayload.Read(s.CaptureSave());
         Assert.Equal(JsonSerializer.Serialize(before.Identities, DaggerfallSaveJsonContext.Default.DurableIdentityState),
             JsonSerializer.Serialize(after.Identities, DaggerfallSaveJsonContext.Default.DurableIdentityState));
         s.State.Inventory.Consume(new(coins, amount)); s.State.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, coins);
-        s.ChooseCreateItem("full", "weapon-113");
-        Assert.Null(s.CreateItemView);
+        s.CreateItemChoice.Choose("full", "weapon-113");
+        Assert.Null(s.CreateItemChoice.View);
         Assert.Single(s.State.ItemInstances.UniqueItems, value => value.Value.Conjuration is not null);
     }
 
@@ -56,7 +56,7 @@ public sealed class ItemSoulEffectsSessionTests
     public void Conjured_item_transferred_to_inactive_site_expires_on_canonical_materialization_before_save_or_presentation()
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
-        Create(s, "transfer"); s.ChooseCreateItem("transfer", "weapon-113");
+        Create(s, "transfer"); s.CreateItemChoice.Choose("transfer", "weapon-113");
         var item = Assert.Single(s.State.ItemInstances.UniqueItems, item => item.Value.Conjuration is not null);
         var live = s.State.Inventory.Read().UniqueItems.Single(value => s.State.Inventory.GetDurableItemId(value.Entity).Value == item.Key);
         s.State.Containers.Transfer(s.State.Actors.Player.Actor.Entity, s.State.Actors.Get(f.Enemy).Actor.Entity,
@@ -97,11 +97,11 @@ public sealed class ItemSoulEffectsSessionTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
         Create(s, "first"); Create(s, "second");
-        s.CancelCreateItem("stale");
-        Assert.Equal("first", s.CreateItemView!.Revision);
+        s.CreateItemChoice.Cancel("stale");
+        Assert.Equal("first", s.CreateItemChoice.View!.Revision);
         s.Update(new ProductUpdate(OuterUpdate(3), [Ui(JsonSerializer.Serialize(new { action = "create-item-cancel", revision = "first" }))]));
         Assert.Equal("Create Item cancelled.", s.Presentation.LastOutcome);
-        Assert.Equal("second", s.CreateItemView!.Revision);
+        Assert.Equal("second", s.CreateItemChoice.View!.Revision);
         Assert.DoesNotContain(s.State.ItemInstances.UniqueItems, value => value.Value.Conjuration is not null);
     }
 
@@ -115,13 +115,13 @@ public sealed class ItemSoulEffectsSessionTests
             id => id == 1 ? s.State.Actors.Player.Actor : null, s.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1, playerKnowsSpell: _ => true);
         Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
         var bundle = casting.Release(1, true).Bundle!; double paid = magicka.Current;
-        casting.Deliver(bundle, [1]); Assert.NotNull(s.CreateItemView);
+        casting.Deliver(bundle, [1]); Assert.NotNull(s.CreateItemChoice.View);
         Assert.Equal(10000 - bundle.Cost, paid);
         using var restored = f.Restore();
-        restored.ChooseCreateItem(restored.CreateItemView!.Revision, "steel-113"); // invalid choice does not consume it
-        Assert.NotNull(restored.CreateItemView);
-        restored.ChooseCreateItem(restored.CreateItemView!.Revision, "weapon-113"); Assert.NotNull(restored.CreateItemView);
-        restored.ChooseCreateItem(restored.CreateItemView!.Revision, "robes"); Assert.Null(restored.CreateItemView);
+        restored.CreateItemChoice.Choose(restored.CreateItemChoice.View!.Revision, "steel-113"); // invalid choice does not consume it
+        Assert.NotNull(restored.CreateItemChoice.View);
+        restored.CreateItemChoice.Choose(restored.CreateItemChoice.View!.Revision, "weapon-113"); Assert.NotNull(restored.CreateItemChoice.View);
+        restored.CreateItemChoice.Choose(restored.CreateItemChoice.View!.Revision, "robes"); Assert.Null(restored.CreateItemChoice.View);
         Assert.Equal(paid, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current);
     }
 
@@ -154,10 +154,10 @@ public sealed class ItemSoulEffectsSessionTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
         Create(s, $"create-{index}");
-        var view = s.CreateItemView!; Assert.Equal(29, view.Options.Count);
-        s.ChooseCreateItem("stale", view.Options[index].Id); Assert.NotNull(s.CreateItemView);
+        var view = s.CreateItemChoice.View!; Assert.Equal(29, view.Options.Count);
+        s.CreateItemChoice.Choose("stale", view.Options[index].Id); Assert.NotNull(s.CreateItemChoice.View);
         f.Submit(new { action = "create-item-select", revision = view.Revision, key = view.Options[index].Id });
-        Assert.Null(s.CreateItemView);
+        Assert.Null(s.CreateItemChoice.View);
         if (index == 26)
         {
             var arrow = Assert.Single(s.State.Inventory.Read().Stacks, stack => stack.Id.Value == $"daggerfall.conjured.create-{index}");
@@ -176,12 +176,12 @@ public sealed class ItemSoulEffectsSessionTests
         using var f = new SanguineRoseSessionTests.Fixture(); var s = f.Session;
         Create(s, "pending");
         using var restored = f.Restore();
-        Assert.Equal("pending", restored.CreateItemView!.Revision);
-        restored.ChooseCreateItem("pending", "steel-102");
+        Assert.Equal("pending", restored.CreateItemChoice.View!.Revision);
+        restored.CreateItemChoice.Choose("pending", "steel-102");
         var item = Assert.Single(restored.State.ItemInstances.UniqueItems.Where(item => item.Value.Conjuration is not null));
         var live = restored.State.Inventory.Read().UniqueItems.Single(value => restored.State.Inventory.GetDurableItemId(value.Entity).Value == item.Key);
         restored.EquipmentMoves.MoveToSlot(new(live.Entity.Value, new(live.Definition.Value)), new("chest"));
-        Create(restored, "arrows"); restored.ChooseCreateItem("arrows", "weapon-131");
+        Create(restored, "arrows"); restored.CreateItemChoice.Choose("arrows", "weapon-131");
         restored.AdvanceElapsedTime(10 * 60);
         Assert.DoesNotContain(restored.State.ItemInstances.UniqueItems, entry => entry.Value.Conjuration is not null);
         Assert.DoesNotContain(restored.State.Inventory.Read().Stacks, entry => entry.Id.Value == "daggerfall.conjured.arrows");
@@ -204,8 +204,8 @@ public sealed class ItemSoulEffectsSessionTests
         var accepted = rules.ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 100, health).Result;
         Assert.True(accepted.Defeated);
         var gem = Assert.Single(s.State.ItemInstances.UniqueItems.Where(value => value.Value.CapturedSoulMobileId == 0));
-        Assert.True(s.SoulGems.Consume(0)); Assert.False(s.State.ItemInstances.ContainsUnique(gem.Key));
-        Assert.False(s.SoulGems.Consume(0));
+        Assert.True(s.ItemSouls.Gems.Consume(0)); Assert.False(s.State.ItemInstances.ContainsUnique(gem.Key));
+        Assert.False(s.ItemSouls.Gems.Consume(0));
     }
 
     [Fact]
@@ -227,12 +227,12 @@ public sealed class ItemSoulEffectsSessionTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(magicItemKey: "magic-item.0009"); var s = f.Session;
         AddGem(s, f, "ordinary");
-        Assert.True(s.SoulGems.Capture(0)); Assert.Equal(0, s.State.ItemInstances.RequireUnique(f.Source).CapturedSoulMobileId);
-        Assert.True(s.SoulGems.Capture(0)); Assert.False(s.SoulGems.Capture(1));
+        Assert.True(s.ItemSouls.Gems.Capture(0)); Assert.Equal(0, s.State.ItemInstances.RequireUnique(f.Source).CapturedSoulMobileId);
+        Assert.True(s.ItemSouls.Gems.Capture(0)); Assert.False(s.ItemSouls.Gems.Capture(1));
         using var restored = f.Restore();
-        Assert.True(restored.SoulGems.Consume(0)); Assert.Equal(0, restored.State.ItemInstances.RequireUnique(f.Source).CapturedSoulMobileId);
-        Assert.True(restored.SoulGems.Consume(0)); Assert.Null(restored.State.ItemInstances.RequireUnique(f.Source).CapturedSoulMobileId);
-        Assert.True(restored.SoulGems.Capture(1, starOnly: true));
+        Assert.True(restored.ItemSouls.Gems.Consume(0)); Assert.Equal(0, restored.State.ItemInstances.RequireUnique(f.Source).CapturedSoulMobileId);
+        Assert.True(restored.ItemSouls.Gems.Consume(0)); Assert.Null(restored.State.ItemInstances.RequireUnique(f.Source).CapturedSoulMobileId);
+        Assert.True(restored.ItemSouls.Gems.Capture(1, starOnly: true));
     }
 
     private static DaggerfallSpellEffectDefinition Setting(int type, int chance = 0) => new("effect", type, -1, 10, 0, 1, chance, 0, 1, 0, 0, 0, 0, 1);

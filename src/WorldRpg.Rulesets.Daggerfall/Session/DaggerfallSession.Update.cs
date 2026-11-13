@@ -79,8 +79,8 @@ internal sealed partial class DaggerfallSession
             // An arrival whose ground the Engine refused holds the world, like a held mode, until that ground is live
             // and the player stands on it: nothing would hold anyone up meanwhile.
             bool groundless = _mode == ProductMode.Playing && !_exterior.RecoverArrivalGround(); // Exterior
-            bool playing = _mode == ProductMode.Playing && !groundless && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !LegalModalOpen && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
-            bool modal = _mode == ProductMode.Modal || Summoning.PendingOffer || State.Quests.PendingOffer is not null || LegalModalOpen || _pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null;
+            bool playing = _mode == ProductMode.Playing && !groundless && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !LegalModalOpen && Cinematics?.ActiveSource is null && DispelChoice.Pending is null && !IdentifyChoice.Open && CreateItemChoice.Pending is null;
+            bool modal = _mode == ProductMode.Modal || Summoning.PendingOffer || State.Quests.PendingOffer is not null || LegalModalOpen || DispelChoice.Pending is not null || IdentifyChoice.Open || CreateItemChoice.Pending is not null;
             DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
                 : playing ? DaggerfallUiPhases.Playing
                 : modal ? DaggerfallUiPhases.Modal
@@ -132,7 +132,7 @@ internal sealed partial class DaggerfallSession
                     State.ItemInstances.ReconcileResidentOwners();                                // Items
                     State.HeldEnchantments.Refresh();                                             // Magic
                     _itemCastTriggers.Refresh();                                                  // Magic
-                    ReleasePendingBoundSouls();                                                   // Magic
+                    ItemSouls.ReleasePendingBoundSouls();                                         // Magic
                     // A standing panel request ages on the same admitted world time as everything else.
                     _interactions.AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);       // Interiors
                     // The tutorial's next page waits on play, not on a menu or a held moment.
@@ -197,7 +197,7 @@ internal sealed partial class DaggerfallSession
             && double.IsFinite(facts.FixedDeltaSeconds) && facts.FixedDeltaSeconds > 0)
             _playSeconds += facts.FixedDeltaSeconds * facts.AdmittedStepCount;                    // Session
         bool ambientPlaying = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen && Cinematics?.ActiveSource is null
-            && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null
+            && DispelChoice.Pending is null && !IdentifyChoice.Open && CreateItemChoice.Pending is null
             && facts.LifecycleState == ProductLifecycleState.Running
             && !PlayerTimeHeld
             && double.IsFinite(facts.FixedDeltaSeconds) && facts.FixedDeltaSeconds > 0;
@@ -617,8 +617,8 @@ internal sealed partial class DaggerfallSession
         bool presentation = _mode == ProductMode.Title || _openingCinematics.IsActive || Cinematics?.ActiveSource is not null;
         bool playing = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen
             && !State.Actors.Player.IsDefeated && !LegalModalOpen && !Summoning.PendingOffer
-            && State.Quests.PendingOffer is null && _pendingDispel is null
-            && _pendingIdentify is null && _pendingCreateItem is null;
+            && State.Quests.PendingOffer is null && DispelChoice.Pending is null
+            && !IdentifyChoice.Open && CreateItemChoice.Pending is null;
         CharacterMotion motion = State.PlayerControl.Motion;
         // Slowfall uses Engine vertical drive too, but it is still passive descent. Only
         // the ruleset's actual hover/support modes let an idle airborne player hold time.

@@ -111,7 +111,7 @@ public sealed class AzurasStarSessionTests
     [Fact]
     public void Full_star_does_not_bypass_common_soul_traps_no_empty_gem_death_refusal()
     {
-        using var f = Star(); var s = f.Session; Equip(f); Assert.True(s.SoulGems.Capture(0)); Trap(s, f.Enemy);
+        using var f = Star(); var s = f.Session; Equip(f); Assert.True(s.ItemSouls.Gems.Capture(0)); Trap(s, f.Enemy);
         var health = s.State.Actors.Get(f.Enemy).Stats.GetTrack(TrackId.Parse("health"));
         health.Maximum.BaseValue = 30;
         health.SetCurrent(30);
@@ -141,7 +141,7 @@ public sealed class AzurasStarSessionTests
     {
         using var f = Star(); var s = f.Session;
         Kill(f, f.Enemy); Assert.Null(s.State.ItemInstances.RequireUnique(f.Source).CapturedSoulMobileId);
-        Assert.True(s.SoulGems.Capture(0));
+        Assert.True(s.ItemSouls.Gems.Capture(0));
         using var restored = f.Restore(out var restoredEngine);
         Assert.False(restored.State.HeldEnchantments.AzurasStarEquipped);
         Assert.Equal(0, restored.State.ItemInstances.RequireUnique(f.Source).CapturedSoulMobileId);
@@ -150,7 +150,7 @@ public sealed class AzurasStarSessionTests
     [Fact]
     public void Filled_item_transfer_save_and_return_preserve_identity_and_release_through_inventory_use()
     {
-        using var f = Star(); var s = f.Session; Equip(f); Assert.True(s.SoulGems.Capture(0));
+        using var f = Star(); var s = f.Session; Equip(f); Assert.True(s.ItemSouls.Gems.Capture(0));
         s.State.Equipment.Unequip(f.Item);
         Transfer(s, f.Source, 1, f.Enemy);
         Assert.False(s.State.HeldEnchantments.AzurasStarEquipped);
@@ -167,7 +167,7 @@ public sealed class AzurasStarSessionTests
     [Fact]
     public void Actual_item_loss_removes_held_eligibility_and_cannot_be_used_or_restored_as_a_star()
     {
-        using var f = Star(); var s = f.Session; Equip(f); Assert.True(s.SoulGems.Capture(0));
+        using var f = Star(); var s = f.Session; Equip(f); Assert.True(s.ItemSouls.Gems.Capture(0));
         s.State.Equipment.Unequip(f.Item); s.State.Inventory.Destroy(f.Item);
         s.State.Actors.Entities.Destroy(new(DurableIdentityKind.Item, f.Source));
         s.State.ItemInstances.RemoveUnique(f.Source); s.RemoveUniqueItemIdentity(f.Source);

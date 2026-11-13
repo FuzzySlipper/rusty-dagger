@@ -352,7 +352,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         // A quest's question (the tutorial's Yes/No, a prompt) holds as it holds a rest.
         if (State.Quests.Messages.Pending is not null) return "Answer the quest's question first.";
         if (LegalModalOpen) return "Answer the court first.";
-        if (_pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null) return "Answer the pending spell choice first.";
+        if (DispelChoice.Pending is not null || IdentifyChoice.Open || CreateItemChoice.Pending is not null) return "Answer the pending spell choice first.";
         return _openingCinematics.IsActive || Cinematics?.ActiveSource is not null ? "A cinematic is playing." : null;
     }
 
@@ -388,7 +388,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     {
         CloseTravelMap();
         Vector3 centre = feet + Vector3.UnitY * ((_spatial.CurrentController.Shape.StandingHeight * .5F) + FloorClearance);
-        Vector3 position = ProfilePosition(new WorldPoint(centre.X, centre.Y, centre.Z));
+        Vector3 position = TeleportChoice.ProfilePosition(new WorldPoint(centre.X, centre.Y, centre.Z));
         if (!_sites.TryRelocatePlayer(_activeProfileKey, new(anchor, new(position.X, position.Y, position.Z), yaw, pitch)))
             return Refused("The relocation was refused.");
         return Where();

@@ -59,26 +59,26 @@ public sealed class DaggerfallMysticismEffectsTests
         using Fixture f = new(twoSites: true); var s = f.Session;
         var position = new WorldRpg.Kit.Controls.WorldPoint(17, 3, -11);
         s.State.PlayerControl.MoveTo(position.ToVector()); s.State.PlayerControl.YawRadians = .7f; s.State.PlayerControl.PitchRadians = -.2f;
-        Cast(s, Setting(43, -1, 0)); var view = s.TeleportView!;
+        Cast(s, Setting(43, -1, 0)); var view = s.TeleportChoice.View!;
         Assert.False(view.AnchorSet); Assert.Equal(ProductMode.Modal, s.PendingModeRequest);
         // Recall is offered but closed until an anchor is set.
         Assert.Equal([new("anchor", "Set anchor", true), new("recall", "Recall to anchor", false)], view.Options);
         var before = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current;
-        using var pending = f.Restore(s.CaptureSave()); Assert.Equal(view.Revision, pending.TeleportView!.Revision);
-        pending.ChooseTeleport("stale", "anchor"); Assert.NotNull(pending.TeleportView);
+        using var pending = f.Restore(s.CaptureSave()); Assert.Equal(view.Revision, pending.TeleportChoice.View!.Revision);
+        pending.TeleportChoice.Choose("stale", "anchor"); Assert.NotNull(pending.TeleportChoice.View);
         pending.Update(new ProductUpdate(OuterUpdate(7), [Ui(JsonSerializer.Serialize(new { action = "teleport-select", revision = view.Revision, key = "anchor" }))]));
-        Assert.Null(pending.TeleportView); Assert.NotNull(DaggerfallSavePayload.Read(pending.CaptureSave()).TeleportAnchor);
+        Assert.Null(pending.TeleportChoice.View); Assert.NotNull(DaggerfallSavePayload.Read(pending.CaptureSave()).TeleportAnchor);
         Assert.Equal(before, pending.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current);
         Assert.True(pending.TryTransitionTo(f.Destination!.ProfileKey));
         using var away = f.Restore(pending.CaptureSave());
         Cast(away, Setting(43, -1, 0)); var calendar = DaggerfallSavePayload.Read(away.CaptureSave()).Calendar; var paid = away.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current;
-        away.ChooseTeleport(away.TeleportView!.Revision, "recall");
+        away.TeleportChoice.Choose(away.TeleportChoice.View!.Revision, "recall");
         Assert.Equal(f.Composition.StartSite.ProfileKey, away.Sites.ActiveProfile);
         Assert.Equal(position, away.State.PlayerControl.Position); Assert.Equal(.7f, away.State.PlayerControl.YawRadians); Assert.Equal(-.2f, away.State.PlayerControl.PitchRadians);
         Assert.Equal(calendar, DaggerfallSavePayload.Read(away.CaptureSave()).Calendar); Assert.Equal(paid, away.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current);
         Assert.Null(DaggerfallSavePayload.Read(away.CaptureSave()).TeleportAnchor); Assert.Null(away.Sites.ReturnProfile);
         using var arrived = f.Restore(away.CaptureSave()); Assert.Equal(position, arrived.State.PlayerControl.Position);
-        Cast(arrived, Setting(43, -1, 0)); arrived.ChooseTeleport(arrived.TeleportView!.Revision, "recall");
+        Cast(arrived, Setting(43, -1, 0)); arrived.TeleportChoice.Choose(arrived.TeleportChoice.View!.Revision, "recall");
         Assert.Contains("must be set", arrived.Presentation.LastOutcome);
     }
 
@@ -88,11 +88,11 @@ public sealed class DaggerfallMysticismEffectsTests
         using Fixture f = new(twoSites: true); var s = f.Session;
         var original = s.State.PlayerControl.Position;
         Assert.True(s.TryTransitionTo(f.Destination!.ProfileKey));
-        Cast(s, Setting(43, -1, 0)); s.ChooseTeleport(s.TeleportView!.Revision, "anchor");
+        Cast(s, Setting(43, -1, 0)); s.TeleportChoice.Choose(s.TeleportChoice.View!.Revision, "anchor");
         var anchored = s.State.PlayerControl.Position;
         Assert.True(s.TryTransitionTo(f.Composition.StartSite.ProfileKey));
         s.State.PlayerControl.MoveTo(new System.Numerics.Vector3(100, 1, 100));
-        Cast(s, Setting(43, -1, 0)); s.ChooseTeleport(s.TeleportView!.Revision, "recall");
+        Cast(s, Setting(43, -1, 0)); s.TeleportChoice.Choose(s.TeleportChoice.View!.Revision, "recall");
         Assert.Equal(anchored, s.State.PlayerControl.Position);
         using var restored = f.Restore(s.CaptureSave());
         Assert.True(restored.TryTransitionTo(f.Composition.StartSite.ProfileKey));
@@ -104,9 +104,9 @@ public sealed class DaggerfallMysticismEffectsTests
     {
         using Fixture f = new(); var s = f.Session;
         Cast(s, Setting(43, -1, 0)); double paid = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current;
-        s.ChooseTeleport(s.TeleportView!.Revision, "cancel"); Assert.Null(s.TeleportView);
+        s.TeleportChoice.Choose(s.TeleportChoice.View!.Revision, "cancel"); Assert.Null(s.TeleportChoice.View);
         Assert.Equal(paid, s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current);
-        Cast(s, Setting(43, -1, 0)); s.ChooseTeleport(s.TeleportView!.Revision, "anchor");
+        Cast(s, Setting(43, -1, 0)); s.TeleportChoice.Choose(s.TeleportChoice.View!.Revision, "anchor");
         var saved = DaggerfallSavePayload.Read(s.CaptureSave());
         var malformed = saved with { TeleportAnchor = saved.TeleportAnchor! with {
             Profile = saved.TeleportAnchor.Profile with { LogicalId = "not-admitted" } } };
@@ -117,17 +117,17 @@ public sealed class DaggerfallMysticismEffectsTests
     public void Rejected_recall_keeps_the_departure_world_and_anchor_for_a_later_paid_attempt()
     {
         using Fixture f = new(twoSites: true); var s = f.Session;
-        Cast(s, Setting(43, -1, 0)); s.ChooseTeleport(s.TeleportView!.Revision, "anchor");
+        Cast(s, Setting(43, -1, 0)); s.TeleportChoice.Choose(s.TeleportChoice.View!.Revision, "anchor");
         Assert.True(s.TryTransitionTo(f.Destination!.ProfileKey)); var departed = s.State.PlayerControl.Position;
         var relation = s.Sites.ReturnProfile;
         Cast(s, Setting(43, -1, 0)); f.Spatial.RejectContentReplacement = true;
-        s.ChooseTeleport(s.TeleportView!.Revision, "recall");
+        s.TeleportChoice.Choose(s.TeleportChoice.View!.Revision, "recall");
         Assert.Contains("failed", s.Presentation.LastOutcome);
         Assert.Equal(f.Destination.ProfileKey, s.Sites.ActiveProfile); Assert.Equal(departed, s.State.PlayerControl.Position);
         Assert.Equal(relation, s.Sites.ReturnProfile);
         Assert.NotNull(DaggerfallSavePayload.Read(s.CaptureSave()).TeleportAnchor);
         f.Spatial.RejectContentReplacement = false;
-        Cast(s, Setting(43, -1, 0)); s.ChooseTeleport(s.TeleportView!.Revision, "recall");
+        Cast(s, Setting(43, -1, 0)); s.TeleportChoice.Choose(s.TeleportChoice.View!.Revision, "recall");
         Assert.Equal(f.Composition.StartSite.ProfileKey, s.Sites.ActiveProfile);
         Assert.Null(DaggerfallSavePayload.Read(s.CaptureSave()).TeleportAnchor);
     }
@@ -169,11 +169,11 @@ public sealed class DaggerfallMysticismEffectsTests
     {
         using Fixture f = new(); var s = f.Session;
         Cast(s, Setting(13, 1, 0)); Cast(s, Setting(23, 1, 0)); Cast(s, Setting(6, 0, 0));
-        var view = s.DispelView!; Assert.Equal(2, view.Options.Count); Assert.Equal(ProductMode.Modal, s.PendingModeRequest);
+        var view = s.DispelChoice.View!; Assert.Equal(2, view.Options.Count); Assert.Equal(ProductMode.Modal, s.PendingModeRequest);
         double paid = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current;
-        using var restored = f.Restore(s.CaptureSave()); Assert.Equal(view.Revision, restored.DispelView!.Revision);
-        restored.ChooseDispel(view.Revision, view.Options[0].Id); Assert.Single(restored.State.Effects.Active); Assert.Null(restored.DispelView);
-        Cast(s, Setting(6, 0, 0)); s.ChooseDispel(s.DispelView!.Revision, null); Assert.Null(s.DispelView);
+        using var restored = f.Restore(s.CaptureSave()); Assert.Equal(view.Revision, restored.DispelChoice.View!.Revision);
+        restored.DispelChoice.Choose(view.Revision, view.Options[0].Id); Assert.Single(restored.State.Effects.Active); Assert.Null(restored.DispelChoice.View);
+        Cast(s, Setting(6, 0, 0)); s.DispelChoice.Choose(s.DispelChoice.View!.Revision, null); Assert.Null(s.DispelChoice.View);
         Assert.True(s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current < paid);
     }
     [Fact]
@@ -181,10 +181,10 @@ public sealed class DaggerfallMysticismEffectsTests
     {
         using Fixture f = new(); var s = f.Session;
         Start(s, "foreign", 2000, 1, "shared"); Start(s, "other-target", 1, 2000, "shared");
-        Cast(s, Setting(6, 0, 0)); var view = s.DispelView!;
-        s.ChooseDispel("stale", view.Options[0].Id); Assert.NotNull(s.DispelView);
-        s.ChooseDispel(view.Revision, view.Options[0].Id); Assert.Equal(2, s.State.Effects.Active.Count); Assert.Null(s.DispelView);
-        Cast(s, Setting(6, 0, 100)); s.ChooseDispel(s.DispelView!.Revision, view.Options[0].Id);
+        Cast(s, Setting(6, 0, 0)); var view = s.DispelChoice.View!;
+        s.DispelChoice.Choose("stale", view.Options[0].Id); Assert.NotNull(s.DispelChoice.View);
+        s.DispelChoice.Choose(view.Revision, view.Options[0].Id); Assert.Equal(2, s.State.Effects.Active.Count); Assert.Null(s.DispelChoice.View);
+        Cast(s, Setting(6, 0, 100)); s.DispelChoice.Choose(s.DispelChoice.View!.Revision, view.Options[0].Id);
         Assert.Equal("other-target", Assert.Single(s.State.Effects.Active).Context.Instance.Value);
     }
     [Fact]
@@ -213,9 +213,9 @@ public sealed class DaggerfallMysticismEffectsTests
         Cast(s, Setting(13, 1, 0), Setting(23, 1, 0)); Cast(s, Setting(24, 1, 0));
         var nested = s.State.Effects.Active.Where(effect => effect.Definition.Key != "shadow-true").ToArray();
         Assert.Equal(2, nested.Length); Assert.Equal(nested[0].BundleId, nested[1].BundleId);
-        Cast(s, Setting(6, 0, 0)); Assert.Equal(2, s.DispelView!.Options.Count);
+        Cast(s, Setting(6, 0, 0)); Assert.Equal(2, s.DispelChoice.View!.Options.Count);
         using var restored = f.Restore(s.CaptureSave());
-        restored.ChooseDispel(restored.DispelView!.Revision, nested[0].BundleId);
+        restored.DispelChoice.Choose(restored.DispelChoice.View!.Revision, nested[0].BundleId);
         Assert.Equal("shadow-true", Assert.Single(restored.State.Effects.Active).Definition.Key);
     }
     [Fact]
@@ -225,9 +225,9 @@ public sealed class DaggerfallMysticismEffectsTests
         ulong item = s.State.Inventory.Read().UniqueItems.Select(value => s.State.Inventory.GetDurableItemId(value.Entity).Value).First();
         s.State.Effects.Start(new("held", "invisibility-true", "item", 1, 1, "invisibility", "Magic", item, 1, null,
             JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(13, 1, 0), 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)) { BundleId = "held.bundle", BundleKind = DaggerfallEffectBundleKind.HeldMagicItem });
-        Cast(s, Setting(24, 1, 0)); Cast(s, Setting(6, 0, 100)); var revision = s.DispelView!.Revision;
+        Cast(s, Setting(24, 1, 0)); Cast(s, Setting(6, 0, 100)); var revision = s.DispelChoice.View!.Revision;
         s.State.ItemInstances.ReplaceUnique(item, s.State.ItemInstances.RequireUnique(item) with { CurrentCondition = 0 });
-        s.ChooseDispel(revision, "held.bundle"); Assert.NotNull(s.DispelView);
+        s.DispelChoice.Choose(revision, "held.bundle"); Assert.NotNull(s.DispelChoice.View);
         Assert.Equal("shadow-true", Assert.Single(s.State.Effects.Active).Definition.Key);
     }
     [Fact]
@@ -237,11 +237,11 @@ public sealed class DaggerfallMysticismEffectsTests
         var setting = Setting(7, 0, 0) with { MagnitudeBaseLow = 7, MagnitudeBaseHigh = 7 };
         void Drain(string id, string bundle) => s.State.Effects.Start(new(id, "drain-strength", "spell.foreign", null, 1, "drain", "Magic", null, 1, null,
             DaggerfallAttributeDrainEffects.Encode(new(new(setting, 1, 7, 100, new(2000, null, DaggerfallCastSource.Spell)), 7))) { BundleId = bundle, BundleKind = DaggerfallEffectBundleKind.Spell });
-        Drain("hidden", "hidden.bundle"); Cast(s, Setting(6, 0, 100)); Assert.Empty(s.DispelView!.Options);
-        s.ChooseDispel(s.DispelView.Revision, "hidden.bundle"); Assert.Single(s.State.Effects.Active); s.ChooseDispel(s.DispelView!.Revision, null);
+        Drain("hidden", "hidden.bundle"); Cast(s, Setting(6, 0, 100)); Assert.Empty(s.DispelChoice.View!.Options);
+        s.DispelChoice.Choose(s.DispelChoice.View.Revision, "hidden.bundle"); Assert.Single(s.State.Effects.Active); s.DispelChoice.Choose(s.DispelChoice.View!.Revision, null);
         // The same incumbent carries its original bundle; a visible companion makes that whole bundle eligible.
-        Start(s, "visible", 2000, 1, "hidden.bundle"); Cast(s, Setting(6, 0, 100)); var option = Assert.Single(s.DispelView!.Options);
-        s.ChooseDispel(s.DispelView.Revision, option.Id); Assert.Empty(s.State.Effects.Active);
+        Start(s, "visible", 2000, 1, "hidden.bundle"); Cast(s, Setting(6, 0, 100)); var option = Assert.Single(s.DispelChoice.View!.Options);
+        s.DispelChoice.Choose(s.DispelChoice.View.Revision, option.Id); Assert.Empty(s.State.Effects.Active);
 
     }
     [Theory]
@@ -250,7 +250,7 @@ public sealed class DaggerfallMysticismEffectsTests
     {
         using Fixture f = new(); var s = f.Session;
         Start(s, "not-spell", 1, 1, "excluded", (DaggerfallEffectBundleKind)kind);
-        Cast(s, Setting(6, 0, 100)); Assert.Empty(s.DispelView!.Options);
+        Cast(s, Setting(6, 0, 100)); Assert.Empty(s.DispelChoice.View!.Options);
         Assert.Single(s.State.Effects.Active);
     }
     private static long Spawn(DaggerfallSession s, DaggerfallEnemyGroup group) => s.SpawnActor(TestPayload.Definitions.Actors.Values.First(definition =>

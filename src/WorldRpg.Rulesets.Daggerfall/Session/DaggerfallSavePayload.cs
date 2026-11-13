@@ -231,7 +231,8 @@ internal sealed record DaggerfallSavePayload(
         if (CustomSpells.Any(spell => spell is null || !spell.IsPlayerCreated))
             throw new ArgumentException("Saved custom spells must be actual player-created definitions.");
         definitions = definitions.ForSession(CustomSpells);
-        TeleportAnchor?.Resolve(definitions, inputs, profiles, tuning ?? DaggerfallTuning.Defaults);
+        TeleportAnchor?.Resolve(definitions, inputs, profiles,
+            ship => DaggerfallPropertyPolicy.ShipArrival(ship, (tuning ?? DaggerfallTuning.Defaults).Property) is var arrival ? (arrival.MapPixelX, arrival.MapPixelY) : default);
         Notebook.Validate(definitions, definitions.TextPresentation);
         if (LastTavernMealMinute < 0) throw new ArgumentOutOfRangeException(nameof(LastTavernMealMinute));
         Lodging.Validate(definitions.Locations);
@@ -1293,18 +1294,6 @@ internal sealed record DaggerfallActorInventorySave(long EntityId, DaggerfallInv
 internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
 
 internal sealed record DaggerfallCalendarSave(int Year, int Month, int Day, int Hour, int Minute, int Second, double RemainderSeconds);
-
-/// <summary>The exact player pose to restore when a site transition returns to its source.</summary>
-internal sealed record DaggerfallSiteReturnPoseSave(float X, float Y, float Z, float YawRadians, float PitchRadians)
-{
-    internal void Validate()
-    {
-        if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z))
-            throw new ArgumentException("A saved site return position must be finite.");
-        if (!float.IsFinite(YawRadians) || !float.IsFinite(PitchRadians))
-            throw new ArgumentException("A saved site return look must be finite.");
-    }
-}
 
 internal sealed record DaggerfallSiteSave(
     DaggerfallSiteIdSave? Active,

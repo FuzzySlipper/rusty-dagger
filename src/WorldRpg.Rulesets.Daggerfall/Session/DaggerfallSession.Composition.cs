@@ -248,11 +248,17 @@ internal sealed partial class DaggerfallSession
                     target => DaggerfallDiseasePolicy.CureAllDiseases(effects, target),
                     actor => _poisoning!.Runtime.Cure(actor), target => DaggerfallParalysisEffects.Cure(effects, target)),
                 .. DaggerfallMysticismEffects.Definitions(id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1,
-                    request => _pendingDispel = request, BanishNearby, ReactToSpellAttack, request => _pendingTeleport = request),
-                .. DaggerfallItemSoulEffects.Definitions(RequestCreateItem,
+                    request => DispelChoice.Request(request),
+                    (effect, daedra) => DispelChoice.BanishNearby(effect, daedra, assembled.PlayerControl.Position!.Value,
+                        (center, radius) => AreaSpellTargets(DaggerfallActorIdentity.PlayerEntityId, center.ToVector(), true, radius, exclusive: true),
+                        id => actors.TryGet(id, out var actor) && !actor.IsDefeated && DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null, BanishActor),
+                    ReactToSpellAttack, request => TeleportChoice.Request(request)),
+                .. DaggerfallItemSoulEffects.Definitions(request => CreateItemChoice.Request(request),
                     id => authored.TryGetValue(id, out var actorDefinition) && actorDefinition.Kind == DaggerfallActorKinds.Monster ? actorDefinition.MobileId : null,
-                    mobile => SoulGems.Capture(mobile), _random, (target, message, dies) => _facts.Append(new SoulTrapResolvedFact(target, message, dies))),
-                .. DaggerfallSocialMagicEffects.Definitions(ApplyPacify,RequestIdentify),
+                    mobile => ItemSouls.Gems.Capture(mobile), _random, (target, message, dies) => _facts.Append(new SoulTrapResolvedFact(target, message, dies))),
+                .. DaggerfallSocialMagicEffects.Definitions(
+                    (effect, group) => DaggerfallSocialMagicEffects.Pacify(effect, group, id => actors.TryGet(id, out var actor) && !actor.IsDefeated && DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null, target => _enemyBehavior!.Pacify(target)),
+                    (effect, state) => IdentifyChoice.Request(effect, state)),
                 DaggerfallIllusionEffects.MorphSelf(() => _lycanthropy!.Morph()),
                 DaggerfallIllusionEffects.NormalLight(),
                 .. DaggerfallConcealmentEffects.Definitions(),
@@ -327,8 +333,8 @@ internal sealed partial class DaggerfallSession
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
                 () => character.Career.ForbiddenEquipment, itemInstances, () => racialOverrides.Current?.State.BeastForm == true);
             _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves);
-            _itemEnchanting = new DaggerfallItemEnchanting(definitions, itemInstances, _equipmentMoves, _itemCondition, inventory, () => SoulGems);
-            _itemCondition.Broken += ReleaseBoundSoul;
+            _itemEnchanting = new DaggerfallItemEnchanting(definitions, itemInstances, _equipmentMoves, _itemCondition, inventory, () => ItemSouls.Gems);
+            _itemCondition.Broken += item => ItemSouls.ReleaseBoundSoul(item);
             _heldEnchantments = new DaggerfallHeldEnchantments(equipmentCoordinator, itemInstances, definitions.Magic,
                 playerStats, actors.Entities, playerEntity, () => _time.Calendar,
                 () => assembled.PlayerControl.Position, () => DaggerfallActorRoster.NearbyCreatures(actors, authored, npcs.IsGameplayActive), InSunlight, _itemCondition, InHolyPlace,
@@ -507,8 +513,20 @@ internal sealed partial class DaggerfallSession
                 dungeonActions: dungeonActions,
                 dialogueWorld: new DaggerfallDialogueWorldState(saved?.DialogueWorld));
             _creation = new DaggerfallCharacterCreation(State.Character, definitions, _random);
+            ItemSouls = new DaggerfallItemSouls(new(State.Inventory, State.ItemInstances, definitions.Magic, _uniqueItems), definitions,
+                State.ItemInstances, _heldEnchantments, State.Effects, _facts, Presentation,
+                id => DefinitionsByActor.TryGetValue(id, out var actor) ? actor : null,
+                owner => owner == DaggerfallItemOwner.Player ? State.PlayerControl.Position
+                    : owner.Scope == "actor" && State.Actors.TryGet(owner.Id, out var holder) ? holder.Position : null,
+                spawn =>
+                {
+                    if (!_sites.Projection.Inputs.MobileSprites.ContainsKey(spawn.Mobile)
+                        || !TrySpawnPose(spawn.Operation, spawn.RandomScope, spawn.Origin, spawn.MinimumDistance, spawn.MaximumDistance, out var pose)) return false;
+                    _enemyBehavior.MakeHostile(_roster!.Spawn(spawn.Definition.Id.Value, pose, playerAllied: false));
+                    return true;
+                });
             _itemMaker = new DaggerfallItemMaker(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
-                State.Inventory, State.ItemInstances, _itemEnchanting, SoulGems, _uniqueItems, () => _time.Calendar);
+                State.Inventory, State.ItemInstances, _itemEnchanting, ItemSouls.Gems, _uniqueItems, () => _time.Calendar);
             _potionMaker = new DaggerfallPotionMaking(definitions, State.Npcs, State.ConcreteGuildServices, State.Inventory,
                 State.Containers, State.Wagon, State.ItemInstances, engine.Random, () => _time.Calendar);
             SpellSales = new DaggerfallSpellSales(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
@@ -597,7 +615,7 @@ internal sealed partial class DaggerfallSession
                     RequestPanel(DaggerfallPanel.Character);
                     return true;
                 }, useSanguineRose: UseSanguineRose, useSkullCorruption: UseSkullCorruption, useItemSpell: item => _itemCastTriggers.Use(item),
-                useAzurasStar: UseAzurasStar, usePotion: UsePotion, useQuestItem: State.Quests.UseItem));
+                useAzurasStar: item => ItemSouls.UseAzurasStar(State.Inventory.GetDurableItemId(new(item.EntityId)).Value), usePotion: UsePotion, useQuestItem: State.Quests.UseItem));
             _inventoryUi.BookOpened += _ => RequestPanel(DaggerfallPanel.Book);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers);
             _interactions = new DaggerfallOpenInteractions(
@@ -607,7 +625,7 @@ internal sealed partial class DaggerfallSession
                 dialogueOpen: () => _activationPresentation.View.Dialogue is not null,
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
-                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => _pendingDispel is not null, identifyOpen: () => _pendingIdentify is not null, teleportOpen: () => _pendingTeleport is not null, createItemOpen: () => _pendingCreateItem is not null, legalOpen: () => LegalModalOpen,
+                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => DispelChoice.Pending is not null, identifyOpen: () => IdentifyChoice.Open, teleportOpen: () => TeleportChoice.Pending is not null, createItemOpen: () => CreateItemChoice.Pending is not null, legalOpen: () => LegalModalOpen,
                 tutorialOpen: () => _tutorial.Shown);
             itemInstances.StackChanged += State.Quests.ObserveStackChange;
             // Only a held bundle lives as long as its item is worn and whole. A used or striking item's
@@ -617,7 +635,7 @@ internal sealed partial class DaggerfallSession
             {
                 if (change != DaggerfallItemSourceChange.Removed) { effects.CancelHeldItem(item); return; }
                 effects.CancelItemReferences(item); Casting?.CancelItemReferences(item);
-                if (_pendingIdentify?.SourceItem == item) _pendingIdentify = null;
+                IdentifyChoice?.ItemRemoved(item);
             };
             Casting = new(definitions.Magic, effects, CastActor, MagicProfile, item => itemInstances.ContainsUnique(item)
                     && (itemInstances.RequireUnique(item).MaximumCondition == 0 || itemInstances.RequireUnique(item).CurrentCondition > 0),
@@ -656,12 +674,14 @@ internal sealed partial class DaggerfallSession
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
             _roster.ActorRetired += State.Quests.ObserveFoeRemoval;
             if (saved is null) _roster.GrantInitialAuthoredEquipment();
-            _pendingCreateItem = saved?.PendingCreateItem;
-            _pendingDispel = saved?.PendingDispel;
-            _pendingTeleport = saved?.PendingTeleport;
+            CreateItemChoice = new DaggerfallCreateItem(definitions, _random, State.Inventory, State.ItemInstances, State.Encumbrance,
+                _uniqueItems, State.Character, () => _time.Calendar, Presentation, saved?.PendingCreateItem);
+            DispelChoice = new DaggerfallDispel(State.Effects, _random, Presentation, saved?.PendingDispel);
             _playSeconds = saved?.PlaySeconds ?? 0;
-            _teleportAnchor = saved?.TeleportAnchor;
-            _pendingIdentify = saved?.PendingIdentify;
+            IdentifyChoice = new DaggerfallIdentify(State.Inventory, State.ItemInstances, _itemCondition, definitions.Magic,
+                State.Actors.Player.Stats, State.Actors.Player.Actor, _vitality, _random, _facts, Presentation,
+                item => _inventoryUi.DescribeItem($"unique:{item.Entity.Value}", item.Definition.Value, 1, owner: DaggerfallItemOwner.Player).Label,
+                saved?.PendingIdentify);
             _tutorial = new(definitions.Tutorial, saved?.Tutorial);
             State.Character.SpellForgotten+=key=>
             { if(Casting.ReadyFor(actors.Player.DurableId)?.SpellKey==key) Casting.Cancel(actors.Player.DurableId); };
@@ -675,12 +695,12 @@ internal sealed partial class DaggerfallSession
             _persistence.Summoning = Summoning.Capture;
             _persistence.PoisonDraws = () => _poisoning.Draws;
             _persistence.ReadySpell=()=>Casting.ReadyFor(actors.Player.DurableId);
-            _persistence.PendingCreateItem = () => _pendingCreateItem;
-            _persistence.PendingDispel = () => _pendingDispel;
-            _persistence.PendingTeleport = () => _pendingTeleport;
+            _persistence.PendingCreateItem = () => CreateItemChoice.Pending;
+            _persistence.PendingDispel = () => DispelChoice.Pending;
+            _persistence.PendingTeleport = () => TeleportChoice.Pending;
             _persistence.PlaySeconds = () => _playSeconds;
-            _persistence.TeleportAnchor = () => _teleportAnchor;
-            _persistence.PendingIdentify = () => CurrentIdentifyRequest;
+            _persistence.TeleportAnchor = () => TeleportChoice.Anchor;
+            _persistence.PendingIdentify = () => IdentifyChoice.Pending;
             _persistence.Tutorial = () => _tutorial.Progress;
             _roster.BanishedActors.UnionWith(saved?.BanishedActors ?? []);
             _persistence.BanishedActors = () => _roster.BanishedActors;
@@ -691,6 +711,8 @@ internal sealed partial class DaggerfallSession
                 _roster, _persistence, _groundContainers, _enemyBehavior, interiors, this,
                 projection, profiles, activeProfile, saved?.Site.ReturnProfile?.Require(),
                 composition.StartSite.ClassicPresentation);
+            TeleportChoice = new DaggerfallTeleport(_sites, _site, State.PlayerControl, State.Transport, () => State.Property.OwnedShip,
+                Presentation, saved?.PendingTeleport, saved?.TeleportAnchor);
             _grounding.FloorPending = () => _exterior.CollisionPending;
             if (composition.ArtReplacements is { } groundArt) _exterior.UseGroundArt(groundArt, () => DrawnArt is not null);
             State.LevelUps.Began += () => _appearance.PlayGameplaySound(96, "level-up");

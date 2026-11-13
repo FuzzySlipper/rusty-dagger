@@ -133,7 +133,7 @@ public sealed class ItemEnchantmentMutationTests
         var starDefinition = TestPayload.Definitions.Magic.MagicItems.Values.Single(value => value.Enchantments.Any(payload => payload.Type == 26 && payload.Param == 9));
         var created = factory.Create(new("Magic", "star", DaggerfallItemOwner.Player, MagicItemKey: starDefinition.Key));
         var star = s.UniqueItemAllocator.AllocateReference(); factory.Materialize(created, s.State.Inventory, s.State.ItemInstances, unique: star);
-        Assert.True(s.SoulGems.Capture(7)); ulong gem = Gem(f, 7);
+        Assert.True(s.ItemSouls.Gems.Capture(7)); ulong gem = Gem(f, 7);
         var (item, id) = Weapon(f); s.ItemEnchanting.Enchant(item, "enchantment.15.7");
         Assert.False(s.State.ItemInstances.ContainsUnique(gem)); Assert.Equal(7, s.State.ItemInstances.RequireUnique(star.Value).CapturedSoulMobileId);
         var (second, secondId) = Weapon(f); s.ItemEnchanting.Enchant(second, "enchantment.15.7");
@@ -178,6 +178,6 @@ public sealed class ItemEnchantmentMutationTests
         var s = f.Session; var factory = new DaggerfallItemFactory(TestPayload.Definitions, f.Engine.Context.Random);
         var created = factory.Create(new("MiscItems", $"gem-{s.State.ItemInstances.Revision}", DaggerfallItemOwner.Player, TemplateIndex: 274));
         var id = s.UniqueItemAllocator.AllocateReference(); factory.Materialize(created, s.State.Inventory, s.State.ItemInstances, unique: id);
-        Assert.True(s.SoulGems.Capture(mobile)); return id.Value;
+        Assert.True(s.ItemSouls.Gems.Capture(mobile)); return id.Value;
     }
 }

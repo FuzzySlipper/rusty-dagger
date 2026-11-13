@@ -1,6 +1,7 @@
 using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Property;
@@ -34,7 +35,8 @@ internal sealed record DaggerfallTeleportAnchor(
         }
     }
 
-    internal void Resolve(DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSiteProfiles? profiles, DaggerfallTuning tuning)
+    internal void Resolve(DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSiteProfiles? profiles,
+        Func<DaggerfallShipType, (int MapPixelX, int MapPixelY)> shipArrival)
     {
         Validate();
         void Admit(DaggerfallWorldProfileKey key)
@@ -47,7 +49,7 @@ internal sealed record DaggerfallTeleportAnchor(
         var site = definitions.Locations.Records.Single(record => record.Id == profile.Site);
         if (ShipType is { } ship)
         {
-            var arrival = DaggerfallPropertyPolicy.ShipArrival(ship, tuning.Property);
+            var arrival = shipArrival(ship);
             if (site.Kind != DaggerfallSiteKind.HomeYourShips || site.MapPixelX != arrival.MapPixelX || site.MapPixelY != arrival.MapPixelY)
                 throw new ArgumentException("Teleport ship anchor does not name that ship's actual world site.");
         }
@@ -65,56 +67,69 @@ internal sealed record DaggerfallTeleportView(string Revision, bool AnchorSet)
 
 internal sealed record DaggerfallTeleportOption(string Id, string Label, bool Available);
 
-internal sealed partial class DaggerfallSession
+/// <summary>
+/// The teleport choice a Teleport spell on the player opens: remember where the player stands (aboard a ship, the
+/// ship and its land return with it), or recall there through the site crossing. Relocation, so Travel's. The
+/// pending choice and the anchor are saved.
+/// </summary>
+/// <param name="ownedShip">The ship the player owns now, if any.</param>
+internal sealed class DaggerfallTeleport(DaggerfallSiteCrossing sites, DaggerfallSiteContext site, PlayerControlState playerControl,
+    DaggerfallTransportPolicy transport, Func<DaggerfallShipType?> ownedShip, PresentationState presentation,
+    string? restoredPending, DaggerfallTeleportAnchor? restoredAnchor)
 {
-    private string? _pendingTeleport;
-    private DaggerfallTeleportAnchor? _teleportAnchor;
-    internal DaggerfallTeleportView? TeleportView => _pendingTeleport is { } request ? new(request, _teleportAnchor is not null) : null;
+    private string? _pending = restoredPending;
+    private DaggerfallTeleportAnchor? _anchor = restoredAnchor;
+
+    internal string? Pending => _pending;
+    internal DaggerfallTeleportAnchor? Anchor => _anchor;
+    internal DaggerfallTeleportView? View => _pending is { } request ? new(request, _anchor is not null) : null;
+
+    internal void Request(string request) => _pending = request;
 
     /// <summary>
     /// A scene-local point in the active profile's own frame, as <see cref="DaggerfallSiteCrossing.TryRelocatePlayer"/>
     /// takes it. Exterior profiles author poses in the site's local frame; LocalToProfile is the map-global projection
     /// used by live population and map reads, so feeding it back to a relocation resolves an impossible exterior cell.
     /// </summary>
-    private Vector3 ProfilePosition(WorldPoint local) => _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
-        ? _exterior.ExteriorSitePosition(local).ToVector()
-        : _exterior.LocalToProfile(local.ToVector());
+    internal Vector3 ProfilePosition(WorldPoint local) => sites.ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior
+        ? sites.Exterior.ExteriorSitePosition(local).ToVector()
+        : sites.Exterior.LocalToProfile(local.ToVector());
 
-    internal void ChooseTeleport(string revision, string choice)
+    internal void Choose(string revision, string choice)
     {
-        if (_pendingTeleport != revision) { Presentation.SetOutcome("Teleport choice is no longer current."); return; }
-        _pendingTeleport = null;
-        if (choice == "cancel") { Presentation.SetOutcome("Teleport cancelled."); return; }
+        if (_pending != revision) { presentation.SetOutcome("Teleport choice is no longer current."); return; }
+        _pending = null;
+        if (choice == "cancel") { presentation.SetOutcome("Teleport cancelled."); return; }
         if (choice == "anchor")
         {
-            var player = State.PlayerControl;
+            var player = playerControl;
             var position = ProfilePosition(player.Position!.Value);
-            var returned = _site.ReturnPose;
-            _teleportAnchor = new(DaggerfallWorldProfileKeySave.Capture(_activeProfileKey),
+            var returned = site.ReturnPose;
+            _anchor = new(DaggerfallWorldProfileKeySave.Capture(sites.ActiveProfile),
                 new(position.X, position.Y, position.Z, player.YawRadians, player.PitchRadians),
-                _sites.ReturnProfile is { } profile ? DaggerfallWorldProfileKeySave.Capture(profile) : null,
+                sites.ReturnProfile is { } profile ? DaggerfallWorldProfileKeySave.Capture(profile) : null,
                 returned is null ? null : new(returned.Position.X, returned.Position.Y, returned.Position.Z, returned.YawRadians, returned.PitchRadians),
-                State.Transport.OnShip ? State.Property.OwnedShip : null,
-                State.Transport.OnShip ? State.Transport.Capture() : null);
-            Presentation.SetOutcome("Teleport anchor set."); return;
+                transport.OnShip ? ownedShip() : null,
+                transport.OnShip ? transport.Capture() : null);
+            presentation.SetOutcome("Teleport anchor set."); return;
         }
-        if (choice != "recall") { Presentation.SetOutcome("Unknown teleport choice."); return; }
-        if (_teleportAnchor is not { } anchor) { Presentation.SetOutcome("A teleport anchor must be set first."); return; }
-        if (anchor.ShipType is { } ship && State.Property.OwnedShip != ship)
-        { Presentation.SetOutcome("The anchored ship is no longer owned."); return; }
+        if (choice != "recall") { presentation.SetOutcome("Unknown teleport choice."); return; }
+        if (_anchor is not { } anchor) { presentation.SetOutcome("A teleport anchor must be set first."); return; }
+        if (anchor.ShipType is { } ship && ownedShip() != ship)
+        { presentation.SetOutcome("The anchored ship is no longer owned."); return; }
         try
         {
             var pose = anchor.Pose;
-            if (!_sites.TryRelocatePlayer(anchor.Profile.Require(), new("teleport-recall", new(pose.X, pose.Y, pose.Z), pose.YawRadians, pose.PitchRadians)))
-            { Presentation.SetOutcome("The teleport destination could not be admitted."); return; }
+            if (!sites.TryRelocatePlayer(anchor.Profile.Require(), new("teleport-recall", new(pose.X, pose.Y, pose.Z), pose.YawRadians, pose.PitchRadians)))
+            { presentation.SetOutcome("The teleport destination could not be admitted."); return; }
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException)
-        { Presentation.SetOutcome("The teleport failed; you remain where you are."); return; }
-        _sites.RestoreReturnDestination(anchor.ReturnProfile?.Require(), anchor.ReturnPose is { } entrance
+        { presentation.SetOutcome("The teleport failed; you remain where you are."); return; }
+        sites.RestoreReturnDestination(anchor.ReturnProfile?.Require(), anchor.ReturnPose is { } entrance
             ? new(new(entrance.X, entrance.Y, entrance.Z), entrance.YawRadians, entrance.PitchRadians) : null);
-        if (anchor.ShipReturn is { } aboard) State.Transport.Restore(aboard);
-        else if (State.Transport.OnShip) _ = State.Transport.LeaveShip();
-        _teleportAnchor = null;
-        Presentation.SetOutcome("Recalled to the teleport anchor.");
+        if (anchor.ShipReturn is { } aboard) transport.Restore(aboard);
+        else if (transport.OnShip) _ = transport.LeaveShip();
+        _anchor = null;
+        presentation.SetOutcome("Recalled to the teleport anchor.");
     }
 }

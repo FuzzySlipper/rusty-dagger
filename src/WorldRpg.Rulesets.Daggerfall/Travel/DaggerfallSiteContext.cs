@@ -450,3 +450,15 @@ internal sealed record DaggerfallSiteBuildingRecord(DaggerfallSiteId Site, Dagge
     internal int FactionId => Source.Source.FactionId;
     internal int Quality => Source.Quality;
 }
+
+/// <summary>The exact player pose to restore when a site transition returns to its source.</summary>
+internal sealed record DaggerfallSiteReturnPoseSave(float X, float Y, float Z, float YawRadians, float PitchRadians)
+{
+    internal void Validate()
+    {
+        if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z))
+            throw new ArgumentException("A saved site return position must be finite.");
+        if (!float.IsFinite(YawRadians) || !float.IsFinite(PitchRadians))
+            throw new ArgumentException("A saved site return look must be finite.");
+    }
+}

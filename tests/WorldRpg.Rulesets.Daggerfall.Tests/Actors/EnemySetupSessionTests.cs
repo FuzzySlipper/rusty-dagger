@@ -61,7 +61,7 @@ public sealed class EnemySetupSessionTests
         var identity = f.Session.UniqueItemAllocator.AllocateReference();
         f.Session.State.Equipment.Materialize(identity, new WorldRpg.Kit.Inventory.InventoryItemId(gem.Id.Value));
         f.Session.State.ItemInstances.RegisterUnique(identity.Value, DaggerfallItemInstanceMetadata.Default(gem, DaggerfallItemOwner.Player));
-        Assert.True(f.Session.SoulGems.Capture(21));
+        Assert.True(f.Session.ItemSouls.Gems.Capture(21));
         Assert.Equal(9321, Assert.Single(f.Session.ReadInventoryPresentation().Items, item => item.Definition == gem.Id.Value).Value);
         using var restored = f.Restore();
         Assert.Equal(9321, Assert.Single(restored.ReadInventoryPresentation().Items, item => item.Definition == gem.Id.Value).Value);

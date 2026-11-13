@@ -10,13 +10,6 @@ internal enum DaggerfallPropertyKind
     Ship,
 }
 
-/// <summary>The two ship deeds the donor offers at a port town.</summary>
-internal enum DaggerfallShipType
-{
-    Small,
-    Large,
-}
-
 /// <summary>A source identity for one placed house building in one actual Daggerfall site.</summary>
 /// <remarks>
 /// The RMB building slot is a template identity and can occur at several block placements. The

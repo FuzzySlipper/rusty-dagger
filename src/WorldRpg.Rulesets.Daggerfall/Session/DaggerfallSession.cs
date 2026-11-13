@@ -747,8 +747,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         }
         if (fact is ActorDiedFact died)
         {
-            CaptureHeldSoul(died);
-            if (died.ActorId==DaggerfallActorIdentity.PlayerEntityId) { _pendingIdentify=null; _pendingCreateItem=null; }
+            ItemSouls.CaptureHeldSoul(died);
+            if (died.ActorId==DaggerfallActorIdentity.PlayerEntityId) { IdentifyChoice.Clear(); CreateItemChoice.Clear(); }
             DaggerfallMolagBalEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallItemSoulEffects.EndOnDeath(State.Effects, died.ActorId);
             DaggerfallParalysisEffects.EndOnDeath(State.Effects, died.ActorId);
@@ -848,7 +848,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Calendar: _time.Calendar,
             Effects: ReadActiveEffects(),
             CinematicSource: Cinematics?.ActiveSource,
-            Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemView, Teleport: TeleportView, Dispel: DispelView, Identify: IdentifyView, Spells: ReadSpells(), Detectors: ReadDetectors())
+            Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemChoice.View, Teleport: TeleportChoice.View, Dispel: DispelChoice.View, Identify: IdentifyChoice.View, Spells: ReadSpells(), Detectors: ReadDetectors())
         {
             ActionDrivenTime = ActionDrivenPlay, TimeHeld = PlayerTimeHeld,
             Weapon = new DaggerfallWeaponView(State.WeaponDrawn,
@@ -928,6 +928,11 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal DaggerfallItemConditionService ItemCondition => _itemCondition;
     /// <summary>Enchanting a live item the player holds (Magic).</summary>
     internal DaggerfallItemEnchanting ItemEnchanting => _itemEnchanting;
+    internal DaggerfallDispel DispelChoice { get; } = null!;
+    internal DaggerfallIdentify IdentifyChoice { get; } = null!;
+    internal DaggerfallCreateItem CreateItemChoice { get; } = null!;
+    internal DaggerfallItemSouls ItemSouls { get; } = null!;
+    internal DaggerfallTeleport TeleportChoice { get; } = null!;
     /// <summary>The end of an item's life: unique retirement, stack consumption, a quest's items taken back.</summary>
     internal DaggerfallItemLifetime ItemLifetime => _itemLifetime;
     /// <summary>The Mages Guild's enchanting service (Economy).</summary>

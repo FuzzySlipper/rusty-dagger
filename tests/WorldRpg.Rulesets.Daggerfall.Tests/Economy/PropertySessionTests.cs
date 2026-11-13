@@ -164,7 +164,7 @@ public sealed class PropertySessionTests
             var setting = new DaggerfallSpellEffectDefinition("teleport-test", 43, -1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1);
             s.State.Effects.Start(new($"ship-teleport-{sequence++}", "teleport", "spell.teleport", 1, 1, "teleport", "Magic", null, 1, 1,
                 JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting, 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
-            s.ChooseTeleport(s.TeleportView!.Revision, choice);
+            s.TeleportChoice.Choose(s.TeleportChoice.View!.Revision, choice);
         }
         Teleport(f.Session, "anchor");
         DaggerfallTeleportAnchor anchor = Assert.IsType<DaggerfallTeleportAnchor>(

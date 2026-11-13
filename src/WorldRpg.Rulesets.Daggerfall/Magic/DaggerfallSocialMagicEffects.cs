@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Content;
 using System.Text.Json.Serialization;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
@@ -21,6 +22,21 @@ internal sealed record DaggerfallIdentifyView(string Revision, int Cost, IReadOn
 /// <summary>Immediate disposition and selection requests use the existing senses and item owners.</summary>
 internal static class DaggerfallSocialMagicEffects
 {
+    /// <summary>
+    /// Calm Humanoid (no group) pacifies a live enemy class; Calm Creature pacifies a live monster of its group. Anyone
+    /// else is no match.
+    /// </summary>
+    /// <param name="liveDefinition">A live, undefeated actor's definition; null for anyone else.</param>
+    internal static void Pacify(DaggerfallActiveEffect effect, int? group, Func<long, DaggerfallActorDefinition?> liveDefinition, Action<long> pacify)
+    {
+        long target=checked((long)effect.Context.Target.Value);
+        if (liveDefinition(target) is not { } definition || (group is null ? definition.Kind != DaggerfallActorKinds.EnemyClass
+                : definition.Kind != DaggerfallActorKinds.Monster || DaggerfallFormulaPolicy.EnemyGroupFor(definition) != group switch
+                {0=>DaggerfallEnemyGroup.Animals,1=>DaggerfallEnemyGroup.Undead,2=>DaggerfallEnemyGroup.Humanoid,3=>DaggerfallEnemyGroup.Daedra,_=>DaggerfallEnemyGroup.None}))
+        {effect.InitialOutcome=DaggerfallEffectAdmissionOutcome.NoMatch;return;}
+        pacify(target);
+    }
+
     internal static IEnumerable<DaggerfallEffectDefinition> Definitions(Action<DaggerfallActiveEffect,int?> pacify,
         Action<DaggerfallActiveEffect,DaggerfallCastEffectState> identify)
     {
