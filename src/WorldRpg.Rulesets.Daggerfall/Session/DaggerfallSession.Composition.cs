@@ -585,7 +585,7 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindGuardSpawning(SpawnQuestGuards);
             State.Quests.BindRewards(OfferQuestReward, PresentQuestReward, tuning.QuestRewards);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
-                useDrug: variant => _poisoning.UseDrug(variant) == DaggerfallPoisonAdmission.Admitted,
+                useDrug: template => _poisoning.UseDrug(template) == DaggerfallPoisonAdmission.Admitted,
                 useOghma: () =>
                 {
                     if (!State.LevelUps.BeginOghma()) return false;

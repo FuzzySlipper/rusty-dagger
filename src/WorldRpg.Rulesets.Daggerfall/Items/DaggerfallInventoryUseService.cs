@@ -176,11 +176,10 @@ internal sealed class DaggerfallInventoryUseService(
         if (Template(itemId) is int template and (>= FirstDrugTemplate and <= LastDrugTemplate))
         {
             // A drug is taken, not applied: the dose is consumed whatever it does to the taker, and what it
-            // does is the poison owner's decision, not this rule's.
+            // does is the poison owner's decision, not this rule's. The owner is handed the drug's template and
+            // names its poison itself.
             if (useDrug is null) return new(false, "Drug effects are not available yet.");
-            if (DaggerfallPoisonPolicy.VariantForDrugTemplate(template) is not int variant)
-                return new(false, "This item cannot be used.");
-            bool took = useDrug(variant);
+            bool took = useDrug(template);
             consume();
             return new(true, took ? "The drug takes hold." : "The drug has no effect on you.");
         }
