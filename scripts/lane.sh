@@ -77,13 +77,14 @@ rusty install || { bootstrap && rusty install; }
 npm ci --no-audit --no-fund
 step "pair and UI dependencies ready"
 
-# scripts/data-sync.sh status: this commit's importer revision, the container's, "partial" when the container departs
-# from one whole import, and "held" when the store keeps this revision.
+# scripts/data-sync.sh status: this commit's importer revision, the container's ("none" without one, so that every
+# field stays in its place for read), "partial" when the container departs from one whole import, and "held" when
+# the store keeps this revision.
 status() {
   local report
   report=$(scripts/data-sync.sh status)
   printf '%s %s %s %s\n' "$(sed -n 's/^importer revision of this checkout: //p' <<<"$report")" \
-    "$(sed -n 's/^importer revision of the container: \([0-9a-f]*\).*/\1/p' <<<"$report")" \
+    "$(sed -n 's/^importer revision of the container: \([0-9a-f]*\).*/\1/p' <<<"$report" | grep . || echo none)" \
     "$(grep -q 'not one whole import\|records no departures' <<<"$report" && echo partial || echo whole)" \
     "$(grep -q '^The store holds importer revision' <<<"$report" && echo held || echo missing)"
 }
