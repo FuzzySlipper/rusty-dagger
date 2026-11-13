@@ -15,9 +15,16 @@ internal sealed record DaggerfallItemMakerSetting(string Key, string Name, int C
 internal sealed record DaggerfallItemMakerQuote(string Key, DaggerfallItemMakerDraft Draft, int Capacity, int Power, int Gold,
     DaggerfallItemMakerSetting[] Payloads, bool Eligible, string? Reason);
 internal sealed record DaggerfallItemMakerResult(bool Accepted, string Outcome, ulong? Item = null, ulong Paid = 0);
+internal sealed record DaggerfallItemMakerView(string Revision, string Provider, bool Eligible,
+    DaggerfallItemMakerItem[] Items, DaggerfallItemMakerSetting[] Settings, DaggerfallItemMakerDraft Draft, DaggerfallItemMakerQuote? Quote);
 
-/// <summary>Provider and draft policy over the existing enchantment construction and item owners.</summary>
-internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, DaggerfallState state,
+/// <summary>
+/// The Mages Guild's paid enchanting service: provider and draft policy over the existing enchantment
+/// construction and item owners. A guild service, so Economy's, as skill training is.
+/// </summary>
+internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, DaggerfallNpcRegistry npcs,
+    DaggerfallConcreteGuildServiceRuntime guildServices, DaggerfallServiceTransactions services,
+    MechanicsInventoryCoordinator inventory, DaggerfallItemInstances instances,
     DaggerfallItemConditionService conditions, DaggerfallSoulGems souls, DaggerfallUniqueItemAllocator identities,
     Func<DaggerfallCalendar> calendar)
 {
@@ -36,13 +43,13 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
     }
 
     internal bool CanUse(DaggerfallServiceProvider provider) => Guild(provider) is { } guild
-        && state.ConcreteGuildServices.Evaluate(guild.FactionId, DaggerfallConcreteGuildService.MakeMagicItems,
+        && guildServices.Evaluate(guild.FactionId, DaggerfallConcreteGuildService.MakeMagicItems,
             checked((int)calendar().DayNumber), new(provider)).CanUse;
 
     private DaggerfallConcreteGuildDefinition? Guild(DaggerfallServiceProvider provider)
     {
         DaggerfallNpc npc;
-        try { npc = state.Npcs.Require(provider.NpcId); }
+        try { npc = npcs.Require(provider.NpcId); }
         catch (InvalidOperationException) { return null; }
         return DaggerfallConcreteGuildCatalog.All.FirstOrDefault(guild => guild.TryGetService(DaggerfallConcreteGuildService.MakeMagicItems, out var service)
             && service.ProviderFactionId == npc.Appearance.FactionId);
@@ -50,13 +57,13 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
 
     internal DaggerfallItemMakerItem[] Items()
     {
-        var inventory = state.Inventory.Read(); List<DaggerfallItemMakerItem> items = [];
-        foreach (var item in inventory.UniqueItems)
+        var carried = inventory.Read(); List<DaggerfallItemMakerItem> items = [];
+        foreach (var item in carried.UniqueItems)
         {
-            ulong id = state.Inventory.GetDurableItemId(item.Entity).Value;
-            Add("unique:" + id, state.ItemInstances.RequireUnique(id), 1);
+            ulong id = inventory.GetDurableItemId(item.Entity).Value;
+            Add("unique:" + id, instances.RequireUnique(id), 1);
         }
-        foreach (var item in inventory.Stacks) Add("stack:" + item.Id.Value, state.ItemInstances.RequireStack(DaggerfallItemOwner.Player, item.Id), item.Quantity);
+        foreach (var item in carried.Stacks) Add("stack:" + item.Id.Value, instances.RequireStack(DaggerfallItemOwner.Player, item.Id), item.Quantity);
         return [.. items.OrderBy(value => value.Name, StringComparer.Ordinal).ThenBy(value => value.Key, StringComparer.Ordinal)];
         void Add(string key, DaggerfallItemInstanceMetadata metadata, ulong quantity)
         {
@@ -109,7 +116,7 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
         guild.TryGetService(DaggerfallConcreteGuildService.MakeMagicItems, out var policy);
         var request = new DaggerfallServiceRequest($"item-maker-{provider.NpcId}-{Revision}", provider);
         var eligibility = new DaggerfallServiceEligibility(policy.RequiresMembership, policy.MinimumRank ?? 0, guild.FactionId);
-        var payment = state.Services.Quote(request, eligibility, new(price));
+        var payment = services.Quote(request, eligibility, new(price));
         if (payment.Quote is null) return new(false, payment.Outcome.Denial.ToString());
         DaggerfallServiceOutcome paid;
         ulong itemId;
@@ -118,7 +125,7 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
             paid = DaggerfallServiceOutcome.Refused(DaggerfallServiceDenial.GrantUnavailable);
             var result = conditions.TryEnchantMade(unique, made, changes =>
             {
-                paid = state.Services.Commit(payment.Quote, changes);
+                paid = services.Commit(payment.Quote, changes);
                 return paid.Accepted;
             });
             if (result is null) return new(false, paid.Denial.ToString());
@@ -133,12 +140,12 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
             var weight = DaggerfallEnchantmentConstruction.EnchantedWeight(definitions, metadata, made);
             var grant = new DaggerfallServiceGrant(new(new(definition.Id.Value), UniqueItem: identity,
                 CapacityCosts: DaggerfallEncumbrancePolicy.CapacityOverride(weight)), metadata);
-            var quoted = state.Services.Quote(request, eligibility, new(price), [grant]);
+            var quoted = services.Quote(request, eligibility, new(price), [grant]);
             if (quoted.Quote is null) { identities.Remove(identity); return new(false, quoted.Outcome.Denial.ToString()); }
-            paid = state.Services.Commit(quoted.Quote, edit => edit.Consume(state.Inventory.Component.Owner, selected.Stack!, 1));
+            paid = services.Commit(quoted.Quote, edit => edit.Consume(inventory.Component.Owner, selected.Stack!, 1));
             if (!paid.Accepted) { identities.Remove(identity); return new(false, paid.Denial.ToString()); }
-            if (!state.Inventory.Read().Stacks.Any(value => value.Id == selected.Stack)) state.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, selected.Stack!);
-            var entity = state.Inventory.Entities.Resolve(identity);
+            if (!inventory.Read().Stacks.Any(value => value.Id == selected.Stack)) instances.RemoveStack(DaggerfallItemOwner.Player, selected.Stack!);
+            var entity = inventory.Entities.Resolve(identity);
             // Definition, soul, weight, and settings were admitted before the paid candidate;
             // the canonical mutation now performs its source callbacks and equipment notification.
             conditions.CompleteGrantedEnchantment(new(entity.Value, new(definition.Id.Value)), made);
@@ -153,13 +160,13 @@ internal sealed class DaggerfallItemMaker(DaggerfallDefinitions definitions, Dag
     {
         if (key.StartsWith("unique:", StringComparison.Ordinal) && ulong.TryParse(key[7..], out ulong id))
         {
-            var item = state.Inventory.Read().UniqueItems.FirstOrDefault(value => state.Inventory.GetDurableItemId(value.Entity).Value == id);
-            if (item.Entity.Value != 0) return new(state.ItemInstances.RequireUnique(id), new(item.Entity.Value, new(item.Definition.Value)), null, id);
+            var item = inventory.Read().UniqueItems.FirstOrDefault(value => inventory.GetDurableItemId(value.Entity).Value == id);
+            if (item.Entity.Value != 0) return new(instances.RequireUnique(id), new(item.Entity.Value, new(item.Definition.Value)), null, id);
         }
         if (key.StartsWith("stack:", StringComparison.Ordinal))
         {
-            var stack = state.Inventory.Read().Stacks.FirstOrDefault(value => value.Id.Value == key[6..]);
-            if (stack.Quantity > 0) return new(state.ItemInstances.RequireStack(DaggerfallItemOwner.Player, stack.Id), null, stack.Id, null);
+            var stack = inventory.Read().Stacks.FirstOrDefault(value => value.Id.Value == key[6..]);
+            if (stack.Quantity > 0) return new(instances.RequireStack(DaggerfallItemOwner.Player, stack.Id), null, stack.Id, null);
         }
         return null;
     }

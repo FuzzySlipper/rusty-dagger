@@ -96,6 +96,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly DaggerfallHudProjection _hud;
     private readonly DaggerfallEquipmentMoves _equipmentMoves;
     private readonly DaggerfallItemConditionService _itemCondition;
+    private readonly DaggerfallItemMaker _itemMaker;
+    private readonly DaggerfallPotionMaking _potionMaker;
     private readonly DaggerfallInventoryPresentation _inventoryUi;
     private readonly DaggerfallLootPresentation _lootUi;
     private readonly DaggerfallCharacterPresentation _characterUi;
@@ -921,6 +923,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal DaggerfallEquipmentMoves EquipmentMoves => _equipmentMoves;
     /// <summary>Typed mutation and disclosure of persisted item condition and magic meaning.</summary>
     internal DaggerfallItemConditionService ItemCondition => _itemCondition;
+    /// <summary>The Mages Guild's enchanting service (Economy).</summary>
+    internal DaggerfallItemMaker ItemMaker => _itemMaker;
+    /// <summary>The Mages Guild's potion maker (Economy).</summary>
+    internal DaggerfallPotionMaking PotionMaker => _potionMaker;
     internal CorpseLootEvidence? LastCorpseLoot => _corpseLoot.LastEvidence;
     internal CorpseLootCommitEvidence? LastCorpseLootCommit => _corpseLoot.LastCommit;
     internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _corpseLoot.Corpses;

@@ -4,6 +4,7 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -11,9 +12,16 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed record DaggerfallPotionIngredientView(int Template, string Name, ulong Quantity);
 internal sealed record DaggerfallPotionRecipeView(int Key, string Name, int[] Ingredients, bool Available);
 internal sealed record DaggerfallPotionMakingResult(bool Accepted, string Outcome, int? Recipe = null);
+internal sealed record DaggerfallPotionMakerView(string Revision, string Provider, bool Eligible,
+    DaggerfallPotionIngredientView[] Ingredients, DaggerfallPotionRecipeView[] Recipes);
 
-/// <summary>Recipe and ingredient policy over the player's and wagon's real Engine inventories.</summary>
-internal sealed class DaggerfallPotionMaking(DaggerfallDefinitions definitions, DaggerfallState state,
+/// <summary>
+/// The Mages Guild's potion maker: recipe and ingredient policy over the player's and wagon's real
+/// Engine inventories. A guild service, so Economy's, as skill training is.
+/// </summary>
+internal sealed class DaggerfallPotionMaking(DaggerfallDefinitions definitions, DaggerfallNpcRegistry npcs,
+    DaggerfallConcreteGuildServiceRuntime guildServices, MechanicsInventoryCoordinator inventory,
+    MechanicsInventoryContainerCoordinator containers, DaggerfallWagonStorage wagon, DaggerfallItemInstances instances,
     IRandomService random, Func<DaggerfallCalendar> calendar)
 {
     /// <summary>How many ingredients one mix takes, as the classic potion maker allows.</summary>
@@ -25,23 +33,23 @@ internal sealed class DaggerfallPotionMaking(DaggerfallDefinitions definitions, 
     internal bool CanUse(DaggerfallServiceProvider provider)
     {
         DaggerfallNpc npc;
-        try { npc = state.Npcs.Require(provider.NpcId); }
+        try { npc = npcs.Require(provider.NpcId); }
         catch (InvalidOperationException) { return false; }
         var guild = DaggerfallConcreteGuildCatalog.All.FirstOrDefault(guild => guild.TryGetService(DaggerfallConcreteGuildService.MakePotions, out var service)
             && service.ProviderFactionId == npc.Appearance.FactionId);
-        return guild is not null && state.ConcreteGuildServices.Evaluate(guild.FactionId, DaggerfallConcreteGuildService.MakePotions,
+        return guild is not null && guildServices.Evaluate(guild.FactionId, DaggerfallConcreteGuildService.MakePotions,
             checked((int)calendar().DayNumber), new(provider)).CanUse;
     }
 
     private IEnumerable<(EntityId Entity, DaggerfallItemOwner Owner)> Owners()
     {
-        yield return (state.Inventory.Component.Owner, DaggerfallItemOwner.Player);
-        if (state.Wagon.Current is { } wagon) yield return (wagon.Owner, DaggerfallItemOwner.Wagon(wagon.Id));
+        yield return (inventory.Component.Owner, DaggerfallItemOwner.Player);
+        if (wagon.Current is { } current) yield return (current.Owner, DaggerfallItemOwner.Wagon(current.Id));
     }
 
-    private IEnumerable<Ingredient> Ingredients() => Owners().SelectMany(owner => state.Containers.Read(owner.Entity).Stacks
+    private IEnumerable<Ingredient> Ingredients() => Owners().SelectMany(owner => containers.Read(owner.Entity).Stacks
         .Where(stack => definitions.RequireItem(new(stack.Definition.Value)).Template is { IsIngredient: true }
-            && !state.ItemInstances.RequireStack(owner.Owner, stack.Id).HasEnchantment)
+            && !instances.RequireStack(owner.Owner, stack.Id).HasEnchantment)
         .OrderBy(stack => stack.Id.Value, StringComparer.Ordinal)
         .Select(stack => new Ingredient(owner.Entity, owner.Owner, stack, definitions.RequireItem(new(stack.Definition.Value)).Template!.Index)));
 
@@ -54,9 +62,9 @@ internal sealed class DaggerfallPotionMaking(DaggerfallDefinitions definitions, 
     {
         var keys = new HashSet<int>();
         foreach (var owner in Owners())
-            foreach (var item in state.Containers.Read(owner.Entity).UniqueItems)
+            foreach (var item in containers.Read(owner.Entity).UniqueItems)
             {
-                var metadata = state.ItemInstances.RequireUnique(state.Containers.GetDurableItemId(item.Entity).Value);
+                var metadata = instances.RequireUnique(containers.GetDurableItemId(item.Entity).Value);
                 if (definitions.RequireItem(new(item.Definition.Value)).Template?.Index == 278 && metadata.PotionRecipeKey is int recipe) keys.Add(recipe);
             }
         var available = ReadIngredients().ToDictionary(value => value.Template, value => value.Quantity);
@@ -94,7 +102,7 @@ internal sealed class DaggerfallPotionMaking(DaggerfallDefinitions definitions, 
             if (recipe is null)
             {
                 // An unsuccessful mixture still uses the ingredients, as in the source maker.
-                using var candidate = state.Inventory.Component.Store.Prepare();
+                using var candidate = inventory.Component.Store.Prepare();
                 Consume(candidate); candidate.Publish();
             }
             else
@@ -104,22 +112,22 @@ internal sealed class DaggerfallPotionMaking(DaggerfallDefinitions definitions, 
                 InventoryStackId stack = InventoryStackId.Parse($"daggerfall.potion.made.{recipe.Key}");
                 var factory = new DaggerfallItemFactory(definitions, random);
                 var item = factory.Create(new("UselessItems1", stack.Value, DaggerfallItemOwner.Player, Quantity: 1, TemplateIndex: 83, PotionRecipeKey: recipe.Key));
-                InventoryStackId? existing = state.Containers.Read(state.Inventory.Component.Owner).Stacks
+                InventoryStackId? existing = containers.Read(inventory.Component.Owner).Stacks
                     .Where(value => value.Definition.Value == item.Item.Value
-                        && state.ItemInstances.ContainsStack(DaggerfallItemOwner.Player, value.Id)
-                        && state.ItemInstances.RequireStack(DaggerfallItemOwner.Player, value.Id) is { HasEnchantment: false } metadata
+                        && instances.ContainsStack(DaggerfallItemOwner.Player, value.Id)
+                        && instances.RequireStack(DaggerfallItemOwner.Player, value.Id) is { HasEnchantment: false } metadata
                         && metadata.PotionRecipeKey == recipe.Key)
                     .Select(value => (InventoryStackId?)value.Id).FirstOrDefault();
-                state.Containers.Seed(state.Inventory.Component.Owner, [new(item.Item, 1, Stack: existing ?? stack)], Consume);
-                if (existing is null && !state.ItemInstances.ContainsStack(DaggerfallItemOwner.Player, stack))
-                    state.ItemInstances.RegisterStack(DaggerfallItemOwner.Player, stack, item.Metadata);
+                containers.Seed(inventory.Component.Owner, [new(item.Item, 1, Stack: existing ?? stack)], Consume);
+                if (existing is null && !instances.ContainsStack(DaggerfallItemOwner.Player, stack))
+                    instances.RegisterStack(DaggerfallItemOwner.Player, stack, item.Metadata);
             }
         }
         catch (MechanicsException failure) when (failure.Reason == MechanicsRefusal.Capacity)
         { return new(false, "Capacity"); }
         foreach (var (ingredient, _) in consumed)
-            if (!state.Containers.Read(ingredient.Owner).Stacks.Any(value => value.Id == ingredient.Stack.Id))
-                state.ItemInstances.RemoveStack(ingredient.MetadataOwner, ingredient.Stack.Id);
+            if (!containers.Read(ingredient.Owner).Stacks.Any(value => value.Id == ingredient.Stack.Id))
+                instances.RemoveStack(ingredient.MetadataOwner, ingredient.Stack.Id);
         return new(true, recipe is null ? "MixtureFailed" : "PotionMade", recipe?.Key);
     }
 }

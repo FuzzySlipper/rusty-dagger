@@ -506,6 +506,10 @@ internal sealed partial class DaggerfallSession
                 dungeonActions: dungeonActions,
                 dialogueWorld: new DaggerfallDialogueWorldState(saved?.DialogueWorld));
             _creation = new DaggerfallCharacterCreation(State.Character, definitions, _random);
+            _itemMaker = new DaggerfallItemMaker(definitions, State.Npcs, State.ConcreteGuildServices, State.Services,
+                State.Inventory, State.ItemInstances, _itemCondition, SoulGems, _uniqueItems, () => _time.Calendar);
+            _potionMaker = new DaggerfallPotionMaking(definitions, State.Npcs, State.ConcreteGuildServices, State.Inventory,
+                State.Containers, State.Wagon, State.ItemInstances, engine.Random, () => _time.Calendar);
             State.Quests.BindTextContext(QuestTextContext);
             DaggerfallNames questNames = new(definitions, engine.Random);
             npcs.BindNames(questNames.NpcName);
