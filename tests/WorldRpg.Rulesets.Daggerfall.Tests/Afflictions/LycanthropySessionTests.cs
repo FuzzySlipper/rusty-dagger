@@ -36,7 +36,7 @@ public sealed class LycanthropySessionTests
         using var restored = Restore(s.CaptureSave());
         Assert.Equal(source, restored.State.RacialOverrides.Current);
         Assert.Empty(restored.State.Equipment.Read().Assignments.Where(x => x.Slot.Value is "right-hand" or "left-hand"));
-        Assert.True(restored.CureLycanthropy());
+        Assert.True(restored.Lycanthropy.Cure());
         Assert.Null(restored.State.RacialOverrides.Current);
         Assert.DoesNotContain("spell.085", restored.State.Character.KnownSpells);
         var item = restored.State.Inventory.Read().UniqueItems.First(x => x.Definition.Value == right.Definition.Value);
@@ -78,7 +78,7 @@ public sealed class LycanthropySessionTests
         s.State.RacialOverrides.Satiate(Minute(s));
         s.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(rawHealth, stats.GetTrack(TrackId.Parse("health")).Maximum.Value);
-        Assert.True(s.CureLycanthropy());
+        Assert.True(s.Lycanthropy.Cure());
         Assert.Equal(strength, stats.GetStat(StatId.Parse("strength")).Value);
         Assert.Equal(swimming, stats.GetStat(StatId.Parse("swimming")).Value);
     }
@@ -145,7 +145,7 @@ public sealed class LycanthropySessionTests
         var transformed = Presentation.CharacterIdentityPresentation.From(TestPayload.Definitions, s.State.Character.Identity, s.State.RacialOverrides.Current);
         Assert.Contains(transformed.SelectedMedia!, x => x.Layer == "background");
         Assert.NotEqual(original.SelectedMedia, transformed.SelectedMedia);
-        s.CureLycanthropy();
+        s.Lycanthropy.Cure();
         var cured = Presentation.CharacterIdentityPresentation.From(TestPayload.Definitions, s.State.Character.Identity, null);
         Assert.Equal(original.SelectedMedia, cured.SelectedMedia);
     }
@@ -165,7 +165,7 @@ public sealed class LycanthropySessionTests
         Assert.Equal(DaggerfallCastOutcome.InvalidTarget, restored.Casting.Deliver(bundle, [2000]).Outcome);
         Assert.False(restored.State.RacialOverrides.Current!.State.BeastForm);
         Assert.Equal(DaggerfallCastOutcome.Ready, restored.ReadyPlayerSpell("spell.085").Outcome);
-        Assert.True(restored.CureLycanthropy());
+        Assert.True(restored.Lycanthropy.Cure());
         Assert.Null(restored.Casting.ReadyFor(1));
     }
 
@@ -173,7 +173,7 @@ public sealed class LycanthropySessionTests
     public void Cure_quest_without_curse_keeps_valid_active_save_and_reports_refusal()
     {
         using var s = FreshSession();
-        Assert.False(s.CureLycanthropy(fromQuest: true));
+        Assert.False(s.Lycanthropy.Cure(fromQuest: true));
         Assert.Contains("no active curse", s.Presentation.LastOutcome);
         using var restored = Restore(s.CaptureSave());
         Assert.Null(restored.State.RacialOverrides.Current);

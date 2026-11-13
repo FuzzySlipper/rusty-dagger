@@ -36,7 +36,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
 internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytestWorldInspectionSession, ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession, IGameBundleChoiceSession,
-    IDaggerfallSiteTransitionHost, IDaggerfallQuestWorldAdmission, IDaggerfallRestSurroundings
+    IDaggerfallSiteTransitionHost, IDaggerfallQuestWorldAdmission, IDaggerfallRestSurroundings, IDaggerfallTransformationConsumer,
+    IDaggerfallAfflictionQuests
 {
     private readonly IRandomService _random;
     private readonly IEngineContext _engine;
@@ -59,6 +60,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     // Who a poison reaches and the poisons the session's actors carry; the player's diseases.
     private readonly DaggerfallPoisoning _poisoning;
     private readonly DaggerfallDiseases _diseases;
+    // The curses an infection becomes.
+    private readonly DaggerfallLycanthropy _lycanthropy;
+    private readonly DaggerfallVampirism _vampirism;
     private readonly CombatResolution _combatResolution;
     private readonly DaggerfallLocomotionPolicy _locomotion;
     private readonly DaggerfallClimbingPolicy _climbing;
@@ -145,6 +149,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal DaggerfallTransformationInfections Infections { get; }
     internal DaggerfallPoisoning Poisoning => _poisoning;
     internal DaggerfallDiseases Diseases => _diseases;
+    internal DaggerfallLycanthropy Lycanthropy => _lycanthropy;
+    internal DaggerfallVampirism Vampirism => _vampirism;
 
     internal DaggerfallState State { get; }
     internal PresentationState Presentation { get; }
@@ -224,7 +230,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         AdmitResidentCivilianAppearances(projection);
 
     // What rest asks of the world, each read from the domain that knows it when the rest asks.
-    bool IDaggerfallRestSurroundings.MustFeed => VampireNeedsToFeed;
+    bool IDaggerfallRestSurroundings.MustFeed => _vampirism.MustFeed;
     bool IDaggerfallRestSurroundings.EncounterPending => _encounters.HasPending(_activeProfileKey.LogicalId);
     bool IDaggerfallRestSurroundings.EnemyNearby => HasNearbyRestEnemy();
     bool IDaggerfallRestSurroundings.QuestPromptPending => State.Quests.Messages.Pending is not null;
@@ -270,6 +276,40 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     bool IDaggerfallRestSurroundings.EncounterArrives(long minute) =>
         WorldEncounterRequest(minute, resting: true) is { } encounter && QueueEncounter(encounter).Choice.MobileId is not null;
+
+    // What a ready infection asks before its permanent change; the change itself is the transformation's list.
+    bool IDaggerfallTransformationConsumer.HasRacialOverride => State.RacialOverrides.Current is not null;
+    DaggerfallInfectionConsumption IDaggerfallTransformationConsumer.Consume(DaggerfallInfectionTransition transition) =>
+        transition.Kind == DaggerfallInfectionKind.Vampire ? BecomeVampire(transition) : _lycanthropy.Become(transition);
+
+    // What lycanthropy and vampirism ask of the quests, read from the quest state when they ask.
+    bool IDaggerfallAfflictionQuests.Active(string sourceFile) =>
+        State.Quests.All.Any(value => value.SourceFile == sourceFile && value.Lifecycle == DaggerfallQuestLifecycle.Active);
+    bool IDaggerfallAfflictionQuests.Started(string instanceId) => State.Quests.All.Any(value => value.InstanceId == instanceId);
+    IReadOnlyList<string> IDaggerfallAfflictionQuests.ClanWork(int clan) =>
+        [.. State.Quests.OrdinaryWorkPool(clan, true, State.Progression.Level, State.Social.FactionReputation(clan),
+            State.Progression.Level, State.Character.Identity.Gender).Select(row => row.Name)];
+
+    bool IDaggerfallAfflictionQuests.Offer(string instanceId, string sourceFile, int factionId)
+    {
+        try
+        {
+            var source = _definitions.QuestSources.Resolve(sourceFile);
+            State.Quests.Start(new(instanceId, source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []) { FactionId = factionId });
+            return true;
+        }
+        catch (Exception error) when (error is ArgumentException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    void IDaggerfallAfflictionQuests.FailActive(string definitionPrefix, string reason)
+    {
+        foreach (var quest in State.Quests.Capture().Instances.Where(quest => quest.Lifecycle == DaggerfallQuestLifecycle.Active
+            && quest.DefinitionName.StartsWith(definitionPrefix, StringComparison.OrdinalIgnoreCase)))
+            State.Quests.Fail(quest.InstanceId, reason);
+    }
 
     /// <summary>
     /// A swing the departing projection was still timing ends with it: retire and hand its
@@ -743,7 +783,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     {
         _heldEnchantments.Refresh();
         RefreshPassiveMagery();
-        RefreshLycanthropy();
+        _lycanthropy.Refresh();
         _appearance.RefreshEnemyVoices(State.Actors);
         DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
         DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);

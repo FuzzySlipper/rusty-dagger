@@ -256,8 +256,8 @@ internal sealed partial class DaggerfallSession
         }
         State.Social.AdvanceElapsedMinutes(minuteBefore, minuteAfter);                            // Society
         AdvanceLoans(before, after);                                                              // Economy
-        AdvanceVampireQuestOpportunities(before, after);                                          // Afflictions
-        AdvanceLycanthropyQuestOpportunities(before, after);                                      // Afflictions
+        _vampirism.AdvanceQuestOpportunities(before, after);                                      // Afflictions
+        _lycanthropy.AdvanceQuestOpportunities(before, after);                                    // Afflictions
         StartDueCriminalInvitations();                                                            // Quests
         ExpireConjuredItems();                                                                    // Magic
         AdvanceRounds(before, after, ordinaryPlay, resting);                                      // Session: the round's list, below
@@ -345,8 +345,8 @@ internal sealed partial class DaggerfallSession
 
         long roundBefore = State.Effects.MagicRounds;
         AdvancePassiveRounds(roundBefore, minutes);                                               // Character
-        AdvanceLycanthropyRound(after);                                                           // Afflictions
-        RefreshLycanthropy();                                                                     // Afflictions
+        _lycanthropy.AdvanceRound(after);                                                         // Afflictions
+        _lycanthropy.Refresh();                                                                   // Afflictions
         if (ordinaryPlay && minutes == 1)
         {
             State.Effects.AdvanceOrdinaryRound();                                                 // Magic
@@ -530,6 +530,30 @@ internal sealed partial class DaggerfallSession
             DaggerfallSkillUseOutcome.Accepted));                                                 // Character
         DeliverFacts();                                                                           // Session
         Presentation.SetOutcome(_condition.AwakeningLine(_definitions.TextPresentation));         // UiProjection
+    }
+
+    /// <summary>
+    /// The vampire's transformation list: what a ready vampire infection's permanent change does across domains, once
+    /// its cinematic has played. Any refusal leaves the infection intact and retryable, as the infection owner asks.
+    /// The player wakes in a cemetery of the region with the hostiles banished, fourteen days later after dusk, a
+    /// vampire of the infection region's clan, and is told so.
+    /// </summary>
+    private DaggerfallInfectionConsumption BecomeVampire(DaggerfallInfectionTransition transition)
+    {
+        // The infection region remains the clan input even if the player travelled while incubating the disease.
+        if (!_vampirism.TryClan(transition.InfectionRegion, out int clan, out string? unavailable))
+            return new(false, unavailable);                                                       // Afflictions
+        if (_sites.AwakenInCemetery(transition.InfectionRegion,
+                count => _vampirism.CemeteryIndex(transition.Instance, count)) is { } refused)
+            return new(false, refused);                                                           // Interiors
+        _roster.BanishHostiles();                                                                 // Actors
+        // Synthetic time uses the existing calendar fan-out without an encounter request, and like the
+        // donor's raised clock it charges no per-minute fatigue loss.
+        AdvanceQuestTime(_vampirism.AwakeningSeconds, idleFatigue: false);                        // Time
+        if (!_vampirism.Become(transition, clan)) return new(false, "A racial override is already active.");   // Afflictions
+        Presentation.SetOutcome(_definitions.TextPresentation.Resolve(
+            new(DaggerfallTextKind.Resource, "401"), DungeonTextContext()).Text);                 // Text, UiProjection
+        return new(true, null);
     }
 
     /// <summary>

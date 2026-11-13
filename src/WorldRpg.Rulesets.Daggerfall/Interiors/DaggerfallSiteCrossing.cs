@@ -243,6 +243,32 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         return TryTransitionTo(profile, pose, useReturnDestination: false);
     }
 
+    /// <summary>
+    /// A vampire's awakening: the player wakes inside one of the cemeteries of the region they stand in (or, with no
+    /// active site, the infection's), as the donor's GetRandomCemetery collects them from the region's map table, at
+    /// its enter marker or else its start, with no doorway back. <paramref name="pick"/> chooses one of that many.
+    /// Null once the player is there, else why they could not be moved.
+    /// </summary>
+    internal string? AwakenInCemetery(int infectionRegion, Func<int, int> pick)
+    {
+        int region = _site.ActiveSite?.Region ?? infectionRegion;
+        var candidates = Profiles is { } profiles
+            ? _site.Records.Where(site => site.Region == region && site.DungeonType == 18)
+                .Select(site => DaggerfallWorldProfileIds.Dungeon(site.Id)).Where(profiles.Contains)
+                .OrderBy(key => key.Site.Index).ToArray()
+            : [];
+        if (candidates.Length == 0) return $"No cemetery destination is published for region {region}.";
+        var destination = Profiles!.Require(candidates[pick(candidates.Length)]);
+        // The donor respawns the player inside the dungeon, preferring its enter marker to its start marker.
+        var arrival = destination.Anchors.GetValueOrDefault(DaggerfallLocationAssembly.EnterAnchor)
+            ?? (destination.Project.PlayerPosition is { } position
+                ? new DaggerfallSiteAnchor("vampire-awakening", position, destination.InitialLook.YawRadians, destination.InitialLook.PitchRadians)
+                : throw new InvalidOperationException($"Cemetery '{destination.ProfileKey.LogicalId}' has no source arrival."));
+        if (!TryRelocatePlayer(destination.ProfileKey, arrival)) return "The cemetery destination could not be admitted.";
+        ClearReturnDestination();
+        return null;
+    }
+
     /// <summary>World relocation has no doorway back; its caller may own a different return workflow.</summary>
     internal void ClearReturnDestination()
     {

@@ -250,7 +250,7 @@ internal sealed partial class DaggerfallSession
                     id => authored.TryGetValue(id, out var actorDefinition) && actorDefinition.Kind == DaggerfallActorKinds.Monster ? actorDefinition.MobileId : null,
                     mobile => SoulGems.Capture(mobile), _random, (target, message, dies) => _facts.Append(new SoulTrapResolvedFact(target, message, dies))),
                 .. DaggerfallSocialMagicEffects.Definitions(ApplyPacify,RequestIdentify),
-                DaggerfallIllusionEffects.MorphSelf(() => MorphPlayer()),
+                DaggerfallIllusionEffects.MorphSelf(() => _lycanthropy!.Morph()),
                 DaggerfallIllusionEffects.NormalLight(),
                 .. DaggerfallConcealmentEffects.Definitions(),
                 .. DaggerfallDetectionEffects.Definitions(),
@@ -282,7 +282,7 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career, target => _diseases!.SymptomsActed(target)),
                 DaggerfallTempleBlessingEffects.Definition(social, () => character.Career, actors.Player.DurableId),
             ]));
-            character.AttachRacialOverrides(new(effects, character, definitions, RacialOverrideRemoved));
+            character.AttachRacialOverrides(new(effects, character, definitions, previous => _vampirism!.Ended(previous)));
             effects.RestoreMagicRounds(saved?.MagicRounds ?? 0);
             Infections = new(effects, () => _time.Calendar.DayNumber, Cinematics, composition.VideosEnabled,
                 message => Presentation.SetOutcome(message), saved?.Infections);
@@ -307,8 +307,8 @@ internal sealed partial class DaggerfallSession
             assembled.Quests.BindEnvironmentActions(QuestEnvironmentCondition, QuestMediaAction);
             assembled.Quests.BindOfferCapabilities(QuestOfferCapability);
             assembled.Quests.BindDiseaseActions(QuestDiseaseAction);
-            assembled.Quests.BindLycanthropyCure(() => CureLycanthropy(fromQuest: true));
-            assembled.Quests.BindVampirismCure(() => CureVampirism(fromQuest: true));
+            assembled.Quests.BindLycanthropyCure(() => _lycanthropy!.Cure(fromQuest: true));
+            assembled.Quests.BindVampirismCure(() => _vampirism!.Cure(fromQuest: true));
             assembled.Quests.BindRuntime(new DaggerfallQuestRuntime(progression, playerStats, definitions,
                 assembled.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar,
                 // Training spends its own source fatigue cost, so its minutes charge no idle loss.
@@ -417,6 +417,14 @@ internal sealed partial class DaggerfallSession
             _poisoning = new DaggerfallPoisoning(effects, _random, actors, character, itemInstances, authored, definitions,
                 combatRules, saved?.PoisonDraws ?? 0);
             DaggerfallPoisonRuntime poisons = _poisoning.Runtime;
+            // The curses an infection becomes; a curse's cure passes an hour, through quest time when a quest cures it.
+            DaggerfallTransformationHealing transformationHealing = new(_diseases, _poisoning, effects, actors, character);
+            _lycanthropy = new DaggerfallLycanthropy(character.RacialOverrides!, _time, tuning.Lycanthropy,
+                () => _heldEnchantments.HircinesRingEquipped, _equipmentMoves.UnequipHands, actors, _random, Presentation, this, transformationHealing,
+                seconds => AdvanceElapsedTime(seconds), seconds => AdvanceQuestTime(seconds));
+            _vampirism = new DaggerfallVampirism(character.RacialOverrides!, _time, tuning.Vampirism, definitions.Factions,
+                _random, Presentation, this, transformationHealing,
+                seconds => AdvanceElapsedTime(seconds), seconds => AdvanceQuestTime(seconds));
             DaggerfallEncumbrancePolicy encumbrance = new(inventory, playerStats,
                 () => _heldEnchantments.CarryMultiplier);
             // A new game wears its loadout now; a restore refreshes once, after its equipment is restored.

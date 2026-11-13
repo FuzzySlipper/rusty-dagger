@@ -261,7 +261,7 @@ public sealed class StoryQuestSessionTests
         var quest = Assert.Single(game.State.Quests.All, value => value.SourceFile == "$CUREWER.txt");
         Assert.NotEmpty(quest.Resources);
         using var restored = fixture.Restore(game.CaptureSave());
-        Assert.False(restored.StartLycanthropyCureQuestOpportunity(boundary + 84L * 1440));
+        Assert.False(restored.Lycanthropy.StartCureQuestOpportunity(boundary + 84L * 1440));
         Assert.Single(restored.State.Quests.All, value => value.SourceFile == "$CUREWER.txt");
     }
 

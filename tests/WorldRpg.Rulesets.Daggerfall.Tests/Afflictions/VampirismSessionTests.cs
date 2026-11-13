@@ -60,8 +60,8 @@ public sealed class VampirismSessionTests
             Assert.Equal(required.Order(), grants.Select(g => g.Spell).Order());
             Assert.All(grants, grant => Assert.Equal(DaggerfallSpellGrantKind.Vampirism, grant.Kind));
             Assert.All(required, spell => Assert.False(s.State.Character.ForgetSpell(spell)));
-            Assert.False(s.MorphPlayer());
-            Assert.True(s.CureVampirism());
+            Assert.False(s.Lycanthropy.Morph());
+            Assert.True(s.Vampirism.Cure());
             Assert.Equal(birth, s.State.Character.Race);
             Assert.Equal(strength, stats.GetStat(StatId.Parse("strength")).Value);
             Assert.Equal(intelligence, stats.GetStat(StatId.Parse("intelligence")).Value);
@@ -83,7 +83,7 @@ public sealed class VampirismSessionTests
         using var restored = f.Restore();
         Assert.Equal(s.State.RacialOverrides.Current, restored.State.RacialOverrides.Current);
         Assert.False(restored.State.Character.ForgetSpell(spells[0]));
-        Assert.True(restored.CureVampirism());
+        Assert.True(restored.Vampirism.Cure());
         Assert.Null(restored.Casting.ReadyFor(1));
         Assert.Contains(spells[0], restored.State.Character.KnownSpells);
         Assert.DoesNotContain(spells[1], restored.State.Character.KnownSpells);
@@ -137,7 +137,7 @@ public sealed class VampirismSessionTests
         Assert.True(s.State.RacialOverrides.Select(DaggerfallRacialKind.Werewolf, "wolf", Minute(s), replace: true));
         Assert.Null(s.State.RacialOverrides.Current!.State.Vampire);
         Assert.DoesNotContain(DaggerfallSavePayload.Read(s.CaptureSave()).Character!.SpellGrants!, g => g.Kind == DaggerfallSpellGrantKind.Vampirism);
-        s.CureLycanthropy();
+        s.Lycanthropy.Cure();
         Assert.Equal(original.SelectedMedia, CharacterIdentityPresentation.From(TestPayload.Definitions, s.State.Character.Identity, null).SelectedMedia);
     }
 
@@ -171,21 +171,21 @@ public sealed class VampirismSessionTests
         f.Random = VampireRandom.Create();
         using var s = f.Start(f.ExteriorProfile);
         s.State.RacialOverrides.Select(DaggerfallRacialKind.Vampire, "vampire", Minute(s), vampireClan: 153);
-        Assert.True(s.StartVampireQuestOpportunity(Minute(s), false), s.Presentation.LastOutcome);
+        Assert.True(s.Vampirism.StartQuestOpportunity(Minute(s), false), s.Presentation.LastOutcome);
         Assert.True(s.State.RacialOverrides.Current!.State.Vampire!.InitialQuestStarted);
         var initial = Assert.Single(s.State.Quests.All);
         Assert.Equal("P0A01L00.txt", initial.SourceFile);
-        Assert.False(s.StartVampireQuestOpportunity(Minute(s), false));
+        Assert.False(s.Vampirism.StartQuestOpportunity(Minute(s), false));
         using var restored = f.Restore(s.CaptureSave());
         Assert.True(restored.State.RacialOverrides.Current!.State.Vampire!.InitialQuestStarted);
         var work = restored.State.Quests.OrdinaryWorkPool(153, true, 20, 100, 20, DaggerfallCharacterGender.Male);
         Assert.Equal(9, work.Length);
         Assert.All(work, row => Assert.Equal("Vampires", row.Group));
-        Assert.True(restored.StartVampireQuestOpportunity(Minute(restored) + 1, false), restored.Presentation.LastOutcome);
+        Assert.True(restored.Vampirism.StartQuestOpportunity(Minute(restored) + 1, false), restored.Presentation.LastOutcome);
         Assert.Contains(restored.State.Quests.All, quest => work.Any(row => row.Name + ".txt" == quest.SourceFile));
-        Assert.True(restored.StartVampireQuestOpportunity(Minute(restored), true), restored.Presentation.LastOutcome);
+        Assert.True(restored.Vampirism.StartQuestOpportunity(Minute(restored), true), restored.Presentation.LastOutcome);
         Assert.Contains(restored.State.Quests.All, q => q.SourceFile == "$CUREVAM.txt");
-        Assert.True(restored.CureVampirism());
+        Assert.True(restored.Vampirism.Cure());
         Assert.NotEqual(DaggerfallQuestLifecycle.Active, restored.State.Quests.All.Single(q => q.InstanceId == initial.InstanceId).Lifecycle);
     }
 

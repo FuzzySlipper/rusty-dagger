@@ -200,6 +200,13 @@ internal sealed class DaggerfallActorRoster
         RemoveQuestActor(durableId);
     }
 
+    /// <summary>Banishes every monster and enemy-class actor, as a vampire's awakening leaves none behind.</summary>
+    internal void BanishHostiles()
+    {
+        foreach (long id in _definitionsByActor.Where(pair => pair.Key != DaggerfallActorIdentity.PlayerEntityId
+            && pair.Value.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass).Select(pair => pair.Key).ToArray()) Banish(id);
+    }
+
     /// <summary>Explicit quest removal also removes a defeated actor and its corpse, without inventing a death.</summary>
     internal void RemoveQuestActor(long durableId)
     {

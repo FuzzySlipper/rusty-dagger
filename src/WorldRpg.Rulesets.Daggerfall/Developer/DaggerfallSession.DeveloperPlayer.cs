@@ -188,7 +188,7 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
         if (string.IsNullOrEmpty(form))
         {
             if (racial is not { State.BeastForm: true }) return Refused("The player is in no beast form.");
-            MorphPlayer(forced: true);
+            _lycanthropy.Morph(forced: true);
             return DebugCommandResult.Success("Back in human form.");
         }
         if (!Enum.TryParse(form, ignoreCase: true, out DaggerfallRacialKind kind) || kind == DaggerfallRacialKind.Vampire)
@@ -196,7 +196,7 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
         if (racial is not null && racial.State.Kind != kind) return Refused($"The player is already a {racial.Name.ToLowerInvariant()}.");
         if (racial is { State.BeastForm: true }) return DebugCommandResult.Success($"Already in {kind} form.");
         if (racial is null) State.RacialOverrides.Select(kind, "lycanthropy:developer", _time.Calendar.MinuteNumber);
-        MorphPlayer(forced: true);
+        _lycanthropy.Morph(forced: true);
         return DebugCommandResult.Success($"Changed into {kind} form.");
     }
 
