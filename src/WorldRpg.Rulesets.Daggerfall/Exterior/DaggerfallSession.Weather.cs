@@ -50,6 +50,9 @@ internal sealed partial class DaggerfallSession
             _weather.SkyVariant(CurrentClimate), player, sheltered, seconds, playing, _horizon.FogDensity);
     }
 
+    /// <summary>Whether river water about the player is still being built, a few map pixels an update.</summary>
+    internal bool RiverWaterBuilding => _horizon.RiversBuilding;
+
     /// <summary>The actual outdoor weather at this geography, also available to indoor services.</summary>
     internal DaggerfallWeatherKind CurrentWeather => _weather.ForClimate(CurrentClimate);
     /// <summary>The weather's facts here: what any rule that cares about the weather should read.</summary>

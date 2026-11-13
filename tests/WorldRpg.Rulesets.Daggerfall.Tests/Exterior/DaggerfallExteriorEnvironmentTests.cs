@@ -211,9 +211,11 @@ public sealed class DaggerfallExteriorEnvironmentTests
         Assert.Equal(whole.NatureFor(next), moving.NatureFor(next));
         Assert.Empty(moving.NatureFor(last));
         Assert.NotEmpty(moving.TerrainTilesFor(last));
+        Assert.True(moving.NatureWaiting);
 
         moving.ReconcileSurfaces([center, next, last], origin, _ => Surface(100F), Locations(), Grids(224, "temperate"), center);
         Assert.NotEmpty(moving.NatureFor(last));
+        Assert.False(moving.NatureWaiting);
         Assert.Equal(whole.NatureFor(last), moving.NatureFor(last));
     }
 

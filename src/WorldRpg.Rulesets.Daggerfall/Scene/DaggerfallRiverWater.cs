@@ -25,6 +25,9 @@ internal sealed class DaggerfallRiverWater(IEngineContext engine, DaggerfallTerr
     private readonly List<Chunk> _retiring = [];
     private readonly List<(ulong Id, Appearance Look, Vector3 At)> _shown = [];
 
+    /// <summary>Whether a pixel within reach of the player still waits for its ribbons.</summary>
+    internal bool Building => _chunks.Count < ((2 * Reach) + 1) * ((2 * Reach) + 1);
+
     /// <summary>Keeps the pixels about a player at map metres (x, z), nearest first, and lays out what stands.</summary>
     internal void Follow(DaggerfallExteriorWorldOrigin origin, double x, double z)
     {

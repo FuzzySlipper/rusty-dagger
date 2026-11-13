@@ -694,9 +694,18 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             output.WriteLine($"{laid} ground tiles of {exterior.Blocks.Count} blocks lie under their blocks.");
             Assert.True(laid > 64 * 128, $"Only {laid} ground tiles were laid under Daggerfall's blocks.");
 
-            // Standing still in the city at night (no civilians walk): each update costs the same. River water streams
-            // in two map pixels an update (DaggerfallRiverWater), so the 5x5 pixels about the player are built first.
-            Steps(host, run, 13);
+            // Standing still in the city at night (no civilians walk): each update costs the same, once what an arrival
+            // streams in has settled. The window's cells away from the player take their nature one a step
+            // (DaggerfallExteriorEnvironment) and river water builds two map pixels an update (DaggerfallRiverWater), so
+            // both are done within an update a window cell.
+            int settling = 0;
+            while (run.Session.Sites.ExteriorEnvironment!.NatureWaiting || run.Session.RiverWaterBuilding)
+            {
+                Assert.True(++settling <= DaggerfallExteriorCellResidency.StreamingDimension * DaggerfallExteriorCellResidency.StreamingDimension,
+                    $"Nature or river water about the arrival was still streaming in after {settling - 1} updates.");
+                host.Call(_ => run.Step());
+            }
+            output.WriteLine($"Nature and river water about the arrival settled after {settling} updates.");
             int created = run.Graphics.CreatedResources;
             List<(double Milliseconds, long Managed)> buckets = [];
             for (int bucket = 0; bucket < 8; bucket++)

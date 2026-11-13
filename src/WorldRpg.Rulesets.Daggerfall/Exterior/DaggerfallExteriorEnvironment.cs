@@ -156,6 +156,9 @@ internal sealed class DaggerfallExteriorEnvironment
 
     internal bool IsInitialized => _initialized;
 
+    /// <summary>Whether a window cell that entered away from the player still waits its turn for nature.</summary>
+    internal bool NatureWaiting => _cells.Values.Any(facts => facts.NatureWaiting);
+
     internal IReadOnlyList<DaggerfallExteriorWaterVolume> WaterVolumes => _cells.Values
         .OrderBy(value => value.Cell.Y).ThenBy(value => value.Cell.X)
         .SelectMany(value => value.Water)

@@ -282,6 +282,9 @@ internal sealed class DaggerfallHorizon : IDisposable
         _rivers?.AppendFacts(facts);
     }
 
+    /// <summary>Whether river water about the player is still being built.</summary>
+    internal bool RiversBuilding => _rivers?.Building == true;
+
     /// <summary>A snapshot was accepted: river water that left it is let go.</summary>
     internal void CompleteSnapshot()
     {
