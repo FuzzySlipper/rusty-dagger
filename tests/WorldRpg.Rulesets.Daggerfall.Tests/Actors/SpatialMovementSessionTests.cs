@@ -431,7 +431,7 @@ public sealed class SpatialMovementSessionTests
 
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
-            session.Update(new ProductUpdateFacts(ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), input);
+            session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), input));
         }
 
         Assert.Equal([1UL, 2UL, 3UL], spatial.StepRequests.Select(request => request.Command.Sequence));
@@ -457,7 +457,7 @@ public sealed class SpatialMovementSessionTests
 
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
-            session.Update(new ProductUpdateFacts(ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectAxis, x: .5f, y: .75f, intent: "move")]);
+            session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectAxis, x: .5f, y: .75f, intent: "move")]));
         }
 
         Assert.Equal(new Vector2(.5f, .75f), spatial.StepRequests[0].Command.PlanarIntent);
@@ -479,7 +479,7 @@ public sealed class SpatialMovementSessionTests
 
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
-            session.Update(new ProductUpdateFacts(ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectDigital, x: 1f, intent: "move")]);
+            session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectDigital, x: 1f, intent: "move")]));
         }
 
         Assert.Equal(new Vector2(0f, 1f), spatial.StepRequests[0].Command.PlanarIntent);
@@ -506,12 +506,12 @@ public sealed class SpatialMovementSessionTests
         float pitchBefore = session.State.PlayerControl.PitchRadians;
         spatial.RejectProposedStep = true;
 
-        Assert.Throws<InvalidOperationException>(() => session.Update(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
+        Assert.Throws<InvalidOperationException>(() => session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
         [
             Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW),
             Input(InputEventKind.PointerDelta, x: .25f, y: -.5f),
             Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack"),
-        ]));
+        ])));
 
         Assert.Equal(0, spatial.CommandValidationCalls);
         Assert.Equal(0, spatial.StepCalls);

@@ -150,11 +150,11 @@ public sealed class ControlsInputSessionTests
         {
             // No keyboard and no synthetic pointer step: one stick pushed forward with the other
             // pushed right is the whole input slice.
-            session.Update(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
+            session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
             [
                 PadAxis(ControllerAxis.Axis1, -1f),
                 PadAxis(ControllerAxis.Axis2, 1f),
-            ]);
+            ]));
 
             // Full deflection is one unit of planar intent, and the authored start yaw is pi, which
             // wrapping puts just inside the negative end after the stick's positive yaw travel.

@@ -58,14 +58,15 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     /// <param name="before">The calendar before the interval was applied.</param>
     /// <param name="kind">What admitted the interval; see <see cref="DaggerfallCalendarAdvanceKind"/>.</param>
-    /// <param name="simulate">Ordinary play's admitted simulation steps, which run between the fan-out and locomotion.</param>
-    private void AdvanceCalendar(DaggerfallCalendar before, DaggerfallCalendarAdvanceKind kind,
-        Action? simulate = null, bool resting = false,
-        bool idleFatigue = true)
+    /// <returns>
+    /// The interval's minutes, captured before any nested interval. Ordinary play goes on from here in its
+    /// update's list (<see cref="AdmittedUpdate"/>): world encounters, standing law, the steps, then
+    /// locomotion's minutes. Every other interval has settled locomotion's minutes here.
+    /// </returns>
+    private (long Before, long After) AdvanceCalendar(DaggerfallCalendar before, DaggerfallCalendarAdvanceKind kind,
+        bool resting = false, bool idleFatigue = true)
     {
         bool ordinaryPlay = kind == DaggerfallCalendarAdvanceKind.OrdinaryPlay;
-        if (ordinaryPlay != simulate is not null)
-            throw new ArgumentException("Only ordinary play runs simulation steps inside its calendar interval.", nameof(simulate));
         // Paid temple blessings own an absolute calendar deadline rather than a generic magic-round
         // lifetime. Observe it before every other consumer so a boundary reached inside a minute is
         // visible immediately and rest/travel cannot outrun the blessing through catch-up limits.
@@ -113,15 +114,8 @@ internal sealed partial class DaggerfallSession
             // from the prior admitted update are settled before reset.
             _locomotion.AdvanceCalendarMinutes(minuteBefore, minuteAfter, State.Actors.Player.Stats,
                 includeIdleFatigue: !resting && idleFatigue, swimmingFatigueApplies: SwimmingFatigueApplies);
-            return;
         }
-        AdvanceWorldEncounters(minuteBefore, minuteAfter);
-        CheckStandingLaw(minuteBefore, minuteAfter);
-        simulate!();
-        // Locomotion charges the update's minutes once its steps have recorded how they were spent.
-        // A training interval admitted inside a step has already settled its own minutes.
-        _locomotion.AdvanceCalendarMinutes(minuteBefore, minuteAfter, State.Actors.Player.Stats,
-            swimmingFatigueApplies: SwimmingFatigueApplies);
+        return (minuteBefore, minuteAfter);
     }
 
     /// <summary>
