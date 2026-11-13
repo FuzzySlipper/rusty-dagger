@@ -129,15 +129,16 @@ internal sealed partial class DaggerfallSession
             // A reloaded DOM holds no art and asks for the revision it is missing; the projection
             // answers on its next snapshot rather than a second delivery channel existing.
             case DaggerfallUiActionKind.ArtRequest: _hud.RequestArt(action.Revision!); break;
-            case DaggerfallUiActionKind.ActionDrivenTime: ChangePlayerTime(action.Enabled!.Value); break;
-            case DaggerfallUiActionKind.ControlsLook:
-            case DaggerfallUiActionKind.ControlsUiScale:
-            case DaggerfallUiActionKind.ControlsGroundCover:
-            case DaggerfallUiActionKind.ControlsClutterDistance:
-            case DaggerfallUiActionKind.ControlsRebind:
+            case DaggerfallUiActionKind.ActionDrivenTime: _controls.ChangePlayerTime(action.Enabled!.Value); break;
+            case DaggerfallUiActionKind.ControlsLook: _controls.Change(settings => settings.SetLook(action.Sensitivity!.Value, action.Invert!.Value)); break;
+            case DaggerfallUiActionKind.ControlsUiScale: _controls.Change(settings => settings.SetUiScale(action.Scale)); break;
+            case DaggerfallUiActionKind.ControlsGroundCover: _controls.Change(settings => settings.SetGroundCover(action.Enabled!.Value)); break;
+            case DaggerfallUiActionKind.ControlsClutterDistance: _controls.Change(settings => settings.SetClutterDistance(action.Scale!.Value)); break;
+            case DaggerfallUiActionKind.ControlsRebind: _controls.Change(settings => settings.Rebind(action.Item!, [action.Key!], action.Confirm)); break;
             case DaggerfallUiActionKind.ControlsRebindButton:
-            case DaggerfallUiActionKind.ControlsVolume:
-            case DaggerfallUiActionKind.ControlsReset: ChangeControls(action); break;
+                _controls.Change(settings => settings.RebindButton(action.Item!, checked((int)action.Amount!.Value), _controls.PadActions, action.Confirm)); break;
+            case DaggerfallUiActionKind.ControlsVolume: _controls.Change(settings => settings.SetVolume(action.Item!, action.Scale!.Value)); break;
+            case DaggerfallUiActionKind.ControlsReset: _controls.Reset(); break;
             case DaggerfallUiActionKind.CharacterClassQuestions:
             case DaggerfallUiActionKind.CharacterClassAnswer:
             case DaggerfallUiActionKind.CharacterClassBack:
@@ -340,5 +341,33 @@ internal sealed partial class DaggerfallSession
         foreach (string shortcut in DaggerfallInput.Shortcuts)
             if (_input.TakeAction(DaggerfallInput.Shortcut(shortcut))) { ApplyShortcut(shortcut); panel = true; }
         if (panel) _input.ClearPendingActions();
+    }
+
+    /// <summary>What a shortcut key asks for: a panel, a save, an activation mode or a spell.</summary>
+    private void ApplyShortcut(string id)
+    {
+        if (id.StartsWith("activation.", StringComparison.Ordinal))
+        {
+            ApplyActivationMode(new("activation-mode", Mode: id["activation.".Length..]));
+            return;
+        }
+        switch (id)
+        {
+            case "quick-save": _saveSlotRequest = new(WorldRpg.Kit.SaveSlotOperation.QuickSave); break;
+            // Quick load discards progress, so the key asks the screen to confirm it, as the menu's button does.
+            case "quick-load": RequestPanel("quick-load"); break;
+            case "spell": RequestPanel("spells"); break;
+            case "rest": RequestPanel("rest"); break;
+            case "transport": RequestPanel(DaggerfallPanel.Travel); break;
+            case "logbook": RequestPanel(DaggerfallPanel.Journal); break;
+            case "notebook": RequestPanel(DaggerfallPanel.Notebook); break;
+            case "travel-map": ChangeTravelMap(new("travel-map", Open: true)); RequestPanel(DaggerfallPanel.Travel); break;
+            case "use-magic-item": RequestPanel("magic-items"); break;
+            case "radial": RequestPanel(DaggerfallPanel.Radial); break;
+            case "abort-spell": ChangeSpell(new("spell-unready")); break;
+            case "recast":
+                _attackClock.PressCast();
+                break;
+        }
     }
 }

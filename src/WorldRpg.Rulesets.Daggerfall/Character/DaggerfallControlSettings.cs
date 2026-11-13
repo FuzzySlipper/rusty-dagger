@@ -182,7 +182,7 @@ public sealed class DaggerfallControlSettings
     public bool ActionDrivenTime { get; private set; }
     public void SetActionDrivenTime(bool enabled) => ActionDrivenTime = enabled;
     /// <summary>Whether the vertical look device axis is inverted.</summary>
-    public bool InvertVertical { get; private set; } = DaggerfallTuning.Defaults.PlayerControl.InvertVertical;
+    public bool InvertVertical { get; private set; } = DaggerfallInput.Look.InvertVertical;
 
     /// <summary>The smallest UI scale a player may choose.</summary>
     public const float MinimumUiScale = 0.5f;
@@ -334,7 +334,7 @@ public sealed class DaggerfallControlSettings
 
     /// <summary>Restores every default.</summary>
     /// <remarks>Sound levels are not controls and survive a controls reset, as the interface scale does.</remarks>
-    public void Reset() { ReplaceBindings(CreateDefaultBindings()); _controller = null; SetLook(1, DaggerfallTuning.Defaults.PlayerControl.InvertVertical); }
+    public void Reset() { ReplaceBindings(CreateDefaultBindings()); _controller = null; SetLook(1, DaggerfallInput.Look.InvertVertical); }
 
     /// <summary>Serializes the bindings for the settings holder.</summary>
     public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale, _controller, _volumes, GroundCover, ClutterDistance), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);

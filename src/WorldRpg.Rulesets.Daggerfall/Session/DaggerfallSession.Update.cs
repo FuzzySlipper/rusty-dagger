@@ -577,8 +577,8 @@ internal sealed partial class DaggerfallSession
         _input.Observe(State.PlayerControl, input, lookSeconds, firstStep.PlanarIntent);         // Character
         foreach (var action in firstStep.RequestedActions) _input.Request(action);               // Character
         _locomotion.Observe(input);                                                               // Character
-        _guard.Observe(input, PadBindings);                                                       // Combat
-        _attackClock.Observe(input, PadBindings);                                                 // Combat
+        _guard.Observe(input, _controls.PadBindings);                                             // Combat
+        _attackClock.Observe(input, _controls.PadBindings);                                       // Combat
     }
 
     /// <summary>

@@ -54,8 +54,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallRestTuning Rest { get; init; } = DaggerfallRestTuning.Default;
 
     internal static DaggerfallTuning Defaults { get; } = new(
-        // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
-        new PlayerControlTuning(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: true, WrapYaw: true),
+        DaggerfallInput.Look,
         ControllerInputTuning.Standard with { Actions = DaggerfallInput.PadActions },
         new SpatialTuning(.5, 32, 32, 2, new CharacterControllerTuning(
             StandingHeight: 1.8f,

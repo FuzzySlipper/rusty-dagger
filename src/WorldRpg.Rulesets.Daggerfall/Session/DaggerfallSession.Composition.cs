@@ -165,9 +165,12 @@ internal sealed partial class DaggerfallSession
             DaggerfallWorldProfileKey activeProfile = saved?.Site.ActiveProfile?.Require() ?? inputs.ProfileKey;
             if (DaggerfallWorldProfileIds.TryParse(activeProfile.LogicalId, out _, out var arrivedBuilding) && arrivedBuilding is { } building)
                 _site.DiscoverBuilding(activeProfile.Site, building);
-            _controlEngine = engine;
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput);
-            _locomotion = new DaggerfallLocomotionPolicy(tuning.Locomotion, _controlSettings);
+            DaggerfallControlSettings controlSettings = new();
+            _locomotion = new DaggerfallLocomotionPolicy(tuning.Locomotion, controlSettings);
+            _controls = new DaggerfallPlayerControls(engine.Input, engine.Audio, _input, _locomotion, controlSettings,
+                tuning.PlayerControl.LookSensitivity, tuning.ControllerInput, _playerTime.Select,
+                (enabled, distance) => _horizon!.UseGroundCover(enabled, distance));
             _climbing = new DaggerfallClimbingPolicy(tuning.Climbing);
             // Location artifacts are admitted by the exterior's collision placement so an exterior map-pixel
             // transition can remove and re-admit one profile without replacing the whole session.

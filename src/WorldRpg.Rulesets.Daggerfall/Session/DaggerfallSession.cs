@@ -114,6 +114,18 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>Whether action-driven play is holding the world still now.</summary>
     internal bool PlayerTimeHeld => _playerTime.Held;
+
+    // The player's control settings: bindings, look, pad, sound levels, ground cover and action-driven time.
+    private readonly DaggerfallPlayerControls _controls;
+    public string CapturePlayerPreferences() => _controls.Capture();
+    public string? TakePlayerPreferencesSave() => _controls.TakePreferencesSave();
+    public void ReportPlayerPreferencesOutcome(string message)
+    {
+        _controls.Report(message);
+        PublishPresentation();
+    }
+    public void ApplyPlayerPreferences(string? serialized) => _controls.ApplyPreferences(serialized);
+    internal bool ActionDrivenPlay => _controls.ActionDrivenTime;
     private readonly World.DaggerfallSiteContext _site;
 
     /// <summary>The holiday announcement the calendar currently names for the session's site, or null.</summary>
@@ -799,8 +811,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             SaveSlots: _saveSlots,
             Bundles: _mode == ProductMode.Title && !_newGameInitialized ? _bundles : null,
             SaveSlotDiagnostic: _saveSlotDiagnostic,
-            ControlSettings: _controlSettings,
-            ControlDiagnostic: _controlDiagnostic,
+            ControlSettings: _controls.Settings,
+            ControlDiagnostic: _controls.Diagnostic,
             Activation: ActivationView,
             Breath: State.Swimming.ReadBreath(State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
                 State.Effects.GrantsWaterBreathing(DaggerfallActorIdentity.PlayerEntityId)),

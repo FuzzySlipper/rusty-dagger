@@ -54,6 +54,13 @@ internal static class DaggerfallInput
     }
 
     /// <summary>
+    /// The default look: sensitivity, pitch limits and inversion. Screen-space mouse Y increases downward and
+    /// Engine camera pitch increases upward, so the vertical axis is inverted unless the player chooses otherwise.
+    /// </summary>
+    internal static readonly PlayerControlTuning Look =
+        new(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: true, WrapYaw: true);
+
+    /// <summary>
     /// The pad's action buttons in the layout the browser shell delivers: the bottom face attacks, the
     /// right face reaches for what the player is facing, the left face readies the weapon, the top
     /// face opens the command radial, the left shoulder guards, the right shoulder kicks, select opens

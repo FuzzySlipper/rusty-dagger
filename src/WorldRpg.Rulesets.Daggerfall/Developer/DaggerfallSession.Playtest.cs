@@ -51,7 +51,7 @@ internal sealed partial class DaggerfallSession
         string binding = id switch { "forward" => "move.forward", "back" => "move.backward",
             "left" => "move.left", "right" => "move.right", "use" => "interact", _ => id };
         if (!PlaytestActions.Contains(id)) return new(id, "", 0, false, false, "unknown-action");
-        string key = _controlSettings.KeysFor(binding).FirstOrDefault() ?? "";
+        string key = _controls.Settings.KeysFor(binding).FirstOrDefault() ?? "";
         bool moving = binding.StartsWith("move.", StringComparison.Ordinal);
         bool available = _mode == ProductMode.Playing && !State.Actors.Player.IsDefeated;
         string? reason = available ? null : State.Actors.Player.IsDefeated ? "player-dead" : $"mode-{_mode}; use ordinary UI";
@@ -146,7 +146,7 @@ internal sealed partial class DaggerfallSession
         var plan = PlaytestTraversal.JumpToward(center - Vector3.UnitY * (height * .5f),
             _input.ResolveCurrentLook(State.PlayerControl).Forward, new Vector3((float)x, (float)y, (float)z),
             config, State.PlayerControl.Motion.Grounded,
-            _controlSettings.KeysFor("jump").First(), _controlSettings.KeysFor("move.forward").First());
+            _controls.Settings.KeysFor("jump").First(), _controls.Settings.KeysFor("move.forward").First());
         return DebugCommandResult.Success(JsonSerializer.Serialize(plan, DaggerfallPlaytestJsonContext.Default.PlaytestJumpPlan));
     }
 
@@ -188,7 +188,7 @@ internal sealed partial class DaggerfallSession
         w.WriteEndObject();
         w.WriteEndObject();
         w.WriteStartObject("controls");
-        foreach (var pair in _controlSettings.All) { w.WriteStartArray(pair.Key); foreach (string key in pair.Value) w.WriteStringValue(key); w.WriteEndArray(); }
+        foreach (var pair in _controls.Settings.All) { w.WriteStartArray(pair.Key); foreach (string key in pair.Value) w.WriteStringValue(key); w.WriteEndArray(); }
         w.WriteEndObject();
         w.WriteString("lastOutcome", Presentation.LastOutcome);
         w.WriteString("outcomeSemantics", "HUD text is historical. Compare lastCombatEvent.sequence and lastUseStep across action receipts; inspection never creates events.");
