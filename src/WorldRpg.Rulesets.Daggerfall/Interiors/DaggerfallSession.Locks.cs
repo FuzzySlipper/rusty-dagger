@@ -154,7 +154,7 @@ internal sealed partial class DaggerfallSession
     {
         if (decision.Surface != DaggerfallLockInteractionSurface.Exterior || !decision.ConsumedAttempt) return;
         string operation = $"lock:{State.Crime.OperationCount + 1}";
-        long minute = MinuteIndex(_time.Calendar);
+        long minute = _time.Calendar.MinuteNumber;
         long owner = checked((long)_doors.IdentityOf(id).Value);
         bool accepted = decision.Applied && result == DaggerfallDoorOperationResult.Started;
         if (accepted && decision.Kind == DaggerfallLockInteractionKind.Lockpick)

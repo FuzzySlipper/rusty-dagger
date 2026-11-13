@@ -5,7 +5,7 @@ internal sealed partial class DaggerfallSession
     /// <summary>Expiry is item policy on the one admitted calendar and the canonical inventories.</summary>
     private void ExpireConjuredItems()
     {
-        long minute = MinuteIndex(_time.Calendar);
+        long minute = _time.Calendar.MinuteNumber;
         foreach (var entry in State.ItemInstances.UniqueItems.Where(value => value.Value.Conjuration?.ExpiresAtMinute <= minute).ToArray())
             DestroyUniqueItem(entry.Key);
         foreach (var entry in State.ItemInstances.StackItems.Where(value => value.Metadata.Conjuration?.ExpiresAtMinute <= minute).ToArray())

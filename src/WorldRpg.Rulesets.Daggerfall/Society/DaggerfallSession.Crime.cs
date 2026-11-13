@@ -64,7 +64,7 @@ internal sealed partial class DaggerfallSession
         var witnesses = !success && npc is not null ? QueryCrimeWitnesses() : DaggerfallCrimeWitnessEvidence.NotQueried;
         var outcome = !success ? DaggerfallCrimeAttemptOutcome.Failed : gold > 0
             ? DaggerfallCrimeAttemptOutcome.PropertyTransferred : DaggerfallCrimeAttemptOutcome.SucceededWithoutTakingProperty;
-        long minute = MinuteIndex(_time.Calendar);
+        long minute = _time.Calendar.MinuteNumber;
         State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Pickpocket, DaggerfallActorIdentity.PlayerEntityId,
             targetId, region.Value, minute, outcome, witnesses));
         if (gold > 0) State.Crime.RecordGuildRequirementProgress(operation, DaggerfallCrimeGuildCredit.Thieving, minute);
@@ -134,7 +134,7 @@ internal sealed partial class DaggerfallSession
     private void ObserveCrimeHit(AttackHitFact damage)
     {
         if (damage.AttackerId == DaggerfallActorIdentity.PlayerEntityId && State.RacialOverrides.Current?.IsVampire == true)
-            State.RacialOverrides.Feed(MinuteIndex(_time.Calendar));
+            State.RacialOverrides.Feed(_time.Calendar.MinuteNumber);
         // SetPlayerCrime supplies a charge, not a fabricated assault or witness query. A real
         // damaging watch hit admits it to the existing legal-response owner, as in EnemyAttack.
         if (damage.TargetId == DaggerfallActorIdentity.PlayerEntityId && damage.ActualHealthLost > 0
@@ -143,7 +143,7 @@ internal sealed partial class DaggerfallSession
             && State.RacialOverrides.Current?.SuppressCrime != true)
         {
             ReportCrime(new($"quest-charge:{damage.OriginatingGeneration}:{damage.OriginatingSimulationStep}:{damage.AttackerId}", crime,
-                DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, null, region, MinuteIndex(_time.Calendar),
+                DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, null, region, _time.Calendar.MinuteNumber,
                 DaggerfallCrimeTargetKind.Unknown, DaggerfallCrimeWitnessEvidence.NotQueried, DaggerfallCrimeGuildCredit.None, Reported: true));
             State.Crime.SetScriptedCrime(null);
         }
@@ -164,12 +164,12 @@ internal sealed partial class DaggerfallSession
         int? region = _site.Region ?? npc?.Site.Region;
         if (region is null) return;
         if (State.Crime.HasAttempt(operation)) return;
-        if (dead && State.RacialOverrides.Current is { IsVampire: false }) State.RacialOverrides.Satiate(MinuteIndex(_time.Calendar));
+        if (dead && State.RacialOverrides.Current is { IsVampire: false }) State.RacialOverrides.Satiate(_time.Calendar.MinuteNumber);
         var witnesses = QueryCrimeWitnesses();
         var crime = dead && !mobileGuard ? DaggerfallCrimeKind.Murder : DaggerfallCrimeKind.Assault;
         var kind = guard ? DaggerfallCrimeTargetKind.Guard : DaggerfallCrimeTargetKind.Civilian;
         var credit = !dead || mobileGuard ? DaggerfallCrimeGuildCredit.None : guard ? DaggerfallCrimeGuildCredit.GuardMurder : DaggerfallCrimeGuildCredit.CivilianMurder;
-        long minute = MinuteIndex(_time.Calendar);
+        long minute = _time.Calendar.MinuteNumber;
         State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Assault, attacker,
             target, region.Value, minute, DaggerfallCrimeAttemptOutcome.DamageAccepted, witnesses));
         ReportCrime(new(operation, crime, DaggerfallCrimeStage.Completed, attacker, target,

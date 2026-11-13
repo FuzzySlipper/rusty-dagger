@@ -195,7 +195,7 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
             return Refused($"'{form}' is no beast form (werewolf, wereboar).");
         if (racial is not null && racial.State.Kind != kind) return Refused($"The player is already a {racial.Name.ToLowerInvariant()}.");
         if (racial is { State.BeastForm: true }) return DebugCommandResult.Success($"Already in {kind} form.");
-        if (racial is null) State.RacialOverrides.Select(kind, "lycanthropy:developer", MinuteIndex(_time.Calendar));
+        if (racial is null) State.RacialOverrides.Select(kind, "lycanthropy:developer", _time.Calendar.MinuteNumber);
         MorphPlayer(forced: true);
         return DebugCommandResult.Success($"Changed into {kind} form.");
     }

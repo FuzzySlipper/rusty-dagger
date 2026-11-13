@@ -64,7 +64,7 @@ internal sealed partial class DaggerfallSession
         string operation = $"property:{State.Crime.OperationCount + 1}";
         bool caught = CrimeRoll(operation, "noticed", 0, 99) < chance;
         var witnesses = QueryCrimeWitnesses();
-        long minute = MinuteIndex(_time.Calendar);
+        long minute = _time.Calendar.MinuteNumber;
         State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Theft, DaggerfallActorIdentity.PlayerEntityId,
             source.Id, _activeProfileKey.Site.Region, minute, DaggerfallCrimeAttemptOutcome.PropertyTransferred, witnesses));
         ReportCrime(new(operation, DaggerfallCrimeKind.Theft, DaggerfallCrimeStage.Completed,

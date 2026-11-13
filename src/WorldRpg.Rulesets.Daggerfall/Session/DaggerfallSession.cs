@@ -105,7 +105,11 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private DaggerfallDoorRuntime _doors => _sites.Projection.Doors;
 
     private readonly World.DaggerfallWorldTime _time;
+    private readonly World.DaggerfallHolidays _holidays = new();
     private readonly World.DaggerfallSiteContext _site;
+
+    /// <summary>The holiday announcement the calendar currently names for the session's site, or null.</summary>
+    internal World.DaggerfallHolidayAnnouncement? HolidayAnnouncement => _holidays.Announcement;
 
     /// <summary>
     /// Where the session is: the active site, the region it belongs to and the sites play has revealed.

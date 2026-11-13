@@ -107,7 +107,7 @@ internal sealed partial class DaggerfallSession
     private void StartDueCriminalInvitations()
     {
         bool inside = _sites.ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior;
-        long minute = MinuteIndex(_time.Calendar);
+        long minute = _time.Calendar.MinuteNumber;
         foreach (var (requirement, source, faction) in new[] {
             (DaggerfallCrimeGuildRequirement.Thieving, "O0A0AL00", DaggerfallConcreteGuildCatalog.ThievesFactionId),
             (DaggerfallCrimeGuildRequirement.Murder, "L0A01L00", DaggerfallConcreteGuildCatalog.DarkBrotherhoodFactionId) })

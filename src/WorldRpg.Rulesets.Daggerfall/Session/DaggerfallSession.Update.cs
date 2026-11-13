@@ -13,9 +13,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
 /// The update order. <see cref="AdmittedUpdate"/> is every call one Engine-admitted update makes, in order;
-/// <see cref="AdvanceCalendar"/> is every calendar consumer, in order, which rest, travel and quest time share;
-/// <see cref="SimulateStep"/> is every call one of its fixed steps makes; and <see cref="ResolveExhaustion"/> is
-/// what a collapse does across domains. Each line says the domain it belongs to. Order is behaviour: a call
+/// <see cref="AdvanceCalendar"/> is every calendar consumer, in order, which rest, travel and quest time share
+/// through <see cref="AdvanceElapsedTime"/> and <see cref="AdvanceQuestTime"/>; <see cref="SimulateStep"/> is every
+/// call one of its fixed steps makes; and <see cref="ResolveExhaustion"/> is what a collapse does across domains. Each line says the domain it belongs to. Order is behaviour: a call
 /// moves only with a reason that names what it changes.
 /// </summary>
 internal sealed partial class DaggerfallSession
@@ -233,7 +233,7 @@ internal sealed partial class DaggerfallSession
             State.HeldEnchantments.Talents.Athleticism);                                          // Character
         RefreshPassiveMagery();                                                                   // Character
         DaggerfallCalendar after = _time.Calendar;
-        long minuteBefore = MinuteIndex(before), minuteAfter = MinuteIndex(after);
+        long minuteBefore = before.MinuteNumber, minuteAfter = after.MinuteNumber;
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);                              // Economy
         _weather.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                     // Exterior
         _sites.Projection.Lighting.UpdateAmbient(_time.Calendar, _tuning.Weather.Daylight(_time.Calendar, CurrentWeather));   // Scene
@@ -259,7 +259,7 @@ internal sealed partial class DaggerfallSession
         AdvanceLycanthropyQuestOpportunities(before, after);                                      // Afflictions
         StartDueCriminalInvitations();                                                            // Quests
         ExpireConjuredItems();                                                                    // Magic
-        AdvanceEffectsForCalendar(before, after, ordinaryPlay, resting);                          // Magic
+        AdvanceRounds(before, after, ordinaryPlay, resting);                                      // Session: the round's list, below
         // An elapsed interval announces the holiday it ends on once, when it completes, rather than
         // every holiday its slices cross (CompleteTimeIncrease).
         if (ordinaryPlay) AnnounceHoliday();                                                      // Time
@@ -273,6 +273,90 @@ internal sealed partial class DaggerfallSession
                 includeIdleFatigue: !resting && idleFatigue, swimmingFatigueApplies: SwimmingFatigueApplies);   // Character, Condition
         }
         return (minuteBefore, minuteAfter);
+    }
+
+    /// <summary>
+    /// The elapsed interval's list: a rest, travel, prison or other ruleset-owned interval, passed through the one
+    /// calendar. A caller resumes <see cref="DaggerfallCalendarAdvance.RemainingSeconds"/> after handling a
+    /// consequence; only the portion the calendar accepted reaches the calendar's consumers. An owner that passes
+    /// time is handed this as an input, bound to its own kind of interval (a <c>Func&lt;long, ...&gt;</c> the session
+    /// builds where it composes that owner), and never calls the session for it.
+    /// </summary>
+    internal DaggerfallCalendarAdvance AdvanceElapsedTime(long gameSeconds,
+        IReadOnlyList<(int Identity, long SecondsFromNow)>? consequences = null,
+        bool deferSkillAdvancement = false, bool resting = false, bool idleFatigue = true,
+        bool completeTimeIncrease = true)
+    {
+        DaggerfallCalendar calendarBefore = _time.Calendar;
+        DaggerfallCalendarAdvance advance = _time.AdvanceInterval(gameSeconds, consequences ?? []);   // Time
+        AdvanceCalendar(calendarBefore,
+            deferSkillAdvancement ? DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills : DaggerfallCalendarAdvanceKind.Elapsed,
+            resting: resting, idleFatigue: idleFatigue);                                          // Session: the calendar's list
+        // Elapsed rest/travel/service time can cross the donor outdoor population's dawn or dusk
+        // boundary without an Engine admitted frame. Reconcile through the existing NPC/lifetime
+        // owner so source civilians hide, retire, restore and preserve their durable identities.
+        if (advance.AppliedSeconds > 0)
+            ReconcileNpcProjection();                                                             // Actors
+        // No admitted update refills Stamina through elapsed time, so the time itself does.
+        if (advance.AppliedSeconds > 0) _condition.Stamina.Fill(State.Actors.Player.Stats);      // Condition
+        // Rest and travel admit many slices and complete the time increase once, at their end.
+        if (!resting && completeTimeIncrease && advance.AppliedSeconds > 0) CompleteTimeIncrease();   // Session: the increase's end, below
+        return advance;
+    }
+
+    /// <summary>A quest-owned elapsed interval through the one calendar, without re-running quest tasks.</summary>
+    private void AdvanceQuestTime(long gameSeconds, bool idleFatigue = true)
+    {
+        DaggerfallCalendar calendarBefore = _time.Calendar;
+        var advance = _time.AdvanceInterval(gameSeconds, []);                                     // Time
+        AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.QuestAction, idleFatigue: idleFatigue);   // Session: the calendar's list
+        if (advance.AppliedSeconds > 0) CompleteTimeIncrease();                                   // Session: the increase's end, below
+    }
+
+    /// <summary>
+    /// The end of one synthetic time increase (a rest, a journey, a service): held items reroll once and the day it
+    /// ended on announces its holiday, as the donor shows only the current holiday's text.
+    /// </summary>
+    private void CompleteTimeIncrease()
+    {
+        _itemCastTriggers.CompleteTimeIncrease();                                                 // Magic
+        AnnounceHoliday();                                                                        // Time
+    }
+
+    /// <summary>The holiday the calendar names where the player stands, announced once.</summary>
+    private void AnnounceHoliday()
+    {
+        if (_holidays.Observe(_time.Calendar, _site.Region, _site.ActiveSite?.Kind,
+                _definitions.TextPresentation) is { } line)                                       // Time
+            Presentation.SetOutcome(line);                                                        // UiProjection
+    }
+
+    /// <summary>
+    /// The round's list: the calendar minutes of one interval as magic rounds. A normal game minute of ordinary play
+    /// is one ordinary round; several minutes, ordinary or elapsed, keep the donor's bounded catch-up inside each
+    /// owner.
+    /// </summary>
+    private void AdvanceRounds(DaggerfallCalendar before, DaggerfallCalendar after, bool ordinaryPlay, bool resting)
+    {
+        long minuteBefore = before.MinuteNumber;
+        long minutes = after.MinuteNumber - minuteBefore;
+        if (minutes <= 0) return;
+
+        long roundBefore = State.Effects.MagicRounds;
+        AdvancePassiveRounds(roundBefore, minutes);                                               // Character
+        AdvanceLycanthropyRound(after);                                                           // Afflictions
+        RefreshLycanthropy();                                                                     // Afflictions
+        if (ordinaryPlay && minutes == 1)
+        {
+            State.Effects.AdvanceOrdinaryRound();                                                 // Magic
+            State.HeldEnchantments.AdvanceRounds(1);                                              // Magic
+            _itemCastTriggers.AdvanceRounds(1, synthetic: false, roundBefore: roundBefore);       // Magic
+            return;
+        }
+
+        _ = State.Effects.AdvanceElapsedRounds(minutes);                                          // Magic
+        State.HeldEnchantments.AdvanceRounds(checked((int)Math.Min(minutes, int.MaxValue)), synthetic: !ordinaryPlay && !resting);   // Magic
+        _itemCastTriggers.AdvanceRounds(minutes, synthetic: !ordinaryPlay && !resting, resting: resting, roundBefore: roundBefore);   // Magic
     }
 
     /// <summary>

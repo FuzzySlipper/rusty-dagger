@@ -137,10 +137,10 @@ internal sealed class DaggerfallLocomotionPolicy
         ArgumentNullException.ThrowIfNull(stats);
         Track fatigue = stats.GetTrack(Fatigue);
         long minutes = checked(after - before);
-        long climbingMinutes = Math.Min(minutes, checked((long)Math.Ceiling(_climbingGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
-        long runningMinutes = Math.Min(minutes - climbingMinutes, checked((long)Math.Ceiling(_runningGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
+        long climbingMinutes = Math.Min(minutes, checked((long)Math.Ceiling(_climbingGameSeconds / TimeSpan.SecondsPerMinute)));
+        long runningMinutes = Math.Min(minutes - climbingMinutes, checked((long)Math.Ceiling(_runningGameSeconds / TimeSpan.SecondsPerMinute)));
         long swimmingMinutes = Math.Min(minutes - climbingMinutes - runningMinutes,
-            checked((long)Math.Ceiling(_swimmingGameSeconds / DaggerfallCalendar.SecondsPerMinute)));
+            checked((long)Math.Ceiling(_swimmingGameSeconds / TimeSpan.SecondsPerMinute)));
         long idleMinutes = includeIdleFatigue ? checked(minutes - climbingMinutes - runningMinutes - swimmingMinutes) : 0;
         long failedSwimmingMinutes = 0;
         for (long index = 0; index < swimmingMinutes; index++)

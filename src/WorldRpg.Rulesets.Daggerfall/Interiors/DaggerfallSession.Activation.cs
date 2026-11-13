@@ -178,7 +178,7 @@ internal sealed partial class DaggerfallSession
     private void ReportEntryCrime(long owner, int region, DaggerfallActivationMode? forceMode, DaggerfallCrimeWitnessEvidence witnesses)
     {
         string operation = $"entry:{State.Crime.Attempts.Count + 1}";
-        long minute = MinuteIndex(_time.Calendar);
+        long minute = _time.Calendar.MinuteNumber;
         State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
             owner, region, minute, DaggerfallCrimeAttemptOutcome.EntryAccepted, witnesses));
         ReportCrime(new(operation, forceMode is not null ? DaggerfallCrimeKind.BreakingAndEntering : DaggerfallCrimeKind.Trespassing,

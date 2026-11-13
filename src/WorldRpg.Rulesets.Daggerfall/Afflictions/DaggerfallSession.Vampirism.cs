@@ -41,7 +41,7 @@ internal sealed partial class DaggerfallSession
         AdvanceQuestTime(14L * DaggerfallCalendar.SecondsPerDay + (DaggerfallCalendar.DuskHour + 1 - _time.Calendar.Hour) * 3600L,
             idleFatigue: false);
         if (!State.RacialOverrides.Select(DaggerfallRacialKind.Vampire, $"vampirism:{transition.Instance}",
-            MinuteIndex(_time.Calendar), vampireClan: clan)) return new(false, "A racial override is already active.");
+            _time.Calendar.MinuteNumber, vampireClan: clan)) return new(false, "A racial override is already active.");
         HealRacialTransformation();
         var text = _definitions.TextPresentation.Resolve(new(DaggerfallTextKind.Resource, "401"), DungeonTextContext());
         Presentation.SetOutcome(text.Text);
@@ -51,7 +51,7 @@ internal sealed partial class DaggerfallSession
     private void AdvanceVampireQuestOpportunities(DaggerfallCalendar before, DaggerfallCalendar after)
     {
         if (State.RacialOverrides.Current is not { IsVampire: true } racial) return;
-        long first = Math.Max(MinuteIndex(before), racial.State.AcquiredMinute), last = MinuteIndex(after);
+        long first = Math.Max(before.MinuteNumber, racial.State.AcquiredMinute), last = after.MinuteNumber;
         // Classic's clan opportunity is nested inside the weekly and 38-day conditions (266 days).
         // The separate cure opportunity is every 84 days. Both consume this one admitted calendar.
         foreach (var period in new[] { (Minutes: 266L * 1440, Cure: false), (Minutes: 84L * 1440, Cure: true) })
@@ -110,5 +110,5 @@ internal sealed partial class DaggerfallSession
     }
 
     private bool VampireNeedsToFeed => State.RacialOverrides.Current?.State.Vampire is { } vampire
-        && MinuteIndex(_time.Calendar) - vampire.LastFedMinute > _tuning.Vampirism.SatiationMinutes;
+        && _time.Calendar.MinuteNumber - vampire.LastFedMinute > _tuning.Vampirism.SatiationMinutes;
 }

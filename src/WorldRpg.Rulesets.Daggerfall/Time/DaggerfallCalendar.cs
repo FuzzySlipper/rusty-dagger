@@ -191,6 +191,9 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
     /// <summary>How many whole days have passed since the calendar's first day.</summary>
     public long DayNumber => (((long)Year - FirstYear) * DaysPerYear) + ((Month - FirstMonth) * DaysPerMonth) + Day;
 
+    /// <summary>How many whole minutes have passed since the calendar's first day: the count minute-keyed rules use.</summary>
+    public long MinuteNumber => (DayNumber * HoursPerDay * MinutesPerHour) + (Hour * MinutesPerHour) + Minute;
+
     /// <summary>
     /// Advances the calendar by an interval, and reports what boundaries it crossed.
     /// </summary>

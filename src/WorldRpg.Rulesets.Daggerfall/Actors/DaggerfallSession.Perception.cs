@@ -63,7 +63,7 @@ internal sealed partial class DaggerfallSession
             ? byMobileId
             : _definitions.Mobiles.ForActor(definition.Id.Value);
 
-        long minute = MinuteIndex(_time.Calendar);
+        long minute = _time.Calendar.MinuteNumber;
         int drawIndex = 0;
         Func<int, int> rollPercent = exclusiveMaximum =>
         {

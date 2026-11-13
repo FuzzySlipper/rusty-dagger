@@ -170,7 +170,7 @@ internal sealed partial class DaggerfallSession
                 State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
                 update.DeltaSeconds,
                 update.DeltaSeconds * _tuning.Time.GameSecondsPerRealSecond,
-                swimmingMinuteAfter ?? MinuteIndex(_time.Calendar),
+                swimmingMinuteAfter ?? _time.Calendar.MinuteNumber,
                 use => State.SkillUses.Record(use), swimmingMinuteBefore)
             : DaggerfallSwimmingStep.None;
         player.Landing = _locomotion.CompleteStep(player.Locomotion, landingBefore, player.Movement,

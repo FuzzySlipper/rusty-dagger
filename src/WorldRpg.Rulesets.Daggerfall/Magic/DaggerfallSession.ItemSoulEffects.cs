@@ -97,7 +97,7 @@ internal sealed partial class DaggerfallSession
             Presentation.SetOutcome("Cannot create that item: you cannot carry any more.");
             return;
         }
-        created = created with { Metadata = created.Metadata with { Conjuration = new(request.Instance, checked(MinuteIndex(_time.Calendar) + request.Duration)) } };
+        created = created with { Metadata = created.Metadata with { Conjuration = new(request.Instance, checked(_time.Calendar.MinuteNumber + request.Duration)) } };
         var identity = created.Stackable ? (WorldRpg.Kit.World.DurableIdentityReference?)null : _uniqueItems.AllocateReference();
         try
         {

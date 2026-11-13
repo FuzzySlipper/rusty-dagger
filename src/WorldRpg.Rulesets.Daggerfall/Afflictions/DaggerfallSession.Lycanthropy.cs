@@ -15,7 +15,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
         if (transition.Kind == DaggerfallInfectionKind.Vampire)
             return ConsumeVampireInfection(transition);
         var kind = transition.Kind == DaggerfallInfectionKind.Werewolf ? DaggerfallRacialKind.Werewolf : DaggerfallRacialKind.Wereboar;
-        if (!State.RacialOverrides.Select(kind, $"lycanthropy:{transition.Instance}", MinuteIndex(_time.Calendar)))
+        if (!State.RacialOverrides.Select(kind, $"lycanthropy:{transition.Instance}", _time.Calendar.MinuteNumber))
             return new(false, "A racial override is already active.");
         HealRacialTransformation();
         Presentation.SetOutcome($"You are now a {State.RacialOverrides.Current!.Name.ToLowerInvariant()}.");
@@ -39,7 +39,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
     internal bool MorphPlayer(bool forced = false, long? transitionMinute = null)
     {
         if (State.RacialOverrides.Current is not { IsVampire: false } racial) return false;
-        long minute = transitionMinute ?? MinuteIndex(_time.Calendar);
+        long minute = transitionMinute ?? _time.Calendar.MinuteNumber;
         if (!racial.State.BeastForm && !forced && !State.HeldEnchantments.HircinesRingEquipped
             && racial.State.LastMorphMinute is long last && minute - last <= _tuning.Lycanthropy.MorphCooldownMinutes)
         {
@@ -76,7 +76,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
     {
         if (State.RacialOverrides.Current is not { IsVampire: false } racial) return;
         const long period = 84L * 1440;
-        long first = Math.Max(MinuteIndex(before), racial.State.AcquiredMinute), last = MinuteIndex(after);
+        long first = Math.Max(before.MinuteNumber, racial.State.AcquiredMinute), last = after.MinuteNumber;
         for (long boundary = ((first + period - 1) / period) * period; boundary < last; boundary += period)
             StartLycanthropyCureQuestOpportunity(boundary);
     }
@@ -107,7 +107,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
         // The donor's magic round reads the current date, and an elapsed catch-up runs its rounds
         // after the clock has moved: an interval forces the change only when it ends under a full
         // moon. Rest and travel deliver minute slices, so they observe every moon they cross.
-        if (after.IsFullMoon) MorphPlayer(forced: true, transitionMinute: MinuteIndex(after));
+        if (after.IsFullMoon) MorphPlayer(forced: true, transitionMinute: after.MinuteNumber);
     }
 
     private void RefreshLycanthropy()
@@ -117,7 +117,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
         var maximum = actor.Stats.GetStat(StatId.Parse("health-maximum"));
         var identity = new EffectSourceIdentity(actor.Actor.Entity, EffectInstanceId.Parse(racial.Source), 1,
             SourceDefinitionId.Parse(DaggerfallRacialOverrides.EffectKey));
-        long overdue = MinuteIndex(_time.Calendar) - racial.State.LastInnocentKilledMinute - _tuning.Lycanthropy.HungerPeriodMinutes;
+        long overdue = _time.Calendar.MinuteNumber - racial.State.LastInnocentKilledMinute - _tuning.Lycanthropy.HungerPeriodMinutes;
         var unbounded = maximum.Copy();
         unbounded.SetSources(StatId.Parse("health-maximum"), maximum.Sources.Where(source => source.Identity != identity));
         double? limit = overdue > 0 && !State.HeldEnchantments.HircinesRingEquipped

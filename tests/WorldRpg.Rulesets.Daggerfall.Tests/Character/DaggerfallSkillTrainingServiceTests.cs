@@ -271,7 +271,7 @@ public sealed class DaggerfallSkillTrainingServiceTests
 
         internal DaggerfallSkillTrainingService CreateTrainingService(DaggerfallQuestTrainingState training) => new(
             Transactions, Npcs, Social, Progression, SkillProgression, training, Stats, Locomotion,
-            () => Calendar, Advance);
+            () => Calendar.ToAbsoluteSeconds(), Advance);
 
         internal DaggerfallServiceRequest Request(string id) => new(id, Provider);
 

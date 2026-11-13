@@ -114,8 +114,8 @@ internal static class DaggerfallRestPolicy
     /// <summary>The donor default in defaults.ini.txt; the UI may supply another admitted profile later.</summary>
     internal const int MaximumLoiterHours = 3;
 
-    internal const long SecondsPerRestTick = 10 * DaggerfallCalendar.SecondsPerMinute;
-    internal const long SecondsPerRestHour = 60 * DaggerfallCalendar.SecondsPerMinute;
+    internal const long SecondsPerRestTick = 10 * TimeSpan.SecondsPerMinute;
+    internal const long SecondsPerRestHour = TimeSpan.SecondsPerHour;
 
     internal static bool IsFullyRecovered(StatsComponent player, bool noRegeneration)
     {

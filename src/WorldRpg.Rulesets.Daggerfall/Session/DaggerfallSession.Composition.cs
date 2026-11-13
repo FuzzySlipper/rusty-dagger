@@ -355,7 +355,7 @@ internal sealed partial class DaggerfallSession
                 _tuning.Contact,
                 _tuning.Attacks,
                 targetUnaware: id => EnemyBehavior.Unaware(id),
-                alertTarget: id => EnemyBehavior.Provoke(id, MinuteIndex(_time.Calendar)),
+                alertTarget: id => EnemyBehavior.Provoke(id, _time.Calendar.MinuteNumber),
                 playerRush: () => CareerSpecialsFor(actors.Player.DurableId).AdrenalineRush
                     ? new DaggerfallAdrenalineRush(_heldEnchantments.Talents.AdrenalineRush) : null,
                 _contact, StrikePose, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion),
@@ -432,7 +432,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallKnightlyOrderClaimRuntime knightlyClaimActions = new(concreteGuildServices, knightlyClaims, _random);
             DaggerfallSkillTrainingService skillTraining = new(services, npcs, social,
                 progression, skillUses, assembled.QuestTraining, playerStats,
-                tuning.Locomotion, () => _time.Calendar, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); });
+                tuning.Locomotion, () => _time.Calendar.ToAbsoluteSeconds(), seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); });
             DaggerfallRegionalPriceState regionalPrices = new(definitions.Factions, _random,
                 _time.Calendar.DayNumber, saved?.RegionalPrices);
             regionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
@@ -597,7 +597,7 @@ internal sealed partial class DaggerfallSession
             _enemyBehavior.BindEnemyMagic(_enemyMagic.Decide, _enemyMagic.HasRangedSpellReady);
             _itemCastTriggers = new(definitions.Magic, itemInstances, Casting, effects, actors.Entities,
                 id => id == actors.Player.DurableId ? equipmentCoordinator : actors.TryGet(id, out var actor) && !actor.IsDefeated ? actorInventories.EquipmentFor(id) : null,
-                _itemCondition, () => MinuteIndex(_time.Calendar), (owner, result) =>
+                _itemCondition, () => _time.Calendar.MinuteNumber, (owner, result) =>
                 {
                     var definition = definitions.RequireItem(new DaggerfallItemId(result.Metadata.ItemId));
                     int? template = DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(definition.Id) ?? definition.Template?.Index;

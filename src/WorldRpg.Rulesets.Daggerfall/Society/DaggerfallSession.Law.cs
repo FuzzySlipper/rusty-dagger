@@ -304,7 +304,7 @@ internal sealed partial class DaggerfallSession
             var charge = State.Crime.Incidents.Single(value => value.OperationId == id);
             ChangeLegalReputation(response.Region, DaggerfallCrimePolicy.RegionalReputationLoss(charge.Crime) / 2 - 1);
         }
-        State.Crime.ResolveResponse(response.Region, response.Sentence!.Outcome, MinuteIndex(_time.Calendar));
+        State.Crime.ResolveResponse(response.Region, response.Sentence!.Outcome, _time.Calendar.MinuteNumber);
         foreach (long id in response.Guards)
         {
             if (State.Actors.TryGet(id, out _)) _roster.RemoveQuestActor(id);
@@ -369,7 +369,7 @@ internal sealed partial class DaggerfallSession
     {
         var profile = destination == _activeProfileKey ? _sites.Projection.Inputs : _sites.RequireProfiles().Require(destination);
         if (profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && profile.Site is not null)
-            _sites.TryRelocatePlayer(destination, ArrivalLanding(profile, null, $"court:{destination.LogicalId}:{MinuteIndex(_time.Calendar)}"));
+            _sites.TryRelocatePlayer(destination, ArrivalLanding(profile, null, $"court:{destination.LogicalId}:{_time.Calendar.MinuteNumber}"));
         else if (profile.Project.PlayerPosition is WorldPoint entrance)
             _sites.TryRelocatePlayer(destination, new("court-release", entrance, 0, 0));
     }

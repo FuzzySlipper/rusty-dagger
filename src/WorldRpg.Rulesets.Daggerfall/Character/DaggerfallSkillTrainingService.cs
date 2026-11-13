@@ -72,7 +72,7 @@ internal sealed class DaggerfallSkillTrainingService
     private readonly DaggerfallQuestTrainingState _training;
     private readonly StatsComponent _stats;
     private readonly DaggerfallLocomotionTuning _locomotion;
-    private readonly Func<DaggerfallCalendar> _calendar;
+    private readonly Func<long> _currentSecond;
     private readonly Action<long> _advanceElapsed;
 
     internal DaggerfallSkillTrainingService(
@@ -84,7 +84,7 @@ internal sealed class DaggerfallSkillTrainingService
         DaggerfallQuestTrainingState training,
         StatsComponent stats,
         DaggerfallLocomotionTuning locomotion,
-        Func<DaggerfallCalendar> calendar,
+        Func<long> currentSecond,
         Action<long> advanceElapsed)
     {
         _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
@@ -95,7 +95,7 @@ internal sealed class DaggerfallSkillTrainingService
         _training = training ?? throw new ArgumentNullException(nameof(training));
         _stats = stats ?? throw new ArgumentNullException(nameof(stats));
         _locomotion = (locomotion ?? throw new ArgumentNullException(nameof(locomotion))).Validate();
-        _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
+        _currentSecond = currentSecond ?? throw new ArgumentNullException(nameof(currentSecond));
         _advanceElapsed = advanceElapsed ?? throw new ArgumentNullException(nameof(advanceElapsed));
     }
 
@@ -107,8 +107,7 @@ internal sealed class DaggerfallSkillTrainingService
         if (policy is null || npc is null) return null;
 
         DaggerfallGuildEligibility membership = _social.GuildEligibility(policy.MembershipFactionId);
-        DaggerfallCalendar now = _calendar();
-        long nowSecond = now.ToAbsoluteSeconds();
+        long nowSecond = _currentSecond();
         long readyAt = _training.LastSkillTrainingSecond is long previous
             ? checked(previous + DaggerfallSkillTrainingPolicy.TrainingCooldownSeconds)
             : nowSecond;
@@ -135,7 +134,7 @@ internal sealed class DaggerfallSkillTrainingService
         int skillValue = _skillProgression.PermanentSkillValue(skillId);
         if (skillValue >= policy.MaximumPermanentSkill)
             return LocalDenial(DaggerfallSkillTrainingDenial.SkillAtLimit);
-        long nowSecond = _calendar().ToAbsoluteSeconds();
+        long nowSecond = _currentSecond();
         if (IsCoolingDown(nowSecond)) return LocalDenial(DaggerfallSkillTrainingDenial.TrainingTooSoon);
 
         DaggerfallGuildEligibility membership = _social.GuildEligibility(policy.MembershipFactionId);
@@ -168,7 +167,7 @@ internal sealed class DaggerfallSkillTrainingService
         if (currentValue != quote.PermanentValue)
             return LocalOutcome(DaggerfallSkillTrainingDenial.QuoteChanged, quote.SkillId, currentValue);
 
-        long nowSecond = _calendar().ToAbsoluteSeconds();
+        long nowSecond = _currentSecond();
         if (IsCoolingDown(nowSecond)) return LocalOutcome(DaggerfallSkillTrainingDenial.TrainingTooSoon, quote.SkillId, currentValue);
         DaggerfallGuildEligibility membership = _social.GuildEligibility(policy.MembershipFactionId);
         ulong currentPrice = DaggerfallSkillTrainingPolicy.Price(_progression.Level, membership.IsMember);
@@ -189,7 +188,7 @@ internal sealed class DaggerfallSkillTrainingService
         Track fatigue = _stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value));
         long fatigueCost = checked((long)_locomotion.IdleFatiguePerGameMinute * 180);
         _ = fatigue.Spend(Math.Min(fatigue.Current, fatigueCost));
-        return new(true, DaggerfallSkillTrainingDenial.None, payment, quote.SkillId, trainedValue, _calendar().ToAbsoluteSeconds());
+        return new(true, DaggerfallSkillTrainingDenial.None, payment, quote.SkillId, trainedValue, _currentSecond());
     }
 
     private DaggerfallSkillTrainingProviderPolicy? ResolveProvider(DaggerfallServiceProvider provider, out DaggerfallNpc? npc)
