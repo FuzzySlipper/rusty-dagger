@@ -13,7 +13,8 @@
 #   scripts/data-sync.sh status                # the container's revision beside this tree's, and whether the store has it
 #   scripts/data-sync.sh store                 # the revisions the store holds, with their size and publish time
 #   scripts/data-sync.sh publish               # the import lane only: this checkout's whole import into the store
-#   ... --mirror                               # also delete what this checkout has and the store lacks
+#   ... --mirror                               # also delete from local/data what the store lacks (the import tree
+#                                              # is always made to match the revision)
 #   DAGGER_DATA_STORE=HOST:/path scripts/data-sync.sh pull   # a store over ssh (changed 8 KiB blocks only)
 #
 # publish refuses a container that departs from one whole import (an import --only or pack repack), and refuses a
@@ -34,11 +35,11 @@ usage="usage: scripts/data-sync.sh pull|link [--import-tree] [--mirror] | status
 
 direction=${1:-}
 shift || true
-import_tree='' mirror=''
+import_tree=''
 options=(-rt --info=stats1)
 for argument in "$@"; do
   case $argument in
-    --mirror) options+=(--delete); mirror=--delete ;;
+    --mirror) options+=(--delete) ;;
     --import-tree) import_tree=1 ;;
     *) echo "$usage" >&2; exit 2 ;;
   esac
@@ -138,7 +139,8 @@ case $direction in
       rm -rf "$unpacked" && mkdir -p "$unpacked" "$root/local/build/import"
       rsync "${options[@]}" "$from/import.tar.zst" "$archive"
       zstd -dcq "$archive" | tar -xf - -C "$unpacked"
-      rsync -rt $mirror "$unpacked/" "$root/local/build/import/"
+      # The tree is one revision's whole output: a file the revision lacks is stale, so it goes.
+      rsync -rt --delete "$unpacked/" "$root/local/build/import/"
       rm -rf "$unpacked"
     fi
     report

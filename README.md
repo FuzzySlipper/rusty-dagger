@@ -106,7 +106,8 @@ the one ignored folder. Its folders say what may be deleted:
   the store has no data for the revision, both say so and name the `route.py data`
   command. A box that runs the tests also needs the corpus the import suite reads:
   `rsync -a den-agents:dev/rusty-dagger/local/inputs/arena2 local/inputs/`.
-  Nothing is deleted unless you add `--mirror`.
+  `--import-tree` makes `local/build/import` match the revision; from `local/data`
+  nothing is deleted unless you add `--mirror`.
 - The `data` lane runs on any free worker: without the cinematics every machine
   imports the same bytes. Only the lane publishes, and it refuses to replace a
   revision the store holds with other bytes. The store keeps every revision ever
