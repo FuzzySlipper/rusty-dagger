@@ -25,7 +25,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// </summary>
 internal static class CombatCollaborators
 {
-    private static readonly SharedFixture<DaggerfallSiteProfile> Profile = new(() => TestSessions.ReadInputs(TestData.RepositoryRoot));
+    internal static readonly SharedFixture<DaggerfallSiteProfile> Profile = new(() => TestSessions.ReadInputs(TestData.RepositoryRoot));
 
     /// <summary>
     /// Targeting over the perception and spatial fakes, with the session's own policy on the committed

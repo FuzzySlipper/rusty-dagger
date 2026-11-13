@@ -37,7 +37,7 @@ public sealed class DungeonTrapSessionTests
     {
         using DaggerfallSession session = Standing(1f);
 
-        session.SpreadHurt(Action(DaggerfallDungeonActionFlag.Hurt22), 1);
+        session.Traps.SpreadHurt(Action(DaggerfallDungeonActionFlag.Hurt22), 1);
 
         Assert.True(Health(session) < 1000d);
     }
@@ -46,11 +46,11 @@ public sealed class DungeonTrapSessionTests
     public void A_body_out_of_reach_is_untouched_and_only_a_hurt_spreads()
     {
         using DaggerfallSession far = Standing(DaggerfallHazardReach + 1f);
-        far.SpreadHurt(Action(DaggerfallDungeonActionFlag.Hurt22), 1);
+        far.Traps.SpreadHurt(Action(DaggerfallDungeonActionFlag.Hurt22), 1);
         Assert.Equal(1000d, Health(far));
 
         using DaggerfallSession near = Standing(1f);
-        near.SpreadHurt(Action(DaggerfallDungeonActionFlag.DrainMagicka), 1);
+        near.Traps.SpreadHurt(Action(DaggerfallDungeonActionFlag.DrainMagicka), 1);
         Assert.Equal(1000d, Health(near));
     }
 

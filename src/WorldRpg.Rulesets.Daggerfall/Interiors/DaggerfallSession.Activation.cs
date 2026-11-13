@@ -585,7 +585,7 @@ internal sealed partial class DaggerfallSession
         if (hazard is not null)
         {
             if (hazard.HealthDamage is { } damage) AppendDamage(damage, DaggerfallDamageCause.Hazard, 0);
-            SpreadHurt(action, count);
+            Traps.SpreadHurt(action, count);
             if (hazard.MagickaLost > 0d)
                 _facts.Append(new DungeonMagickaDrainedFact(DaggerfallActorIdentity.PlayerEntityId, action.Id,
                     hazard.MagickaLost, _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL));

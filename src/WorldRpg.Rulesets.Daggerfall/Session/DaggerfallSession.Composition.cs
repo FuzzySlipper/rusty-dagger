@@ -382,11 +382,18 @@ internal sealed partial class DaggerfallSession
             ActorNavigationCoordinator navigation = new(engine.Spatial, _spatial.Session, actors.Store, _spatial.CurrentController,
                 actor => _exterior.CharacterEnvironment(actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion)));
             _reactions = new ActorReactions(navigation);
-            _fires = new DaggerfallFires(_tuning.Hazards);
+            Traps = new DaggerfallTraps(_tuning.Hazards, actors, _reactions, () => assembled.PlayerControl.Position,
+                () => _sites.Projection.Inputs.DungeonActions, point => _sites.Interiors.ActionTriggers.ContactActionsAt(point),
+                () => actors.Player.Progression.Level, _combatResolution, _random, damage => AppendDamage(damage, DaggerfallDamageCause.Hazard, 0));
+            _hazards = new DaggerfallHazards(_tuning.Hazards, actors, _reactions, () => assembled.PlayerControl.Position,
+                point => _exterior.LocalToProfile(point), () => _sites.Projection.Inputs, _vitality, Presentation,
+                damage => AppendDamage(damage, DaggerfallDamageCause.Hazard, 0), Traps.ForgetLanded, Traps.SpringOn);
+            _monsterHits = new DaggerfallMonsterHits(_diseases, Infections, effects,
+                (attacker, target) => Casting.TriggerMonsterParalysis(attacker, target), () => _activeProfileKey.Site.Region);
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 actorInventories.EquipmentFor, _itemCondition, combatRules,
                 () => assembled.PlayerControl.Position, () => character, (target, coating) => _poisoning!.DeliverWeaponPoison(target, coating), () => _heldEnchantments.AttackChanceModifier, _artifacts.TransformWithWabbajack, effects.MagicDefenseFor,
-                actorId => effects.ControlsFor(actorId).PhysicalAttacks, _artifacts.TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), DeliverMonsterHit,
+                actorId => effects.ControlsFor(actorId).PhysicalAttacks, _artifacts.TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), _monsterHits.Deliver,
                 npcs.IsGameplayActive, EffectiveFoeTeam,
                 new DaggerfallContactMitigation(contactInputs, _tuning.Contact, _guard),
                 _tuning.Contact,

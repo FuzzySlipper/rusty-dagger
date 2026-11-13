@@ -167,6 +167,12 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>Whether the player's guard is raised now; never under a ruleset with no guard.</summary>
     internal bool PlayerGuardRaised => _guard.Raised;
     private readonly DaggerfallContactTouch _touch;
+    /// <summary>Fires, and where a thrown body meets the traps.</summary>
+    private readonly DaggerfallHazards _hazards;
+    /// <summary>Hurt traps reaching past the body that set them off.</summary>
+    internal DaggerfallTraps Traps { get; }
+    /// <summary>What a monster's landed hit carries.</summary>
+    private readonly DaggerfallMonsterHits _monsterHits;
 
     /// <summary>A focus, mode, rest or travel change drops a held guard with the rest of the held input.</summary>
     private void NeutralizeGuard() => _guard.Neutralize(_latestUpdateGeneration ?? 0UL, _latestSimulationStep ?? 0UL, _facts);

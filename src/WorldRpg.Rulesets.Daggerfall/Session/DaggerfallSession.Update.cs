@@ -470,7 +470,7 @@ internal sealed partial class DaggerfallSession
         UpdateLaw(update.DeltaSeconds);                                                           // Society
         if (LegalModalOpen) return;
         _reactions.Step(State.Actors, update.DeltaSeconds, ThrownLanding);                       // Actors
-        StepHazards(update.DeltaSeconds);                                                         // Combat
+        _hazards.Step(update.DeltaSeconds);                                                       // Combat
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);   // Actors
         // Enemy attack-start facts must reach presentation before the post-enemy actions below.
         // A hit marker is consumed by the outer admitted update after this simulation step; if

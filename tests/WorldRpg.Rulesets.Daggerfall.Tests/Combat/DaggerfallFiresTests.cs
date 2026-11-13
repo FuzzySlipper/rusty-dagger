@@ -91,11 +91,11 @@ public sealed class DaggerfallFiresTests
 
         StatsComponent weak = new();
         weak.AddStat(StatId.Parse("resistance-fire"), new Stat(-50, -10_000, 10_000));
-        Assert.Equal(1.5d, DaggerfallSession.FireFelt(weak));
+        Assert.Equal(1.5d, DaggerfallHazards.FireFelt(weak));
         weak.GetStat(StatId.Parse("resistance-fire")).BaseValue = 150;
-        Assert.Equal(0d, DaggerfallSession.FireFelt(weak));
+        Assert.Equal(0d, DaggerfallHazards.FireFelt(weak));
         weak.GetStat(StatId.Parse("resistance-fire")).BaseValue = 25;
-        Assert.Equal(.75d, DaggerfallSession.FireFelt(weak));
+        Assert.Equal(.75d, DaggerfallHazards.FireFelt(weak));
     }
 
     [Theory]
