@@ -37,7 +37,7 @@ internal enum DaggerfallCalendarAdvanceKind
     QuestAction,
 }
 
-/// <summary>The one calendar fan-out: every path that moves the session calendar reaches its consumers here.</summary>
+/// <summary>The paths that move the session calendar; each reaches its consumers through the calendar's list, AdvanceCalendar in DaggerfallSession.Update.cs.</summary>
 internal sealed partial class DaggerfallSession
 {
     private int _lastHolidayId;
@@ -47,76 +47,6 @@ internal sealed partial class DaggerfallSession
     /// the site is no settlement or no holiday is kept there today.
     /// </summary>
     internal World.DaggerfallHolidayAnnouncement? HolidayAnnouncement { get; private set; }
-
-    /// <summary>
-    /// Delivers one calendar interval, already applied to the clock, to its consumers in their one
-    /// order. A quest step inside the fan-out (or inside ordinary play's simulation steps) can admit
-    /// an interval of its own, such as training or a cure; that nested interval runs this fan-out
-    /// itself and so reaches every consumer once. Consumers that count minutes or rounds therefore
-    /// take this interval's own end point, captured before any nested interval, while consumers
-    /// that compare against an absolute date read the live calendar and are idempotent.
-    /// </summary>
-    /// <param name="before">The calendar before the interval was applied.</param>
-    /// <param name="kind">What admitted the interval; see <see cref="DaggerfallCalendarAdvanceKind"/>.</param>
-    /// <returns>
-    /// The interval's minutes, captured before any nested interval. Ordinary play goes on from here in its
-    /// update's list (<see cref="AdmittedUpdate"/>): world encounters, standing law, the steps, then
-    /// locomotion's minutes. Every other interval has settled locomotion's minutes here.
-    /// </returns>
-    private (long Before, long After) AdvanceCalendar(DaggerfallCalendar before, DaggerfallCalendarAdvanceKind kind,
-        bool resting = false, bool idleFatigue = true)
-    {
-        bool ordinaryPlay = kind == DaggerfallCalendarAdvanceKind.OrdinaryPlay;
-        // Paid temple blessings own an absolute calendar deadline rather than a generic magic-round
-        // lifetime. Observe it before every other consumer so a boundary reached inside a minute is
-        // visible immediately and rest/travel cannot outrun the blessing through catch-up limits.
-        _ = DaggerfallTempleBlessingEffects.ExpireDue(State.Effects, _time);
-        _locomotion.SetAthletics(
-            PlayerSpecials.Athleticism,
-            State.HeldEnchantments.Talents.Athleticism);
-        RefreshPassiveMagery();
-        DaggerfallCalendar after = _time.Calendar;
-        long minuteBefore = MinuteIndex(before), minuteAfter = MinuteIndex(after);
-        State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);
-        _weather.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);
-        _sites.Projection.Lighting.UpdateAmbient(_time.Calendar, _tuning.Weather.Daylight(_time.Calendar, CurrentWeather));
-        _sites.UpdateResidentCityLights();
-        State.Quests.AdvanceClocks(State.Variables, before, _time.Calendar);
-        // Daily conditions and ordinary source-order operations observe the same admitted calendar
-        // after rest, travel, prison, or another interval, including an interval with no clock expiry.
-        if (kind is DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.ElapsedDeferringSkills)
-        {
-            State.Quests.Advance(State.Variables, _time.Calendar);
-            State.Quests.ReconcileFoeCommands();
-        }
-        _dialogue?.SynchronizeWorldState();
-        _dialogue?.RefreshEligibility();
-        if (kind is DaggerfallCalendarAdvanceKind.Elapsed or DaggerfallCalendarAdvanceKind.QuestAction)
-        {
-            State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds());
-            State.LevelUps.BeginIfEligible();
-        }
-        State.Social.AdvanceElapsedMinutes(minuteBefore, minuteAfter);
-        AdvanceLoans(before, after);
-        AdvanceVampireQuestOpportunities(before, after);
-        AdvanceLycanthropyQuestOpportunities(before, after);
-        StartDueCriminalInvitations();
-        ExpireConjuredItems();
-        AdvanceEffectsForCalendar(before, after, ordinaryPlay, resting);
-        // An elapsed interval announces the holiday it ends on once, when it completes, rather than
-        // every holiday its slices cross (CompleteTimeIncrease).
-        if (ordinaryPlay) AnnounceHoliday();
-        if (!ordinaryPlay)
-        {
-            // Rest suppresses newly incurred idle loss, and training charges its own source fatigue
-            // cost instead, while travel, prison, and other elapsed callers still settle every
-            // calendar minute through this existing owner. Any accepted movement seconds carried
-            // from the prior admitted update are settled before reset.
-            _locomotion.AdvanceCalendarMinutes(minuteBefore, minuteAfter, State.Actors.Player.Stats,
-                includeIdleFatigue: !resting && idleFatigue, swimmingFatigueApplies: SwimmingFatigueApplies);
-        }
-        return (minuteBefore, minuteAfter);
-    }
 
     /// <summary>
     /// Advances a rest, travel, prison, or other ruleset-owned elapsed interval through the session's
