@@ -150,9 +150,12 @@ def route(lane, commit, options, run):
             return (entry.get('id') not in before and not entry.get('stale') and entry.get('state') == 'running'
                     and entry.get('host') == host and entry.get('source') == 'build'
                     and entry.get('title') == f'{REPO} / {part}' and commit in entry.get('note', ''))
+        # The installed config may be updated while a split run waits.
+        current_config = json.loads(pathlib.Path(options.config).read_text())
+        flags = ['--no-wait'] if current_config.get('wait_for_worker') else []
         with log.open('w') as output:
             child = launch(['den-tool', 'build', 'run', '--repo', REPO, '--lane', part, '--ref', commit,
-                            '--host', host, '--config', options.config], output)
+                            '--host', host, '--config', options.config, *flags], output)
             children.add(child)
             if gate:
                 while child.poll() is None and not any(map(checked_in, resources().get('work', []))):
