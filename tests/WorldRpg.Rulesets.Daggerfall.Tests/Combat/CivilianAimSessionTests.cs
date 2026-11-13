@@ -180,9 +180,9 @@ public sealed class CivilianAimSessionTests
     {
         using Stage stage = new();
 
-        Assert.True(stage.Session.PassesThrough(stage.Civilian, harmsCivilians: false));
-        Assert.False(stage.Session.PassesThrough(stage.Civilian, harmsCivilians: true));
-        Assert.False(stage.Session.PassesThrough(Enemy, harmsCivilians: false));
+        Assert.True(stage.Session.StrikeAim.PassesThrough(stage.Civilian, harmsCivilians: false));
+        Assert.False(stage.Session.StrikeAim.PassesThrough(stage.Civilian, harmsCivilians: true));
+        Assert.False(stage.Session.StrikeAim.PassesThrough(Enemy, harmsCivilians: false));
     }
 
     private sealed class Stage : IDisposable

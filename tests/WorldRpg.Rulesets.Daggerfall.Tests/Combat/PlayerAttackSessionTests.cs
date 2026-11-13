@@ -805,12 +805,12 @@ public sealed class PlayerAttackSessionTests
         for (int index = 0; index < 90; index++)
         {
             session.Update(new ProductUpdate(OuterUpdate(step++), []));
-            if (session.HitStopped) stopped++;
+            if (session.StrikeFeel.HitStopped) stopped++;
         }
 
         Assert.True(health.Current < 1000);
         Assert.Equal(DaggerfallTuning.Defaults.Attacks.Strike.HitStopSteps, stopped);
-        Assert.False(session.HitStopped);
+        Assert.False(session.StrikeFeel.HitStopped);
     }
 
     /// <summary>A real click or a real hold of one blow on the enemy: what it took off the enemy and the player's stamina.</summary>

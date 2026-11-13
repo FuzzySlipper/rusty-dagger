@@ -167,6 +167,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>Whether the player's guard is raised now; never under a ruleset with no guard.</summary>
     internal bool PlayerGuardRaised => _guard.Raised;
     private readonly DaggerfallContactTouch _touch;
+    /// <summary>Who a blow is holding now.</summary>
+    private readonly ActorReactions _reactions;
+    internal ActorReactions Reactions => _reactions;
+    /// <summary>Where a blow comes from and whom the player's harm goes through.</summary>
+    internal DaggerfallStrikeAim StrikeAim { get; }
+    /// <summary>The blow's weight on screen: the knock and the hit-stop.</summary>
+    internal DaggerfallStrikeFeel StrikeFeel { get; }
+    /// <summary>The player's attack around its clock.</summary>
+    internal DaggerfallPlayerAttack PlayerAttack { get; } = null!;
     /// <summary>Fires, and where a thrown body meets the traps.</summary>
     private readonly DaggerfallHazards _hazards;
     /// <summary>Hurt traps reaching past the body that set them off.</summary>
@@ -420,7 +429,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// </summary>
     private void RetireDepartingSwing(DaggerfallSiteProjection source)
     {
-        if (_latestUpdateGeneration is ulong swinging) RetirePlayerAttack(swinging);
+        if (_latestUpdateGeneration is ulong swinging) PlayerAttack.Retire(swinging);
         IReadOnlyList<AttackImpactNotice> impacts = source.Appearance.TakeAttackImpacts();
         if (impacts.Count == 0) return;
         if (_latestUpdateGeneration is not ulong generation) return;
@@ -763,7 +772,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
                 hurt.ActualHealthLost, State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Maximum.Value);
             if (hurt.Cause == DaggerfallDamageCause.Fall) _appearance.PlayGameplaySound(91, "fall-damage");
         }
-        if (fact is ActorStruckFact struck) FeelStrike(struck);
+        if (fact is ActorStruckFact struck) StrikeFeel.Feel(struck);
         if (fact is AttackHitFact hit)
         {
             ObserveCrimeHit(hit);

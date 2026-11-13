@@ -167,7 +167,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.SpellMakerDraft:
             case DaggerfallUiActionKind.SpellMakerBuy: ChangeSpellMaker(action); break;
             case DaggerfallUiActionKind.SpellCast:
-                if (!opensInteraction && !_interactions.HoldsWorldOpen) _attackClock.PressCast(); break;
+                if (!opensInteraction && !_interactions.HoldsWorldOpen) PlayerAttack.Clock.PressCast(); break;
             case DaggerfallUiActionKind.Attack: if (!opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
             case DaggerfallUiActionKind.Loot: firstStep.Request(DaggerfallInput.Interact); break;
             case DaggerfallUiActionKind.WeaponToggle: ToggleWeapon(); break;
@@ -368,7 +368,7 @@ internal sealed partial class DaggerfallSession
             case "radial": RequestPanel(DaggerfallPanel.Radial); break;
             case "abort-spell": ChangeSpell(new("spell-unready")); break;
             case "recast":
-                _attackClock.PressCast();
+                PlayerAttack.Clock.PressCast();
                 break;
         }
     }

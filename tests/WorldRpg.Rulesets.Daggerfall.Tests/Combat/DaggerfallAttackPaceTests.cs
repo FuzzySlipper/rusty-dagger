@@ -21,14 +21,14 @@ public sealed class DaggerfallAttackPaceTests
     {
         Stat(session, DaggerfallMechanicsIds.Speed.Value, 50);
         Stat(session, DaggerfallMechanicsIds.Strength.Value, 50);
-        Stat(session, ((IDaggerfallPlayerAttacks)session).WeaponSkill, 0);
+        Stat(session, ((IDaggerfallPlayerAttacks)session.PlayerAttack).WeaponSkill, 0);
     }
 
     [Fact]
     public void Every_attack_of_a_mashed_chain_is_admitted()
     {
         using DaggerfallSession session = FreshSession();
-        IDaggerfallPlayerAttacks attacks = session;
+        IDaggerfallPlayerAttacks attacks = session.PlayerAttack;
         session.State.WeaponDrawn = true;
         HashSet<ulong> admitted = [];
         for (ulong step = 1; step <= 180; step++)
@@ -46,7 +46,7 @@ public sealed class DaggerfallAttackPaceTests
     public void Speed_quickens_an_attack_above_average_and_slows_it_below()
     {
         using DaggerfallSession session = FreshSession();
-        IDaggerfallPlayerAttacks attacks = session;
+        IDaggerfallPlayerAttacks attacks = session.PlayerAttack;
         Average(session);
         Assert.Equal(1d, attacks.TimeScale("fastA"), 6);
 
@@ -61,7 +61,7 @@ public sealed class DaggerfallAttackPaceTests
     public void Speed_quickens_a_shot_as_it_does_any_attack()
     {
         using DaggerfallSession session = FreshSession();
-        IDaggerfallPlayerAttacks attacks = session;
+        IDaggerfallPlayerAttacks attacks = session.PlayerAttack;
         Average(session);
         double average = attacks.TimeScale(DaggerfallAttackIds.ShotDraw);
         Stat(session, DaggerfallMechanicsIds.Speed.Value, 100);
@@ -72,7 +72,7 @@ public sealed class DaggerfallAttackPaceTests
     public void Weapon_skill_shortens_an_attack_and_strength_only_a_power_charge()
     {
         using DaggerfallSession session = FreshSession();
-        IDaggerfallPlayerAttacks attacks = session;
+        IDaggerfallPlayerAttacks attacks = session.PlayerAttack;
         Average(session);
 
         Stat(session, attacks.WeaponSkill, 100);
@@ -87,7 +87,7 @@ public sealed class DaggerfallAttackPaceTests
     public void A_winded_character_is_slower_and_no_attack_runs_below_the_minimum()
     {
         using DaggerfallSession session = FreshSession();
-        IDaggerfallPlayerAttacks attacks = session;
+        IDaggerfallPlayerAttacks attacks = session.PlayerAttack;
         Average(session);
         Track stamina = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value));
 

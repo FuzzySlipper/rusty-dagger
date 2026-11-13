@@ -457,8 +457,7 @@ internal sealed partial class DaggerfallSession
             ReconcileTriggers(_exterior.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, actionGraph);   // Character
         if (player.Movement is not null && player.Alive && _sites.ActivateLocationAtPlayer())    // Interiors: the crossing
             ReconcileTriggers(_exterior.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, null);   // Character
-        _camera.SettlePunch(update.DeltaSeconds, _tuning.Attacks.Strike.PunchSettleRate);        // Combat
-        if (_hitStopSteps > 0) _hitStopSteps--;                                                   // Combat
+        StrikeFeel.Settle(update.DeltaSeconds);                                                   // Combat
         _camera.Update(State.PlayerControl, _appearance.MountEyeLift(_tuning.Camera.EyeHeight)); // Character
 
         // An unloaded location has already destroyed its own actors (roster UnloadSite), so the
@@ -488,9 +487,9 @@ internal sealed partial class DaggerfallSession
             || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d)
             return;
         PerformOrDeferPlayerActs(update);                                                         // Character
-        StepPlayerAttack(update.DeltaSeconds, generation, simulationStep);                        // Combat
+        PlayerAttack.Step(update.DeltaSeconds, generation, simulationStep);                       // Combat
         // The guard follows the step's acts, so a swing begun this step keeps the guard down.
-        StepGuard(update.DeltaSeconds, generation, simulationStep);                               // Combat
+        PlayerAttack.StepGuard(update.DeltaSeconds, generation, simulationStep);                  // Combat
         _condition.Stamina.Step(State.Actors.Player.Stats, update.DeltaSeconds);                  // Condition
         // Tasks consume the state committed by this admitted step. Clock actions mutate only the
         // quest clock state; elapsed duration is still consumed by the calendar owner.
@@ -614,6 +613,14 @@ internal sealed partial class DaggerfallSession
         DeliverFacts();                                                                           // Session
     }
 
+    /// <summary>A body the player threw has landed: Condition's fall, applied as fall damage.</summary>
+    private void ThrownLanding(ActorThrowLanding landing)
+    {
+        if (State.Actors.TryGet(landing.ActorId, out ActorState thrown)
+            && _vitality.ResolveThrownLanding(State.Actors.Player.Actor, thrown.Actor, landing.Distance) is { } fall)   // Condition
+            AppendDamage(fall, DaggerfallDamageCause.Fall, 0);                                    // Session
+    }
+
     /// <summary>The input's list: one update's input slice, observed by each owner that reads it.</summary>
     private void ObservePlayerInput(ReadOnlySpan<ProductInputEvent> input, float lookSeconds, ProductUpdateState firstStep)
     {
@@ -621,7 +628,7 @@ internal sealed partial class DaggerfallSession
         foreach (var action in firstStep.RequestedActions) _input.Request(action);               // Character
         _locomotion.Observe(input);                                                               // Character
         _guard.Observe(input, _controls.PadBindings);                                             // Combat
-        _attackClock.Observe(input, _controls.PadBindings);                                       // Combat
+        PlayerAttack.Clock.Observe(input, _controls.PadBindings);                                 // Combat
     }
 
     /// <summary>
@@ -649,14 +656,14 @@ internal sealed partial class DaggerfallSession
             // momentum needs settling here; airborne gravity is covered by falling above.
             || falling || new Vector2(motion.ControlledVelocity.X, motion.ControlledVelocity.Z).LengthSquared() > .0001f
             || motion.ExternalVelocity.LengthSquared() > .0001f;
-        bool action = _playerTime.WorldActionPending || _input.HasPendingActions || _guard.WantsTime || _attackClock.Busy || !_combat.PlayerWeaponReady
+        bool action = _playerTime.WorldActionPending || _input.HasPendingActions || _guard.WantsTime || PlayerAttack.Clock.Busy || !_combat.PlayerWeaponReady
             || State.Actors.Player.Attack.ReadyAtStep > facts.SimulationStep
             || _combat.HasPlayerRangedFlight
             || Casting.PendingRangedFlights.Any(flight => flight.CasterId == DaggerfallActorIdentity.PlayerEntityId)
             || _doors.AnyMoving
             || _sites.Projection.Motion.IsMoving;
         if (_playerTime.Update(ActionDrivenPlay, new(presentation, playing, movement, action),
-                _hitStopSteps > 0 ? _tuning.Attacks.Strike.HitStopRate : 1d))                    // Time
+                StrikeFeel.TimeRate))                                                             // Time
             PublishPresentation();                                                                // UiProjection
     }
 

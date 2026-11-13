@@ -93,7 +93,7 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
     /// </summary>
     private void SwingOverlay(List<OverlayItem> items)
     {
-        IReadOnlyList<SwingRay> rays = _lastSwing?.Rays ?? [];
+        IReadOnlyList<SwingRay> rays = PlayerAttack.LastSwing?.Rays ?? [];
         for (int ray = 0; ray < rays.Count; ray++)
         {
             Color color = rays[ray].Kind == ContactKind.Actor ? Ink.Hostile : rays[ray].Kind == ContactKind.World ? Ink.Refused : Ink.Query;

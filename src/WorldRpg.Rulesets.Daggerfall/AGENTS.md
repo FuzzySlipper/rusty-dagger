@@ -40,10 +40,10 @@ On top of the root `AGENTS.md`.
 
 - No to-hit roll (DEC-12): contact decides delivery, mitigation decides what is taken.
 - The swing arc is authored in view space, never traced from the drawn weapon. Presentation follows the attack clock.
-- Draw at impact with `CombatRandomKey`; a whiff draws nothing. Spend costs at admission; interruption keeps the charged cooldown.
+- Draw at impact with `DaggerfallRandomKey`'s seed and key and `CombatRandomKey`'s scopes and salts; a whiff draws nothing. Every keyed draw takes `DaggerfallRandomKey.Seed`. Spend costs at admission; interruption keeps the charged cooldown.
 - Cooldowns count admitted simulation steps. In a catch-up update, apply input on the first step only and impacts once.
 - Pending strikes, flights, the guard, reactions and hazards are transient: never saved, never replayed.
-- Whether a player's attack can harm civilians is decided once, as it starts.
+- Whether a player's attack can harm civilians is decided once, as it starts (`DaggerfallStrikeAim`).
 - Hit feedback never moves the aim or overrides a gameplay rate another owner set.
 - Keep `pathGroups` in step with the held definition's `items`.
 - See a swing's arc: `world.overlay-on swing`, then `engine.inspect.overlay show set swing` after a first swing.

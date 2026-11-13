@@ -24,7 +24,7 @@ internal static class DaggerfallAttackIds
     internal static IReadOnlyList<string> Held { get; } = [.. All, Cast];
 }
 
-/// <summary>What the attack clock asks of the session around one admitted step.</summary>
+/// <summary>What the attack clock asks of the player's attack around one admitted step.</summary>
 internal interface IDaggerfallPlayerAttacks
 {
     /// <summary>The skill of the weapon in hand, whose class sets the timing.</summary>

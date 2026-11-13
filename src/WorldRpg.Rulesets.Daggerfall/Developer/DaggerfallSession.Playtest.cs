@@ -67,7 +67,7 @@ internal sealed partial class DaggerfallSession
             duration = 50;
             equipment = timing.Equipment;
             if (available && !State.WeaponDrawn) { available = false; reason = "weapon-sheathed; toggle-weapon"; }
-            else if (available && !_attackClock.Free)
+            else if (available && !PlayerAttack.Clock.Free)
             { available = false; reason = "attack-animation-active; advance then inspect"; }
             else if (available && (!_combat.PlayerWeaponReady || !State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId,
                 _latestUpdateGeneration ?? 1, _latestSimulationStep ?? 0)))
@@ -176,15 +176,15 @@ internal sealed partial class DaggerfallSession
         w.WriteString("equipment", _combat.InspectPlayerTiming().Equipment);
         w.WriteString("attackUnavailableReason", InspectPlaytestAction("attack").Reason);
         w.WriteNumber("attackReadyAtStep", State.Actors.Player.Attack.ReadyAtStep);
-        IDaggerfallPlayerAttacks attacks = this;
-        w.WriteString("attackPlaying", _attackClock.Current);
+        IDaggerfallPlayerAttacks attacks = PlayerAttack;
+        w.WriteString("attackPlaying", PlayerAttack.Clock.Current);
         w.WriteNumber("attackTimeScale", attacks.TimeScale(DaggerfallAttackIds.Fast[0]));
         w.WriteNumber("attackChainLength", attacks.ChainLength);
         w.WriteBoolean("winded", attacks.Winded);
         w.WriteNumber("staminaMaximum", State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value)).Maximum.Value);
         w.WriteStartObject("attributes");
         foreach (DaggerfallStatId stat in new[] { DaggerfallMechanicsIds.Strength, DaggerfallMechanicsIds.Agility, DaggerfallMechanicsIds.Speed, DaggerfallMechanicsIds.Luck })
-            w.WriteNumber(stat.Value, PlayerStat(stat.Value));
+            w.WriteNumber(stat.Value, State.Actors.Player.Stats.GetStat(StatId.Parse(stat.Value)).ValueInt);
         w.WriteEndObject();
         w.WriteEndObject();
         w.WriteStartObject("controls");

@@ -250,8 +250,8 @@ internal sealed partial class DaggerfallSession
         ActorControlRestrictions restrictions = State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId);
         if (!restrictions.PhysicalAttacks && !acts.Interact && State.WeaponDrawn)
         {
-            if (acts.Attack) _attackClock.Press();
-            if (acts.Kick) _attackClock.PressKick();
+            if (acts.Attack) PlayerAttack.Clock.Press();
+            if (acts.Kick) PlayerAttack.Clock.PressKick();
         }
         if (acts.Interact)
             _ = TryActivateContextual(currentLook);
@@ -266,15 +266,6 @@ internal sealed partial class DaggerfallSession
         if (acts.Map) RequestPanel(DaggerfallPanel.Map);
         if (acts.Menu) RequestPanel(DaggerfallPanel.Menu);
     }
-
-    /// <summary>
-    /// Advances the player's guard by <paramref name="seconds"/>. An attack keeps the guard down from its
-    /// press until the clock has finished its motion.
-    /// </summary>
-    private void StepGuard(double seconds, ulong generation, ulong simulationStep) => _guard.Step(seconds,
-        canGuard: !_combat.PlayerWinded && State.WeaponDrawn && !State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId).PhysicalAttacks && !State.Actors.Player.IsDefeated,
-        swinging: State.Actors.Player.Actor.Get<AttackState>().Pending is not null || _attackClock.Busy,
-        generation, simulationStep, _facts);
 
     /// <summary>
     /// Runs the acts a step deferred behind an enemy hit on the player, once this update's impacts have
@@ -330,8 +321,7 @@ internal sealed partial class DaggerfallSession
             _combat.LandDueImpacts(held, step, _facts);
             DeliverFacts();
         }
-        AttackImpactNotice[] impacts = [.. _playerImpacts, .. _sites.Appearances.SelectMany(appearance => appearance.TakeAttackImpacts())];
-        _playerImpacts.Clear();
+        AttackImpactNotice[] impacts = [.. PlayerAttack.TakeImpacts(), .. _sites.Appearances.SelectMany(appearance => appearance.TakeAttackImpacts())];
         if (impacts.Length == 0) return;
         if (_latestUpdateGeneration is not ulong generation) return;
         State.Kit.AttackExecution.ApplyImpacts(impacts, generation, _facts);

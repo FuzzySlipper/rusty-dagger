@@ -375,7 +375,6 @@ internal sealed partial class DaggerfallSession
                 PlayerCurse = () => racialOverrides.Current,
             };
             _guard = new DaggerfallContactGuard(contactInputs, _tuning.Contact);
-            _attackClock = new DaggerfallPlayerAttackClock(_tuning.Attacks, this);
             _condition = new DaggerfallPlayerCondition(_vitality, _tuning.Attacks.Stamina, _tuning.Rest, _random, DaggerfallRandomKey.Seed);
             _condition.Stamina.Refresh(actors.Player.Stats);
             _touch = new DaggerfallContactTouch(new(_contact, _spatial, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion)), _tuning.Contact);
@@ -390,6 +389,11 @@ internal sealed partial class DaggerfallSession
                 damage => AppendDamage(damage, DaggerfallDamageCause.Hazard, 0), Traps.ForgetLanded, Traps.SpringOn);
             _monsterHits = new DaggerfallMonsterHits(_diseases, Infections, effects,
                 (attacker, target) => Casting.TriggerMonsterParalysis(attacker, target), () => _activeProfileKey.Site.Region);
+            StrikeAim = new DaggerfallStrikeAim(actors, () => assembled.PlayerControl.Position, () => _input.ResolveCurrentLook(assembled.PlayerControl).Forward,
+                _tuning.Camera.EyeHeight, _contact, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.Attacks.AimRange,
+                actor => EffectiveFoeTeam(actor) == "player-ally",
+                actor => DefinitionsByActor.TryGetValue(actor, out DaggerfallActorDefinition? definition) && definition.Kind == DaggerfallActorKinds.Civilian);
+            StrikeFeel = new DaggerfallStrikeFeel(_tuning.Attacks.Strike, _camera, () => _engine.GameplayTime.Read().Rate);
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 actorInventories.EquipmentFor, _itemCondition, combatRules,
                 () => assembled.PlayerControl.Position, () => character, (target, coating) => _poisoning!.DeliverWeaponPoison(target, coating), () => _heldEnchantments.AttackChanceModifier, _artifacts.TransformWithWabbajack, effects.MagicDefenseFor,
@@ -402,12 +406,12 @@ internal sealed partial class DaggerfallSession
                 alertTarget: id => EnemyBehavior.Provoke(id, _time.Calendar.MinuteNumber),
                 playerRush: () => _passives.SpecialsFor(actors.Player.DurableId).AdrenalineRush
                     ? new DaggerfallAdrenalineRush(_heldEnchantments.Talents.AdrenalineRush) : null,
-                _contact, StrikePose, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion),
+                _contact, StrikeAim.StrikePose, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion),
                 // Only the player's own controller reports a velocity; site actors step between poses.
                 actor => actor == actors.Player.DurableId ? assembled.PlayerControl.Motion.ControlledVelocity : Vector3.Zero,
                 new DaggerfallStrikes(_tuning.Attacks.Strike, actors, _reactions, () => assembled.PlayerControl.Position,
                     id => DefinitionsByActor.TryGetValue(id, out DaggerfallActorDefinition? struck) ? struck.Weight : null, id => EnemyBehavior.NavigationMode(id)),
-                PassesThrough) { PlayerCurse = () => racialOverrides.Current };
+                StrikeAim.PassesThrough) { PlayerCurse = () => racialOverrides.Current };
             _equipmentMoves.Changed += _combat.EquipmentChanged;
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
@@ -680,9 +684,20 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindCasting(Casting, effects.Catalog);
             SpellRelease = new DaggerfallSpellRelease(Casting, SpellTargets, definitions, actors, State.Character, State.Inventory, Presentation,
                 _tuning.Camera.EyeHeight, CurrentPositions, cast => _touch.Reach(cast), _contact,
-                () => _exterior.CharacterEnvironment(State.PlayerControl.Motion), PassesThrough,
+                () => _exterior.CharacterEnvironment(State.PlayerControl.Motion), StrikeAim.PassesThrough,
                 (sequence, element, point) => _appearance.PlaySpellImpact(sequence, element, point));
             SpellFlights = new DaggerfallSpellFlights(Casting, SpellRelease);
+            PlayerAttack = new DaggerfallPlayerAttack(_tuning.Attacks, _combat, actors, State.PlayerControl, () => _input.ResolveCurrentLook(State.PlayerControl),
+                () => State.WeaponDrawn, effects, State.Kit.Attacks, _guard, StrikeAim, _contact,
+                () => _sites?.Exterior.CharacterEnvironment(State.PlayerControl.Motion), Casting, SpellRelease, definitions, _facts, ReportCast,
+                look =>
+                {
+                    // WeaponManager sends Attack to an action on the environment after the ordinary hit query. The safe
+                    // Engine hit reports a static surface rather than a source id, so the normalized placement resolver
+                    // is the product-side identity join.
+                    _ = TryTriggerDungeonActionRay(look.Forward, _tuning.MeleeTargeting.MaximumDistance, DaggerfallDungeonActionEvent.Attack);
+                    TryBashDoorWithSwing(look);
+                });
             DaggerfallEnemySpellRelease enemySpells = new(Casting, SpellTargets, cast => _touch.Reach(cast), _contact, _spatial,
                 () => _exterior.CharacterEnvironment(State.PlayerControl.Motion));
             _enemyMagic = new(definitions.EnemySpells, definitions.Magic, Casting, _random,
