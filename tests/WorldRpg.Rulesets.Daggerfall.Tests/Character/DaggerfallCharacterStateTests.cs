@@ -483,12 +483,12 @@ public sealed class DaggerfallCharacterStateTests
         Assert.Equal("Breton", creation.Races.Single(race => race.Id == "breton").Label);
         Assert.All(creation.Races, race => Assert.DoesNotContain("-", race.Label, StringComparison.Ordinal));
         DaggerfallCharacterBackgroundPresentation background = Assert.IsType<DaggerfallCharacterBackgroundPresentation>(creation.Background);
-        Assert.All(background.Skills, skill => Assert.Equal(DaggerfallCharacterPresentation.Label(skill.Id), skill.Label));
-        Assert.Equal("Long Blade", DaggerfallCharacterPresentation.Label("long-blade"));
-        Assert.Equal("Blunt Weapon", DaggerfallCharacterPresentation.Label("blunt-weapon"));
-        Assert.Equal("Hand-to-Hand", DaggerfallCharacterPresentation.Label("hand-to-hand"));
+        Assert.All(background.Skills, skill => Assert.Equal(DaggerfallCharacterState.Label(skill.Id), skill.Label));
+        Assert.Equal("Long Blade", DaggerfallCharacterState.Label("long-blade"));
+        Assert.Equal("Blunt Weapon", DaggerfallCharacterState.Label("blunt-weapon"));
+        Assert.Equal("Hand-to-Hand", DaggerfallCharacterState.Label("hand-to-hand"));
         Assert.All(definitions.Catalogs.Skills.Where(skill => skill.Id != "hand-to-hand"),
-            skill => Assert.DoesNotContain("-", DaggerfallCharacterPresentation.Label(skill.Id), StringComparison.Ordinal));
+            skill => Assert.DoesNotContain("-", DaggerfallCharacterState.Label(skill.Id), StringComparison.Ordinal));
     }
 
     [Fact]

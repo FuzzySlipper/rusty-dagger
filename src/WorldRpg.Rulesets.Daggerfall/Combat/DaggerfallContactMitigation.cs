@@ -28,7 +28,7 @@ internal sealed class DaggerfallContactMitigation(DaggerfallContactInputs sessio
     /// <summary>Whether the target turns the whole harm away before it is calculated.</summary>
     public void Negate(NegationEvent negation, DaggerfallPhysicalHarm harm)
     {
-        string? minimum = harm.TargetId == DaggerfallActorIdentity.PlayerEntityId && session.Character()?.RacialOverrides?.Current?.RequiresSilver == true
+        string? minimum = harm.TargetId == DaggerfallActorIdentity.PlayerEntityId && session.PlayerCurse()?.RequiresSilver == true
             ? "silver" : harm.Target.MinimumMaterial;
         if (harm.WeaponMaterial is not null
             && !DaggerfallFormulaPolicy.CanHitMaterial(harm.WeaponMaterial, minimum, DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks))

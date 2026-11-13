@@ -8,6 +8,13 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+/// <summary>What the player rides, as locomotion reads it: whether the player is on foot, and the ride's ground speed.</summary>
+internal interface IDaggerfallRide
+{
+    bool IsOnFoot { get; }
+    double MovementSpeed(double liveSpeed, double classicToEngineRatio);
+}
+
 /// <summary>Ruleset-owned classic walk, run, crouch and fatigue policy over Engine character-controller receipts.</summary>
 internal sealed class DaggerfallLocomotionPolicy
 {
@@ -56,7 +63,7 @@ internal sealed class DaggerfallLocomotionPolicy
 
     /// <summary>Builds one Engine command from the current physical controls and live player mechanics.</summary>
     internal DaggerfallLocomotionStep BeginStep(ReadOnlySpan<ProductInputEvent> inputs, float seconds, StatsComponent stats, bool canMove,
-        DaggerfallTransportPolicy? transport = null, bool enhancedJumping = false, bool slowfall = false)
+        IDaggerfallRide? ride = null, bool enhancedJumping = false, bool slowfall = false)
     {
         ArgumentNullException.ThrowIfNull(stats);
         FpsInputFrame frame = _input.Consume(inputs, seconds);
@@ -64,7 +71,7 @@ internal sealed class DaggerfallLocomotionPolicy
         _pendingJump = false;
         HasPendingStanceChange = false;
         // The donor never refuses a run or a jump for fatigue; an empty pool is the exhaustion owner's.
-        bool onFoot = transport?.IsOnFoot ?? true;
+        bool onFoot = ride?.IsOnFoot ?? true;
         bool running = canMove && onFoot && frame.SprintHeld;
         bool crouching = !running && frame.CrouchHeld;
         if (!onFoot) crouching = false;
@@ -72,7 +79,7 @@ internal sealed class DaggerfallLocomotionPolicy
         int runningSkill = stats.GetStat(Running).ValueInt;
         int jumpingSkill = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Jumping.Value)).ValueInt;
         float groundSpeed = !onFoot
-            ? (float)transport!.MovementSpeed(speed, _tuning.ClassicToEngineSpeedRatio)
+            ? (float)ride!.MovementSpeed(speed, _tuning.ClassicToEngineSpeedRatio)
             : running ? RunSpeed(speed, runningSkill) : crouching ? CrouchSpeed(speed) : WalkSpeed(speed);
         CharacterStepControls controls = new(
             JumpPressed: canMove && onFoot && !slowfall && frame.JumpPressed,

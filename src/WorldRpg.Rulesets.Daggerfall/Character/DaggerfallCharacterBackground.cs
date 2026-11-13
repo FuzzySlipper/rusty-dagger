@@ -221,7 +221,7 @@ internal static class DaggerfallCharacterBackgroundPolicy
     private static int RemainingTier(string tier, IEnumerable<DaggerfallCreationAllocationSave> values, DaggerfallCareerDefinition career) => checked(TierPool - values.Where(value => Tier(career, value.Id) == tier).Sum(value => value.Points));
     private static string Tier(DaggerfallCareerDefinition career, string skill) => career.PrimarySkills.Contains(skill) ? "primary" : career.MajorSkills.Contains(skill) ? "major" : career.MinorSkills.Contains(skill) ? "minor" : throw new ArgumentException($"'{skill}' is not trained by the selected career.");
     private static int Number(string text) => int.Parse(text, System.Globalization.CultureInfo.InvariantCulture);
-    private static string Label(string id) => DaggerfallCharacterPresentation.Label(id);
+    private static string Label(string id) => DaggerfallCharacterState.Label(id);
     private static string Text(DaggerfallDefinitions definitions, IEnumerable<DaggerfallTextKey> keys) => string.Join(" ", keys.SelectMany(key => definitions.Text.Require(key).TextRuns)).Trim();
     private static IEnumerable<DaggerfallBiographyEffectDefinition> Effects(DaggerfallBiographyDefinition biography, IEnumerable<DaggerfallBiographyAnswerSave> answers) =>
         answers.Select(answer => biography.Questions.Single(question => question.Number == answer.Question).Answers.Single(value => value.Letter == answer.Letter)).SelectMany(answer => answer.Effects);

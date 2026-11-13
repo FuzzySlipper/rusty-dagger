@@ -179,7 +179,7 @@ internal sealed record DaggerfallTransportActionResult(
 /// Ruleset-owned transport state. It only reads Engine inventory facts and emits policy outcomes;
 /// the Session owns relocation and the admitted update in which these outcomes are applied.
 /// </summary>
-internal sealed class DaggerfallTransportPolicy
+internal sealed class DaggerfallTransportPolicy : IDaggerfallRide
 {
     internal const string HorseItemId = "template-94";
     internal const string CartItemId = "template-93";
@@ -200,6 +200,8 @@ internal sealed class DaggerfallTransportPolicy
     internal DaggerfallTransportPose? ShipReturnPose => _shipReturnPose;
     internal DaggerfallTransportTuning Tuning => _tuning;
     internal bool IsOnFoot => !_onShip && _mode == DaggerfallTransportMode.Foot;
+    bool IDaggerfallRide.IsOnFoot => IsOnFoot;
+    double IDaggerfallRide.MovementSpeed(double liveSpeed, double classicToEngineRatio) => MovementSpeed(liveSpeed, classicToEngineRatio);
     internal bool CanRun => IsOnFoot;
 
     internal bool HasHorse(InventoryView inventory) => ContainsUnique(inventory, HorseItemId);

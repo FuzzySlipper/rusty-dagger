@@ -16,6 +16,7 @@ public sealed class DaggerfallPerceptionPolicyTests
     public void Classic_sense_formulas_keep_source_units_and_integer_rounding()
     {
         Assert.Equal(156, DaggerfallPerceptionPolicy.CalculateStealthChance(25d, 80));
+        Assert.Equal(156, DaggerfallPerceptionPolicy.CalculateStealthChance(25f, 80));
         Assert.Equal(26, DaggerfallPerceptionPolicy.CalculateEnemyPacificationChance(
             DaggerfallSkills.Etiquette, 60, 50, weaponSheathed: true));
         Assert.Equal(40, DaggerfallPerceptionPolicy.CalculateEnemyPacificationChance(

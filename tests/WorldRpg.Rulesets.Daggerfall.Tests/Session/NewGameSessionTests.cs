@@ -74,10 +74,10 @@ public sealed class NewGameSessionTests
         var character = f.Title.State.Character;
         string[] summary = Assert.IsType<string[]>(character.ReadCreation().Summary);
         var career = f.Definitions.Catalogs.RequireCareer("class16");
-        Assert.StartsWith($"New adventurer — {DaggerfallCharacterPresentation.Label(character.Identity.RaceId)}, male, {career.Name};", summary[0], StringComparison.Ordinal);
+        Assert.StartsWith($"New adventurer — {DaggerfallCharacterState.Label(character.Identity.RaceId)}, male, {career.Name};", summary[0], StringComparison.Ordinal);
         Assert.DoesNotContain(character.Identity.RaceId + ",", summary[0], StringComparison.Ordinal);
         foreach (string skill in career.SkillReferences)
-            Assert.Contains(summary, line => line.StartsWith(DaggerfallCharacterPresentation.Label(skill) + ": ", StringComparison.Ordinal));
+            Assert.Contains(summary, line => line.StartsWith(DaggerfallCharacterState.Label(skill) + ": ", StringComparison.Ordinal));
         Assert.DoesNotContain(summary, line => career.SkillReferences.Concat(career.Attributes).Any(id => id.Contains('-') && line.StartsWith(id + ":", StringComparison.Ordinal)));
         Assert.Contains(summary, line => line.StartsWith("Health: ", StringComparison.Ordinal));
         ulong biographyGold = character.Capture().Background!.StartingGrants.Where(item => item.ItemId == "template-276").Aggregate(0UL, (total, item) => total + item.Quantity);

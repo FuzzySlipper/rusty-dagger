@@ -25,6 +25,7 @@ internal sealed class DaggerfallState(
     DaggerActorAssembly assembled,
     GameplayServices<IProductFact> kit,
     DaggerfallEffectLifecycle effects,
+    DaggerfallRacialOverrides racialOverrides,
     DaggerfallSkillUseReactions skillUses,
     DaggerfallLevelUpState levelUps,
     DaggerfallHeldEnchantments heldEnchantments,
@@ -105,7 +106,8 @@ internal sealed class DaggerfallState(
     internal DaggerfallItemInstances ItemInstances { get; } = assembled.ItemInstances;
     /// <summary>The committed player identity and its cancellable creation draft.</summary>
     internal DaggerfallCharacterState Character { get; } = assembled.Character;
-    internal DaggerfallRacialOverrides RacialOverrides => Character.RacialOverrides!;
+    /// <summary>The race a curse imposes on the player, over the birth race the character keeps.</summary>
+    internal DaggerfallRacialOverrides RacialOverrides { get; } = racialOverrides;
     /// <summary>Current Daggerfall quest instances over admitted definitions and durable product bindings.</summary>
     internal DaggerfallQuestInstances Quests { get; } = assembled.Quests;
     internal DaggerfallQuestItems QuestItems { get; set; } = null!;

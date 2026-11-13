@@ -315,13 +315,6 @@ internal sealed partial class DaggerfallSession
     /// <summary>Lets the ordinary HUD projection callback carry activation state with its snapshot.</summary>
     internal void PublishActivationView(Action<DaggerfallActivationView> publish) => publish(ActivationView);
 
-    private DaggerfallSkillTrainingProviderView? CurrentTrainingProvider(string? revision = null)
-    {
-        DaggerfallNpc? npc = _dialogue?.CurrentNpc(revision);
-        if (npc is null || !npc.Services.Contains(DaggerfallSkillTrainingPolicy.ServiceName, StringComparer.Ordinal)) return null;
-        return State.SkillTraining.ReadProvider(new(npc.DurableId, npc.Site, DaggerfallSkillTrainingPolicy.ServiceName));
-    }
-
     private (string Text, IReadOnlyList<string> Diagnostics)? ResolveQuestTopic(long npcId, string topicId)
     {
         return State.Quests.TryResolveDialogueTopic(npcId, topicId,

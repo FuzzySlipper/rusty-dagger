@@ -42,6 +42,9 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private readonly Action<DaggerfallSkillUse> _skillUses;
     private readonly Func<WorldPoint?> _playerPosition;
     private readonly Func<DaggerfallCharacterState?> _character;
+
+    /// <summary>The curse the player's race is under, if any: a vampire player is undead.</summary>
+    internal Func<DaggerfallRacialOverrideView?> PlayerCurse { private get; init; } = () => null;
     /// <summary>Whether admitted static geometry stands between a shot's release and its aim.</summary>
     /// <summary>The armor-value shift the defender's worn enchantments give, zero when none do.</summary>
     private readonly Func<int> _attackChanceModifier;
@@ -782,7 +785,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     {
         int flags = AttackModifierFlagsFor(attacker);
         return flags == 0 ? 0 : DaggerfallFormulaPolicy.BonusOrPenaltyByEnemyType(flags,
-            target.Id == PlayerId ? _character()?.RacialOverrides?.Current?.IsVampire == true ? DaggerfallEnemyGroup.Undead : DaggerfallEnemyGroup.Humanoid
+            target.Id == PlayerId ? PlayerCurse()?.IsVampire == true ? DaggerfallEnemyGroup.Undead : DaggerfallEnemyGroup.Humanoid
                 : DaggerfallFormulaPolicy.EnemyGroupFor(target.Definition),
             AttackerLevel(attacker));
     }

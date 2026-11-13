@@ -78,26 +78,6 @@ internal static class DaggerfallFormulaPolicy
     }
 
     /// <summary>
-    /// Donor <c>FormulaHelper.CalculateStealthChance</c>, expressed over the
-    /// normalized Engine distance and the already-resolved player skill. The
-    /// classic distance conversion intentionally truncates before the fixed
-    /// point shift; callers own the random roll that compares this chance.
-    /// </summary>
-    internal static int CalculateStealthChance(float distanceToTarget, int targetStealthSkill) =>
-        CalculateStealthChance((double)distanceToTarget, targetStealthSkill);
-
-    internal static int CalculateStealthChance(double distanceToTarget, int targetStealthSkill)
-    {
-        if (!double.IsFinite(distanceToTarget) || distanceToTarget < 0d)
-            throw new ArgumentOutOfRangeException(nameof(distanceToTarget));
-        if (targetStealthSkill is < 0 or > 100)
-            throw new ArgumentOutOfRangeException(nameof(targetStealthSkill));
-
-        int classicDistance = checked((int)(distanceToTarget / DaggerfallPerceptionQueryDefaults.ClassicGlobalScale));
-        return checked(2 * ((classicDistance * targetStealthSkill) >> 10));
-    }
-
-    /// <summary>
     /// Donor <c>FormulaHelper.CalculateEnemyPacification</c>'s chance term.
     /// Etiquette and Streetwise use their social skill scaling; language skills
     /// use their direct skill value. The caller supplies the independent

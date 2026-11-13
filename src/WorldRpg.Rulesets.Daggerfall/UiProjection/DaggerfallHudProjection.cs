@@ -560,7 +560,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("cooldownReadySecond", builder.Number(training.CooldownReadySecond)),
             ("skills", builder.Array(training.Skills.Select(skill => builder.Object(
                 ("id", builder.String(skill.Id)),
-                ("label", builder.String(DaggerfallCharacterPresentation.Label(skill.Id))),
+                ("label", builder.String(DaggerfallCharacterState.Label(skill.Id))),
                 ("permanentValue", builder.Number(skill.PermanentValue)),
                 ("maximumValue", builder.Number(skill.MaximumValue)),
                 ("trainable", builder.Boolean(skill.Trainable)))).ToArray())))),
@@ -950,7 +950,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("history", value.History is null ? builder.Null() : builder.Object(("biography", builder.Array(value.History.Biography.Select(builder.String).ToArray())))),
             ("grantedSkills", builder.Array((value.GrantedSkills ?? []).Select(skill => builder.Object(
                 ("id", builder.String(skill.SkillId)), ("tier", builder.String(skill.Tier.ToString().ToLowerInvariant())),
-                ("label", builder.String(DaggerfallCharacterPresentation.Label(skill.SkillId))),
+                ("label", builder.String(DaggerfallCharacterState.Label(skill.SkillId))),
                 ("tierLabel", builder.String(skill.Tier switch
                 {
                     DaggerfallCareerSkillTier.Primary => "Primary skill",
@@ -1002,7 +1002,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("advantages", Traits(builder, custom.Current.Advantages)),
         ("disadvantages", Traits(builder, custom.Current.Disadvantages)),
         ("eligibility", builder.Array(custom.Eligibility.Select(builder.String).ToArray())),
-        ("skills", builder.Array(custom.Skills.Select(skill => builder.Object(("id", builder.String(skill)), ("label", builder.String(DaggerfallCharacterPresentation.Label(skill))))).ToArray())),
+        ("skills", builder.Array(custom.Skills.Select(skill => builder.Object(("id", builder.String(skill)), ("label", builder.String(DaggerfallCharacterState.Label(skill))))).ToArray())),
         ("advantageOptions", TraitOptions(builder, custom.SupportedAdvantages)),
         ("disadvantageOptions", TraitOptions(builder, custom.SupportedDisadvantages)),
         ("hitPointsPerLevelRange", builder.Object(("minimum", builder.Number(DaggerfallCustomCareerPolicy.MinimumHp)),
@@ -1061,7 +1061,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         .Select(trait => builder.Object(("id", builder.String(trait.Id)), ("target", trait.Target is null ? builder.Null() : builder.String(trait.Target)))).ToArray());
 
     private static uint Identity(UiValueBuilder builder, CharacterIdentityPresentation identity) => builder.Object(
-        ("race", builder.String(identity.Race)), ("raceLabel", builder.String(identity.Race.Length == 0 ? "" : DaggerfallCharacterPresentation.Label(identity.Race))), ("donorRaceId", builder.Number(identity.DonorRaceId)), ("portrait", builder.String(identity.Portrait)),
+        ("race", builder.String(identity.Race)), ("raceLabel", builder.String(identity.Race.Length == 0 ? "" : DaggerfallCharacterState.Label(identity.Race))), ("donorRaceId", builder.Number(identity.DonorRaceId)), ("portrait", builder.String(identity.Portrait)),
         ("gender", builder.String(identity.Gender)), ("faceIndex", builder.Number(identity.FaceIndex)), ("career", builder.String(identity.Career)), ("careerLabel", builder.String(identity.CareerLabel)),
         ("racialOverride", identity.RacialOverride is not { } racial ? builder.Null() : builder.Object(
             ("name", builder.String(racial.Name)), ("vampireClan", identity.VampireClan is null ? builder.Null() : builder.String(identity.VampireClan)), ("beastForm", builder.Boolean(racial.State.BeastForm)),

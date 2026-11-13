@@ -131,20 +131,14 @@ internal sealed partial class DaggerfallCharacterState
         (_knownSpells[a], _knownSpells[b]) = (_knownSpells[b], _knownSpells[a]); return true;
     }
 
-    internal void SortSpells()
+    /// <summary>
+    /// Sorts the spellbook by name, or, when it already is, by what each spell costs, which
+    /// <paramref name="spellPoints"/> answers by key.
+    /// </summary>
+    internal void SortSpells(Func<string, int> spellPoints)
     {
         var ordered = _knownSpells.OrderBy(key => _definitions.Magic.Spells[key].Name, StringComparer.OrdinalIgnoreCase).ToArray();
-        if (ordered.SequenceEqual(_knownSpells))
-        {
-            var schools = new[] { "destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism" }
-                .ToDictionary(key => key, key => Math.Clamp(_stats.GetStat(StatId.Parse(key)).ValueInt, 0, 100));
-            ordered = _knownSpells.OrderBy(key =>
-            {
-                var spell = _definitions.Magic.Spells[key];
-                return Policies.DaggerfallMagicCostPolicy.CalculateTotalEffectCosts(_definitions.Magic, spell.Effects,
-                    Policies.DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType), schools, IsGrantedSpell(key)).SpellPoints;
-            }).ToArray();
-        }
+        if (ordered.SequenceEqual(_knownSpells)) ordered = _knownSpells.OrderBy(spellPoints).ToArray();
         _knownSpells.Clear(); _knownSpells.AddRange(ordered);
     }
 
@@ -183,14 +177,21 @@ internal sealed partial class DaggerfallCharacterState
     }
     /// <summary>The committed BIOG text retained with this character, distinct from an editable draft.</summary>
     internal IReadOnlyList<string> History => _background?.Biography ?? [];
-    internal DaggerfallRacialOverrides? RacialOverrides { get; private set; }
-    internal void AttachRacialOverrides(DaggerfallRacialOverrides racialOverrides)
+    private Func<DaggerfallRaceDefinition, DaggerfallRaceDefinition>? _raceOverride;
+
+    /// <summary>
+    /// Lets a curse's race stand in for the birth race: <paramref name="applyToBirthRace"/> answers the race the
+    /// character is now from the race it was born. Composed once, by whoever owns the curses.
+    /// </summary>
+    internal void UseRaceOverride(Func<DaggerfallRaceDefinition, DaggerfallRaceDefinition> applyToBirthRace)
     {
-        if (RacialOverrides is not null) throw new InvalidOperationException("Character racial owner is already composed.");
-        RacialOverrides = racialOverrides;
+        if (_raceOverride is not null) throw new InvalidOperationException("Character racial owner is already composed.");
+        _raceOverride = applyToBirthRace;
     }
-    internal DaggerfallRaceDefinition Race => RacialOverrides?.ApplyToBirthRace(_definitions.Catalogs.RequireRace(Identity.RaceId))
-        ?? _definitions.Catalogs.RequireRace(Identity.RaceId);
+
+    internal DaggerfallRaceDefinition Race => _raceOverride is { } apply
+        ? apply(_definitions.Catalogs.RequireRace(Identity.RaceId))
+        : _definitions.Catalogs.RequireRace(Identity.RaceId);
 
     internal IReadOnlyList<DaggerfallCareerSkillGrant> GrantedSkills =>
     [
@@ -215,7 +216,7 @@ internal sealed partial class DaggerfallCharacterState
                 && layers.Heads(DaggerfallCharacterGender.Male).Count != 0 && layers.Heads(DaggerfallCharacterGender.Female).Count != 0;
             string? restriction = available ? null : _definitions.CharacterPresentation.RacesWithoutMedia
                 .FirstOrDefault(value => value.RaceId == race.Id)?.Reason ?? "No complete character media is published.";
-            return new DaggerfallCharacterChoice(race.Id, DaggerfallCharacterPresentation.Label(race.Id), available, restriction);
+            return new DaggerfallCharacterChoice(race.Id, Label(race.Id), available, restriction);
         }).ToArray();
         DaggerfallCharacterChoice[] careers = _careerChoices ??= _definitions.Catalogs.Careers.Select(career => new DaggerfallCharacterChoice(
             career.Id, career.Name, _definitions.NewGame.Careers.Any(value => value.Career == career.Id),
@@ -298,13 +299,13 @@ internal sealed partial class DaggerfallCharacterState
             : Career.PrimarySkills.Concat(Career.MajorSkills).Any(skill => skill is "destruction" or "restoration" or "illusion" or "alteration" or "thaumaturgy" or "mysticism")
                 ? config.CustomMagicSpells : [];
         ulong biographyGold = _background!.StartingGrants.Where(item => item.TemplateIndex == GoldTemplateIndex).Aggregate(0UL, (total, item) => checked(total + item.Quantity));
-        return [ $"{Identity.Name} — {DaggerfallCharacterPresentation.Label(Identity.RaceId)}, {Identity.Gender.ToString().ToLowerInvariant()}, {Career.Name}; {ReflexLabel(Identity.Reflexes).ToLowerInvariant()} reflexes.",
-            .. Career.Attributes.Select(id => $"{DaggerfallCharacterPresentation.Label(id)}: {_stats.GetStat(StatId.Parse(id)).ValueInt}"),
-            .. GrantedSkills.Select(skill => $"{DaggerfallCharacterPresentation.Label(skill.SkillId)}: {_stats.GetStat(StatId.Parse(skill.SkillId)).ValueInt} ({skill.Tier.ToString().ToLowerInvariant()})"),
+        return [ $"{Identity.Name} — {Label(Identity.RaceId)}, {Identity.Gender.ToString().ToLowerInvariant()}, {Career.Name}; {ReflexLabel(Identity.Reflexes).ToLowerInvariant()} reflexes.",
+            .. Career.Attributes.Select(id => $"{Label(id)}: {_stats.GetStat(StatId.Parse(id)).ValueInt}"),
+            .. GrantedSkills.Select(skill => $"{Label(skill.SkillId)}: {_stats.GetStat(StatId.Parse(skill.SkillId)).ValueInt} ({skill.Tier.ToString().ToLowerInvariant()})"),
             .. _definitions.HudResources.Where(resource => _stats.Tracks.ContainsKey(TrackId.Parse(resource.Track.Value))).Select(resource => ResourceLine(resource)),
             "Starting clothing and spellbook.",
             biographyGold == 0 ? $"{config.Gold} gold." : $"{(ulong)config.Gold + biographyGold} gold ({config.Gold} starting, {biographyGold} from your background).",
-            .. items.Select(item => $"{item.Quantity} × {(item.Material is null ? "" : DaggerfallCharacterPresentation.Label(item.Material) + " ")}{_definitions.ItemTemplateCatalog.Templates[item.Template].Name}"),
+            .. items.Select(item => $"{item.Quantity} × {(item.Material is null ? "" : Label(item.Material) + " ")}{_definitions.ItemTemplateCatalog.Templates[item.Template].Name}"),
             .. DaggerfallCharacterBackgroundPolicy.CombinedGrants(_background.StartingGrants.Where(item => item.TemplateIndex != GoldTemplateIndex))
                 .Select(item => $"{item.Quantity} × {_definitions.RequireItem(new DaggerfallItemId(item.ItemId)).Template!.Name}"),
             .. spells.Select(key => $"Spell: {_definitions.Magic.Spells[key].Name}") ];
@@ -317,6 +318,14 @@ internal sealed partial class DaggerfallCharacterState
         long maximum = _stats.GetTrack(TrackId.Parse(resource.Track.Value)).Maximum.ValueInt64;
         return $"{resource.Label}: {(resource.Track == DaggerfallMechanicsIds.Fatigue ? DaggerfallFormulaPolicy.DisplayFatigue(maximum) : maximum)}";
     }
+
+    /// <summary>
+    /// The player name of an attribute, skill, race or slot id, as the character sheet names it. The
+    /// one hyphenated classic name keeps its hyphens and lower-case joining word.
+    /// </summary>
+    internal static string Label(string id) => id == "hand-to-hand"
+        ? "Hand-to-Hand"
+        : System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
 
     private static string ReflexLabel(DaggerfallCharacterReflexes reflexes) => reflexes switch
     {

@@ -11,6 +11,19 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+/// <summary>
+/// Explicit opt-in for the retained non-classic kill-XP experiment, and the experience each of its
+/// levels costs. Classic progression is the donor's skill-sum formula and reads neither value.
+/// </summary>
+internal sealed record DaggerfallProgressionTuning(bool EnableExperimentalKillExperience, int ExperiencePerLevel)
+{
+    internal DaggerfallProgressionTuning Validate()
+    {
+        if (ExperiencePerLevel <= 0) throw new ArgumentOutOfRangeException(nameof(ExperiencePerLevel));
+        return this;
+    }
+}
+
 /// <summary>Daggerfall-owned reward policy for defeated registered actors.</summary>
 internal sealed class DaggerfallRewardReactions(
     ProgressionState progression,

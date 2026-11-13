@@ -1,4 +1,6 @@
+using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -41,12 +43,26 @@ internal sealed partial class DaggerfallSession
             spell.RangeType, spell.Element);
     }
 
+    /// <summary>What each spell the player knows costs the player now, by key, read from the schools' live skills once.</summary>
+    private Func<string, int> SpellPoints()
+    {
+        var stats = State.Actors.Player.Stats;
+        var schools = new[] { "destruction", "restoration", "illusion", "alteration", "thaumaturgy", "mysticism" }
+            .ToDictionary(key => key, key => Math.Clamp(stats.GetStat(StatId.Parse(key)).ValueInt, 0, 100));
+        return key =>
+        {
+            var spell = _definitions.Magic.Spells[key];
+            return DaggerfallMagicCostPolicy.CalculateTotalEffectCosts(_definitions.Magic, spell.Effects,
+                DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType), schools, State.Character.IsGrantedSpell(key)).SpellPoints;
+        };
+    }
+
     internal void ChangeSpellbook(DaggerfallPlayerUiAction action)
     {
         switch (action.Kind)
         {
             case DaggerfallUiActionKind.SpellSort:
-                State.Character.SortSpells(); _spellResult = "Spellbook sorted."; break;
+                State.Character.SortSpells(SpellPoints()); _spellResult = "Spellbook sorted."; break;
             case DaggerfallUiActionKind.SpellSwap:
                 _spellResult = State.Character.SwapSpells(action.Key!, action.Item!) ? "Spell order changed." : "Those spells cannot be swapped.";
                 break;

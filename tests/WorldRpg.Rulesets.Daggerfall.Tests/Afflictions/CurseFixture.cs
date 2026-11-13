@@ -27,7 +27,7 @@ internal sealed class CurseFixture : IDisposable
         DaggerfallTuning tuning = DaggerfallTuning.Defaults;
         Effects = new(Actors, new DaggerfallEffectCatalog([DaggerfallRacialOverrides.Definition(Character, tuning.Lycanthropy, tuning.Vampirism)]));
         Overrides = new DaggerfallRacialOverrides(Effects, Character, definitions, previous => Vampirism!.Ended(previous));
-        Character.AttachRacialOverrides(Overrides);
+        Character.UseRaceOverride(Overrides.ApplyToBirthRace);
         CombatResolution combat = new();
         DaggerfallDiseases diseases = new(Effects, Actors, Random.Service, Time, Character, combat, Presentation, definitions);
         DaggerfallPoisoning poisoning = new(Effects, Random.Service, Actors, Character, new DaggerfallItemInstances(),

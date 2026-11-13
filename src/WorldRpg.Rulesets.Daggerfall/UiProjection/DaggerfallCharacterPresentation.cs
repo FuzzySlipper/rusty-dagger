@@ -165,6 +165,7 @@ internal sealed class DaggerfallCharacterPresentation
     private readonly DaggerfallSocialState? _social;
     private readonly DaggerfallSkillUseReactions? _skills;
     private Func<DaggerfallArtReplacements?>? _art;
+    private DaggerfallRacialOverrides? _racialOverrides;
     private DaggerfallGuildMembershipPolicy? _guildMembership;
     private Func<int>? _currentDay;
     private Func<int?>? _currentRegion;
@@ -292,7 +293,7 @@ internal sealed class DaggerfallCharacterPresentation
             _character is { History.Count: > 0 } character ? new CharacterHistoryPresentation([.. character.History]) : null,
             // The sheet names the career as the player chose it, a custom class by its own name.
             Drawn(_character is null ? CharacterIdentityPresentation.From(_definitions, _playerDefinition)
-                : CharacterIdentityPresentation.From(_definitions, _character.Identity, _character.RacialOverrides?.Current) is { } identity
+                : CharacterIdentityPresentation.From(_definitions, _character.Identity, _racialOverrides?.Current) is { } identity
                     ? identity with { CareerLabel = _character.Career.Name } : null),
             _character is null ? [] : [.. _character.GrantedSkills],
             Drawn(_character?.ReadCreation()),
@@ -310,9 +311,9 @@ internal sealed class DaggerfallCharacterPresentation
             DaggerfallItemDefinition item = _definitions.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value));
             string key = DaggerfallInventoryPresentation.UniqueKey(assignment.Item.EntityId);
             return new DaggerfallWornItem(key, assignment.Slot.Value, item, _items?.EquippedMetadata(assignment.Item.EntityId),
-                () => _items?.DescribeItem(key, item.Id.Value, 1, equippedSlots: [assignment.Slot.Value]).Label ?? Label(item.Id.Value));
+                () => _items?.DescribeItem(key, item.Id.Value, 1, equippedSlots: [assignment.Slot.Value]).Label ?? DaggerfallCharacterState.Label(item.Id.Value));
         })];
-        return DaggerfallPaperDollPolicy.Compose(_definitions, _character.Identity, _character.RacialOverrides?.Current, worn, _art?.Invoke());
+        return DaggerfallPaperDollPolicy.Compose(_definitions, _character.Identity, _racialOverrides?.Current, worn, _art?.Invoke());
     }
 
     /// <summary>The sheet's portrait and form in the art set drawn, as the paper doll draws its own layers.</summary>
@@ -326,6 +327,9 @@ internal sealed class DaggerfallCharacterPresentation
         creation is not null && _art?.Invoke() is { } art
             ? creation with { Faces = [.. creation.Faces.Select(face => face with { MediaId = art.Drawn(face.MediaId) })] }
             : creation;
+
+    /// <summary>Draws the identity and the paper doll in the race a curse imposes, when one does.</summary>
+    internal void UseRacialOverrides(DaggerfallRacialOverrides racialOverrides) => _racialOverrides = racialOverrides;
 
     /// <summary>Draws the paper doll in the art set this returns: the refreshed set, or null for classic art.</summary>
     internal void UseArt(Func<DaggerfallArtReplacements?> art)
@@ -346,7 +350,7 @@ internal sealed class DaggerfallCharacterPresentation
         .Select(id =>
         {
             Stat stat = player.Stats.GetStat(StatId.Parse(id.Value));
-            return new CharacterStatPresentation(id.Value, Label(id.Value), stat.ValueInt64, checked((long)stat.BaseValue));
+            return new CharacterStatPresentation(id.Value, DaggerfallCharacterState.Label(id.Value), stat.ValueInt64, checked((long)stat.BaseValue));
         })
         .ToArray();
 
@@ -389,11 +393,11 @@ internal sealed class DaggerfallCharacterPresentation
         .Select(group =>
         {
             DaggerfallItemDefinition item = _definitions.RequireItem(new DaggerfallItemId(group.First().Item.Definition.Value));
-            string[] slots = group.Select(assignment => Label(assignment.Slot.Value)).OrderBy(value => value, StringComparer.Ordinal).ToArray();
+            string[] slots = group.Select(assignment => DaggerfallCharacterState.Label(assignment.Slot.Value)).OrderBy(value => value, StringComparer.Ordinal).ToArray();
             InventoryItemPresentation? described = _items?.DescribeItem(DaggerfallInventoryPresentation.UniqueKey(group.Key), item.Id.Value, 1,
                 equippedSlots: group.Select(assignment => assignment.Slot.Value).ToArray());
             return new CharacterEquipmentPresentation(
-                described?.Label ?? Label(item.Id.Value),
+                described?.Label ?? DaggerfallCharacterState.Label(item.Id.Value),
                 slots,
                 described?.Details ?? Details(item),
                 described?.Condition,
@@ -403,16 +407,8 @@ internal sealed class DaggerfallCharacterPresentation
         .ToArray();
 
     private static string Details(DaggerfallItemDefinition item) => item.Weapon is { } weapon
-        ? $"Attack {weapon.MinimumDamage}–{weapon.MaximumDamage}; {Label(weapon.Material)}; {Label(weapon.Skill)}"
-        : item.Armor is { } armor ? $"Armor material: {Label(armor.Material)}"
+        ? $"Attack {weapon.MinimumDamage}–{weapon.MaximumDamage}; {DaggerfallCharacterState.Label(weapon.Material)}; {DaggerfallCharacterState.Label(weapon.Skill)}"
+        : item.Armor is { } armor ? $"Armor material: {DaggerfallCharacterState.Label(armor.Material)}"
         : item.Shield is { } shield ? $"Shield armor: {shield.Armor.ToString(CultureInfo.InvariantCulture)}"
         : "Equipment";
-
-    /// <summary>
-    /// The player name of an attribute, skill, race or slot id, as the character sheet names it. The
-    /// one hyphenated classic name keeps its hyphens and lower-case joining word.
-    /// </summary>
-    internal static string Label(string id) => id == "hand-to-hand"
-        ? "Hand-to-Hand"
-        : CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
 }

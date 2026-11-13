@@ -285,7 +285,8 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career, target => _diseases!.SymptomsActed(target)),
                 DaggerfallTempleBlessingEffects.Definition(social, () => character.Career, actors.Player.DurableId),
             ]));
-            character.AttachRacialOverrides(new(effects, character, definitions, previous => _vampirism!.Ended(previous)));
+            DaggerfallRacialOverrides racialOverrides = new(effects, character, definitions, previous => _vampirism!.Ended(previous));
+            character.UseRaceOverride(racialOverrides.ApplyToBirthRace);
             effects.RestoreMagicRounds(saved?.MagicRounds ?? 0);
             Infections = new(effects, () => _time.Calendar.DayNumber, Cinematics, composition.VideosEnabled,
                 message => Presentation.SetOutcome(message), saved?.Infections);
@@ -324,7 +325,7 @@ internal sealed partial class DaggerfallSession
             _rest = new DaggerfallRest(_time, tuning.Rest, skillUses, levelUps,
                 seconds => AdvanceElapsedTime(seconds, deferSkillAdvancement: true, resting: true));
             _equipmentMoves = new DaggerfallEquipmentMoves(inventory, equipmentCoordinator, definitions,
-                () => character.Career.ForbiddenEquipment, itemInstances, () => character.RacialOverrides?.Current?.State.BeastForm == true);
+                () => character.Career.ForbiddenEquipment, itemInstances, () => racialOverrides.Current?.State.BeastForm == true);
             _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves, inventory, () => SoulGems);
             _itemCondition.Broken += ReleaseBoundSoul;
             _heldEnchantments = new DaggerfallHeldEnchantments(equipmentCoordinator, itemInstances, definitions.Magic,
@@ -345,7 +346,11 @@ internal sealed partial class DaggerfallSession
             DaggerfallContactInputs contactInputs = new(definitions, () => character, _random,
                 id => id == actors.Player.DurableId ? equipmentCoordinator.Read() : actorInventories.EquipmentFor(id).Read(),
                 id => id == actors.Player.DurableId ? actors.Player.Stats : actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
-                () => _heldEnchantments.ArmorValueModifier) { PlayerAvoidHit = () => character.Background?.Modifiers.AvoidHit ?? 0 };
+                () => _heldEnchantments.ArmorValueModifier)
+            {
+                PlayerAvoidHit = () => character.Background?.Modifiers.AvoidHit ?? 0,
+                PlayerCurse = () => racialOverrides.Current,
+            };
             _guard = new DaggerfallContactGuard(contactInputs, _tuning.Contact);
             _attackClock = new DaggerfallPlayerAttackClock(_tuning.Attacks, this);
             _condition = new DaggerfallPlayerCondition(_vitality, _tuning.Attacks.Stamina, _tuning.Rest, _random, CombatRandomKey.Seed);
@@ -372,7 +377,7 @@ internal sealed partial class DaggerfallSession
                 actor => actor == actors.Player.DurableId ? assembled.PlayerControl.Motion.ControlledVelocity : Vector3.Zero,
                 new DaggerfallStrikes(_tuning.Attacks.Strike, actors, _reactions, () => assembled.PlayerControl.Position,
                     id => DefinitionsByActor.TryGetValue(id, out DaggerfallActorDefinition? struck) ? struck.Weight : null, id => EnemyBehavior.NavigationMode(id)),
-                PassesThrough);
+                PassesThrough) { PlayerCurse = () => racialOverrides.Current };
             _equipmentMoves.Changed += _combat.EquipmentChanged;
             GameplayServices<IProductFact> kit = new(actors, _combat.Targeting, _combat.Attacks, _combat.Execution, _combat.Rules, inventory, equipmentCoordinator);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
@@ -423,10 +428,10 @@ internal sealed partial class DaggerfallSession
             DaggerfallPoisonRuntime poisons = _poisoning.Runtime;
             // The curses an infection becomes; a curse's cure passes an hour, through quest time when a quest cures it.
             DaggerfallTransformationHealing transformationHealing = new(_diseases, _poisoning, effects, actors, character);
-            _lycanthropy = new DaggerfallLycanthropy(character.RacialOverrides!, _time, tuning.Lycanthropy,
+            _lycanthropy = new DaggerfallLycanthropy(racialOverrides, _time, tuning.Lycanthropy,
                 () => _heldEnchantments.HircinesRingEquipped, _equipmentMoves.UnequipHands, actors, _random, Presentation, this, transformationHealing,
                 seconds => AdvanceElapsedTime(seconds), seconds => AdvanceQuestTime(seconds));
-            _vampirism = new DaggerfallVampirism(character.RacialOverrides!, _time, tuning.Vampirism, definitions.Factions,
+            _vampirism = new DaggerfallVampirism(racialOverrides, _time, tuning.Vampirism, definitions.Factions,
                 _random, Presentation, this, transformationHealing,
                 seconds => AdvanceElapsedTime(seconds), seconds => AdvanceQuestTime(seconds));
             DaggerfallEncumbrancePolicy encumbrance = new(inventory, playerStats,
@@ -439,7 +444,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallPropertyState property = new(tuning.Property, saved?.Property);
             _propertyStorage = new DaggerfallPropertyStorage(containers, itemInstances, definitions, _actorIdentities, property, playerEntity);
             if (saved?.Property is { } savedProperty) _propertyStorage.Restore(savedProperty);
-            DaggerfallCrimeState crime = new(saved?.Crime, () => character.RacialOverrides?.Current?.SuppressCrime == true);
+            DaggerfallCrimeState crime = new(saved?.Crime, () => racialOverrides.Current?.SuppressCrime == true);
             DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
                 currency, _uniqueItems, containers, playerEntity, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty, _sites.ActiveProfile.LogicalId)
@@ -469,6 +474,7 @@ internal sealed partial class DaggerfallSession
                 assembled,
                 kit: kit,
                 effects: effects,
+                racialOverrides: racialOverrides,
                 skillUses: skillUses,
                 levelUps: levelUps,
                 heldEnchantments: _heldEnchantments,
@@ -712,6 +718,7 @@ internal sealed partial class DaggerfallSession
             _characterUi.UseLegalStanding(() => _site.Region, region => State.Crime.BanishedRegions.Contains(region));
             _characterUi.UseItemPresentation(_inventoryUi);
             _characterUi.UseArt(() => DrawnArt);
+            _characterUi.UseRacialOverrides(State.RacialOverrides);
             _inventoryUi.UseArt(() => DrawnArt);
             NormalizedClassicPresentation classicPresentation = composition.StartSite.ClassicPresentation;
             if (classicPresentation.TryEffect("magicGlint", out NormalizedClassicEffect? magicGlint) && classicPresentation.TryEffect("coinGlint", out NormalizedClassicEffect? coinGlint))

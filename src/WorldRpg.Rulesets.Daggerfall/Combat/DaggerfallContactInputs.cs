@@ -18,6 +18,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed record DaggerfallContactInputs(DaggerfallDefinitions Definitions, Func<DaggerfallCharacterState?> Character,
     IRandomService Random, Func<long, EquipmentRead> EquipmentOf, Func<long, StatsComponent?> StatsOf, Func<int> PlayerArmorValueModifier)
 {
+    /// <summary>The curse the player's race is under, if any: a werebeast is harmed only by silver or better.</summary>
+    internal Func<DaggerfallRacialOverrideView?> PlayerCurse { get; init; } = () => null;
+
     /// <summary>The player's biography bonus to avoiding blows, which deflection adds.</summary>
     internal Func<int> PlayerAvoidHit { get; init; } = () => 0;
 }

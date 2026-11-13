@@ -6,6 +6,14 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Training's semantic dialogue action boundary over the canonical service transaction.</summary>
 internal sealed partial class DaggerfallSession
 {
+    /// <summary>The training the person the player is talking to offers, for the dialogue's training page.</summary>
+    private DaggerfallSkillTrainingProviderView? CurrentTrainingProvider(string? revision = null)
+    {
+        DaggerfallNpc? npc = _dialogue?.CurrentNpc(revision);
+        if (npc is null || !npc.Services.Contains(DaggerfallSkillTrainingPolicy.ServiceName, StringComparer.Ordinal)) return null;
+        return State.SkillTraining.ReadProvider(new(npc.DurableId, npc.Site, DaggerfallSkillTrainingPolicy.ServiceName));
+    }
+
     private void ApplyTrainingAction(DaggerfallPlayerUiAction action)
     {
         if (action.Revision is not { Length: > 0 } revision || action.Key is not { Length: > 0 } skill
