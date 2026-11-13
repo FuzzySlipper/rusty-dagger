@@ -35,7 +35,9 @@ internal sealed class DaggerfallInventoryUseService(
     Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useItemSpell = null,
     Func<KitUniqueInventoryItem, DaggerfallInventoryUseResult>? useAzurasStar = null,
     Func<int, DaggerfallInventoryUseResult>? usePotion = null,
-    Func<DaggerfallItemInstanceMetadata, DaggerfallInventoryUseResult?>? useQuestItem = null)
+    Func<DaggerfallItemInstanceMetadata, DaggerfallInventoryUseResult?>? useQuestItem = null,
+    Func<DaggerfallItemInstanceMetadata, bool>? isAzurasStar = null,
+    Func<DaggerfallMagicEnchantmentDefinition, bool>? castsOnUse = null)
 {
     private const int FirstDrugTemplate = 78;
     private const int LastDrugTemplate = 81;
@@ -72,9 +74,9 @@ internal sealed class DaggerfallInventoryUseService(
         if (metadata.QuestId is not null && useQuestItem is not null) return true;
         if (metadata.HasEnchantment)
         {
-            if (DaggerfallSoulGems.IsStar(metadata, definitions.Magic)) return true;
+            if (isAzurasStar?.Invoke(metadata) == true) return true;
             if (definitions.Magic.TryEnchantments(metadata, out var payloads) && payloads.Any(effect => effect.Type == 26 && effect.Param is 4 or 8
-                || effect.Type is 0 or DaggerfallEnchantmentSettings.HealthLeechType)) return true;
+                || castsOnUse?.Invoke(effect) == true)) return true;
             return metadata.Enchantment is { } enchantment && definitions.Magic.MagicItems.TryGetValue(enchantment, out DaggerfallMagicItemDefinition? magic)
                 && magic.Enchantments.Any(effect => effect.ParamMeaning == "artifact-effect" && effect.Param == 5);
         }
@@ -127,7 +129,7 @@ internal sealed class DaggerfallInventoryUseService(
     {
         if (metadata.HasEnchantment)
         {
-            if (DaggerfallSoulGems.IsStar(metadata, definitions.Magic))
+            if (isAzurasStar?.Invoke(metadata) == true)
             {
                 if (metadata.CurrentCondition <= 0) return new(false, "Azura's Star is broken.");
                 if (unique is not { } star) return new(false, "Azura's Star requires a unique item source.");
@@ -155,7 +157,7 @@ internal sealed class DaggerfallInventoryUseService(
                 consume();
                 return new(true, "Oghma Infinium grants 30 attribute points. Allocate them on your character sheet.");
             }
-            if (definitions.Magic.TryEnchantments(metadata, out var spellPayloads) && spellPayloads.Any(effect => effect.Type is 0 or DaggerfallEnchantmentSettings.HealthLeechType))
+            if (definitions.Magic.TryEnchantments(metadata, out var spellPayloads) && spellPayloads.Any(effect => castsOnUse?.Invoke(effect) == true))
                 return unique is { } spellSource && useItemSpell is not null ? useItemSpell(spellSource)
                     : new(false, "Item casting requires an available unique source.");
             return new(false, "This enchantment has no use effect.");

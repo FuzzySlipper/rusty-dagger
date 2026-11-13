@@ -638,7 +638,8 @@ internal sealed partial class DaggerfallSession
                     RequestPanel(DaggerfallPanel.Character);
                     return true;
                 }, useSanguineRose: _artifacts.UseSanguineRose, useSkullCorruption: _artifacts.UseSkullCorruption, useItemSpell: item => _itemCastTriggers.Use(item),
-                useAzurasStar: item => ItemSouls.UseAzurasStar(State.Inventory.GetDurableItemId(new(item.EntityId)).Value), usePotion: key => Casting.UsePotion(actors.Player.DurableId, key), useQuestItem: State.Quests.UseItem));
+                useAzurasStar: item => ItemSouls.UseAzurasStar(State.Inventory.GetDurableItemId(new(item.EntityId)).Value), usePotion: key => Casting.UsePotion(actors.Player.DurableId, key), useQuestItem: State.Quests.UseItem,
+                isAzurasStar: metadata => DaggerfallSoulGems.IsStar(metadata, definitions.Magic), castsOnUse: DaggerfallItemCastTriggers.CastsOnUse));
             _inventoryUi.BookOpened += _ => RequestPanel(DaggerfallPanel.Book);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers);
             _interactions = new DaggerfallOpenInteractions(

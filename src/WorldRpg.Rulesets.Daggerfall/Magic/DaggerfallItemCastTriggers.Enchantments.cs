@@ -4,6 +4,10 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed partial class DaggerfallItemCastTriggers
 {
+    /// <summary>Whether a payload casts when its item is used: an item spell or a health leech.</summary>
+    internal static bool CastsOnUse(DaggerfallMagicEnchantmentDefinition payload) =>
+        payload.Type is 0 or DaggerfallEnchantmentSettings.HealthLeechType;
+
     private IReadOnlyList<DaggerfallMagicEnchantmentDefinition> Enchantments(DaggerfallItemInstanceMetadata metadata) =>
         magic.TryEnchantments(metadata, out var values) ? values : [];
 
