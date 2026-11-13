@@ -6,6 +6,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed record DaggerfallSummoningView(string Revision, string Provider, DaggerfallSummoningQuote? Quote,
     string? OfferRevision, string? Prince, string? Message, string[] Diagnostics);
+/// <summary>The summoner's pane of the spellbook frame, the prince's answer and its cinematic, worded for the player.</summary>
 internal sealed partial class DaggerfallSession
 {
     internal DaggerfallDaedricSummoning Summoning { get; private set; } = null!;
@@ -33,7 +34,7 @@ internal sealed partial class DaggerfallSession
         if (action.Kind == DaggerfallUiActionKind.DaedraAnswer)
         {
             var prior = Summoning.Last;
-            outcome = long.TryParse(action.Revision,out long sequence) ? Summoning.Answer(sequence,action.Confirm,StartSummoningQuest) : "OfferUnavailable";
+            outcome = long.TryParse(action.Revision,out long sequence) ? Summoning.Answer(sequence,action.Confirm,offer=>DaggerfallDaedricSummoning.StartQuest(State.Quests,offer)) : "OfferUnavailable";
             if (outcome == "Refused" && prior is not null)
             {
                 var text = State.Quests.RenderPreparedOffer(prior.PreparedQuest!,1001);
@@ -61,19 +62,6 @@ internal sealed partial class DaggerfallSession
         "OfferUnavailable" => "That offer is no longer open.",
         "QuestUnavailable" => "The prince's quest is unavailable.",
         _ => DaggerfallServiceOutcomeText.Common(outcome) };
-    private DaggerfallQuestInstanceSave PrepareSummoningQuest(DaggerfallSummoningResult result)
-    {
-        string source=result.Quest+".txt";
-        var definition=_definitions.QuestSources.Resolve(source);
-        string identity="daedric:"+result.Sequence;
-        return State.Quests.PrepareSummoned(result.Quest,new(identity,source,definition.Name,DaggerfallQuestLifecycle.Active,null,[],[])
-            { FactionId=result.ProviderFaction,QuestorId=result.Provider });
-    }
-    private void StartSummoningQuest(DaggerfallSummoningResult result)
-    {
-        var quest=State.Quests.AdmitPreparedSummoned(result.Quest,result.PreparedQuest!);
-        State.Quests.ShowMessage(quest.InstanceId,1002);
-    }
     private void PlaySummoningStory(int prince)
     {
         if (!_composition.VideosEnabled) return;
@@ -81,18 +69,5 @@ internal sealed partial class DaggerfallSession
         if (Cinematics is null || cinematic.Artifact is null)
         { Presentation.SetOutcome($"The {Summoning.PrinceName(prince)} cinematic is unavailable."); return; }
         Cinematics.Play(cinematic.FileName);
-    }
-    private void ReconcileSummoningFoes()
-    {
-        if (Summoning?.Last is not { HostilesRemaining: > 0 } result || result.Profile.Require()!=_activeProfileKey
-            || State.PlayerControl.Position is not { } player) return;
-        var actor=_definitions.Actors.Values.Single(value=>value.Kind==DaggerfallActorKinds.Monster && value.MobileId==result.HostileMobile);
-        if (!_sites.Projection.Inputs.MobileSprites.ContainsKey(result.HostileMobile)) return;
-        while (Summoning.Last is { HostilesRemaining: > 0 } pending)
-        {
-            if (!TrySpawnPose($"summoning:{pending.Sequence}:foe:{pending.Spawned.Length}","daggerfall.daedric-summoning",player,
-                pending.Refusal ? 8 : 4,64,out ActorPose pose)) return;
-            long id=_roster.Spawn(actor.Id.Value,pose); _enemyBehavior.MakeHostile(id); Summoning.Spawned(id);
-        }
     }
 }

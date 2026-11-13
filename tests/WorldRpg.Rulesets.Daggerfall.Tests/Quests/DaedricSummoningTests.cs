@@ -33,7 +33,7 @@ public sealed class DaedricSummoningTests
         var provider = Provider(f.Session, 66);
         var day = DaggerfallCalendar.Start;
         var random = SummonRandom.Create();
-        var summoning = new DaggerfallDaedricSummoning(TestPayload.Definitions, f.Session.State, random, Selection(),
+        var summoning = new DaggerfallDaedricSummoning(TestPayload.Definitions,f.Session.State.Npcs,f.Session.State.ConcreteGuildServices,f.Session.State.Services,f.Session.State.Social, random, Selection(),
             () => day, () => (false, false), () => f.Inputs.ProfileKey,result=>Prepare(f,result));
         Assert.Equal("ProviderUnavailable", summoning.Quote(provider).Reason);
         f.Session.State.Social.JoinGuild(40, 0);
@@ -51,7 +51,7 @@ public sealed class DaedricSummoningTests
         day=new(405,0,1,12,0,0);Assert.Equal("WrongDay",summoning.Quote(provider).Reason);
         var glenmoril=Provider(f.Session,419);
         var first=summoning.Quote(glenmoril);Assert.True(first.Eligible,first.Reason);Assert.NotEqual(4,first.Prince);
-        var restored=new DaggerfallDaedricSummoning(TestPayload.Definitions,f.Session.State,random,Selection(),()=>day,()=> (false,false),()=>f.Inputs.ProfileKey,result=>Prepare(f,result),summoning.Capture());
+        var restored=new DaggerfallDaedricSummoning(TestPayload.Definitions,f.Session.State.Npcs,f.Session.State.ConcreteGuildServices,f.Session.State.Services,f.Session.State.Social,random,Selection(),()=>day,()=> (false,false),()=>f.Inputs.ProfileKey,result=>Prepare(f,result),summoning.Capture());
         Assert.Equal(first,restored.Quote(glenmoril));
         var other=TestPayload.Definitions.Factions.Factions.Values.First(x=>x.Type==8&&x.Id!=419);
         Assert.Equal(4,summoning.Quote(Provider(f.Session,other.Id)).Prince);
@@ -65,7 +65,7 @@ public sealed class DaedricSummoningTests
     {
         var random=SummonRandom.Create();
         using var f=new SanguineRoseSessionTests.Fixture(prepareComposition:Composition,random:random);var provider=Provider(f.Session,419); var control=(SummonRandom)(object)random;
-        var summoning=new DaggerfallDaedricSummoning(TestPayload.Definitions,f.Session.State,random,Selection(),()=>DaggerfallCalendar.Start,()=> (false,false),()=>f.Inputs.ProfileKey,result=>Prepare(f,result));
+        var summoning=new DaggerfallDaedricSummoning(TestPayload.Definitions,f.Session.State.Npcs,f.Session.State.ConcreteGuildServices,f.Session.State.Services,f.Session.State.Social,random,Selection(),()=>DaggerfallCalendar.Start,()=> (false,false),()=>f.Inputs.ProfileKey,result=>Prepare(f,result));
         var quote=summoning.Quote(provider);
         f.Session.State.Currency.TrySpendGold(f.Session.State.Currency.Read().Gold,[]);
         Assert.Equal("ConfirmationRequired",summoning.Summon(provider,quote.Key,quote.Gold,false));
@@ -79,7 +79,7 @@ public sealed class DaedricSummoningTests
         quote=summoning.Quote(provider);control.Success=1;
         Assert.True(summoning.Summon(provider,quote.Key,quote.Gold,true)=="Offered",summoning.Last?.Diagnostic);
         Assert.Equal("AnswerPendingOffer",summoning.Summon(provider,quote.Key,quote.Gold,true));
-        var restored=new DaggerfallDaedricSummoning(TestPayload.Definitions,f.Session.State,random,Selection(),()=>DaggerfallCalendar.Start,()=> (false,false),()=>f.Inputs.ProfileKey,result=>Prepare(f,result),summoning.Capture());
+        var restored=new DaggerfallDaedricSummoning(TestPayload.Definitions,f.Session.State.Npcs,f.Session.State.ConcreteGuildServices,f.Session.State.Services,f.Session.State.Social,random,Selection(),()=>DaggerfallCalendar.Start,()=> (false,false),()=>f.Inputs.ProfileKey,result=>Prepare(f,result),summoning.Capture());
         int starts=0;
         Assert.Equal("Accepted",restored.Answer(restored.Last!.Sequence,true,_=>starts++));
         Assert.Equal("OfferUnavailable",restored.Answer(restored.Last.Sequence,true,_=>starts++));Assert.Equal(1,starts);
@@ -134,7 +134,7 @@ public sealed class DaedricSummoningTests
         using var f=new SanguineRoseSessionTests.Fixture();var provider=Provider(f.Session,419);Fund(f);
         var random=SummonRandom.Create();var draws=(SummonRandom)(object)random;draws.Replacement=10;draws.Success=100;
         f.Session.State.Social.ChangeFactionReputation(9,-f.Session.State.Social.FactionReputation(9));
-        var summoning=new DaggerfallDaedricSummoning(TestPayload.Definitions,f.Session.State,random,Selection(),()=>DaggerfallCalendar.Start,
+        var summoning=new DaggerfallDaedricSummoning(TestPayload.Definitions,f.Session.State.Npcs,f.Session.State.ConcreteGuildServices,f.Session.State.Services,f.Session.State.Social,random,Selection(),()=>DaggerfallCalendar.Start,
             ()=> (storm,storm),()=>f.Inputs.ProfileKey,_=>throw new InvalidOperationException("A failed roll must not prepare a quest."));
         var quote=summoning.Quote(provider);Assert.Equal("Failed",summoning.Summon(provider,quote.Key,quote.Gold,true));
         Assert.Equal(prince,summoning.Last!.Prince);Assert.Equal(chance,summoning.Last.Chance);
@@ -145,12 +145,8 @@ public sealed class DaedricSummoningTests
     { DisabledQuestSelection=Selection(), VideosEnabled=false,
       Blocks=DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot,"content/worldrpg/payloads/daggerfall.blocks.json"))) };
 
-    private static DaggerfallQuestInstanceSave Prepare(SanguineRoseSessionTests.Fixture f,DaggerfallSummoningResult result)
-    {
-        var source=TestPayload.Definitions.QuestSources.Resolve(result.Quest+".txt");
-        return f.Session.State.Quests.PrepareSummoned(result.Quest,new("daedric:"+result.Sequence,source.SourceFile,source.Name,DaggerfallQuestLifecycle.Active,null,[],[])
-            { FactionId=result.ProviderFaction,QuestorId=result.Provider });
-    }
+    private static DaggerfallQuestInstanceSave Prepare(SanguineRoseSessionTests.Fixture f,DaggerfallSummoningResult result)=>
+        DaggerfallDaedricSummoning.PrepareQuest(TestPayload.Definitions,f.Session.State.Quests,result);
 
     private static DaggerfallServiceProvider Provider(DaggerfallSession session,int faction)
     {

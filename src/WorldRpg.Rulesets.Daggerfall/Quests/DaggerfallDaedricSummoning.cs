@@ -64,8 +64,13 @@ internal sealed record DaggerfallSummoningSave(long Sequence, int WitchDay, int 
 }
 internal sealed record DaggerfallSummoningQuote(string Key, int Prince, string Name, string Quest, ulong Gold, bool Eligible, string? Reason);
 
-/// <summary>Paid summoning policy over canonical NPC, guild, currency, calendar, weather and quest admission.</summary>
-internal sealed class DaggerfallDaedricSummoning(DaggerfallDefinitions definitions, DaggerfallState state, IRandomService random,
+/// <summary>
+/// Paid summoning policy over canonical NPC, guild, currency, calendar, weather and quest admission. A guild service
+/// whose answer is a quest offer, so Quests'.
+/// </summary>
+internal sealed class DaggerfallDaedricSummoning(DaggerfallDefinitions definitions, DaggerfallNpcRegistry npcs,
+    DaggerfallConcreteGuildServiceRuntime guildServices, DaggerfallServiceTransactions services, DaggerfallSocialState social,
+    IRandomService random,
     DaggerfallDisabledQuestSelection selection, Func<DaggerfallCalendar> calendar, Func<(bool Rain, bool Storm)> weather,
     Func<DaggerfallWorldProfileKey> profile, Func<DaggerfallSummoningResult, DaggerfallQuestInstanceSave> prepareQuest, DaggerfallSummoningSave? restored = null)
 {
@@ -80,13 +85,13 @@ internal sealed class DaggerfallDaedricSummoning(DaggerfallDefinitions definitio
 
     private (DaggerfallFactionDefinition Faction, DaggerfallServiceEligibility Eligibility)? Provider(DaggerfallServiceProvider provider)
     {
-        if (provider.Service != "daedra-summoning" || state.Services.ProviderAvailable(provider) != DaggerfallServiceDenial.None) return null;
-        var npc = state.Npcs.Require(provider.NpcId);
+        if (provider.Service != "daedra-summoning" || services.ProviderAvailable(provider) != DaggerfallServiceDenial.None) return null;
+        var npc = npcs.Require(provider.NpcId);
         if (!definitions.Factions.Factions.TryGetValue(npc.Appearance.FactionId, out var faction)) return null;
         if (faction.Type == 8) return (faction, new(false));
         var guild = DaggerfallConcreteGuildCatalog.All.FirstOrDefault(guild => guild.TryGetService(DaggerfallConcreteGuildService.DaedraSummoning, out var service)
             && service.ProviderFactionId == faction.Id);
-        if (guild is null || !state.ConcreteGuildServices.Evaluate(guild.FactionId,DaggerfallConcreteGuildService.DaedraSummoning,
+        if (guild is null || !guildServices.Evaluate(guild.FactionId,DaggerfallConcreteGuildService.DaedraSummoning,
                 checked((int)calendar().DayNumber),new(provider)).CanUse) return null;
         guild.TryGetService(DaggerfallConcreteGuildService.DaedraSummoning, out var policy);
         return (faction, new(policy.RequiresMembership, policy.MinimumRank ?? 0, guild.FactionId));
@@ -114,7 +119,7 @@ internal sealed class DaggerfallDaedricSummoning(DaggerfallDefinitions definitio
         string quest = Cinematic(prince).Quest;
         string? reason = PendingOffer ? "AnswerPendingOffer" : Last?.HostilesRemaining > 0 ? "HostileArrivalPending" : !QuestAvailable(quest) ? "QuestUnavailable" : null;
         return new($"{_state.Sequence}:{current.DayNumber}:{provider.NpcId}:{prince}",prince,PrinceName(prince),quest,
-            checked((ulong)DaggerfallDaedricSummoningPolicy.CalculateDaedraSummoningCost(state.Social.FactionReputation(source.Faction.Id))),reason is null,reason);
+            checked((ulong)DaggerfallDaedricSummoningPolicy.CalculateDaedraSummoningCost(social.FactionReputation(source.Faction.Id))),reason is null,reason);
     }
 
     internal string Summon(DaggerfallServiceProvider provider, string key, ulong price, bool confirm)
@@ -125,14 +130,14 @@ internal sealed class DaggerfallDaedricSummoning(DaggerfallDefinitions definitio
         if (key != quote.Key || price != quote.Gold) return "QuoteChanged";
         var source = Provider(provider)!.Value;
         long sequence = checked(_state.Sequence + 1);
-        var payment = state.Services.Quote(new($"daedric-summoning:{sequence}",provider),source.Eligibility,new(quote.Gold));
+        var payment = services.Quote(new($"daedric-summoning:{sequence}",provider),source.Eligibility,new(quote.Gold));
         if (payment.Quote is null) return payment.Outcome.Denial.ToString();
-        var paid = state.Services.Commit(payment.Quote);
+        var paid = services.Commit(payment.Quote);
         if (!paid.Accepted) return paid.Denial.ToString();
         var sky = weather();
         int prince = Draw($"{sequence}:replacement",1,100) <= (sky.Storm ? 15 : 5) ? 9 : quote.Prince;
         var policy = DaggerfallDaedricSummoningPolicy.Princes.Single(value => value.Faction == prince);
-        int chance = DaggerfallDaedricSummoningPolicy.CalculateDaedraSummoningChance(state.Social.FactionReputation(prince),
+        int chance = DaggerfallDaedricSummoningPolicy.CalculateDaedraSummoningChance(social.FactionReputation(prince),
             DaggerfallDaedricSummoningPolicy.WeatherBonus(policy,sky.Rain,sky.Storm));
         int roll = Draw($"{sequence}:success",1,100);
         string outcome = roll > chance ? "Failed" : _state.Summoned.Contains(prince) ? "Dismissed" : QuestAvailable(Cinematic(prince).Quest) ? "Offered" : "QuestUnavailable";
@@ -179,5 +184,23 @@ internal sealed class DaggerfallDaedricSummoning(DaggerfallDefinitions definitio
         if (Last is not { HostilesRemaining: > 0 } last) throw new InvalidOperationException("No summoning foe awaits admission.");
         _state = _state with { Last=last with { HostilesRemaining=last.HostilesRemaining-1, Spawned=[.. last.Spawned,actor] } };
     }
+    /// <summary>The prince's quest, prepared for an outstanding offer under the summoner's faction and questor.</summary>
+    internal static DaggerfallQuestInstanceSave PrepareQuest(DaggerfallDefinitions definitions, DaggerfallQuestInstances quests,
+        DaggerfallSummoningResult result)
+    {
+        string source=result.Quest+".txt";
+        var definition=definitions.QuestSources.Resolve(source);
+        string identity="daedric:"+result.Sequence;
+        return quests.PrepareSummoned(result.Quest,new(identity,source,definition.Name,DaggerfallQuestLifecycle.Active,null,[],[])
+            { FactionId=result.ProviderFaction,QuestorId=result.Provider });
+    }
+
+    /// <summary>The accepted offer's quest starts and shows its acceptance message.</summary>
+    internal static void StartQuest(DaggerfallQuestInstances quests, DaggerfallSummoningResult result)
+    {
+        var quest=quests.AdmitPreparedSummoned(result.Quest,result.PreparedQuest!);
+        quests.ShowMessage(quest.InstanceId,1002);
+    }
+
     private int Draw(string key,int minimum,int maximum) => checked((int)random.DrawKeyed(new(0,"daggerfall.daedric-summoning",key,minimum,maximum)).Value);
 }

@@ -2,6 +2,7 @@ using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
@@ -16,8 +17,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// The update order. <see cref="AdmittedUpdate"/> is every call one Engine-admitted update makes, in order;
 /// <see cref="AdvanceCalendar"/> is every calendar consumer, in order, which rest, travel and quest time share
 /// through <see cref="AdvanceElapsedTime"/> and <see cref="AdvanceQuestTime"/>; <see cref="SimulateStep"/> is every
-/// call one of its fixed steps makes; <see cref="ResolveExhaustion"/> is what a collapse does across domains; and
-/// <see cref="RemoveCarriedQuestItems"/> is what a quest's end does to the items it lent. Each line says the domain it belongs to. Order is behaviour: a call
+/// call one of its fixed steps makes; <see cref="ResolveExhaustion"/> is what a collapse does across domains;
+/// <see cref="RemoveCarriedQuestItems"/> is what a quest's end does to the items it lent; and <see cref="ReconcileSummoningFoes"/>
+/// is how a summoning's hostiles arrive. Each line says the domain it belongs to. Order is behaviour: a call
 /// moves only with a reason that names what it changes.
 /// </summary>
 internal sealed partial class DaggerfallSession
@@ -73,7 +75,7 @@ internal sealed partial class DaggerfallSession
                 else Cinematics?.Skip();                                                          // Scene
             }
             if (_mode == ProductMode.Playing) Infections.Poll(_openingCinematics.IsActive);       // Afflictions
-            ReconcileSummoningFoes();                                                             // Magic
+            ReconcileSummoningFoes();                                                             // Session: the summoned hostiles' list, below
             // An arrival whose ground the Engine refused holds the world, like a held mode, until that ground is live
             // and the player stands on it: nothing would hold anyone up meanwhile.
             bool groundless = _mode == ProductMode.Playing && !_exterior.RecoverArrivalGround(); // Exterior
@@ -655,5 +657,24 @@ internal sealed partial class DaggerfallSession
         _itemLifetime.RemoveCarriedQuestItems(instanceId);                                        // Items
         State.QuestItems.RemoveCustody(instanceId);                                               // Quests
         State.HeldEnchantments.Refresh();                                                         // Magic
+    }
+
+    /// <summary>
+    /// The summoned hostiles' list: the daedra a failed or refused summoning still owes arrive around the player, one
+    /// at a time, while the player is where it was summoned and a clear pose remains.
+    /// </summary>
+    private void ReconcileSummoningFoes()
+    {
+        if (Summoning?.Last is not { HostilesRemaining: > 0 } result || result.Profile.Require()!=_activeProfileKey
+            || State.PlayerControl.Position is not { } player) return;                         // Quests
+        var actor=_definitions.Actors.Values.Single(value=>value.Kind==DaggerfallActorKinds.Monster && value.MobileId==result.HostileMobile);
+        if (!_sites.Projection.Inputs.MobileSprites.ContainsKey(result.HostileMobile)) return;  // Scene
+        while (Summoning.Last is { HostilesRemaining: > 0 } pending)                            // Quests
+        {
+            if (!TrySpawnPose($"summoning:{pending.Sequence}:foe:{pending.Spawned.Length}","daggerfall.daedric-summoning",player,
+                pending.Refusal ? 8 : 4,64,out ActorPose pose)) return;                          // Actors
+            long id=_roster.Spawn(actor.Id.Value,pose); _enemyBehavior.MakeHostile(id);          // Actors
+            Summoning.Spawned(id);                                                              // Quests
+        }
     }
 }
