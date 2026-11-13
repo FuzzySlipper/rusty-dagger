@@ -80,7 +80,7 @@ internal sealed class DaggerfallTransformationInfections : IDisposable
         if (_consumer?.HasRacialOverride == true) return DaggerfallInfectionAdmission.RacialOverride;
         var result = _effects.Start(new(exposure.Instance, DaggerfallTransformationInfectionPolicy.Key(exposure.Kind),
             exposure.Source, null, exposure.TargetId, "infection", "Disease", null, 1, null,
-            JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallInfectionState)));
+            JsonSerializer.SerializeToElement(state, DaggerfallAfflictionJson.Default.DaggerfallInfectionState)));
         return result == DaggerfallEffectAdmissionOutcome.Rejected ? DaggerfallInfectionAdmission.Incumbent : DaggerfallInfectionAdmission.Started;
     }
 

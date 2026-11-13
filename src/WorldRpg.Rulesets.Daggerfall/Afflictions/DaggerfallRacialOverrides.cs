@@ -164,8 +164,8 @@ internal sealed class DaggerfallRacialOverrides(DaggerfallEffectLifecycle effect
         })];
     }
     internal static DaggerfallRacialOverrideState Read(JsonElement state) =>
-        (state.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallRacialOverrideState)
+        (state.Deserialize(DaggerfallAfflictionJson.Default.DaggerfallRacialOverrideState)
             ?? throw new ArgumentException("Racial override state is missing.")).Validate();
     private static JsonElement Encode(DaggerfallRacialOverrideState state) =>
-        JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallRacialOverrideState);
+        JsonSerializer.SerializeToElement(state, DaggerfallAfflictionJson.Default.DaggerfallRacialOverrideState);
 }

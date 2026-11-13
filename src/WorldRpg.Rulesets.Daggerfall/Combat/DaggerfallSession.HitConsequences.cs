@@ -4,6 +4,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed partial class DaggerfallSession
 {
+    /// <summary>What a monster's landed hit carries: a disease, paralysis or a transformation infection.</summary>
     private void DeliverMonsterHit(DaggerfallMonsterHitExposure hit)
     {
         var consequence = hit.Hit.Consequence;
@@ -11,7 +12,7 @@ internal sealed partial class DaggerfallSession
         if (diseases.Count > 0)
         {
             // Once admitted, disease belongs to its target, not to a living infecting monster.
-            InflictDisease(new(hit.Instance, "monster-hit", null, hit.Target, diseases));
+            _diseases.Inflict(new(hit.Instance, "monster-hit", null, hit.Target, diseases));
             return;
         }
         if (consequence == DaggerfallMonsterHitConsequence.Paralysis)
@@ -29,7 +30,7 @@ internal sealed partial class DaggerfallSession
             _ => null,
         };
         if (kind is { } infection)
-            InflictTransformationInfection(new(hit.Instance, "monster-hit", hit.Attacker,
+            Infections.Inflict(new(hit.Instance, "monster-hit", hit.Attacker,
                 hit.Target, infection, _activeProfileKey.Site.Region));
     }
 }

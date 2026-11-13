@@ -95,7 +95,7 @@ public sealed class VampirismSessionTests
     {
         using var f = new Fixture(); var s = f.Session;
         const int infectedRegion = 0;
-        Assert.Equal(DaggerfallInfectionAdmission.Started, s.InflictTransformationInfection(new("vampire-infection", "monster.hit", null, 1, DaggerfallInfectionKind.Vampire, infectedRegion)));
+        Assert.Equal(DaggerfallInfectionAdmission.Started, s.Infections.Inflict(new("vampire-infection", "monster.hit", null, 1, DaggerfallInfectionKind.Vampire, infectedRegion)));
         s.AdvanceElapsedTime(4 * 86400);
         long day = DaggerfallSavePayload.Read(s.CaptureSave()).Calendar.Day;
         for (ulong i = 1; i <= 5; i++) s.Update(new ProductUpdate(OuterUpdate(i), []));

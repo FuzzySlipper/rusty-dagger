@@ -41,10 +41,10 @@ public sealed class DaggerfallRaceExposureTests
     public void Actual_session_poison_exposure_reads_its_normalized_race_instead_of_false()
     {
         using var session = SessionWithPlayerRaceImmunity(4);
-        var exposure = session.PlayerPoisonExposure(bypassResistance: true);
+        var exposure = session.Poisoning.PlayerExposure(bypassResistance: true);
         Assert.True(exposure.RaceImmune);
         Assert.Equal(DaggerfallDiseaseCareerTolerance.Immune, exposure.RaceTolerance);
-        Assert.Equal(DaggerfallPoisonAdmission.Immune, session.InflictPoison(exposure with { RaceImmune = false }, 128));
+        Assert.Equal(DaggerfallPoisonAdmission.Immune, session.Poisoning.Inflict(exposure with { RaceImmune = false }, 128));
         Assert.Empty(session.State.Effects.Active);
     }
 
@@ -56,12 +56,12 @@ public sealed class DaggerfallRaceExposureTests
         ulong identity = session.State.Inventory.GetDurableItemId(weapon.Entity).Value;
         var metadata = session.State.ItemInstances.RequireUnique(identity);
         session.State.ItemInstances.ReplaceUnique(identity, metadata with { PoisonVariant = 128 });
-        session.DeliverWeaponPoison(session.State.Actors.Player.DurableId, identity);
+        session.Poisoning.DeliverWeaponPoison(session.State.Actors.Player.DurableId, identity);
         Assert.Null(session.State.ItemInstances.RequireUnique(identity).PoisonVariant);
         Assert.Empty(session.State.Effects.Active);
         using var restored = SessionWithPlayerRaceImmunity(4, session.CaptureSave());
         Assert.Equal(session.State.Character.Identity.RaceId, restored.State.Character.Identity.RaceId);
-        Assert.True(restored.PlayerPoisonExposure(false).RaceImmune);
+        Assert.True(restored.Poisoning.PlayerExposure(false).RaceImmune);
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public sealed class DaggerfallRaceExposureTests
         using var session = SessionWithPlayerRaceImmunity(64);
         session.State.Progression.AdvanceTo(session.State.Progression.Experience, 2);
         var exposure = new DaggerfallDiseaseExposure("race-disease", "race-test", null, session.State.Actors.Player.DurableId, [DaggerfallClassicDisease.BrainFever]);
-        Assert.Equal(DaggerfallDiseaseAdmission.Immune, session.InflictDisease(exposure));
+        Assert.Equal(DaggerfallDiseaseAdmission.Immune, session.Diseases.Inflict(exposure));
         Assert.Empty(session.State.Effects.Active);
     }
 

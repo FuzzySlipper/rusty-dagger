@@ -1,4 +1,5 @@
 using System.Text.Json;
+using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Effects;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -6,6 +7,9 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 using Rusty.Engine.Mechanics;
 
 namespace WorldRpg.Rulesets.Daggerfall;
+
+/// <summary>The health an effect's damage took, as the harm pipeline applied it.</summary>
+internal sealed record DaggerfallEffectDamage(DamageResult Result);
 
 /// <summary>Immediate destruction consumes the casting owner's admitted magnitude/chance exactly once.</summary>
 internal static class DaggerfallDestructionEffects

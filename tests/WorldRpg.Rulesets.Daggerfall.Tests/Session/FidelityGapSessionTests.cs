@@ -58,7 +58,7 @@ public sealed class FidelityGapSessionTests
     {
         using var f = new SanguineRoseSessionTests.Fixture();
         var s = f.Session; s.State.Progression.AdvanceTo(0, 2);
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.InflictDisease(new("fidelity-disease", "test", null, 1,
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("fidelity-disease", "test", null, 1,
             [DaggerfallClassicDisease.Consumption], BypassSavingThrows: true)));
         Assert.DoesNotContain("You feel somewhat bad.", s.Presentation.Messages);
         s.AdvanceElapsedTime(86400, idleFatigue: false);

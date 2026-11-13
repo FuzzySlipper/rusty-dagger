@@ -762,7 +762,7 @@ public sealed class SessionPersistenceTests
         session.State.Progression.AdvanceTo(0, 2);
         var will = session.State.Actors.Player.Stats.GetStat(StatId.Parse("willpower"));
         double originalBase = will.BaseValue;
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, session.InflictDisease(new(
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, session.Diseases.Inflict(new(
             "test-disease", "accepted-hit", null, session.State.Actors.Player.DurableId, [DaggerfallClassicDisease.BrainFever])));
         session.AdvanceElapsedTime(DaggerfallCalendar.SecondsPerDay);
         Assert.Equal(originalBase, will.BaseValue);
@@ -777,7 +777,7 @@ public sealed class SessionPersistenceTests
         double health = restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
         restored.AdvanceElapsedTime(0);
         Assert.Equal(will.Value, restoredWill.Value);
-        Assert.Equal(1, restored.CureDisease(DaggerfallClassicDisease.BrainFever));
+        Assert.Equal(1, restored.Diseases.Cure(DaggerfallClassicDisease.BrainFever));
         Assert.Equal(originalBase, restoredWill.Value);
         Assert.Equal(health, restored.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
     }

@@ -69,10 +69,10 @@ public sealed class DaggerfallAlterationEffectsTests
         s.State.Progression.AdvanceTo(0, 2);
         s.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.ResistanceDiseaseOrPoison.Value)).BaseValue = 100;
         Resistance(s, "disease-ward", DaggerfallMagicResistanceElement.DiseaseOrPoison, chance, 10);
-        Assert.Equal(expected, s.InflictDisease(new("exposure", "monster-hit", 1, 1, [DaggerfallClassicDisease.BloodRot])));
+        Assert.Equal(expected, s.Diseases.Inflict(new("exposure", "monster-hit", 1, 1, [DaggerfallClassicDisease.BloodRot])));
         s.State.Effects.Cancel(EffectInstanceId.Parse("disease-ward"));
         Assert.Empty(s.MagicProfile(1).ActiveResistances);
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.InflictDisease(new("after-ward", "monster-hit", 1, 1, [DaggerfallClassicDisease.BloodRot])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("after-ward", "monster-hit", 1, 1, [DaggerfallClassicDisease.BloodRot])));
     }
 
     [Fact]

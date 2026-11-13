@@ -243,7 +243,7 @@ internal sealed partial class DaggerfallSession
                 DaggerfallParalysisEffects.Definition(ReactToSpellAttack),
                 .. DaggerfallCureEffects.Definitions(
                     target => DaggerfallDiseasePolicy.CureAllDiseases(effects, target),
-                    CurePoison, target => DaggerfallParalysisEffects.Cure(effects, target)),
+                    actor => _poisoning!.Runtime.Cure(actor), target => DaggerfallParalysisEffects.Cure(effects, target)),
                 .. DaggerfallMysticismEffects.Definitions(id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1,
                     request => _pendingDispel = request, BanishNearby, ReactToSpellAttack, request => _pendingTeleport = request),
                 .. DaggerfallItemSoulEffects.Definitions(RequestCreateItem,
@@ -278,8 +278,8 @@ internal sealed partial class DaggerfallSession
                     () => _time.Calendar.DayNumber,
                     () => character.Career,
                     combatRules,
-                    AppendEffectDamage, (effect,track,amount)=>_vitality.AdjustConditionTrack(effect.Source,effect.Target,track,amount), AfflictionSymptomsActed),
-                .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career, AfflictionSymptomsActed),
+                    AppendEffectDamage, (effect,track,amount)=>_vitality.AdjustConditionTrack(effect.Source,effect.Target,track,amount), target => _diseases!.SymptomsActed(target)),
+                .. DaggerfallPoisonEffects.Definitions(_random, _vitality, () => character.Career, target => _diseases!.SymptomsActed(target)),
                 DaggerfallTempleBlessingEffects.Definition(social, () => character.Career, actors.Player.DurableId),
             ]));
             character.AttachRacialOverrides(new(effects, character, definitions, RacialOverrideRemoved));
@@ -288,6 +288,7 @@ internal sealed partial class DaggerfallSession
                 message => Presentation.SetOutcome(message), saved?.Infections);
             partiallyConstructed.Add(Infections);
             Infections.BindConsumer(this);
+            _diseases = new DaggerfallDiseases(effects, actors, _random, _time, character, combatRules, Presentation, definitions);
             partiallyConstructed.Add(effects);
             if (composition.Effects is null)
                 foreach (var recipe in definitions.Magic.PotionRecipes.Values) recipe.ValidateEffects(effects.Catalog);
@@ -352,7 +353,7 @@ internal sealed partial class DaggerfallSession
             _fires = new DaggerfallFires(_tuning.Hazards);
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 actorInventories.EquipmentFor, _itemCondition, combatRules,
-                () => assembled.PlayerControl.Position, () => character, DeliverWeaponPoison, () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
+                () => assembled.PlayerControl.Position, () => character, (target, coating) => _poisoning!.DeliverWeaponPoison(target, coating), () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
                 actorId => effects.ControlsFor(actorId).PhysicalAttacks, TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), DeliverMonsterHit,
                 npcs.IsGameplayActive, EffectiveFoeTeam,
                 new DaggerfallContactMitigation(contactInputs, _tuning.Contact, _guard),
@@ -411,9 +412,11 @@ internal sealed partial class DaggerfallSession
 
             _uniqueItems = DaggerfallUniqueItemAllocator.Sharing(_actorIdentities);
             npcs.Identities = _actorIdentities;
-            // Poisons are active effects, so restoring them is the effect lifecycle's own restore: this
-            // owner reads, starts and cures them and keeps no state of its own to carry.
-            _poisons = new DaggerfallPoisonRuntime(effects, PoisonRoll, () => character.Career);
+            // Poisons are active effects, so restoring them is the effect lifecycle's own restore; the
+            // admission keeps only its draw ordinal.
+            _poisoning = new DaggerfallPoisoning(effects, _random, actors, character, itemInstances, authored, definitions,
+                combatRules, saved?.PoisonDraws ?? 0);
+            DaggerfallPoisonRuntime poisons = _poisoning.Runtime;
             DaggerfallEncumbrancePolicy encumbrance = new(inventory, playerStats,
                 () => _heldEnchantments.CarryMultiplier);
             // A new game wears its loadout now; a restore refreshes once, after its equipment is restored.
@@ -431,7 +434,7 @@ internal sealed partial class DaggerfallSession
                     : null, saved?.Services);
             DaggerfallConcreteGuildServiceRuntime concreteGuildServices = new(guildMembership, npcs, services);
             DaggerfallTempleServiceRuntime templeServices = new(concreteGuildServices, services, npcs, social,
-                effects, _poisons, actors, _random, () => _time);
+                effects, poisons, actors, _random, () => _time);
             DaggerfallKnightlyOrderClaimState knightlyClaims = new(saved?.KnightlyClaims);
             DaggerfallKnightlyOrderClaimRuntime knightlyClaimActions = new(concreteGuildServices, knightlyClaims, _random);
             DaggerfallSkillTrainingService skillTraining = new(services, npcs, social,
@@ -457,7 +460,7 @@ internal sealed partial class DaggerfallSession
                 skillUses: skillUses,
                 levelUps: levelUps,
                 heldEnchantments: _heldEnchantments,
-                poisons: _poisons,
+                poisons: poisons,
                 crime: crime,
                 guildMembership: guildMembership,
                 concreteGuildMembership: concreteGuildMembership,
@@ -556,7 +559,7 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindGuardSpawning(SpawnQuestGuards);
             State.Quests.BindRewards(OfferQuestReward, PresentQuestReward, tuning.QuestRewards);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
-                useDrug: variant => UseDrug(variant) == DaggerfallPoisonAdmission.Admitted,
+                useDrug: variant => _poisoning.UseDrug(variant) == DaggerfallPoisonAdmission.Admitted,
                 useOghma: () =>
                 {
                     if (!State.LevelUps.BeginOghma()) return false;
@@ -637,8 +640,7 @@ internal sealed partial class DaggerfallSession
             Summoning = new(definitions, State, _random, composition.DisabledQuestSelection ?? DaggerfallDisabledQuestSelection.None,
                 () => _time.Calendar, () => (IsRaining, IsStorming), () => _activeProfileKey, PrepareSummoningQuest, saved?.Summoning);
             _persistence.Summoning = Summoning.Capture;
-            _poisonDraws = saved?.PoisonDraws ?? 0;
-            _persistence.PoisonDraws = () => _poisonDraws;
+            _persistence.PoisonDraws = () => _poisoning.Draws;
             _persistence.ReadySpell=()=>Casting.ReadyFor(actors.Player.DurableId);
             _persistence.PendingCreateItem = () => _pendingCreateItem;
             _persistence.PendingDispel = () => _pendingDispel;

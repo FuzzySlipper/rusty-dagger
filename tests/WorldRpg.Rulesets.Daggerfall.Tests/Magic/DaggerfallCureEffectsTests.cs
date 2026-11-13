@@ -40,8 +40,8 @@ public sealed class DaggerfallCureEffectsTests
     public void Real_cure_delivery_selects_all_matching_sources_and_preserves_other_conditions_and_targets(string key, int subtype)
     {
         using Fixture f = new(); var s = f.Session;
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.InflictDisease(new("brain.one", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.InflictDisease(new("brain.two", "quest", 2001, 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain.one", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain.two", "quest", 2001, 1, [DaggerfallClassicDisease.BrainFever])));
         Assert.True(s.State.Poisons.Afflict(s.State.Actors.Player.Actor, (int)DaggerfallPoisonVariant.Arsenic));
         Assert.True(s.State.Poisons.Afflict(s.State.Actors.Get(2000).Actor, (int)DaggerfallPoisonVariant.NuxVomica));
         Paralyze(s, "paralysis.one", 2000, 1); Paralyze(s, "paralysis.two", 2001, 1); Paralyze(s, "paralysis.other", 1, 2000);
@@ -91,7 +91,7 @@ public sealed class DaggerfallCureEffectsTests
         using Fixture f = new(); var s = f.Session;
         var willpower = s.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Willpower.Value));
         double baseline = willpower.Value;
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.InflictDisease(new("brain", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
         s.AdvanceElapsedTime(86400);
         Assert.True(willpower.Value < baseline); double health = Health(s, 1).Current;
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Cast(s, "spell.059").Results).Outcome);

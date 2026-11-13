@@ -17,12 +17,12 @@ internal sealed partial class DaggerfallSession
         if (!_definitions.QuestSources.Tables.Diseases.Lookup.TryGetValue(name, out int id) || id < 0 || id >= QuestDiseases.Length)
             throw new NotSupportedException($"Quest disease '{name}' has no admitted disease identity.");
         var disease = QuestDiseases[id];
-        if (operation.Kind == DaggerfallQuestTaskOperationKind.CurePcDisease) { CureDisease(disease); return; }
+        if (operation.Kind == DaggerfallQuestTaskOperationKind.CurePcDisease) { _diseases.Cure(disease); return; }
         // Source quest exposure bypasses saving throws, while the disease owner retains level-one immunity.
         string prefix = $"quest:{instance.InstanceId}:disease:{operation.SourceLine}";
         int occurrence = 0;
         while (State.Effects.Active.Any(effect => effect.Context.Instance.Value == $"{prefix}:{occurrence}")) occurrence++;
-        InflictDisease(new($"{prefix}:{occurrence}", instance.SourceFile, null,
+        _diseases.Inflict(new($"{prefix}:{occurrence}", instance.SourceFile, null,
             State.Actors.Player.DurableId, [disease], BypassSavingThrows: true));
     }
 }

@@ -24,8 +24,8 @@ internal sealed partial class DaggerfallSession : IDaggerfallTransformationConsu
 
     private void HealRacialTransformation()
     {
-        foreach (var disease in Enum.GetValues<DaggerfallClassicDisease>()) CureDisease(disease);
-        CurePoison();
+        foreach (var disease in Enum.GetValues<DaggerfallClassicDisease>()) _diseases.Cure(disease);
+        _poisoning.CurePlayer();
         foreach (var attribute in DaggerfallMechanicsIds.Attributes)
             DaggerfallAttributeDrainEffects.Heal(State.Effects, DaggerfallActorIdentity.PlayerEntityId, attribute,
                 int.MaxValue, () => State.Character.Career);

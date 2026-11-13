@@ -375,7 +375,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         Actor player = session.State.Actors.Player.Actor;
         // What the session itself reads for a delivery aimed at the player: the live level and Willpower,
         // the career's own poison tolerance from the raw bytes, and the bypass a drug dose uses.
-        DaggerfallPoisonExposure dose = session.PlayerPoisonExposure(bypassResistance: true);
+        DaggerfallPoisonExposure dose = session.Poisoning.PlayerExposure(bypassResistance: true);
         Assert.Equal(session.State.Actors.Player.DurableId, dose.TargetId);
         Assert.Equal(session.State.Actors.Player.Actor.Get<ProgressionState>().Level, dose.TargetLevel);
         Assert.Equal(
@@ -386,12 +386,12 @@ public sealed class DaggerfallPoisonRuntimeTests
         // A fresh player is first level, and the donor refuses a first-level target even when the delivery
         // bypasses resistance, so the dose the session builds for a new character does nothing at all.
         Assert.Equal(1, dose.TargetLevel);
-        Assert.Equal(DaggerfallPoisonAdmission.Immune, session.InflictPoison(dose, 136, itemId: 4242));
+        Assert.Equal(DaggerfallPoisonAdmission.Immune, session.Poisoning.Inflict(dose, 136, itemId: 4242));
         Assert.False(session.State.Poisons.IsAfflicted(player));
 
         // Past that gate the same delivery takes and the poison says which dose it came from.
         DaggerfallPoisonExposure levelled = dose with { TargetLevel = 5 };
-        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.InflictPoison(levelled, 136, itemId: 4242));
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.Poisoning.Inflict(levelled, 136, itemId: 4242));
         Assert.True(session.State.Poisons.IsAfflicted(player));
         Assert.Equal(136, session.State.Poisons.Affliction(player)!.Archetype.Variant);
 
@@ -410,7 +410,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         Assert.Equal(DaggerfallPoisonAdmission.Admitted, DaggerfallPoisonPolicy.Admit(modified with { BiographyModifier = 0 }, between));
         Assert.Equal(DaggerfallPoisonAdmission.Resisted, DaggerfallPoisonPolicy.Admit(modified, between));
 
-        Assert.True(session.CurePoison());
+        Assert.True(session.Poisoning.CurePlayer());
         Assert.False(session.State.Poisons.IsAfflicted(player));
     }
 
@@ -448,8 +448,8 @@ public sealed class DaggerfallPoisonRuntimeTests
     {
         using var fixture = new ConditionSessionFixture();
         DaggerfallSession session = fixture.Session;
-        DaggerfallPoisonExposure levelled = session.PlayerPoisonExposure(bypassResistance: true) with { TargetLevel = 5 };
-        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.InflictPoison(levelled, 136));
+        DaggerfallPoisonExposure levelled = session.Poisoning.PlayerExposure(bypassResistance: true) with { TargetLevel = 5 };
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.Poisoning.Inflict(levelled, 136));
         long draws = DaggerfallSavePayload.Read(session.CaptureSave()).PoisonDraws;
         Assert.True(draws > 0);
 
@@ -467,10 +467,10 @@ public sealed class DaggerfallPoisonRuntimeTests
 
         // The four drugs resolve to the variants of their own names, and a template that is not one of them
         // names no poison rather than a neighbouring one.
-        Assert.Equal(DaggerfallPoisonAdmission.Immune, session.UseDrug(78));
-        Assert.Equal(DaggerfallPoisonAdmission.Immune, session.UseDrug(81));
-        Assert.Throws<ArgumentOutOfRangeException>(() => session.UseDrug(77));
-        Assert.Throws<ArgumentOutOfRangeException>(() => session.UseDrug(82));
+        Assert.Equal(DaggerfallPoisonAdmission.Immune, session.Poisoning.UseDrug(78));
+        Assert.Equal(DaggerfallPoisonAdmission.Immune, session.Poisoning.UseDrug(81));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.Poisoning.UseDrug(77));
+        Assert.Throws<ArgumentOutOfRangeException>(() => session.Poisoning.UseDrug(82));
         Assert.False(session.State.Poisons.IsAfflicted(session.State.Actors.Player.Actor));
 
         // The template index is what a classic record names, and the catalogue answers it with the item.
@@ -524,14 +524,14 @@ public sealed class DaggerfallPoisonRuntimeTests
 
         // The struck actor here is first level, where the donor refuses poison even for a delivered dose, and
         // the coating is spent all the same: it was used, not applied.
-        session.DeliverWeaponPoison(struck, Weapon);
+        session.Poisoning.DeliverWeaponPoison(struck, Weapon);
         Assert.Null(session.State.ItemInstances.RequireUnique(Weapon).PoisonVariant);
         Assert.False(session.State.Poisons.IsAfflicted(player));
 
         // An uncoated weapon delivers nothing at all, and one whose item is unknown is ignored rather than
         // delivering to the wrong actor.
-        session.DeliverWeaponPoison(struck, Weapon);
-        session.DeliverWeaponPoison(struck, 9002);
+        session.Poisoning.DeliverWeaponPoison(struck, Weapon);
+        session.Poisoning.DeliverWeaponPoison(struck, 9002);
         Assert.False(session.State.Poisons.IsAfflicted(player));
     }
 
@@ -582,12 +582,12 @@ public sealed class DaggerfallPoisonRuntimeTests
         session.State.ItemInstances.RegisterUnique(Weapon, new DaggerfallItemInstanceMetadata(
             "dagger", "steel", 0, 10, 20, true, false, null, null, null, DaggerfallItemOwner.Player, PoisonVariant: 131));
 
-        session.DeliverWeaponPoison(struck.DurableId, Weapon);
+        session.Poisoning.DeliverWeaponPoison(struck.DurableId, Weapon);
         Assert.Null(session.State.ItemInstances.RequireUnique(Weapon).PoisonVariant);
 
         // A bypassed delivery of the same variant is the deterministic half: past the first level it takes,
         // and the poison that runs is the one the coating named.
-        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.InflictPoison(session.PlayerPoisonExposure(bypassResistance: true), 131));
+        Assert.Equal(DaggerfallPoisonAdmission.Admitted, session.Poisoning.Inflict(session.Poisoning.PlayerExposure(bypassResistance: true), 131));
         Assert.True(session.State.Poisons.IsAfflicted(struck.Actor));
         Assert.Equal(131, session.State.Poisons.Affliction(struck.Actor)!.Archetype.Variant);
     }

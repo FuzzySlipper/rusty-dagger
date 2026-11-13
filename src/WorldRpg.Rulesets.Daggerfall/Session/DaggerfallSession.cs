@@ -56,10 +56,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly DaggerfallVitalityConsequences _vitality;
     // The player's Stamina, swimming fatigue and collapse.
     private readonly DaggerfallPlayerCondition _condition;
-    // The poisons the session's actors carry, and the ordinal its draws advance on so a replay inside a
-    // session draws the same values.
-    private readonly DaggerfallPoisonRuntime _poisons;
-    private long _poisonDraws;
+    // Who a poison reaches and the poisons the session's actors carry; the player's diseases.
+    private readonly DaggerfallPoisoning _poisoning;
+    private readonly DaggerfallDiseases _diseases;
     private readonly CombatResolution _combatResolution;
     private readonly DaggerfallLocomotionPolicy _locomotion;
     private readonly DaggerfallClimbingPolicy _climbing;
@@ -144,6 +143,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal DaggerfallCinematicPresentation? Cinematics { get; }
     private readonly DaggerfallOpeningCinematics _openingCinematics;
     internal DaggerfallTransformationInfections Infections { get; }
+    internal DaggerfallPoisoning Poisoning => _poisoning;
+    internal DaggerfallDiseases Diseases => _diseases;
 
     internal DaggerfallState State { get; }
     internal PresentationState Presentation { get; }
@@ -558,17 +559,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             return null;
         return SpawnActor(pending.ActorDefinition!, pose, pending.Request.PlayerLevel);
     }
-
-    /// <summary>
-    /// Draws one poison bound through the Engine's keyed service, so a replay inside a session draws the
-    /// same values rather than whatever the process clock says.
-    /// </summary>
-    private int PoisonRoll(int minimum, int maximum) => checked((int)_random.DrawKeyed(new KeyedRngRequest(
-        DaggerfallPoisonRandomKey.Seed,
-        DaggerfallPoisonRandomKey.Scope,
-        DaggerfallPoisonRandomKey.For(DaggerfallActorIdentity.PlayerEntityId, "admission", ++_poisonDraws, DaggerfallPoisonRandomKey.MinuteScope),
-        minimum,
-        maximum)).Value);
 
     public void Dispose()
     {

@@ -44,16 +44,6 @@ internal enum DaggerfallDiseaseAdmission
     Resisted,
 }
 
-/// <summary>The published career's one classic disease tolerance, resolved using the donor's raw-byte priority.</summary>
-internal enum DaggerfallDiseaseCareerTolerance
-{
-    Normal,
-    Resistant,
-    Immune,
-    LowTolerance,
-    CriticalWeakness,
-}
-
 /// <summary>Stable source values for a disease exposure. The caller supplies the actual hit, item, or quest provenance.</summary>
 internal sealed record DaggerfallDiseaseExposure(
     string Instance,
@@ -81,8 +71,6 @@ internal sealed record DaggerfallDiseaseExposure(
 /// calendar cursor and accumulated attribute losses in effect state. Attribute losses are canonical
 /// Engine stat sources owned by that effect; health loss uses the same accepted application path as attacks.
 /// </summary>
-internal sealed record DaggerfallEffectDamage(DamageResult Result);
-
 internal static class DaggerfallDiseasePolicy
 {
     private const string DiseaseElement = "disease";

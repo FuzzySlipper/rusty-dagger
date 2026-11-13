@@ -57,11 +57,11 @@ internal static class DaggerfallTransformationInfectionPolicy
     }
 
     internal static DaggerfallInfectionState Read(DaggerfallActiveEffect effect) =>
-        (effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallInfectionState)
+        (effect.State.Deserialize(DaggerfallAfflictionJson.Default.DaggerfallInfectionState)
             ?? throw new ArgumentException("Transformation infection has no state.")).Validate();
 
     internal static void Write(DaggerfallActiveEffect effect, DaggerfallInfectionState state) =>
-        effect.State = JsonSerializer.SerializeToElement(state.Validate(), DaggerfallSaveJsonContext.Default.DaggerfallInfectionState);
+        effect.State = JsonSerializer.SerializeToElement(state.Validate(), DaggerfallAfflictionJson.Default.DaggerfallInfectionState);
 
     private static IEnumerable<IActiveEffectContribution> Validate(DaggerfallActiveEffect effect, DaggerfallInfectionKind kind)
     {
@@ -74,7 +74,7 @@ internal static class DaggerfallTransformationInfectionPolicy
     internal static void ValidateSaved(DaggerfallActiveEffectSave effect, long day)
     {
         if (!IsInfection(effect.EffectKey)) return;
-        var state = (effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallInfectionState)
+        var state = (effect.State.Deserialize(DaggerfallAfflictionJson.Default.DaggerfallInfectionState)
             ?? throw new ArgumentException("Infection state is missing.")).Validate();
         long elapsed = day - state.StartingDay;
         if (effect.EffectKey != Key(state.Kind) || effect.TargetId != DaggerfallActorIdentity.PlayerEntityId

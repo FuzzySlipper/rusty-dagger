@@ -39,7 +39,7 @@ public sealed class DaggerfallTransformationInfectionTests
     {
         using Fixture f = new(videos: false); var s = f.Session;
         var kind = (DaggerfallInfectionKind)variant;
-        Assert.Equal(DaggerfallInfectionAdmission.Started, s.InflictTransformationInfection(Exposure("infection", kind)));
+        Assert.Equal(DaggerfallInfectionAdmission.Started, s.Infections.Inflict(Exposure("infection", kind)));
         s.AdvanceElapsedTime(4 * 86400);
         Assert.Equal(DaggerfallInfectionStage.WarningPending, State(s).Stage);
         using var pending = f.Restore(s.CaptureSave());
@@ -80,19 +80,19 @@ public sealed class DaggerfallTransformationInfectionTests
         using var consumed = f.Restore(waiting.CaptureSave());
         Assert.Empty(consumed.Infections.Ready);
         Assert.Equal(terminal, Assert.Single(DaggerfallSavePayload.Read(consumed.CaptureSave()).Infections.LastOutcomes));
-        Assert.Equal(DaggerfallInfectionAdmission.RacialOverride, waiting.InflictTransformationInfection(Exposure("after", kind)));
+        Assert.Equal(DaggerfallInfectionAdmission.RacialOverride, waiting.Infections.Inflict(Exposure("after", kind)));
     }
 
     [Fact]
     public void Duplicate_and_opposing_lycans_reject_but_vampire_can_coexist_until_permanent_consumption()
     {
         using Fixture f = new(videos: false); var s = f.Session;
-        Assert.Equal(DaggerfallInfectionAdmission.TargetUnavailable, s.InflictTransformationInfection(Exposure("enemy", DaggerfallInfectionKind.Werewolf) with { TargetId = 2000 }));
-        Assert.Equal(DaggerfallInfectionAdmission.Started, s.InflictTransformationInfection(Exposure("wolf", DaggerfallInfectionKind.Werewolf)));
-        Assert.Equal(DaggerfallInfectionAdmission.Incumbent, s.InflictTransformationInfection(Exposure("boar", DaggerfallInfectionKind.Wereboar)));
-        Assert.Equal(DaggerfallInfectionAdmission.Started, s.InflictTransformationInfection(Exposure("vamp", DaggerfallInfectionKind.Vampire)));
-        Assert.Equal(DaggerfallInfectionAdmission.Incumbent, s.InflictTransformationInfection(Exposure("vamp2", DaggerfallInfectionKind.Vampire)));
-        Assert.Equal(2, s.CureAllDiseases());
+        Assert.Equal(DaggerfallInfectionAdmission.TargetUnavailable, s.Infections.Inflict(Exposure("enemy", DaggerfallInfectionKind.Werewolf) with { TargetId = 2000 }));
+        Assert.Equal(DaggerfallInfectionAdmission.Started, s.Infections.Inflict(Exposure("wolf", DaggerfallInfectionKind.Werewolf)));
+        Assert.Equal(DaggerfallInfectionAdmission.Incumbent, s.Infections.Inflict(Exposure("boar", DaggerfallInfectionKind.Wereboar)));
+        Assert.Equal(DaggerfallInfectionAdmission.Started, s.Infections.Inflict(Exposure("vamp", DaggerfallInfectionKind.Vampire)));
+        Assert.Equal(DaggerfallInfectionAdmission.Incumbent, s.Infections.Inflict(Exposure("vamp2", DaggerfallInfectionKind.Vampire)));
+        Assert.Equal(2, s.Diseases.CureAll());
         Assert.Empty(s.State.Effects.Active);
         Assert.All(DaggerfallSavePayload.Read(s.CaptureSave()).Infections.LastOutcomes, value => Assert.Equal(DaggerfallInfectionCleanup.Cured, value.Outcome));
         using var cured = f.Restore(s.CaptureSave()); Assert.Empty(cured.Infections.Ready);
@@ -102,7 +102,7 @@ public sealed class DaggerfallTransformationInfectionTests
     public void Missing_media_is_durable_unavailable_cureable_and_never_reports_ready()
     {
         using Fixture f = new(videos: true); var s = f.Session;
-        s.InflictTransformationInfection(Exposure("vamp", DaggerfallInfectionKind.Vampire));
+        s.Infections.Inflict(Exposure("vamp", DaggerfallInfectionKind.Vampire));
         s.AdvanceElapsedTime(8 * 86400);
         s.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(DaggerfallInfectionStage.WarningPending, State(s).Stage);
@@ -112,7 +112,7 @@ public sealed class DaggerfallTransformationInfectionTests
         Assert.True(restored.Infections.Retry("vamp"));
         restored.Update(new ProductUpdate(OuterUpdate(2), []));
         Assert.NotNull(State(restored).Unavailable);
-        Assert.Equal(1, restored.CureAllDiseases());
+        Assert.Equal(1, restored.Diseases.CureAll());
         Assert.Equal(DaggerfallInfectionCleanup.Cured, Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Infections.LastOutcomes).Outcome);
     }
 
@@ -120,16 +120,16 @@ public sealed class DaggerfallTransformationInfectionTests
     public void Cancellation_and_malformed_elapsed_state_have_explicit_current_save_behavior()
     {
         using Fixture f = new(videos: false); var s = f.Session;
-        s.InflictTransformationInfection(Exposure("boar", DaggerfallInfectionKind.Wereboar));
+        s.Infections.Inflict(Exposure("boar", DaggerfallInfectionKind.Wereboar));
         var save = DaggerfallSavePayload.Read(s.CaptureSave());
         var active = Assert.Single(save.ActiveEffects);
         var wrong = new DaggerfallInfectionState(DaggerfallInfectionKind.Vampire, State(s).StartingDay, 3, DaggerfallInfectionStage.DeathPending);
-        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { State = JsonSerializer.SerializeToElement(wrong, DaggerfallSaveJsonContext.Default.DaggerfallInfectionState) }] }));
+        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { State = JsonSerializer.SerializeToElement(wrong, DaggerfallAfflictionJson.Default.DaggerfallInfectionState) }] }));
         Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { CasterId = 2000 }] }));
         Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { ItemId = 123 }] }));
         Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { BundleKind = DaggerfallEffectBundleKind.HeldMagicItem }] }));
         var stuck = State(s) with { Unavailable = "Impossible incubating failure." };
-        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { State = JsonSerializer.SerializeToElement(stuck, DaggerfallSaveJsonContext.Default.DaggerfallInfectionState) }] }));
+        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { State = JsonSerializer.SerializeToElement(stuck, DaggerfallAfflictionJson.Default.DaggerfallInfectionState) }] }));
         Assert.True(s.State.Effects.Cancel(Assert.Single(s.State.Effects.Active).Context.Instance));
         using var restored = f.Restore(s.CaptureSave());
         Assert.Equal(DaggerfallInfectionCleanup.Cancelled, Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Infections.LastOutcomes).Outcome);
@@ -140,7 +140,7 @@ public sealed class DaggerfallTransformationInfectionTests
     {
         var media = new DaggerfallCinematicPresentationTests.Harness(infections: true);
         using Fixture f = new(videos: true, media); var s = f.Session;
-        s.InflictTransformationInfection(Exposure("vamp", DaggerfallInfectionKind.Vampire));
+        s.Infections.Inflict(Exposure("vamp", DaggerfallInfectionKind.Vampire));
         s.AdvanceElapsedTime(4 * 86400);
         s.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal("ANIM0004.VID", s.Cinematics!.ActiveSource);
@@ -156,7 +156,7 @@ public sealed class DaggerfallTransformationInfectionTests
     {
         var media = new DaggerfallCinematicPresentationTests.Harness(infections: true);
         using Fixture f = new(videos: true, media); var s = f.Session;
-        s.InflictTransformationInfection(Exposure("vamp", DaggerfallInfectionKind.Vampire));
+        s.Infections.Inflict(Exposure("vamp", DaggerfallInfectionKind.Vampire));
         s.AdvanceElapsedTime(4 * 86400);
         s.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal("ANIM0004.VID", s.Cinematics!.ActiveSource);
@@ -170,12 +170,12 @@ public sealed class DaggerfallTransformationInfectionTests
         s.Update(new ProductUpdate(OuterUpdate(5), []));
         Assert.Equal(DaggerfallInfectionStage.ReadyForTransformation, State(s).Stage);
         Assert.Single(s.Infections.Ready);
-        Assert.Equal(1, s.CureAllDiseases());
+        Assert.Equal(1, s.Diseases.CureAll());
         using var restored = f.Restore(savedPending);
         restored.Update(new ProductUpdate(OuterUpdate(6), []));
         Assert.Equal("ANIM0004.VID", restored.Cinematics!.ActiveSource);
         int stops = media.Stops;
-        Assert.Equal(1, restored.CureAllDiseases());
+        Assert.Equal(1, restored.Diseases.CureAll());
         Assert.Equal(stops + 1, media.Stops);
         Assert.Null(restored.Cinematics.ActiveSource);
         restored.Cinematics.Play("ANIM0011.VID");
@@ -187,7 +187,7 @@ public sealed class DaggerfallTransformationInfectionTests
     public void Site_transition_and_restore_keep_original_region_and_uncompleted_milestones()
     {
         using Fixture f = new(videos: false, twoSites: true); var s = f.Session;
-        s.InflictTransformationInfection(Exposure("vamp", DaggerfallInfectionKind.Vampire));
+        s.Infections.Inflict(Exposure("vamp", DaggerfallInfectionKind.Vampire));
         s.AdvanceElapsedTime(86400);
         var before = State(s);
         Assert.True(s.TryTransitionTo(f.Destination!.ProfileKey));
@@ -202,7 +202,7 @@ public sealed class DaggerfallTransformationInfectionTests
     public void Infection_is_target_owned_after_source_actor_is_banished_and_keeps_historical_provenance()
     {
         using Fixture f = new(videos: false); var s = f.Session;
-        s.InflictTransformationInfection(Exposure("hit-infection", DaggerfallInfectionKind.Werewolf) with { CasterId = 2000 });
+        s.Infections.Inflict(Exposure("hit-infection", DaggerfallInfectionKind.Werewolf) with { CasterId = 2000 });
         Assert.Null(Assert.Single(s.State.Effects.Active).Context.Caster);
         Assert.Equal(2000, State(s).OriginActorId);
         s.BanishActor(2000);

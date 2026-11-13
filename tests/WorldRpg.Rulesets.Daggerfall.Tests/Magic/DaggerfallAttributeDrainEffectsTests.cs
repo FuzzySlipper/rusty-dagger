@@ -107,7 +107,7 @@ public sealed class DaggerfallAttributeDrainEffectsTests
         s.State.Progression.AdvanceTo(0, 100);
         var health = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")); health.Maximum.BaseValue = 10000; health.SetCurrent(10000);
         Start(s, "strength", 0, 7); Start(s, "willpower", 2, 7);
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.InflictDisease(new("brain", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
         Assert.True(s.State.Poisons.Afflict(s.State.Actors.Player.Actor, (int)DaggerfallPoisonVariant.Arsenic));
         s.AdvanceElapsedTime(86400);
         double diseaseLoss = Stat(s, 1, 2).BaseValue - Stat(s, 1, 2).Value - 7;

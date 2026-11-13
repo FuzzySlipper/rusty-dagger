@@ -69,7 +69,7 @@ public sealed class DaggerfallHealingEffectsTests
         using Fixture f = new(); var s = f.Session;
         s.State.Progression.AdvanceTo(0, 100); Track(s, "health").Maximum.BaseValue = 10000; Track(s, "health").SetCurrent(10000);
         Drain(s, "willpower", 2, 7);
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.InflictDisease(new("brain", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
         s.AdvanceElapsedTime(86400); Assert.True(s.State.Poisons.Afflict(s.State.Actors.Player.Actor, (int)DaggerfallPoisonVariant.Arsenic));
         double before = Stat(s, 2).Value; Assert.Equal(DaggerfallCastOutcome.Applied, Heal(s, 2, 99)); Assert.Equal(before + 7, Stat(s, 2).Value);
         Assert.True(s.State.Poisons.IsAfflicted(s.State.Actors.Player.Actor) || s.State.Poisons.HasPersistingDamage(s.State.Actors.Player.Actor)); Assert.NotEmpty(s.State.Effects.Active);

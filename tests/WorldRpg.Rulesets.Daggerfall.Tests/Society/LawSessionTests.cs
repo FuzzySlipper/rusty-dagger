@@ -251,7 +251,7 @@ public sealed class LawSessionTests
         Assert.True(s.State.Loans.Issue(region, 1, 100, loanStart,
             Banking.DaggerfallLoanSettlementAdapter.ForBank(s.State.Bank, s.State.Currency)).Approved);
         s.State.Progression.AdvanceTo(0, 2);
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.InflictDisease(new("court-disease", "test-contact", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("court-disease", "test-contact", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
         var disease = Assert.Single(s.State.Effects.Active, effect => effect.Context.Instance.Value == "court-disease");
         string diseaseBefore = disease.State.GetRawText();
         var stolen = s.State.Inventory.Read().UniqueItems.First();
