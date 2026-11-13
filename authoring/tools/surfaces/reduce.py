@@ -10,6 +10,7 @@
   wraps     whether a classic record repeats across each axis: its opposite edges differ no more than its neighbouring
             pixels do (WRAP times), which says how it was meant to tile.
 """
+from functools import cache
 from pathlib import Path
 
 import numpy as np
@@ -17,7 +18,6 @@ from scipy import ndimage
 from PIL import Image, ImageCms, ImageFilter
 
 PALETTE_FILE = Path.home() / "research/daggerfall-files/ART_PAL.COL"
-PALETTE = np.frombuffer(PALETTE_FILE.read_bytes()[8:8 + 768], np.uint8).reshape(256, 3).astype(np.float32)
 COLOURS = 32
 SCALE = 2
 WRAP = 1.6
@@ -28,6 +28,11 @@ GLOW_PATCH = 0.1   # the smallest share of a light's largest glowing patch that 
 _srgb, _lab = ImageCms.createProfile("sRGB"), ImageCms.createProfile("LAB")
 _to_lab = ImageCms.buildTransformFromOpenProfiles(_srgb, _lab, "RGB", "LAB")
 _to_rgb = ImageCms.buildTransformFromOpenProfiles(_lab, _srgb, "LAB", "RGB")
+
+
+@cache
+def art_palette():
+    return np.frombuffer(PALETTE_FILE.read_bytes()[8:8 + 768], np.uint8).reshape(256, 3).astype(np.float32)
 
 
 def lab(image):
@@ -62,7 +67,8 @@ def subset_palette(image, colours=COLOURS):
     for _ in range(16):
         owner = np.argmin(((sample[:, None] - centres[None]) ** 2).sum(-1), 1)
         centres = np.array([sample[owner == k].mean(0) if (owner == k).any() else centres[k] for k in range(colours)])
-    return PALETTE[np.unique(np.argmin(((centres[:, None] - PALETTE[None]) ** 2).sum(-1), 1))]
+    palette = art_palette()
+    return palette[np.unique(np.argmin(((centres[:, None] - palette[None]) ** 2).sum(-1), 1))]
 
 
 def crunch(raw, classic):
@@ -88,7 +94,7 @@ def crunch_sprites(frames, size, colours=COLOURS):
         rgb = np.clip(small[..., :3] / np.maximum(small[..., 3:], 0.02), 0, 1)
         colour.append(np.asarray(Image.fromarray((rgb * 255).astype(np.uint8)).filter(ImageFilter.UnsharpMask(radius=1, percent=140, threshold=1)), np.float32))
         solid.append(small[..., 3] > 0.5)
-    palette = PALETTE if colours is None else subset_palette(Image.fromarray(np.concatenate([c[s] for c, s in zip(colour, solid)])[None].astype(np.uint8)), colours)
+    palette = art_palette() if colours is None else subset_palette(Image.fromarray(np.concatenate([c[s] for c, s in zip(colour, solid)])[None].astype(np.uint8)), colours)
     out = []
     for pixels, mask in zip(colour, solid):
         image = np.zeros((*mask.shape, 4), np.uint8)
