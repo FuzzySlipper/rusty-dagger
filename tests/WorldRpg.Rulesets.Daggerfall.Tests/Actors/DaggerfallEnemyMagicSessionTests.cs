@@ -39,7 +39,7 @@ public sealed class DaggerfallEnemyMagicSessionTests
         DaggerfallLiveSpell flight = Assert.Single(session.Casting.PendingRangedFlights);
         Assert.False(flight.Delivered);
         Assert.Equal(1d / 60d, flight.DungeonFlightElapsedSeconds, 8);
-        Assert.Single(session.ReadDungeonSpellFlights());
+        Assert.Single(session.SpellFlights.Views());
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current);
 
         fixture.Spatial.FloorHit = request => request.Direction.Z > .99f
@@ -142,7 +142,7 @@ public sealed class DaggerfallEnemyMagicSessionTests
 
         DaggerfallLiveSpell flight = Assert.Single(session.Casting.PendingRangedFlights);
         Assert.Equal(3d / 60d, flight.DungeonFlightElapsedSeconds, 8);
-        DaggerfallDungeonSpellFlightView view = Assert.Single(session.ReadDungeonSpellFlights());
+        DaggerfallDungeonSpellFlightView view = Assert.Single(session.SpellFlights.Views());
         // The motor's ready-spell path checks share the capsule sweep; one of them is the launch.
         Assert.Contains(fixture.Spatial.CapsuleCastRequests, request => MathF.Abs(Vector3.Distance(request.Center, view.Position.ToVector()) - 1.25f) < 1e-4f);
     }
@@ -176,7 +176,7 @@ public sealed class DaggerfallEnemyMagicSessionTests
         // step-4 and step-5 slices, while the step-3 slice must never be charged retroactively.
         Assert.Equal(4UL, flight.ReleaseSimulationStep);
         Assert.Equal(2d / 60d, flight.DungeonFlightElapsedSeconds, 8);
-        DaggerfallDungeonSpellFlightView view = Assert.Single(session.ReadDungeonSpellFlights());
+        DaggerfallDungeonSpellFlightView view = Assert.Single(session.SpellFlights.Views());
         Assert.Contains(fixture.Spatial.CapsuleCastRequests, request => MathF.Abs(Vector3.Distance(request.Center, view.Position.ToVector()) - 25f * (2f / 60f)) < 1e-4f);
         Assert.True(fixture.Perception.Requests.Count >= 3);
     }

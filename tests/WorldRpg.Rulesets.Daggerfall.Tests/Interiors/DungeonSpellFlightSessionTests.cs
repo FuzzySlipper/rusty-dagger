@@ -34,7 +34,7 @@ public sealed class DungeonSpellFlightSessionTests
         Vector3 originalTarget = session.State.PlayerControl.Position!.Value.ToVector();
         fixture.Spatial.FloorHit = _ => default;
         fixture.Update(.1d);
-        DaggerfallDungeonSpellFlightView first = Assert.Single(session.ReadDungeonSpellFlights());
+        DaggerfallDungeonSpellFlightView first = Assert.Single(session.SpellFlights.Views());
         Assert.Equal(2.5f, Vector3.Distance(launch, first.Position.ToVector()), 4);
         Assert.Equal(Vector3.UnitZ, first.Direction);
 
@@ -42,7 +42,7 @@ public sealed class DungeonSpellFlightSessionTests
         // the later segment, but the launch direction and already-traversed pose stay fixed.
         session.State.PlayerControl.MoveTo(originalTarget + new Vector3(100f, 0f, 0f));
         fixture.Update(.1d);
-        DaggerfallDungeonSpellFlightView second = Assert.Single(session.ReadDungeonSpellFlights());
+        DaggerfallDungeonSpellFlightView second = Assert.Single(session.SpellFlights.Views());
         Assert.Equal(5f, Vector3.Distance(launch, second.Position.ToVector()), 4);
         Assert.Equal(Vector3.UnitZ, second.Direction);
 
@@ -82,7 +82,7 @@ public sealed class DungeonSpellFlightSessionTests
         ProductUpdateFacts facts = OuterUpdate(1) with { SimulationStep = 3, AdmittedStepCount = 3 };
         session.Update(new ProductUpdate(facts, []));
 
-        DaggerfallDungeonSpellFlightView flight = Assert.Single(session.ReadDungeonSpellFlights());
+        DaggerfallDungeonSpellFlightView flight = Assert.Single(session.SpellFlights.Views());
         Assert.Equal(1.25f, Vector3.Distance(launch, flight.Position.ToVector()), 4);
         Assert.Equal(3d / 60d, bundle.DungeonFlightElapsedSeconds, 8);
     }

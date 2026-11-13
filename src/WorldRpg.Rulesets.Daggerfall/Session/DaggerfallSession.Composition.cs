@@ -682,6 +682,7 @@ internal sealed partial class DaggerfallSession
                 _tuning.Camera.EyeHeight, CurrentPositions, cast => _touch.Reach(cast), _contact,
                 () => _exterior.CharacterEnvironment(State.PlayerControl.Motion), PassesThrough,
                 (sequence, element, point) => _appearance.PlaySpellImpact(sequence, element, point));
+            SpellFlights = new DaggerfallSpellFlights(Casting, SpellRelease);
             DaggerfallEnemySpellRelease enemySpells = new(Casting, SpellTargets, cast => _touch.Reach(cast), _contact, _spatial,
                 () => _exterior.CharacterEnvironment(State.PlayerControl.Motion));
             _enemyMagic = new(definitions.EnemySpells, definitions.Magic, Casting, _random,

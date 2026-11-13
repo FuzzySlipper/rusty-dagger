@@ -1,51 +1,37 @@
 using System.Numerics;
 using Rusty.Engine;
-using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
-using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal sealed partial class DaggerfallSession
+/// <summary>
+/// Spells in flight: the dungeon missiles a release sends travelling, advanced one segment for each admitted step until
+/// they meet something or outlive their lifespan, and what each looks like to presentation.
+/// </summary>
+internal sealed class DaggerfallSpellFlights(DaggerfallCasting casting, DaggerfallSpellRelease release)
 {
-    /// <summary>
-    /// Advances Daggerfall-owned travelling ranged releases after sprite impact notices have been
-    /// consumed. An arrow covers every step the update admitted, so a catch-up batch keeps its speed.
-    /// </summary>
-    partial void UpdateRangedFlight(ProductUpdateFacts facts)
-    {
-        if (_latestUpdateGeneration is not ulong generation || _latestSimulationStep is not ulong simulationStep) return;
-        if (facts.AdmittedStepCount == 0) return;
-        double fixedDeltaSeconds = facts.FixedDeltaSeconds;
-        if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d)
-            throw new ArgumentOutOfRangeException(nameof(facts), "Admitted ranged-flight step time must be finite and positive.");
-        _combat.AdvanceRangedFlight(generation, simulationStep, fixedDeltaSeconds * facts.AdmittedStepCount, CurrentPositions(), _facts);
-        AdvanceSpellFlights(facts, generation, fixedDeltaSeconds);
-        DeliverFacts();
-    }
-
     /// <summary>
     /// Advances each admitted dungeon missile in one segment per elapsed admitted simulation step
     /// and submits every newly traversed segment to the Engine spatial owner. A bundle released
     /// during this batch carries its actual release step, so only later slices can age it. The
     /// action target is an aim fact at launch; it is never consulted again to re-aim a live missile.
     /// </summary>
-    private void AdvanceSpellFlights(ProductUpdateFacts facts, ulong generation, double fixedDeltaSeconds)
+    internal void Advance(ProductUpdateFacts facts, ulong generation, double fixedDeltaSeconds)
     {
         if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d)
             throw new ArgumentOutOfRangeException(nameof(fixedDeltaSeconds));
 
         float displacement = checked((float)(DaggerfallDungeonSpellPolicy.MissileMovementSpeedMetresPerSecond * fixedDeltaSeconds));
         ulong lastStep = checked(facts.SimulationStep + facts.AdmittedStepCount - 1);
-        foreach (DaggerfallLiveSpell bundle in Casting.PendingFlightOperations)
+        foreach (DaggerfallLiveSpell bundle in casting.PendingFlightOperations)
         {
             if (bundle.ReleaseOrigin is not Vector3 from
                 || !DaggerfallDungeonSpellPolicy.TryNormalizeDirection(bundle.ReleaseDirection ?? default, out Vector3 direction))
             {
                 // An admitted release with no usable launch direction is a terminal miss. The
                 // source target is not a fallback caster or a proof of impact.
-                _ = Casting.Deliver(bundle, []);
+                _ = casting.Deliver(bundle, []);
                 continue;
             }
 
@@ -54,7 +40,7 @@ internal sealed partial class DaggerfallSession
             // per-step movement path was introduced.
             if (bundle.Target is not (DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange))
             {
-                _ = SpellRelease.DeliverSpellImpact(bundle, from, from);
+                _ = release.DeliverSpellImpact(bundle, from, from);
                 continue;
             }
 
@@ -74,28 +60,20 @@ internal sealed partial class DaggerfallSession
             {
                 Vector3 next = from + direction * displacement;
                 bundle.DungeonFlightElapsedSeconds += fixedDeltaSeconds;
-                DaggerfallCastResult impact = SpellRelease.DeliverSpellImpact(bundle, from, next);
+                DaggerfallCastResult impact = release.DeliverSpellImpact(bundle, from, next);
                 if (impact.Outcome != DaggerfallCastOutcome.Released || bundle.Delivered) break;
                 from = next;
                 bundle.ReleaseOrigin = from;
                 if (bundle.DungeonFlightElapsedSeconds > DaggerfallDungeonSpellPolicy.MissileLifespanSeconds)
-                    _ = Casting.Deliver(bundle, []);
+                    _ = casting.Deliver(bundle, []);
             }
         }
     }
 
-    private IReadOnlyDictionary<long, WorldPoint> CurrentPositions()
+    /// <summary>The spells in flight now, as presentation draws them.</summary>
+    internal IReadOnlyList<DaggerfallDungeonSpellFlightView> Views()
     {
-        Dictionary<long, WorldPoint> positions = [];
-        if (State.PlayerControl.Position is WorldPoint player) positions.Add(DaggerfallActorIdentity.PlayerEntityId, player);
-        foreach (ActorState actor in State.Actors.All.Where(actor => State.Npcs.IsGameplayActive(actor.DurableId)))
-            positions[actor.DurableId] = actor.Position;
-        return positions;
-    }
-
-    internal IReadOnlyList<DaggerfallDungeonSpellFlightView> ReadDungeonSpellFlights()
-    {
-        return [.. Casting.PendingRangedFlights.Select(bundle =>
+        return [.. casting.PendingRangedFlights.Select(bundle =>
         {
             Vector3 origin = bundle.ReleaseOrigin
                 ?? (bundle.ActionSource is { } source

@@ -183,7 +183,7 @@ internal sealed partial class DaggerfallSession
             ApplyAttackImpacts();                                                                 // Combat
             // Acts a step held behind an enemy hit on the player run once that hit's frame had its chance.
             ApplyDeferredPlayerActs();                                                            // Character
-            UpdateRangedFlight(facts);                                                            // Combat
+            UpdateRangedFlight(facts);                                                            // Combat, Magic: the ranged flight's list, below
             // Every fatigue sink this update reached has now settled, so an emptied pool collapses once here.
             ResolveExhaustion();                                                                  // Condition
             PublishPresentation();                                                                // UiProjection
@@ -596,6 +596,22 @@ internal sealed partial class DaggerfallSession
         _restPresentation.Publish(result);                                                        // UiProjection
         Presentation.SetOutcome(result.Message ?? (result.Accepted ? "Rest complete." : "Rest refused."));   // UiProjection
         return result;
+    }
+
+    /// <summary>
+    /// The ranged flight's list, after sprite impact notices have been consumed: arrows, then spells in flight, then the
+    /// facts they made. Each covers every step the update admitted, so a catch-up batch keeps its speed.
+    /// </summary>
+    private void UpdateRangedFlight(ProductUpdateFacts facts)
+    {
+        if (_latestUpdateGeneration is not ulong generation || _latestSimulationStep is not ulong simulationStep) return;
+        if (facts.AdmittedStepCount == 0) return;
+        double fixedDeltaSeconds = facts.FixedDeltaSeconds;
+        if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d)
+            throw new ArgumentOutOfRangeException(nameof(facts), "Admitted ranged-flight step time must be finite and positive.");
+        _combat.AdvanceRangedFlight(generation, simulationStep, fixedDeltaSeconds * facts.AdmittedStepCount, CurrentPositions(), _facts);   // Combat
+        SpellFlights.Advance(facts, generation, fixedDeltaSeconds);                                // Magic
+        DeliverFacts();                                                                           // Session
     }
 
     /// <summary>The input's list: one update's input slice, observed by each owner that reads it.</summary>

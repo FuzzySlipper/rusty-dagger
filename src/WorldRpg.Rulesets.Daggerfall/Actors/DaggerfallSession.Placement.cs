@@ -131,4 +131,14 @@ internal sealed partial class DaggerfallSession
         pose = default;
         return false;
     }
+
+    /// <summary>Where the player and every gameplay-active actor stand now.</summary>
+    private IReadOnlyDictionary<long, WorldPoint> CurrentPositions()
+    {
+        Dictionary<long, WorldPoint> positions = [];
+        if (State.PlayerControl.Position is WorldPoint player) positions.Add(DaggerfallActorIdentity.PlayerEntityId, player);
+        foreach (ActorState actor in State.Actors.All.Where(actor => State.Npcs.IsGameplayActive(actor.DurableId)))
+            positions[actor.DurableId] = actor.Position;
+        return positions;
+    }
 }

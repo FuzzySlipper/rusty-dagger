@@ -896,7 +896,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
                 _spatial.CurrentController.Shape.StandingHeight * _tuning.NormalLight.HeightFraction,
                 facing.Z * _tuning.NormalLight.Distance) : null;
         _sites.Projection.Lighting.UpdateMobileLights(State.Actors.All, _roster.Definitions, _definitions.Mobiles);
-        IReadOnlyList<DaggerfallDungeonSpellFlightView> spellFlights = ReadDungeonSpellFlights();
+        IReadOnlyList<DaggerfallDungeonSpellFlightView> spellFlights = SpellFlights.Views();
         _sites.Projection.Lighting.UpdateSpellLights(spellFlights);
         _sites.Projection.Lighting.UpdateMagicCandle(candlePosition, _tuning.NormalLight);
         _appearance.UpdateMagicCandle(candlePosition);
@@ -935,7 +935,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     }
 
     /// <summary>Optional compiled ranged-flight owner; invoked once for every admitted realtime update.</summary>
-    partial void UpdateRangedFlight(ProductUpdateFacts facts);
 
     internal TargetingEvidence? LastMeleeTargeting => State.Kit.Targeting.LastEvidence;
 
@@ -963,6 +962,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal DaggerfallCasting Casting { get; private set; } = null!;
     internal DaggerfallSpellTargets SpellTargets { get; } = null!;
     internal DaggerfallSpellRelease SpellRelease { get; } = null!;
+    internal DaggerfallSpellFlights SpellFlights { get; } = null!;
     /// <summary>The end of an item's life: unique retirement, stack consumption, a quest's items taken back.</summary>
     internal DaggerfallItemLifetime ItemLifetime => _itemLifetime;
     /// <summary>The Mages Guild's enchanting service (Economy).</summary>
