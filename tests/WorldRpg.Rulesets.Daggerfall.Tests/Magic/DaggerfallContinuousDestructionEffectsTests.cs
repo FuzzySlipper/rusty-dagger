@@ -226,7 +226,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     private sealed class ResistMagic:WorldRpg.Kit.Combat.ICombatContribution
     {
         public void Mitigate(WorldRpg.Kit.Combat.MitigationEvent interaction)
-        { if (interaction.Channel==WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerfallHarmChannels.Magic) interaction.Resisted+=4; }
+        { if (interaction.Channel==WorldRpg.Rulesets.Daggerfall.DaggerfallHarmChannels.Magic) interaction.Resisted+=4; }
     }
 
     [Fact]

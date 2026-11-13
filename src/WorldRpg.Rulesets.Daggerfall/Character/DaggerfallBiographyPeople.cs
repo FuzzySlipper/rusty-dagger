@@ -1,6 +1,5 @@
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -20,7 +19,7 @@ internal static class DaggerfallBiographyPeople
             _ => throw new ArgumentException($"Race '{race}' supplies no biography name bank."),
         };
         int Draw(string key, int maximum) => checked((int)random.DrawKeyed(new KeyedRngRequest(
-            CombatRandomKey.Seed, "daggerfall.character-creation.v1", $"{sequence}.biography.{key}", 0, maximum)).Value);
+            DaggerfallRandomKey.Seed, "daggerfall.character-creation.v1", $"{sequence}.biography.{key}", 0, maximum)).Value);
         DaggerfallNames names = new(definitions, random, (key, count) => Draw(key, count - 1));
         string Name(string scope, bool female) => names.FullName(bank, female, scope);
         return new(race, Name("name", false), Name("female", true), Name("male", false), ImperialNames[Draw("imperial", ImperialNames.Length - 1)]);

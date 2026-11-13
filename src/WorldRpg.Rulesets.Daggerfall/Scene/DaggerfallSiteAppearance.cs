@@ -1442,10 +1442,15 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         return nextLocationVisualOrdinal++;
     }
 
+    // Media draws key on the blow they dress, with salts apart from combat's own.
+    private const string MediaAttackAlternateScope = "daggerfall.media.attack-alternate.v1";
+    private const int MediaAttackAlternateSalt = 41;
+    private const int MediaHitCueSalt = 42;
+
     private NormalizedAttackSequence SelectAttack(IReadOnlyList<NormalizedAttackSequence> sequences, ulong generation, ulong step, long attacker, long target)
     {
         if (sequences.Count == 1 || random is null) return sequences[0];
-        int roll = checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.MediaAttackAlternateScope, CombatRandomKey.For(generation, step, attacker, target, CombatRandomKey.MediaAttackAlternateSalt), 1, 100)).Value);
+        int roll = checked((int)random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed, MediaAttackAlternateScope, DaggerfallRandomKey.For(generation, step, attacker, target, MediaAttackAlternateSalt), 1, 100)).Value);
         int cumulative = 0;
         foreach (NormalizedAttackSequence sequence in sequences.Skip(1))
         {
@@ -1466,9 +1471,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     }
 
     private int DrawCue(PresentationEventIdentity identity, string purpose, int minimum, int maximum) =>
-        random is null ? minimum : checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed,
-            $"daggerfall.media.{purpose}.v1", CombatRandomKey.For(identity.Generation, identity.SimulationStep,
-                identity.Attacker, identity.Target, CombatRandomKey.MediaHitCueSalt), minimum, maximum)).Value);
+        random is null ? minimum : checked((int)random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed,
+            $"daggerfall.media.{purpose}.v1", DaggerfallRandomKey.For(identity.Generation, identity.SimulationStep,
+                identity.Attacker, identity.Target, MediaHitCueSalt), minimum, maximum)).Value);
 
     private string SelectHitCue(PresentationEventIdentity identity, bool weapon)
     {

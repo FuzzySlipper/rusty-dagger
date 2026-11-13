@@ -1,6 +1,5 @@
 namespace WorldRpg.Rulesets.Daggerfall.Policies;
 
-internal sealed record DaggerfallWeaponPoisonSource(ulong ItemId, int Variant);
 internal enum DaggerfallMonsterHitConsequence { None, RatDisease, UndeadDisease, Plague, Werewolf, Wereboar, Vampire, Paralysis, Fatigue }
 internal sealed record DaggerfallMonsterHit(int Slot, int Damage, DaggerfallMonsterHitConsequence Consequence);
 internal sealed record DaggerfallMonsterHitExposure(long Attacker, long Target, ulong Generation, ulong Step, DaggerfallMonsterHit Hit)

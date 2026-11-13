@@ -56,7 +56,7 @@ internal sealed record DaggerfallActorGender(string Value)
 {
     internal static string Resolve(IRandomService random, long durableId, string authored, NormalizedActorSprite sprite) =>
         authored != "unspecified" || sprite.Female is null ? authored
-            : random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.EnemyScope, $"enemy-gender:{durableId}", 0, 1)).Value == 0
+            : random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed, CombatRandomKey.EnemyScope, $"enemy-gender:{durableId}", 0, 1)).Value == 0
                 ? "male" : "female";
 }
 
@@ -463,7 +463,7 @@ internal static class DaggerActorFactory
     {
         if (definition.Id.Value == "player")
             throw new ArgumentException("Player vitals require the selected career and are assembled by the player factory path.", nameof(definition));
-        int health = checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.EnemyScope, CombatRandomKey.InitialHealth(entityId, definition.Id.Value), definition.Health.Minimum, definition.Health.Maximum)).Value);
+        int health = checked((int)random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed, CombatRandomKey.EnemyScope, CombatRandomKey.InitialHealth(entityId, definition.Id.Value), definition.Health.Minimum, definition.Health.Maximum)).Value);
         return new DaggerfallVitalValues(health, 0, 0);
     }
 

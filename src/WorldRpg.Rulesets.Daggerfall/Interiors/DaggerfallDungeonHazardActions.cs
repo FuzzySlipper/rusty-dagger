@@ -4,7 +4,6 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 

@@ -2,7 +2,6 @@ using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -188,7 +187,7 @@ internal sealed class DaggerfallLevelUpState
     private int Draw(int level, string roll, int minimum, int maximum)
     {
         int result = checked((int)_random.DrawKeyed(new KeyedRngRequest(
-            CombatRandomKey.Seed, CombatRandomKey.PlayerScope, $"player.level-up.{level}.{roll}", minimum, maximum)).Value);
+            DaggerfallRandomKey.Seed, DaggerfallRandomKey.PlayerScope, $"player.level-up.{level}.{roll}", minimum, maximum)).Value);
         if (result < minimum || result > maximum)
             throw new InvalidOperationException($"Daggerfall level-up {roll} for level {level} was outside [{minimum}, {maximum}].");
         return result;

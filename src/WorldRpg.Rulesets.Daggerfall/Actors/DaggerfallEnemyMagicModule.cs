@@ -203,7 +203,7 @@ internal sealed class DaggerfallEnemyMagicModule
 
     private int Draw(long actorId, ulong generation, ulong simulationStep, string purpose, int minimum, int maximum) =>
         checked((int)_random.DrawKeyed(new KeyedRngRequest(
-            CombatRandomKey.Seed,
+            DaggerfallRandomKey.Seed,
             CombatRandomKey.EnemyScope,
             $"{SelectionScope}:generation:{generation}:step:{simulationStep}:actor:{actorId}:spell:{purpose}",
             minimum, maximum)).Value);

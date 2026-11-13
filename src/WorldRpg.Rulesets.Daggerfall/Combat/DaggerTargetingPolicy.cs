@@ -43,3 +43,14 @@ internal sealed class DaggerTargetingPolicy(IReadOnlyDictionary<long, Daggerfall
         return reach;
     }
 }
+
+/// <summary>Ruleset-tunable query bounds for ordinary Daggerfall player melee.</summary>
+internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, double MinimumFacingCosine)
+{
+    internal DaggerfallMeleeTargetingTuning Validate()
+    {
+        if (!double.IsFinite(MaximumDistance) || MaximumDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(MaximumDistance));
+        if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
+        return this;
+    }
+}

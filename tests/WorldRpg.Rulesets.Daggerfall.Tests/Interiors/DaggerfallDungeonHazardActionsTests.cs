@@ -268,7 +268,7 @@ public sealed class DaggerfallDungeonHazardActionsTests
     {
         public void Negate(NegationEvent interaction)
         {
-            if (interaction.Channel == WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerfallHarmChannels.Physical)
+            if (interaction.Channel == WorldRpg.Rulesets.Daggerfall.DaggerfallHarmChannels.Physical)
                 interaction.Negation = HarmNegation.Immune;
         }
     }

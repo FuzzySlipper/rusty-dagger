@@ -574,17 +574,6 @@ internal sealed record DaggerfallCivilianWanderTuning(float MovementSpeedUnitsPe
     }
 }
 
-/// <summary>Ruleset-tunable query bounds for ordinary Daggerfall player melee.</summary>
-internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, double MinimumFacingCosine)
-{
-    internal DaggerfallMeleeTargetingTuning Validate()
-    {
-        if (!double.IsFinite(MaximumDistance) || MaximumDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(MaximumDistance));
-        if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
-        return this;
-    }
-}
-
 /// <summary>Ruleset-authored descriptor values for one-shot classic presentation audio.</summary>
 internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pitch, float SpatialBlend, float MaxDistance)
 {

@@ -1,5 +1,4 @@
 using Rusty.Engine;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -42,7 +41,7 @@ internal sealed partial class DaggerfallCharacterState
         int[] selected = new int[10];
         for (int question = 0; question < selected.Length; question++)
         {
-            int index = checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed,
+            int index = checked((int)random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed,
                 "daggerfall.class-questions.v1", $"{sequence}.{question}", 0, questionnaire.Questions.Count - 1)).Value);
             while (selected.Take(question).Contains(index)) index = (index + 1) % questionnaire.Questions.Count;
             selected[question] = index;

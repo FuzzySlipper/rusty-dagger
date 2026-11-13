@@ -102,8 +102,8 @@ internal sealed class DaggerfallContactMitigation(DaggerfallContactInputs sessio
         int chance = DeflectionChance(harm.TargetId);
         if (chance <= 0) return false;
         bool enemy = harm.AttackerId != DaggerfallActorIdentity.PlayerEntityId;
-        long roll = session.Random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, enemy ? CombatRandomKey.EnemyScope : CombatRandomKey.PlayerScope,
-            CombatRandomKey.For(harm.Generation, harm.SimulationStep, harm.AttackerId, harm.TargetId, DeflectionSalt), 1, 100)).Value;
+        long roll = session.Random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed, enemy ? CombatRandomKey.EnemyScope : DaggerfallRandomKey.PlayerScope,
+            DaggerfallRandomKey.For(harm.Generation, harm.SimulationStep, harm.AttackerId, harm.TargetId, DeflectionSalt), 1, 100)).Value;
         return roll <= chance;
     }
 

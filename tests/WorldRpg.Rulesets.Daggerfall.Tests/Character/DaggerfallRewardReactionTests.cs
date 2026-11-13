@@ -7,7 +7,6 @@ using WorldRpg.Kit.Progression;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -118,7 +117,7 @@ public sealed class DaggerfallRewardReactionTests
         StatDecision source = Assert.Single(mechanics.GetStat(StatId.Parse("health-maximum")).Explain().Decisions);
         Assert.Equal("daggerfall.player.level-up.2.health", ((IntrinsicSourceIdentity)source.Source).Instance.Value);
         KeyedRngRequest roll = Assert.Single(recorder.Requests);
-        Assert.Equal(CombatRandomKey.PlayerScope, roll.Scope);
+        Assert.Equal(DaggerfallRandomKey.PlayerScope, roll.Scope);
         Assert.Equal("player.level-up.2.hp-roll", roll.Key);
         Assert.Equal(6, roll.Minimum);
         Assert.Equal(12, roll.Maximum);

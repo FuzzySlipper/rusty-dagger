@@ -3,7 +3,6 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -301,7 +300,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
     private static string MaterializedItemId(DaggerfallItemTemplateDefinition template, string material) =>
         material == "none" ? $"template-{template.Index}" : $"template-{template.Index}-{material}";
 
-    private int Draw(string key, int minimum, int maximum) => checked((int)_random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, Scope, key, minimum, maximum)).Value);
+    private int Draw(string key, int minimum, int maximum) => checked((int)_random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed, Scope, key, minimum, maximum)).Value);
 }
 
 internal sealed record DaggerfallItemCreateRequest(string Category, string Key, DaggerfallItemOwner Owner, ulong? Quantity = null,

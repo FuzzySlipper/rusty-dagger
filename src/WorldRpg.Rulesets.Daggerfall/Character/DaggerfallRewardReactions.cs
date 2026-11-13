@@ -2,7 +2,6 @@ using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Kit.Progression;
@@ -209,8 +208,8 @@ internal static class DaggerfallLevelUpHealthSource
         int hitPointsPerLevel = career.HitPointsPerLevel;
         (int minimum, int maximum) = DaggerfallFormulaPolicy.HitPointsPerLevelRollBounds(hitPointsPerLevel);
         int roll = checked((int)random.DrawKeyed(new KeyedRngRequest(
-            CombatRandomKey.Seed,
-            CombatRandomKey.PlayerScope,
+            DaggerfallRandomKey.Seed,
+            DaggerfallRandomKey.PlayerScope,
             $"player.level-up.{level}.hp-roll",
             minimum,
             maximum)).Value);

@@ -3,7 +3,6 @@ using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -71,7 +70,7 @@ internal sealed partial class DaggerfallSession
                 throw new ArgumentOutOfRangeException(nameof(exclusiveMaximum));
             int ordinal = drawIndex++;
             return checked((int)_random.DrawKeyed(new KeyedRngRequest(
-                CombatRandomKey.Seed,
+                DaggerfallRandomKey.Seed,
                 "daggerfall.enemy-perception.v1",
                 $"actor:{actorId}:minute:{minute}:roll:{ordinal}",
                 0,

@@ -1,4 +1,3 @@
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Rusty.Engine;
@@ -90,7 +89,7 @@ internal static class DaggerfallItemSoulEffects
             if (monster(checked((long)effect.Context.Target.Value)) is not int mobile) return;
             var state = Read(effect);
             effect.State = Serialize(state with { Attempts = checked(state.Attempts + 1) });
-            bool success = random.DrawKeyed(new(CombatRandomKey.Seed, "daggerfall.soul-trap.v1",
+            bool success = random.DrawKeyed(new(DaggerfallRandomKey.Seed, "daggerfall.soul-trap.v1",
                 $"{effect.Context.Instance.Value}:attempt:{state.Attempts}", 1, 100)).Value
                 <= DaggerfallMagicAdmissionPolicy.CalculateEffectChance(state.Cast.Settings, state.Cast.CasterLevel);
             bool filled = success && capture(mobile);

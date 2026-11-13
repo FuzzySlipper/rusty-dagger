@@ -919,7 +919,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private int StrengthModifier(Combatant attacker) => DaggerfallFormulaPolicy.DamageModifier(ReadStat(attacker, DaggerfallMechanicsIds.Strength));
     internal static int ReadStat(Combatant actor, DaggerfallStatId stat) =>
         actor.Stats.GetStat(StatId.Parse(stat.Value)).ValueInt;
-    private int Draw(ExplicitMeleeRequest request, long attacker, long target, int salt, int minimum, int maximum, bool enemy) => checked((int)_random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, enemy ? CombatRandomKey.EnemyScope : CombatRandomKey.PlayerScope, CombatRandomKey.For(request.Generation, request.SimulationStep, attacker, target, salt), minimum, maximum)).Value);
+    private int Draw(ExplicitMeleeRequest request, long attacker, long target, int salt, int minimum, int maximum, bool enemy) => checked((int)_random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed, enemy ? CombatRandomKey.EnemyScope : DaggerfallRandomKey.PlayerScope, DaggerfallRandomKey.For(request.Generation, request.SimulationStep, attacker, target, salt), minimum, maximum)).Value);
     /// <summary>A live combat participant: its durable id, live stats and authored definition.</summary>
     internal readonly record struct Combatant(long Id, StatsComponent Stats, DaggerfallActorDefinition Definition)
     {

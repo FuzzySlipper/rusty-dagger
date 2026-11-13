@@ -104,7 +104,7 @@ internal sealed partial class DaggerfallSession
             State.Actors.Player.Stats, State.Character.Race.Id == "khajiit",
             State.Effects.EnhancesClimbing(DaggerfallActorIdentity.PlayerEntityId),
             update.DeltaSeconds, () => checked((int)_random.DrawKeyed(new KeyedRngRequest(
-                CombatRandomKey.Seed, "daggerfall.climbing.v1", $"generation:{generation}:step:{simulationStep}", 1, 100)).Value));
+                DaggerfallRandomKey.Seed, "daggerfall.climbing.v1", $"generation:{generation}:step:{simulationStep}", 1, 100)).Value));
         player.Levitation = _levitation.Resolve(new DaggerfallLevitationContext(
             State.Effects.GrantsLevitation(DaggerfallActorIdentity.PlayerEntityId),
             Swimming: State.Swimming.IsSwimming && !player.WaterWalking,

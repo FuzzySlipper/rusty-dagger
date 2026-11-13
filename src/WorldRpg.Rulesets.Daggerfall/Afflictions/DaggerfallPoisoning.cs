@@ -178,3 +178,6 @@ internal sealed class DaggerfallPoisoning
         minimum,
         maximum)).Value);
 }
+
+/// <summary>The poison a weapon carried into a blow: the weapon and the poison's variant.</summary>
+internal sealed record DaggerfallWeaponPoisonSource(ulong ItemId, int Variant);

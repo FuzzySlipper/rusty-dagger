@@ -7,7 +7,6 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Targeting;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -714,7 +713,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         int socialGroup = Math.Clamp(ResolveSocialGroup(npc), 0, 4);
         int modifier = KnowledgeModifiers[questionIndex * 5 + socialGroup];
         int roll = checked((int)_random.DrawKeyed(new KeyedRngRequest(
-            CombatRandomKey.Seed,
+            DaggerfallRandomKey.Seed,
             RandomScope,
             $"knowledge:npc:{npc.DurableId}:topic:{topicTarget ?? destination.Id}",
             1,
@@ -798,7 +797,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         if (runs.Length == 0)
             return (string.Empty, [$"{DaggerfallTextDiagnosticKind.MissingContext}: No source text variant for '{key}' has the context this talk operation can resolve."]);
         int selected = checked((int)_random.DrawKeyed(new KeyedRngRequest(
-            CombatRandomKey.Seed,
+            DaggerfallRandomKey.Seed,
             RandomScope,
             $"{drawKey}:variant",
             0,
@@ -974,7 +973,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 
     private int Draw(TalkSession session, string purpose, int minimum, int maximum) =>
         checked((int)_random.DrawKeyed(new KeyedRngRequest(
-            CombatRandomKey.Seed,
+            DaggerfallRandomKey.Seed,
             RandomScope,
             $"session:{session.Revision}:npc:{session.TargetId}:{purpose}",
             minimum,

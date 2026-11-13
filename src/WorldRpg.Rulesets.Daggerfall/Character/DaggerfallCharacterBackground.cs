@@ -1,7 +1,6 @@
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -215,7 +214,7 @@ internal static class DaggerfallCharacterBackgroundPolicy
 
     private static void AddRolls(List<DaggerfallCreationAllocationSave> values, IEnumerable<string> skills, int minimum, string scope, IRandomService random, int rollSequence)
     { foreach (string skill in skills) values.Add(new DaggerfallCreationAllocationSave(skill, checked(minimum + Draw(random, rollSequence, $"{scope}.{skill}", 0, 3)))); }
-    private static int Draw(IRandomService random, int rollSequence, string key, int minimum, int maximum) => checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, "daggerfall.character-creation.v1", $"{rollSequence}.{key}", minimum, maximum)).Value);
+    private static int Draw(IRandomService random, int rollSequence, string key, int minimum, int maximum) => checked((int)random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed, "daggerfall.character-creation.v1", $"{rollSequence}.{key}", minimum, maximum)).Value);
     private static Dictionary<string, int> Values(IEnumerable<DaggerfallCreationAllocationSave> values) => values.ToDictionary(value => value.Id, value => value.Points, StringComparer.Ordinal);
     private static int Remaining(int pool, IEnumerable<DaggerfallCreationAllocationSave> values) => checked(pool - values.Sum(value => value.Points));
     private static int RemainingTier(string tier, IEnumerable<DaggerfallCreationAllocationSave> values, DaggerfallCareerDefinition career) => checked(TierPool - values.Where(value => Tier(career, value.Id) == tier).Sum(value => value.Points));

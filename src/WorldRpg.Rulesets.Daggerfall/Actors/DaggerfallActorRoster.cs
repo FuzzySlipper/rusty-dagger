@@ -139,7 +139,7 @@ internal sealed class DaggerfallActorRoster
         DurableIdentityReference identity = _identities.Allocate(DurableIdentityKind.Actor);
         long durableId = checked((long)identity.Value);
         if (definition.Kind == DaggerfallActorKinds.EnemyClass && definition.MobileId == 146)
-            spawnLevel = checked(spawnLevel + (int)_random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.EnemyScope,
+            spawnLevel = checked(spawnLevel + (int)_random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed, CombatRandomKey.EnemyScope,
                 $"class-guard-level:{durableId}", 3, 6)).Value);
         DaggerfallActorDefinition spawnedDefinition = DaggerfallEncounterActors.AtLevel(definition, _definitions.Vocabulary, spawnLevel);
         if (playerAllied) spawnedDefinition = spawnedDefinition with { Team = "player-ally" };
@@ -493,7 +493,7 @@ internal sealed class DaggerfallActorRoster
             int rollIndex = 0;
             int health = DaggerfallFormulaPolicy.RollEnemyClassMaxHealth(level, hitPointsPerLevel, (minimum, maximum) =>
                 checked((int)_random.DrawKeyed(new KeyedRngRequest(
-                    CombatRandomKey.Seed,
+                    DaggerfallRandomKey.Seed,
                     CombatRandomKey.EnemyScope,
                     CombatRandomKey.ClassHealth(durableId, definition.Id.Value, rollIndex++),
                     minimum,

@@ -359,9 +359,9 @@ public sealed class DaggerfallHitConsequencesTests
         Assert.True(f.Session.State.Kit.AttackExecution.Start(new(rat, 1, 7, 13, .125, true), Facts(f.Session)));
         Impact(f.Session, rat);
         foreach (int salt in Enumerable.Range(CombatRandomKey.MonsterReflexSaltBase, 3))
-            Assert.Contains(proxy.Requests, request => request.Key == CombatRandomKey.For(7, 13, rat, 1, salt));
+            Assert.Contains(proxy.Requests, request => request.Key == DaggerfallRandomKey.For(7, 13, rat, 1, salt));
         foreach (int slot in new[] { 1, 2 })
-            Assert.DoesNotContain(proxy.Requests, request => request.Key == CombatRandomKey.For(7, 13, rat, 1, CombatRandomKey.MonsterDamageSaltBase + slot));
+            Assert.DoesNotContain(proxy.Requests, request => request.Key == DaggerfallRandomKey.For(7, 13, rat, 1, CombatRandomKey.MonsterDamageSaltBase + slot));
     }
 
     private static long Spawn(DaggerfallSession s, int mobile) => s.SpawnActor(TestPayload.Definitions.Mobiles.Mobiles[mobile].Actor!, new(new(10, 0, 10), 0));

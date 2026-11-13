@@ -6,7 +6,6 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.World;
 using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 
@@ -122,7 +121,7 @@ internal sealed class DaggerfallArtifactPowers(DaggerfallDefinitions definitions
             return new(DaggerfallWabbajackOutcome.AlreadyTransformed, target);
         if (protectedTarget(target)) return new(DaggerfallWabbajackOutcome.ProtectedQuestTarget, target);
         int[] candidates = DaggerfallWabbajack.MobileIds.Where(id => id != definition.MobileId).ToArray();
-        int index = checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, "daggerfall.wabbajack.v1",
+        int index = checked((int)random.DrawKeyed(new KeyedRngRequest(DaggerfallRandomKey.Seed, "daggerfall.wabbajack.v1",
             $"source:{source}:attacker:{attacker}:target:{target}:generation:{generation}:step:{step}", 0, candidates.Length - 1)).Value);
         return transform(target, candidates[index]);
     }
