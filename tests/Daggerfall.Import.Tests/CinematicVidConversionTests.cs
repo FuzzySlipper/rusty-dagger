@@ -8,7 +8,7 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class CinematicVidConversionTests
 {
-    [CorpusFact("DAG2.VID")]
+    [CinematicFact("DAG2.VID")]
     public void Dag2_png_timeline_is_accepted_by_ffmpeg()
     {
         string directory = Path.Combine(Path.GetTempPath(), "dagger-vid-" + Guid.NewGuid().ToString("N"));

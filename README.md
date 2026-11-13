@@ -121,14 +121,15 @@ the one ignored folder. Its folders say what may be deleted:
   /mnt/den-nas-backup/data/evidence/rusty-dagger/10774-router-lanes/den-build.json`. Every checkout then pulls. No data is moved by hand,
   and no checkout writes another's.
 - Windows (den-win11) runs the game and never imports or verifies. Its default
-  install is a native clone, `C:\dev\rusty-dagger`, set up as above, whose
-  containers come whole from den-agents' shared checkout through `P:` with
-  `powershell -File scripts\data-sync.ps1`, which copies only data at the clone's
-  own importer revision (the NAS store is not reachable from Windows). When it
-  refuses, the shared checkout is at another revision: check the clone out at the
-  shared checkout's commit, or wait until that checkout has pulled main. `P:`,
-  den-agents' home, is mapped only on the console desktop, so that pull and anything that opens a window run
-  through `C:\Users\agent\crew\bin\run-on-desktop.ps1`. Running from a den-agents
+  install is a native clone, `C:\dev\rusty-dagger`, set up as above, which pulls
+  with `powershell -File scripts\data-sync.ps1`. The NAS store is not reachable
+  from Windows, so it copies the clone's own revision from den-agents' per-revision
+  copies (`link`, below) through `P:`. When den-agents holds no copy of that
+  revision, it says so and copies nothing: run `scripts/data-sync.sh cache
+  REVISION` on den-agents (from any checkout; it fetches the revision from the
+  store), then pull again. `P:`, den-agents' home, is mapped only on the console
+  desktop, so that pull and anything that opens a window run through
+  `C:\Users\agent\crew\bin\run-on-desktop.ps1`. Running from a den-agents
   worktree over `P:` also works, for uncommitted work or a throwaway pin. Only the
   newest pairs publish win-x64 archives: `rusty install` says
   `RUSTY_INSTALL_NOT_PUBLISHED` for an older pin.

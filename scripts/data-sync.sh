@@ -10,6 +10,8 @@
 #   scripts/data-sync.sh pull --import-tree    # also local/build/import, for a box that runs the tests
 #   scripts/data-sync.sh link --import-tree    # instead of copying: link local/data and local/build/import to this
 #                                              # machine's one read-only copy of the revision (den-agents' checkouts)
+#   scripts/data-sync.sh cache REVISION        # only fill this machine's copy of that revision (on den-agents it is
+#                                              # what Windows reads through P:, see scripts/data-sync.ps1)
 #   scripts/data-sync.sh status                # the container's revision beside this tree's, and whether the store has it
 #   scripts/data-sync.sh store                 # the revisions the store holds, with their size and publish time
 #   scripts/data-sync.sh publish               # the import lane only: this checkout's whole import into the store
@@ -31,14 +33,15 @@ root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 data=$root/local/data
 store=${DAGGER_DATA_STORE:-/mnt/den-nas-backup/data/rusty-dagger/lan}
 store=${store%/}
-usage="usage: scripts/data-sync.sh pull|link [--import-tree] [--mirror] | status | store | publish"
+usage="usage: scripts/data-sync.sh pull|link [--import-tree] [--mirror] | cache [REVISION] | status | store | publish"
 
 direction=${1:-}
 shift || true
-import_tree=''
+import_tree='' named=''
 options=(-rt --info=stats1)
 for argument in "$@"; do
   case $argument in
+    [0-9a-f]*) [[ $direction == cache && $argument =~ ^[0-9a-f]{64}$ ]] || { echo "$usage" >&2; exit 2; }; named=$argument ;;
     --mirror) options+=(--delete) ;;
     --import-tree) import_tree=1 ;;
     *) echo "$usage" >&2; exit 2 ;;
@@ -86,11 +89,12 @@ checkout_revision() {
     -getProperty:_ImporterRevision 2>&1) || true
   [[ $revision =~ ^[0-9a-f]{64}$ ]] && echo "$revision" || echo "unknown (msbuild could not compute it)"
 }
-revision=$(checkout_revision)
+revision=${named:-$(checkout_revision)}
 held() { [[ $revision =~ ^[0-9a-f]{64}$ ]] && at_store "test -f '$store_path/revisions/$revision/SHA256SUMS'" 2>/dev/null; }
 missing() {
   echo "The store ($store) has no data for importer revision $revision. Import it with" \
-    "scripts/route.py data $(git -C "$root" rev-parse HEAD) on our network, or locally with the README's import command."
+    "scripts/route.py data $([[ -n $named ]] && echo '<a commit at that revision>' || git -C "$root" rev-parse HEAD) on our network," \
+    "or locally with the README's import command."
 }
 report() {
   local container
@@ -145,12 +149,13 @@ case $direction in
     fi
     report
     ;;
-  link)
+  link|cache)
     # One copy of each revision on this machine's own disk, read-only, which every checkout and worktree here links
-    # to: nothing copies the data per checkout, and no checkout can write what another reads.
+    # to: nothing copies the data per checkout, and no checkout can write what another reads. On den-agents it lies
+    # inside the share Windows maps as P:, so a Windows checkout pulls any revision held here.
     cache=${DAGGER_DATA_CACHE:-$HOME/.cache/rusty-dagger/data}
     entry=$cache/$revision
-    [[ ! -L $root/local ]] || { echo "data-sync: local is a link to $(readlink "$root/local"); give this checkout its own local/ first" >&2; exit 1; }
+    [[ $direction == cache || ! -L $root/local ]] || { echo "data-sync: local is a link to $(readlink "$root/local"); give this checkout its own local/ first" >&2; exit 1; }
     if [[ ! -f $entry/SHA256SUMS ]]; then
       at_store "test -d '$store_path'" || { echo "data-sync: $store is not reachable" >&2; exit 1; }
       held || { missing >&2; exit 1; }
@@ -170,6 +175,7 @@ case $direction in
     fi
     # first-person.rpak is not an import output: one copy here serves every revision, refreshed from the store's root.
     if at_store "test -f '$store_path/first-person.rpak'" 2>/dev/null; then rsync "${options[@]}" "$store/first-person.rpak" "$cache/"; fi
+    if [[ $direction == cache ]]; then echo "data-sync: $entry holds importer revision $revision"; exit 0; fi
     folders=(local/data)
     [[ -n $import_tree ]] && folders+=(local/build/import)
     for folder in "${folders[@]}"; do
