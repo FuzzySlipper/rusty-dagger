@@ -124,21 +124,16 @@ case $direction in
         exit 1
       done
     fi
-    from=("$store/revisions/$revision/daggerfall-data.rpak" "$store/revisions/$revision/music.rpak")
-    # Transition (#10775): until the single copies at the store's root go, a revision not yet kept is read from them.
-    if ! held; then
-      if [[ -n $import_tree ]] || ! at_store "test -f '$store_path/daggerfall-data.rpak'"; then missing >&2; exit 1; fi
-      echo "data-sync: the store keeps no revision $revision yet; taking the single copy at its root" >&2
-      from=("$store/daggerfall-data.rpak" "$store/music.rpak")
-    fi
+    held || { missing >&2; exit 1; }
+    from=$store/revisions/$revision
     mkdir -p "$data"
-    rsync "${options[@]}" "${from[@]}" "$data/"
+    rsync "${options[@]}" "$from/daggerfall-data.rpak" "$from/music.rpak" "$data/"
     if at_store "test -f '$store_path/first-person.rpak'"; then rsync "${options[@]}" "$store/first-person.rpak" "$data/"; fi
     if [[ -n $import_tree ]]; then
       # The archive stays beside the tree, so a second pull of the same revision copies nothing.
       archive=$root/local/build/import.tar.zst unpacked=$root/local/build/import.unpacked
       rm -rf "$unpacked" && mkdir -p "$unpacked" "$root/local/build/import"
-      rsync "${options[@]}" "$store/revisions/$revision/import.tar.zst" "$archive"
+      rsync "${options[@]}" "$from/import.tar.zst" "$archive"
       zstd -dcq "$archive" | tar -xf - -C "$unpacked"
       rsync -rt $mirror "$unpacked/" "$root/local/build/import/"
       rm -rf "$unpacked"
@@ -153,10 +148,8 @@ case $direction in
   store)
     at_store "cd '$store_path/revisions' && for r in */; do r=\${r%/}; printf '%s  %s  %s\n' \"\$r\" \"\$(du -sh --apparent-size \$r | cut -f1)\" \"\$(sed -n 's/^published: //p' \$r/published)\"; done"
     ;;
-  publish|push)
-    # Transition (#10775): push, den-agents' step after a hand-run import, still writes the single copies at the
-    # store's root and also keeps the revision; it goes with them.
-    [[ $direction == push || $(git -C "$root" config --local --get den-build.managed || true) == true ]] ||
+  publish)
+    [[ $(git -C "$root" config --local --get den-build.managed || true) == true ]] ||
       { echo "data-sync: only the import lane publishes (scripts/route.py data); this is not a den-build checkout" >&2; exit 2; }
     report
     [[ $(sed -n 1p <<<"$description") == "$revision" && $(sed -n 2p <<<"$description") == whole ]] ||
@@ -175,9 +168,6 @@ case $direction in
       sed 's/^/  /' <<<"$differ" | head -n 40 >&2
       return 1
     }
-    if [[ $direction == push ]]; then
-      rsync "${options[@]}" "$data/" "$store/"
-    fi
     if held; then compare; exit; fi
     incoming=$store_path/revisions/.incoming-$revision-$(hostname)-$$
     newest=$(at_store "ls -t '$store_path'/revisions/*/published 2>/dev/null | head -n 1 | xargs -r dirname")

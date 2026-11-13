@@ -21,8 +21,6 @@ lane=${1:-}
 part=${2:-}
 case $lane in
   ruleset) [[ -z $part || $part =~ ^[1-9][0-9]*/[1-9][0-9]*$ ]] || { echo "$usage" >&2; exit 2; } ;;
-  # Transition (#10775): import is import-suite's old name, until the router config drops it.
-  import) lane=import-suite; [[ -z $part ]] || { echo "$usage" >&2; exit 2; } ;;
   import-suite|verify|data) [[ -z $part ]] || { echo "$usage" >&2; exit 2; } ;;
   *) echo "$usage" >&2; exit 2 ;;
 esac
