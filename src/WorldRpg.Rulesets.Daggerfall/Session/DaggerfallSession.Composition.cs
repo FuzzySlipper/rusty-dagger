@@ -498,6 +498,7 @@ internal sealed partial class DaggerfallSession
                 dungeonDiscoveries: dungeonDiscoveries,
                 dungeonActions: dungeonActions,
                 dialogueWorld: new DaggerfallDialogueWorldState(saved?.DialogueWorld));
+            _creation = new DaggerfallCharacterCreation(State.Character, definitions, _random);
             State.Quests.BindTextContext(QuestTextContext);
             DaggerfallNames questNames = new(definitions, engine.Random);
             npcs.BindNames(questNames.NpcName);

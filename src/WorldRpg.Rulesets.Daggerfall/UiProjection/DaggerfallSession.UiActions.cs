@@ -102,7 +102,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.DaedraAnswer:
                 ChangeSummoning(action); break;
             case DaggerfallUiActionKind.Begin:
-                if (_definitions.NewGame.QuickEntry) QuickStartCharacter();
+                if (_definitions.NewGame.QuickEntry) _creation.QuickStart();
                 break;
             // A running game already has its content; only the unavailable session imports it.
             case DaggerfallUiActionKind.ContentImport:
@@ -368,6 +368,96 @@ internal sealed partial class DaggerfallSession
             case "recast":
                 _attackClock.PressCast();
                 break;
+        }
+    }
+
+    private void ChangeCharacter(DaggerfallPlayerUiAction action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        if (_mode != ProductMode.Title || _newGameInitialized)
+        {
+            Presentation.SetOutcome("Character creation is available from the title screen.");
+            return;
+        }
+        try
+        {
+            switch (action.Kind)
+            {
+                case DaggerfallUiActionKind.CharacterBegin:
+                    _creation.Begin();
+                    Presentation.SetOutcome("Character choices opened.");
+                    break;
+                case DaggerfallUiActionKind.CharacterClassQuestions:
+                    _creation.OpenClassQuestions(SheetFields(action));
+                    Presentation.SetOutcome("Class questions opened.");
+                    break;
+                case DaggerfallUiActionKind.CharacterClassAnswer:
+                    _creation.AnswerClassQuestion(action.Question ?? throw new ArgumentException("Class question is incomplete."),
+                        action.Answer ?? throw new ArgumentException("Class answer is incomplete."));
+                    Presentation.SetOutcome(State.Character.CreationMode == "character-pick" ? "Recommended career selected; review your choices, then Start." : "Class answer accepted.");
+                    break;
+                case DaggerfallUiActionKind.CharacterClassBack:
+                    State.Character.BackToClassPick();
+                    Presentation.SetOutcome("Returned to character choices.");
+                    break;
+                case DaggerfallUiActionKind.CharacterCancel:
+                    State.Character.AbandonCreation();
+                    Presentation.SetOutcome("Character choices cancelled.");
+                    break;
+                case DaggerfallUiActionKind.CharacterUpdate:
+                    _creation.Update(SheetFields(action));
+                    Presentation.SetOutcome("Character choices updated.");
+                    break;
+                case DaggerfallUiActionKind.CharacterBackgroundReroll:
+                    _creation.RerollBackground(SheetFields(action));
+                    Presentation.SetOutcome("Character background rerolled.");
+                    break;
+                case DaggerfallUiActionKind.CharacterCommit:
+                    _creation.Commit(SheetFields(action));
+                    Presentation.SetOutcome("Character committed. Review the final summary, then begin the new game.");
+                    break;
+                case DaggerfallUiActionKind.CharacterQuickStart:
+                    _creation.QuickStart(SheetFields(action));
+                    Presentation.SetOutcome("Quick start: character committed; beginning the new game.");
+                    break;
+                default:
+                    throw new ArgumentException($"'{action.Action}' is not a character action.", nameof(action));
+            }
+        }
+        catch (ArgumentException error)
+        {
+            Presentation.SetOutcome($"Character choice was not accepted: {DaggerfallRejectionText.For(error)}");
+        }
+    }
+
+    private static DaggerfallCharacterSheetFields SheetFields(DaggerfallPlayerUiAction action) => new(
+        action.Name, action.Race, action.Gender, action.FaceIndex, action.Reflexes, action.Career,
+        action.PrimarySkills, action.MajorSkills, action.MinorSkills, action.HitPointsPerLevel, action.Advantages, action.Disadvantages,
+        action.BackgroundAnswers, action.AttributeAllocations, action.SkillAllocations);
+
+    /// <summary>Applies a real character-sheet level-up action while ordinary play is active.</summary>
+    private void ChangeLevelUp(DaggerfallPlayerUiAction action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        try
+        {
+            switch (action.Kind)
+            {
+                case DaggerfallUiActionKind.CharacterLevelAllocate:
+                    State.LevelUps.Allocate(action.Attribute ?? throw new ArgumentException("Level-up attribute is incomplete.", nameof(action)));
+                    Presentation.SetOutcome("Level-up point allocated.");
+                    break;
+                case DaggerfallUiActionKind.CharacterLevelCommit:
+                    State.LevelUps.Commit();
+                    Presentation.SetOutcome("Level-up committed.");
+                    break;
+                default:
+                    throw new ArgumentException($"'{action.Action}' is not a level-up action.", nameof(action));
+            }
+        }
+        catch (ArgumentException error)
+        {
+            Presentation.SetOutcome($"Level-up choice was not accepted: {DaggerfallRejectionText.For(error)}");
         }
     }
 }

@@ -150,4 +150,17 @@ internal sealed partial class DaggerfallSession
             State.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, item.Id);
         }
     }
+
+    /// <summary>
+    /// What a new character's background does to standing: the biography's reaction modifier and the
+    /// reputations it grants, read from Character's background policy and applied to Society's state.
+    /// </summary>
+    private void ApplyBackground(DaggerfallCharacterBackgroundSave background)
+    {
+        State.Social.SetBiographyReactionModifier(background.Modifiers.Reaction);
+        foreach ((int faction, int amount) in DaggerfallCharacterBackgroundPolicy.FactionReputations(_definitions, State.Character.Career, background))
+            State.Social.ChangeFactionReputation(faction, amount, DaggerfallFactionReputationChange.Propagate);
+        foreach ((int group, int amount) in DaggerfallCharacterBackgroundPolicy.SocialReputations(_definitions, State.Character.Career, background))
+            State.Social.ChangePersonalReputation(group, amount);
+    }
 }

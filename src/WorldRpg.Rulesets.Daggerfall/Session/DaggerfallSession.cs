@@ -115,6 +115,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>Whether action-driven play is holding the world still now.</summary>
     internal bool PlayerTimeHeld => _playerTime.Held;
 
+    // Character creation from the title screen.
+    private readonly DaggerfallCharacterCreation _creation;
     // The player's control settings: bindings, look, pad, sound levels, ground cover and action-driven time.
     private readonly DaggerfallPlayerControls _controls;
     public string CapturePlayerPreferences() => _controls.Capture();
