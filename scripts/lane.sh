@@ -5,7 +5,7 @@
 #   scripts/lane.sh ruleset        the whole ruleset suite
 #   scripts/lane.sh ruleset K/N    part K of the ruleset suite cut by domain folder (PARTS below)
 #   scripts/lane.sh import-suite   the whole import suite
-#   scripts/lane.sh verify         scripts/verify.sh --import --play
+#   scripts/lane.sh verify         route.py's own tests (the tooling step), then scripts/verify.sh --import --play
 #   scripts/lane.sh data           imports the commit and publishes its data to the store under its importer revision
 #
 # Each run prepares the checkout by the README's steps (rusty, the pinned pair, npm ci) and links local/inputs to the
@@ -145,8 +145,10 @@ measured() {
   echo "lane: $name took $((SECONDS - began)) s, peak memory $(($(cat "$peak" 2>/dev/null || echo 0) / 1024)) MiB"
   if [[ -f $breach ]]; then
     echo "lane: $name stopped: $(cat "$breach"); stacks $(hostname):$breach.stacks" >&2
-    return 4
+    status=4
   fi
+  # route.py main reads which step failed: verify is the product's, tooling the router's own tests.
+  ((status == 0)) || echo "lane: $name failed (exit $status)"
   return "$status"
 }
 case $lane in
@@ -192,11 +194,16 @@ EOF
     echo "lane: results $(hostname):$out/import.trx"
     ;;
   verify)
+    # The router's own tests (scripts/route.py runs on den-agents, not in the product) are the tooling step: a
+    # failure there is told apart from the product's and does not keep the product from its verify.
+    tooling=0
+    measured tooling python3 -m unittest discover -s scripts -p 'test_*.py' || tooling=$?
     # The play smoke's headless Chromium, from Playwright into the agent's home (the README's step).
     npx -y playwright@1.62.1 install chromium
     RUSTY_CHROMIUM_PATH=$(ls -d "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux64/chrome | sort -V | tail -n 1)
     export RUSTY_CHROMIUM_PATH
     measured verify scripts/verify.sh --import --play
+    ((tooling == 0)) || exit "$tooling"
     ;;
   data)
     measured import dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound

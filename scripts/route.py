@@ -10,6 +10,7 @@
     ... --notify ADDRESS --task N            send and leave: return at once; the result goes to that crew address
                                              (yours is in your session's start) and as a line on Den task N
     scripts/route.py main                    one round of main's own check (below)
+    scripts/route.py main-status             the latest round's outcome, and whether main is overdue for one
 
 REF defaults to HEAD and may be any commit in den-agents' repository, pushed or not; uncommitted changes are not
 in it. The lanes are scripts/lane.sh; the router's config (--config, DEN_BUILD_CONFIG_PATH, else the installed one)
@@ -20,11 +21,16 @@ to split runs unless --take-last; long lanes sent from den-agents are admitted o
 it too. `data` is not a long lane: the commit's suites wait on it. Stopping the command stops
 its lanes. Each lane's log is written under local/build/route/, and the command exits 0 only when every part passed.
 
-A round of `main` takes the newest origin/main commit unless it already has a result, and runs the verify lane on
-it if a worker is free now (otherwise the next round does). A pass is noted on the commit in refs/notes/verify, as
-verify.sh --record does; a failure in refs/notes/verify-failures, so a verify note still means green. Both are pushed
-from den-agents. The first failure after a pass is posted on the crew board rusty-dagger, naming the first commit
-that failed and the last that passed. One round runs at a time.
+A round of `main` does nothing when the newest origin/main commit already has a result. Otherwise it waits, up to
+ROUND_WAIT_MINUTES, until two workers the router can use are free (a long lane leaves the last one to split runs, and
+it looks every minute while a waiting part looks every 20 seconds), then runs the verify lane on whatever commit is
+newest at that moment; a commit it waited for that is no longer newest is superseded. A pass is noted on the commit in
+refs/notes/verify, as verify.sh --record does; a failure in refs/notes/verify-failures, so a verify note still means
+green, and the note's first line says which part failed: the product (scripts/verify.sh) or the tooling (route.py's
+own tests, the lane or the router). Both are pushed from den-agents. The first failure after a pass is posted on the
+crew board rusty-dagger, naming the first commit that failed and the last that passed. One round waits or runs at a
+time: another that finds it does nothing. Each round's states (waiting, running, passed, failed, did not start and
+why, superseded) are lines in the shared checkout's local/build/route/main-rounds.jsonl, which main-status reads.
 """
 import argparse, datetime, fcntl, json, os, pathlib, queue, re, signal, subprocess, sys, threading, time
 
@@ -35,8 +41,16 @@ BOARD = 'rusty-dagger'
 root = pathlib.Path(__file__).resolve().parent.parent
 routes = root / 'local/build/route'
 # What a result says of itself: verify.sh's own summary lines, the lane's, and the tests that failed.
-SUMMARY = re.compile(r'\s*(Passed!|Failed!|Failed [A-Z]\w*\.|play-smoke .* passed:|Verified Engine pair|skipped )'
-                     r'|lane: (run |refusing|the import rebaked|the store already|.* took |.* stopped:)|data-sync: (published|refusing|the store already)')
+SUMMARY = re.compile(r'\s*(Passed!|Failed!|Failed [A-Z]\w*\.|FAIL: |play-smoke .* passed:|Verified Engine pair|skipped )'
+                     r'|lane: (run |refusing|the import rebaked|the store already|.* took |.* failed \(|.* stopped:)'
+                     r'|data-sync: (published|refusing|the store already)')
+# A round of main waits at most this long for a worker, so that the wait and a verify (35 to 45 minutes, with the
+# lane's setup) fit the timer unit's two-hour TimeoutStartSec; the next round, half an hour later, waits again.
+ROUND_WAIT_MINUTES = 60
+POLL_SECONDS = 60
+# main-status calls main overdue once a commit has gone this long without a recorded round: one landing just after a
+# round started waits for it (45 minutes), for the next tick (30), for a worker (60) and for its own verify (45).
+OVERDUE_MINUTES = 180
 
 
 def git(*args, check=True):
@@ -266,33 +280,115 @@ def record(name, commit, text):
     print(f'route: could not push refs/notes/{name}; the note is in refs/notes/{local} here', file=sys.stderr)
 
 
-def main_round(options):
-    routes.mkdir(parents=True, exist_ok=True)
-    lock = (routes / 'main.lock').open('w')
-    try:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        print('route: a round of main is already running')
-        return 0
+def shared_routes():
+    """main's rounds belong to the shared checkout, whichever checkout runs or reads them, so that one lock and one
+    record hold for all."""
+    return pathlib.Path(git('rev-parse', '--path-format=absolute', '--git-common-dir')).parent / 'local/build/route'
+
+
+def note_round(rounds, commit, state, detail='', run=None):
+    """One line of main-rounds.jsonl: a round's state for a commit, and why."""
+    entry = {'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'), 'commit': commit,
+             'state': state, 'detail': detail, 'pid': os.getpid(), **({'run': str(run)} if run else {})}
+    with (rounds / 'main-rounds.jsonl').open('a') as output:
+        output.write(json.dumps(entry) + '\n')
+    print(f'route: {commit[:12]} {state}{f": {detail}" if detail else ""}', flush=True)
+
+
+def failed_part(text):
+    """Which part of a verify lane failed, as a failure note's first line says it: the product (scripts/verify.sh)
+    or the tooling around it (route.py's own tests in the lane's tooling step, the lane's setup, the router)."""
+    product, tooling = 'lane: verify failed (' in text, 'lane: tooling failed (' in text
+    if product and tooling:
+        return 'product and tooling', 'scripts/verify.sh and the lane\'s tooling step (scripts/test_*.py) failed'
+    if product:
+        return 'product', 'scripts/verify.sh failed'
+    if tooling:
+        return 'tooling', ("the lane's tooling step (scripts/test_*.py) failed"
+                           f"{'; the product passed scripts/verify.sh' if 'lane: verify took ' in text else ''}")
+    last = next((line.strip() for line in reversed(text.splitlines()) if line.strip()), 'no output')
+    return 'tooling', f'the lane or the router stopped before scripts/verify.sh finished: {last}'
+
+
+def newest_main():
     git('fetch', '-q', 'origin', 'main')
     for name in ('verify', 'verify-failures'):
         git('fetch', '-q', 'origin', f'+refs/notes/{name}:refs/notes/route/{name}', check=False)
-    newest = git('rev-parse', 'origin/main')
-    if noted('route/verify', newest) or noted('route/verify-failures', newest):
+    return git('rev-parse', 'origin/main')
+
+
+def has_result(commit):
+    return noted('route/verify', commit) or noted('route/verify-failures', commit)
+
+
+def usable_workers(options):
+    """The workers the router would take a job on now, and what the others are doing, without for how long, so that it
+    reads the same until something changes."""
+    hosts = [host for host in json.loads(pathlib.Path(options.config).read_text())['hosts'] if host['enabled']]
+    free, busy = [], []
+    for host, (reason, doing) in workers_now(hosts, resources()).items():
+        if reason is None:
+            free.append(host)
+        else:
+            busy.append(f'{host}: {reason}' + (f' ({doing[0].rsplit(" for ", 1)[0]})' if doing else ''))
+    return free, '; '.join(busy)
+
+
+def main_round(options):
+    rounds = shared_routes()
+    rounds.mkdir(parents=True, exist_ok=True)
+    with (rounds / 'main.lock').open('w') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            print('route: a round of main is already waiting or running; this one does nothing')
+            return 0
+        return held_round(options, rounds)
+
+
+def held_round(options, rounds):
+    """A round of main, under its lock."""
+    newest = newest_main()
+    if has_result(newest):
         print(f'route: {newest} already has a result')
         return 0
     options.whole, options.host, options.wait, options.take_last = False, None, 0, False
-    run = routes / f'main-{newest[:12]}-{time.strftime("%Y%m%dT%H%M%S")}'
-    run.mkdir(parents=True)
-    passed, report = route('verify', newest, options, run)
-    if 'found no free worker' in report:
-        print(f'route: no worker is free; the next round takes {newest[:12]}')
-        return 0
+    waited_for, deadline, said = newest, time.monotonic() + ROUND_WAIT_MINUTES * 60, None
+    while True:
+        free, busy = usable_workers(options)
+        # A long lane leaves the last usable worker to split runs, so the round needs two.
+        if len(free) >= 2:
+            newest = newest_main()
+            if waited_for != newest and not has_result(waited_for):
+                note_round(rounds, waited_for, 'superseded', f'{newest[:12]} landed before a worker freed')
+            waited_for = newest
+            if has_result(newest):
+                print(f'route: {newest} already has a result')
+                return 0
+            run = rounds / f'main-{newest[:12]}-{time.strftime("%Y%m%dT%H%M%S")}'
+            run.mkdir(parents=True)
+            note_round(rounds, newest, 'running', f'the verify lane, with {", ".join(free)} free', run)
+            passed, report = route('verify', newest, options, run)
+            if 'found no free worker' not in report:
+                break
+            busy = 'another job took the free workers first'
+        if time.monotonic() >= deadline:
+            note_round(rounds, waited_for, 'did not start', f'no two workers were free within {ROUND_WAIT_MINUTES} '
+                                                            f'minutes ({busy}); the next round waits again')
+            return 0
+        if busy != said:
+            said = busy
+            note_round(rounds, waited_for, 'waiting', f'for two free workers: {busy}')
+        time.sleep(POLL_SECONDS)
     if 'lane: refusing' in report:
-        print(f'route: the store has no data for the importer revision of {newest[:12]}; '
-              f'scripts/route.py data {newest} imports it, and the next round takes it')
+        note_round(rounds, newest, 'did not start', f'the store has no data for its importer revision; '
+                                                    f'scripts/route.py data {newest} imports it', run)
         return 0
-    record('verify' if passed else 'verify-failures', newest, f'scripts/route.py main\n{report}')
+    log = (run / 'verify.log').read_text(errors='replace') if (run / 'verify.log').exists() else ''
+    part, why = failed_part(log) if not passed else (None, None)
+    headline = 'passed' if passed else f'FAILED ({part}): {why}'
+    note_round(rounds, newest, 'passed' if passed else f'failed ({part})', '' if passed else why, run)
+    record('verify' if passed else 'verify-failures', newest, f'scripts/route.py main: {headline}\n{report}')
     if passed:
         return 0
     # The last commit with a green note, and the first failure noted after it.
@@ -305,17 +401,57 @@ def main_round(options):
         return 1
     subject = git('log', '-1', '--format=%s', newest)[:120]
     unchecked = len(since) - 1
-    text = (f'main fails the full verify at {newest} ("{subject}"), the first commit that failed. '
+    text = (f'main fails the full verify ({part}) at {newest} ("{subject}"), the first commit that failed: {why}. '
             f'The last that passed is {last or "none within 2000 commits"}'
             f'{f"; the {unchecked} commits between were not checked" if unchecked else ""}.\n\n{report}')
-    subprocess.run(['crew-claude', 'board', 'new', BOARD, f'main fails the full verify at {newest[:12]}', text],
+    subprocess.run(['crew-claude', 'board', 'new', BOARD, f'main fails the full verify ({part}) at {newest[:12]}', text],
                    check=False)
     return 1
 
 
+def main_status():
+    """The latest round of main and the newest result on main; exits 1 when main is overdue for a round."""
+    rounds = shared_routes()
+    newest = newest_main()
+    lines = [line for line in (rounds / 'main-rounds.jsonl').read_text().splitlines() if line.strip()] \
+        if (rounds / 'main-rounds.jsonl').exists() else []
+    if lines:
+        latest = json.loads(lines[-1])
+        state = latest['state']
+        # Its process, not the round's lock, says whether it still waits or runs: taking the lock to look would make
+        # a round starting at that moment do nothing.
+        command = pathlib.Path(f'/proc/{latest.get("pid")}/cmdline')
+        if state in ('waiting', 'running') and not (command.exists() and b'route.py' in command.read_bytes()):
+            state = f'stopped while {state}, without an outcome (killed, or past the unit\'s timeout)'
+        print(f'latest round: {latest["at"]} {latest["commit"][:12]} {state}'
+              f'{": " + latest["detail"] if latest["detail"] else ""}{"; " + latest["run"] if latest.get("run") else ""}')
+    else:
+        print(f'latest round: none recorded in {rounds}/main-rounds.jsonl')
+    history = git('rev-list', '--first-parent', '--max-count=2000', newest).split()
+    recorded = next((commit for commit in history if has_result(commit)), None)
+    if recorded:
+        ref = 'route/verify' if noted('route/verify', recorded) else 'route/verify-failures'
+        note = git('notes', f'--ref={ref}', 'show', recorded).splitlines()[0]
+        print(f'newest result on main: {recorded[:12]}, {"passed" if ref == "route/verify" else "failed"} '
+              f'(refs/notes/{ref[6:]}): {note}')
+    unrecorded = history[:history.index(recorded)] if recorded else history
+    if not unrecorded:
+        print(f'main ({newest[:12]}) has its result')
+        return 0
+    landed = int(git('log', '-1', '--format=%ct', unrecorded[-1]))
+    minutes = int((time.time() - landed) // 60)
+    print(f'main ({newest[:12]}) has {len(unrecorded)} commit(s) without a recorded round, the oldest '
+          f'{unrecorded[-1][:12]} from {minutes} minutes ago')
+    if minutes > OVERDUE_MINUTES:
+        print(f'OVERDUE: no round recorded within {OVERDUE_MINUTES} minutes of {unrecorded[-1][:12]}; '
+              f'journalctl --user -u rusty-dagger-main-check.service says why')
+        return 1
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('lane', help='ruleset, import-suite, verify, data, another configured rusty-dagger lane, or main')
+    parser.add_argument('lane', help='ruleset, import-suite, verify, data, another configured rusty-dagger lane, main or main-status')
     parser.add_argument('ref', nargs='?', default='HEAD')
     parser.add_argument('--whole', action='store_true', help='run the ruleset suite on one worker, unsplit')
     parser.add_argument('--host', help='only this worker')
@@ -331,6 +467,8 @@ def main():
             [child.terminate() for child in list(children)], os._exit(128 + received)))
     if options.lane == 'main':
         return main_round(options)
+    if options.lane == 'main-status':
+        return main_status()
 
     commit = os.environ.get('ROUTE_COMMIT') or git('rev-parse', '--verify', options.ref + '^{commit}')
     if not os.environ.get('ROUTE_COMMIT') and options.ref == 'HEAD' and git('status', '--porcelain', '--untracked-files=no'):

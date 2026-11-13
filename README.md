@@ -284,21 +284,30 @@ first. A test host that
 holds more than three quarters of its worker's memory (at most 32 GiB) is stopped,
 and the run names the tests it was running.
 
-`scripts/route.py main` gives the newest `main` commit the verify lane when a
-worker is free. It records passes in `refs/notes/verify` and failures in
-`refs/notes/verify-failures`. A round started from a Claude Code session also
-posts the first failure after a pass to the crew board. On den-agents,
-`rusty-dagger-main-check.timer` runs this round every half hour using the
-installed build config. Read its journal with
-`journalctl --user -u rusty-dagger-main-check.service`. Until crew-services
-#10797, the timer's rounds cannot post, so their failures are only in the note:
-no post does not mean green. The newest `main` commits with a failure note (the
-fetch finds no ref while no round has ever failed):
+`scripts/route.py main` is one round of `main`'s own check. When the newest
+`main` commit has no result, it waits up to an hour for two free workers (one
+for itself, one left for split runs), then gives the verify lane to whichever
+commit is newest at that moment. It records passes in `refs/notes/verify` and
+failures in `refs/notes/verify-failures`; a failure note's first line says
+whether the product failed (`scripts/verify.sh`) or the tooling did (the
+router's own `scripts/test_*.py`, which the verify lane runs as a separate step,
+or the lane and router around it). A round that finds another waiting or running
+does nothing. A round started from a Claude Code session also posts the first
+failure after a pass to the crew board. On den-agents,
+`rusty-dagger-main-check.timer` runs a round every half hour using the
+installed build config, so a commit has a recorded round within about three
+hours while the workers are free. Until crew-services #10797, the timer's rounds
+cannot post, so no post does not mean green. To read the latest round (passed,
+failed and which part, waiting, did not start and why, superseded) from any
+checkout on den-agents:
 
 ```bash
-git fetch origin refs/notes/verify-failures:refs/notes/verify-failures
-git log -10 --notes=verify-failures --format='%h %s%n%N' origin/main
+scripts/route.py main-status
 ```
+
+It exits 1 and says OVERDUE when a commit has gone three hours on `main` without
+a recorded round; the journal says why
+(`journalctl --user -u rusty-dagger-main-check.service`).
 
 A plain `dotnet build` does not stage the product. To stage only:
 
