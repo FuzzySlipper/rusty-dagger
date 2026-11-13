@@ -1,0 +1,6 @@
+scripts/route.py main
+rusty-dagger verify at 476cb982d615f64353b1ceedc764de6d9915466c FAILED in 1.1 min
+verify on den-k8, 1.1 min, FAIL: /home/agent/dev/rusty-dagger/local/build/route/main-476cb982d615-20261113T023029/verify.log
+    lane: run dc8be7879f10ae87378075c37b35814a of verify on den-k8 at 476cb982d615f64353b1ceedc764de6d9915466c (0 s)
+    skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run `dotnet run --project src/Daggerfall.Source.Tool -- export-items`
+    lane: verify took 57 s, peak memory 2708 MiB
