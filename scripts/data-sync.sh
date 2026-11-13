@@ -9,6 +9,7 @@
 #   scripts/data-sync.sh pull den-agents:dev/rusty-dagger            # from that checkout over ssh
 #   scripts/data-sync.sh status                     # only compare the container's importer revision with this tree's
 #                                                   # (and say whether it departs from a whole import)
+#   scripts/data-sync.sh status den-agents:dev/rusty-dagger   # the same for that checkout's container
 #   ... --mirror                                    # also delete what the destination has and the source lacks
 #   ... HOST:CHECKOUT --import-tree                 # also local/build/import, the staging and records the tests read
 #   DAGGER_DATA_STORE=/path scripts/data-sync.sh pull
@@ -23,7 +24,7 @@ set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 data=$root/local/data
 store=${DAGGER_DATA_STORE:-/mnt/den-nas-backup/data/rusty-dagger/lan}
-usage="usage: scripts/data-sync.sh push|pull [HOST:CHECKOUT [--import-tree]] [--mirror] | status"
+usage="usage: scripts/data-sync.sh push|pull [HOST:CHECKOUT [--import-tree]] [--mirror] | status [HOST:CHECKOUT]"
 
 direction=${1:-}
 shift || true
@@ -47,11 +48,15 @@ fi
 
 # What the container says of itself (worldrpg/data-container.json), read through its index, so an entry stored
 # compressed (import --compress) reads the same: the revision on the first line, then "whole", "departs" or
-# "unrecorded" (a description from before departures were recorded), then one departure per line.
+# "unrecorded" (a description from before departures were recorded), then one departure per line. With HOST:CHECKOUT
+# it reads that checkout's container over ssh.
 describe_container() {
-  [[ -f $data/daggerfall-data.rpak ]] || { echo "none (no local/data/daggerfall-data.rpak)"; return; }
-  python3 - "$data/daggerfall-data.rpak" <<'EOF'
-import json, struct, subprocess, sys
+  local reader=(python3 -) path=$data/daggerfall-data.rpak
+  [[ -n ${1:-} ]] && reader=(ssh -o BatchMode=yes "${1%%:*}" python3 -) path=${1#*:}/local/data/daggerfall-data.rpak
+  "${reader[@]}" "$path" <<'EOF'
+import json, os, struct, subprocess, sys
+if not os.path.isfile(sys.argv[1]):
+    sys.exit(print('none (no local/data/daggerfall-data.rpak)'))
 with open(sys.argv[1], 'rb') as container:
     offset, length = struct.unpack('<QQ', container.read(24)[8:24])
     container.seek(offset)
@@ -80,7 +85,7 @@ checkout_revision() {
 }
 report() {
   local container checkout
-  description=$(describe_container)
+  description=$(describe_container "$@")
   container=$(sed -n 1p <<<"$description")
   checkout=$(checkout_revision)
   echo "importer revision of the container: $container"
@@ -119,6 +124,6 @@ case $direction in
     done
     report
     ;;
-  status) report ;;
+  status) report $remote ;;
   *) echo "$usage" >&2; exit 2 ;;
 esac

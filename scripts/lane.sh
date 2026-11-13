@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+# The build router's lanes for this repository. den-services' build config names each one; `den-tool build run`
+# checks the commit out cleanly on a worker and runs it there. Sessions start them with scripts/route.py.
+#
+#   scripts/lane.sh ruleset        the whole ruleset suite
+#   scripts/lane.sh ruleset K/N    part K of the ruleset suite cut by domain folder (PARTS below)
+#   scripts/lane.sh import         the whole import suite
+#   scripts/lane.sh verify         scripts/verify.sh --import --play
+#
+# Each run prepares the checkout by the README's steps (rusty, the pinned pair, npm ci) and links local/ to data
+# kept beside the router's checkout (BUILD_ROOT/rusty-dagger/kept), as a worktree links the main checkout's. It never
+# imports: when the kept data is not at this commit's importer revision it pulls den-agents' (DAGGER_DATA_SOURCE),
+# and when that is not at the commit's revision either it stops before testing, since a suite run against other
+# data is a silently wrong result.
+set -euo pipefail
+
+usage="usage: scripts/lane.sh ruleset [K/N] | import | verify"
+lane=${1:-}
+part=${2:-}
+case $lane in
+  ruleset) [[ -z $part || $part =~ ^[1-9][0-9]*/[1-9][0-9]*$ ]] || { echo "$usage" >&2; exit 2; } ;;
+  import|verify) [[ -z $part ]] || { echo "$usage" >&2; exit 2; } ;;
+  *) echo "$usage" >&2; exit 2 ;;
+esac
+
+# Each part takes these folders of tests/WorldRpg.Rulesets.Daggerfall.Tests; the last part takes every test the
+# others do not, so a new folder or class is never missed and none runs twice. Balanced by the test time each
+# folder took in a whole run (its results file's durations, summed by folder): about a third each.
+PARTS=(
+  "Quests Exterior Character Scene Dialogue"
+  "Magic Content Afflictions Time Developer"
+  ""
+)
+
+root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+cd "$root"
+# The lane replaces local/ with links to the worker's kept data; in an ordinary checkout that would hide its own.
+[[ $(git config --local --get den-build.managed || true) == true ]] ||
+  { echo "lane: $root is not a den-build checkout; the lane would replace its local/ with links. Use scripts/route.py." >&2; exit 2; }
+export PATH=$HOME/.local/bin:$HOME/.dotnet:$PATH MSBUILDDISABLENODEREUSE=1
+commit=$(git rev-parse HEAD)
+kept=$(dirname "$root")/kept
+source=${DAGGER_DATA_SOURCE:-den-agents:dev/rusty-dagger}
+donor_source=${DAGGER_DONOR_SOURCE:-den-agents:/home/research/daggerfall-unity}
+out=$DEN_BUILD_OUTPUT_DIR
+mkdir -p "$kept"/{inputs/arena2,data,import} "$out" local/build
+ln -sfn "$kept/inputs" local/inputs
+ln -sfn "$kept/data" local/data
+ln -sfn "$kept/import" local/build/import
+started=$SECONDS
+step() { echo "lane: $* ($((SECONDS - started)) s)"; }
+step "run $(basename "$out") of $lane${part:+ part $part} on $(hostname) at $commit"
+
+# The README's setup: rusty from the Engine bootstrap (again when it is older than the pinned pair), the pair, npm ci.
+bootstrap() { curl -fsSL https://raw.githubusercontent.com/FuzzySlipper/rusty-engine/main/scripts/install-rusty.sh | bash; }
+command -v rusty >/dev/null || bootstrap
+rusty install || { bootstrap && rusty install; }
+npm ci --no-audit --no-fund
+step "pair and UI dependencies ready"
+
+# scripts/data-sync.sh status: this commit's importer revision, the container's (here, or on HOST:CHECKOUT), and
+# "partial" when the container departs from one whole import.
+status() {
+  local report
+  report=$(scripts/data-sync.sh status "$@")
+  printf '%s %s %s\n' "$(sed -n 's/^importer revision of this checkout: //p' <<<"$report")" \
+    "$(sed -n 's/^importer revision of the container: \([0-9a-f]*\).*/\1/p' <<<"$report")" \
+    "$(grep -q 'not one whole import\|records no departures' <<<"$report" && echo partial || echo whole)"
+}
+read -r wanted have whole < <(status)
+[[ $wanted =~ ^[0-9a-f]{64}$ ]] || { echo "lane: cannot compute this commit's importer revision" >&2; exit 1; }
+if [[ $have != "$wanted" || $whole != whole ]]; then
+  read -r _ there there_whole < <(status "$source")
+  if [[ $there != "$wanted" || $there_whole != whole ]]; then
+    echo "lane: refusing to test $commit: its importer revision is $wanted; the data on $source is at ${there:-no readable revision}${there_whole:+ ($there_whole)}." >&2
+    echo "lane: a suite against other data is a silently wrong result. Route it again once den-agents has imported $wanted;" >&2
+    echo "lane: a branch that changes the importer's inputs imports in its own worktree on den-agents and tests there." >&2
+    exit 3
+  fi
+  scripts/data-sync.sh pull "$source" --import-tree --mirror
+  read -r _ have whole < <(status)
+  [[ $have == "$wanted" && $whole == whole ]] ||
+    { echo "lane: the data pulled from $source is at ${have:-no revision} ($whole), not $wanted; is den-agents importing?" >&2; exit 3; }
+fi
+# The corpus the import suite reads, and the Daggerfall Unity checkout the donor comparisons read; changed files only.
+rsync -rtL --delete "$source/local/inputs/arena2/" "$kept/inputs/arena2/"
+rsync -rtl --delete "$donor_source/" "$kept/daggerfall-unity/"
+export DAGGER_DONOR_ROOT=$kept/daggerfall-unity
+step "data at importer revision $wanted"
+
+# Runs a step and says how long it took and the most memory the lane's processes held together (the router starts
+# the lane as its own process group; sampled every two seconds).
+measured() {
+  local name=$1 began=$SECONDS peak=$out/$1.peak sampler status=0
+  shift
+  (
+    group=$(ps -o pgid= -p $BASHPID | tr -d ' ') most=0
+    while sleep 2; do
+      now=$(ps -eo pgid=,rss= | awk -v group="$group" '$1 == group { sum += $2 } END { print sum + 0 }')
+      ((now > most)) && most=$now && echo "$most" >"$peak"
+    done
+  ) &
+  sampler=$!
+  "$@" || status=$?
+  kill "$sampler"
+  wait "$sampler" 2>/dev/null || true
+  echo "lane: $name took $((SECONDS - began)) s, peak memory $(($(cat "$peak" 2>/dev/null || echo 0) / 1024)) MiB"
+  return "$status"
+}
+case $lane in
+  ruleset)
+    project=tests/WorldRpg.Rulesets.Daggerfall.Tests/WorldRpg.Rulesets.Daggerfall.Tests.csproj
+    measured build dotnet build "$project"
+    filter=()
+    if [[ -n $part ]]; then
+      [[ ${part#*/} == "${#PARTS[@]}" ]] ||
+        { echo "lane: part $part names ${part#*/} parts, scripts/lane.sh has ${#PARTS[@]}; a part would be missed or doubled" >&2; exit 2; }
+      filter=(--filter "$(python3 - "${part%/*}" "${PARTS[@]}" <<'EOF'
+import pathlib, re, sys, hashlib
+# A top-level type of the suite's file-scoped namespace, declared at the start of a line.
+declaration = re.compile(r'^(?:[a-z]+\s+)*(?:class|record|struct)\s+([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*<)', re.M)
+tests = pathlib.Path('tests/WorldRpg.Rulesets.Daggerfall.Tests')
+number, parts = int(sys.argv[1]), [p.split() for p in sys.argv[2:]]
+owner = {}
+for folder in sorted(p.name for p in tests.iterdir() if p.is_dir()):
+    for source in sorted((tests / folder).rglob('*.cs')):
+        for name in declaration.findall(source.read_text(encoding='utf-8-sig')):
+            owner.setdefault(name, folder)
+taken = [sorted(name for name, folder in owner.items() if folder in part) for part in parts[:-1]]
+prefix = 'FullyQualifiedName{}WorldRpg.Rulesets.Daggerfall.Tests.{}{}'
+digest = hashlib.sha256(repr(taken).encode()).hexdigest()[:12]
+if number < len(parts):
+    names = taken[number - 1]
+    print(f'lane: part {number}/{len(parts)} runs {len(names)} classes of {", ".join(parts[number - 1])} (partition {digest})', file=sys.stderr)
+    print('|'.join(prefix.format('~', name, end) for name in names for end in '.+'))
+else:
+    others = sum(len(names) for names in taken)
+    print(f'lane: part {number}/{len(parts)} runs every test outside the {others} classes of the other parts (partition {digest})', file=sys.stderr)
+    print('&'.join(prefix.format('!~', name, end) for names in taken for name in names for end in '.+'))
+EOF
+)")
+    fi
+    measured test dotnet test "$project" --no-build "${filter[@]}" --logger "trx;LogFileName=$out/ruleset.trx"
+    echo "lane: results $(hostname):$out/ruleset.trx"
+    ;;
+  import)
+    measured test dotnet test tests/Daggerfall.Import.Tests/Daggerfall.Import.Tests.csproj --logger "trx;LogFileName=$out/import.trx"
+    echo "lane: results $(hostname):$out/import.trx"
+    ;;
+  verify)
+    # The play smoke's headless Chromium, from Playwright into the agent's home (the README's step).
+    npx -y playwright@1.62.1 install chromium
+    RUSTY_CHROMIUM_PATH=$(ls -d "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux64/chrome | sort -V | tail -n 1)
+    export RUSTY_CHROMIUM_PATH
+    measured verify scripts/verify.sh --import --play
+    ;;
+esac
+step "$lane${part:+ part $part} passed at $commit"

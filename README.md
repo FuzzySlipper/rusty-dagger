@@ -17,7 +17,7 @@ content source.
 | Open questions and discussion | Crew board `rusty-dagger` |
 | Art pipeline | [authoring/README.md](authoring/README.md); first-person arms in [authoring/tools/fp-arms](authoring/tools/fp-arms/README.md) |
 | Agent playtesting | [docs/playtesting.md](docs/playtesting.md) |
-| Development tools: verify, play smoke, data sync, tour and cost | [scripts](scripts), usage in each tool's header |
+| Development tools: verify, routed suites, play smoke, data sync, tour and cost | [scripts](scripts), usage in each tool's header |
 | Review lanes and the reviewer packet | [docs/agent-review](docs/agent-review/README.md) |
 | What is and isn't redistributed | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) |
 
@@ -239,6 +239,24 @@ Only verify needs these; a machine that only runs the game can skip them:
 There is no hosted CI: most suites read the Arena2 corpus and the content made
 from it, so the recorded local run is the gate's record. Without the data
 container the script says so, skips the ruleset suite and refuses `--play`.
+
+On our network a whole suite or a full verify runs on the build workers (den-k8,
+den-nimo, den-m5), not on den-agents while one of them can take it; per-task
+checks stay focused and local. From a worktree on den-agents, for a commit
+(`HEAD` by default, pushed or not; uncommitted changes are not in it):
+
+```bash
+scripts/route.py ruleset    # the ruleset suite in parts across the workers: one result, each part's log
+scripts/route.py import     # the import suite; `verify` is verify.sh --import --play
+```
+
+It sends the lanes in [scripts/lane.sh](scripts/lane.sh) through the build router
+(`den-tool build run`). A lane takes den-agents' data when its own is not at the
+commit's importer revision, and refuses, naming both, when den-agents' is not
+either: a branch that changes the importer's inputs imports in its own worktree
+and runs its suites there until den-agents has imported it. Until den-services
+installs the lanes in the router's config, add
+`--config /mnt/den-nas-backup/data/evidence/rusty-dagger/10774-router-lanes/den-build.json`.
 
 A plain `dotnet build` does not stage the product. To stage only:
 

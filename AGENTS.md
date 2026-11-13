@@ -145,9 +145,11 @@ playback.
   requirement to a concrete receiving task and point to it.
 - **Reuse first.** Before creating a mechanism, check the Engine surface and
   existing owners.
-- **Checks.** Run focused compilation and tests suited to the change. Window
-  runs, UI tests and screenshots use at least 1920x1080, which is the minimum
-  supported window.
+- **Checks.** Run focused compilation and tests suited to the change, locally.
+  A whole suite or a full verify goes to the build workers with
+  `scripts/route.py ruleset|import|verify` (README, Verify), never to den-agents
+  while a worker can take it; imports stay on den-agents. Window runs, UI tests
+  and screenshots use at least 1920x1080, which is the minimum supported window.
 - **Tests** record intended behavior, not authority. When a change supersedes
   an expectation, update or remove the test in the same change.
 - **Failures.** A hard failure must name the loss it prevents: data loss, an
