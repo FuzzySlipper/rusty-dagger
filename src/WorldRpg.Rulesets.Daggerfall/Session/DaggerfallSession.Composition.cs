@@ -341,9 +341,9 @@ internal sealed partial class DaggerfallSession
             _attackClock = new DaggerfallPlayerAttackClock(_tuning.Attacks, this);
             _condition = new DaggerfallPlayerCondition(_vitality, _tuning.Attacks.Stamina, _tuning.Rest, _random, CombatRandomKey.Seed);
             _condition.Stamina.Refresh(actors.Player.Stats);
-            _touch = new DaggerfallContactTouch(new(_contact, _spatial, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion)), _tuning.Contact);
+            _touch = new DaggerfallContactTouch(new(_contact, _spatial, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion)), _tuning.Contact);
             ActorNavigationCoordinator navigation = new(engine.Spatial, _spatial.Session, actors.Store, _spatial.CurrentController,
-                actor => _sites.CharacterEnvironment(actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion)));
+                actor => _exterior.CharacterEnvironment(actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion)));
             _reactions = new ActorReactions(navigation);
             _fires = new DaggerfallFires(_tuning.Hazards);
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
@@ -358,7 +358,7 @@ internal sealed partial class DaggerfallSession
                 alertTarget: id => EnemyBehavior.Provoke(id, MinuteIndex(_time.Calendar)),
                 playerRush: () => CareerSpecialsFor(actors.Player.DurableId).AdrenalineRush
                     ? new DaggerfallAdrenalineRush(_heldEnchantments.Talents.AdrenalineRush) : null,
-                _contact, StrikePose, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion),
+                _contact, StrikePose, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion),
                 // Only the player's own controller reports a velocity; site actors step between poses.
                 actor => actor == actors.Player.DurableId ? assembled.PlayerControl.Motion.ControlledVelocity : Vector3.Zero,
                 new DaggerfallStrikes(_tuning.Attacks.Strike, actors, _reactions, () => assembled.PlayerControl.Position,
@@ -649,8 +649,8 @@ internal sealed partial class DaggerfallSession
                 _roster, _persistence, _groundContainers, _enemyBehavior, ExecuteDungeonFamilyAction, this,
                 projection, actionTriggers, profiles, activeProfile, saved?.Site.ReturnProfile?.Require(),
                 composition.StartSite.ClassicPresentation);
-            _grounding.FloorPending = () => _sites.CollisionPending;
-            if (composition.ArtReplacements is { } groundArt) _sites.UseGroundArt(groundArt, () => DrawnArt is not null);
+            _grounding.FloorPending = () => _exterior.CollisionPending;
+            if (composition.ArtReplacements is { } groundArt) _exterior.UseGroundArt(groundArt, () => DrawnArt is not null);
             State.LevelUps.Began += () => _appearance.PlayGameplaySound(96, "level-up");
             _equipmentMoves.Changed += change =>
             {
@@ -666,13 +666,13 @@ internal sealed partial class DaggerfallSession
                 (profile, clip) => audioBundles?.Require(profile).OpenClip(engine.Audio, clip));
             partiallyConstructed.Add(_weatherPresentation);
             DaggerfallHorizonGround ground = new(definitions.Terrain,
-                (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value, tuning.Horizon, tuning.Ground, _sites.Locations);
-            _sites.UseGround(ground, GroundWalkers);
+                (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value, tuning.Horizon, tuning.Ground, _exterior.Locations);
+            _exterior.UseGround(ground, GroundWalkers);
             _horizon = new DaggerfallHorizon(engine, ground, tuning.Horizon, tuning.Water, tuning.Ground.RepeatMetres, definitions.Terrain.Rivers,
                 new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
                 new DaggerfallFarForest(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)));
             partiallyConstructed.Add(_horizon);
-            _sites.DrawSeaWith(_horizon.AppendFacts, _horizon.CompleteSnapshot, _horizon.ReleaseSea);
+            _exterior.DrawSeaWith(_horizon.AppendFacts, _horizon.CompleteSnapshot, _horizon.ReleaseSea);
             if (composition.ArtReplacements?.GroundCover is { } cover)
                 _horizon.UseGroundCover(cover, tuning.GroundCover, DaggerfallGroundCover.TuftGrounds(definitions.Grids.Climate.Values),
                     new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Flats, new Dictionary<int, float>(),
@@ -733,12 +733,12 @@ internal sealed partial class DaggerfallSession
             if (saved?.ReadySpell is { } readyKey) Casting.RestoreReadySpell(readyKey);
             ExpireConjuredItems();
             _roster.MaterializeStaticNpcs(inputs);
-            _sites.AdmitInitialResidency(saved?.ExteriorResidency, saved?.ExteriorLocationResidency);
+            _exterior.AdmitInitialResidency(saved?.ExteriorResidency, saved?.ExteriorLocationResidency);
             // Treasure and dungeon enemies are placed on the floor under their markers, so the site's
             // collision must be admitted first: before it, a ground probe meets nothing and they float.
             ReconcilePropertyContainers();
             // A new game arrives at its start site's start like any other arrival; a restore resumes its saved pose.
-            if (restore is null) _sites.StandArrivingPlayer();
+            if (restore is null) _exterior.StandArrivingPlayer();
             // Registry positions are profile coordinates; project NPCs and the civilian population
             // only once the save is restored and the saved origin admitted, so dialogue and the
             // first snapshot share its frame and no restored presence is decided from the start pose.
@@ -750,7 +750,7 @@ internal sealed partial class DaggerfallSession
             List<Exception> failures = [constructionFailure];
             try { DisposeAll(partiallyConstructed); }
             catch (Exception cleanupFailure) { failures.Add(cleanupFailure); }
-            try { _sites?.RetireExteriorAppearance(); }
+            try { _sites?.Exterior.RetireExteriorAppearance(); }
             catch (Exception cleanupFailure) { failures.Add(cleanupFailure); }
             if (failures.Count == 1) throw;
             throw new AggregateException(failures);

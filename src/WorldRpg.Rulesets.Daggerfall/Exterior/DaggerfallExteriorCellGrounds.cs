@@ -4,12 +4,10 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 
 /// <summary>
 /// Builds exterior cells' ground on the thread pool ahead of the window that needs it, so crossing into a new map pixel
-/// does not build a row of cells in one update. A build reads only terrain and location definitions and ground tuning,
-/// which nothing changes, with the location's ground already read on the update, and calls no Engine service: the pure
-/// product computation the Engine's call-affinity contract lets a product run on its own workers. Results are taken
-/// only on the update. A cell the update needs before a worker has taken up its build is built on the update itself,
-/// so the update never waits behind other work queued on the thread pool; it waits only for a build a worker is
-/// already running (a travel's first window, or a crossing faster than the build).
+/// does not build a row of cells in one update; what a build may read and how its result comes back is the exterior's
+/// off-update rule (<see cref="DaggerfallExteriorWorld"/>). A cell the update needs before a worker has taken up its
+/// build is built on the update itself, so the update never waits behind other work queued on the thread pool; it waits
+/// only for a build a worker is already running (a travel's first window, or a crossing faster than the build).
 /// </summary>
 internal sealed class DaggerfallExteriorCellGrounds(
     DaggerfallTerrainSet terrain,

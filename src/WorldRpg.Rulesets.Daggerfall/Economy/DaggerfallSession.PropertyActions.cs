@@ -190,7 +190,7 @@ internal sealed partial class DaggerfallSession
         if (PropertyShipBoardingRefusal(context) is { } refused) return refused;
         if (!context.ShipAccessAllowed || ResolveOwnedShipProfile() is not { } ship || State.PlayerControl.Position is null)
             return new(false, State.Transport.Mode, State.Transport.OnShip, DaggerfallTransportRejection.ShipUnavailableAtSite, "No owned ship world is available here.");
-        _sites.NormalizeExteriorOrigin();
+        _exterior.NormalizeExteriorOrigin();
         DaggerfallWorldProfileKey land = _activeProfileKey;
         DaggerfallTransportPose pose = new(State.PlayerControl.Position!.Value, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians);
         // Admit the real ship projection before changing transport ownership or return state.

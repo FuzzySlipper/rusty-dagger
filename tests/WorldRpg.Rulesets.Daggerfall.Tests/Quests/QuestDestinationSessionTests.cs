@@ -141,7 +141,7 @@ public sealed class QuestDestinationSessionTests
         Assert.Equal(At("enemy"), At("gift"));
         Assert.Equal(At("enemy"), At("person"));
 
-        Vector3 foeMarker = run.Session.Sites.ProfileToLocal(At("enemy").Position).ToVector();
+        Vector3 foeMarker = run.Session.Exterior.ProfileToLocal(At("enemy").Position).ToVector();
         Assert.True(run.Session.State.Actors.TryGet(Assert.Single(Bound("enemy").ActorIds), out var foe));
         Assert.True(Vector2.Distance(new(foe!.Position.X, foe.Position.Z), new(foeMarker.X, foeMarker.Z)) < 1e-3F);
         Assert.Equal("ground", run.Session.State.ItemInstances.RequireUnique(Assert.Single(Bound("gift").UniqueItemIds)).Owner.Scope);

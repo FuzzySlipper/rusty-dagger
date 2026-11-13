@@ -217,16 +217,16 @@ public sealed class PropertySessionTests
         DaggerfallSiteProfile ship = type == "small" ? f.Small : f.Large;
         Assert.True(f.Session.State.Transport.OnShip);
         Assert.Equal(ship.ProfileKey, f.Session.Sites.ActiveProfile);
-        WorldPoint boardingProfilePosition = f.Session.Sites.ExteriorSitePosition(f.Session.State.PlayerControl.Position!.Value);
+        WorldPoint boardingProfilePosition = f.Session.Exterior.ExteriorSitePosition(f.Session.State.PlayerControl.Position!.Value);
         WorldPoint boardingAnchor = ship.RequireAnchor("start").Position;
         Assert.Equal(boardingAnchor.X, boardingProfilePosition.X, 3);
         Assert.Equal(boardingAnchor.Y, boardingProfilePosition.Y, 3);
         Assert.Equal(boardingAnchor.Z, boardingProfilePosition.Z, 3);
-        Assert.True(f.Session.Sites.ExteriorResidencyInitialized);
+        Assert.True(f.Session.Exterior.ExteriorResidencyInitialized);
         // The large ship's authored start is just across the profile cell boundary. The active
         // profile remains the ship while the terrain window follows the cell containing the player.
-        DaggerfallExteriorCellResidencySave residency = f.Session.Sites.CaptureExteriorResidency()!.Value;
-        Assert.Equal(f.Session.Sites.CurrentExteriorCell(), residency.Center);
+        DaggerfallExteriorCellResidencySave residency = f.Session.Exterior.CaptureExteriorResidency()!.Value;
+        Assert.Equal(f.Session.Exterior.CurrentExteriorCell(), residency.Center);
         f.AddGold(4);
         DaggerfallPropertyStorageView storage = f.Session.ReadPropertyPresentation().Storage!;
         string coins = f.Session.State.Inventory.Read().Stacks.First(item => item.Definition.Value == "gold-piece").Id.Value;
@@ -505,7 +505,7 @@ public sealed class PropertySessionTests
                 new(site.Region, site.Name, string.Empty), new("Breton", "Male", 0, 0, 0, 0), "banker", ["talk", "banking"]);
             WorldPoint position = Session.State.PlayerControl.Position!.Value;
             Session.State.Npcs.Place(BankerId, Session.Sites.ActiveProfile,
-                WorldPoint.From(Session.Sites.LocalToProfile(position.ToVector())));
+                WorldPoint.From(Session.Exterior.LocalToProfile(position.ToVector())));
             Session.MaterializeNpcActor(BankerId, new ActorPose(position, 0));
             var target = Session.Dialogue.NpcTargets().Single(value => value.Identity.Value == (ulong)BankerId);
             Assert.True(Session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);

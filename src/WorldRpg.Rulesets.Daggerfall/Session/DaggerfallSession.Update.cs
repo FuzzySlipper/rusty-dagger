@@ -74,7 +74,7 @@ internal sealed partial class DaggerfallSession
             ReconcileSummoningFoes();                                                             // Magic
             // An arrival whose ground the Engine refused holds the world, like a held mode, until that ground is live
             // and the player stands on it: nothing would hold anyone up meanwhile.
-            bool groundless = _mode == ProductMode.Playing && !_sites.RecoverArrivalGround();    // Exterior
+            bool groundless = _mode == ProductMode.Playing && !_exterior.RecoverArrivalGround(); // Exterior
             bool playing = _mode == ProductMode.Playing && !groundless && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !LegalModalOpen && Cinematics?.ActiveSource is null && _pendingDispel is null && _pendingIdentify is null && _pendingCreateItem is null;
             bool modal = _mode == ProductMode.Modal || Summoning.PendingOffer || State.Quests.PendingOffer is not null || LegalModalOpen || _pendingDispel is not null || _pendingIdentify is not null || _pendingCreateItem is not null;
             DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
@@ -237,7 +237,7 @@ internal sealed partial class DaggerfallSession
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);                              // Economy
         _weather.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                     // Exterior
         _sites.Projection.Lighting.UpdateAmbient(_time.Calendar, _tuning.Weather.Daylight(_time.Calendar, CurrentWeather));   // Scene
-        _sites.UpdateResidentCityLights();                                                        // Exterior
+        _exterior.UpdateResidentCityLights();                                                     // Exterior
         State.Quests.AdvanceClocks(State.Variables, before, _time.Calendar);                      // Quests
         // Daily conditions and ordinary source-order operations observe the same admitted calendar
         // after rest, travel, prison, or another interval, including an interval with no clock expiry.
@@ -301,8 +301,8 @@ internal sealed partial class DaggerfallSession
         BeginLocomotion(ref player, update);                                                      // Character
         _doors.Advance(update.DeltaSeconds);                                                      // Interiors
         _sites.Projection.AdvanceMotion(update.DeltaSeconds);                                     // Exterior
-        _sites.SyncCityGates();                                                                   // Exterior
-        player.Environment = _sites.CharacterEnvironment(State.PlayerControl.Motion);            // Exterior
+        _exterior.SyncCityGates();                                                                // Exterior
+        player.Environment = _exterior.CharacterEnvironment(State.PlayerControl.Motion);         // Exterior
         ReconcileTriggers(player.Environment, simulationStep, actionGraph);                       // Character
         ShapeLocomotion(ref player, update, generation, simulationStep);                          // Character: water, climbing, levitation
         player.Locomotion = Ride(player.Locomotion, update, player.ActiveWater is not null);      // Travel
@@ -312,10 +312,10 @@ internal sealed partial class DaggerfallSession
             State.Transport.Ride.Moved(ridden.Displacement, update.DeltaSeconds, ridden.Motion.Grounded);   // Travel
         if (player.Movement is not null && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
         {
-            _sites.HoldPlayerInsideWorldEdge();                                                   // Exterior
-            _sites.FollowPlayerOnTheRoad();                                                       // Exterior
+            _exterior.HoldPlayerInsideWorldEdge();                                                // Exterior
+            _exterior.FollowPlayerOnTheRoad();                                                    // Exterior
             // A player who has dropped beneath the terrain is stood back on it rather than falling for ever.
-            _ = _sites.RecoverPlayerBelowTerrain();                                               // Exterior
+            _ = _exterior.RecoverPlayerBelowTerrain();                                            // Exterior
             // A terrain cell can remain resident while the authored location closure is unloaded.
             // Its live wilderness actors still use the admitted terrain and actor owners.
         }
@@ -323,7 +323,7 @@ internal sealed partial class DaggerfallSession
             ReconcileTriggers(player.Environment, simulationStep, actionGraph);                   // Character
         if (player.Movement is not null && State.DungeonDiscoveries.TryGetValue(_activeProfileKey, out DaggerfallDungeonDiscovery? discovery))
             _dungeonVisibility.Observe(discovery, State.PlayerControl, _doors, player.Environment, simulationStep,
-                _tuning.Camera.EyeHeight, _sites.LocalCompensation);                              // Interiors
+                _tuning.Camera.EyeHeight, _exterior.LocalCompensation);                           // Interiors
         CompleteLocomotion(ref player, update, swimmingMinuteBefore, swimmingMinuteAfter);        // Character: swimming, landing, climbing
         if (player.Movement is { } acceptedMovement && player.PositionBefore is { } previousPosition)
             _appearance.AdvanceFootsteps(previousPosition, acceptedMovement.Transform.Translation,
@@ -341,10 +341,10 @@ internal sealed partial class DaggerfallSession
         // Trigger geometry is the row each trigger last reconciled with. Actor navigation asks those rows
         // whether an actor stands in water, so after the origin moves they are reconciled again in the new
         // frame before any actor steps. The player's place relative to the water is unchanged by it.
-        if (_sites.RebaseExteriorIfNeeded())                                                      // Exterior
-            ReconcileTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, actionGraph);   // Character
+        if (_exterior.RebaseExteriorIfNeeded())                                                   // Exterior
+            ReconcileTriggers(_exterior.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, actionGraph);   // Character
         if (player.Movement is not null && player.Alive && _sites.ActivateLocationAtPlayer())    // Exterior
-            ReconcileTriggers(_sites.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, null);   // Character
+            ReconcileTriggers(_exterior.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, null);   // Character
         _camera.SettlePunch(update.DeltaSeconds, _tuning.Attacks.Strike.PunchSettleRate);        // Combat
         if (_hitStopSteps > 0) _hitStopSteps--;                                                   // Combat
         _camera.Update(State.PlayerControl, _appearance.MountEyeLift(_tuning.Camera.EyeHeight)); // Character
@@ -384,7 +384,7 @@ internal sealed partial class DaggerfallSession
         // quest clock state; elapsed duration is still consumed by the calendar owner.
         State.Quests.Advance(State.Variables, _time.Calendar, update.DeltaSeconds);               // Quests
         _dialogue?.SynchronizeWorldState();                                                       // Dialogue
-        if (_sites.ActiveLocationLoaded) State.Quests.AdmitPlacements(_sites.Projection.Inputs, this);   // Quests
+        if (_exterior.ActiveLocationLoaded) State.Quests.AdmitPlacements(_sites.Projection.Inputs, this);   // Quests
         State.Quests.ReconcileFoeCommands();                                                      // Quests
         ReconcileNpcProjection();                                                                 // Actors
         UpdateCivilianPopulation(simulationStep, update.DeltaSeconds);                            // Actors

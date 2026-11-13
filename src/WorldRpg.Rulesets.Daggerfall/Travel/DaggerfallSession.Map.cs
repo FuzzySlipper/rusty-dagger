@@ -15,7 +15,7 @@ internal sealed partial class DaggerfallSession
         if (profile.ProfileKind is (DaggerfallWorldProfileKind.Dungeon or DaggerfallWorldProfileKind.Interior) && State.DungeonDiscoveries.TryGetValue(_activeProfileKey, out var discovery))
             return DaggerfallMapProjection.Dungeon(profile, discovery, player, State.PlayerControl.YawRadians, Site.ActiveSite?.Name);
         if (profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && Site.ActiveSite?.Exterior is not null && Site.Blocks is not null)
-            return DaggerfallMapProjection.City(Site, _sites.ExteriorSitePosition(player), State.PlayerControl.YawRadians);
+            return DaggerfallMapProjection.City(Site, _exterior.ExteriorSitePosition(player), State.PlayerControl.YawRadians);
         return null;
     }
 
@@ -168,7 +168,7 @@ internal sealed partial class DaggerfallSession
             if (npc is null || _dialogue?.TryReadLiveTalkPosition(npc, out WorldPoint npcPosition) != true) return null;
             string hint = _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
                 && State.PlayerControl.Position is WorldPoint player
-                ? CardinalHint(_sites.ExteriorSitePosition(npcPosition), _sites.ExteriorSitePosition(player)) : "here";
+                ? CardinalHint(_exterior.ExteriorSitePosition(npcPosition), _exterior.ExteriorSitePosition(player)) : "here";
             DaggerfallNpc? speaker = _dialogue?.CurrentNpc();
             bool sameBuilding = speaker is not null && !string.IsNullOrEmpty(speaker.Site.Building)
                 && string.Equals(speaker.Site.Building, npc.Site.Building, StringComparison.Ordinal);
@@ -290,7 +290,7 @@ internal sealed partial class DaggerfallSession
         WorldPoint? start = _activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior
             && DaggerfallWorldProfileIds.TryParse(_activeProfileKey.LogicalId, out _, out DaggerfallSiteBuildingId? inside) && inside is { } here
                 ? DaggerfallMapProjection.BuildingPosition(Site, site, here)
-            : State.PlayerControl.Position is WorldPoint player ? _sites.ExteriorSitePosition(player) : null;
+            : State.PlayerControl.Position is WorldPoint player ? _exterior.ExteriorSitePosition(player) : null;
         if (start is not { } origin) return "here";
         return CardinalHint(DaggerfallMapProjection.BuildingPosition(Site, site, building), origin);
     }

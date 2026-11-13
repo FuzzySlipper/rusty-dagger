@@ -42,7 +42,7 @@ public sealed class DaggerfallRestSessionTests
             if (wilderness)
                 session.State.PlayerControl.MoveTo(new WorldPoint(DaggerfallExteriorCellResidency.CellSize + 1f, 1f, 1f).ToVector());
 
-            DaggerfallExteriorCellId cell = session.Sites.CurrentExteriorCell();
+            DaggerfallExteriorCellId cell = session.Exterior.CurrentExteriorCell();
             int climate = definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y).Value;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
 
@@ -351,7 +351,7 @@ public sealed class DaggerfallRestSessionTests
         long actorId = Assert.IsType<long>(Assert.Single(placed.Encounters.Resolved).SpawnedActorId);
         Assert.True(restored.Sites.Projection.Appearance.HasActor(actorId));
         Assert.Contains(actorId, restored.LastEnemyBehavior.Keys);
-        Assert.False(restored.Sites.ActiveLocationLoaded);
+        Assert.False(restored.Exterior.ActiveLocationLoaded);
         Assert.InRange(Vector3.Distance(restored.State.PlayerControl.Position!.Value.ToVector(), restored.State.Actors.Get(actorId).Position.ToVector()), 10f, 20f);
         Assert.NotEmpty(f.Spatial.FloorProbes);
         Assert.NotEmpty(f.Spatial.OverlapRequests);

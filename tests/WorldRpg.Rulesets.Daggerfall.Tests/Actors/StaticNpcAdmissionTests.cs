@@ -32,7 +32,7 @@ public sealed class StaticNpcAdmissionTests
         Assert.Equal(5911, npc.Appearance.FactionId);
         Assert.Equal(0, session.State.Social.ReactionForNpc(npc).Value);
         Assert.True(session.State.Actors.TryGet(npc.DurableId, out var actor));
-        Assert.Equal(session.Sites.ProfileToLocal(inputs.StaticNpcs[0].Position), actor.Position);
+        Assert.Equal(session.Exterior.ProfileToLocal(inputs.StaticNpcs[0].Position), actor.Position);
         Assert.Equal(npc.DisplayName, Assert.Single(session.Dialogue.NpcTargets(), target => target.Identity.Value == (ulong)npc.DurableId).Label);
         long civilian = session.State.Npcs.RegisterCivilian(npc.Site, npc.Appearance, "civilian", ["talk"]);
         Assert.Equal(npc.DisplayName, session.State.Npcs.Require(civilian).DisplayName);

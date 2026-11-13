@@ -15,7 +15,7 @@ internal static class DaggerfallLocationTerrainFrame
     private const int TileDimension = DaggerfallTerrainSurfaceBuilder.SampleDimension - 1;
 
     /// <summary>The navigation cells one terrain tile spans: a map pixel is 1,024 cells and 128 tiles wide.</summary>
-    internal const long NavigationCellsPerTile = DaggerfallSiteLifecycle.NavigationCellsPerExteriorCell / TileDimension;
+    internal const long NavigationCellsPerTile = DaggerfallExteriorWorld.NavigationCellsPerExteriorCell / TileDimension;
 
     /// <summary>The profile origin in donor terrain tiles from the map pixel's south-west corner.</summary>
     internal static (int X, int Y) TileOffset(DaggerfallSiteExterior location)

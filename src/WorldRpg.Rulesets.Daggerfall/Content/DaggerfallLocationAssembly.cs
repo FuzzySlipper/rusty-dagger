@@ -31,8 +31,8 @@ internal sealed class DaggerfallLocationAssembly
     // is eight RMB blocks or sixteen RDB blocks wide, so blocks sit whole cells apart.
     private const float RmbBlockSide = DaggerfallTerrainSurfaceBuilder.HorizontalSize / 8F;
     private const float RdbBlockSide = DaggerfallTerrainSurfaceBuilder.HorizontalSize / 16F;
-    private const long RmbBlockCells = DaggerfallSiteLifecycle.NavigationCellsPerExteriorCell / 8;
-    private const long RdbBlockCells = DaggerfallSiteLifecycle.NavigationCellsPerExteriorCell / 16;
+    private const long RmbBlockCells = DaggerfallExteriorWorld.NavigationCellsPerExteriorCell / 8;
+    private const long RdbBlockCells = DaggerfallExteriorWorld.NavigationCellsPerExteriorCell / 16;
 
     private const int AutomapSide = 64;
 

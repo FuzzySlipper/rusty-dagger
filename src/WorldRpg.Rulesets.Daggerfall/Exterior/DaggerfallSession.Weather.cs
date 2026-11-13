@@ -16,7 +16,7 @@ internal sealed partial class DaggerfallSession
     public LoadingProgress AwaitArrivalGround()
     {
         SyncWeatherContext();
-        LoadingProgress collider = _sites.AwaitGroundCollider();
+        LoadingProgress collider = _exterior.AwaitGroundCollider();
         return collider.Done ? _horizon.GroundProgress() : collider;
     }
 
@@ -33,18 +33,18 @@ internal sealed partial class DaggerfallSession
         Vector3 player = position.ToVector();
         bool outside = _sites.Projection.Inputs.ProfileKind == Content.DaggerfallWorldProfileKind.Exterior;
         if (outside)
-            _sites.SetExteriorSeason(_time.Calendar.Season == DaggerfallSeason.Winter
+            _exterior.SetExteriorSeason(_time.Calendar.Season == DaggerfallSeason.Winter
                 ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer,
                 climate => _weather.ForClimate(climate) is DaggerfallWeatherKind.Rain or DaggerfallWeatherKind.Thunder);
         bool sheltered = outside && _spatial.CastRay(player + Vector3.UnitY * _tuning.Camera.EyeHeight,
             Vector3.UnitY, _tuning.Ambient.ShelterProbeHeight,
-            _sites.CharacterEnvironment(State.PlayerControl.Motion)).Present;
+            _exterior.CharacterEnvironment(State.PlayerControl.Motion)).Present;
         _camera.DrawOutTo(outside ? _tuning.Horizon.DrawnMetres : null);
-        if (outside && _sites.ActiveExteriorOrigin is { } origin)
+        if (outside && _exterior.ActiveExteriorOrigin is { } origin)
             _horizon.Show(_spatial.Session, origin, player, _time.Calendar.Season == DaggerfallSeason.Winter,
                 _sites.Projection.Lighting.SkyLight / _tuning.SiteLighting.ViewFull,
                 CurrentWeather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast,
-                !_classicArt, _sites.GroundLayers, _sites.FloraLook);
+                !_classicArt, _exterior.GroundLayers, _exterior.FloraLook);
         else _horizon.Hide();
         _weatherPresentation.Update(_sites.Projection, _time.Calendar, CurrentClimate, CurrentConditions,
             _weather.SkyVariant(CurrentClimate), player, sheltered, seconds, playing, _horizon.FogDensity);
@@ -64,8 +64,8 @@ internal sealed partial class DaggerfallSession
     {
         get
         {
-            DaggerfallExteriorCellId cell = _sites is { ExteriorResidencyInitialized: true }
-                ? _sites.CurrentExteriorCell()
+            DaggerfallExteriorCellId cell = _sites?.Exterior is { ExteriorResidencyInitialized: true }
+                ? _exterior.CurrentExteriorCell()
                 : _site.ActiveSite is { } site ? new(site.MapPixelX, site.MapPixelY)
                 : throw new InvalidOperationException("Weather requires the session's admitted world geography.");
             return _definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y).Value;

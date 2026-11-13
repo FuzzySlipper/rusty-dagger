@@ -50,13 +50,13 @@ public sealed class AssembledWorldTravelSessionTests
         run.Travel(city);
         Assert.Equal(exterior, run.Session.Sites.ActiveProfile);
         DaggerfallSiteProfile town = world.Profiles.Require(exterior);
-        WorldPoint landed = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+        WorldPoint landed = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
         // A city receives the traveller at one of its own start markers, stood on the terrain there.
         Assert.Contains(town.Anchors.Values, anchor => anchor.Id.StartsWith(DaggerfallLocationAssembly.StartMarkerAnchorPrefix, StringComparison.Ordinal)
             && Vector2.Distance(new(anchor.Position.X, anchor.Position.Z), new(landed.X, landed.Z)) < 1e-3F
             && landed.Y >= anchor.Position.Y - 1e-3F);
         // Its neighbours in the exterior window stream from their blocks too.
-        Assert.All(run.Session.Sites.ResidentExteriorProfiles, key => Assert.Equal(DaggerfallWorldProfileIds.Exterior(key.Site), key));
+        Assert.All(run.Session.Exterior.ResidentExteriorProfiles, key => Assert.Equal(DaggerfallWorldProfileIds.Exterior(key.Site), key));
 
         RulesetSavePayload atArrival = run.Session.CaptureSave();
         using AssembledWorldRun arrived = world.Restore(atArrival, city.Id, entered);
@@ -80,7 +80,7 @@ public sealed class AssembledWorldTravelSessionTests
         resumed.Use(exit.Portal, exit.Entity);
         // Out through the door the player came in by, where they stood to use it.
         Assert.Equal(exterior, resumed.Session.Sites.ActiveProfile);
-        Assert.True(Vector3.Distance(outside.ToVector(), resumed.Session.Sites.ExteriorSitePosition(resumed.Session.State.PlayerControl.Position!.Value).ToVector()) < 1e-2F);
+        Assert.True(Vector3.Distance(outside.ToVector(), resumed.Session.Exterior.ExteriorSitePosition(resumed.Session.State.PlayerControl.Position!.Value).ToVector()) < 1e-2F);
     }
 
     /// <summary>
@@ -124,7 +124,7 @@ public sealed class AssembledWorldTravelSessionTests
         DaggerfallSiteProfile outside = world.Profiles.Require(exterior);
         // A dungeon location is no city: the traveller stands a tenth of a block outside its edge, facing in.
         DaggerfallSiteAnchor[] sides = [.. Enum.GetValues<DaggerfallArrivalSide>().Select(side => DaggerfallLocationArrival.Landing(outside, site, side))];
-        WorldPoint landed = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+        WorldPoint landed = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
         Assert.Contains(sides, side => Vector3.Distance(side.Position.ToVector(), landed.ToVector()) < 1e-2F);
 
         DaggerfallSitePortal entrance = outside.Portals.First(portal => portal.DestinationLogicalProfile == dungeon.LogicalId);
@@ -144,7 +144,7 @@ public sealed class AssembledWorldTravelSessionTests
         (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) exit = resumed.Session.Sites.Projection.Portals.All.First();
         resumed.Use(exit.Portal, exit.Entity);
         Assert.Equal(exterior, resumed.Session.Sites.ActiveProfile);
-        WorldPoint returned = resumed.Session.Sites.ExteriorSitePosition(resumed.Session.State.PlayerControl.Position!.Value);
+        WorldPoint returned = resumed.Session.Exterior.ExteriorSitePosition(resumed.Session.State.PlayerControl.Position!.Value);
         Assert.True(Vector3.Distance(stood.ToVector(), returned.ToVector()) < 1e-2F, $"{stood} vs {returned}");
 
         // Brought inside rather than walking in, the player has no entrance to return through.
@@ -154,7 +154,7 @@ public sealed class AssembledWorldTravelSessionTests
         resumed.Use(exit.Portal, exit.Entity);
         DaggerfallSiteAnchor landing = outside.RequireAnchor(DaggerfallLocationAssembly.DungeonEntranceAnchor);
         Assert.Equal(exterior, resumed.Session.Sites.ActiveProfile);
-        Assert.True(Vector3.Distance(landing.Position.ToVector(), resumed.Session.Sites.ExteriorSitePosition(resumed.Session.State.PlayerControl.Position!.Value).ToVector()) < 1e-2F);
+        Assert.True(Vector3.Distance(landing.Position.ToVector(), resumed.Session.Exterior.ExteriorSitePosition(resumed.Session.State.PlayerControl.Position!.Value).ToVector()) < 1e-2F);
         Assert.Equal(landing.YawRadians, resumed.Session.State.PlayerControl.YawRadians);
     }
 

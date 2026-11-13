@@ -116,7 +116,7 @@ public sealed class QuestWorldTriggerTests
     public void Actual_town_footprint_includes_source_one_block_clearance(float x, float z, bool expected)
     {
         var footprint = new DaggerfallSiteExterior(1, 1, 2, 3, 48, 40, false, 0, 0, 0, 0, 0);
-        Assert.Equal(expected, DaggerfallSiteLifecycle.InsideLocationFootprint(footprint, x, z));
+        Assert.Equal(expected, DaggerfallExteriorWorld.InsideLocationFootprint(footprint, x, z));
     }
 
     private static DaggerfallQuestTaskState Task(DaggerfallSession session, string symbol) => session.State.Quests.Capture().Instances.Single().Tasks.Single(v => v.Symbol == symbol);

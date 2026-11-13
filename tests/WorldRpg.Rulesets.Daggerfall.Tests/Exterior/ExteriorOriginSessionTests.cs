@@ -61,7 +61,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         }
         host.Call(engine =>
         {
-            Vector3 exteriorFrame = session.Sites.ExteriorProfileFrameTranslation(exterior.ProfileKey);
+            Vector3 exteriorFrame = session.Exterior.ExteriorProfileFrameTranslation(exterior.ProfileKey);
             // Charing's sampled terrain height is deliberately not representable by the old
             // quarter-level placement field.  The location artifact and every source-owned pose
             // must therefore agree on this exact continuous frame.
@@ -86,7 +86,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
 
             // Probe the neighbouring map pixel the ground reaches into, clear of the location's own collision.
             // Every hit is the collider's, and it stands where the drawn surface does.
-            DaggerfallExteriorCellResidencySave admitted = session.Sites.CaptureExteriorResidency()
+            DaggerfallExteriorCellResidencySave admitted = session.Exterior.CaptureExteriorResidency()
                 ?? throw new InvalidOperationException("Native Charing session did not admit an exterior terrain window.");
             HashSet<DaggerfallExteriorCellId> locationCells = definitions.Locations.Records
                 .Where(record => record.Exterior is not null)
@@ -104,7 +104,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
                 Corner(side.X != 0 ? cellCorner.X + edgeX : livePlayer.X + (step * 4.7F)), 0F,
                 Corner(side.Y != 0 ? cellCorner.Z + edgeZ : livePlayer.Z + (step * 4.7F))))];
             DaggerfallHorizonGround function = new(definitions.Terrain, (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value,
-                DaggerfallTuning.Defaults.Horizon, DaggerfallTuning.Defaults.Ground, session.Sites.Locations);
+                DaggerfallTuning.Defaults.Horizon, DaggerfallTuning.Defaults.Ground, session.Exterior.Locations);
             float Drawn(Vector3 corner)
             {
                 HeightfieldTileSamples samples = (HeightfieldTileSamples)Activator.CreateInstance(typeof(HeightfieldTileSamples),
@@ -158,8 +158,8 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
 
             session.State.PlayerControl.MoveTo(new Vector3(1000f, 1f, 5f));
             long actor = session.SpawnActor("rat", new ActorPose(new WorldPoint(1002f, 1f, 5f), 0f));
-            session.Sites.RebaseExteriorIfNeeded();
-            Vector3 delta = session.Sites.LocalCompensation;
+            session.Exterior.RebaseExteriorIfNeeded();
+            Vector3 delta = session.Exterior.LocalCompensation;
             Assert.NotEqual(Vector3.Zero, delta);
             SpatialHit after = Hit(ray + delta);
             Assert.True(after.Present);
@@ -287,8 +287,8 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
                 DaggerfallNpcBody.Position(session.State.Actors.Store, npcBody).ToVector());
             Assert.Equal(actorPosition.ToVector() + delta, session.State.Actors.Store.Get(
                 session.State.Actors.Get(actorId).Actor.Entity, EngineComponentTypes.CharacterMotion).SupportPreviousTranslation);
-            Assert.Empty(session.State.Actors.Store.Query(DaggerfallSiteLifecycle.GlobalPositions));
-            Vector3 activePortalProfile = session.Sites.LocalToProfile(
+            Assert.Empty(session.State.Actors.Store.Query(DaggerfallExteriorWorld.GlobalPositions));
+            Vector3 activePortalProfile = session.Exterior.LocalToProfile(
                 session.Sites.Projection.Portals.All.First().Portal.Position.ToVector());
             Assert.Equal(exterior.Portals[0].Position.X, activePortalProfile.X, 3);
             Assert.Equal(exterior.Portals[0].Position.Y, activePortalProfile.Y, 3);
@@ -332,16 +332,16 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         // Quest NPC registry positions are profile coordinates.  Re-entry projects them through
         // both the saved origin compensation and Charing's admitted continuous terrain frame;
         // resident player/actor poses already carry that frame in their saved local coordinates.
-        WorldPoint expectedNpcLocal = restored.Sites.ProfileToLocal(npcPosition);
+        WorldPoint expectedNpcLocal = restored.Exterior.ProfileToLocal(npcPosition);
         Vector3 restoredNpcLocal = DaggerfallNpcBody.Position(restored.State.Actors.Store, npcEntity).ToVector();
         Assert.Equal(expectedNpcLocal.ToVector(), restoredNpcLocal);
         Assert.Equal(restoredNpcLocal,
             restored.Dialogue.NpcTargets().Single(target => target.Identity.Value == (ulong)npcId).Position.ToVector());
-        Vector3 restoredNpcProfile = restored.Sites.LocalToProfile(restoredNpcLocal);
+        Vector3 restoredNpcProfile = restored.Exterior.LocalToProfile(restoredNpcLocal);
         Assert.Equal(npcPosition.X, restoredNpcProfile.X, 3);
         Assert.Equal(npcPosition.Y, restoredNpcProfile.Y, 3);
         Assert.Equal(npcPosition.Z, restoredNpcProfile.Z, 3);
-        Vector3 restoredPortalProfile = restored.Sites.LocalToProfile(
+        Vector3 restoredPortalProfile = restored.Exterior.LocalToProfile(
             restored.Sites.Projection.Portals.All.First().Portal.Position.ToVector());
         Assert.Equal(exterior.Portals[0].Position.X, restoredPortalProfile.X, 3);
         Assert.Equal(exterior.Portals[0].Position.Y, restoredPortalProfile.Y, 3);
@@ -351,11 +351,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         // captured. Both remove the admitted terrain frame and store the canonical profile pose, so a
         // return belongs to the departed profile whichever town anchored the window.
         Vector3 restoredPlayerLocal = restored.State.PlayerControl.Position!.Value.ToVector();
-        Vector3 expectedPlayerProfile = restored.Sites.LocalToProfile(restoredPlayerLocal);
+        Vector3 expectedPlayerProfile = restored.Exterior.LocalToProfile(restoredPlayerLocal);
         Vector3 expectedReturnPlayer = expectedPlayerProfile;
         // A dropped pile keeps the origin-normalized local frame rather than the profile frame.
-        Vector3 expectedGround = restoredPlayerLocal - restored.Sites.LocalCompensation;
-        Vector3 expectedActorProfile = restored.Sites.LocalToProfile(
+        Vector3 expectedGround = restoredPlayerLocal - restored.Exterior.LocalCompensation;
+        Vector3 expectedActorProfile = restored.Exterior.LocalToProfile(
             restored.State.Actors.Get(actorId).Position.ToVector());
         Assert.True(restored.TryTransitionTo(interior.ProfileKey));
         DaggerfallSavePayload inside = DaggerfallSavePayload.Read(restored.CaptureSave());
@@ -397,20 +397,20 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         Assert.Equal(DurableEntityResolution.Materialized,
             fromInside.State.Actors.Entities.Classify(actorIdentity, fromInside.State.Npcs.Identities!));
         WorldPoint savedActorProfile = new(insideActor.X, insideActor.Y, insideActor.Z);
-        WorldPoint fromInsideActorPosition = fromInside.Sites.ProfileToLocal(savedActorProfile);
+        WorldPoint fromInsideActorPosition = fromInside.Exterior.ProfileToLocal(savedActorProfile);
         Assert.Equal(fromInsideActorPosition.X, fromInside.State.Actors.Get(actorId).Position.X, 3);
         Assert.Equal(fromInsideActorPosition.Y, fromInside.State.Actors.Get(actorId).Position.Y, 3);
         Assert.Equal(fromInsideActorPosition.Z, fromInside.State.Actors.Get(actorId).Position.Z, 3);
         Assert.Single(fromInside.DynamicActors, actor => actor.Key == actorId);
-        Vector3 fromInsidePlayerProfile = fromInside.Sites.LocalToProfile(fromInside.State.PlayerControl.Position!.Value.ToVector());
+        Vector3 fromInsidePlayerProfile = fromInside.Exterior.LocalToProfile(fromInside.State.PlayerControl.Position!.Value.ToVector());
         Assert.Equal(returnPose.X, fromInsidePlayerProfile.X, 3);
         Assert.Equal(returnPose.Y, fromInsidePlayerProfile.Y, 3);
         Assert.Equal(returnPose.Z, fromInsidePlayerProfile.Z, 3);
         Assert.True(restored.TryTransitionTo(exterior.ProfileKey));
-        WorldPoint restoredActorPosition = restored.Sites.ProfileToLocal(savedActorProfile);
+        WorldPoint restoredActorPosition = restored.Exterior.ProfileToLocal(savedActorProfile);
         Assert.Equal(restoredActorPosition.X, restored.State.Actors.Get(actorId).Position.X, 3);
         Assert.Equal(restoredActorPosition.Y, restored.State.Actors.Get(actorId).Position.Y, 3);
-        Vector3 restoredPlayerProfile = restored.Sites.LocalToProfile(
+        Vector3 restoredPlayerProfile = restored.Exterior.LocalToProfile(
             restored.State.PlayerControl.Position!.Value.ToVector());
         Assert.Equal(returnPose.X, restoredPlayerProfile.X, 3);
         Assert.Equal(returnPose.Y, restoredPlayerProfile.Y, 3);
@@ -418,7 +418,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         Assert.Equal(expectedPlayerProfile.X, restoredPlayerProfile.X, 3);
         Assert.Equal(expectedPlayerProfile.Y, restoredPlayerProfile.Y, 3);
         Assert.Equal(expectedPlayerProfile.Z, restoredPlayerProfile.Z, 3);
-        Assert.Equal(Vector3.Zero, restored.Sites.LocalCompensation);
+        Assert.Equal(Vector3.Zero, restored.Exterior.LocalCompensation);
     }
 
     [Fact]
@@ -439,8 +439,8 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         session.State.PlayerControl.YawRadians = .3f;
         var encounter = session.QueueEncounter(new(DaggerfallEncounterContext.WildernessDay, 1, Climate: 224));
         Assert.NotNull(encounter.ActorDefinition);
-        session.Sites.RebaseExteriorIfNeeded();
-        Vector3 delta = session.Sites.LocalCompensation;
+        session.Exterior.RebaseExteriorIfNeeded();
+        Vector3 delta = session.Exterior.LocalCompensation;
         RulesetSavePayload saved = session.CaptureSave();
         var payload = DaggerfallSavePayload.Read(saved);
         Assert.Equal(encounter.Pose.Position.ToVector() + delta, Assert.Single(payload.Encounters.Resolved).Pose.Position.ToVector());
@@ -491,8 +491,8 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
         // The step moved the origin under the player, so every water volume now sits in a new frame.
-        Assert.NotEqual(Vector3.Zero, session.Sites.LocalCompensation);
-        CharacterWaterVolume[] water = session.Sites.CharacterEnvironment(session.State.PlayerControl.Motion).WaterVolumes.ToArray();
+        Assert.NotEqual(Vector3.Zero, session.Exterior.LocalCompensation);
+        CharacterWaterVolume[] water = session.Exterior.CharacterEnvironment(session.State.PlayerControl.Motion).WaterVolumes.ToArray();
         Assert.NotEmpty(water);
         // Actor navigation asks the Engine's trigger rows whether an actor is in water; those rows are
         // the volumes as they now stand, not as they stood before the origin moved.
@@ -521,7 +521,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
 
             for (ulong step = 1; step <= 3; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
 
-            DaggerfallExteriorCellId reached = session.Sites.CurrentExteriorCell();
+            DaggerfallExteriorCellId reached = session.Exterior.CurrentExteriorCell();
             if (edgeX is { } x) Assert.Equal(x, reached.X);
             if (edgeY is { } y) Assert.Equal(y, reached.Y);
         }
@@ -548,11 +548,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             Vector3 after = Global(session);
             Assert.Equal(before.X, after.X, 2);
             Assert.Equal(before.Z + 10F, after.Z, 2);
-            Assert.Equal(999, session.Sites.CurrentExteriorCell().X);
+            Assert.Equal(999, session.Exterior.CurrentExteriorCell().X);
         }
 
         static Vector3 Global(DaggerfallSession session) =>
-            session.State.PlayerControl.Position!.Value.ToVector() - session.Sites.LocalCompensation;
+            session.State.PlayerControl.Position!.Value.ToVector() - session.Exterior.LocalCompensation;
     }
 
     [Fact]
@@ -586,7 +586,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             host.Call(_ => session.Update(new ProductUpdate(OuterUpdate(1), [])));
             OnGround(host, session);
             host.Call(_ => session.Update(new ProductUpdate(OuterUpdate(2), [])));
-            Assert.Equal(999, session.Sites.CurrentExteriorCell().X);
+            Assert.Equal(999, session.Exterior.CurrentExteriorCell().X);
             WorldPoint held = session.State.PlayerControl.Position!.Value;
 
             // Each step begins past the boundary, as one that has just walked over it does, clear of ground that may rise there.
@@ -600,7 +600,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
                 });
                 Assert.Equal(held.X, session.State.PlayerControl.Position!.Value.X, 2);
             }
-            Assert.Equal(999, session.Sites.CurrentExteriorCell().X);
+            Assert.Equal(999, session.Exterior.CurrentExteriorCell().X);
         }
         finally
         {
@@ -646,9 +646,9 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         // A step that moves the player and leaves the origin alone still reconciles after movement, with
         // the action graph admitted. Engine keeps only the rows of the last reconcile, so the water
         // volumes must be in it: actor navigation asks those rows whether an actor stands in water.
-        Assert.Equal(Vector3.Zero, session.Sites.LocalCompensation);
+        Assert.Equal(Vector3.Zero, session.Exterior.LocalCompensation);
         Assert.True(spatial.TriggerReconcileCalls - reconcilesBefore >= 2);
-        CharacterWaterVolume[] water = session.Sites.CharacterEnvironment(session.State.PlayerControl.Motion).WaterVolumes.ToArray();
+        CharacterWaterVolume[] water = session.Exterior.CharacterEnvironment(session.State.PlayerControl.Motion).WaterVolumes.ToArray();
         Assert.NotEmpty(water);
         foreach (CharacterWaterVolume volume in water)
         {
@@ -683,8 +683,8 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             // Walk 20 km east; the in-play rebase keeps the player and a nearby rat close to the origin.
             session.State.PlayerControl.MoveTo(new Vector3(20000f, 1f, 5f));
             far = session.SpawnActor("rat", new ActorPose(new WorldPoint(20002f, 1f, 5f), 0f));
-            Assert.True(session.Sites.RebaseExteriorIfNeeded());
-            farProfile = session.Sites.LocalToProfile(session.State.Actors.Get(far).Position.ToVector());
+            Assert.True(session.Exterior.RebaseExteriorIfNeeded());
+            farProfile = session.Exterior.LocalToProfile(session.State.Actors.Get(far).Position.ToVector());
 
             // Returning the origin to cell zero leaves the rat beyond the local envelope. The reset
             // excludes it from the Engine batch instead of refusing, and still carries it into the
@@ -733,22 +733,22 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
-        var before = session.Sites.CaptureExteriorResidency()!.Value;
+        var before = session.Exterior.CaptureExteriorResidency()!.Value;
         WorldPoint destination = new(4 * DaggerfallExteriorCellResidency.CellSize, -50, -1);
         Assert.True(session.AwaitArrivalGround().Done);
         // The ground at the destination is not there yet: nobody stands until it is.
         spatial.HeightfieldColliderReady = false;
         Assert.True(session.Sites.TryRelocatePlayer(exterior.ProfileKey, new("recall", destination, .7f, .1f)));
-        Assert.True(session.Sites.CollisionPending);
+        Assert.True(session.Exterior.CollisionPending);
         Assert.False(session.AwaitArrivalGround().Done);
         spatial.HeightfieldColliderReady = true;
         Assert.True(session.AwaitArrivalGround().Done);
         Assert.Single(engine.OriginCommits);
-        var after = session.Sites.CaptureExteriorResidency()!.Value;
+        var after = session.Exterior.CaptureExteriorResidency()!.Value;
         Assert.Equal(new DaggerfallExteriorCellId(before.Origin.X + 4, before.Origin.Y), after.Center);
-        Assert.Equal(after.Center, session.Sites.CurrentExteriorCell());
+        Assert.Equal(after.Center, session.Exterior.CurrentExteriorCell());
         // The recalled point lies below the terrain four cells east, so the arrival stands on the terrain above it.
-        Vector3 arrived = session.Sites.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector());
+        Vector3 arrived = session.Exterior.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector());
         Assert.Equal(destination.X, arrived.X, 3);
         Assert.Equal(destination.Z, arrived.Z, 3);
         Assert.True(arrived.Y > destination.Y, $"Recalled to {destination}, the player stands at {arrived}.");
@@ -769,11 +769,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
-        DaggerfallExteriorCellId center = session.Sites.CaptureExteriorResidency()!.Value.Center;
+        DaggerfallExteriorCellId center = session.Exterior.CaptureExteriorResidency()!.Value.Center;
 
-        Assert.True(session.Sites.HoldsExteriorSurface(new(center.X + 4, center.Y)));
-        Assert.True(session.Sites.HoldsExteriorSurface(new(center.X - 4, center.Y + 4)));
-        Assert.False(session.Sites.HoldsExteriorSurface(new(center.X + 5, center.Y)));
+        Assert.True(session.Exterior.HoldsExteriorSurface(new(center.X + 4, center.Y)));
+        Assert.True(session.Exterior.HoldsExteriorSurface(new(center.X - 4, center.Y + 4)));
+        Assert.False(session.Exterior.HoldsExteriorSurface(new(center.X + 5, center.Y)));
     }
 
     [Fact]
@@ -787,17 +787,17 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
-        DaggerfallExteriorCellId site = session.Sites.CaptureExteriorResidency()!.Value.Center;
-        Vector3 here = session.Sites.LocalToProfile(Vector3.Zero);
+        DaggerfallExteriorCellId site = session.Exterior.CaptureExteriorResidency()!.Value.Center;
+        Vector3 here = session.Exterior.LocalToProfile(Vector3.Zero);
 
         WorldPoint away = new(5 * DaggerfallExteriorCellResidency.CellSize, -50, -1);
         Assert.True(session.Sites.TryRelocatePlayer(exterior.ProfileKey, new("recall", away, .7f, .1f)));
-        Assert.DoesNotContain(site, session.Sites.ResidentExteriorCells);
-        Assert.False(session.Sites.HoldsExteriorSurface(site));
+        Assert.DoesNotContain(site, session.Exterior.ResidentExteriorCells);
+        Assert.False(session.Exterior.HoldsExteriorSurface(site));
 
         // Every update asks where the site stands: that must not build its whole cell again.
-        Vector3 there = session.Sites.LocalToProfile(Vector3.Zero);
-        Assert.False(session.Sites.HoldsExteriorSurface(site));
+        Vector3 there = session.Exterior.LocalToProfile(Vector3.Zero);
+        Assert.False(session.Exterior.HoldsExteriorSurface(site));
         Assert.NotEqual(here, there);
     }
 
@@ -814,21 +814,21 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
-        var before = session.Sites.CaptureExteriorResidency()!.Value;
+        var before = session.Exterior.CaptureExteriorResidency()!.Value;
         WorldPoint start = session.State.PlayerControl.Position
             ?? throw new InvalidOperationException("The exterior player has no position.");
         // Rebase thresholds are evaluated in the current local frame. The authored profile is
         // elevated by Charing's sampled terrain frame, so offset the probe back into that frame
         // while keeping the asserted durable profile pose explicit.
-        float frameHeight = session.Sites.ExteriorProfileFrameTranslation(exterior.ProfileKey).Y;
-        Vector3 startProfile = session.Sites.LocalToProfile(start.ToVector());
+        float frameHeight = session.Exterior.ExteriorProfileFrameTranslation(exterior.ProfileKey).Y;
+        Vector3 startProfile = session.Exterior.LocalToProfile(start.ToVector());
         WorldPoint desiredProfilePosition = new(startProfile.X, height - frameHeight, startProfile.Z);
-        WorldPoint desiredLocalPosition = session.Sites.ProfileToLocal(desiredProfilePosition);
+        WorldPoint desiredLocalPosition = session.Exterior.ProfileToLocal(desiredProfilePosition);
         session.State.PlayerControl.MoveTo(desiredLocalPosition.ToVector());
-        session.Sites.RebaseExteriorIfNeeded();
+        session.Exterior.RebaseExteriorIfNeeded();
         Assert.Single(engine.OriginCommits);
-        Assert.Equal(before.Center, session.Sites.CurrentExteriorCell());
-        Vector3 actualProfilePosition = session.Sites.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector());
+        Assert.Equal(before.Center, session.Exterior.CurrentExteriorCell());
+        Vector3 actualProfilePosition = session.Exterior.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector());
         Assert.Equal(desiredProfilePosition.X, actualProfilePosition.X, 3);
         Assert.Equal(desiredProfilePosition.Y, actualProfilePosition.Y, 3);
         Assert.Equal(desiredProfilePosition.Z, actualProfilePosition.Z, 3);
@@ -836,7 +836,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         // rebase retains the local height residual while preserving the requested profile height.
         Assert.Equal(desiredLocalPosition.Y - MathF.Floor(desiredLocalPosition.Y),
             session.State.PlayerControl.Position.Value.Y, 3);
-        Assert.Equal(-MathF.Floor(desiredLocalPosition.Y), session.Sites.LocalCompensation.Y);
+        Assert.Equal(-MathF.Floor(desiredLocalPosition.Y), session.Exterior.LocalCompensation.Y);
     }
 
     [Fact]
@@ -877,7 +877,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         session.ChooseTeleport(session.TeleportView!.Revision, "anchor");
         Assert.True(session.TryTransitionTo(exterior.ProfileKey));
         session.State.PlayerControl.MoveTo(new Vector3(1000, 1, 5));
-        session.Sites.RebaseExteriorIfNeeded();
+        session.Exterior.RebaseExteriorIfNeeded();
         RequestTeleport();
         engine.FailNextCameraUpdate();
         DaggerfallOriginCommitException failure = Assert.Throws<DaggerfallOriginCommitException>(
@@ -904,7 +904,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
             new(definitions, exterior, DaggerfallTuning.Defaults) { Profiles = new([exterior, interior]) });
         session.State.PlayerControl.MoveTo(new Vector3(1000, 1, 5));
-        session.Sites.RebaseExteriorIfNeeded();
+        session.Exterior.RebaseExteriorIfNeeded();
         Assert.Single(engine.OriginCommits);
         engine.FailNextCameraUpdate();
         DaggerfallOriginCommitException failure = Assert.Throws<DaggerfallOriginCommitException>(() => session.TryTransitionTo(interior.ProfileKey));
@@ -912,7 +912,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         Assert.Contains("inconsistent world coordinates", failure.Message);
         Assert.IsType<InvalidOperationException>(failure.InnerException);
         Assert.Equal(2, engine.OriginCommits.Count);
-        Assert.Equal(Vector3.Zero, session.Sites.LocalCompensation);
+        Assert.Equal(Vector3.Zero, session.Exterior.LocalCompensation);
         Assert.Equal(exterior.ProfileKey, session.Sites.ActiveProfile);
         Assert.Equal(new WorldPoint(1000, 1, 5), session.State.PlayerControl.Position);
     }

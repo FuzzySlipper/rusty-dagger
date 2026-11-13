@@ -34,7 +34,7 @@ internal sealed partial class DaggerfallSession
         // providers are materialized by DaggerfallActorRoster as real actor entities so dialogue,
         // targeting and site lifetime all observe the same owner; projecting them here would
         // collide with that actor identity.
-        var active = State.Npcs.All.Where(npc => _sites.ActiveLocationLoaded && npc.Kind == DaggerfallNpcKind.Questor
+        var active = State.Npcs.All.Where(npc => _exterior.ActiveLocationLoaded && npc.Kind == DaggerfallNpcKind.Questor
             && npc.Profile == profile.ProfileKey && State.Npcs.IsGameplayActive(npc.DurableId)).ToDictionary(npc => npc.DurableId);
         foreach (var entry in State.Actors.Store.Query<DaggerfallNpcBody>())
         {
@@ -47,7 +47,7 @@ internal sealed partial class DaggerfallSession
         {
             if (npc.X is not float x || npc.Y is not float y || npc.Z is not float z)
                 throw new InvalidOperationException($"Placed NPC {npc.DurableId} has no profile position.");
-            ProjectNpc(npc, profile, _sites.ProfileToLocal(new(x, y, z)));
+            ProjectNpc(npc, profile, _exterior.ProfileToLocal(new(x, y, z)));
         }
 
         ReconcileCivilianPopulation();
@@ -106,7 +106,7 @@ internal sealed partial class DaggerfallSession
         State.Npcs.SetDisplayName(id, person.DisplayName);
         // A live actor owns its own pose; only a projected questor keeps a detached registry placement.
         if (State.Actors.TryGet(id, out _)) State.Npcs.Bind(id, profile.ProfileKey);
-        else State.Npcs.Place(id, profile.ProfileKey, WorldPoint.From(_sites.LocalToProfile(position.ToVector())));
+        else State.Npcs.Place(id, profile.ProfileKey, WorldPoint.From(_exterior.LocalToProfile(position.ToVector())));
         return DaggerfallQuestResourceBinding.Actors(id);
     }
 }

@@ -77,8 +77,8 @@ internal sealed partial class DaggerfallSession
     /// used by live population and map reads, so feeding it back to a relocation resolves an impossible exterior cell.
     /// </summary>
     private Vector3 ProfilePosition(WorldPoint local) => _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
-        ? _sites.ExteriorSitePosition(local).ToVector()
-        : _sites.LocalToProfile(local.ToVector());
+        ? _exterior.ExteriorSitePosition(local).ToVector()
+        : _exterior.LocalToProfile(local.ToVector());
 
     internal void ChooseTeleport(string revision, string choice)
     {

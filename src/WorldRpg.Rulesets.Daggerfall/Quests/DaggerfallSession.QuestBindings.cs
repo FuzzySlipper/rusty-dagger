@@ -9,7 +9,7 @@ internal sealed partial class DaggerfallSession
     DaggerfallQuestResourceBinding? IDaggerfallQuestWorldAdmission.Place(string instanceId, DaggerfallQuestResourceState resource,
         DaggerfallSiteProfile profile, DaggerfallSiteMarker marker)
     {
-        var position = _sites.ProfileToLocal(marker.Position);
+        var position = _exterior.ProfileToLocal(marker.Position);
         if (resource.SelectedFoe is { } foe)
         {
             if (resource.IsHidden || resource.Binding.ActorIds.Length > 0 && resource.Binding.ActorIds.All(resource.RemovedFoeIds.Contains)) return null;

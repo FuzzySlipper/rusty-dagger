@@ -99,6 +99,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The one owner of the active site projection, catalog, deltas and exterior window.</summary>
     // Assigned once the roster and persistence it composes exist; readers before that are lazy.
     private readonly DaggerfallSiteLifecycle _sites = null!;
+    private DaggerfallExteriorWorld _exterior => _sites.Exterior;
     private DaggerfallWorldProfileKey _activeProfileKey => _sites.ActiveProfile;
     private DaggerfallSiteAppearance _appearance => _sites.Projection.Appearance;
     private DaggerfallDoorRuntime _doors => _sites.Projection.Doors;
@@ -140,8 +141,11 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>Admits the full selected site catalog once composition has constructed this session.</summary>
     internal void AdmitSiteProfiles(DaggerfallSiteProfiles profiles) => _sites.AdmitProfiles(profiles);
 
-    /// <summary>The session's site lifecycle: projection, catalog, deltas and exterior window.</summary>
+    /// <summary>The session's site lifecycle: projection, catalog, deltas and transitions.</summary>
     internal DaggerfallSiteLifecycle Sites => _sites;
+
+    /// <summary>The cells streamed around the player and the towns placed on them.</summary>
+    internal DaggerfallExteriorWorld Exterior => _sites.Exterior;
 
     /// <summary>The admitted spatial scene, for Engine queries made outside an update such as a test looking along a wall.</summary>
     internal SpatialMovementSystem Spatial => _spatial;
@@ -163,13 +167,13 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         return _sites.TryTransitionTo(destination, arrivalAnchor);
     }
 
-    void IDaggerfallSiteTransitionHost.RelocatePlayer(WorldPoint position, float yawRadians, float pitchRadians) =>
+    void IDaggerfallExteriorHost.RelocatePlayer(WorldPoint position, float yawRadians, float pitchRadians) =>
         ApplyRelocation(position, yawRadians, pitchRadians);
 
-    void IDaggerfallSiteTransitionHost.ConfigureSiteAppearance(DaggerfallSiteAppearance appearance) =>
+    void IDaggerfallExteriorHost.ConfigureSiteAppearance(DaggerfallSiteAppearance appearance) =>
         ConfigureSiteAppearance(appearance);
 
-    void IDaggerfallSiteTransitionHost.RebuildActivation()
+    void IDaggerfallExteriorHost.RebuildActivation()
     {
         ReconcileNpcProjection();
         ReconcilePropertyContainers();
@@ -177,7 +181,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         SyncWeatherContext();
     }
 
-    void IDaggerfallSiteTransitionHost.RebaseTransientWorld(Vector3 delta)
+    void IDaggerfallExteriorHost.RebaseTransientWorld(Vector3 delta)
     {
         _combat.RebaseRangedFlight(delta);
         Casting.Rebase(delta);
@@ -190,7 +194,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     void IDaggerfallSiteTransitionHost.ReconcileArrivalPopulation() => ReconcileCivilianPopulation();
 
-    void IDaggerfallSiteTransitionHost.GroundArrivedActors() => _grounding.GroundAwaiting(actor =>
+    void IDaggerfallExteriorHost.GroundArrivedActors() => _grounding.GroundAwaiting(actor =>
         State.Actors.TryGet(actor.DurableId, out ActorState live) && live.Actor.Entity == actor.Actor.Entity);
 
     void IDaggerfallSiteTransitionHost.EnteredSite()
@@ -203,7 +207,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         ReconcileLawSite();
     }
 
-    void IDaggerfallSiteTransitionHost.AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection) =>
+    void IDaggerfallExteriorHost.AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection) =>
         AdmitResidentCivilianAppearances(projection);
 
     /// <summary>
@@ -331,10 +335,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         DaggerfallMolagBalEffects.Reconcile(State.Effects, MolagBalEquipped);
         State.ItemInstances.ReconcileResidentOwners();
         _heldEnchantments.Refresh();
-        using IDisposable detachedResidents = _sites.SuspendResidentExteriorLocationsForSave();
+        using IDisposable detachedResidents = _exterior.SuspendResidentExteriorLocationsForSave();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _roster.Dynamic, _encounters,
             _sites.Deltas, _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
-            _sites.Projection.CaptureMotion(), _sites.CaptureExteriorResidency(), _sites.CaptureExteriorLocationResidency());
+            _sites.Projection.CaptureMotion(), _exterior.CaptureExteriorResidency(), _exterior.CaptureExteriorLocationResidency());
     }
 
     /// <summary>
@@ -513,15 +517,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _disposed = true;
         // DisposeAll walks backward: projection door entities must release before the actor store.
         Exception? failure = null;
-        try { _sites.ReleaseExteriorWaterTriggers(); }
+        try { _exterior.ReleaseExteriorWaterTriggers(); }
         catch (Exception exception) { failure = exception; }
-        try { _sites.DropGroundCollider(); }
+        try { _exterior.DropGroundCollider(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
-        try { _sites.RetireResidentExteriorLocations(capture: false); }
+        try { _exterior.RetireResidentExteriorLocations(capture: false); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, .. _atlasTiles is null ? Array.Empty<IDisposable>() : new IDisposable[] { _atlasTiles }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections, _horizon, _weatherPresentation]); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
-        try { _sites.RetireExteriorAppearance(); }
+        try { _exterior.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         // The test figure's appearances and rigs are released once no site appearance draws them.
         try { _peopleRigs?.Dispose(); }
@@ -751,7 +755,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _sites.Projection.Lighting.UpdateMagicCandle(candlePosition, _tuning.NormalLight);
         _appearance.UpdateMagicCandle(candlePosition);
         if (State.PlayerControl.Position is { } eyeFeet)
-            _viewLight.Update(() => _sites.ViewLight(eyeFeet.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight));
+            _viewLight.Update(() => _exterior.ViewLight(eyeFeet.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight));
         foreach (var appearance in _sites.Appearances) appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
             _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep

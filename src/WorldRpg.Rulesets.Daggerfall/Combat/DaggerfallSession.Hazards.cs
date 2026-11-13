@@ -31,7 +31,7 @@ internal sealed partial class DaggerfallSession
         Vector3[] fires = FireSpots();
         if (State.PlayerControl.Position is WorldPoint player)
         {
-            int burn = _fires.BurnPlayer(_fires.Near(_sites.LocalToProfile(player.ToVector()), fires), seconds, FireFelt(State.Actors.Player.Stats));
+            int burn = _fires.BurnPlayer(_fires.Near(_exterior.LocalToProfile(player.ToVector()), fires), seconds, FireFelt(State.Actors.Player.Stats));
             if (burn > 0)
             {
                 Burn(State.Actors.Player.Actor, burn);
@@ -42,7 +42,7 @@ internal sealed partial class DaggerfallSession
         foreach (long thrown in _reactions.Held)
         {
             if (!State.Actors.TryGet(thrown, out ActorState actor) || actor.IsDefeated) continue;
-            Vector3 at = _sites.LocalToProfile(actor.Position.ToVector());
+            Vector3 at = _exterior.LocalToProfile(actor.Position.ToVector());
             if (_fires.Near(at, fires)) _fires.Ignite(thrown);
             SpringTraps(actor, at);
         }

@@ -206,7 +206,7 @@ public sealed class DaggerfallPopulationSessionTests
         WorldPoint authoredPose = new(1F, 1F, 1F);
         // The live actor's Transform is the only pose owner; the registry keeps identity and binding.
         Assert.Null(residentNpc.X);
-        admitted!.ApplyPose(new ActorPose(session.Sites.ProfileToLocal(authoredPose), admitted.HeadingYawRadians));
+        admitted!.ApplyPose(new ActorPose(session.Exterior.ProfileToLocal(authoredPose), admitted.HeadingYawRadians));
 
         // The resident actor remains live while the active source changes. No copy is written into
         // the registry; the resident actor still owns its pose in its own cell's frame.
@@ -215,7 +215,7 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.Equal(resident.ProfileKey, returnedNpc.Profile);
         Assert.Null(returnedNpc.X);
         Assert.True(session.State.Actors.TryGet(residentId, out ActorState? live));
-        Vector3 liveExpected = authoredPose.ToVector() + session.Sites.ExteriorProfileFrameTranslation(resident.ProfileKey);
+        Vector3 liveExpected = authoredPose.ToVector() + session.Exterior.ExteriorProfileFrameTranslation(resident.ProfileKey);
         Assert.Equal(liveExpected.X, live!.Position.X, 3);
         Assert.Equal(liveExpected.Z, live.Position.Z, 3);
 
@@ -242,7 +242,7 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.True(session.TryTransitionTo(source.ProfileKey));
         Assert.True(session.State.Actors.TryGet(residentId, out ActorState? restored));
         Vector3 expected = authoredPose.ToVector()
-            + session.Sites.ExteriorProfileFrameTranslation(resident.ProfileKey);
+            + session.Exterior.ExteriorProfileFrameTranslation(resident.ProfileKey);
         Assert.Equal(expected.X, restored!.Position.X, 3);
         Assert.Equal(expected.Y, restored.Position.Y, 3);
         Assert.Equal(expected.Z, restored.Position.Z, 3);
@@ -284,7 +284,7 @@ public sealed class DaggerfallPopulationSessionTests
             && TestPayload.Definitions.Catalogs.Races.Any(race => race.DonorRaceId == faction.Race));
         Assert.Equal(DaggerfallSession.PopulationRole(sourceFaction), civilian.Role);
         Assert.True(session.State.Actors.TryGet(id, out ActorState? actor));
-        Assert.Equal(session.Sites.ProfileToLocal(new WorldPoint(1F, 1F, 1F)), actor!.Position);
+        Assert.Equal(session.Exterior.ProfileToLocal(new WorldPoint(1F, 1F, 1F)), actor!.Position);
 
         actor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60;

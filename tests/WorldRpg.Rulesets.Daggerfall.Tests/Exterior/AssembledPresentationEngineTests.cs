@@ -60,7 +60,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             AssertAccepted(run);
             IReadOnlyList<ulong> ids = run.Graphics.LastSnapshotIds;
             int nature = ids.Count(id => id >= 1UL << 49 && id < 1UL << 50);
-            int cells = run.Session.Sites.ResidentExteriorCells.Count;
+            int cells = run.Session.Exterior.ResidentExteriorCells.Count;
             output.WriteLine($"Island admission (new game, hold, leaving it): {admission.Elapsed.TotalSeconds:F1} s; snapshot {ids.Count} objects "
                 + $"({cells} resident cells, {nature} nature batches); managed +{(managedAfter - managedBefore) / (1024 * 1024)} MiB, "
                 + $"process working set +{(Environment.WorkingSet - processBefore) / (1024 * 1024)} MiB.");
@@ -70,7 +70,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             Assert.InRange(nature, cells, cells * 32);
 
             // Every resident neighbour's meshes are drawn, each under its own location slot.
-            IReadOnlyCollection<DaggerfallWorldProfileKey> neighbours = run.Session.Sites.ResidentExteriorProfiles;
+            IReadOnlyCollection<DaggerfallWorldProfileKey> neighbours = run.Session.Exterior.ResidentExteriorProfiles;
             Assert.NotEmpty(neighbours);
             int neighbourMeshes = neighbours.Sum(key => world.Profiles.Require(key).Geometry.Meshes.Count);
             Assert.True(neighbourMeshes > 0);
@@ -80,7 +80,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             WorldPoint landed = run.Session.State.PlayerControl.Position!.Value;
             // The entrance threshold stands on the ground: the standing capsule centre is about half its height above it.
             DaggerfallSiteAnchor landing = world.Profiles.Require(island).RequireAnchor(DaggerfallLocationAssembly.DungeonEntranceAnchor);
-            float ground = landing.Position.Y + run.Session.Sites.ExteriorProfileFrameTranslation(island).Y;
+            float ground = landing.Position.Y + run.Session.Exterior.ExteriorProfileFrameTranslation(island).Y;
             Assert.InRange(landed.Y - ground, .7F, 1.1F);
             Steps(host, run, 10);
             AssertStanding(run, landed);
@@ -90,7 +90,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             Assert.True(host.Call(_ => run.Session.TryTransitionTo(hold)));
             descent.Stop();
             Assert.Equal(hold, run.Session.Sites.ActiveProfile);
-            Assert.Empty(run.Session.Sites.ResidentExteriorProfiles);
+            Assert.Empty(run.Session.Exterior.ResidentExteriorProfiles);
             Steps(host, run, 3);
             AssertAccepted(run);
             Assert.DoesNotContain(run.Graphics.LastSnapshotIds, id => id >= 1UL << 49 && id < 1UL << 50);
@@ -223,7 +223,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             OnGround(host, run);
             host.Call(_ => run.AdvanceToHour(12));
             Steps(host, run, 60);
-            Assert.NotEqual(Vector3.Zero, run.Session.Sites.LocalCompensation);
+            Assert.NotEqual(Vector3.Zero, run.Session.Exterior.LocalCompensation);
             save = host.Call(_ => run.Session.CaptureSave());
         }
         finally
@@ -323,7 +323,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             {
                 DaggerfallWorldProfileKey interior = DaggerfallWorldProfileIds.Interior(site, building);
                 WorldPoint marker = Assert.NotNull(world.Profiles.Require(interior).Project.PlayerPosition);
-                WorldPoint entered = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+                WorldPoint entered = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
                 Assert.True(host.Call(_ => run.Session.TryTransitionTo(interior)));
                 Assert.Equal(interior, run.Session.Sites.ActiveProfile);
                 WorldPoint landed = run.Session.State.PlayerControl.Position!.Value;
@@ -342,7 +342,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
                 Assert.Equal(island, run.Session.Sites.ActiveProfile);
                 // Leaving returns to the standing pose the player entered from, not raised again.
                 WorldPoint outside = run.Session.State.PlayerControl.Position!.Value;
-                WorldPoint returned = run.Session.Sites.ExteriorSitePosition(outside);
+                WorldPoint returned = run.Session.Exterior.ExteriorSitePosition(outside);
                 Assert.True(Vector3.Distance(entered.ToVector(), returned.ToVector()) < 1e-2F, $"Entered from {entered}, returned to {returned}.");
                 Steps(host, run, 3);
                 AssertStanding(run, outside);
@@ -388,7 +388,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             _ = host.Call(_ => run.Use(exit.Portal, exit.Entity));
             Assert.Equal(island, run.Session.Sites.ActiveProfile);
             Steps(host, run, 3);
-            WorldPoint leftIsland = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            WorldPoint leftIsland = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
             host.Call(_ => run.Session.Sites.ClearReturnDestination());
             Assert.True(host.Call(_ => run.Session.TryTransitionTo(hold)));
             Assert.Equal(hold, run.Session.Sites.ActiveProfile);
@@ -407,7 +407,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             // Leaving returns through the remembered entrance: the pose left on the island is already a standing centre.
             Assert.True(host.Call(_ => run.Session.TryTransitionTo(island)));
             Assert.Equal(island, run.Session.Sites.ActiveProfile);
-            WorldPoint returned = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            WorldPoint returned = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
             output.WriteLine($"Left the island at {leftIsland}, returned to {returned}.");
             Assert.True(Vector3.Distance(leftIsland.ToVector(), returned.ToVector()) < 1e-2F, $"Left the island at {leftIsland}, returned to {returned}.");
             WorldPoint outside = run.Session.State.PlayerControl.Position!.Value;
@@ -512,13 +512,13 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             OnGround(host, run);
             Steps(host, run, 5);
             Assert.True(run.Session.State.PlayerControl.Motion.Grounded);
-            WorldPoint stood = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            WorldPoint stood = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
             double health = run.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
 
             WorldPoint local = run.Session.State.PlayerControl.Position!.Value;
             run.Session.State.PlayerControl.MoveTo(local.ToVector() - (Vector3.UnitY * 40F));
             Steps(host, run, 5);
-            WorldPoint recovered = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            WorldPoint recovered = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
             output.WriteLine($"Stood at {stood}; dropped 40 units beneath the terrain, recovered to {recovered}.");
             Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Dropped beneath the terrain, the player is at {recovered} and not grounded.");
             Assert.True(MathF.Abs(recovered.Y - stood.Y) < .25F, $"Stood at {stood}, recovered to {recovered}.");
@@ -552,7 +552,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             // The location's frame lies over the tiles its blocks occupy in its map pixel, at the flattened terrain's height.
             DaggerfallTerrainSurface surface = DaggerfallTerrainSurfaceBuilder.Build(world.Definitions.Terrain, footprint.MapPixelX, footprint.MapPixelY,
                 new DaggerfallTerrainLocationFlattening(footprint.MinX, footprint.MaxX, footprint.MinY, footprint.MaxY));
-            Vector3 frame = run.Session.Sites.ExteriorProfileFrameTranslation(exterior) - run.Session.Sites.LocalCompensation;
+            Vector3 frame = run.Session.Exterior.ExteriorProfileFrameTranslation(exterior) - run.Session.Exterior.LocalCompensation;
             const float tile = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
             Assert.Equal(footprint.TileOriginX * tile, frame.X, 1e-2F);
             Assert.Equal(-footprint.TileOriginY * tile, frame.Z, 1e-2F);
@@ -564,14 +564,14 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
 
             // The traveller stands on the terrain at the location's edge.
             WorldPoint local = run.Session.State.PlayerControl.Position!.Value;
-            WorldPoint landed = run.Session.Sites.ExteriorSitePosition(local);
-            Vector3 cellLocal = local.ToVector() - run.Session.Sites.LocalCompensation;
+            WorldPoint landed = run.Session.Exterior.ExteriorSitePosition(local);
+            Vector3 cellLocal = local.ToVector() - run.Session.Exterior.LocalCompensation;
             float ground = DaggerfallTerrainSurfaceBuilder.SampleWorldHeight(surface, cellLocal.X / DaggerfallExteriorCellResidency.CellSize,
                 -cellLocal.Z / DaggerfallExteriorCellResidency.CellSize);
             output.WriteLine($"Landed at {landed} in the location frame; the terrain there is {ground - frame.Y} above the frame.");
             Assert.InRange(cellLocal.Y - ground, .7F, 1.3F);
             Steps(host, run, 10);
-            WorldPoint settled = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            WorldPoint settled = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
             Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Landed at {landed}, the player is at {settled} and not grounded.");
             Assert.True(MathF.Abs(settled.Y - landed.Y) < .25F, $"Landed at {landed}, the player settled at {settled}.");
             AssertAccepted(run);
@@ -590,7 +590,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             Vector3 approach = door.Portal.Position.ToVector() + Assert.NotNull(door.Portal.Normal);
             bool reached = host.Call(_ => run.WalkAround(approach, .5F));
             Steps(host, run, 5);
-            WorldPoint walked = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            WorldPoint walked = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
             float remaining = Vector2.Distance(new(door.Portal.Position.X, door.Portal.Position.Z),
                 new(run.Session.State.PlayerControl.Position!.Value.X, run.Session.State.PlayerControl.Position!.Value.Z));
             output.WriteLine($"Walked from the landing at {settled} to {walked}, {remaining} units from the door.");
@@ -608,10 +608,10 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             (DaggerfallSitePortal Portal, DurableIdentityReference _, EntityId Entity) exit = run.Session.Sites.Projection.Portals.All.First();
             _ = host.Call(_ => run.Use(exit.Portal, exit.Entity));
             Assert.Equal(exterior, run.Session.Sites.ActiveProfile);
-            WorldPoint returned = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            WorldPoint returned = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
             // The pose left outside is where the player walked to and used the door from.
             Steps(host, run, 20);
-            WorldPoint after = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+            WorldPoint after = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
             output.WriteLine($"Left the location at {outside}, came back out at {returned} and stood at {after}.");
             Assert.True(Vector2.Distance(new(outside.X, outside.Z), new(returned.X, returned.Z)) < 1e-2F, $"Left at {outside}, returned to {returned}.");
             Assert.True(run.Session.State.PlayerControl.Motion.Grounded, $"Back outside at {returned}, the player is at {after} and not grounded.");
@@ -652,8 +652,8 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
 
             // The player and every one of the city's drawn meshes lie over the city's own terrain cell.
             WorldPoint player = run.Session.State.PlayerControl.Position!.Value;
-            Assert.Equal(cell, run.Session.Sites.CurrentExteriorCell());
-            Vector3 corner = run.Session.Sites.ActiveExteriorOrigin!.Value.LocalTranslation(cell);
+            Assert.Equal(cell, run.Session.Exterior.CurrentExteriorCell());
+            Vector3 corner = run.Session.Exterior.ActiveExteriorOrigin!.Value.LocalTranslation(cell);
             AppearanceFact[] meshes = [.. run.Graphics.LastSnapshot.Where(fact => fact.ObjectId >= DaggerfallPresentationObjectIds.WorldMesh(0, 0)
                 && fact.ObjectId < DaggerfallPresentationObjectIds.WorldMesh(1, 0) && (fact.ObjectId & uint.MaxValue) < 1UL << 31)];
             Assert.Equal(world.Profiles.Require(key).Geometry.Meshes.Count, meshes.Length);
@@ -673,9 +673,9 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             // Each block's ground tiles lie under that block: the donor lays a block's tile (x, y) along the block's rows,
             // which run north (+Z in its left-handed frame) and which the right-handed content runs along -Z, so the terrain
             // tile under each tile's place in the content is the block's own source row.
-            IReadOnlyList<DaggerfallExteriorTerrainTile> tiles = run.Session.Sites.ExteriorTerrainTiles(cell);
+            IReadOnlyList<DaggerfallExteriorTerrainTile> tiles = run.Session.Exterior.ExteriorTerrainTiles(cell);
             Assert.Equal(128 * 128, tiles.Count);
-            Vector3 frame = run.Session.Sites.ExteriorProfileFrameTranslation(key) - corner;
+            Vector3 frame = run.Session.Exterior.ExteriorProfileFrameTranslation(key) - corner;
             const float tile = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
             int laid = 0;
             foreach (DaggerfallSiteBlock block in exterior.Blocks)
@@ -699,7 +699,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             // (DaggerfallExteriorEnvironment) and river water builds two map pixels an update (DaggerfallRiverWater), so
             // both are done within an update a window cell.
             int settling = 0;
-            while (run.Session.Sites.ExteriorEnvironment!.NatureWaiting || run.Session.RiverWaterBuilding)
+            while (run.Session.Exterior.ExteriorEnvironment!.NatureWaiting || run.Session.RiverWaterBuilding)
             {
                 Assert.True(++settling <= DaggerfallExteriorCellResidency.StreamingDimension * DaggerfallExteriorCellResidency.StreamingDimension,
                     $"Nature or river water about the arrival was still streaming in after {settling - 1} updates.");

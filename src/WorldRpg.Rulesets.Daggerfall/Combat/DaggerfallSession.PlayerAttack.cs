@@ -99,7 +99,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
     {
         if (StrikePose(DaggerfallActorIdentity.PlayerEntityId) is not { } pose) return false;
         SegmentContact aim = _contact.Segment(DaggerfallActorIdentity.PlayerEntityId, pose.Eye, pose.Eye + pose.Forward * (float)_tuning.Attacks.AimRange,
-            _sites?.CharacterEnvironment(State.PlayerControl.Motion), IsPlayerAlly);
+            _sites?.Exterior.CharacterEnvironment(State.PlayerControl.Motion), IsPlayerAlly);
         return aim.ActorId is long met && IsCivilian(met);
     }
 
@@ -144,7 +144,7 @@ internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
         if (_attack is DaggerfallAttackIds.Shot or DaggerfallAttackIds.Cast || StrikePose(DaggerfallActorIdentity.PlayerEntityId) is not { } pose) return true;
         _lastSwing = _swing ??= new SwingSweep(_contact, DaggerfallActorIdentity.PlayerEntityId, _tuning.Attacks.Arc(_attack!, _combat.PlayerWeaponSkill(), _combat.PlayerWeaponTemplate()),
             passes: actor => PassesThrough(actor, _attackHarmsCivilians));
-        if (_swing.Advance(pose.Eye, pose.Forward, (float)cycle, _sites?.CharacterEnvironment(State.PlayerControl.Motion)) is not long struck) return false;
+        if (_swing.Advance(pose.Eye, pose.Forward, (float)cycle, _sites?.Exterior.CharacterEnvironment(State.PlayerControl.Motion)) is not long struck) return false;
         _combat.SetSweptTarget(struck);
         return true;
     }

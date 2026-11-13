@@ -88,7 +88,7 @@ internal sealed partial class DaggerfallSession
     private void ShapeLocomotion(ref PlayerStep player, ProductUpdateState update, ulong generation, ulong simulationStep)
     {
         player.ActiveWater = player.PositionBefore is { } waterPoint
-            ? _sites.WaterAt(State.Swimming.ActiveVolume(player.Environment.WaterVolumes.Span), waterPoint.ToVector())
+            ? _exterior.WaterAt(State.Swimming.ActiveVolume(player.Environment.WaterVolumes.Span), waterPoint.ToVector())
             : State.Swimming.ActiveVolume(player.Environment.WaterVolumes.Span);
         player.WaterWalking = State.Effects.GrantsWaterWalking(DaggerfallActorIdentity.PlayerEntityId);
         bool wallAhead = _spatial.TryProbeClimbWall(State.PlayerControl, CharacterWallProbeDirection.Forward, out SpatialHit forwardHit, player.Environment)

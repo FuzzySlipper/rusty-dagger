@@ -32,13 +32,13 @@ internal sealed partial class DaggerfallSession
                 DungeonType: site.DungeonType, EnemyAlert: true) : null;
         if (_activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior) return null;
 
-        DaggerfallExteriorCellId cell = _sites.CurrentExteriorCell();
+        DaggerfallExteriorCellId cell = _exterior.CurrentExteriorCell();
         DaggerfallClimateCell climate = _definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y);
         // RandomEncounters.ChooseRandomEnemy has no table for other climates (ocean) and spawns nothing.
         if (climate.Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232)) return null;
         long timeOfDay = minute % (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour);
         bool day = timeOfDay is >= 360 and <= 1080;
-        bool atLocation = _sites.LocationAtPlayer() is not null;
+        bool atLocation = _exterior.LocationAtPlayer() is not null;
         if (atLocation && day) return null;
         DaggerfallEncounterContext context = atLocation
             ? DaggerfallEncounterContext.LocationNight

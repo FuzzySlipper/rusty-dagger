@@ -172,7 +172,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         if (contrast < 1 || repeatMetres <= 0 || triplanarSharpness < 0) return Refused("A contrast is 1 or more, a repeat above 0 and a sharpness 0 or more.");
         if (!DaggerfallGroundBlend.FillsCell((float)repeatMetres)) return Refused($"A texture repeating every {repeatMetres} metres would break at every cell's edge.");
         _horizon.Rebuild();
-        _sites.UseGroundBlend(new((float)contrast, (float)repeatMetres, (float)triplanarSharpness));
+        _exterior.UseGroundBlend(new((float)contrast, (float)repeatMetres, (float)triplanarSharpness));
         return DebugCommandResult.Success("Ground layers again by these settings.");
     }
 
@@ -193,7 +193,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     public DebugCommandResult Stand(double east, double south)
     {
         if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);
-        if (_sites.ActiveExteriorOrigin is not { } origin || State.PlayerControl.Position is not { } position)
+        if (_exterior.ActiveExteriorOrigin is not { } origin || State.PlayerControl.Position is not { } position)
             return Refused("The player is not outdoors.");
         Vector3 feet = PlayerFloor();
         double rise = _horizon.GroundRise(origin, position.ToVector(), east, south);
@@ -205,7 +205,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         if (DeveloperMoveRefusal() is { } refusal) return Refused(refusal);
         if (!DaggerfallHorizonGround.Kinds.Contains(kind)) return Refused($"Ground is one of {string.Join(", ", DaggerfallHorizonGround.Kinds)}.");
         if (!double.IsFinite(kilometres) || kilometres is <= 0 or > 100) return Refused("Search out to more than 0 and at most 100 kilometres.");
-        if (_sites.ActiveExteriorOrigin is not { } origin || State.PlayerControl.Position is not { } position) return Refused("The player is not outdoors.");
+        if (_exterior.ActiveExteriorOrigin is not { } origin || State.PlayerControl.Position is not { } position) return Refused("The player is not outdoors.");
         bool winter = _time.Calendar.Season == DaggerfallSeason.Winter;
         if (_horizon.FindGround(origin, position.ToVector(), kind, kilometres * 1000, winter) is not { } found)
             return Refused($"No open ground within {kilometres} km is mostly {kind}{(winter ? " in winter" : "")}; travel nearer first.");
@@ -221,7 +221,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
                     + Math.Pow(((record.MapPixelY + .5) * DaggerfallExteriorCellResidency.CellSize) - found.Z, 2));
             if (nearest is null || !profiles.TryGet(DaggerfallWorldProfileIds.Exterior(nearest.Id), out DaggerfallSiteProfile exterior) || !ArriveAt(exterior))
                 return Refused($"Ground that is mostly {kind} lies {Math.Max(Math.Abs(found.X - fromX), Math.Abs(found.Z - fromZ)) / 1000:F0} km away, and no place near it could be landed at.");
-            if (_sites.ActiveExteriorOrigin is not { } landed || State.PlayerControl.Position is not { } there) return Refused($"{nearest.Name} has no ground to stand on.");
+            if (_exterior.ActiveExteriorOrigin is not { } landed || State.PlayerControl.Position is not { } there) return Refused($"{nearest.Name} has no ground to stand on.");
             (fromX, fromZ) = DaggerfallHorizon.MapPoint(landed, there.ToVector());
             by = $" by way of {nearest.Name}";
         }
@@ -236,7 +236,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     /// <summary>The farthest a scout stands the player from where they are, well inside the Engine's local envelope.</summary>
     private const double ScoutStandMetres = 4000;
 
-    public DebugCommandResult NearestRiver() => _sites.ActiveExteriorOrigin is { } origin && State.PlayerControl.Position is { } position
+    public DebugCommandResult NearestRiver() => _exterior.ActiveExteriorOrigin is { } origin && State.PlayerControl.Position is { } position
         ? DebugCommandResult.Success(_horizon.NearestRiver(origin, position.ToVector(), _definitions.Terrain))
         : Refused("The player is not outdoors.");
 
@@ -357,7 +357,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     }
 
     /// <summary>The collision movement meets now: the admitted scene plus the live doors and supports.</summary>
-    private CharacterStepEnvironment LiveCollision() => _sites.CharacterEnvironment(State.PlayerControl.Motion);
+    private CharacterStepEnvironment LiveCollision() => _exterior.CharacterEnvironment(State.PlayerControl.Motion);
 
     private static DebugCommandResult Refused(string reason) => DebugCommandResult.Failure(DebugCommandStatus.Failed, reason);
 

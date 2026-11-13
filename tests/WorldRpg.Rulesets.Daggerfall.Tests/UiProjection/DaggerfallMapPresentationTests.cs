@@ -129,7 +129,7 @@ public sealed class DaggerfallMapPresentationTests
         };
         using var session = DaggerfallSession.StartNew(engine.Context, composition);
         var before = session.ReadMapPresentation()!;
-        WorldPoint canonicalProfilePose = WorldPoint.From(session.Sites.LocalToProfile(
+        WorldPoint canonicalProfilePose = WorldPoint.From(session.Exterior.LocalToProfile(
             session.State.PlayerControl.Position!.Value.ToVector()));
         Assert.Equal(canonicalProfilePose, before.Player);
         WorldPoint requestedProfilePose = profile.Project.PlayerPosition
@@ -148,7 +148,7 @@ public sealed class DaggerfallMapPresentationTests
         Assert.Contains(label.Name, session.Presentation.LastOutcome);
         // A read follows the canonical current pose, rather than an independently stored map marker.
         session.State.PlayerControl.MoveTo(new(31, 2, -25));
-        Assert.Equal(session.Sites.ExteriorSitePosition(new(31, 2, -25)), session.ReadMapPresentation()!.Player);
+        Assert.Equal(session.Exterior.ExteriorSitePosition(new(31, 2, -25)), session.ReadMapPresentation()!.Player);
         var saved = DaggerfallSavePayload.Read(session.CaptureSave());
         Assert.Equal(session.Site.Active, saved.Site.Active.Require());
         Assert.Equal(session.State.PlayerControl.Position, new WorldPoint(saved.Player.X, saved.Player.Y, saved.Player.Z));

@@ -107,7 +107,7 @@ internal sealed partial class DaggerfallSession
     private bool TrySpawnPose(string operation, string randomScope, WorldPoint player, float minimumDistance, float maximumDistance, out ActorPose pose,
         SpawnDirection direction = SpawnDirection.Behind)
     {
-        CharacterStepEnvironment environment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
+        CharacterStepEnvironment environment = _exterior.CharacterEnvironment(State.PlayerControl.Motion);
         // These are call-local spawn-clearance envelopes, not another retained collision world.
         SpatialEntityCollider[] actors = State.Actors.All.Where(actor => !actor.IsDefeated && State.Npcs.IsGameplayActive(actor.DurableId)).Select(actor =>
         {

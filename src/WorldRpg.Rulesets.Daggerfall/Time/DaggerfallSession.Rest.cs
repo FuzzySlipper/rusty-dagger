@@ -145,13 +145,13 @@ internal sealed partial class DaggerfallSession
             return new(false, Message: "You cannot rest in this interior without an admitted room or guild privilege.");
         }
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
-            && _sites.CurrentExteriorCell() is { } current
+            && _exterior.CurrentExteriorCell() is { } current
             && _definitions.Grids.ClimateAtWorldPixel(current.X, current.Y).Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232))
             return new(false, Message: "You cannot rest on this terrain.");
         if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
             && site.Kind is DaggerfallSiteKind.TownCity or DaggerfallSiteKind.TownHamlet or DaggerfallSiteKind.TownVillage)
         {
-            DaggerfallExteriorCellId cell = _sites.CurrentExteriorCell();
+            DaggerfallExteriorCellId cell = _exterior.CurrentExteriorCell();
             if (site.Exterior is { } exterior && cell == new DaggerfallExteriorCellId(exterior.MapPixelX, exterior.MapPixelY))
                 return new(false, Message: "Camping in a town is not permitted.");
         }

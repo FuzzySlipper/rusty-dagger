@@ -321,7 +321,7 @@ public sealed class DaggerfallMerchantSessionTests
             new DaggerfallNpcAppearance("Breton", "Male", archive, record, 0, faction), "merchant test provider", offered);
         WorldRpg.Kit.Controls.WorldPoint position = session.State.PlayerControl.Position!.Value;
         session.State.Npcs.Place(id, session.Sites.ActiveProfile,
-            WorldRpg.Kit.Controls.WorldPoint.From(session.Sites.LocalToProfile(position.ToVector())));
+            WorldRpg.Kit.Controls.WorldPoint.From(session.Exterior.LocalToProfile(position.ToVector())));
         session.MaterializeNpcActor(id, new ActorPose(position, 0));
         DaggerfallActivationTarget target = session.Dialogue.NpcTargets().Single(value => value.Identity.Value == (ulong)id);
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);

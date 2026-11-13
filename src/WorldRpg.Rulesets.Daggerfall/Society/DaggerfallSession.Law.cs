@@ -87,7 +87,7 @@ internal sealed partial class DaggerfallSession
     {
         var response = CurrentLegalResponse;
         if (response is null || response.Modal || State.Actors.Player.IsDefeated
-            || State.RacialOverrides.Current?.SuppressCrime == true || !_sites.ActiveLocationLoaded
+            || State.RacialOverrides.Current?.SuppressCrime == true || !_exterior.ActiveLocationLoaded
             || _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon) return;
         if (response.Phase == DaggerfallLegalPhase.Escaped)
         {

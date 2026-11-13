@@ -189,7 +189,7 @@ internal sealed partial class DaggerfallSession
 
     /// <summary>Where entering through an exterior door lands inside its building.</summary>
     private DaggerfallSiteAnchor BuildingLanding(DaggerfallSiteProfile inside, DaggerfallRdbDoorId door) =>
-        DaggerfallBuildingArrival.Landing(inside, _sites.LocalToProfile(_doors.Read(door).Pose.Translation), _spatial.CurrentController.Shape);
+        DaggerfallBuildingArrival.Landing(inside, _exterior.LocalToProfile(_doors.Read(door).Pose.Translation), _spatial.CurrentController.Shape);
 
     /// <summary>The placed building an exterior door enters, when the active site's record carries it.</summary>
     private bool TryExteriorBuilding(DaggerfallRdbDoorId door, out DaggerfallSiteId site, out DaggerfallSiteBuildingSource building)
@@ -501,7 +501,7 @@ internal sealed partial class DaggerfallSession
             return null;
         SpatialHit hit = _spatial.CastRay(position.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight,
             direction, (float)maximumDistance, _sites.ActionTriggers.ActiveRayEntities(),
-            _sites.CharacterEnvironment(State.PlayerControl.Motion));
+            _exterior.CharacterEnvironment(State.PlayerControl.Motion));
         if (!hit.Present || hit.Kind != SpatialHitKind.Entity) return null;
         foreach (DaggerfallDoorView door in _doors.All)
             if (door.Entity.Value == hit.Entity) return door.Id;
@@ -525,7 +525,7 @@ internal sealed partial class DaggerfallSession
             direction,
             (float)maximumDistance,
             actionEntities,
-            _sites.CharacterEnvironment(State.PlayerControl.Motion));
+            _exterior.CharacterEnvironment(State.PlayerControl.Motion));
         if (!hit.Present) return false;
 
         if (hit.Kind == SpatialHitKind.Entity)
@@ -552,7 +552,7 @@ internal sealed partial class DaggerfallSession
 
         if (hit.Kind == SpatialHitKind.StaticMesh && _sites.Projection.Inputs.DungeonMap is DaggerfallDungeonMapContent map)
         {
-            DaggerfallDungeonMapGeometry? placement = PlacementAt(map, _sites.LocalToProfile(hit.Point));
+            DaggerfallDungeonMapGeometry? placement = PlacementAt(map, _exterior.LocalToProfile(hit.Point));
             if (placement is not null)
             {
                 DaggerfallDungeonActionDispatch? dispatch = graph.TriggerForPlacement(placement.PlacementId, @event);

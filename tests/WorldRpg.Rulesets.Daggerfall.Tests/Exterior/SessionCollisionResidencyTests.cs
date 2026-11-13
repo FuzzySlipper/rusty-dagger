@@ -111,20 +111,20 @@ public sealed class SessionCollisionResidencyTests
 
         // Construction admits the seven-by-seven window centred on the player's cell, in the site's local frame:
         // the frame the player's own position is in, so the window and the player agree on where the player stands.
-        DaggerfallExteriorCellResidencySave admittedWindow = session.Sites.CaptureExteriorResidency()
+        DaggerfallExteriorCellResidencySave admittedWindow = session.Exterior.CaptureExteriorResidency()
             ?? throw new InvalidOperationException("The exterior session admitted no cell window.");
         DaggerfallExteriorCellId center = admittedWindow.Center;
-        Assert.Equal(session.Sites.ActiveExteriorCell(), admittedWindow.Origin);
-        Assert.Equal(session.Sites.CurrentExteriorCell(), center);
+        Assert.Equal(session.Exterior.ActiveExteriorCell(), admittedWindow.Origin);
+        Assert.Equal(session.Exterior.CurrentExteriorCell(), center);
         DaggerfallExteriorCellId[] cells = Window(center);
         Assert.Equal(49, cells.Length);
-        Assert.Equal(cells.ToHashSet(), session.Sites.ResidentExteriorCells.ToHashSet());
+        Assert.Equal(cells.ToHashSet(), session.Exterior.ResidentExteriorCells.ToHashSet());
 
         // A step that leaves the player where it stands leaves the window where it is. The ground is the
         // collider's, which the step stands up: the window brings no terrain batches of its own.
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(1, spatial.HeightfieldColliderCreates);
-        DaggerfallExteriorCellResidencySave window = session.Sites.CaptureExteriorResidency()!.Value;
+        DaggerfallExteriorCellResidencySave window = session.Exterior.CaptureExteriorResidency()!.Value;
         Assert.Equal(center, window.Center);
 
         // One cell east is a new column of seven cells to admit and the far west column to remove. The
@@ -139,8 +139,8 @@ public sealed class SessionCollisionResidencyTests
         session.Update(new ProductUpdate(OuterUpdate(2), []));
 
         DaggerfallExteriorCellId east = new(center.X + 1, center.Y);
-        Assert.Equal(Window(east).ToHashSet(), session.Sites.ResidentExteriorCells.ToHashSet());
-        DaggerfallExteriorCellResidencySave moved = session.Sites.CaptureExteriorResidency()!.Value;
+        Assert.Equal(Window(east).ToHashSet(), session.Exterior.ResidentExteriorCells.ToHashSet());
+        DaggerfallExteriorCellResidencySave moved = session.Exterior.CaptureExteriorResidency()!.Value;
         DaggerfallExteriorWorldOrigin origin = window.WorldOrigin;
         // The focus is the player and anyone in the wilderness, in the collider's own frame: the step's
         // focuses are worked out before the same update commits the rebase, so they carry the prior frame.
@@ -155,14 +155,14 @@ public sealed class SessionCollisionResidencyTests
         Assert.Equal(origin.Compensation + rebase.LocalDelta, moved.WorldOrigin.Compensation);
         Assert.Equal((rebase.OriginAfterCellX, rebase.OriginAfterCellY, rebase.OriginAfterCellZ),
             (moved.EngineOriginCellX, moved.EngineOriginCellY, moved.EngineOriginCellZ));
-        Assert.Equal(east, session.Sites.CurrentExteriorCell());
+        Assert.Equal(east, session.Exterior.CurrentExteriorCell());
 
         // The crossing preserves world-space poses and vitals. Both player and actor adopt the
         // receipt's local delta, keeping their relative position and the collision window aligned.
         Assert.Equal(crossed.ToVector() + rebase.LocalDelta, session.State.PlayerControl.Position!.Value.ToVector());
-        Vector3 activeFrame = session.Sites.ExteriorProfileFrameTranslation(exterior.ProfileKey);
+        Vector3 activeFrame = session.Exterior.ExteriorProfileFrameTranslation(exterior.ProfileKey);
         Assert.Equal(crossed.ToVector() + rebase.LocalDelta - activeFrame,
-            session.Sites.LocalToProfile(session.State.PlayerControl.Position.Value.ToVector()));
+            session.Exterior.LocalToProfile(session.State.PlayerControl.Position.Value.ToVector()));
         Assert.Equal(yaw, session.State.PlayerControl.YawRadians);
         Assert.Equal(health, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.True(session.State.Actors.TryGet(rat, out ActorState? ratState));
@@ -179,7 +179,7 @@ public sealed class SessionCollisionResidencyTests
         Assert.True(session.TryTransitionTo(interior.ProfileKey));
         Assert.Equal(replacements + 1, spatial.ReplaceCalls);
         Assert.Equal(1, spatial.HeightfieldColliderReleases);
-        Assert.Null(session.Sites.CaptureExteriorResidency());
+        Assert.Null(session.Exterior.CaptureExteriorResidency());
         Assert.Equal(interior.ProfileKey, session.Sites.ActiveProfile);
     }
 
@@ -198,20 +198,20 @@ public sealed class SessionCollisionResidencyTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
 
         spatial.HeightfieldColliderReady = false;
-        session.Sites.DeferCollision(() => session.Sites.UpdateExteriorResidency());
+        session.Exterior.DeferCollision(() => session.Exterior.UpdateExteriorResidency());
 
         // Nothing may stand on ground that is not there: the arrival stays pending until it is.
-        Assert.True(session.Sites.CollisionPending);
-        Assert.False(session.Sites.AwaitArrivalCollision().Done);
-        Assert.True(session.Sites.CollisionPending);
+        Assert.True(session.Exterior.CollisionPending);
+        Assert.False(session.Exterior.AwaitArrivalCollision().Done);
+        Assert.True(session.Exterior.CollisionPending);
 
         spatial.HeightfieldColliderRefusedTiles = 1;
-        Assert.Throws<DaggerfallArrivalCollisionRefusedException>(() => session.Sites.AwaitArrivalCollision());
+        Assert.Throws<DaggerfallArrivalCollisionRefusedException>(() => session.Exterior.AwaitArrivalCollision());
         spatial.HeightfieldColliderRefusedTiles = 0;
 
         spatial.HeightfieldColliderReady = true;
-        Assert.True(session.Sites.AwaitArrivalCollision().Done);
-        Assert.False(session.Sites.CollisionPending);
+        Assert.True(session.Exterior.AwaitArrivalCollision().Done);
+        Assert.False(session.Exterior.CollisionPending);
     }
 
     [Fact]
@@ -249,14 +249,14 @@ public sealed class SessionCollisionResidencyTests
             Assert.False(session.AwaitArrivalGround().Done);
 
             // A staged arrival: the walkers are asked after there too, and nothing stands until they have ground.
-            session.Sites.DropGroundCollider();
-            session.Sites.DeferCollision(() => session.Sites.UpdateExteriorResidency());
-            Assert.False(session.Sites.AwaitArrivalCollision().Done);
-            Assert.True(session.Sites.CollisionPending);
+            session.Exterior.DropGroundCollider();
+            session.Exterior.DeferCollision(() => session.Exterior.UpdateExteriorResidency());
+            Assert.False(session.Exterior.AwaitArrivalCollision().Done);
+            Assert.True(session.Exterior.CollisionPending);
 
             arrived = true;
-            Assert.True(session.Sites.AwaitArrivalCollision().Done);
-            Assert.False(session.Sites.CollisionPending);
+            Assert.True(session.Exterior.AwaitArrivalCollision().Done);
+            Assert.False(session.Exterior.CollisionPending);
             session.Update(new ProductUpdate(OuterUpdate(2), []));
             Assert.True(spatial.StepCalls > steps);
 
@@ -318,7 +318,7 @@ public sealed class SessionCollisionResidencyTests
 
         // The first admitted update moves the window with the player and brings the neighbour in.
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Contains(resident.ProfileKey, session.Sites.ResidentExteriorProfiles);
+        Assert.Contains(resident.ProfileKey, session.Exterior.ResidentExteriorProfiles);
         SpatialContentArtifactResidencyRequest placed = Assert.Single(spatial.ContentResidencyRequests.Skip(requests));
         Assert.True(placed.Deferred);
         Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
@@ -328,13 +328,13 @@ public sealed class SessionCollisionResidencyTests
         Assert.All(geometry, path => Assert.Contains(appearance.DeferredStaticMeshPaths, deferred => deferred?.EndsWith(path, StringComparison.Ordinal) == true));
         Assert.Contains(appearance.OpenResourceContentRequests, request => request.Deferred);
         // The world runs on; only what the location places waits for its floor.
-        Assert.True(session.Sites.CollisionPending);
+        Assert.True(session.Exterior.CollisionPending);
         session.Update(new ProductUpdate(OuterUpdate(2), []));
-        Assert.True(session.Sites.CollisionPending);
+        Assert.True(session.Exterior.CollisionPending);
 
         spatial.HoldDeferredCollision = false;
         session.Update(new ProductUpdate(OuterUpdate(3), []));
-        Assert.False(session.Sites.CollisionPending);
+        Assert.False(session.Exterior.CollisionPending);
         Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);
     }
 
@@ -376,10 +376,10 @@ public sealed class SessionCollisionResidencyTests
         // New-game initial terrain admission precedes the composition catalog, so the first
         // admitted update reconciles the catalog's neighboring exterior profiles.
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Contains(resident.ProfileKey, session.Sites.ResidentExteriorProfiles);
+        Assert.Contains(resident.ProfileKey, session.Exterior.ResidentExteriorProfiles);
         Assert.True(session.TryTransitionTo(resident.ProfileKey));
         WorldPoint authoredProfilePose = new(4F, 0F, 5F);
-        Vector3 residentFrame = session.Sites.ExteriorProfileFrameTranslation(resident.ProfileKey);
+        Vector3 residentFrame = session.Exterior.ExteriorProfileFrameTranslation(resident.ProfileKey);
         long actorId = session.SpawnActor("rat",
             new ActorPose(WorldPoint.From(authoredProfilePose.ToVector() + residentFrame), .25F));
         WorldPoint profilePose = WorldPoint.From(
@@ -389,7 +389,7 @@ public sealed class SessionCollisionResidencyTests
         // The source transition establishes a new local origin. Re-read the resident profile's
         // frame after that rebase; its profile-space pose remains unchanged while its local cell
         // translation changes with the active source origin.
-        Vector3 residentFrameInSource = session.Sites.ExteriorProfileFrameTranslation(resident.ProfileKey);
+        Vector3 residentFrameInSource = session.Exterior.ExteriorProfileFrameTranslation(resident.ProfileKey);
         Vector3 expectedResidentPose = profilePose.ToVector()
             + residentFrameInSource;
         Assert.Equal(expectedResidentPose.X, session.State.Actors.Get(actorId).Position.X, 3);
@@ -415,7 +415,7 @@ public sealed class SessionCollisionResidencyTests
 
         Assert.True(session.TryTransitionTo(source.ProfileKey));
         Assert.True(session.State.Actors.TryGet(actorId, out ActorState? restoredResident));
-        Vector3 restoredResidentFrame = session.Sites.ExteriorProfileFrameTranslation(resident.ProfileKey);
+        Vector3 restoredResidentFrame = session.Exterior.ExteriorProfileFrameTranslation(resident.ProfileKey);
         Vector3 restoredExpectedPose = profilePose.ToVector() + restoredResidentFrame;
         Assert.Equal(restoredExpectedPose.X, restoredResident!.Position.X, 3);
         Assert.Equal(restoredExpectedPose.Y, restoredResident.Position.Y, 3);

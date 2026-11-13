@@ -216,7 +216,7 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
         DaggerfallSiteProfile profile = _sites.Projection.Inputs;
         void Add(WorldPoint at, string label, Color color)
         {
-            WorldPoint local = _sites.ProfileToLocal(at);
+            WorldPoint local = _exterior.ProfileToLocal(at);
             if (player.HorizontalDistanceTo(local) > OverlayRadius) return;
             items.Add(OverlayItem.Marker(OverlayPlace.World, local.ToVector(), .5F, color, onTop: true));
             items.Add(OverlayItem.Label(OverlayPlace.World, local.ToVector() + Vector3.UnitY * .4F, label, color, onTop: true));

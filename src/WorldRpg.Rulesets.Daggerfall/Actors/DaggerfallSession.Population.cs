@@ -47,10 +47,10 @@ internal sealed partial class DaggerfallSession
             return;
         // An unloaded location keeps its population, hidden or not, in the site delta that holds
         // its actors; presence is reconciled again when the location is admitted.
-        if (!_sites.ActiveLocationLoaded) return;
+        if (!_exterior.ActiveLocationLoaded) return;
         // Where the location (and the player in it) lies in the world is known only once its terrain window is
         // admitted: an exterior arrival reconciles its population after that (DaggerfallSiteLifecycle.TryTransitionTo).
-        if (!_sites.ExteriorResidencyInitialized) return;
+        if (!_exterior.ExteriorResidencyInitialized) return;
 
         DaggerfallSiteRecord site = _site.Require(siteId);
         DaggerfallNpcSite npcSite = new(site.Id.Region, site.Name, string.Empty);
@@ -133,8 +133,8 @@ internal sealed partial class DaggerfallSession
 
             DaggerfallNpc current = State.Npcs.Require(npcId);
             WorldPoint position = current.X is float x && current.Y is float y && current.Z is float z
-                ? _sites.ProfileToLocal(new WorldPoint(x, y, z))
-                : _sites.ProfileToLocal(placement.Position);
+                ? _exterior.ProfileToLocal(new WorldPoint(x, y, z))
+                : _exterior.ProfileToLocal(placement.Position);
             MaterializeNpcActor(npcId, new ActorPose(position, 0F));
         }
 
@@ -167,7 +167,7 @@ internal sealed partial class DaggerfallSession
             if (populationNpc is not null
                 && _sites.Projection.Inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior
                 && _time.Calendar.IsDay
-                && _sites.ActiveLocationLoaded
+                && _exterior.ActiveLocationLoaded
                 && _sites.Projection.Inputs.Project.PlayerPosition is not null
                 && State.PlayerControl.Position is WorldPoint player
                 && actor.Position.HorizontalDistanceTo(player) > _tuning.CivilianWander.RecycleDistanceMeters)
@@ -205,7 +205,7 @@ internal sealed partial class DaggerfallSession
     private WorldPoint PopulationPlayerProfilePosition(DaggerfallSiteProfile profile)
     {
         if (State.PlayerControl.Position is WorldPoint local)
-            return WorldPoint.From(_sites.LocalToProfile(local.ToVector()));
+            return WorldPoint.From(_exterior.LocalToProfile(local.ToVector()));
         return profile.Project.PlayerPosition ?? new WorldPoint(0F, 0F, 0F);
     }
 
@@ -222,8 +222,8 @@ internal sealed partial class DaggerfallSession
     private bool IsPopulationPlacementAdmitted(DaggerfallPopulationPlacement placement, DaggerfallNpc? existing,
         WorldPoint playerProfile)
     {
-        WorldPoint placementLocal = _sites.ProfileToLocal(placement.Position);
-        WorldPoint playerLocal = _sites.ProfileToLocal(playerProfile);
+        WorldPoint placementLocal = _exterior.ProfileToLocal(placement.Position);
+        WorldPoint playerLocal = _exterior.ProfileToLocal(playerProfile);
         float distance = playerLocal.HorizontalDistanceTo(placementLocal);
         if (distance > PopulationNavGridSpawnRadiusMeters) return false;
         if (existing is { Presence: DaggerfallNpcPresence.Active })

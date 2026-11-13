@@ -104,7 +104,7 @@ internal sealed class AssembledWorld
         Assert.Equal(island, run.Session.Sites.ActiveProfile);
         DaggerfallSiteAnchor landing = Profiles.Require(island).RequireAnchor(DaggerfallLocationAssembly.DungeonEntranceAnchor);
         // The player stands on the ground at the landing: over it, and raised onto real collision when there is some.
-        WorldPoint stood = run.Session.Sites.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
+        WorldPoint stood = run.Session.Exterior.ExteriorSitePosition(run.Session.State.PlayerControl.Position!.Value);
         Assert.True(Vector2.Distance(new(landing.Position.X, landing.Position.Z), new(stood.X, stood.Z)) < 1e-2F, $"{landing.Position} vs {stood}");
         Assert.True(stood.Y > landing.Position.Y - 1e-2F, $"{landing.Position} vs {stood}");
         return run;
@@ -433,7 +433,7 @@ internal sealed class AssembledWorldRun : IDisposable
     internal WorldPoint UseFromHere(EntityId entity)
     {
         WorldPoint stood = Session.Sites.ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior
-            ? Session.Sites.ExteriorSitePosition(Session.State.PlayerControl.Position!.Value)
+            ? Session.Exterior.ExteriorSitePosition(Session.State.PlayerControl.Position!.Value)
             : Session.State.PlayerControl.Position!.Value;
         _perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(candidate => new PerceptionPair(1, candidate.Entity, 1d, 1d,
             candidate.Entity == entity.Value ? PerceptionPairKind.Visible : PerceptionPairKind.Occluded, 1d))]);

@@ -43,8 +43,8 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
     {
         _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();
         _ = _loading!.Start(title,
-            [.. phases.Select((phase, index) => new LoadingPhase(phase.Label, () => _sites.DeferCollision(phase.Run),
-                index == phases.Count - 1 ? AwaitArrival : _sites.AwaitArrivalCollision))],
+            [.. phases.Select((phase, index) => new LoadingPhase(phase.Label, () => _exterior.DeferCollision(phase.Run),
+                index == phases.Count - 1 ? AwaitArrival : _exterior.AwaitArrivalCollision))],
             // The arrival has happened by the time its ground is refused, so the work's own failure wording does not fit.
             error => Presentation.SetOutcome(error is DaggerfallArrivalCollisionRefusedException ? error.Message : failure(error)));
     }
@@ -54,7 +54,7 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
     {
         if (!_arrivalStood)
         {
-            LoadingProgress collision = _sites.AwaitArrivalCollision();
+            LoadingProgress collision = _exterior.AwaitArrivalCollision();
             if (!collision.Done) return collision;
             _arrivalStood = true;
         }

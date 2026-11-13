@@ -16,7 +16,7 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// lift measured from the player would move every tile at once, and tiles sampled either side of the change tear the
 /// ranges until they are all sampled again. It reads only the terrain and climate, which nothing changes, the
 /// latest <see cref="Frame"/>, and the locations' ground the update has read (<see cref="ReadGroundsAbout"/>), and
-/// calls no Engine service.
+/// calls no Engine service, as the exterior's off-update rule requires (<see cref="DaggerfallExteriorWorld"/>).
 /// </summary>
 internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
 {

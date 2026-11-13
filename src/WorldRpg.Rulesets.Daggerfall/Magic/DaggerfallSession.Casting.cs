@@ -161,7 +161,7 @@ internal sealed partial class DaggerfallSession
         Vector3 direction = Vector3.Normalize(delta);
         Vector3 launch = origin + direction * armDistance;
         ReadOnlyMemory<SpatialEntityCollider> colliders = _contact.Colliders(attempt.ActorId);
-        CharacterStepEnvironment environment = _sites.CharacterEnvironment(State.PlayerControl.Motion);
+        CharacterStepEnvironment environment = _exterior.CharacterEnvironment(State.PlayerControl.Motion);
         SpatialHit atLaunch = _spatial.OverlapCapsule(launch, 0d, .45d, colliders, environment);
         if (BlocksEnemySpellPath(atLaunch)) return false;
         SpatialHit alongPath = _spatial.CastCapsule(launch, 0d, .45d,
@@ -219,7 +219,7 @@ internal sealed partial class DaggerfallSession
         Vector3 delta = to - from;
         if (!ValidDirection(delta)) return bundle.ActionSource is not null ? Casting.Deliver(bundle, []) : new(DaggerfallCastOutcome.InvalidTarget, bundle);
         Func<long, bool>? passes = SpellPasses(bundle);
-        SegmentContact contact = _contact.Segment(bundle.CasterId, from, to, _sites.CharacterEnvironment(State.PlayerControl.Motion), passes);
+        SegmentContact contact = _contact.Segment(bundle.CasterId, from, to, _exterior.CharacterEnvironment(State.PlayerControl.Motion), passes);
         if (contact.Kind == ContactKind.None) return new(DaggerfallCastOutcome.Released, bundle); // Still in flight.
         _appearance.PlaySpellImpact(bundle.Sequence, bundle.Spell.Element, contact.Point);
         if (bundle.Target == DaggerfallSpellTarget.AreaAtRange)
