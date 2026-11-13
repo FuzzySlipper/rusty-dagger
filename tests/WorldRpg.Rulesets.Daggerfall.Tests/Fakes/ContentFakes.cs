@@ -183,6 +183,11 @@ internal sealed class BundleContentFake : IContentService
     private readonly Dictionary<ulong, string> openedBundles = [];
     private readonly Dictionary<ulong, (string Bundle, string Path)> references = [];
     private ulong nextHandle = 1;
+    /// <summary>
+    /// Guards the handles and the read records. <c>TestPayload.Data</c> shares one of these fakes across parallel
+    /// test classes, so handles are allocated, released and read from several threads at once.
+    /// </summary>
+    private readonly Lock gate = new();
 
     /// <summary>Every bundle file the product opened, in order, as its bundle and its path inside it.</summary>
     internal List<(string Bundle, string Path)> OpenedReferences { get; } = [];
@@ -236,15 +241,21 @@ internal sealed class BundleContentFake : IContentService
     public ContentBundle OpenBundle(ContentBundleOpenRequest request)
     {
         if (!files.ContainsKey(request.Id)) throw new FileNotFoundException("Test bundle is not declared.", request.Id);
-        ulong handle = nextHandle++;
-        openedBundles.Add(handle, request.Id);
-        OpenedBundles.Add(request.Id);
-        return new(new ContentBundleHandle(handle), () => openedBundles.Remove(handle));
+        ulong handle;
+        lock (gate)
+        {
+            handle = nextHandle++;
+            openedBundles.Add(handle, request.Id);
+            OpenedBundles.Add(request.Id);
+        }
+        return new(new ContentBundleHandle(handle), () => { lock (gate) openedBundles.Remove(handle); });
     }
 
     public ReadOnlyMemory<ContentReferenceInfo> ReadBundleFiles(ContentBundle bundle)
     {
-        if (!openedBundles.TryGetValue(bundle.Handle.Value, out string? id)) throw new InvalidOperationException("Test bundle handle is not open.");
+        string? id;
+        lock (gate)
+            if (!openedBundles.TryGetValue(bundle.Handle.Value, out id)) throw new InvalidOperationException("Test bundle handle is not open.");
         return files[id].OrderBy(entry => entry.Key, StringComparer.Ordinal)
             .Select(entry =>
             {
@@ -256,18 +267,31 @@ internal sealed class BundleContentFake : IContentService
 
     public ContentReference OpenBundleReference(ContentBundleReferenceRequest request)
     {
-        if (!openedBundles.TryGetValue(request.Bundle.Handle.Value, out string? id)
-            || !files[id].ContainsKey(request.Path)) throw new FileNotFoundException("Test bundle file is not declared.", request.Path);
-        OpenedReferences.Add((id, request.Path));
+        string? id;
+        lock (gate)
+        {
+            if (!openedBundles.TryGetValue(request.Bundle.Handle.Value, out id)
+                || !files[id].ContainsKey(request.Path)) throw new FileNotFoundException("Test bundle file is not declared.", request.Path);
+            OpenedReferences.Add((id, request.Path));
+        }
         return Reference(id, request.Path);
     }
 
     private ContentReference Reference(string bundle, string path)
     {
-        ulong handle = nextHandle++;
-        references.Add(handle, (bundle, path));
+        ulong handle;
+        lock (gate)
+        {
+            handle = nextHandle++;
+            references.Add(handle, (bundle, path));
+        }
         string contentPath = bundle == EagerSnapshot ? path : roots.TryGetValue(bundle, out string? root) && root.Length != 0 ? $"{root}/{path}" : path;
-        return TestContentReferences.Named(new(new ContentReferenceHandle(handle), () => references.Remove(handle)), contentPath);
+        return TestContentReferences.Named(new(new ContentReferenceHandle(handle), () => { lock (gate) references.Remove(handle); }), contentPath);
+    }
+
+    private (string Bundle, string Path) Referenced(ulong handle)
+    {
+        lock (gate) return references[handle];
     }
 
     private BundleFile FileAt(string bundle, string path) => bundle == EagerSnapshot ? eager[path] : files[bundle][path];
@@ -286,13 +310,15 @@ internal sealed class BundleContentFake : IContentService
             return Reference(EagerSnapshot, request.Path);
         }
 
-        foreach (string bundle in openedBundles.Values.Distinct(StringComparer.Ordinal))
+        string[] open;
+        lock (gate) open = [.. openedBundles.Values.Distinct(StringComparer.Ordinal)];
+        foreach (string bundle in open)
         {
             if (!roots.TryGetValue(bundle, out string? root) || (root.Length != 0 && !request.Path.StartsWith(root + "/", StringComparison.Ordinal))) continue;
             string path = root.Length == 0 ? request.Path : request.Path[(root.Length + 1)..];
             if (!files[bundle].TryGetValue(path, out BundleFile? file)) { if (root.Length == 0) continue; break; }
             if (file.Identity().Digest != request.Sha256) throw new InvalidOperationException($"Test bundle file '{request.Path}' has another digest.");
-            OpenedReferences.Add((bundle, path));
+            lock (gate) OpenedReferences.Add((bundle, path));
             return Reference(bundle, path);
         }
 
@@ -301,15 +327,15 @@ internal sealed class BundleContentFake : IContentService
 
     public ReadOnlyMemory<ContentReferenceInfo> ReadReferenceInfo(ContentReference reference)
     {
-        (string bundle, string path) = references[reference.Handle.Value];
+        (string bundle, string path) = Referenced(reference.Handle.Value);
         (ContentSha256 digest, ulong length) = FileAt(bundle, path).Identity();
         return new[] { new ContentReferenceInfo(path, digest, length) };
     }
 
     public ReadOnlyMemory<byte> ReadBytes(ContentReadBytesRequest request)
     {
-        (string bundle, string path) = references[request.Reference.Handle.Value];
-        if (bundle != EagerSnapshot) ReadFiles.Add((bundle, path));
+        (string bundle, string path) = Referenced(request.Reference.Handle.Value);
+        if (bundle != EagerSnapshot) lock (gate) ReadFiles.Add((bundle, path));
         byte[] body = FileAt(bundle, path).Read();
         if (request.Offset > (ulong)body.Length) throw new InvalidOperationException($"Read of '{path}' starts past its bytes.");
         int available = checked((int)Math.Min(request.MaxBytes, (ulong)body.Length - request.Offset));
