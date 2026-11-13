@@ -265,7 +265,7 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallDetectionEffects.Definitions(),
                 .. DaggerfallDoorMagicEffects.Definitions(),
                 .. DaggerfallFortifyEffects.Definitions(() => character.Career),
-                DaggerfallMolagBalEffects.Definition(() => _time.Calendar, () => character.Career, MolagBalEquipped),
+                DaggerfallMolagBalEffects.Definition(() => _time.Calendar, () => character.Career, (owner, item) => _artifacts!.MolagBalEquipped(owner, item)),
                 .. DaggerfallHealingEffects.Definitions(() => effects, () => character.Career, _vitality),
                 .. DaggerfallAttributeDrainEffects.Definitions(() => character.Career, ReactToSpellAttack),
                 .. DaggerfallAttributeDrainEffects.TransferDefinitions(() => character.Career, ReactToSpellAttack,
@@ -338,7 +338,10 @@ internal sealed partial class DaggerfallSession
             _heldEnchantments = new DaggerfallHeldEnchantments(equipmentCoordinator, itemInstances, definitions.Magic,
                 playerStats, actors.Entities, playerEntity, () => _time.Calendar,
                 () => assembled.PlayerControl.Position, () => DaggerfallActorRoster.NearbyCreatures(actors, authored, npcs.IsGameplayActive), InSunlight, _itemCondition, InHolyPlace,
-                amount => AppendEffectDamage(new(_vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount))), social, DrainNearbyHealth);
+                amount => AppendEffectDamage(new(_vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount))), social, () => DaggerfallHeldEnchantments.DrainNearby(assembled.PlayerControl.Position, _tuning.StrikeEnchantments.VampiricRange,
+                    (center, radius) => AreaSpellTargets(actors.Player.DurableId, center.ToVector(), excludeCaster: true, radius: radius),
+                    id => actors.TryGet(id, out var actor) && !actor.IsDefeated && DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null, EffectiveFoeTeam,
+                    id => AppendSpellTransfer(_vitality.ResolveSpellTransfer(actors.Player.Actor, actors.Get(id).Actor, 1, fatigue: false, permitsFatigueLoss: true))));
             effects.UseHeldDefense(actors.Player.DurableId, _heldEnchantments);
             _passives = new DaggerfallCareerPassives(character, definitions, authored, actors.Player.DurableId);
             effects.UseCareerDefense(CareerMagicDefense);
@@ -347,9 +350,19 @@ internal sealed partial class DaggerfallSession
             {
                 _heldEnchantments.Refresh();
                 _itemCastTriggers?.Refresh();
-                DaggerfallMolagBalEffects.Reconcile(effects, MolagBalEquipped);
+                DaggerfallMolagBalEffects.Reconcile(effects, _artifacts!.MolagBalEquipped);
             };
             DaggerfallActorInventories actorInventories = assembled.ActorInventories;
+            Actor EffectActor(long id) => id == actors.Player.DurableId ? actors.Player.Actor : actors.Get(id).Actor;
+            _artifacts = new DaggerfallArtifactPowers(definitions, itemInstances, inventory, _itemCondition, effects, actors, _random,
+                () => _time.Calendar, () => assembled.PlayerControl.Position, equipmentCoordinator, actorInventories,
+                id => id == actors.Player.DurableId ? actors.Player.Actor : actors.TryGet(id, out var actor) ? actor.Actor : null,
+                id => DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null,
+                (origin, radius, eligible) => QueryEnemies(DaggerfallActorIdentity.PlayerEntityId, origin, Vector3.UnitZ, radius, -1d, eligible),
+                mobile => _sites.Projection.Inputs.MobileSprites.ContainsKey(mobile),
+                (operation, scope, origin, minimum, maximum) => TrySpawnPose(operation, scope, origin, minimum, maximum, out var pose) ? pose : null,
+                (definition, pose, allied) => _roster!.Spawn(definition, pose, playerAllied: allied),
+                id => assembled.Quests.ProtectsActor(id), (id, mobile) => _roster!.Transform(id, mobile));
             DaggerfallContactInputs contactInputs = new(definitions, () => character, _random,
                 id => id == actors.Player.DurableId ? equipmentCoordinator.Read() : actorInventories.EquipmentFor(id).Read(),
                 id => id == actors.Player.DurableId ? actors.Player.Stats : actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
@@ -369,8 +382,8 @@ internal sealed partial class DaggerfallSession
             _fires = new DaggerfallFires(_tuning.Hazards);
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 actorInventories.EquipmentFor, _itemCondition, combatRules,
-                () => assembled.PlayerControl.Position, () => character, (target, coating) => _poisoning!.DeliverWeaponPoison(target, coating), () => _heldEnchantments.AttackChanceModifier, TransformWithWabbajack, effects.MagicDefenseFor,
-                actorId => effects.ControlsFor(actorId).PhysicalAttacks, TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), DeliverMonsterHit,
+                () => assembled.PlayerControl.Position, () => character, (target, coating) => _poisoning!.DeliverWeaponPoison(target, coating), () => _heldEnchantments.AttackChanceModifier, _artifacts.TransformWithWabbajack, effects.MagicDefenseFor,
+                actorId => effects.ControlsFor(actorId).PhysicalAttacks, _artifacts.TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), DeliverMonsterHit,
                 npcs.IsGameplayActive, EffectiveFoeTeam,
                 new DaggerfallContactMitigation(contactInputs, _tuning.Contact, _guard),
                 _tuning.Contact,
@@ -562,6 +575,13 @@ internal sealed partial class DaggerfallSession
             _itemOwnership = new DaggerfallItemOwnership(State.Actors, State.InventoryStore, actor => _corpseLoot.Corpses[actor].Owner);
             _itemLifetime = new DaggerfallItemLifetime(State.Actors.Entities, State.InventoryStore, State.ItemInstances, _uniqueItems, _itemOwnership);
             _groundContainers = new DaggerfallGroundContainers(containers, State.ItemInstances, playerEntity, _actorIdentities, activeProfile);
+            Detectors = new DaggerfallDetectors(State.Effects, actors, containers, _tuning.Detection.MaximumDistance,
+                () => assembled.PlayerControl.Position, npcs.IsGameplayActive, id => DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null,
+                () => _groundContainers.All.Values.Select(ground => (ground.Id, ground.Owner, ground.Position))
+                    .Concat(_corpseLoot.Corpses.Values.Where(value => value.IsRegistered && value.IsInteractable)
+                        .Select(corpse => (checked((long)corpse.ContainerIdentity.Value), corpse.Owner, actors.Get(corpse.ActorId).Position))),
+                (origin, positions, radius) => NearbyContacts(DaggerfallActorIdentity.PlayerEntityId, origin.ToVector(), positions, radius, true));
+            _doorSpells = new DaggerfallDoorSpells(State.Effects, State.ItemInstances, () => State.Progression.Level);
             State.ItemInstances.AttachContainment(_itemOwnership.ResidentOwner);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, definitions.Mobiles, definitions.Text);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, composition.StartSite.ClassicPresentation.InventoryIcons,
@@ -614,8 +634,8 @@ internal sealed partial class DaggerfallSession
                     if (!State.LevelUps.BeginOghma()) return false;
                     RequestPanel(DaggerfallPanel.Character);
                     return true;
-                }, useSanguineRose: UseSanguineRose, useSkullCorruption: UseSkullCorruption, useItemSpell: item => _itemCastTriggers.Use(item),
-                useAzurasStar: item => ItemSouls.UseAzurasStar(State.Inventory.GetDurableItemId(new(item.EntityId)).Value), usePotion: UsePotion, useQuestItem: State.Quests.UseItem));
+                }, useSanguineRose: _artifacts.UseSanguineRose, useSkullCorruption: _artifacts.UseSkullCorruption, useItemSpell: item => _itemCastTriggers.Use(item),
+                useAzurasStar: item => ItemSouls.UseAzurasStar(State.Inventory.GetDurableItemId(new(item.EntityId)).Value), usePotion: key => Casting.UsePotion(actors.Player.DurableId, key), useQuestItem: State.Quests.UseItem));
             _inventoryUi.BookOpened += _ => RequestPanel(DaggerfallPanel.Book);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi, _groundContainers);
             _interactions = new DaggerfallOpenInteractions(
@@ -662,8 +682,8 @@ internal sealed partial class DaggerfallSession
                         result.Outcome == DaggerfallItemConditionOutcome.Broken, _latestUpdateGeneration ?? 0, _latestSimulationStep ?? 0));
                 }, enemyGroup: id => authored.TryGetValue(id, out var enemy) && enemy.Kind is DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass
                     ? DaggerfallFormulaPolicy.EnemyGroupFor(enemy) : null,
-                damageSource: (id, amount) => AppendEffectDamage(new(_vitality.ResolveHeldEnchantmentDamage(RequireEffectActor(id), amount))),
-                restoreSource: (id, amount) => _vitality.RestoreSpellTrack(RequireEffectActor(id), TrackId.Parse("health"), amount),
+                damageSource: (id, amount) => AppendEffectDamage(new(_vitality.ResolveHeldEnchantmentDamage(EffectActor(id), amount))),
+                restoreSource: (id, amount) => _vitality.RestoreSpellTrack(EffectActor(id), TrackId.Parse("health"), amount),
                 strikeTuning: tuning.StrikeEnchantments);
             _itemEnchanting.Enchanted += _itemCastTriggers.Enchanted;
             effects.Completed += _itemCastTriggers.EffectCompleted;

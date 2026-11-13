@@ -97,6 +97,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly DaggerfallEquipmentMoves _equipmentMoves;
     private readonly DaggerfallItemConditionService _itemCondition;
     private readonly DaggerfallItemEnchanting _itemEnchanting;
+    private readonly DaggerfallArtifactPowers _artifacts;
+    private readonly DaggerfallDoorSpells _doorSpells;
     private readonly DaggerfallItemMaker _itemMaker;
     private readonly DaggerfallPotionMaking _potionMaker;
     private readonly DaggerfallItemOwnership _itemOwnership;
@@ -463,7 +465,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // A modal equipment action can be saved before another playing step. Capture the worn set
         // that actually owns the items, rather than a prior frame's held stat sources.
         Casting.ClearPending();
-        DaggerfallMolagBalEffects.Reconcile(State.Effects, MolagBalEquipped);
+        DaggerfallMolagBalEffects.Reconcile(State.Effects, _artifacts.MolagBalEquipped);
         State.ItemInstances.ReconcileResidentOwners();
         _heldEnchantments.Refresh();
         using IDisposable detachedResidents = _exterior.SuspendResidentExteriorLocationsForSave();
@@ -848,7 +850,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Calendar: _time.Calendar,
             Effects: ReadActiveEffects(),
             CinematicSource: Cinematics?.ActiveSource,
-            Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemChoice.View, Teleport: TeleportChoice.View, Dispel: DispelChoice.View, Identify: IdentifyChoice.View, Spells: ReadSpells(), Detectors: ReadDetectors())
+            Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemChoice.View, Teleport: TeleportChoice.View, Dispel: DispelChoice.View, Identify: IdentifyChoice.View, Spells: ReadSpells(), Detectors: Detectors.Read())
         {
             ActionDrivenTime = ActionDrivenPlay, TimeHeld = PlayerTimeHeld,
             Weapon = new DaggerfallWeaponView(State.WeaponDrawn,
@@ -933,6 +935,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal DaggerfallCreateItem CreateItemChoice { get; } = null!;
     internal DaggerfallItemSouls ItemSouls { get; } = null!;
     internal DaggerfallTeleport TeleportChoice { get; } = null!;
+    internal DaggerfallDetectors Detectors { get; } = null!;
     /// <summary>The end of an item's life: unique retirement, stack consumption, a quest's items taken back.</summary>
     internal DaggerfallItemLifetime ItemLifetime => _itemLifetime;
     /// <summary>The Mages Guild's enchanting service (Economy).</summary>

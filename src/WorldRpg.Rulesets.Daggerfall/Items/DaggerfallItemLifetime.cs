@@ -31,6 +31,15 @@ internal sealed class DaggerfallItemLifetime(EntityDirectory entities, Inventory
     }
 
     /// <summary>Consumes the whole of one owner's stack and forgets its meaning.</summary>
+    /// <summary>Every conjured item whose minute has come is retired: unique ones destroyed, stacks consumed.</summary>
+    internal void ExpireConjured(long minute)
+    {
+        foreach (var entry in instances.UniqueItems.Where(value => value.Value.Conjuration?.ExpiresAtMinute <= minute).ToArray())
+            DestroyUnique(entry.Key);
+        foreach (var entry in instances.StackItems.Where(value => value.Metadata.Conjuration?.ExpiresAtMinute <= minute).ToArray())
+            ConsumeStack(entry.Owner, entry.Stack);
+    }
+
     internal void ConsumeStack(DaggerfallItemOwner owner, InventoryStackId id)
     {
         EntityId entity = ownership.Entity(owner);

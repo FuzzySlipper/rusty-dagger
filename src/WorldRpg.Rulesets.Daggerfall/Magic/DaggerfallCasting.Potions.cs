@@ -5,6 +5,15 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed partial class DaggerfallCasting
 {
+    /// <summary>The player drinks a dose: it succeeds when every effect was delivered.</summary>
+    internal DaggerfallInventoryUseResult UsePotion(long casterId, int recipeKey)
+    {
+        var result = DrinkPotion(casterId, recipeKey);
+        return result.Outcome == DaggerfallCastOutcome.DeliveryCompleted
+            ? new(true, $"Drank {catalog.PotionRecipes[recipeKey].Name}.")
+            : new(false, "This potion cannot be used now.");
+    }
+
     /// <summary>Consumes no readiness or spell points. The inventory owner removes the dose after delivery.</summary>
     internal DaggerfallCastResult DrinkPotion(long casterId, int recipeKey)
     {
@@ -34,16 +43,5 @@ internal sealed partial class DaggerfallCasting
         return delivered.Bundle is { Results.Count: > 0 } completed
             && completed.Results.All(value => value.Outcome is DaggerfallCastOutcome.SourceUnavailable or DaggerfallCastOutcome.TargetUnavailable)
             ? Finish(DaggerfallCastOutcome.SourceUnavailable, completed) : delivered;
-    }
-}
-
-internal sealed partial class DaggerfallSession
-{
-    private DaggerfallInventoryUseResult UsePotion(int recipeKey)
-    {
-        var result = Casting.DrinkPotion(State.Actors.Player.DurableId, recipeKey);
-        return result.Outcome == DaggerfallCastOutcome.DeliveryCompleted
-            ? new(true, $"Drank {_definitions.Magic.PotionRecipes[recipeKey].Name}.")
-            : new(false, "This potion cannot be used now.");
     }
 }

@@ -33,9 +33,9 @@ public sealed class DaggerfallDetectionEffectsTests
         Assert.Equal(subtype == 2 ? 360 : 400, DaggerfallMagicCostPolicy.CalculateEffectCosts(TestPayload.Definitions.Magic,
             Setting(subtype, 10), new Dictionary<string, int> { ["thaumaturgy"] = 50 }).Gold);
         using var restored = f.Restore(s.CaptureSave());
-        Assert.Equal(Assert.Single(s.ReadDetectors()).Source, Assert.Single(restored.ReadDetectors()).Source);
+        Assert.Equal(Assert.Single(s.Detectors.Read()).Source, Assert.Single(restored.Detectors.Read()).Source);
         Assert.Equal(11u, Assert.Single(restored.State.Effects.Active).Lifecycle.RemainingRounds);
-        restored.State.Effects.AdvanceElapsedRounds(11); Assert.Empty(restored.ReadDetectors());
+        restored.State.Effects.AdvanceElapsedRounds(11); Assert.Empty(restored.Detectors.Read());
     }
     [Fact]
     public void Enemy_and_magic_use_live_classification_strict_engine_range_and_remove_stale_contacts()
@@ -46,9 +46,9 @@ public sealed class DaggerfallDetectionEffectsTests
         long boundary = s.SpawnActor("rat", new(new(24, 0, 10), 0));
         long north = s.SpawnActor("rat", new(new(10, 0, 7), 0));
         Cast(s, Setting(0, 20)); Cast(s, Setting(1, 20));
-        Assert.DoesNotContain(s.ReadDetectors().Single(v => v.Kind == "magic").Contacts, v => v.Id == near.ToString());
+        Assert.DoesNotContain(s.Detectors.Read().Single(v => v.Kind == "magic").Contacts, v => v.Id == near.ToString());
         Conceal(s, near); Conceal(s, boundary);
-        var views = s.ReadDetectors();
+        var views = s.Detectors.Read();
         var magic = Assert.Single(views.Single(v => v.Kind == "magic").Contacts, v => v.Id == near.ToString());
         Assert.Equal(2, magic.Distance); Assert.Equal(Math.PI / 2, magic.BearingRadians);
         Assert.DoesNotContain(views.SelectMany(v => v.Contacts), v => v.Id == boundary.ToString());
@@ -58,10 +58,10 @@ public sealed class DaggerfallDetectionEffectsTests
         Assert.All(f.Perception.Requests, request => Assert.Equal(14, request.Observers.Span[0].MaximumDistance));
         // Occluded is deliberately used by the Engine fake: classic detection ignores line of sight.
         s.State.Effects.CancelSource("test.conceal");
-        Assert.DoesNotContain(s.ReadDetectors().Single(v => v.Kind == "magic").Contacts, v => v.Id == near.ToString());
+        Assert.DoesNotContain(s.Detectors.Read().Single(v => v.Kind == "magic").Contacts, v => v.Id == near.ToString());
         s.RetireActor(near);
-        Assert.DoesNotContain(s.ReadDetectors().SelectMany(v => v.Contacts), v => v.Id == near.ToString());
-        s.State.PlayerControl.MoveTo(new Vector3(40, 0, 40)); Assert.Empty(s.ReadDetectors().SelectMany(v => v.Contacts));
+        Assert.DoesNotContain(s.Detectors.Read().SelectMany(v => v.Contacts), v => v.Id == near.ToString());
+        s.State.PlayerControl.MoveTo(new Vector3(40, 0, 40)); Assert.Empty(s.Detectors.Read().SelectMany(v => v.Contacts));
     }
     [Fact]
     public void Ground_treasure_uses_actual_inventory_items_and_clears_across_sites_then_restores()
@@ -71,26 +71,26 @@ public sealed class DaggerfallDetectionEffectsTests
         Cast(s, Setting(2, 30)); s.PublishInitial();
         var stack = s.State.Inventory.Read().Stacks.First();
         f.Submit(new { action = "inventory-drop", revision = f.Engine.PublishedNested("inventory", "revision"), item = $"stack:{stack.Id.Value}", amount = 1 });
-        var contact = Assert.Single(Assert.Single(s.ReadDetectors()).Contacts);
+        var contact = Assert.Single(Assert.Single(s.Detectors.Read()).Contacts);
         Assert.Equal("container", contact.Kind);
         var item = Assert.Single(contact.Items); Assert.Equal(stack.Definition.Value, item.Definition); Assert.Equal(1UL, item.Quantity);
         Assert.NotEqual("1", contact.Id);
         s.PublishInitial(); string projection = JsonSerializer.Serialize(f.Engine.Published());
         Assert.Contains("\"detectors\"", projection); Assert.Contains(contact.Id, projection); Assert.Contains(item.Id, projection);
         using var restored = f.Restore(s.CaptureSave());
-        var resumed = Assert.Single(Assert.Single(restored.ReadDetectors()).Contacts);
+        var resumed = Assert.Single(Assert.Single(restored.Detectors.Read()).Contacts);
         Assert.Equal(contact.Id, resumed.Id); Assert.Equal(item.Id, Assert.Single(resumed.Items).Id);
         Assert.True(s.TryTransitionTo(f.Destination!.ProfileKey));
-        Assert.Empty(Assert.Single(s.ReadDetectors()).Contacts);
+        Assert.Empty(Assert.Single(s.Detectors.Read()).Contacts);
         Assert.True(s.TryTransitionTo(f.Composition.StartSite.ProfileKey));
         s.State.PlayerControl.MoveTo(new Vector3(10, 0, 10));
-        Assert.Equal(contact.Id, Assert.Single(Assert.Single(s.ReadDetectors()).Contacts).Id);
+        Assert.Equal(contact.Id, Assert.Single(Assert.Single(s.Detectors.Read()).Contacts).Id);
         // Emptying the canonical inventory removes treasure eligibility immediately.
         var save = DaggerfallSavePayload.Read(s.CaptureSave()); var ground = Assert.Single(save.GroundContainers, value => value.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) == contact.Id);
         var owner = s.State.Containers.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)ground.Id)));
         var contents = s.State.Containers.Read(owner);
         s.State.Containers.Transfer(owner, s.State.Actors.Player.Actor.Entity, new(new WorldRpg.Kit.Inventory.InventoryItemId(stack.Definition.Value), 1, contents.Stacks.Single().Id));
-        Assert.Empty(Assert.Single(s.ReadDetectors()).Contacts);
+        Assert.Empty(Assert.Single(s.Detectors.Read()).Contacts);
     }
     [Fact]
     public void Corpse_treasure_uses_the_durable_container_and_current_nonempty_inventory()
@@ -104,30 +104,30 @@ public sealed class DaggerfallDetectionEffectsTests
         var inventory = s.State.Containers.Read(corpse.Owner);
         Assert.NotEmpty(inventory.Stacks);
         AimActivationAt(s, target); Cast(s, Setting(2, 20));
-        var contact = Assert.Single(Assert.Single(s.ReadDetectors()).Contacts);
+        var contact = Assert.Single(Assert.Single(s.Detectors.Read()).Contacts);
         Assert.Equal(corpse.ContainerIdentity.Value.ToString(), contact.Id);
         Assert.Equal(inventory.Stacks.Count + inventory.UniqueItems.Count, contact.Items.Count);
         using var restored = f.Restore(s.CaptureSave());
-        Assert.Equal(contact.Id, Assert.Single(Assert.Single(restored.ReadDetectors()).Contacts).Id);
+        Assert.Equal(contact.Id, Assert.Single(Assert.Single(restored.Detectors.Read()).Contacts).Id);
         foreach (var stack in inventory.Stacks)
             s.State.Containers.Transfer(corpse.Owner, s.State.Actors.Player.Actor.Entity,
                 new(new WorldRpg.Kit.Inventory.InventoryItemId(stack.Definition.Value), stack.Quantity, stack.Id));
         foreach (var item in inventory.UniqueItems)
             s.State.Containers.Transfer(corpse.Owner, s.State.Actors.Player.Actor.Entity,
                 new(new WorldRpg.Kit.Inventory.InventoryItemId(item.Definition.Value), 1, UniqueEntityId: item.Entity.Value));
-        Assert.Empty(Assert.Single(s.ReadDetectors()).Contacts);
+        Assert.Empty(Assert.Single(s.Detectors.Read()).Contacts);
     }
     [Fact]
     public void Source_expiry_and_cancellation_keep_other_detector_sources_and_no_projection_ghosts()
     {
         using Fixture f = new(); var s = f.Session;
         Cast(s, Setting(0, 2)); Cast(s, Setting(1, 10)); Cast(s, Setting(2, 10));
-        Assert.Equal(3, s.ReadDetectors().Count);
+        Assert.Equal(3, s.Detectors.Read().Count);
         s.State.Effects.AdvanceElapsedRounds(1);
-        Assert.Equal(new[] { "enemy", "treasure" }, s.ReadDetectors().Select(v => v.Kind).Order());
+        Assert.Equal(new[] { "enemy", "treasure" }, s.Detectors.Read().Select(v => v.Kind).Order());
         var enemy = s.State.Effects.Active.Single(effect => effect.Definition.Detection == DaggerfallDetection.Enemy);
         s.State.Effects.Cancel(enemy.Context.Instance); s.PublishInitial();
-        Assert.Equal("treasure", Assert.Single(s.ReadDetectors()).Kind);
+        Assert.Equal("treasure", Assert.Single(s.Detectors.Read()).Kind);
         var snapshot = (Dictionary<string, object?>)f.Engine.Published()!;
         Assert.Single((object?[])snapshot["detectors"]!);
         s.State.Effects.AdvanceElapsedRounds(9); s.PublishInitial();

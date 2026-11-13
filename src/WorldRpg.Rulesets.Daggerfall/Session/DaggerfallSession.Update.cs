@@ -18,8 +18,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <see cref="AdvanceCalendar"/> is every calendar consumer, in order, which rest, travel and quest time share
 /// through <see cref="AdvanceElapsedTime"/> and <see cref="AdvanceQuestTime"/>; <see cref="SimulateStep"/> is every
 /// call one of its fixed steps makes; <see cref="ResolveExhaustion"/> is what a collapse does across domains;
-/// <see cref="RemoveCarriedQuestItems"/> is what a quest's end does to the items it lent; and <see cref="ReconcileSummoningFoes"/>
-/// is how a summoning's hostiles arrive. Each line says the domain it belongs to. Order is behaviour: a call
+/// <see cref="RemoveCarriedQuestItems"/> is what a quest's end does to the items it lent; <see cref="ReconcileSummoningFoes"/>
+/// is how a summoning's hostiles arrive; and <see cref="ExpireConjuredItems"/> is what a conjured item's last minute does. Each line says the domain it belongs to. Order is behaviour: a call
 /// moves only with a reason that names what it changes.
 /// </summary>
 internal sealed partial class DaggerfallSession
@@ -262,7 +262,7 @@ internal sealed partial class DaggerfallSession
         _vampirism.AdvanceQuestOpportunities(before, after);                                      // Afflictions
         _lycanthropy.AdvanceQuestOpportunities(before, after);                                    // Afflictions
         StartDueCriminalInvitations();                                                            // Quests
-        ExpireConjuredItems();                                                                    // Magic
+        ExpireConjuredItems();                                                                    // Session: the conjured items' list, below
         AdvanceRounds(before, after, ordinaryPlay, resting);                                      // Session: the round's list, below
         // An elapsed interval announces the holiday it ends on once, when it completes, rather than
         // every holiday its slices cross (CompleteTimeIncrease).
@@ -401,7 +401,7 @@ internal sealed partial class DaggerfallSession
         _latestSimulationStep = simulationStep;                                                   // Session
         if (State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? actionGraph))
             actionGraph.Advance(update.DeltaSeconds);                                             // Interiors
-        DaggerfallMolagBalEffects.Reconcile(State.Effects, MolagBalEquipped);                     // Magic
+        DaggerfallMolagBalEffects.Reconcile(State.Effects, _artifacts.MolagBalEquipped);          // Magic
         _combat.AdvanceEquipment(update.DeltaSeconds);                                            // Combat
         State.Kit.AttackExecution.ObserveTimeline(generation, simulationStep);                    // Combat
 
@@ -676,5 +676,17 @@ internal sealed partial class DaggerfallSession
             long id=_roster.Spawn(actor.Id.Value,pose); _enemyBehavior.MakeHostile(id);          // Actors
             Summoning.Spawned(id);                                                              // Quests
         }
+    }
+
+    /// <summary>
+    /// The conjured items' list: every conjured item whose minute has come is retired from the one admitted calendar and
+    /// the canonical inventories, then the held powers are read again from what is still worn.
+    /// </summary>
+    private void ExpireConjuredItems()
+    {
+        _itemLifetime.ExpireConjured(_time.Calendar.MinuteNumber);                               // Items
+        State.HeldEnchantments.Refresh();                                                         // Magic
+        // Inactive deltas stay coherent while suspended. The site's existing materialization
+        // restores their effects and stat sources before this same live sweep releases them.
     }
 }

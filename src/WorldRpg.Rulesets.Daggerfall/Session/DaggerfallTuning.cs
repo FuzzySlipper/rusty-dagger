@@ -768,16 +768,6 @@ internal sealed record DaggerfallViewmodelTuning(DaggerfallViewmodelStyle Style)
     }
 }
 
-internal sealed record DaggerfallDetectionTuning(double MaximumDistance)
-{
-    internal DaggerfallDetectionTuning Validate()
-    {
-        if (!double.IsFinite(MaximumDistance) || MaximumDistance <= 0d)
-            throw new ArgumentOutOfRangeException(nameof(MaximumDistance));
-        return this;
-    }
-}
-
 internal sealed record DaggerfallNormalLightTuning(float Distance, float HeightFraction, float Range, float Intensity)
 {
     internal DaggerfallNormalLightTuning Validate() => float.IsFinite(Distance) && Distance > 0

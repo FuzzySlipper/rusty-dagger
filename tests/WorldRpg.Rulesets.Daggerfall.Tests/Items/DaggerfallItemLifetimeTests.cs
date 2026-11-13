@@ -27,6 +27,23 @@ public sealed class DaggerfallItemLifetimeTests
     }
 
     [Fact]
+    public void Conjured_items_are_retired_when_their_minute_comes_and_others_stay()
+    {
+        using ItemHoldersFixture f = new();
+        var (_, conjured) = f.Weapon();
+        var (_, ordinary) = f.Weapon();
+        f.Instances.ReplaceUnique(conjured, f.Instances.RequireUnique(conjured) with { Conjuration = new("cast.4", 10) });
+
+        f.Lifetime.ExpireConjured(9);
+        Assert.True(f.Instances.ContainsUnique(conjured));
+
+        f.Lifetime.ExpireConjured(10);
+        Assert.False(f.Instances.ContainsUnique(conjured));
+        Assert.True(f.Instances.ContainsUnique(ordinary));
+        Assert.Single(f.Inventory.Read().UniqueItems);
+    }
+
+    [Fact]
     public void A_consumed_stack_is_spent_whole_from_its_owner_and_forgotten()
     {
         using ItemHoldersFixture f = new();

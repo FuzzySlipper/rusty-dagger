@@ -117,7 +117,7 @@ internal sealed partial class DaggerfallSession
             reach,
             new DaggerfallActivationContributions(
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts, CorpseSightPoint),
-                _doorActivation = new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, ActivateDoorMagic, EnterExteriorBuilding, ExteriorBuildingDoor, ExteriorBuildingName, DescribeLockDifficulty, DiscoverExteriorBuilding),
+                _doorActivation = new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, id => _doorSpells.Activate(_doors, id), EnterExteriorBuilding, ExteriorBuildingDoor, ExteriorBuildingName, DescribeLockDifficulty, DiscoverExteriorBuilding),
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination,
                     EnterPortal),
                 new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyInteractionPoint, OpenPropertyLoot),

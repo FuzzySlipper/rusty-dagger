@@ -6,40 +6,20 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules;
-using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+/// <summary>
+/// Where actors can be placed and whom they see as foes: clear spawn poses around the player and the enemies a
+/// perception query finds, used by summons, law, quests and allies.
+/// </summary>
 internal sealed partial class DaggerfallSession
 {
-    // SanguineRoseEffect's radius and FoeSpawner's placement envelope, in normalized world metres.
-    private const float RoseEnemyRadius = 12f;
-    private const float SummonMinimumDistance = 4f;
-    private const float SummonMaximumDistance = 20f;
+    // FoeSpawner's placement envelope, in normalized world metres.
     private const float SummonFloorDistance = 4f;
     private const float SummonSeparation = 1.25f;
     private const float SummonClearanceRadius = .65f;
     private const int SummonPlacementAttempts = 8;
-
-    private DaggerfallInventoryUseResult UseSanguineRose(KitUniqueInventoryItem source)
-    {
-        if (State.PlayerControl.Position is not { } player)
-            return new(false, "Sanguine Rose cannot summon without a player position.");
-        if (!QueryEnemies(DaggerfallActorIdentity.PlayerEntityId, player, Vector3.UnitZ, RoseEnemyRadius, -1d,
-                definition => definition.Team != "player-ally").Any(pair => pair.Distance <= RoseEnemyRadius))
-            return new(false, "No monsters nearby.");
-        DaggerfallActorDefinition daedroth = _definitions.Actors.Values.Single(actor => actor.MobileId == 27);
-        if (!_sites.Projection.Inputs.MobileSprites.ContainsKey(daedroth.MobileId!.Value))
-            return new(false, "This site cannot display the Sanguine Rose summon.");
-        if (!TrySummonPose(source, player, out ActorPose pose))
-            return new(false, "This site has no clear ground for the Sanguine Rose summon.");
-        // The emitted actor belongs to the site, independently of its source item's later lifetime.
-        _ = _roster.Spawn(daedroth.Id.Value, pose, playerAllied: true);
-        DaggerfallItemConditionResult charged = _itemCondition.Damage(source, 100);
-        return new(true, charged.Outcome == DaggerfallItemConditionOutcome.Broken
-            ? "Sanguine Rose summoned an allied Daedroth and broke."
-            : "Sanguine Rose summoned an allied Daedroth.");
-    }
 
     private PursuitTarget? SelectAllyTarget(long observerId)
     {
@@ -80,14 +60,6 @@ internal sealed partial class DaggerfallSession
             if (receipt.HasNextPairCursor)
                 request = request with { PairCursor = receipt.NextPairCursor };
         } while (receipt.HasNextPairCursor);
-    }
-
-    private bool TrySummonPose(KitUniqueInventoryItem source, WorldPoint player, out ActorPose pose, string randomScope = "daggerfall.sanguine-rose.v1")
-    {
-        ulong identity = State.Inventory.GetDurableItemId(new(source.EntityId)).Value;
-        int condition = State.ItemInstances.RequireUnique(identity).CurrentCondition;
-        return TrySpawnPose($"source:{identity}:condition:{condition}", randomScope, player,
-            SummonMinimumDistance, SummonMaximumDistance, out pose);
     }
 
     /// <summary>Where a placement ray starts relative to the player's facing.</summary>
