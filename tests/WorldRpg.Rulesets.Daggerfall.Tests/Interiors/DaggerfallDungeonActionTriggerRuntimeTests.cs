@@ -260,7 +260,7 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
 
     private static DaggerfallVariableStore Variables() => new(new Dictionary<string, int>(StringComparer.Ordinal));
 
-    private class TriggerSpatialDouble : DispatchProxy
+    internal class TriggerSpatialDouble : DispatchProxy
     {
         private readonly Dictionary<ulong, SpatialTriggerRegisterRequest> _definitions = [];
         private HashSet<ulong> _active = [];

@@ -98,7 +98,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly DaggerfallCharacterPresentation _characterUi;
     /// <summary>The one owner of the active site projection, catalog, deltas and exterior window.</summary>
     // Assigned once the roster and persistence it composes exist; readers before that are lazy.
-    private readonly DaggerfallSiteLifecycle _sites = null!;
+    private readonly DaggerfallSiteCrossing _sites = null!;
     private DaggerfallExteriorWorld _exterior => _sites.Exterior;
     private DaggerfallWorldProfileKey _activeProfileKey => _sites.ActiveProfile;
     private DaggerfallSiteAppearance _appearance => _sites.Projection.Appearance;
@@ -142,7 +142,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal void AdmitSiteProfiles(DaggerfallSiteProfiles profiles) => _sites.AdmitProfiles(profiles);
 
     /// <summary>The session's site lifecycle: projection, catalog, deltas and transitions.</summary>
-    internal DaggerfallSiteLifecycle Sites => _sites;
+    internal DaggerfallSiteCrossing Sites => _sites;
 
     /// <summary>The cells streamed around the player and the towns placed on them.</summary>
     internal DaggerfallExteriorWorld Exterior => _sites.Exterior;
@@ -337,7 +337,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _heldEnchantments.Refresh();
         using IDisposable detachedResidents = _exterior.SuspendResidentExteriorLocationsForSave();
         return _persistence.Capture(_latestUpdateGeneration, _latestSimulationStep, _roster.Dynamic, _encounters,
-            _sites.Deltas, _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
+            _sites.CaptureDeltas(), _activeProfileKey, _sites.ReturnProfile, State.DungeonDiscoveries, State.DungeonActions,
             _sites.Projection.CaptureMotion(), _exterior.CaptureExteriorResidency(), _exterior.CaptureExteriorLocationResidency());
     }
 
@@ -523,7 +523,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _exterior.RetireResidentExteriorLocations(capture: false); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
-        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, .. _atlasTiles is null ? Array.Empty<IDisposable>() : new IDisposable[] { _atlasTiles }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.ActionTriggers, Infections, _horizon, _weatherPresentation]); }
+        try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, .. _atlasTiles is null ? Array.Empty<IDisposable>() : new IDisposable[] { _atlasTiles }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.Interiors.ActionTriggers, Infections, _horizon, _weatherPresentation]); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _exterior.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }

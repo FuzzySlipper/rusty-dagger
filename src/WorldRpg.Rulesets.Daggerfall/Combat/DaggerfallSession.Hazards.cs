@@ -77,7 +77,7 @@ internal sealed partial class DaggerfallSession
     private void SpringTraps(ActorState thrown, Vector3 at)
     {
         IReadOnlyList<DaggerfallDungeonActionDefinition> actions = _sites.Projection.Inputs.DungeonActions;
-        foreach (DaggerfallDungeonActionDefinition trigger in _sites.ActionTriggers.ContactActionsAt(at))
+        foreach (DaggerfallDungeonActionDefinition trigger in _sites.Interiors.ActionTriggers.ContactActionsAt(at))
         {
             DaggerfallDungeonActionDefinition? action = trigger;
             for (int link = 0; link < actions.Count && action is not null; link++)

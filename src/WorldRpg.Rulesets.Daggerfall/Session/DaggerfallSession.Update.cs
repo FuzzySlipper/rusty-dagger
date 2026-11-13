@@ -343,7 +343,7 @@ internal sealed partial class DaggerfallSession
         // frame before any actor steps. The player's place relative to the water is unchanged by it.
         if (_exterior.RebaseExteriorIfNeeded())                                                   // Exterior
             ReconcileTriggers(_exterior.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, actionGraph);   // Character
-        if (player.Movement is not null && player.Alive && _sites.ActivateLocationAtPlayer())    // Exterior
+        if (player.Movement is not null && player.Alive && _sites.ActivateLocationAtPlayer())    // Interiors: the crossing
             ReconcileTriggers(_exterior.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, null);   // Character
         _camera.SettlePunch(update.DeltaSeconds, _tuning.Attacks.Strike.PunchSettleRate);        // Combat
         if (_hitStopSteps > 0) _hitStopSteps--;                                                   // Combat

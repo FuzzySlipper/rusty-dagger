@@ -72,7 +72,7 @@ internal sealed partial class DaggerfallSession
     internal DaggerfallTeleportView? TeleportView => _pendingTeleport is { } request ? new(request, _teleportAnchor is not null) : null;
 
     /// <summary>
-    /// A scene-local point in the active profile's own frame, as <see cref="DaggerfallSiteLifecycle.TryRelocatePlayer"/>
+    /// A scene-local point in the active profile's own frame, as <see cref="DaggerfallSiteCrossing.TryRelocatePlayer"/>
     /// takes it. Exterior profiles author poses in the site's local frame; LocalToProfile is the map-global projection
     /// used by live population and map reads, so feeding it back to a relocation resolves an impossible exterior cell.
     /// </summary>

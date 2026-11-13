@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json.Serialization;
 using Rusty.Engine;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
@@ -12,8 +13,8 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// The session consequences a site transition reaches that the site lifecycle does not own, beside those the exterior
-/// reaches. The lifecycle calls each at one fixed point of the transition; the session answers.
+/// The session consequences a crossing reaches that it does not own, beside those the exterior reaches. The crossing
+/// calls each at one fixed point of the transition; the session answers.
 /// </summary>
 internal interface IDaggerfallSiteTransitionHost : IDaggerfallExteriorHost
 {
@@ -31,12 +32,19 @@ internal interface IDaggerfallSiteTransitionHost : IDaggerfallExteriorHost
 }
 
 /// <summary>
-/// The one owner of where the session is projected: the live site projection, the admitted site catalog, the active and
-/// return profiles, the inactive sites' detached deltas, the site-bound bank provider and the action-trigger runtime.
-/// Every site transition and relocation goes through here, and a failed transition restores the source. The cells
-/// streamed around an exterior site and the towns on them are <see cref="Exterior"/>'s.
+/// Crossing the door: the hand-off between the exterior (<see cref="DaggerfallExteriorWorld"/>) and places entered through
+/// a door (<see cref="DaggerfallInteriors"/>). It holds what crosses: which site is active and its live projection, the
+/// profile a return leads back to, the admitted catalog, the inactive sites' detached deltas and the site-bound bank
+/// provider. Every site change goes through here (entering, leaving, travel, a recall, walking into a town, and loading
+/// into either) and a failed one restores the source.
 /// </summary>
-internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
+/// <remarks>
+/// Entering from outside, the exterior captures the town and its neighbours into the deltas, returns the origin to zero
+/// and lets go of its window; the crossing admits the destination's projection, actors and collision, stands the arrival
+/// and hands the interior its arrival. Leaving, the crossing admits the town's projection, the exterior admits its window
+/// at the destination's origin and the player is stood in it. Neither owner names the session.
+/// </remarks>
+internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
 {
     private readonly IEngineContext _engine;
     private readonly DaggerfallState _state;
@@ -51,7 +59,6 @@ internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
     private readonly DaggerSessionPersistence _persistence;
     private readonly DaggerfallGroundContainers _groundContainers;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
-    private readonly Func<DaggerfallDungeonActionDefinition, DaggerfallDungeonActionExecution?> _executeFamilyAction;
     private readonly IDaggerfallSiteTransitionHost _host;
     private readonly Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> _deltas = [];
     private readonly DaggerfallExteriorWorld _exterior;
@@ -59,12 +66,12 @@ internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
     /// <summary>The session-wide classic presentation every site projection draws held items and effects from.</summary>
     private readonly NormalizedClassicPresentation? _sessionPresentation;
 
-    internal DaggerfallSiteLifecycle(IEngineContext engine, DaggerfallState state, DaggerfallDefinitions definitions,
+    internal DaggerfallSiteCrossing(IEngineContext engine, DaggerfallState state, DaggerfallDefinitions definitions,
         DaggerfallTuning tuning, DaggerfallWorldTime time, DaggerfallSiteContext site, SpatialMovementSystem spatial,
         FirstPersonCameraSystem camera, DaggerfallSiteAudioBundles? audioBundles, DaggerfallActorRoster roster,
         DaggerSessionPersistence persistence, DaggerfallGroundContainers groundContainers, DaggerfallEnemyBehaviorModule enemyBehavior,
-        Func<DaggerfallDungeonActionDefinition, DaggerfallDungeonActionExecution?> executeFamilyAction, IDaggerfallSiteTransitionHost host,
-        DaggerfallSiteProjection projection, DaggerfallDungeonActionTriggerRuntime actionTriggers, DaggerfallSiteProfiles? profiles,
+        DaggerfallInteriors interiors, IDaggerfallSiteTransitionHost host,
+        DaggerfallSiteProjection projection, DaggerfallSiteProfiles? profiles,
         DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile,
         NormalizedClassicPresentation? sessionPresentation = null)
     {
@@ -82,10 +89,9 @@ internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
         _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
         _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers));
         _enemyBehavior = enemyBehavior ?? throw new ArgumentNullException(nameof(enemyBehavior));
-        _executeFamilyAction = executeFamilyAction ?? throw new ArgumentNullException(nameof(executeFamilyAction));
         _host = host ?? throw new ArgumentNullException(nameof(host));
         Projection = projection ?? throw new ArgumentNullException(nameof(projection));
-        ActionTriggers = actionTriggers ?? throw new ArgumentNullException(nameof(actionTriggers));
+        Interiors = interiors ?? throw new ArgumentNullException(nameof(interiors));
         Profiles = profiles;
         ActiveProfile = activeProfile;
         ReturnProfile = returnProfile;
@@ -99,8 +105,8 @@ internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
     /// <summary>The active site's live projection: doors, motion, appearance, lighting and portals.</summary>
     internal DaggerfallSiteProjection Projection { get; private set; }
 
-    /// <summary>The action-trigger runtime spanning every admitted profile.</summary>
-    internal DaggerfallDungeonActionTriggerRuntime ActionTriggers { get; }
+    /// <summary>Places entered through a door, as every site change reaches them.</summary>
+    internal DaggerfallInteriors Interiors { get; }
 
     /// <summary>The admitted site catalog, once composition has admitted it.</summary>
     internal DaggerfallSiteProfiles? Profiles { get; private set; }
@@ -114,10 +120,10 @@ internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
     DaggerfallSiteProjection IDaggerfallExteriorSite.Projection => Projection;
     DaggerfallSiteProfiles? IDaggerfallExteriorSite.Profiles => Profiles;
 
-    void IDaggerfallExteriorSite.RebaseActionTriggers(Vector3 delta) => ActionTriggers.RebaseActive(delta);
+    void IDaggerfallExteriorSite.RebaseActionTriggers(Vector3 delta) => Interiors.ActionTriggers.RebaseActive(delta);
 
     void IDaggerfallExteriorSite.RebaseRestoredPlayerTriggers() =>
-        ActionTriggers.RebaseRestoredPlayer(_state.PlayerControl, _state.Actors.Player.Actor.Entity);
+        Interiors.ActionTriggers.RebaseRestoredPlayer(_state.PlayerControl, _state.Actors.Player.Actor.Entity);
 
     /// <summary>All live appearance owners share the session's admitted animation and retirement boundaries.</summary>
     internal IEnumerable<DaggerfallSiteAppearance> Appearances
@@ -147,40 +153,22 @@ internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
                 delta.Corpses, delta.Doors, delta.Effects, delta.Motion) { BanishedActors = delta.BanishedActors });
     }
 
+    /// <summary>The inactive sites' deltas as the save holds them, in the stable order of their profiles.</summary>
+    internal DaggerfallSiteDeltaSave[] CaptureDeltas() =>
+        [.. _deltas.OrderBy(entry => entry.Key.Site.Region).ThenBy(entry => entry.Key.Site.Index).ThenBy(entry => entry.Key.LogicalId, StringComparer.Ordinal).Select(entry => new DaggerfallSiteDeltaSave(
+            DaggerfallWorldProfileKeySave.Capture(entry.Key), entry.Value.Actors, entry.Value.DynamicActors, entry.Value.ActorInventories, entry.Value.Corpses, entry.Value.Doors, entry.Value.Effects)
+        {
+            BanishedActors = entry.Value.BanishedActors,
+            Motion = entry.Value.Motion
+                ?? throw new InvalidOperationException($"Inactive site '{entry.Key.LogicalId}' has no captured dungeon motion snapshot."),
+        })];
+
     /// <summary>Replaces one inactive site's delta after an owner edited its detached state.</summary>
     internal void ReplaceDelta(DaggerfallWorldProfileKey profile, DaggerfallSiteRuntimeDelta delta)
     {
         if (!_deltas.ContainsKey(profile))
             throw new InvalidOperationException($"Site '{profile.LogicalId}' has no inactive delta to replace.");
         _deltas[profile] = delta ?? throw new ArgumentNullException(nameof(delta));
-    }
-
-    /// <summary>
-    /// The profiles a session starts with action graphs for: the active one, and on a restore every
-    /// profile the save carries action state for, in the stable order action graph save identity uses.
-    /// Any other profile gains its graph when the session first enters it.
-    /// </summary>
-    internal static IReadOnlyList<(DaggerfallWorldProfileKey Key, DaggerfallSiteProfile Inputs)> ActionProfiles(
-        DaggerfallSiteProfile active,
-        DaggerfallSiteProfiles? profiles,
-        IEnumerable<string>? savedProfileIds = null)
-    {
-        ArgumentNullException.ThrowIfNull(active);
-        Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> admitted = new() { [active.ProfileKey] = active };
-        foreach (string id in savedProfileIds ?? [])
-        {
-            if (StringComparer.Ordinal.Equals(id, active.ProfileKey.LogicalId)) continue;
-            DaggerfallSiteProfile saved = (profiles ?? throw new ArgumentException($"Saved action state names profile '{id}' without an admitted site catalog.", nameof(profiles)))
-                .RequireLogicalProfile(id);
-            admitted.TryAdd(saved.ProfileKey, saved);
-        }
-        if (admitted.Keys.Select(key => key.LogicalId).Distinct(StringComparer.Ordinal).Count() != admitted.Count)
-            throw new ArgumentException("Admitted world profiles must use distinct logical ids for action graph save identity.", nameof(profiles));
-        return admitted.OrderBy(entry => entry.Key.Site.Region)
-            .ThenBy(entry => entry.Key.Site.Index)
-            .ThenBy(entry => entry.Key.LogicalId, StringComparer.Ordinal)
-            .Select(entry => (entry.Key, entry.Value))
-            .ToArray();
     }
 
     /// <summary>Admits the full selected site catalog once composition has constructed this session.</summary>
@@ -196,21 +184,19 @@ internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
         // action graph, triggers and audio are admitted when the session first enters it.
         DaggerfallSiteProfile active = profiles.Require(ActiveProfile);
         Profiles = profiles;
-        EnsureDungeonActionGraph(ActiveProfile, active);
+        Interiors.AdmitActions(ActiveProfile, active);
     }
 
     internal DaggerfallAudioBundle? AudioFor(DaggerfallSiteProfile inputs) => _audioBundles?.Require(inputs);
 
-    private void EnsureDungeonActionGraph(DaggerfallWorldProfileKey key, DaggerfallSiteProfile inputs)
+    /// <summary>
+    /// Admits a constructed session's site, new or restored: outdoors, the exterior's window and town (from their saves
+    /// on a restore); inside, the place's own collision.
+    /// </summary>
+    internal void Load(DaggerfallExteriorCellResidencySave? savedExterior, DaggerfallExteriorLocationResidencySave? savedLocation)
     {
-        key.Validate();
-        ArgumentNullException.ThrowIfNull(inputs);
-        ActionTriggers.AdmitProfile(key, inputs);
-        if (_state.DungeonActions.ContainsKey(key)) return;
-        if (inputs.ProfileKey != key)
-            throw new InvalidOperationException($"World profile '{key.LogicalId}' action graph was paired with '{inputs.ProfileKey.LogicalId}'.");
-        _state.DungeonActions.Add(key, new DaggerfallDungeonActionGraph(key.LogicalId, inputs.DungeonActions,
-            _state.Variables, executeFamilyAction: _executeFamilyAction));
+        if (ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior) _exterior.AdmitInitialResidency(savedExterior, savedLocation);
+        else _exterior.AdmitLocationArtifact(Projection.Inputs);
     }
 
     /// <summary>
@@ -478,16 +464,7 @@ internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
                 _state.Transport.ForceFootOnInteriorTransition();
             ReturnProfile = !walking && returnDestination is null ? sourceProfile : null;
             _enemyBehavior.ClearPerceptionMemory();
-            if (target.DungeonMap is { } destinationMap)
-            {
-                if (!_state.DungeonDiscoveries.TryGetValue(destination, out DaggerfallDungeonDiscovery? discovery))
-                    _state.DungeonDiscoveries.Add(destination, discovery = new DaggerfallDungeonDiscovery(destination, destinationMap));
-                discovery.BeginVisit();
-            }
-            EnsureDungeonActionGraph(destination, target);
-            ActionTriggers.ActivateProfile(destination);
-            if (DaggerfallWorldProfileIds.TryParse(destination.LogicalId, out _, out var visitedBuilding) && visitedBuilding is { } building)
-                _site.DiscoverBuilding(destination.Site, building);
+            Interiors.Enter(destination, target);
         }
         catch (Exception failure)
         {
@@ -568,7 +545,7 @@ internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
                 try { _exterior.ClearExteriorResidency(); }
                 catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
             }
-            try { ActionTriggers.ActivateProfile(sourceProfile); }
+            try { Interiors.Reactivate(sourceProfile); }
             catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
             if (playerRelocated)
             {
@@ -585,17 +562,7 @@ internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
             throw new AggregateException("Site transition failed and source restoration was incomplete.", failures);
         }
 
-        if (_state.DungeonDiscoveries.TryGetValue(sourceProfile, out DaggerfallDungeonDiscovery? sourceDiscovery)
-            && source.Inputs.DungeonMap is { } sourceMap)
-        {
-            DaggerfallSiteMarker? usedPortal = sourceMap.Markers
-                .Where(marker => marker.Kind == DaggerfallSiteMarkerKind.Portal
-                    && marker.DestinationLogicalProfile == destination.LogicalId)
-                .OrderBy(marker => Vector3.DistanceSquared(marker.Position.ToVector(), sourcePosition.ToVector()))
-                .FirstOrDefault();
-            if (usedPortal is not null && Vector3.DistanceSquared(usedPortal.Position.ToVector(), sourcePosition.ToVector()) <= 9f)
-                sourceDiscovery.RevealMarker(usedPortal.Id);
-        }
+        Interiors.Left(sourceProfile, source.Inputs, destination, sourcePosition);
 
         // Releasing the old projection happens only after every durable and live owner has
         // committed to the destination. A disposal failure therefore leaves the destination as
@@ -681,5 +648,43 @@ internal sealed class DaggerfallSiteLifecycle : IDaggerfallExteriorSite
             _roster.MaterializeRetainedActor(actor, projectAppearance: true, projection: source);
         _persistence.RestoreSiteDelta(liveActors);
         source.Appearance.SyncRestoredDefeat(_state.Actors);
+    }
+}
+
+/// <summary>One inactive site's durable gameplay state. Runtime Engine identities are recreated when it becomes active.</summary>
+internal sealed record DaggerfallSiteDeltaSave(
+    DaggerfallWorldProfileKeySave Profile,
+    DaggerfallActorSave[] Actors,
+    DaggerfallDynamicActorSave[] DynamicActors,
+    DaggerfallActorInventorySave[] ActorInventories,
+    DaggerfallCorpseSave[] Corpses,
+    DaggerfallDoorSave[] Doors,
+    DaggerfallActiveEffectSave[] Effects)
+{
+    /// <summary>Detached current motion phases for this unloaded profile.</summary>
+    [JsonRequired]
+    public DaggerfallDungeonMotionSnapshot Motion { get; init; } = null!;
+    [JsonRequired]
+    public long[] BanishedActors { get; init; } = [];
+
+    internal void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Profile); Profile.Validate();
+        ArgumentNullException.ThrowIfNull(Actors);
+        ArgumentNullException.ThrowIfNull(DynamicActors);
+        if(Actors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)) || DynamicActors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)))
+            throw new ArgumentException("An actor cannot be forced hostile and magically pacified together.");
+        ArgumentNullException.ThrowIfNull(ActorInventories);
+        ArgumentNullException.ThrowIfNull(Corpses);
+        ArgumentNullException.ThrowIfNull(Doors);
+        ArgumentNullException.ThrowIfNull(Effects);
+        ArgumentNullException.ThrowIfNull(Motion);
+        Motion.Validate();
+        foreach (DaggerfallActorSave actor in Actors) { ArgumentNullException.ThrowIfNull(actor); actor.Validate(); }
+        foreach (DaggerfallDynamicActorSave actor in DynamicActors) { ArgumentNullException.ThrowIfNull(actor); actor.Validate(); }
+        foreach (DaggerfallActorInventorySave inventory in ActorInventories) { ArgumentNullException.ThrowIfNull(inventory); inventory.Validate(); }
+        foreach (DaggerfallCorpseSave corpse in Corpses) { ArgumentNullException.ThrowIfNull(corpse); corpse.Validate(); }
+        foreach (DaggerfallDoorSave door in Doors) { ArgumentNullException.ThrowIfNull(door); door.Validate(); }
+        foreach (DaggerfallActiveEffectSave effect in Effects) { ArgumentNullException.ThrowIfNull(effect); effect.Validate(); }
     }
 }

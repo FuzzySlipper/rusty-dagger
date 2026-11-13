@@ -1691,44 +1691,6 @@ internal sealed record DaggerfallActorSave(long EntityId, float X, float Y, floa
     }
 }
 
-/// <summary>One inactive site's durable gameplay state. Runtime Engine identities are recreated when it becomes active.</summary>
-internal sealed record DaggerfallSiteDeltaSave(
-    DaggerfallWorldProfileKeySave Profile,
-    DaggerfallActorSave[] Actors,
-    DaggerfallDynamicActorSave[] DynamicActors,
-    DaggerfallActorInventorySave[] ActorInventories,
-    DaggerfallCorpseSave[] Corpses,
-    DaggerfallDoorSave[] Doors,
-    DaggerfallActiveEffectSave[] Effects)
-{
-    /// <summary>Detached current motion phases for this unloaded profile.</summary>
-    [JsonRequired]
-    public DaggerfallDungeonMotionSnapshot Motion { get; init; } = null!;
-    [JsonRequired]
-    public long[] BanishedActors { get; init; } = [];
-
-    internal void Validate()
-    {
-        ArgumentNullException.ThrowIfNull(Profile); Profile.Validate();
-        ArgumentNullException.ThrowIfNull(Actors);
-        ArgumentNullException.ThrowIfNull(DynamicActors);
-        if(Actors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)) || DynamicActors.Any(actor=>actor.ForcedHostile && (actor.MagicallyPacified || actor.LanguagePacified)))
-            throw new ArgumentException("An actor cannot be forced hostile and magically pacified together.");
-        ArgumentNullException.ThrowIfNull(ActorInventories);
-        ArgumentNullException.ThrowIfNull(Corpses);
-        ArgumentNullException.ThrowIfNull(Doors);
-        ArgumentNullException.ThrowIfNull(Effects);
-        ArgumentNullException.ThrowIfNull(Motion);
-        Motion.Validate();
-        foreach (DaggerfallActorSave actor in Actors) { ArgumentNullException.ThrowIfNull(actor); actor.Validate(); }
-        foreach (DaggerfallDynamicActorSave actor in DynamicActors) { ArgumentNullException.ThrowIfNull(actor); actor.Validate(); }
-        foreach (DaggerfallActorInventorySave inventory in ActorInventories) { ArgumentNullException.ThrowIfNull(inventory); inventory.Validate(); }
-        foreach (DaggerfallCorpseSave corpse in Corpses) { ArgumentNullException.ThrowIfNull(corpse); corpse.Validate(); }
-        foreach (DaggerfallDoorSave door in Doors) { ArgumentNullException.ThrowIfNull(door); door.Validate(); }
-        foreach (DaggerfallActiveEffectSave effect in Effects) { ArgumentNullException.ThrowIfNull(effect); effect.Validate(); }
-    }
-}
-
 /// <summary>
 /// One dynamically spawned actor: the definition it was registered from plus its pose and full
 /// Engine stat meaning. Authored placement actors need no definition reference because the

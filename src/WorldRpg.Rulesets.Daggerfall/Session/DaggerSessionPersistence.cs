@@ -81,7 +81,7 @@ internal sealed class DaggerSessionPersistence
         _capturePropertyStorage = capturePropertyStorage;
         _travelPosition = travelPosition ?? throw new ArgumentNullException(nameof(travelPosition));
     }
-    internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, DaggerfallEncounterRuntime encounters, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> siteDeltas, DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions, DaggerfallDungeonMotionSnapshot dungeonMotion, DaggerfallExteriorCellResidencySave? exteriorResidency, DaggerfallExteriorLocationResidencySave? exteriorLocationResidency = null)
+    internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, DaggerfallEncounterRuntime encounters, DaggerfallSiteDeltaSave[] siteDeltas, DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions, DaggerfallDungeonMotionSnapshot dungeonMotion, DaggerfallExteriorCellResidencySave? exteriorResidency, DaggerfallExteriorLocationResidencySave? exteriorLocationResidency = null)
     {
         ArgumentNullException.ThrowIfNull(dynamicActors);
         ArgumentNullException.ThrowIfNull(encounters);
@@ -169,13 +169,7 @@ internal sealed class DaggerSessionPersistence
             BanishedActors = [.. BanishedActors().Order()],
             Quests = State.Quests.Capture(),
             Doors = _doors().Capture(),
-            SiteDeltas = [.. siteDeltas.OrderBy(entry => entry.Key.Site.Region).ThenBy(entry => entry.Key.Site.Index).ThenBy(entry => entry.Key.LogicalId, StringComparer.Ordinal).Select(entry => new DaggerfallSiteDeltaSave(
-                DaggerfallWorldProfileKeySave.Capture(entry.Key), entry.Value.Actors, entry.Value.DynamicActors, entry.Value.ActorInventories, entry.Value.Corpses, entry.Value.Doors, entry.Value.Effects)
-            {
-                BanishedActors = entry.Value.BanishedActors,
-                Motion = entry.Value.Motion
-                    ?? throw new InvalidOperationException($"Inactive site '{entry.Key.LogicalId}' has no captured dungeon motion snapshot."),
-            })],
+            SiteDeltas = siteDeltas,
             DungeonMotion = dungeonMotion,
             ExteriorResidency = exteriorResidency,
             ExteriorLocationResidency = exteriorLocationResidency,
@@ -325,7 +319,7 @@ internal sealed class DaggerSessionPersistence
     /// </list>
     /// The exterior window is admitted by the site lifecycle afterwards for both start kinds.
     /// </summary>
-    internal void Restore(DaggerfallResolvedRestore restore, DaggerfallSiteLifecycle sites, DaggerfallActorRoster roster,
+    internal void Restore(DaggerfallResolvedRestore restore, DaggerfallSiteCrossing sites, DaggerfallActorRoster roster,
         DaggerfallEncounterRuntime encounters, DaggerfallHeldEnchantments heldEnchantments,
         Action<DaggerfallDungeonTextSnapshot> restoreDungeonText)
     {
@@ -342,11 +336,11 @@ internal sealed class DaggerSessionPersistence
         heldEnchantments.Refresh();
         sites.Projection.Appearance.SyncRestoredDefeat(State.Actors);
         restoreDungeonText(saved.DungeonText);
-        sites.ActionTriggers.RebaseRestoredPlayer(State.PlayerControl, State.Actors.Player.Actor.Entity);
+        sites.Interiors.ActionTriggers.RebaseRestoredPlayer(State.PlayerControl, State.Actors.Player.Actor.Entity);
     }
 
     /// <summary>Every spawned actor's definition, live in the active site or detached in an inactive one.</summary>
-    private static IReadOnlyDictionary<long, string> DynamicActorDefinitions(DaggerfallActorRoster roster, DaggerfallSiteLifecycle sites)
+    private static IReadOnlyDictionary<long, string> DynamicActorDefinitions(DaggerfallActorRoster roster, DaggerfallSiteCrossing sites)
     {
         Dictionary<long, string> values = roster.Dynamic.ToDictionary(entry => entry.Key, entry => entry.Value.Value);
         foreach (DaggerfallSiteRuntimeDelta delta in sites.Deltas.Values)

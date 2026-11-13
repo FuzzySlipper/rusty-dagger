@@ -416,7 +416,7 @@ internal sealed class DaggerfallExteriorWorld
     internal bool CollisionPending =>
         _groundAwaited || _heldPlacementGrid is not null || _deferredCollision is { Awaiting: true };
 
-    private void AdmitLocationArtifact(DaggerfallSiteProfile profile, DaggerfallExteriorWorldOrigin? exteriorOrigin = null) =>
+    internal void AdmitLocationArtifact(DaggerfallSiteProfile profile, DaggerfallExteriorWorldOrigin? exteriorOrigin = null) =>
         ApplyLocationResidency(profile, exteriorOrigin, [], profile.Geometry.NavigationGridId);
 
     private void RemoveLocationArtifact(DaggerfallSiteProfile profile) =>
@@ -680,19 +680,14 @@ internal sealed class DaggerfallExteriorWorld
             ? ActiveOrigin(residency) : null;
 
     /// <summary>
-    /// Admits a constructed session's location artifact and, for an exterior, its terrain window.
-    /// A saved unloaded location restores detached state without recreating native geometry until
-    /// the player returns to the authored map pixel.
+    /// Admits a constructed session's exterior: its terrain window and the town's location artifact. A saved unloaded
+    /// location restores detached state without recreating native geometry until the player returns to the authored map
+    /// pixel.
     /// </summary>
     internal void AdmitInitialResidency(DaggerfallExteriorCellResidencySave? savedExterior,
         DaggerfallExteriorLocationResidencySave? savedLocation = null)
     {
-        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior)
-        {
-            AdmitLocationArtifact(Projection.Inputs);
-            _locationLoaded = true;
-            return;
-        }
+        RequireExteriorProfile();
         _locationLoaded = savedLocation?.Loaded != false;
         _locationCell = savedLocation?.Cell;
         _admittingInitialResidency = true;

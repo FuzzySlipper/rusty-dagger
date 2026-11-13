@@ -500,7 +500,7 @@ internal sealed partial class DaggerfallSession
         if (State.PlayerControl.Position is not WorldPoint position || direction.LengthSquared() <= .000001f)
             return null;
         SpatialHit hit = _spatial.CastRay(position.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight,
-            direction, (float)maximumDistance, _sites.ActionTriggers.ActiveRayEntities(),
+            direction, (float)maximumDistance, _sites.Interiors.ActionTriggers.ActiveRayEntities(),
             _exterior.CharacterEnvironment(State.PlayerControl.Motion));
         if (!hit.Present || hit.Kind != SpatialHitKind.Entity) return null;
         foreach (DaggerfallDoorView door in _doors.All)
@@ -519,7 +519,7 @@ internal sealed partial class DaggerfallSession
             return false;
 
         Vector3 rayOrigin = position.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight;
-        ReadOnlyMemory<SpatialEntityCollider> actionEntities = _sites.ActionTriggers.ActiveRayEntities();
+        ReadOnlyMemory<SpatialEntityCollider> actionEntities = _sites.Interiors.ActionTriggers.ActiveRayEntities();
         SpatialHit hit = _spatial.CastRay(
             rayOrigin,
             direction,
@@ -545,7 +545,7 @@ internal sealed partial class DaggerfallSession
             {
                 return ReportDungeonActions(graph.TriggerForDoor(selectedDoor.Id, @event));
             }
-            if (_sites.ActionTriggers.TryResolveAction(new EntityId(hit.Entity), out string? actionId))
+            if (_sites.Interiors.ActionTriggers.TryResolveAction(new EntityId(hit.Entity), out string? actionId))
                 return ReportDungeonAction(graph.Trigger(actionId, @event));
             return false;
         }
@@ -659,7 +659,7 @@ internal sealed partial class DaggerfallSession
         out DaggerfallActionCastSource source)
     {
         Vector3? origin = action.SourcePosition;
-        if (origin is Vector3 flat && _sites.ActionTriggers.TryGetTransform(action.Id, out Transform triggerTransform))
+        if (origin is Vector3 flat && _sites.Interiors.ActionTriggers.TryGetTransform(action.Id, out Transform triggerTransform))
             origin = flat + triggerTransform.Translation;
         if (origin is null && _sites.Projection.Motion.TryGetTransform(action.Id, out Transform transform))
             origin = transform.Translation;

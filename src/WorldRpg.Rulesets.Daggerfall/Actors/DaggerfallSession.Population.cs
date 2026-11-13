@@ -49,7 +49,7 @@ internal sealed partial class DaggerfallSession
         // its actors; presence is reconciled again when the location is admitted.
         if (!_exterior.ActiveLocationLoaded) return;
         // Where the location (and the player in it) lies in the world is known only once its terrain window is
-        // admitted: an exterior arrival reconciles its population after that (DaggerfallSiteLifecycle.TryTransitionTo).
+        // admitted: an exterior arrival reconciles its population after that (DaggerfallSiteCrossing.TryTransitionTo).
         if (!_exterior.ExteriorResidencyInitialized) return;
 
         DaggerfallSiteRecord site = _site.Require(siteId);

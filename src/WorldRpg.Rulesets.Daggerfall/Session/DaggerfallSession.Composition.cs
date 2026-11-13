@@ -168,7 +168,7 @@ internal sealed partial class DaggerfallSession
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput);
             _locomotion = new DaggerfallLocomotionPolicy(tuning.Locomotion, _controlSettings);
             _climbing = new DaggerfallClimbingPolicy(tuning.Climbing);
-            // Location artifacts are admitted by the site lifecycle so an exterior map-pixel
+            // Location artifacts are admitted by the exterior's collision placement so an exterior map-pixel
             // transition can remove and re-admit one profile without replacing the whole session.
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, null, tuning.Spatial);
             _dungeonVisibility = new DaggerfallDungeonVisibility(_spatial, tuning.Spatial.CollisionVoxelSize);
@@ -178,7 +178,7 @@ internal sealed partial class DaggerfallSession
             _contact = new ActorContact(actors, _spatial, () => assembled.PlayerControl, ActorContactBody, IsSpellEligibleActor);
             Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions = [];
             IReadOnlyList<(DaggerfallWorldProfileKey Key, DaggerfallSiteProfile Inputs)> actionProfiles =
-                DaggerfallSiteLifecycle.ActionProfiles(inputs, profiles, saved?.DungeonActions.Select(snapshot => snapshot.ProfileId));
+                DaggerfallInteriors.ActionProfiles(inputs, profiles, saved?.DungeonActions.Select(snapshot => snapshot.ProfileId));
             foreach ((DaggerfallWorldProfileKey key, DaggerfallSiteProfile admitted) in actionProfiles)
             {
                 DaggerfallDungeonActionGraphSnapshot? snapshot = saved?.DungeonActions
@@ -645,9 +645,12 @@ internal sealed partial class DaggerfallSession
             _persistence.Tutorial = () => _tutorial.Progress;
             _roster.BanishedActors.UnionWith(saved?.BanishedActors ?? []);
             _persistence.BanishedActors = () => _roster.BanishedActors;
-            _sites = new DaggerfallSiteLifecycle(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,
-                _roster, _persistence, _groundContainers, _enemyBehavior, ExecuteDungeonFamilyAction, this,
-                projection, actionTriggers, profiles, activeProfile, saved?.Site.ReturnProfile?.Require(),
+            DaggerfallInteriors interiors = new(actionTriggers, State.DungeonActions, State.DungeonDiscoveries,
+                (key, admitted) => new DaggerfallDungeonActionGraph(key.LogicalId, admitted.DungeonActions, State.Variables,
+                    executeFamilyAction: ExecuteDungeonFamilyAction), _site);
+            _sites = new DaggerfallSiteCrossing(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,
+                _roster, _persistence, _groundContainers, _enemyBehavior, interiors, this,
+                projection, profiles, activeProfile, saved?.Site.ReturnProfile?.Require(),
                 composition.StartSite.ClassicPresentation);
             _grounding.FloorPending = () => _exterior.CollisionPending;
             if (composition.ArtReplacements is { } groundArt) _exterior.UseGroundArt(groundArt, () => DrawnArt is not null);
@@ -733,7 +736,7 @@ internal sealed partial class DaggerfallSession
             if (saved?.ReadySpell is { } readyKey) Casting.RestoreReadySpell(readyKey);
             ExpireConjuredItems();
             _roster.MaterializeStaticNpcs(inputs);
-            _exterior.AdmitInitialResidency(saved?.ExteriorResidency, saved?.ExteriorLocationResidency);
+            _sites.Load(saved?.ExteriorResidency, saved?.ExteriorLocationResidency);
             // Treasure and dungeon enemies are placed on the floor under their markers, so the site's
             // collision must be admitted first: before it, a ground probe meets nothing and they float.
             ReconcilePropertyContainers();

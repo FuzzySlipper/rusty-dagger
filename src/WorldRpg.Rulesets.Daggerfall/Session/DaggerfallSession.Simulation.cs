@@ -314,13 +314,13 @@ internal sealed partial class DaggerfallSession
         SpatialEntityCollider[] triggers =
         [
             .. _waterColliders.Colliders,
-            .. actionGraph is null ? [] : _sites.ActionTriggers.ContactColliders(actionGraph, simulationStep),
+            .. actionGraph is null ? [] : _sites.Interiors.ActionTriggers.ContactColliders(actionGraph, simulationStep),
             _spatial.ProjectCharacterCollider(State.PlayerControl, player.Value),
         ];
         SpatialTriggerReconcileResult reconciliation = _spatial.ReconcileTriggers(simulationStep, triggers);
         State.Swimming.ObserveTriggers(reconciliation.Facts.Span, player.Value, environment.WaterVolumes.Span);
         if (actionGraph is not null)
-            _ = ReportDungeonActions(_sites.ActionTriggers.Dispatch(actionGraph, reconciliation.Facts.Span, player));
+            _ = ReportDungeonActions(_sites.Interiors.ActionTriggers.Dispatch(actionGraph, reconciliation.Facts.Span, player));
     }
 
     private void ApplyAttackImpacts()
