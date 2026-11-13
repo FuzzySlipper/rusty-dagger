@@ -30,7 +30,6 @@ internal sealed record DaggerfallWagonSave(long Id, DaggerfallInventorySave Inve
 /// </summary>
 internal sealed class DaggerfallWagonStorage
 {
-    internal static readonly EntityTypeId WagonContainerType = new("daggerfall.wagon-container");
     private readonly MechanicsInventoryContainerCoordinator _containers;
     private readonly DaggerfallItemInstances _instances;
     private readonly DaggerfallDefinitions _definitions;
@@ -76,7 +75,7 @@ internal sealed class DaggerfallWagonStorage
             throw new InvalidOperationException("A wagon identity cannot fit the Daggerfall durable identity range.", exception);
         }
 
-        EntityId owner = _containers.Entities.Create(identity, WagonContainerType);
+        EntityId owner = _containers.Entities.Create(identity, DaggerfallItemContainers.Wagon);
         try
         {
             _containers.RegisterOwner(owner);
@@ -160,7 +159,7 @@ internal sealed class DaggerfallWagonStorage
         if (savedStacks.Any(stack => _instances.ContainsStack(itemOwner, stack))
             || savedUniqueItems.Any(_instances.ContainsUnique))
             throw new InvalidOperationException($"Wagon {saved.Id} item metadata is already materialized.");
-        EntityId owner = _containers.Entities.Create(identity, WagonContainerType);
+        EntityId owner = _containers.Entities.Create(identity, DaggerfallItemContainers.Wagon);
         bool seeded = false;
         try
         {

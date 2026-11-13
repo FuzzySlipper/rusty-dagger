@@ -17,7 +17,6 @@ internal sealed record DaggerfallGroundContainer(DaggerfallWorldProfileKey Profi
 /// </summary>
 internal sealed class DaggerfallGroundContainers
 {
-    internal static readonly EntityTypeId GroundContainerType = new("daggerfall.ground-container");
     private readonly MechanicsInventoryContainerCoordinator _containers;
     private readonly DaggerfallItemInstances _instances;
     private readonly EntityId _player;
@@ -167,7 +166,7 @@ internal sealed class DaggerfallGroundContainers
                 DestinationStack = InventoryStackId.Parse($"daggerfall.ground.drop.{identity.Value}.{source.Value}"),
             };
         }
-        EntityId owner = _containers.Entities.Create(identity, GroundContainerType);
+        EntityId owner = _containers.Entities.Create(identity, DaggerfallItemContainers.Ground);
         try
         {
             _containers.RegisterOwner(owner);
@@ -200,7 +199,7 @@ internal sealed class DaggerfallGroundContainers
         if (prior is not null) return prior;
         var identity = _identities.Allocate(DurableIdentityKind.Container);
         long id = checked((long)identity.Value);
-        var owner = _containers.Entities.Create(identity, GroundContainerType);
+        var owner = _containers.Entities.Create(identity, DaggerfallItemContainers.Ground);
         _containers.RegisterOwner(owner);
         var container = new DaggerfallGroundContainer(_activeProfile, id, owner, position, TreasurePlacement: placement.Id);
         try
@@ -231,7 +230,7 @@ internal sealed class DaggerfallGroundContainers
         if (container is null)
         {
             var identity = _identities.Allocate(DurableIdentityKind.Container);
-            var entity = _containers.Entities.Create(identity, GroundContainerType);
+            var entity = _containers.Entities.Create(identity, DaggerfallItemContainers.Ground);
             _containers.RegisterOwner(entity);
             container = new(_activeProfile, checked((long)identity.Value), entity, placement.Position, placement.Id, day);
             _ground.Add(container.Id, container);
@@ -296,7 +295,7 @@ internal sealed class DaggerfallGroundContainers
         bool seeded = false;
         try
         {
-            var owner = _containers.Entities.Create(containerIdentity, GroundContainerType);
+            var owner = _containers.Entities.Create(containerIdentity, DaggerfallItemContainers.Ground);
             _containers.RegisterOwner(owner);
             unique = created.Stackable ? null : uniqueItems.AllocateReference();
             _containers.Seed(owner, [new(created.Item, created.Quantity, Stack: stack, UniqueItem: unique)]);
@@ -356,7 +355,7 @@ internal sealed class DaggerfallGroundContainers
         long id = checked((long)identity.Value);
         try
         {
-            var owner = _containers.Entities.Create(identity, GroundContainerType);
+            var owner = _containers.Entities.Create(identity, DaggerfallItemContainers.Ground);
             _containers.RegisterOwner(owner);
             transfer(DaggerfallItemOwner.Ground(id));
             _ground.Add(id, new(_activeProfile, id, owner, position));
@@ -469,7 +468,7 @@ internal sealed class DaggerfallGroundContainers
     private void Materialize(DaggerfallGroundContainerSave value)
     {
         DurableIdentityReference identity = new(DurableIdentityKind.Container, checked((ulong)value.Id));
-        EntityId owner = _containers.Entities.Create(identity, GroundContainerType);
+        EntityId owner = _containers.Entities.Create(identity, DaggerfallItemContainers.Ground);
         bool seeded = false;
         try
         {

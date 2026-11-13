@@ -170,8 +170,6 @@ internal sealed class DaggerfallMerchantService
 {
     /// <summary>A purchase or sale totalling this many gold or more is confirmed before it is made.</summary>
     internal const long LargeTradeGold = 500;
-    internal const string MerchantContainerTypeName = "daggerfall.merchant-container";
-    internal const string RepairContainerTypeName = "daggerfall.repair-custody";
     private const int OpenHour = 6;
     private const int CloseHour = 18;
     private const long RandomSeed = 0;
@@ -854,8 +852,8 @@ internal sealed class DaggerfallMerchantService
     {
         long merchantId = saved?.MerchantContainerId ?? checked((long)_identities.Allocate(DurableIdentityKind.Container).Value);
         long custodyId = saved?.CustodyContainerId ?? checked((long)_identities.Allocate(DurableIdentityKind.Container).Value);
-        EntityId merchant = _containers.Entities.Create(new(DurableIdentityKind.Container, checked((ulong)merchantId)), new(MerchantContainerTypeName));
-        EntityId custody = _containers.Entities.Create(new(DurableIdentityKind.Container, checked((ulong)custodyId)), new(RepairContainerTypeName));
+        EntityId merchant = _containers.Entities.Create(new(DurableIdentityKind.Container, checked((ulong)merchantId)), DaggerfallItemContainers.Merchant);
+        EntityId custody = _containers.Entities.Create(new(DurableIdentityKind.Container, checked((ulong)custodyId)), DaggerfallItemContainers.RepairCustody);
         try
         {
             _containers.RegisterOwner(merchant);

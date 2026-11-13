@@ -7,9 +7,9 @@ internal sealed partial class DaggerfallSession
     {
         long minute = _time.Calendar.MinuteNumber;
         foreach (var entry in State.ItemInstances.UniqueItems.Where(value => value.Value.Conjuration?.ExpiresAtMinute <= minute).ToArray())
-            DestroyUniqueItem(entry.Key);
+            _itemLifetime.DestroyUnique(entry.Key);
         foreach (var entry in State.ItemInstances.StackItems.Where(value => value.Metadata.Conjuration?.ExpiresAtMinute <= minute).ToArray())
-            ConsumeItemStack(entry.Owner, entry.Stack);
+            _itemLifetime.ConsumeStack(entry.Owner, entry.Stack);
         State.HeldEnchantments.Refresh();
         // Inactive deltas stay coherent while suspended. The site's existing materialization
         // restores their effects and stat sources before this same live sweep releases them.

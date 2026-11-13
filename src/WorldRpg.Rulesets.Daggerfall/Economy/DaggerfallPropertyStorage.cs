@@ -14,7 +14,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Property;
 /// </summary>
 internal sealed class DaggerfallPropertyStorage
 {
-    internal static readonly EntityTypeId PropertyContainerType = new("daggerfall.property-container");
 
     private readonly MechanicsInventoryContainerCoordinator _containers;
     private readonly DaggerfallItemInstances _instances;
@@ -50,7 +49,7 @@ internal sealed class DaggerfallPropertyStorage
 
         DurableIdentityReference identity = _identities.Allocate(DurableIdentityKind.Container);
         long id = ToContainerId(identity);
-        EntityId owner = _containers.Entities.Create(identity, PropertyContainerType);
+        EntityId owner = _containers.Entities.Create(identity, DaggerfallItemContainers.Property);
         try
         {
             _containers.RegisterOwner(owner);
@@ -154,7 +153,7 @@ internal sealed class DaggerfallPropertyStorage
             || savedUniqueItems.Any(_instances.ContainsUnique))
             throw new InvalidOperationException($"Property storage {saved.ContainerId} item metadata is already materialized.");
 
-        EntityId owner = _containers.Entities.Create(identity, PropertyContainerType);
+        EntityId owner = _containers.Entities.Create(identity, DaggerfallItemContainers.Property);
         bool seeded = false;
         try
         {

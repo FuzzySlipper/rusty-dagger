@@ -16,7 +16,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// The update order. <see cref="AdmittedUpdate"/> is every call one Engine-admitted update makes, in order;
 /// <see cref="AdvanceCalendar"/> is every calendar consumer, in order, which rest, travel and quest time share
 /// through <see cref="AdvanceElapsedTime"/> and <see cref="AdvanceQuestTime"/>; <see cref="SimulateStep"/> is every
-/// call one of its fixed steps makes; and <see cref="ResolveExhaustion"/> is what a collapse does across domains. Each line says the domain it belongs to. Order is behaviour: a call
+/// call one of its fixed steps makes; <see cref="ResolveExhaustion"/> is what a collapse does across domains; and
+/// <see cref="RemoveCarriedQuestItems"/> is what a quest's end does to the items it lent. Each line says the domain it belongs to. Order is behaviour: a call
 /// moves only with a reason that names what it changes.
 /// </summary>
 internal sealed partial class DaggerfallSession
@@ -644,4 +645,15 @@ internal sealed partial class DaggerfallSession
     /// <summary>Condition's swimming roll for the player as the session holds them now.</summary>
     private bool SwimmingFatigueApplies(long minute) =>
         _condition.SwimmingFatigueApplies(State.Character.Race.Id, State.Actors.Player.Stats, minute);
+
+    /// <summary>
+    /// The quest's end, for its items: the still-quest items the player carries are retired, then the quest's
+    /// custody of the rest is released and the held powers are read again from what is still worn.
+    /// </summary>
+    private void RemoveCarriedQuestItems(string instanceId)
+    {
+        _itemLifetime.RemoveCarriedQuestItems(instanceId);                                        // Items
+        State.QuestItems.RemoveCustody(instanceId);                                               // Quests
+        State.HeldEnchantments.Refresh();                                                         // Magic
+    }
 }

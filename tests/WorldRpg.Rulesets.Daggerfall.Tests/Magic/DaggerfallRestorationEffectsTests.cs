@@ -173,7 +173,7 @@ public sealed class DaggerfallRestorationEffectsTests
         // donor, and ends when no item remains for it to name.
         s.State.ItemInstances.ReplaceUnique(id, s.State.ItemInstances.RequireUnique(id) with { CurrentCondition = 0 });
         Assert.Contains(s.State.Effects.Active, e => e.Context.Instance.Value == "item");
-        s.DestroyUniqueItem(id);
+        s.ItemLifetime.DestroyUnique(id);
         Assert.DoesNotContain(s.State.Effects.Active, e => e.Context.Instance.Value == "item");
         Assert.True(s.State.Effects.ControlsFor(1).Movement);
         Assert.False(s.State.Effects.MagicDefenseFor(1).PreventsParalysis);
@@ -197,11 +197,11 @@ public sealed class DaggerfallRestorationEffectsTests
         using var restored = f.Restore(s.CaptureSave());
         restored.State.ItemInstances.ReplaceUnique(first, restored.State.ItemInstances.RequireUnique(first) with { CurrentCondition = 0 });
         Assert.Equal(3, restored.State.Effects.Active.Count);
-        restored.DestroyUniqueItem(first);
+        restored.ItemLifetime.DestroyUnique(first);
         Assert.DoesNotContain(restored.State.Effects.Active, e => e.Context.Instance.Value == "first-item");
         Assert.Contains(restored.State.Effects.Active, e => e.Context.Instance.Value == "spell-source" && e.Lifecycle.RemainingRounds == 19);
         Assert.Contains(restored.State.Effects.Active, e => e.Context.Instance.Value == "second-item" && e.Lifecycle.RemainingRounds == 29);
-        restored.DestroyUniqueItem(second);
+        restored.ItemLifetime.DestroyUnique(second);
         Assert.Equal("spell-source", Assert.Single(restored.State.Effects.Active).Context.Instance.Value);
         Assert.True(restored.State.Effects.Cure(EffectInstanceId.Parse("spell-source"))); Assert.Empty(restored.State.Effects.Active);
     }

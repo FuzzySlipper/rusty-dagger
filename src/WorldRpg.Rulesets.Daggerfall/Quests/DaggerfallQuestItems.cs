@@ -13,7 +13,6 @@ internal sealed record DaggerfallQuestCustody(string InstanceId, long Id, Entity
 internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentityAllocator identities,
     DaggerfallUniqueItemAllocator uniqueItems, Func<DaggerfallItemOwner, EntityId> ownerEntity, Action<ulong> destroyUnique, Action<DaggerfallItemOwner, InventoryStackId> consumeStack, DaggerfallEquipmentMoves equipmentMoves)
 {
-    internal static readonly EntityTypeId CustodyType = new("daggerfall.quest-custody");
     private readonly Dictionary<string, DaggerfallQuestCustody> _custody = new(StringComparer.Ordinal);
     internal IEnumerable<DaggerfallQuestCustody> Custody => _custody.Values;
 
@@ -182,7 +181,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         EntityId owner;
         try
         {
-            owner = state.Containers.Entities.Create(identity, CustodyType);
+            owner = state.Containers.Entities.Create(identity, DaggerfallItemContainers.QuestCustody);
             state.Containers.RegisterOwner(owner);
         }
         catch
@@ -310,7 +309,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
     {
         foreach (var value in saved)
         {
-            var owner = state.Containers.Entities.Create(new(DurableIdentityKind.Container, checked((ulong)value.Id)), CustodyType);
+            var owner = state.Containers.Entities.Create(new(DurableIdentityKind.Container, checked((ulong)value.Id)), DaggerfallItemContainers.QuestCustody);
             state.Containers.RegisterOwner(owner);
             _custody.Add(value.InstanceId, new(value.InstanceId, value.Id, owner));
             var seeds = value.Inventory.Stacks.Select(stack => new InventoryContainerSeed(new(stack.ItemId), stack.Quantity, Stack: InventoryStackId.Parse(stack.StackId)))

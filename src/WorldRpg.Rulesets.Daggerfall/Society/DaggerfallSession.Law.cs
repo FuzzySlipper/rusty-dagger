@@ -379,9 +379,9 @@ internal sealed partial class DaggerfallSession
         var before = State.Equipment.Read();
         var inventory = State.Inventory.Read();
         var removed = inventory.UniqueItems.Where(item => State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(item.Entity).Value).Stolen).ToArray();
-        foreach (var item in removed) DestroyUniqueItem(State.Inventory.GetDurableItemId(item.Entity).Value);
+        foreach (var item in removed) _itemLifetime.DestroyUnique(State.Inventory.GetDurableItemId(item.Entity).Value);
         foreach (var stack in State.ItemInstances.StackItems.Where(value => value.Owner == DaggerfallItemOwner.Player && value.Metadata.Stolen).ToArray())
-            ConsumeItemStack(stack.Owner, stack.Stack);
+            _itemLifetime.ConsumeStack(stack.Owner, stack.Stack);
         _equipmentMoves.NotifyRemoved(before, before.Assignments.Where(value => removed.Any(item => item.Entity.Value == value.Item.EntityId)).Select(value => value.Item).DistinctBy(value => value.EntityId).ToArray());
         State.HeldEnchantments.Refresh();
     }

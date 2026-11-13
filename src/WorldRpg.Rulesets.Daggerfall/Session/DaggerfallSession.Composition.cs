@@ -535,8 +535,10 @@ internal sealed partial class DaggerfallSession
                 tuning.LootInteraction,
                 State.Character,
                 _actorIdentities);
+            _itemOwnership = new DaggerfallItemOwnership(State.Actors, State.InventoryStore, actor => _corpseLoot.Corpses[actor].Owner);
+            _itemLifetime = new DaggerfallItemLifetime(State.Actors.Entities, State.InventoryStore, State.ItemInstances, _uniqueItems, _itemOwnership);
             _groundContainers = new DaggerfallGroundContainers(containers, State.ItemInstances, playerEntity, _actorIdentities, activeProfile);
-            State.ItemInstances.AttachContainment(ResidentItemOwner);
+            State.ItemInstances.AttachContainment(_itemOwnership.ResidentOwner);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, definitions.Mobiles, definitions.Text);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, composition.StartSite.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
@@ -561,7 +563,7 @@ internal sealed partial class DaggerfallSession
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
             assembled.Quests.BindNotebook(_notebook.AddQuestNote);
             assembled.Quests.BindItemCleanup(RemoveCarriedQuestItems);
-            State.QuestItems = new(State, _actorIdentities, _uniqueItems, ItemOwnerEntity, DestroyUniqueItem, ConsumeItemStack, _equipmentMoves);
+            State.QuestItems = new(State, _actorIdentities, _uniqueItems, _itemOwnership.Entity, _itemLifetime.DestroyUnique, _itemLifetime.ConsumeStack, _equipmentMoves);
             State.Quests.BindItems(State.QuestItems);
             State.Quests.BindPlacementNpcs(State.Npcs);
             State.Npcs.BindQuestPresence(State.Quests.IsNpcUnavailable);

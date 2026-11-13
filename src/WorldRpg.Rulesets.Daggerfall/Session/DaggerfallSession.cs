@@ -98,6 +98,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly DaggerfallItemConditionService _itemCondition;
     private readonly DaggerfallItemMaker _itemMaker;
     private readonly DaggerfallPotionMaking _potionMaker;
+    private readonly DaggerfallItemOwnership _itemOwnership;
+    private readonly DaggerfallItemLifetime _itemLifetime;
     private readonly DaggerfallInventoryPresentation _inventoryUi;
     private readonly DaggerfallLootPresentation _lootUi;
     private readonly DaggerfallCharacterPresentation _characterUi;
@@ -923,6 +925,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal DaggerfallEquipmentMoves EquipmentMoves => _equipmentMoves;
     /// <summary>Typed mutation and disclosure of persisted item condition and magic meaning.</summary>
     internal DaggerfallItemConditionService ItemCondition => _itemCondition;
+    /// <summary>The end of an item's life: unique retirement, stack consumption, a quest's items taken back.</summary>
+    internal DaggerfallItemLifetime ItemLifetime => _itemLifetime;
     /// <summary>The Mages Guild's enchanting service (Economy).</summary>
     internal DaggerfallItemMaker ItemMaker => _itemMaker;
     /// <summary>The Mages Guild's potion maker (Economy).</summary>
