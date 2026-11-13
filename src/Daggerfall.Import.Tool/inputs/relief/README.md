@@ -1,1 +1,1 @@
-These three files are the terrain bake made from `WOODS.WLD`, tracked by Patch's decision under Den task #10758; that decision covers no other file made from arena2. Refreshing them is in the root README's Game data section.
+Tracked by Patch's decision (Den #10758): the terrain bake transforms `WOODS.WLD`'s heights heavily, ships as binary and is used only behind the import's check for the player's own arena2; this covers no other file made from arena2. To refresh it, see the root README's Game data section.
