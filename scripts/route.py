@@ -11,8 +11,10 @@
 
 REF defaults to HEAD and may be any commit in den-agents' repository, pushed or not; uncommitted changes are not
 in it. The lanes are scripts/lane.sh; the router's config (--config, DEN_BUILD_CONFIG_PATH, else the installed one)
-names them. A part waits for a worker while every enabled one is busy. Each lane's log is written under
-local/build/route/, and the command exits 0 only when every part passed.
+names them. It first says what each worker is doing. A part waits until a worker frees (--wait MINUTES gives up),
+and a long lane (verify, --whole, import) leaves the last free worker to split runs unless --take-last. Stopping
+the command stops its lanes. Each lane's log is written under local/build/route/, and the command exits 0 only
+when every part passed.
 
 A round of `main` takes the newest origin/main commit unless it already has a result, and runs the verify lane on
 it if a worker is free now (otherwise the next round does). A pass is noted on the commit in refs/notes/verify, as
@@ -20,9 +22,11 @@ verify.sh --record does; a failure in refs/notes/verify-failures, so a verify no
 from den-agents. The first failure after a pass is posted on the crew board rusty-dagger, naming the first commit
 that failed and the last that passed. One round runs at a time.
 """
-import argparse, fcntl, json, os, pathlib, queue, re, subprocess, sys, threading, time
+import argparse, datetime, fcntl, json, os, pathlib, queue, re, signal, subprocess, sys, threading, time
 
 REPO = 'rusty-dagger'
+# The den-tool runs in flight; stopping this command stops them, and den-tool then stops the lane on its worker.
+children = set()
 BOARD = 'rusty-dagger'
 root = pathlib.Path(__file__).resolve().parent.parent
 routes = root / 'local/build/route'
@@ -35,6 +39,23 @@ def git(*args, check=True):
     return subprocess.run(['git', '-C', str(root), *args], check=check, capture_output=True, text=True).stdout.strip()
 
 
+def activity():
+    """What each worker is doing now, from the Resources ledger: {host: ['TITLE (NOTE) for N min', ...]}."""
+    listing = subprocess.run(['den-tool', 'resources', '--json', 'work'], capture_output=True, text=True).stdout
+    try:
+        work = json.loads(listing).get('work', [])
+    except json.JSONDecodeError:
+        return {}
+    now, busy = datetime.datetime.now(datetime.timezone.utc), {}
+    for entry in work:
+        if entry.get('state') in ('running', 'queued') and not entry.get('stale'):
+            began = datetime.datetime.fromisoformat(entry['started_at'][:26].rstrip('Z') + '+00:00')
+            note = entry.get('note', '').replace('Commit ', '')[:12]
+            busy.setdefault(entry['host'], []).append(
+                f'{entry["title"]}{f" ({note})" if note else ""} for {int((now - began).total_seconds() // 60)} min')
+    return busy
+
+
 def route(lane, commit, options, run):
     """Runs a lane, or the ruleset suite's parts, on the workers; returns (passed, report)."""
     config = json.loads(pathlib.Path(options.config).read_text())
@@ -45,11 +66,18 @@ def route(lane, commit, options, run):
         parts = [lane]
     if not parts or any(part not in lanes for part in parts):
         sys.exit(f'route: {options.config} has no {REPO} lane {lane}; it has {", ".join(sorted(lanes))}')
-    hosts = [host['id'] for host in config['hosts'] if host['enabled'] and options.host in (None, host['id'])]
+    workers = [host['id'] for host in config['hosts'] if host['enabled']]
+    hosts = [host for host in workers if options.host in (None, host)]
     if not hosts:
         sys.exit(f'route: {options.config} enables no worker {options.host}')
+    # One long lane (verify, the whole ruleset suite, import) never takes the last free worker, so that a split
+    # run, eleven minutes on three workers, can always start; --take-last allows it.
+    long = parts == [lane] and not re.fullmatch(r'ruleset-\d+', lane)
 
     print(f'route: {", ".join(parts)} at {commit} over {", ".join(hosts)}; logs in {run}', flush=True)
+    busy = activity()
+    for host in workers:
+        print(f'route: {host}: {"; ".join(busy.get(host, [])) or "free"}', flush=True)
     pending = queue.Queue()
     for part in parts:
         pending.put(part)
@@ -65,26 +93,36 @@ def route(lane, commit, options, run):
             except queue.Empty:
                 continue
             log = run / f'{part}.log'
-            start = time.monotonic()
-            with log.open('w') as output:
-                code = subprocess.run(['den-tool', 'build', 'run', '--repo', REPO, '--lane', part, '--ref', commit,
-                                       '--host', host, '--config', options.config],
-                                      stdout=output, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL).returncode
-            text = log.read_text(errors='replace')
-            # The worker prints its checkout line once the lane is about to start; without it the router refused the host.
-            if f' at {commit}\n' not in text or 'den-build: ' not in text:
-                reason = text.strip().splitlines()[-1] if text.strip() else f'exit {code}'
+            start, text, code, reason = time.monotonic(), '', None, None
+            if long and not options.take_last:
+                busy = activity()
+                if not any(other != host and not busy.get(other) for other in workers):
+                    reason = 'it is the last free worker, which a split run needs (--take-last takes it)'
+            if not reason:
+                with log.open('w') as output:
+                    child = subprocess.Popen(['den-tool', 'build', 'run', '--repo', REPO, '--lane', part, '--ref', commit,
+                                              '--host', host, '--config', options.config],
+                                             stdout=output, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+                    children.add(child)
+                    code = child.wait()
+                    children.discard(child)
+                text = log.read_text(errors='replace')
+                # The worker prints its checkout line once the lane is about to start; without it the router refused the host.
+                if f' at {commit}\n' not in text or 'den-build: ' not in text:
+                    reason = text.strip().splitlines()[-1] if text.strip() else f'exit {code}'
+            if reason:
                 pending.put(part)
                 waited_since = waited_since or time.monotonic()
-                if time.monotonic() - waited_since >= options.wait * 60:
+                if options.wait is not None and time.monotonic() - waited_since >= options.wait * 60:
                     with lock:
                         print(f'route: {host} gave up waiting: {reason}', flush=True)
                     return
                 if reason != said:
                     said = reason
                     with lock:
-                        print(f'route: {host} cannot take {part} yet ({reason}); retrying each minute', flush=True)
-                time.sleep(60)
+                        print(f'route: {host} cannot take {part} yet ({reason}); trying again', flush=True)
+                # A part tries every 20 seconds and a long lane every minute, so a waiting part takes a freed worker first.
+                time.sleep(60 if long else 20)
                 continue
             waited_since, said = None, None
             minutes = (time.monotonic() - start) / 60
@@ -102,7 +140,7 @@ def route(lane, commit, options, run):
     failed, report, partitions = False, [], set()
     for part in parts:
         if part not in results:
-            report.append(f'{part}: found no free worker within {options.wait} minutes; see {run / (part + ".log")}')
+            report.append(f'{part}: found no free worker within {options.wait} minutes; see {run}')
             failed = True
             continue
         host, code, minutes, log, text = results[part]
@@ -162,7 +200,7 @@ def main_round(options):
     if noted('route/verify', newest) or noted('route/verify-failures', newest):
         print(f'route: {newest} already has a result')
         return 0
-    options.whole, options.host, options.wait = False, None, 0
+    options.whole, options.host, options.wait, options.take_last = False, None, 0, False
     run = routes / f'main-{newest[:12]}-{time.strftime("%Y%m%dT%H%M%S")}'
     run.mkdir(parents=True)
     passed, report = route('verify', newest, options, run)
@@ -201,10 +239,14 @@ def main():
     parser.add_argument('--host', help='only this worker')
     parser.add_argument('--config', default=os.environ.get('DEN_BUILD_CONFIG_PATH')
                         or os.path.expanduser('~/.config/den-build/config.json'))
-    parser.add_argument('--wait', type=int, default=60, help='minutes a part may wait for a worker (default 60)')
+    parser.add_argument('--wait', type=int, help='minutes a part may wait for a worker (default: until one frees)')
+    parser.add_argument('--take-last', action='store_true', help='let a long lane take the last free worker')
     parser.add_argument('--notify', metavar='ADDRESS', help='send and leave; the result goes to this crew address')
     parser.add_argument('--task', type=int, help='send and leave; the result goes on this Den task as a line')
     options = parser.parse_args()
+    for number in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(number, lambda received, frame: (
+            [child.terminate() for child in list(children)], os._exit(128 + received)))
     if options.lane == 'main':
         return main_round(options)
 
