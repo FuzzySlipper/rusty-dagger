@@ -264,11 +264,11 @@ and the run names the tests it was running.
 
 `scripts/route.py main` is one round of `main`'s own check: the newest `main`
 commit gets the verify lane when a worker is free, a pass is noted in
-`refs/notes/verify` and a failure in `refs/notes/verify-failures`, and the first
-failure is posted on the crew board. Until den-services installs the lanes and a
-timer for the round, add
-`--config /mnt/den-nas-backup/data/evidence/rusty-dagger/10774-router-lanes/den-build.json`
-and run a round by hand.
+`refs/notes/verify`, a failure in `refs/notes/verify-failures`, and the first
+failure is posted on the crew board. On den-agents,
+`rusty-dagger-main-check.timer` runs this round every half hour using the
+installed build config. Read its journal with
+`journalctl --user -u rusty-dagger-main-check.service`.
 
 A plain `dotnet build` does not stage the product. To stage only:
 
