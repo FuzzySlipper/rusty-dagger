@@ -346,7 +346,7 @@ public sealed class DaggerfallCastingTests
         var bundle = h.Release(); h.Casting.Deliver(bundle, [1]);
         var saved = Assert.Single(h.Effects.Capture());
         Assert.Equal(1, saved.CasterId); Assert.Equal("Magic", saved.Element);
-        var state = saved.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)!;
+        var state = saved.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)!;
         Assert.Equal(10, state.Amount); Assert.Equal(1, state.CasterLevel); Assert.Equal(100, state.SavePercent);
         Assert.Equal(1, h.Rounds);
         using Harness restored = new(range: 0);
@@ -398,7 +398,7 @@ public sealed class DaggerfallCastingTests
         h.Profile = h.Profile with { CareerTolerances = h.Profile.CareerTolerances with { Magic = DaggerfallMagicTolerance.Normal } };
         var bundle = h.Release(); h.Casting.Deliver(bundle,[2]);
         var active = Assert.Single(h.Effects.Active);
-        var state = active.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)!;
+        var state = active.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)!;
         Assert.Equal(75,state.SavePercent); Assert.Equal(expectedAmount,state.Amount);
         Assert.Equal(remaining,active.Lifecycle.RemainingRounds);
     }
@@ -501,7 +501,7 @@ public sealed class DaggerfallCastingTests
                 new Dictionary<(int,int),DaggerfallMagicEffectCostDefinition> { [(99,-1)] = row }, new Dictionary<string,DaggerfallEnchantmentSetting>());
             IEnumerable<IActiveEffectContribution> Apply(DaggerfallActiveEffect effect)
             {
-                var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)!;
+                var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)!;
                 Stat maximum = effect.Target.Get<StatsComponent>().GetStat(StatId.Parse("health-maximum"));
                 var handle = maximum.AddModifier(state.Amount);
                 return [new DelegateActiveEffectContribution(() => maximum.RemoveModifier(handle))];

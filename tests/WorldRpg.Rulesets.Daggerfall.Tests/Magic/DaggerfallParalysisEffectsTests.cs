@@ -224,7 +224,7 @@ public sealed class DaggerfallParalysisEffectsTests
     internal static void Start(DaggerfallSession s,string instance,long caster,long target,uint rounds,ulong? item=null)
     {
         var setting=new DaggerfallSpellEffectDefinition("paralyze-settings",0,-1,(int)rounds,0,1,100,0,1,0,0,0,0,1);
-        var state=JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting,1,0,100),DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state=JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting,1,0,100),DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         s.State.Effects.Start(new(instance,"paralyze","spell.paralyze",caster,target,setting.Key,"Magic",item,1,rounds,state));
     }
     private static DaggerfallCasting CastingFor(Fixture f,DaggerfallSpellDefinition spell,int save)

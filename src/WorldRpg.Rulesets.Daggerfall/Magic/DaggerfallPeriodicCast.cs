@@ -13,10 +13,10 @@ internal sealed record DaggerfallPeriodicCastState(
 internal static class DaggerfallPeriodicCast
 {
     internal static JsonElement Encode(DaggerfallPeriodicCastState state) =>
-        JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallPeriodicCastState);
+        JsonSerializer.SerializeToElement(state, DaggerfallMagicJson.Default.DaggerfallPeriodicCastState);
     internal static DaggerfallPeriodicCastState Read(JsonElement state, int type, int subtype)
     {
-        var value = state.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallPeriodicCastState)
+        var value = state.Deserialize(DaggerfallMagicJson.Default.DaggerfallPeriodicCastState)
             ?? throw new ArgumentException("Periodic cast state is missing.");
         if (value.NextRound < 0 || value.Cast?.Settings is not { } settings || settings.Type != type || settings.SubType != subtype
             || value.Cast.CasterLevel < 1 || value.Cast.Amount < 0 || value.Cast.SavePercent is < 1 or > 100)

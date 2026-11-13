@@ -51,7 +51,7 @@ internal static class DaggerfallThaumaturgyEffects
     private static IEnumerable<WorldRpg.Kit.Effects.IActiveEffectContribution> ValidateEffect(
         DaggerfallActiveEffect effect, int type, int subtype)
     {
-        DaggerfallCastEffectState? state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        DaggerfallCastEffectState? state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         if (state?.Settings is not { Type: var actualType, SubType: var actualSubtype }
             || actualType != type || actualSubtype != subtype
             || state.CasterLevel < 1 || state.Amount != 0 || state.SavePercent is < 1 or > 100)
@@ -61,7 +61,7 @@ internal static class DaggerfallThaumaturgyEffects
 
     private static DaggerfallMagicDefense DefenseFor(DaggerfallActiveEffect effect, bool reflection)
     {
-        DaggerfallCastEffectState state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)
+        DaggerfallCastEffectState state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)
             ?? throw new ArgumentException("Thaumaturgy defense state is missing.");
         int chance = DaggerfallMagicAdmissionPolicy.CalculateEffectChance(state.Settings, state.CasterLevel);
         if (chance is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(chance));

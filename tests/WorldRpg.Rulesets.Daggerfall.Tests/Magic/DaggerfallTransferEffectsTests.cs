@@ -71,7 +71,7 @@ public sealed class DaggerfallTransferEffectsTests
     {
         using Harness h = new(8); h.Track(2, "health").SetCurrent(100);
         List<DaggerfallEffectOutcome> outcomes = []; h.Effects.Completed += outcomes.Add;
-        var state = JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(h.Setting, 1, 10, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state = JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(h.Setting, 1, 10, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         var outcome = h.Effects.Start(new("missing", "transfer-health", "spell.transfer", caster, 2, "setting", "Magic", null, 1, 1, state));
         Assert.Equal(DaggerfallEffectAdmissionOutcome.SourceUnavailable, outcome);
         Assert.Contains(outcomes, value => value.Kind == DaggerfallEffectOutcomeKind.SourceUnavailable);
@@ -82,7 +82,7 @@ public sealed class DaggerfallTransferEffectsTests
     public void A_direct_request_with_a_defeated_target_has_no_loss_or_caster_recovery()
     {
         using Harness h = new(8); h.Track(1, "health").SetCurrent(100); h.Track(2, "health").SetCurrent(0);
-        var state = JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(h.Setting, 1, 10, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state = JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(h.Setting, 1, 10, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         Assert.Equal(DaggerfallEffectAdmissionOutcome.TargetUnavailable,
             h.Effects.Start(new("dead", "transfer-health", "spell.transfer", 1, 2, "setting", "Magic", null, 1, 1, state)));
         Assert.Equal(100, h.Track(1, "health").Current); Assert.Empty(h.Results); Assert.Empty(h.Effects.Active);

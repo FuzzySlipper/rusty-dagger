@@ -22,7 +22,7 @@ internal static class DaggerfallMolagBalEffects
 
     internal static long Minute(DaggerfallCalendar calendar) => calendar.ToAbsoluteSeconds() / 60;
     internal static JsonElement Encode(DaggerfallMolagBalState state) =>
-        JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallMolagBalState);
+        JsonSerializer.SerializeToElement(state, DaggerfallMagicJson.Default.DaggerfallMolagBalState);
 
     internal static DaggerfallEffectDefinition Definition(Func<DaggerfallCalendar> calendar,
         Func<DaggerfallCareerDefinition> career, Func<long, ulong, bool> equipped) =>
@@ -76,7 +76,7 @@ internal static class DaggerfallMolagBalEffects
 
     internal static DaggerfallMolagBalState Read(JsonElement payload)
     {
-        var state = payload.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallMolagBalState);
+        var state = payload.Deserialize(DaggerfallMagicJson.Default.DaggerfallMolagBalState);
         if (state is null || state.LastStrikeMinute < 0 || !double.IsFinite(state.MagickaMaximumIncrease)
             || state.MagickaMaximumIncrease < 0 || state.StrengthIncrease < 0)
             throw new ArgumentException("Mace state requires a valid strike time and bounded positive bonuses.");

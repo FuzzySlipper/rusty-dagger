@@ -34,7 +34,7 @@ internal static class DaggerfallDetectionEffects
     }
     private static IEnumerable<IActiveEffectContribution> Validate(DaggerfallActiveEffect effect, int subtype)
     {
-        var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         if (state?.Settings is not { } settings || settings.Type != 39 || settings.SubType != subtype || state.CasterLevel < 1
             || state.Amount != 0 || state.SavePercent is < 1 or > 100)
             throw new ArgumentException("Detector state does not match its admitted duration-only variant.");

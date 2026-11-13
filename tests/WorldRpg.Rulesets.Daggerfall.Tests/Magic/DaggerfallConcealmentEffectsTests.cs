@@ -94,8 +94,8 @@ public sealed class DaggerfallConcealmentEffectsTests
         using Fixture f = new(); var s = f.Session; var casting = Casting(s, Spell(23, 1) with { Element = 0, IsCustom = true }); Fund(s);
         Assert.Equal(DaggerfallCastOutcome.UnsupportedEffect, casting.Ready(1, "conceal.test").Outcome);
         Start(s, "bad", 23, 1, 10); var save = DaggerfallSavePayload.Read(s.CaptureSave()); var effect = Assert.Single(save.ActiveEffects);
-        var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)!;
-        var invalid = effect with { State = JsonSerializer.SerializeToElement(state with { Amount = 1 }, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState) };
+        var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)!;
+        var invalid = effect with { State = JsonSerializer.SerializeToElement(state with { Amount = 1 }, DaggerfallMagicJson.Default.DaggerfallCastEffectState) };
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(save with { ActiveEffects = [invalid] })));
     }
 
@@ -105,7 +105,7 @@ public sealed class DaggerfallConcealmentEffectsTests
         using Fixture f = new(); var s = f.Session;
         var setting = new DaggerfallSpellEffectDefinition("paralyze", 0, -1, 10, 0, 1, 100, 0, 1, 0, 0, 0, 0, 1);
         s.State.Effects.Start(new("paralysis", "paralyze", "spell", 1, 2000, "paralyze", "Magic", null, 1, 10,
-            JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting, 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)));
+            JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting, 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
         Start(s, "normal", 13, 0, 10); Start(s, "true", 24, 1, 10);
         var before = s.State.Effects.PerceptionFor(1);
         using var restored = f.Restore(s.CaptureSave()); Assert.Equal(before, restored.State.Effects.PerceptionFor(1));
@@ -129,7 +129,7 @@ public sealed class DaggerfallConcealmentEffectsTests
     private static DaggerfallSpellDefinition Spell(int type, int subtype) => new("conceal.test", 1, false, "Conceal", 4, 0, 0, 0, [Setting(type, subtype)]);
     private static DaggerfallEffectAdmissionOutcome Start(DaggerfallSession s, string instance, int type, int subtype, uint rounds, long target = 1, ulong? item = null) => s.State.Effects.Start(new(
         instance, DaggerfallConcealmentEffects.Key(type, subtype), "concealment", 1, target, "conceal", "Magic", item, 1, rounds,
-        JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(type, subtype), 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)));
+        JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(type, subtype), 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
     private static DaggerfallCasting Casting(DaggerfallSession s, DaggerfallSpellDefinition spell) => new(
         TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } }, s.State.Effects,
         id => id == 1 ? s.State.Actors.Player.Actor : s.State.Actors.TryGet(id, out var actor) ? actor.Actor : null,

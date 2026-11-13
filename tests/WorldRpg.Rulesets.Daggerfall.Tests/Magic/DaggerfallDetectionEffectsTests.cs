@@ -24,7 +24,7 @@ public sealed class DaggerfallDetectionEffectsTests
         Assert.Equal(DaggerfallCastOutcome.Refreshed, Assert.Single(Cast(s, Setting(subtype, 2)).Results).Outcome);
         var active = Assert.Single(s.State.Effects.Active);
         Assert.Equal(11u, active.Lifecycle.RemainingRounds);
-        Assert.Equal(10, active.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)!.Settings.DurationBase);
+        Assert.Equal(10, active.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)!.Settings.DurationBase);
         Assert.Equal(39, active.Definition.Spell!.Type);
         Assert.Equal(subtype, active.Definition.Spell.SubType);
         Assert.Equal(DaggerfallMagicAllowedTargets.CasterOnly, active.Definition.Spell.AllowedTargets);
@@ -140,8 +140,8 @@ public sealed class DaggerfallDetectionEffectsTests
         var setting = Setting(0, 10); var spell = Spell(setting) with { Element = 0, IsCustom = true };
         Assert.Equal(DaggerfallCastOutcome.UnsupportedEffect, Casting(s, spell).Ready(1, spell.Key).Outcome);
         Cast(s, setting); var save = DaggerfallSavePayload.Read(s.CaptureSave()); var effect = Assert.Single(save.ActiveEffects);
-        var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)!;
-        var invalid = effect with { State = JsonSerializer.SerializeToElement(state with { Amount = 1 }, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState) };
+        var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)!;
+        var invalid = effect with { State = JsonSerializer.SerializeToElement(state with { Amount = 1 }, DaggerfallMagicJson.Default.DaggerfallCastEffectState) };
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(save with { ActiveEffects = [invalid] })));
         Assert.Throws<ArgumentOutOfRangeException>(() => new DaggerfallDetectionTuning(double.NaN).Validate());
         Assert.Throws<ArgumentOutOfRangeException>(() => new DaggerfallDetectionTuning(0).Validate());
@@ -163,7 +163,7 @@ public sealed class DaggerfallDetectionEffectsTests
         var bundle = casting.Release(1, true).Bundle!; casting.Deliver(bundle, [1]); return bundle;
     }
     private static void Conceal(DaggerfallSession s, long target) => s.State.Effects.Start(new($"conceal.{target}", "invisibility-true", "test.conceal", target, target, "invisibility", "Magic", null, 1, 20,
-        JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(new("conceal", 13, 1, 20, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1), 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)));
+        JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(new("conceal", 13, 1, 20, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1), 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
     private sealed class Fixture : IDisposable
     {
         internal DaggerfallSessionComposition Composition { get; }

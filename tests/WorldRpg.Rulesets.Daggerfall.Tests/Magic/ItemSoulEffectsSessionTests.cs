@@ -136,15 +136,15 @@ public sealed class ItemSoulEffectsSessionTests
         var shielded = new CombatResolution().ApplyToHealth(new(s.State.Actors.Player.Actor, actor, "test"), 20, health).Result;
         Assert.False(shielded.Defeated); Assert.Equal(10d, health.Current);
         var trap = s.State.Effects.Active.Single(value => value.Definition.Key == "soul-trap");
-        Assert.Equal(0, trap.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallSoulTrapState)!.Attempts);
+        Assert.Equal(0, trap.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallSoulTrapState)!.Attempts);
         s.State.Effects.Start(new("extend", "soul-trap", "spell.other", 1, target, "soul-trap", "Magic", null, 1, 7,
-            JsonSerializer.SerializeToElement(new DaggerfallSoulTrapState(new(Setting(12, 0), 1, 0, 100)), DaggerfallSaveJsonContext.Default.DaggerfallSoulTrapState)));
+            JsonSerializer.SerializeToElement(new DaggerfallSoulTrapState(new(Setting(12, 0), 1, 0, 100)), DaggerfallMagicJson.Default.DaggerfallSoulTrapState)));
         Assert.Equal(16u, trap.Lifecycle.RemainingRounds);
         using var restored = f.Restore(); actor = restored.State.Actors.Get(target).Actor; health = actor.Get<StatsComponent>().GetTrack(TrackId.Parse("health"));
         var tethered = new CombatResolution().ApplyToHealth(new(restored.State.Actors.Player.Actor, actor, "terminal"), 100, health, HealthApplicationMode.Terminal).Result;
         Assert.False(tethered.Defeated); Assert.Equal(1d, health.Current);
         var savedTrap = DaggerfallSavePayload.Read(restored.CaptureSave()).ActiveEffects.Single(value => value.EffectKey == "soul-trap");
-        Assert.Equal(1, savedTrap.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallSoulTrapState)!.Attempts);
+        Assert.Equal(1, savedTrap.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallSoulTrapState)!.Attempts);
     }
     public static IEnumerable<object[]> CreateItemChoiceIndexes() => Enumerable.Range(0, 29).Select(index => new object[] { index });
 
@@ -237,9 +237,9 @@ public sealed class ItemSoulEffectsSessionTests
 
     private static DaggerfallSpellEffectDefinition Setting(int type, int chance = 0) => new("effect", type, -1, 10, 0, 1, chance, 0, 1, 0, 0, 0, 0, 1);
     private static void Create(DaggerfallSession session, string instance) => session.State.Effects.Start(new(instance, "create-item", "spell.create", 1, 1,
-        "create-item", "Magic", null, 1, 10, JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(2), 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)));
+        "create-item", "Magic", null, 1, 10, JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(2), 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
     private static void Trap(DaggerfallSession session, long target, int chance) => session.State.Effects.Start(new($"trap-{target}", "soul-trap", "spell.trap", 1, target,
-        "soul-trap", "Magic", null, 1, 10, JsonSerializer.SerializeToElement(new DaggerfallSoulTrapState(new(Setting(12, chance), 1, 0, 100)), DaggerfallSaveJsonContext.Default.DaggerfallSoulTrapState)));
+        "soul-trap", "Magic", null, 1, 10, JsonSerializer.SerializeToElement(new DaggerfallSoulTrapState(new(Setting(12, chance), 1, 0, 100)), DaggerfallMagicJson.Default.DaggerfallSoulTrapState)));
     private static void AddGem(DaggerfallSession session, SanguineRoseSessionTests.Fixture f, string key)
     {
         var factory = new DaggerfallItemFactory(TestPayload.Definitions, f.Engine.Context.Random);

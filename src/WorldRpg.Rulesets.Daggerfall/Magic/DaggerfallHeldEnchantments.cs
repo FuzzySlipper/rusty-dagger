@@ -122,7 +122,7 @@ internal sealed partial class DaggerfallHeldEnchantments : IDisposable
     private readonly Action<int>? _damageWearer;
     private readonly Action? _drainNearby;
     private readonly List<AppliedContribution> _applied = [];
-    private readonly DaggerfallSocialState? _social;
+    private readonly IDaggerfallReactionSources? _social;
     private readonly List<EffectSourceIdentity> _socialSources = [];
     // Indexed by the donor's RegensHealth params: always, in sunlight, in darkness, and one slot for a
     // param the donor never names, which counts for cleanup but never contributes a tick.
@@ -141,7 +141,7 @@ internal sealed partial class DaggerfallHeldEnchantments : IDisposable
         DaggerfallMagicCatalogSet magic, StatsComponent playerStats, EntityDirectory entities, EntityId actor,
         Func<DaggerfallCalendar> calendar, Func<WorldPoint?> playerPosition, Func<IReadOnlyList<DaggerfallNearbyCreature>> nearby,
         Func<bool>? playerInSunlight = null, DaggerfallItemConditionService? itemCondition = null,
-        Func<bool>? playerInHolyPlace = null, Action<int>? damageWearer = null, DaggerfallSocialState? social = null, Action? drainNearby = null)
+        Func<bool>? playerInHolyPlace = null, Action<int>? damageWearer = null, IDaggerfallReactionSources? social = null, Action? drainNearby = null)
     {
         _equipment = equipment ?? throw new ArgumentNullException(nameof(equipment));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
@@ -304,7 +304,7 @@ internal sealed partial class DaggerfallHeldEnchantments : IDisposable
                 EffectSourceIdentity source = IdentityFor(assignment, enchantment);
                 if (enchantment.Type == ArtifactEffectType && enchantment.Param == MasqueOfClavicusParam)
                 {
-                    for (int group = 0; group < DaggerfallSocialState.SocialGroupCount; group++)
+                    for (int group = 0; group < _social.GroupCount; group++)
                         _social.SetReactionSource(group, source, magnitude);
                     _socialSources.Add(source);
                 }

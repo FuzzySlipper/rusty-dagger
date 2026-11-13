@@ -184,7 +184,7 @@ public sealed class CastingSessionTests
             // Actual spell family bodies remain owned by their explicit follow-up tasks.
             IEnumerable<IActiveEffectContribution> Apply(DaggerfallActiveEffect effect)
             {
-                var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)!;
+                var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)!;
                 Stat strength = effect.Target.Get<StatsComponent>().GetStat(StatId.Parse("strength"));
                 var handle = strength.AddModifier(Math.Max(1,state.Amount));
                 return [new DelegateActiveEffectContribution(() => strength.RemoveModifier(handle))];

@@ -84,8 +84,8 @@ public sealed class DaggerfallFortifyEffectsTests
     {
         using Fixture f = new(); var s = f.Session; Start(s, "bad", 0, 7, 10);
         var saved = DaggerfallSavePayload.Read(s.CaptureSave()); var effect = Assert.Single(saved.ActiveEffects);
-        var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)!;
-        var invalid = effect with { State = JsonSerializer.SerializeToElement(state with { Amount = 6 }, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState) };
+        var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)!;
+        var invalid = effect with { State = JsonSerializer.SerializeToElement(state with { Amount = 6 }, DaggerfallMagicJson.Default.DaggerfallCastEffectState) };
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(saved with { ActiveEffects = [invalid] })));
     }
 
@@ -106,7 +106,7 @@ public sealed class DaggerfallFortifyEffectsTests
     private static DaggerfallSpellEffectDefinition Setting(int subtype, int amount) => new("fortify", 9, subtype, 10, 0, 1, 0, 0, 1, amount, amount, 0, 0, 1);
     private static DaggerfallEffectAdmissionOutcome Start(DaggerfallSession s, string instance, int subtype, int amount, uint rounds, int? settingsAmount = null, long target = 1, long caster = 2000) => s.State.Effects.Start(new(
         instance, DaggerfallFortifyEffects.Key(subtype), "fortify", caster, target, "fortify", "Magic", null, 1, rounds,
-        JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(subtype, settingsAmount ?? amount), 1, amount, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)));
+        JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(subtype, settingsAmount ?? amount), 1, amount, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
     private static Stat Stat(DaggerfallSession s, long id, int subtype) => (id == 1 ? s.State.Actors.Player.Stats : s.State.Actors.Get(id).Stats)
         .GetStat(StatId.Parse(DaggerfallMechanicsIds.Attributes[subtype].Value));
     private static void Fund(DaggerfallSession s) { var track = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")); track.Maximum.BaseValue = 10000; track.SetCurrent(10000); }

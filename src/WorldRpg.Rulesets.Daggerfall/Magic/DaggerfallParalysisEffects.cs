@@ -42,7 +42,7 @@ internal static class DaggerfallParalysisEffects
 
     private static void Validate(DaggerfallActiveEffect effect)
     {
-        var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         if (state?.Settings is not { Type: 0, SubType: -1 } || state.CasterLevel < 1 || state.SavePercent is < 1 or > 100
             || effect.Target.Get<StatsComponent>().GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0)
             throw new ArgumentException("Paralysis requires an admitted current cast state and a living target.");

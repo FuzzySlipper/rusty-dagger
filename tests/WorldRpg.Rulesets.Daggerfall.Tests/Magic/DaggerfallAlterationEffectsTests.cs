@@ -149,7 +149,7 @@ public sealed class DaggerfallAlterationEffectsTests
         uint rounds, long target = 1, ulong? item = null)
     {
         var setting = new DaggerfallSpellEffectDefinition("ward-settings", 8, (int)element, 10, 0, 1, chance, 0, 1, 0, 0, 0, 0, 1);
-        var state = JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting, 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state = JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting, 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         session.State.Effects.Start(new(instance, $"resist-{element.ToString().ToLowerInvariant()}", "spell.ward", 1, target, setting.Key, "Magic", item, 1, rounds, state));
     }
     private static void PrepareCast(DaggerfallSession s, string key)

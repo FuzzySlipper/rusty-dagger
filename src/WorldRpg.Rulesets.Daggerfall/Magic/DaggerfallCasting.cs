@@ -584,7 +584,7 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
                 ulong? operationalItem = binding.UntilHealed ? null : bundle.ItemId;
                 var preliminaryState = new DaggerfallCastEffectState(setting, bundle.CasterLevel, permanentAmount, permanentPercent, origin);
                 JsonElement preliminary = binding.CreateState?.Invoke(preliminaryState)
-                    ?? JsonSerializer.SerializeToElement(preliminaryState, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+                    ?? JsonSerializer.SerializeToElement(preliminaryState, DaggerfallMagicJson.Default.DaggerfallCastEffectState);
                 if (effects.TryAdmitIncumbent(new(instance, definition.Key, bundle.Source == DaggerfallCastSource.Potion ? bundle.Spell.Key : $"spell.{bundle.Spell.Key}", operationalCaster,
                     targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, baseDuration, preliminary) { BundleKind = bundleKind, BundleId = $"cast.{bundle.Sequence}", BundleSequence = bundle.Sequence, BundleName = bundle.Spell.Name }, out var incumbent,
                     () =>
@@ -592,7 +592,7 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
                         var incoming = new DaggerfallCastEffectState(setting, bundle.CasterLevel,
                             binding.UntilHealed ? permanentAmount : binding.SupportsMagnitude && !binding.MagnitudePerRound ? DaggerfallMagicAdmissionPolicy.RollEffectMagnitude(setting, bundle.CasterLevel, roll) : 0, permanentPercent, origin);
                         return binding.CreateState?.Invoke(incoming)
-                            ?? JsonSerializer.SerializeToElement(incoming, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+                            ?? JsonSerializer.SerializeToElement(incoming, DaggerfallMagicJson.Default.DaggerfallCastEffectState);
                     }))
                 {
                     string? actual = incumbent == DaggerfallEffectAdmissionOutcome.Refreshed
@@ -616,7 +616,7 @@ internal sealed partial class DaggerfallCasting(DaggerfallMagicCatalogSet catalo
                     duration = bundle.Source == DaggerfallCastSource.ItemHeld ? null : binding.SupportsDuration ? checked((uint)Math.Max(1, DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting, bundle.CasterLevel))) : 1u;
                 var state = new DaggerfallCastEffectState(setting, bundle.CasterLevel, amount, percent, origin);
                 JsonElement payload = binding.CreateState?.Invoke(state)
-                    ?? JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+                    ?? JsonSerializer.SerializeToElement(state, DaggerfallMagicJson.Default.DaggerfallCastEffectState);
                 var admission = effects.Start(new(instance, definition.Key, bundle.Source == DaggerfallCastSource.Potion ? bundle.Spell.Key : $"spell.{bundle.Spell.Key}", operationalCaster,
                     targetId, setting.Key, bundle.Element.ToString(), operationalItem, 1, duration, payload) { BundleId = $"cast.{bundle.Sequence}", BundleSequence = bundle.Sequence, BundleName = bundle.Spell.Name, BundleKind = bundleKind });
                 outcome = admission switch

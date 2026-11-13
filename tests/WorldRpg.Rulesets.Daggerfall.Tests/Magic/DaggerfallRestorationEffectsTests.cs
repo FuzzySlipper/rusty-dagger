@@ -246,7 +246,7 @@ public sealed class DaggerfallRestorationEffectsTests
     {
         var cast = new DaggerfallCastEffectState(settings,1,0,100);
         JsonElement state = key == "regenerate" ? DaggerfallRestorationEffects.RegenerationState(new(cast,0))
-            : JsonSerializer.SerializeToElement(cast,DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+            : JsonSerializer.SerializeToElement(cast,DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         s.State.Effects.Start(new(instance,key,"spell.recovery",caster,target,settings.Key,"Magic",item,1,rounds,state));
     }
     private static DaggerfallCasting CastingFor(DaggerfallSession s, DaggerfallSpellDefinition spell, int dice,

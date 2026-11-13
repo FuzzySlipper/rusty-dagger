@@ -36,7 +36,7 @@ internal readonly record struct DaggerfallGuildEligibility(bool IsGuild, bool Is
 /// standing, player social-group standing, regional legal standing, and one membership per guild
 /// group have distinct records rather than overloaded quest variables.
 /// </summary>
-internal sealed class DaggerfallSocialState
+internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
 {
     internal const int MinimumReputation = -100;
     internal const int MaximumReputation = 100;
@@ -120,6 +120,11 @@ internal sealed class DaggerfallSocialState
         RequireSocialGroup(socialGroup);
         return _reactionModifiers[socialGroup].ValueInt;
     }
+
+    int IDaggerfallReactionSources.GroupCount => SocialGroupCount;
+    void IDaggerfallReactionSources.SetReactionSource(int socialGroup, MechanicsSourceIdentity identity, int amount) =>
+        SetReactionSource(socialGroup, identity, amount);
+    void IDaggerfallReactionSources.RemoveReactionSource(MechanicsSourceIdentity identity) => RemoveReactionSource(identity);
 
     internal void SetReactionSource(int socialGroup, MechanicsSourceIdentity identity, int amount)
     {

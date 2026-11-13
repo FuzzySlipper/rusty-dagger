@@ -57,7 +57,7 @@ internal static class DaggerfallDestructionEffects
     }
 
     private static DaggerfallCastEffectState Read(DaggerfallActiveEffect effect) =>
-        effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)
+        effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)
             ?? throw new ArgumentException("Immediate destruction cast state is missing.");
 
     private static IEnumerable<IActiveEffectContribution> Validate(DaggerfallActiveEffect effect, int type, int subtype)

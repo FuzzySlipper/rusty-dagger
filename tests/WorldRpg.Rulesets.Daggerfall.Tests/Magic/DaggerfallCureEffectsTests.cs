@@ -213,7 +213,7 @@ public sealed class DaggerfallCureEffectsTests
     private static void Paralyze(DaggerfallSession s, string instance, long caster, long target)
     {
         var setting = TestPayload.Definitions.Magic.Spells["spell.047"].Effects[0];
-        var state = System.Text.Json.JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting, 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state = System.Text.Json.JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting, 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         s.State.Effects.Start(new(instance, "paralyze", "spell.paralyze", caster, target, setting.Key, "Magic", null, 1, 10000, state));
     }
     private static DaggerfallLiveSpell Cast(DaggerfallSession s, string key)

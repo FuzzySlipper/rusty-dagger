@@ -41,7 +41,7 @@ internal static class DaggerfallFortifyEffects
 
     private static DaggerfallCastEffectState Read(JsonElement payload, int subtype)
     {
-        var state = payload.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state = payload.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         if (state?.Settings is not { Type: 9 } setting || setting.SubType != subtype || state.CasterLevel < 1
             || state.Amount < 0 || state.SavePercent is < 1 or > 100)
             throw new ArgumentException("Fortification state does not match its admitted compiled attribute.");

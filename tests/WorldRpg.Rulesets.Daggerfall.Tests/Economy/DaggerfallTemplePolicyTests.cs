@@ -440,7 +440,7 @@ public sealed class DaggerfallTemplePolicyTests
         DaggerfallSpellEffectDefinition settings = new("temple-unrelated", 8, 0, 10, 0, 1, 100, 0, 1, 0, 0, 0, 0, 1);
         JsonElement state = JsonSerializer.SerializeToElement(
             new DaggerfallCastEffectState(settings, 1, 0, 100),
-            DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+            DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         _ = session.State.Effects.Start(new(
             "unrelated-duration", "resist-fire", "spell.unrelated", null,
             DaggerfallActorIdentity.PlayerEntityId, settings.Key, "Magic", null, 1,

@@ -73,7 +73,7 @@ public sealed class DaggerfallThaumaturgyEffectsTests
         DaggerfallSpellEffectDefinition setting = new(key, type, subtype, 20, 0, 1, chance, 0, 1, 0, 0, 0, 0, 0);
         JsonElement state = JsonSerializer.SerializeToElement(
             new DaggerfallCastEffectState(setting, 1, 0, 100),
-            DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+            DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         DaggerfallEffectAdmissionOutcome outcome = effects.Start(new(
             $"{key}.instance", key, "spell.test", 1, target, key, "Magic", null, 1, rounds, state));
         Assert.True(outcome is DaggerfallEffectAdmissionOutcome.Started or DaggerfallEffectAdmissionOutcome.Refreshed);

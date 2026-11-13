@@ -26,7 +26,7 @@ internal static class DaggerfallAlterationEffects
                 Spell: new(8, (int)element, SpellMaker: true, SupportsDuration: true),
                 MagicDefense: effect =>
                 {
-                    var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)
+                    var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)
                         ?? throw new ArgumentException("Resistance effect state is missing.");
                     return new(0, 0, [new(selected,
                         DaggerfallMagicAdmissionPolicy.CalculateEffectChance(state.Settings, state.CasterLevel))]);
@@ -60,7 +60,7 @@ internal static class DaggerfallAlterationEffects
 
     internal static DaggerfallShieldState ReadShield(JsonElement state)
     {
-        var value = state.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallShieldState)
+        var value = state.Deserialize(DaggerfallMagicJson.Default.DaggerfallShieldState)
             ?? throw new ArgumentException("Shield effect state is missing.");
         if (value.Starting < 0 || value.Remaining < 0 || value.Remaining > value.Starting)
             throw new ArgumentException("Shield effect state contains an invalid remaining pool.");
@@ -68,11 +68,11 @@ internal static class DaggerfallAlterationEffects
     }
 
     internal static JsonElement ShieldState(DaggerfallShieldState state) =>
-        JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallShieldState);
+        JsonSerializer.SerializeToElement(state, DaggerfallMagicJson.Default.DaggerfallShieldState);
 
     private static IEnumerable<IActiveEffectContribution> ValidateResistance(DaggerfallActiveEffect effect, DaggerfallMagicResistanceElement element)
     {
-        var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         if (state?.Settings is not { Type: 8 } settings || settings.SubType != (int)element || state.CasterLevel < 1)
             throw new ArgumentException("Resistance effect state does not match its compiled variant.");
         return [];
@@ -80,7 +80,7 @@ internal static class DaggerfallAlterationEffects
 
     private static IEnumerable<IActiveEffectContribution> ValidateMovement(DaggerfallActiveEffect effect, int type)
     {
-        DaggerfallCastEffectState? state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        DaggerfallCastEffectState? state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         if (state?.Settings is not { Type: var actualType, SubType: -1 } || actualType != type || state.CasterLevel < 1
             || state.Amount != 0 || state.SavePercent is < 1 or > 100)
             throw new ArgumentException($"Alteration movement state does not match its duration-only variant {type}:-1.");

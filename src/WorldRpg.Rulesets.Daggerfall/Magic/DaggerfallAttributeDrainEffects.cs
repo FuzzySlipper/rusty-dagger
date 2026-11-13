@@ -17,7 +17,7 @@ internal static class DaggerfallAttributeDrainEffects
 
     internal static string Key(int subtype) => $"drain-{Attributes[subtype].Value}";
     internal static JsonElement Encode(DaggerfallAttributeDrainState state) =>
-        JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallAttributeDrainState);
+        JsonSerializer.SerializeToElement(state, DaggerfallMagicJson.Default.DaggerfallAttributeDrainState);
 
     /// <summary>The accepted artifact strike already supplied its save; retain only historical provenance.</summary>
     internal static void DrainArtifactStrength(DaggerfallEffectLifecycle effects, string instance,
@@ -113,7 +113,7 @@ internal static class DaggerfallAttributeDrainEffects
 
     internal static DaggerfallAttributeDrainState Read(JsonElement payload, int subtype, int type = 7)
     {
-        var state = payload.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallAttributeDrainState);
+        var state = payload.Deserialize(DaggerfallMagicJson.Default.DaggerfallAttributeDrainState);
         if (state?.Cast is not { } cast || cast.Settings is not { } setting || setting.Type != type || type is not (7 or 11) || setting.SubType != subtype
             || cast.CasterLevel < 1 || cast.Amount < 0 || cast.SavePercent is < 1 or > 100 || state.Magnitude < 0
             || cast.Origin is not { } origin || !Enum.IsDefined(origin.Source)

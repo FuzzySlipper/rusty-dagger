@@ -52,7 +52,7 @@ internal static class DaggerfallRestorationEffects
     private static IEnumerable<IActiveEffectContribution> ValidateCast(DaggerfallActiveEffect effect, int type)
     { Validate(ReadCast(effect.State), type); return []; }
     private static DaggerfallCastEffectState ReadCast(JsonElement state) =>
-        state.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)
+        state.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)
             ?? throw new ArgumentException("Recovery/defense cast state is missing.");
     private static void Validate(DaggerfallCastEffectState state, int type)
     {

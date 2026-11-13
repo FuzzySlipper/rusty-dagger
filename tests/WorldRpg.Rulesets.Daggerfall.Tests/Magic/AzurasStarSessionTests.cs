@@ -189,7 +189,7 @@ public sealed class AzurasStarSessionTests
     {
         var setting = new DaggerfallSpellEffectDefinition("effect", 12, -1, 10, 0, 1, 100, 0, 1, 0, 0, 0, 0, 1);
         s.State.Effects.Start(new("star-trap", "soul-trap", "spell.trap", 1, target, "soul-trap", "Magic", null, 1, 10,
-            JsonSerializer.SerializeToElement(new DaggerfallSoulTrapState(new(setting, 1, 0, 100)), DaggerfallSaveJsonContext.Default.DaggerfallSoulTrapState)));
+            JsonSerializer.SerializeToElement(new DaggerfallSoulTrapState(new(setting, 1, 0, 100)), DaggerfallMagicJson.Default.DaggerfallSoulTrapState)));
     }
     private static void Equip(SanguineRoseSessionTests.Fixture f) => f.Session.State.Equipment.Equip(f.Item, [new("amulet0")]);
     private static void Use(DaggerfallSession s, ulong source, EngineContextFake engine)

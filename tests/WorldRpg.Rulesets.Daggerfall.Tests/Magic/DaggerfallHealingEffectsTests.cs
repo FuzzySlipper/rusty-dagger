@@ -102,7 +102,7 @@ public sealed class DaggerfallHealingEffectsTests
         // An instant family cannot be forged into a resumable save by retaining an ordinary lifecycle record.
         Drain(s, "saved", 0, 1); var active = Assert.Single(DaggerfallSavePayload.Read(s.CaptureSave()).ActiveEffects);
         var instant = active with { EffectKey = "heal-health", RemainingRounds = 1,
-            State = JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(8, 10), 1, 10, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState) };
+            State = JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(8, 10), 1, 10, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState) };
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(save with { ActiveEffects = [instant] })));
     }
 
@@ -120,7 +120,7 @@ public sealed class DaggerfallHealingEffectsTests
     }
     private static DaggerfallEffectAdmissionOutcome Direct(DaggerfallSession s, int subtype, int amount) => s.State.Effects.Start(new(
         "direct", subtype == 8 ? "heal-health" : "heal-fatigue", "spell", 1, 1, "heal", "Magic", null, 1, 1,
-        JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(subtype, amount), 1, amount, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)));
+        JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(subtype, amount), 1, amount, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
     private static DaggerfallEffectAdmissionOutcome Potion(DaggerfallSession s, int amount) => s.State.Effects.Start(new(
         "potion", "heal-spell-points", "potion", 1, 1, "restorePower", "Magic", null, 1, 1, DaggerfallHealingEffects.SpellPointState(amount)));
     private static void Drain(DaggerfallSession s, string instance, int subtype, int amount) => s.State.Effects.Start(new(

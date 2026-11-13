@@ -37,7 +37,7 @@ public sealed class DaggerfallMysticismEffectsTests
             id => id == 1 ? s.State.Actors.Player.Actor : null, s.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1, playerKnowsSpell: _ => true);
         Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
         void Silence(string id) => s.State.Effects.Start(new(id, "silence", "spell.foreign", 2000, 1, "silence", "Magic", null, 1, 10,
-            JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(19, -1, 100), 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)));
+            JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(19, -1, 100), 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
         Silence("silence-one"); Silence("silence-two");
         Assert.Equal(19u, Assert.Single(s.State.Effects.Active).Lifecycle.RemainingRounds);
         double before = track.Current;
@@ -224,7 +224,7 @@ public sealed class DaggerfallMysticismEffectsTests
         using Fixture f = new(); var s = f.Session;
         ulong item = s.State.Inventory.Read().UniqueItems.Select(value => s.State.Inventory.GetDurableItemId(value.Entity).Value).First();
         s.State.Effects.Start(new("held", "invisibility-true", "item", 1, 1, "invisibility", "Magic", item, 1, null,
-            JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(13, 1, 0), 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)) { BundleId = "held.bundle", BundleKind = DaggerfallEffectBundleKind.HeldMagicItem });
+            JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(13, 1, 0), 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)) { BundleId = "held.bundle", BundleKind = DaggerfallEffectBundleKind.HeldMagicItem });
         Cast(s, Setting(24, 1, 0)); Cast(s, Setting(6, 0, 100)); var revision = s.DispelView!.Revision;
         s.State.ItemInstances.ReplaceUnique(item, s.State.ItemInstances.RequireUnique(item) with { CurrentCondition = 0 });
         s.ChooseDispel(revision, "held.bundle"); Assert.NotNull(s.DispelView);
@@ -267,7 +267,7 @@ public sealed class DaggerfallMysticismEffectsTests
         casting.Deliver(bundle, [1]); return bundle;
     }
     private static void Start(DaggerfallSession s, string id, long caster, long target, string bundle, DaggerfallEffectBundleKind kind = DaggerfallEffectBundleKind.Spell) => s.State.Effects.Start(new(id, "invisibility-true", "spell.shared", caster, target, "invisibility", "Magic", null, 1, 10,
-        JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(13, 1, 0), 1, 0, 100), DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)) { BundleId = bundle, BundleKind = kind });
+        JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(13, 1, 0), 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)) { BundleId = bundle, BundleKind = kind });
     private sealed class Fixture : IDisposable
     {
         internal DaggerfallSessionComposition Composition { get; }

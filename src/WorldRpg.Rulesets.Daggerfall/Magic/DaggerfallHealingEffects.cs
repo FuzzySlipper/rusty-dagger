@@ -13,7 +13,7 @@ internal sealed record DaggerfallSpellPointHealingState(int Amount);
 internal static class DaggerfallHealingEffects
 {
     internal static JsonElement SpellPointState(int amount) => JsonSerializer.SerializeToElement(
-        new DaggerfallSpellPointHealingState(amount), DaggerfallSaveJsonContext.Default.DaggerfallSpellPointHealingState);
+        new DaggerfallSpellPointHealingState(amount), DaggerfallMagicJson.Default.DaggerfallSpellPointHealingState);
 
     internal static IEnumerable<DaggerfallEffectDefinition> Definitions(Func<DaggerfallEffectLifecycle> effects,
         Func<DaggerfallCareerDefinition> career, DaggerfallVitalityConsequences vitality)
@@ -48,7 +48,7 @@ internal static class DaggerfallHealingEffects
         yield return new("heal-spell-points", "heal-spell-points", DaggerfallEffectStacking.Stack, ushort.MaxValue, 1,
             Apply: effect =>
             {
-                var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallSpellPointHealingState);
+                var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallSpellPointHealingState);
                 if (state is null || state.Amount < 0 || effect.Context.Caster != effect.Context.Target || effect.Element != "Magic")
                     throw new ArgumentException("Spell-point healing requires a non-negative Magic self-targeted potion payload.");
                 return [];
@@ -56,7 +56,7 @@ internal static class DaggerfallHealingEffects
             {
                 effect.ExpireAfterCurrentRound = true;
                 if (Alive(effect)) vitality.RestoreSpellTrack(effect.Target, TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value),
-                    effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallSpellPointHealingState)!.Amount);
+                    effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallSpellPointHealingState)!.Amount);
             },
             // Restore Power sparkles on its drinker like every other potion effect.
             Feedback: DaggerfallEffectFeedback.MagicSparkle);
@@ -71,7 +71,7 @@ internal static class DaggerfallHealingEffects
     private static IEnumerable<IActiveEffectContribution> CannotResume(DaggerfallActiveEffect _) =>
         throw new ArgumentException("Immediate healing cannot remain active in a current save.");
     private static DaggerfallCastEffectState Read(DaggerfallActiveEffect effect) =>
-        effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)
+        effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)
             ?? throw new ArgumentException("Healing cast state is missing.");
     private static IEnumerable<IActiveEffectContribution> Validate(DaggerfallActiveEffect effect, int subtype)
     {

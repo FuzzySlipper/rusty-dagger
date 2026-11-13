@@ -56,10 +56,10 @@ internal static class DaggerfallItemSoulEffects
                 AllowedTargets: DaggerfallMagicAllowedTargets.Other, CreateState: state => Serialize(new(state))),
             ExtendIncumbentDuration: true, IncumbentSettingsMatch: (_, _) => true, ShowSpellIcon: false);
     }
-    private static JsonElement Serialize(DaggerfallSoulTrapState state) => JsonSerializer.SerializeToElement(state, DaggerfallSaveJsonContext.Default.DaggerfallSoulTrapState);
+    private static JsonElement Serialize(DaggerfallSoulTrapState state) => JsonSerializer.SerializeToElement(state, DaggerfallMagicJson.Default.DaggerfallSoulTrapState);
     private static DaggerfallSoulTrapState Read(DaggerfallActiveEffect effect)
     {
-        var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallSoulTrapState);
+        var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallSoulTrapState);
         if (state?.Cast is not { Settings.Type: 12, Settings.SubType: -1, CasterLevel: >= 1, Amount: 0, SavePercent: >= 1 and <= 100 }
             || state.Attempts < 0) throw new ArgumentException("Soul Trap state does not match its compiled effect.");
         return state;

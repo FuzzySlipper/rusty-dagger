@@ -37,7 +37,7 @@ internal static class DaggerfallDoorMagicEffects
 
     private static IEnumerable<IActiveEffectContribution> Validate(DaggerfallActiveEffect effect, int type)
     {
-        var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         if (state?.Settings is not { } settings || settings.Type != type || settings.SubType != -1
             || state.CasterLevel < 1 || state.Amount != 0 || state.SavePercent != 100)
             throw new ArgumentException("Ready door magic state does not match its compiled operation.");

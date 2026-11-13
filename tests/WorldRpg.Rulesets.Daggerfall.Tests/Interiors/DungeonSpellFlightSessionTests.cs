@@ -348,7 +348,7 @@ public sealed class DungeonSpellFlightSessionTests
         {
             IEnumerable<IActiveEffectContribution> Apply(DaggerfallActiveEffect effect)
             {
-                DaggerfallCastEffectState state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState)!;
+                DaggerfallCastEffectState state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState)!;
                 Stat maximum = effect.Target.Get<StatsComponent>().GetStat(StatId.Parse("health-maximum"));
                 var handle = maximum.AddModifier(Math.Max(1, state.Amount));
                 return [new DelegateActiveEffectContribution(() => maximum.RemoveModifier(handle))];

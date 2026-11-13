@@ -66,7 +66,7 @@ internal static class DaggerfallConcealmentEffects
     }
     private static IEnumerable<IActiveEffectContribution> Validate(DaggerfallActiveEffect effect, int type, int subtype)
     {
-        var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         if (state?.Settings is not { } setting || setting.Type != type || setting.SubType != subtype || state.CasterLevel < 1
             || state.Amount != 0 || state.SavePercent is < 1 or > 100)
             throw new ArgumentException("Concealment state does not match its admitted duration-only variant.");

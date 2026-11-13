@@ -74,7 +74,7 @@ internal static class DaggerfallMysticismEffects
     }
     internal static DaggerfallCastEffectState Read(DaggerfallActiveEffect effect, int type, int subtype)
     {
-        var state = effect.State.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallCastEffectState);
+        var state = effect.State.Deserialize(DaggerfallMagicJson.Default.DaggerfallCastEffectState);
         if (state?.Settings is not { } settings || settings.Type != type || settings.SubType != subtype || state.CasterLevel < 1
             || state.Amount != 0 || state.SavePercent is < 1 or > 100)
             throw new ArgumentException("Mysticism state does not match its admitted compiled variant.");
