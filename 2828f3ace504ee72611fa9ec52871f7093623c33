@@ -1,0 +1,13 @@
+scripts/route.py main
+rusty-dagger verify at 2828f3ace504ee72611fa9ec52871f7093623c33 passed in 42.7 min
+verify on den-k8, 42.6 min, pass: /home/agent/dev/rusty-dagger/.claude/worktrees/router-lanes-10774-28b4a2/local/build/route/main-2828f3ace504-20261112T212529/verify.log
+    lane: run 8e9e2f40760bc6aff075c85d5ddc52a1 of verify on den-k8 at 2828f3ace504ee72611fa9ec52871f7093623c33 (0 s)
+    skipped the art pipeline's tests: python3 lacks numpy, scipy or Pillow
+    Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 246 ms - WorldRpg.Architecture.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:   876, Skipped:     0, Total:   876, Duration: 17 m 59 s - Daggerfall.Import.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:  3980, Skipped:     0, Total:  3980, Duration: 22 m 20 s - WorldRpg.Rulesets.Daggerfall.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:   271, Skipped:     0, Total:   271, Duration: 159 ms - WorldRpg.Kit.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:    52, Skipped:     0, Total:    52, Duration: 85 ms - WorldRpg.Host.Tests.dll (net10.0)
+    play-smoke 29.1s passed: mode Playing, drawn cameras 1, characterStepCalls 1, voxelResidencyCalls 0, music cue started
+    Verified Engine pair 0.1.0-dev.d23eb7881a8d: CoreCLR. Use --aot for the NativeAOT fidelity publish.
+    lane: verify took 2548 s, peak memory 14264 MiB
