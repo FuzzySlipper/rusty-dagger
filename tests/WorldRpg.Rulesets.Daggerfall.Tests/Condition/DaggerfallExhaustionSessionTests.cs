@@ -12,8 +12,9 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// The donor's fatigue rules at the session: no passive real-time recovery, the per-minute Swimming
-/// roll, and the collapse when the pool empties (PlayerEntity.PlayerEntity_OnExhausted).
+/// The donor's fatigue rules at the session: no passive real-time recovery, and the collapse's list when the
+/// pool empties (PlayerEntity.PlayerEntity_OnExhausted). Condition's own rules are tested without the session in
+/// <see cref="DaggerfallPlayerConditionTests"/>.
 /// </summary>
 public sealed class DaggerfallExhaustionSessionTests
 {
@@ -174,23 +175,6 @@ public sealed class DaggerfallExhaustionSessionTests
         Assert.Equal(0d, session.State.Actors.Player.Stats.GetTrack(Health).Current);
         Assert.Equal(secondsBefore, CalendarSeconds(session));
         Assert.Contains("watery grave", session.Presentation.LastOutcome, StringComparison.Ordinal);
-    }
-
-    [Theory]
-    [InlineData("breton", 0, true)]
-    [InlineData("breton", 100, false)]
-    [InlineData("argonian", 0, false)]
-    public void A_swimming_minute_charges_swimming_fatigue_only_on_a_failed_swimming_roll_and_never_for_an_argonian(
-        string race, int swimming, bool charged)
-    {
-        using DaggerfallSession session = FreshSession();
-        session.State.Character.BeginChoices();
-        session.State.Character.ReplacePending(session.State.Character.Pending! with { RaceId = race, FaceIndex = 0 });
-        session.State.Character.CommitChoices();
-        session.State.Actors.Player.Stats.GetStat(StatId.Parse("swimming")).BaseValue = swimming;
-
-        for (long minute = 0; minute < 20; minute++)
-            Assert.Equal(charged, session.SwimmingFatigueApplies(minute));
     }
 
     private static void Ride(DaggerfallSession session, ulong updates, ProductInputEvent forward, ProductInputEvent urge, Action eachUpdate)

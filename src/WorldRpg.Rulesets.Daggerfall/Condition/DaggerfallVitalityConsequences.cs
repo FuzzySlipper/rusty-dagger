@@ -19,12 +19,12 @@ internal sealed class DaggerfallVitalityConsequences
     internal DaggerfallVitalityConsequences(CombatResolution combat) => _combat = combat ?? throw new ArgumentNullException(nameof(combat));
 
     /// <summary>
-    /// One round's rolled magnitude of a periodic harmful effect, mitigated on its element channel when
-    /// that magnitude exists. Admission already applied the classic saving throw's share, so only target
+    /// One round's rolled magnitude of a periodic harmful effect, mitigated on its harm channel when that
+    /// magnitude exists. Admission already applied the classic saving throw's share, so only target
     /// contributions act here.
     /// </summary>
-    internal int MitigatePeriodicHarm(Actor caster, Actor target, string? element, int amount) =>
-        _combat.Mitigate(new(caster, target, "spell periodic harm"), DaggerfallHarmChannels.ForBundleElement(element), amount).Damage;
+    internal int MitigatePeriodicHarm(Actor caster, Actor target, HarmChannelId channel, int amount) =>
+        _combat.Mitigate(new(caster, target, "spell periodic harm"), channel, amount).Damage;
 
     internal DamageResult ResolveSpellHealth(Actor caster, Actor target, int amount, bool terminal)
     {

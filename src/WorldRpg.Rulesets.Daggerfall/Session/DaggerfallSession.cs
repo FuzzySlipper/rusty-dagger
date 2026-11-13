@@ -54,6 +54,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     // The player's weapon swing gesture, read from the look turns each admitted update commits and
     // consumed by the weapon attack it admits.
     private readonly DaggerfallVitalityConsequences _vitality;
+    // The player's Stamina, swimming fatigue and collapse.
+    private readonly DaggerfallPlayerCondition _condition;
     // The poisons the session's actors carry, and the ordinal its draws advance on so a replay inside a
     // session draws the same values.
     private readonly DaggerfallPoisonRuntime _poisons;
@@ -447,14 +449,14 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         // Returning to play clears the line a mode set for itself, but not a result reported while that
         // mode was up: a journey or rest that ends by closing the menu keeps its line for the player.
         // A screen that says what it is itself adds no line, and leaves the recent messages where they are.
-        string line = mode == ProductMode.Dead && _exhaustionDeathLine is { } exhausted ? exhausted : _interactions.ModeMessage(_mode);
+        string line = mode == ProductMode.Dead && _condition.ExhaustionDeathLine is { } exhausted ? exhausted : _interactions.ModeMessage(_mode);
         if (line.Length == 0 && mode == ProductMode.Modal) _modeLine = null;
         else
         {
             if (mode != ProductMode.Playing || Presentation.LastOutcome == _modeLine) Presentation.SetOutcome(line);
             _modeLine = Presentation.LastOutcome;
         }
-        if (mode is ProductMode.Playing or ProductMode.Title) _exhaustionDeathLine = null;
+        if (mode is ProductMode.Playing or ProductMode.Title) _condition.ClearExhaustionDeathLine();
         PublishPresentation();
     }
 

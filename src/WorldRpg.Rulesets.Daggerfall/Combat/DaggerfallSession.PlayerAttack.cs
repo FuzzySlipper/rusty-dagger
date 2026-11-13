@@ -15,7 +15,6 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed partial class DaggerfallSession : IDaggerfallPlayerAttacks
 {
     private DaggerfallPlayerAttackClock _attackClock = null!;
-    private DaggerfallPlayerStamina _stamina = null!;
     private ActorReactions _reactions = null!;
     private int _hitStopSteps;
     // Whether the attack in progress started aimed at a civilian.

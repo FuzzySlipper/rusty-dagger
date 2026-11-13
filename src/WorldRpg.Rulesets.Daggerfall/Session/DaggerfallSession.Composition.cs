@@ -339,8 +339,8 @@ internal sealed partial class DaggerfallSession
                 () => _heldEnchantments.ArmorValueModifier) { PlayerAvoidHit = () => character.Background?.Modifiers.AvoidHit ?? 0 };
             _guard = new DaggerfallContactGuard(contactInputs, _tuning.Contact);
             _attackClock = new DaggerfallPlayerAttackClock(_tuning.Attacks, this);
-            _stamina = new DaggerfallPlayerStamina(_tuning.Attacks.Stamina);
-            _stamina.Refresh(actors.Player.Stats);
+            _condition = new DaggerfallPlayerCondition(_vitality, _tuning.Attacks.Stamina, _tuning.Rest, _random, CombatRandomKey.Seed);
+            _condition.Stamina.Refresh(actors.Player.Stats);
             _touch = new DaggerfallContactTouch(new(_contact, _spatial, () => _sites?.CharacterEnvironment(assembled.PlayerControl.Motion)), _tuning.Contact);
             ActorNavigationCoordinator navigation = new(engine.Spatial, _spatial.Session, actors.Store, _spatial.CurrentController,
                 actor => _sites.CharacterEnvironment(actor.Actor.Store.Get(actor.Actor.Entity, EngineComponentTypes.CharacterMotion)));

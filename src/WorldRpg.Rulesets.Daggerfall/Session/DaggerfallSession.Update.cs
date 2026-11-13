@@ -14,8 +14,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>
 /// The update order. <see cref="AdmittedUpdate"/> is every call one Engine-admitted update makes, in order;
 /// <see cref="AdvanceCalendar"/> is every calendar consumer, in order, which rest, travel and quest time share;
-/// and <see cref="SimulateStep"/> is every call one of its fixed steps makes. Each line says the domain
-/// it belongs to. Order is behaviour: a call moves only with a reason that names what it changes.
+/// <see cref="SimulateStep"/> is every call one of its fixed steps makes; and <see cref="ResolveExhaustion"/> is
+/// what a collapse does across domains. Each line says the domain it belongs to. Order is behaviour: a call
+/// moves only with a reason that names what it changes.
 /// </summary>
 internal sealed partial class DaggerfallSession
 {
@@ -159,7 +160,7 @@ internal sealed partial class DaggerfallSession
                     // Locomotion charges the update's minutes once its steps have recorded how they were spent.
                     // A training interval admitted inside a step has already settled its own minutes.
                     _locomotion.AdvanceCalendarMinutes(minuteBefore, minuteAfter, State.Actors.Player.Stats,
-                        swimmingFatigueApplies: SwimmingFatigueApplies);                          // Character
+                        swimmingFatigueApplies: SwimmingFatigueApplies);                          // Character, Condition
                 }
             }
         }
@@ -269,7 +270,7 @@ internal sealed partial class DaggerfallSession
             // calendar minute through this existing owner. Any accepted movement seconds carried
             // from the prior admitted update are settled before reset.
             _locomotion.AdvanceCalendarMinutes(minuteBefore, minuteAfter, State.Actors.Player.Stats,
-                includeIdleFatigue: !resting && idleFatigue, swimmingFatigueApplies: SwimmingFatigueApplies);   // Character
+                includeIdleFatigue: !resting && idleFatigue, swimmingFatigueApplies: SwimmingFatigueApplies);   // Character, Condition
         }
         return (minuteBefore, minuteAfter);
     }
@@ -378,7 +379,7 @@ internal sealed partial class DaggerfallSession
         StepPlayerAttack(update.DeltaSeconds, generation, simulationStep);                        // Combat
         // The guard follows the step's acts, so a swing begun this step keeps the guard down.
         StepGuard(update.DeltaSeconds, generation, simulationStep);                               // Combat
-        _stamina.Step(State.Actors.Player.Stats, update.DeltaSeconds);                            // Condition
+        _condition.Stamina.Step(State.Actors.Player.Stats, update.DeltaSeconds);                  // Condition
         // Tasks consume the state committed by this admitted step. Clock actions mutate only the
         // quest clock state; elapsed duration is still consumed by the calendar owner.
         State.Quests.Advance(State.Variables, _time.Calendar, update.DeltaSeconds);               // Quests
@@ -405,4 +406,48 @@ internal sealed partial class DaggerfallSession
         PublishPresentation();                                                                    // UiProjection
         AdvanceMusic();                                                                           // Scene
     }
+
+    /// <summary>
+    /// The collapse's list: what an emptied Fatigue pool does, in order, once every fatigue sink of the admitted
+    /// update has settled. Condition decides whether the player collapses and how the collapse ends; the other
+    /// lines are its consequences in their own domains. Out of water with no enemy near, the player drops for one
+    /// hour, recovers one rest hour and tallies Medical; in water or near an enemy the collapse is fatal. Either
+    /// outcome leaves the pool non-empty or the player dead, so a pool that stays empty never collapses twice.
+    /// </summary>
+    internal void ResolveExhaustion()
+    {
+        if (_mode != ProductMode.Playing || State.Actors.Player.IsDefeated
+            || !_condition.Exhausted(State.Actors.Player.Stats)) return;                         // Condition
+        // The donor cancels movement as the player drops.
+        _input.Neutralize();                                                                      // Character
+        _locomotion.Neutralize();                                                                 // Character
+        NeutralizeGuard();                                                                        // Combat
+        State.Transport.Ride.Reset();                                                             // Travel
+        bool inWater = State.Swimming.IsSwimming;
+        bool enemiesNearby = HasNearbyRestEnemy();                                                // Time: rest's enemy check
+        if (inWater || enemiesNearby)
+        {
+            var (death, line) =
+                _condition.CollapseFatally(State.Actors.Player.Actor, inWater, _definitions.TextPresentation);   // Condition
+            AppendDamage(death, DaggerfallDamageCause.Exhaustion, 0);                             // Session
+            DeliverFacts();                                                                       // Session
+            // The collapse text stands over the death's own damage line.
+            Presentation.SetOutcome(line);                                                        // UiProjection
+            return;
+        }
+        _ = AdvanceElapsedTime(DaggerfallRestPolicy.SecondsPerRestHour, idleFatigue: false);      // Time
+        // A consequence of the hour itself (a poison round, a quest) may have ended the player.
+        DeliverFacts();                                                                           // Session
+        if (State.Actors.Player.IsDefeated) return;
+        (bool rapidHealing, bool noRegeneration) = RestCharacterTraits();                         // Time
+        if (!_condition.RecoverFromCollapse(State.Actors.Player.Stats, rapidHealing, noRegeneration)) return;   // Condition
+        State.SkillUses.Record(new DaggerfallSkillUse("medical", DaggerfallSkillUseReason.MedicalRest,
+            DaggerfallSkillUseOutcome.Accepted));                                                 // Character
+        DeliverFacts();                                                                           // Session
+        Presentation.SetOutcome(_condition.AwakeningLine(_definitions.TextPresentation));         // UiProjection
+    }
+
+    /// <summary>Condition's swimming roll for the player as the session holds them now.</summary>
+    private bool SwimmingFatigueApplies(long minute) =>
+        _condition.SwimmingFatigueApplies(State.Character.Race.Id, State.Actors.Player.Stats, minute);
 }

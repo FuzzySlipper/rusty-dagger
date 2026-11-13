@@ -15,6 +15,7 @@ On top of the root `AGENTS.md`.
   7. `Quests`
 
   `Session` and `Developer` compose everything and `UiProjection` reads everything; nothing references those three. Existing code still has references against the order. Don't add new ones.
+- A domain's owner takes what it uses as inputs, never `DaggerfallSession` or `DaggerfallState`, and is tested without the session. What one rule does across domains is an ordered list in `Session/DaggerfallSession.Update.cs`, each line marked with its domain, like `ResolveExhaustion` (the collapse).
 - Tests mirror these folders in `tests/WorldRpg.Rulesets.Daggerfall.Tests`. Shared test support stays in that project's root and `Fakes/`.
 
 ## Gameplay

@@ -69,7 +69,7 @@ internal sealed partial class DaggerfallSession
         if (advance.AppliedSeconds > 0)
             ReconcileNpcProjection();
         // No admitted update refills Stamina through elapsed time, so the time itself does.
-        if (advance.AppliedSeconds > 0) _stamina.Fill(State.Actors.Player.Stats);
+        if (advance.AppliedSeconds > 0) _condition.Stamina.Fill(State.Actors.Player.Stats);
         // Rest and travel admit many slices and complete the time increase once, at their end.
         if (!resting && completeTimeIncrease && advance.AppliedSeconds > 0) CompleteTimeIncrease();
         return advance;
