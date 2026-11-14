@@ -44,22 +44,22 @@ public sealed class DaggerfallMoonsTests
     [Fact]
     public void A_full_moon_stands_high_at_midnight_and_under_the_ground_at_noon()
     {
-        Assert.True(DaggerfallMoons.Direction(DaggerfallCalendar.Start with { Hour = 0, Minute = 0 }, Full, 0).Y > .99F);
-        Assert.True(DaggerfallMoons.Direction(DaggerfallCalendar.Start with { Hour = 12, Minute = 0 }, Full, 0).Y < -.99F);
+        Assert.True(DaggerfallMoons.Direction((DaggerfallCalendar.Start with { Hour = 0, Minute = 0 }).Sky, Full, 0).Y > .99F);
+        Assert.True(DaggerfallMoons.Direction((DaggerfallCalendar.Start with { Hour = 12, Minute = 0 }).Sky, Full, 0).Y < -.99F);
     }
 
     [Fact]
     public void A_new_moon_stands_beside_the_sun()
     {
-        Assert.True(DaggerfallMoons.Direction(DaggerfallCalendar.Start with { Hour = 12, Minute = 0 }, New, 0).Y > .99F);
+        Assert.True(DaggerfallMoons.Direction((DaggerfallCalendar.Start with { Hour = 12, Minute = 0 }).Sky, New, 0).Y > .99F);
     }
 
     [Fact]
     public void A_moon_falls_behind_the_sun_as_it_waxes()
     {
         // Eight days after new it stands a quarter turn behind, so at noon it is where the sun was at dawn.
-        Vector3 noon = DaggerfallMoons.Direction(DaggerfallCalendar.Start with { Hour = 12, Minute = 0 }, New + 8, 0);
-        Vector3 dawn = DaggerfallMoons.Direction(DaggerfallCalendar.Start with { Hour = 6, Minute = 0 }, New, 0);
+        Vector3 noon = DaggerfallMoons.Direction((DaggerfallCalendar.Start with { Hour = 12, Minute = 0 }).Sky, New + 8, 0);
+        Vector3 dawn = DaggerfallMoons.Direction((DaggerfallCalendar.Start with { Hour = 6, Minute = 0 }).Sky, New, 0);
 
         Assert.Equal(dawn.X, noon.X, 3);
         Assert.Equal(dawn.Y, noon.Y, 3);
@@ -68,7 +68,7 @@ public sealed class DaggerfallMoonsTests
     [Fact]
     public void A_tilted_path_leans_south_and_stays_a_unit_direction()
     {
-        Vector3 way = DaggerfallMoons.Direction(DaggerfallCalendar.Start with { Hour = 0, Minute = 0 }, Full, 30);
+        Vector3 way = DaggerfallMoons.Direction((DaggerfallCalendar.Start with { Hour = 0, Minute = 0 }).Sky, Full, 30);
 
         Assert.True(way.Z > 0);
         Assert.Equal(1, way.Length(), 4);

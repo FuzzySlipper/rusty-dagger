@@ -50,7 +50,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     /// <param name="carriesSky">Whether this site lights the world with its sun and ambient. A resident location beside the
     /// active one brings only its own lamps: there is one sky, and a second sun would light the same ground twice.</param>
     internal DaggerfallSiteLighting(IGraphicsService graphics, ICameraViewService camera, DaggerfallSiteProfile inputs,
-        DaggerfallSiteLightingTuning tuning, DaggerfallCalendar calendar, bool carriesSky = true)
+        DaggerfallSiteLightingTuning tuning, DaggerfallSkyTime sky, bool carriesSky = true)
     {
         ArgumentNullException.ThrowIfNull(graphics);
         ArgumentNullException.ThrowIfNull(camera);
@@ -66,7 +66,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _ambientId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "ambient");
         _magicCandleId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "magic-candle");
         _sunId = LogicalLightId(inputs.ProfileKey.LogicalId, instance, "sun");
-        _ambientLevel = AmbientLevel(calendar);
+        _ambientLevel = AmbientLevel(sky);
 
         List<Light> created = [];
         HashSet<ulong> lightIds = [_ambientId, _sunId, _magicCandleId];
@@ -97,13 +97,13 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                 if (light.CityLight)
                 {
                     _cityIntensities.Add(lightId, light.Intensity * Scale);
-                    request = CityRequest(request, calendar);
+                    request = CityRequest(request, sky);
                 }
                 Light point = graphics.CreateLight(request);
                 created.Add(point);
                 _points.Add((point, request));
             }
-            if (carriesSky && _profileKind == DaggerfallWorldProfileKind.Exterior) _sunRequest = SunRequest(calendar, calendar.IsDay ? 1f : 0f);
+            if (carriesSky && _profileKind == DaggerfallWorldProfileKind.Exterior) _sunRequest = SunRequest(sky, sky.IsDay ? 1f : 0f);
             CreateSky(created);
             _lights.AddRange(created);
             if (_carriesSky) ApplyBackground();
@@ -247,24 +247,24 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         }
     }
 
-    internal void UpdateAmbient(DaggerfallCalendar calendar, float exteriorDaylight = 1f,
+    internal void UpdateAmbient(DaggerfallSkyTime sky, float exteriorDaylight = 1f,
         float? dungeonLevel = null, float lightningFlash = 0f)
     {
         if (!float.IsFinite(exteriorDaylight) || exteriorDaylight is < 0f or > 1f
             || dungeonLevel is float variant && (!float.IsFinite(variant) || variant is < 0f or > 1f)
             || !float.IsFinite(lightningFlash) || lightningFlash < 0f)
             throw new ArgumentOutOfRangeException(nameof(exteriorDaylight), "Ambient context requires normalized daylight/zone values and finite nonnegative flash intensity.");
-        UpdateCityLights(calendar);
+        UpdateCityLights(sky);
         _daylight = exteriorDaylight;
         _dungeonLevel = dungeonLevel;
         _flash = lightningFlash;
         if (_carriesSky && _profileKind == DaggerfallWorldProfileKind.Exterior
-            && SunRequest(calendar, exteriorDaylight) is var next && (_sunRequest is not { } held || Moved(held.Descriptor, next.Descriptor)))
+            && SunRequest(sky, exteriorDaylight) is var next && (_sunRequest is not { } held || Moved(held.Descriptor, next.Descriptor)))
         {
             _sunRequest = next;
             if (_sun is { } sun) _graphics.UpdateLight(new(sun, next));
         }
-        float level = AmbientLevel(calendar);
+        float level = AmbientLevel(sky);
         if (level == _ambientLevel) return;
         if (_ambient is { } ambient)
             _graphics.UpdateLight(new LightUpdateRequest(ambient, AmbientRequest(level)));
@@ -272,40 +272,40 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     }
 
     // DaggerfallDateTime keeps city lamps on slightly beyond the ordinary night interval.
-    internal static bool CityLightsOn(DaggerfallCalendar calendar) => calendar.Hour >= 17 || calendar.Hour < 8;
+    internal static bool CityLightsOn(DaggerfallSkyTime sky) => sky.Hour >= 17 || sky.Hour < 8;
 
     /// <summary>Lights a location's window glass on the city lamps' hours.</summary>
-    internal void UpdateWindowGlass(DaggerfallSiteAppearance appearance, DaggerfallCalendar calendar) =>
-        appearance.UpdateWindowGlass(_tuning.WindowColor, CityLightsOn(calendar) ? _tuning.WindowLevel : 0f);
+    internal void UpdateWindowGlass(DaggerfallSiteAppearance appearance, DaggerfallSkyTime sky) =>
+        appearance.UpdateWindowGlass(_tuning.WindowColor, CityLightsOn(sky) ? _tuning.WindowLevel : 0f);
 
     /// <summary>Whether a site's lamps burn: outdoors on the city lamps' hours, and always under a roof.</summary>
-    internal static bool LampsLit(DaggerfallWorldProfileKind kind, DaggerfallCalendar calendar) =>
-        kind != DaggerfallWorldProfileKind.Exterior || CityLightsOn(calendar);
+    internal static bool LampsLit(DaggerfallWorldProfileKind kind, DaggerfallSkyTime sky) =>
+        kind != DaggerfallWorldProfileKind.Exterior || CityLightsOn(sky);
 
     /// <summary>Lights a site's refreshed lamps while they burn.</summary>
-    internal void UpdateLampGlow(DaggerfallSiteAppearance appearance, DaggerfallCalendar calendar) =>
-        appearance.UpdateLampGlow(LampsLit(_profileKind, calendar) ? _tuning.LampLevel : 0f);
+    internal void UpdateLampGlow(DaggerfallSiteAppearance appearance, DaggerfallSkyTime sky) =>
+        appearance.UpdateLampGlow(LampsLit(_profileKind, sky) ? _tuning.LampLevel : 0f);
 
-    private LightRequest CityRequest(LightRequest request, DaggerfallCalendar calendar) =>
+    private LightRequest CityRequest(LightRequest request, DaggerfallSkyTime sky) =>
         _cityIntensities.TryGetValue(request.LogicalId, out float intensity)
-            ? request with { Descriptor = request.Descriptor with { Intensity = CityLightsOn(calendar) ? intensity : 0f } }
+            ? request with { Descriptor = request.Descriptor with { Intensity = CityLightsOn(sky) ? intensity : 0f } }
             : request;
 
-    internal void UpdateCityLights(DaggerfallCalendar calendar)
+    internal void UpdateCityLights(DaggerfallSkyTime sky)
     {
-        bool on = CityLightsOn(calendar);
+        bool on = CityLightsOn(sky);
         if (_cityIntensities.Count == 0 || _lastCityLightsOn == on) return;
         _lastCityLightsOn = on;
         for (int index = 0; index < _points.Count; index++)
         {
             var (light, prior) = _points[index];
-            var next = CityRequest(prior, calendar);
+            var next = CityRequest(prior, sky);
             if (next == prior) continue;
             _graphics.UpdateLight(new(light, next));
             _points[index] = (light, next);
         }
         for (int index = 0; index < _suspendedPoints.Count; index++)
-            _suspendedPoints[index] = CityRequest(_suspendedPoints[index], calendar);
+            _suspendedPoints[index] = CityRequest(_suspendedPoints[index], sky);
     }
 
     /// <summary>
@@ -430,10 +430,10 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     /// <summary>A sun's brightness or colour changes by less than this share before it shows.</summary>
     private const float SunStep = .005f;
 
-    private LightRequest SunRequest(DaggerfallCalendar calendar, float daylight)
+    private LightRequest SunRequest(DaggerfallSkyTime sky, float daylight)
     {
-        float phase = (calendar.SecondOfDay / 60f - DaggerfallCalendar.DawnHour * 60f)
-            / ((DaggerfallCalendar.DuskHour - DaggerfallCalendar.DawnHour) * 60f);
+        float phase = (sky.SecondOfDay / 60f - DaggerfallSkyTime.DawnHour * 60f)
+            / ((DaggerfallSkyTime.DuskHour - DaggerfallSkyTime.DawnHour) * 60f);
         // The sun rises in the east, crosses the southern sky leaning by its tilt, and sets in the west. The direction is
         // the way its light travels, with x east and z south: westward at dawn, and northward as it climbs.
         float tilt = _tuning.SunTiltDegrees * MathF.PI / 180f, height = MathF.Sin(phase * MathF.PI);
@@ -467,9 +467,9 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         return floor + ((noon - floor) * daylight);
     }
 
-    private float AmbientLevel(DaggerfallCalendar calendar)
+    private float AmbientLevel(DaggerfallSkyTime sky)
     {
-        bool night = calendar.Hour is < 6 or >= 18;
+        bool night = sky.Hour is < 6 or >= 18;
         return _profileKind switch
         {
             DaggerfallWorldProfileKind.Interior => night ? _tuning.InteriorNight : _tuning.InteriorDay,

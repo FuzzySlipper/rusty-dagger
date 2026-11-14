@@ -41,7 +41,7 @@ internal sealed class DaggerfallVampirism(DaggerfallRacialOverrides overrides, D
 
     /// <summary>The awakening passes fourteen days and wakes the player in the hour after dusk.</summary>
     internal long AwakeningSeconds =>
-        14L * DaggerfallCalendar.SecondsPerDay + (DaggerfallCalendar.DuskHour + 1 - time.Calendar.Hour) * 3600L;
+        14L * DaggerfallCalendar.SecondsPerDay + (DaggerfallSkyTime.DuskHour + 1 - time.Calendar.Hour) * 3600L;
 
     /// <summary>
     /// A vampire infection becomes the curse of <paramref name="clan"/>, with its healing; refused while another

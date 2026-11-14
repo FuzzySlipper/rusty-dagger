@@ -14,17 +14,10 @@ internal sealed partial class DaggerfallSiteAppearance
     private bool alternateFootstep;
     private bool observedFootstepState;
 
-    private void BindDoorAudio(DaggerfallDoorRuntime? owner)
+    /// <summary>The sound of a door opening, closing or being bashed, which the site's door runtime asks for; none once the location is suspended or this appearance gone.</summary>
+    internal void PlayDoorSound(DaggerfallRdbDoorDefinition door, DaggerfallDoorOperationKind operation)
     {
-        if (doors is not null) doors.SoundRequested -= PlayDoorSound;
-        doors = owner;
-        doorFacts = null;
-        if (doors is not null) doors.SoundRequested += PlayDoorSound;
-    }
-
-    private void PlayDoorSound(DaggerfallRdbDoorDefinition door, DaggerfallDoorOperationKind operation)
-    {
-        if (locationSuspended) return;
+        if (disposed || locationSuspended) return;
         bool dungeon = inputs.ProfileKind == DaggerfallWorldProfileKind.Dungeon;
         int ordinal = operation switch
         {

@@ -88,8 +88,8 @@ internal sealed record DaggerfallWeatherTuning(int[][] Odds, float WinterScale, 
 
     internal float Daylight(DaggerfallCalendar calendar, DaggerfallWeatherKind weather)
     {
-        float time = (calendar.SecondOfDay / 60f - DaggerfallCalendar.DawnHour * 60f)
-            / ((DaggerfallCalendar.DuskHour - DaggerfallCalendar.DawnHour) * 60f);
+        float time = (calendar.SecondOfDay / 60f - DaggerfallSkyTime.DawnHour * 60f)
+            / ((DaggerfallSkyTime.DuskHour - DaggerfallSkyTime.DawnHour) * 60f);
         if (time <= 0 || time >= 1) return 0;
         float scale = weather switch
         {

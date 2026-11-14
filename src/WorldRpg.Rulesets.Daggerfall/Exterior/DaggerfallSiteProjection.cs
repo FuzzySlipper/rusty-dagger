@@ -97,13 +97,18 @@ internal sealed class DaggerfallSiteProjection : IDisposable
             motion = new(actors, engine.Spatial, spatialMovement.Session, doors, inputs.ProfileKey.LogicalId,
                 inputs.DungeonActions, inputs.DungeonActionModels, restoredMotion, deferMotionCollisionAdmission);
             gates = new(actors, engine.Spatial, spatialMovement.Session, inputs.ProfileKey.LogicalId, inputs.CityGates,
-                DaggerfallCityGateDefinition.OpenAt(calendar));
+                DaggerfallCityGates.OpenAt(calendar));
             if (!deferMotionCollisionAdmission) gates.ActivateCollisionResidency();
+            DaggerfallDungeonMotionProjection placedMotion = motion;
+            DaggerfallCityGates placedGates = gates;
+            DaggerfallLocationParts parts = new(() => doors.Revision, () => doors.All.Select(door => (door.Id, door.Pose)),
+                () => placedGates.Open, () => placedGates.Visuals, () => placedMotion.Visuals, placedMotion.TryGetTransform);
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
-                tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation, gates, definitions, tuning.Flats, tuning.SiteLighting,
+                tuning.PresentationAudio, random, audioBundle, parts, sessionPresentation, definitions, tuning.Flats, tuning.SiteLighting,
                 prepareLocationOffUpdate, (id, gender, sprite) => DaggerfallActorGender.Resolve(random, id, gender, sprite));
+            doors.SoundRequested += appearance.PlayDoorSound;
             configureAppearance(appearance);
-            lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar, carriesSky);
+            lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar.Sky, carriesSky);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
             DaggerfallSiteProjection projection = new(inputs, doors, motion, gates, appearance, lighting, portals, spatialMovement);
             projection.ActivateWaterTriggers(tick: 0);
@@ -147,7 +152,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
     }
 
     /// <summary>Opens or closes the profile's city gates for the time of day.</summary>
-    internal void SyncCityGates(DaggerfallCalendar calendar) => CityGates.Sync(DaggerfallCityGateDefinition.OpenAt(calendar));
+    internal void SyncCityGates(DaggerfallCalendar calendar) => CityGates.Sync(DaggerfallCityGates.OpenAt(calendar));
 
     internal void RebuildMotionCollisionResidency() => Motion.RebuildCollisionResidency();
 
@@ -218,7 +223,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         Doors.Resume();
         Motion.Resume();
         CityGates.Resume();
-        Appearance.ResumeLocationResources(Doors, Motion, offUpdate);
+        Appearance.ResumeLocationResources(offUpdate);
         Portals.Resume();
         Lighting.Resume();
         ActivateWaterTriggers(tick: 0);

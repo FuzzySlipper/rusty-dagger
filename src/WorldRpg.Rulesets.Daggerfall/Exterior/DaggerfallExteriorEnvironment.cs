@@ -6,14 +6,6 @@ using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
-/// <summary>The season input used when selecting source climate terrain variants.</summary>
-internal enum DaggerfallExteriorSeason
-{
-    Summer,
-    Winter,
-    Rain,
-}
-
 /// <summary>
 /// The normalized climate answer for one resident terrain cell. The archive ids are source facts
 /// from MapsFile.GetClimateSettings and its winter +1 rule; callers own when the season changes.
@@ -427,12 +419,6 @@ internal sealed class DaggerfallExteriorEnvironment
     internal static bool IsOceanClimate(int climateValue) => climateValue == 223;
 
     internal static bool GroundSupportsWinter(int climateValue) => !IsDesertClimate(climateValue);
-
-    /// <summary>The first of the donor's nature archives, 500 to 511: the climates' trees, plants and rocks and their winter sets.</summary>
-    internal const int FirstNatureArchive = 500;
-    internal const int NatureArchiveCount = 12;
-
-    internal static bool IsNatureArchive(int archive) => archive is >= FirstNatureArchive and < FirstNatureArchive + NatureArchiveCount;
 
     /// <summary>
     /// Whether a tile of a location's map pixel is kept clear of nature. TerrainHelper.SetLocationTiles publishes an

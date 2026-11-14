@@ -9,7 +9,6 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 
 internal enum DaggerfallDoorMotion { Closed, Opening, Open, Closing }
 internal enum DaggerfallDoorOperationSource { Player, Spell, DungeonAction }
-internal enum DaggerfallDoorOperationKind { Open, Close, Lock, Unlock, Bash }
 internal enum DaggerfallDoorOperationResult
 {
     Started,

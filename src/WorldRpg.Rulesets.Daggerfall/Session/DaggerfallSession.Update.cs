@@ -246,7 +246,7 @@ internal sealed partial class DaggerfallSession
         long minuteBefore = before.MinuteNumber, minuteAfter = after.MinuteNumber;
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);                              // Economy
         LocalWeather.State.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                // Exterior
-        _sites.Projection.Lighting.UpdateAmbient(_time.Calendar, _tuning.Weather.Daylight(_time.Calendar, LocalWeather.Current));   // Scene
+        _sites.Projection.Lighting.UpdateAmbient(_time.Calendar.Sky, _tuning.Weather.Daylight(_time.Calendar, LocalWeather.Current));   // Scene
         _exterior.UpdateResidentCityLights();                                                     // Exterior
         State.Quests.AdvanceClocks(State.Variables, before, _time.Calendar);                      // Quests
         // Daily conditions and ordinary source-order operations observe the same admitted calendar
@@ -700,9 +700,12 @@ internal sealed partial class DaggerfallSession
             _horizon.Show(_spatial.Session, origin, player, _time.Calendar.Season == DaggerfallSeason.Winter,
                 _sites.Projection.Lighting.SkyLight / _tuning.SiteLighting.ViewFull,
                 LocalWeather.Current is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast,
-                !_classicArt, _exterior.GroundLayers, _exterior.FloraLook);                        // Scene
-        else _horizon.Hide();                                                                     // Scene
-        _weatherPresentation.Update(_sites.Projection, _time.Calendar, LocalWeather.Climate, LocalWeather.Conditions,
+                !_classicArt, _exterior.GroundLayers, _exterior.FloraLook);                        // Exterior
+        else _horizon.Hide();                                                                     // Exterior
+        DaggerfallSiteProjection site = _sites.Projection;
+        DaggerfallWeatherConditions conditions = LocalWeather.Conditions;
+        _weatherPresentation.Update(site.Inputs, site.WorldOffset, site.Lighting, site.Appearance, _time.Calendar.Sky,
+            _tuning.Weather.Daylight(_time.Calendar, conditions.Kind), LocalWeather.Climate, conditions,
             LocalWeather.SkyVariant, player, sheltered, seconds, playing, _horizon.FogDensity);       // Scene
     }
 

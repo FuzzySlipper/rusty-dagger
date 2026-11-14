@@ -368,11 +368,11 @@ public sealed class SiteAppearanceLifecycleTests
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
             site: new DaggerfallSiteId(17, 4), profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "worldrpg/test/exterior");
         using DaggerfallSiteLighting exteriorLighting = new(appearance, engine.Context.CameraView, exterior,
-            DaggerfallTuning.Defaults.SiteLighting, DaggerfallCalendar.Start);
+            DaggerfallTuning.Defaults.SiteLighting, DaggerfallCalendar.Start.Sky);
         Assert.Equal(2, engine.ClearedSkyBackgrounds);
         Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.ExteriorNight * DaggerfallTuning.Defaults.SiteLighting.ExteriorScale,
             appearance.LightRequests.Last().Descriptor.Intensity);
-        exteriorLighting.UpdateAmbient(DaggerfallCalendar.Start with { Hour = 12 });
+        exteriorLighting.UpdateAmbient((DaggerfallCalendar.Start with { Hour = 12 }).Sky);
         Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.ExteriorNoon * DaggerfallTuning.Defaults.SiteLighting.ExteriorScale,
             appearance.LightUpdates.Single(update => update.Replacement.Descriptor.Kind == LightKind.Ambient).Replacement.Descriptor.Intensity);
         LightRequest sun = Assert.Single(appearance.LightRequests, request => request.Descriptor.Kind == LightKind.Directional);
@@ -383,7 +383,7 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.SunShadowResolution, sun.Descriptor.ShadowResolution);
         var noon = DaggerfallCalendar.Start with { Hour = 12 };
         float daylight = DaggerfallWeatherTuning.Classic.Daylight(noon, DaggerfallWeatherKind.Thunder);
-        exteriorLighting.UpdateAmbient(noon, daylight);
+        exteriorLighting.UpdateAmbient(noon.Sky, daylight);
         var ambientUpdate = appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Ambient);
         Assert.Equal((DaggerfallTuning.Defaults.SiteLighting.ExteriorNight
             + (DaggerfallTuning.Defaults.SiteLighting.ExteriorNoon - DaggerfallTuning.Defaults.SiteLighting.ExteriorNight) * daylight) * DaggerfallTuning.Defaults.SiteLighting.ExteriorScale,
@@ -396,20 +396,20 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Equal(-MathF.Cos(tilt), sunUpdate.Replacement.Descriptor.Direction.Y, 4);
         Assert.Equal(-MathF.Sin(tilt), sunUpdate.Replacement.Descriptor.Direction.Z, 4);
         // In the morning it is in the east, so its light travels west (x is east).
-        exteriorLighting.UpdateAmbient(DaggerfallCalendar.Start with { Hour = 8 }, daylight);
+        exteriorLighting.UpdateAmbient((DaggerfallCalendar.Start with { Hour = 8 }).Sky, daylight);
         Assert.True(appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional).Replacement.Descriptor.Direction.X < -.5f);
-        exteriorLighting.UpdateAmbient(noon, daylight);
+        exteriorLighting.UpdateAmbient(noon.Sky, daylight);
         // A game second moves the sun too little to show, so it isn't turned; a game minute moves it a quarter of a degree.
         int SunTurns() => appearance.LightUpdates.Count(update => update.Replacement.Descriptor.Kind == LightKind.Directional);
         int turns = SunTurns();
-        exteriorLighting.UpdateAmbient(noon with { Second = 1 }, daylight);
+        exteriorLighting.UpdateAmbient((noon with { Second = 1 }).Sky, daylight);
         Assert.Equal(turns, SunTurns());
-        exteriorLighting.UpdateAmbient(noon with { Minute = 1 }, daylight);
+        exteriorLighting.UpdateAmbient((noon with { Minute = 1 }).Sky, daylight);
         Assert.Equal(turns + 1, SunTurns());
-        exteriorLighting.UpdateAmbient(noon, daylight);
-        exteriorLighting.UpdateAmbient(noon, daylight, lightningFlash: 2);
+        exteriorLighting.UpdateAmbient(noon.Sky, daylight);
+        exteriorLighting.UpdateAmbient(noon.Sky, daylight, lightningFlash: 2);
         Assert.Equal(2f * DaggerfallTuning.Defaults.SiteLighting.ExteriorScale, appearance.LightUpdates.Last().Replacement.Descriptor.Intensity);
-        exteriorLighting.UpdateAmbient(noon, daylight);
+        exteriorLighting.UpdateAmbient(noon.Sky, daylight);
         Assert.Equal(ambientUpdate.Replacement.Descriptor.Intensity, appearance.LightUpdates.Last().Replacement.Descriptor.Intensity);
         exteriorLighting.Dispose();
         Assert.Equal(appearance.LightRequests.Count, appearance.DisposedLights);
@@ -661,12 +661,12 @@ public sealed class SiteAppearanceLifecycleTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, appearance);
         DaggerfallCalendar noon = DaggerfallCalendar.Start with { Hour = 12 };
-        using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting, noon);
+        using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting, noon.Sky);
         int created = appearance.LightRequests.Count;
 
         lighting.Suspend(keepSky: true);
         Assert.Equal(0, appearance.DisposedLights);
-        lighting.UpdateAmbient(noon, .5f);
+        lighting.UpdateAmbient(noon.Sky, .5f);
         Assert.Equal(.5f * DaggerfallTuning.Defaults.SiteLighting.ExteriorSun, appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Directional).Replacement.Descriptor.Intensity);
 
         int cleared = engine.ClearedSkyBackgrounds;
@@ -690,7 +690,7 @@ public sealed class SiteAppearanceLifecycleTests
         EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, appearance);
         int cleared = engine.ClearedSkyBackgrounds;
         using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting,
-            DaggerfallCalendar.Start, carriesSky: false);
+            DaggerfallCalendar.Start.Sky, carriesSky: false);
 
         lighting.Suspend();
         lighting.Resume();
@@ -706,11 +706,11 @@ public sealed class SiteAppearanceLifecycleTests
         List<string> releases = [];
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, appearance);
-        using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting, DaggerfallCalendar.Start);
+        using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting, DaggerfallCalendar.Start.Sky);
 
         Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.NightColor, appearance.LightRequests.Single(request => request.Descriptor.Kind == LightKind.Ambient).Descriptor.Color);
 
-        lighting.UpdateAmbient(DaggerfallCalendar.Start with { Hour = 12 });
+        lighting.UpdateAmbient((DaggerfallCalendar.Start with { Hour = 12 }).Sky);
 
         Assert.Equal(Vector3.One, appearance.LightUpdates.Last(update => update.Replacement.Descriptor.Kind == LightKind.Ambient).Replacement.Descriptor.Color);
     }
@@ -723,17 +723,17 @@ public sealed class SiteAppearanceLifecycleTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, appearance);
         DaggerfallCalendar noon = DaggerfallCalendar.Start with { Hour = 12 };
-        using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting, noon);
+        using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, SkyExterior(), DaggerfallTuning.Defaults.SiteLighting, noon.Sky);
 
         // The sun as last sent: created with the site, then turned only when it has visibly changed.
         LightDescriptor Sun() => appearance.LightUpdates.Where(update => update.Replacement.Descriptor.Kind == LightKind.Directional)
             .Select(update => update.Replacement.Descriptor)
             .DefaultIfEmpty(appearance.LightRequests.Last(request => request.Descriptor.Kind == LightKind.Directional).Descriptor).Last();
 
-        lighting.UpdateAmbient(noon, 1);
+        lighting.UpdateAmbient(noon.Sky, 1);
         Assert.Equal(Vector3.One, Sun().Color);
 
-        lighting.UpdateAmbient(noon with { Hour = 6, Minute = 10 }, .3f);
+        lighting.UpdateAmbient((noon with { Hour = 6, Minute = 10 }).Sky, .3f);
         Vector3 low = Sun().Color;
         Assert.True(low.Z < low.X);
     }

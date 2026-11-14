@@ -10,7 +10,6 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
 {
     private readonly IEngineContext _engine;
     private readonly DaggerfallSkyMedia? _media;
-    private readonly DaggerfallWeatherTuning _weather;
     private readonly DaggerfallAmbientTuning _tuning;
     private readonly DaggerfallHorizonTuning _horizon;
     private readonly DaggerfallAmbientPresentation _ambient;
@@ -24,46 +23,46 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
     private bool _disposed;
 
     internal DaggerfallWeatherPresentation(IEngineContext engine, DaggerfallSkyMedia? media,
-        DaggerfallWeatherTuning weather, DaggerfallAmbientTuning tuning, DaggerfallHorizonTuning horizon,
+        DaggerfallAmbientTuning tuning, DaggerfallHorizonTuning horizon,
         DaggerfallPresentationAudioTuning audioTuning, Func<DaggerfallWorldProfileKey, string, AudioClip?> openClip)
     {
-        _engine = engine; _media = media; _weather = weather; _tuning = tuning.Validate(); _horizon = horizon;
+        _engine = engine; _media = media; _tuning = tuning.Validate(); _horizon = horizon;
         _ambient = new(engine.Audio, engine.Random, tuning, openClip, audioTuning);
     }
 
-    internal void Update(DaggerfallSiteProjection projection, DaggerfallCalendar calendar, int climate,
-        DaggerfallWeatherConditions conditions, int variant, Vector3 player, bool sheltered, double seconds, bool playing, float? horizonFog)
+    /// <summary>Shows the weather over the active site, whose profile, frame offset, lighting and appearance it draws on.</summary>
+    /// <param name="daylight">The share of clear noon's light the weather lets through now.</param>
+    internal void Update(DaggerfallSiteProfile inputs, Vector3 worldOffset, DaggerfallSiteLighting lighting, DaggerfallSiteAppearance appearance,
+        DaggerfallSkyTime sky, float daylight, int climate, DaggerfallWeatherConditions conditions, int variant, Vector3 player, bool sheltered,
+        double seconds, bool playing, float? horizonFog)
     {
         DaggerfallWeatherKind weather = conditions.Kind;
-        var inputs = projection.Inputs;
-        var zones = inputs.AmbientZones.Where(zone => zone.Contains(player - projection.WorldOffset)).ToArray();
+        var zones = inputs.AmbientZones.Where(zone => zone.Contains(player - worldOffset)).ToArray();
         bool castle = zones.Any(zone => zone.Kind == DaggerfallAmbientZoneKind.Castle);
         bool special = zones.Any(zone => zone.Kind == DaggerfallAmbientZoneKind.SpecialArea);
-        _ambient.Update(new(inputs.ProfileKey, weather, !calendar.IsDay, sheltered, castle, special), player, seconds, playing);
+        _ambient.Update(new(inputs.ProfileKey, weather, !sky.IsDay, sheltered, castle, special), player, seconds, playing);
         // Moons stand with the cleared sky: the classic's painted one has none, and thick weather closes over them.
         bool moons = _media is not null && horizonFog is not null && weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast;
         if (moons) _moons ??= new(_engine, _media!, _horizon);
-        projection.Lighting.LightNightBy(horizonFog is null ? 1 : _horizon.MoonlessNight + ((1 - _horizon.MoonlessNight) * (moons ? _moons!.Moonlight(calendar) : 0)));
-        projection.Lighting.UpdateAmbient(calendar, _weather.Daylight(calendar, weather),
-            castle || special ? _tuning.ZoneAmbient : null, _ambient.FlashIntensity);
-        projection.Lighting.UpdateWindowGlass(projection.Appearance, calendar);
-        projection.Lighting.UpdateLampGlow(projection.Appearance, calendar);
+        lighting.LightNightBy(horizonFog is null ? 1 : _horizon.MoonlessNight + ((1 - _horizon.MoonlessNight) * (moons ? _moons!.Moonlight(sky) : 0)));
+        lighting.UpdateAmbient(sky, daylight, castle || special ? _tuning.ZoneAmbient : null, _ambient.FlashIntensity);
+        lighting.UpdateWindowGlass(appearance, sky);
+        lighting.UpdateLampGlow(appearance, sky);
         // Over a cleared sky, thick weather closes the sky in its own air. The world fades exactly into that, whatever the
         // panorama of the day would have shown under the clouds.
         bool outside = inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior;
         Vector3 air = _horizon.AirColors[(int)weather];
         bool closed = outside && horizonFog is not null && air != Vector3.Zero;
-        float daylight = _weather.Daylight(calendar, weather);
         if (outside && _media is not null && !closed)
         {
-            DaggerfallSkySelection sky = _media.Select(climate, calendar, weather, variant);
-            SelectSky(horizonFog is null ? sky : _media.Cleared(sky));
+            DaggerfallSkySelection selected = _media.Select(climate, sky, weather, variant);
+            SelectSky(horizonFog is null ? selected : _media.Cleared(selected));
         }
         else
         {
             // A panorama selected above replaces whatever stood; only a sky that goes without one needs its background put back.
             bool cleared = ClearSky();
-            if (!closed && (cleared || _closed)) projection.Lighting.ApplyBackground();
+            if (!closed && (cleared || _closed)) lighting.ApplyBackground();
         }
         air = (air * MathF.Max(daylight, _horizon.NightAir)) + new Vector3(_ambient.FlashIntensity * _horizon.FlashAir);
         Color airColor = new(air.X, air.Y, air.Z, 1);
@@ -75,8 +74,8 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
             : weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy ? _horizon.CloudCoverage : _horizon.StormCloudCoverage,
             wind * _horizon.CloudDrift.Length() * (1 + (conditions.Wind * _tuning.WindDrift)), _horizon.CloudColors[(int)weather]);
         SetFall(conditions, outside, sheltered, wind, daylight, seconds);
-        SetGround(conditions, outside, wind, calendar.Season == DaggerfallSeason.Winter);
-        if (moons) _moons!.Show(calendar, daylight);
+        SetGround(conditions, outside, wind, sky.Season == DaggerfallSeason.Winter);
+        if (moons) _moons!.Show(sky, daylight);
         else _moons?.Hide();
     }
 

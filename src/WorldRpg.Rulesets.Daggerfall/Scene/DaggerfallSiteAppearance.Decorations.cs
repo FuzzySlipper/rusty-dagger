@@ -69,7 +69,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private SpriteMaterialDescriptor Material(DaggerfallSiteDecoration flat)
     {
         SpriteMaterialDescriptor lit = GivesLight(flat.Source) ? LitSprite : CastingSprite;
-        return DaggerfallExteriorEnvironment.IsNatureArchive(flat.Source.Archive) ? flats.Flora(lit) : lit;
+        return DaggerfallNatureArchives.Contains(flat.Source.Archive) ? flats.Flora(lit) : lit;
     }
 
     /// <summary>A flat that gives light, under <paramref name="material"/>: what <paramref name="map"/> holds shines at the lamps' level.</summary>

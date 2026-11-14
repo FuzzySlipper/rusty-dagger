@@ -184,12 +184,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     // Each city gate draws its open or its closed model; both are created with the location and the
     // current state's is published under the gate's one ordinal.
     private readonly Dictionary<string, (Appearance Open, Appearance Closed, ulong Ordinal)> gateVisuals = new(StringComparer.Ordinal);
-    private DaggerfallCityGates? cityGates;
-    private DaggerfallDungeonMotionProjection? dungeonMotion;
     // Door, gate and action model visuals are drawn under ordinals of the location's identity slot rather than
     // their source or Engine entity identities, which other owners' visuals may share.
     private ulong nextLocationVisualOrdinal;
-    private DaggerfallDoorRuntime? doors;
+    // The location's doors, city gates and action models, read through their runtimes; none for a lone appearance.
+    private readonly DaggerfallLocationParts? parts;
     // Engine resources are owning objects: a render resource opened here is released here, because the
     // materials, atlases and sprites that name it hold non-owning references.
     private readonly List<RenderResource> ownedResources = [];
@@ -232,7 +231,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// The gender a fixed enemy authored with none takes, from its placement identity, its authored gender and its sprite;
     /// null draws every enemy as authored.
     /// </param>
-    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null, DaggerfallDefinitions? definitions = null, DaggerfallFlatsTuning? flats = null, DaggerfallSiteLightingTuning? lighting = null, bool prepareLocationOffUpdate = false,
+    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallLocationParts? parts = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallDefinitions? definitions = null, DaggerfallFlatsTuning? flats = null, DaggerfallSiteLightingTuning? lighting = null, bool prepareLocationOffUpdate = false,
         Func<long, string, NormalizedActorSprite, string>? actorGender = null)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -240,9 +239,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         ArgumentNullException.ThrowIfNull(inputs);
         this.inputs = inputs;
         this.mobileDefinitions = definitions;
-        BindDoorAudio(doors);
-        this.dungeonMotion = dungeonMotion;
-        this.cityGates = cityGates;
+        this.parts = parts;
         this.appearance = appearance;
         this.content = content;
         candleSprite = inputs.BillboardSprites.GetValueOrDefault((LightFlatArchive, 3));
@@ -277,7 +274,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 }
                 appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(arrowAppearance, bindings.ToArray()));
             }
-            if (inputs.Doors.Count != 0 && doors is null) throw new ArgumentException("Door visuals require the selected door runtime.", nameof(doors));
+            if (inputs.Doors.Count != 0 && parts is null) throw new ArgumentException("Door visuals require the selected door runtime.", nameof(parts));
             foreach ((long entityId, NormalizedActorSprite sprite) in inputs.ActorSprites.OrderBy(pair => pair.Key))
             {
                 // A fixed human enemy with no gender flag takes its random gender keyed by its placement identity.
@@ -368,14 +365,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// Recreates the retained location geometry after its content placement is admitted; <paramref name="offUpdate"/>
     /// prepares its meshes and textures on the renderer's workers, as for a location arriving on the road.
     /// </summary>
-    internal void ResumeLocationResources(DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion, bool offUpdate)
+    internal void ResumeLocationResources(bool offUpdate)
     {
         if (disposed) throw new ObjectDisposedException(nameof(DaggerfallSiteAppearance));
-        ArgumentNullException.ThrowIfNull(doors);
-        ArgumentNullException.ThrowIfNull(motion);
         if (!locationSuspended) return;
-        BindDoorAudio(doors);
-        dungeonMotion = motion;
+        doorFacts = null;
         try
         {
             AdmitLocationResources(offUpdate);
@@ -501,31 +495,25 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach ((Appearance staticWorld, Transform pose, int index) in world)
             facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.WorldMesh(slot, index), false, 0,
                 Compose(worldAppearance.Transform, pose), staticWorld, worldAppearance.Visible, worldAppearance.Layer));
-        if (doors is not null)
-        {
-            // A city has thousands of doors, nearly all of them still: their facts are read again only once one moves.
-            if (doorFacts is not { } held || held.Revision != doors.Revision || held.Slot != slot)
-                doorFacts = held = (doors.Revision, slot, [.. doors.All.Where(door => doorVisuals.ContainsKey(door.Id)).Select(door =>
-                    new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, doorVisualOrdinals[door.Id]), false, 0,
-                        doorVisualPoses.TryGetValue(door.Id, out Transform local) ? Compose(door.Pose, local) : door.Pose,
-                        doorVisuals[door.Id], true, RenderLayer.Scene))]);
-            facts.AddRange(held.Facts);
-        }
-        if (cityGates is not null)
-            foreach ((DaggerfallCityGateDefinition gate, EntityId _, DaggerfallDoorVisual _, Transform pose) in cityGates.Visuals)
-                if (gateVisuals.TryGetValue(gate.Id, out (Appearance Open, Appearance Closed, ulong Ordinal) visual))
-                    facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, visual.Ordinal), false, 0, pose,
-                        cityGates.Open ? visual.Open : visual.Closed, true, RenderLayer.Scene));
-        if (dungeonMotion is not null)
-        {
-            foreach ((DaggerfallDungeonActionModelDefinition model, EntityId _) in dungeonMotion.Visuals)
-            {
-                if (actionModelVisuals.TryGetValue(model.ActionId, out (Appearance Visual, ulong Ordinal) visual)
-                    && dungeonMotion.TryGetTransform(model.ActionId, out Transform transform))
-                    facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, visual.Ordinal), false, 0,
-                        transform, visual.Visual, true, RenderLayer.Scene));
-            }
-        }
+        if (parts is null) return;
+        // A city has thousands of doors, nearly all of them still: their facts are read again only once one moves.
+        int revision = parts.DoorRevision();
+        if (doorFacts is not { } held || held.Revision != revision || held.Slot != slot)
+            doorFacts = held = (revision, slot, [.. parts.Doors().Where(door => doorVisuals.ContainsKey(door.Id)).Select(door =>
+                new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, doorVisualOrdinals[door.Id]), false, 0,
+                    doorVisualPoses.TryGetValue(door.Id, out Transform local) ? Compose(door.Pose, local) : door.Pose,
+                    doorVisuals[door.Id], true, RenderLayer.Scene))]);
+        facts.AddRange(held.Facts);
+        bool gatesOpen = parts.GatesOpen();
+        foreach ((DaggerfallCityGateDefinition gate, EntityId _, DaggerfallDoorVisual _, Transform pose) in parts.Gates())
+            if (gateVisuals.TryGetValue(gate.Id, out (Appearance Open, Appearance Closed, ulong Ordinal) visual))
+                facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, visual.Ordinal), false, 0, pose,
+                    gatesOpen ? visual.Open : visual.Closed, true, RenderLayer.Scene));
+        foreach ((DaggerfallDungeonActionModelDefinition model, EntityId _) in parts.ActionModels())
+            if (actionModelVisuals.TryGetValue(model.ActionId, out (Appearance Visual, ulong Ordinal) visual)
+                && parts.ActionModelPose(model.ActionId, out Transform transform))
+                facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, visual.Ordinal), false, 0,
+                    transform, visual.Visual, true, RenderLayer.Scene));
     }
 
     /// <summary>
@@ -834,7 +822,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         if (disposed) return;
         disposed = true;
-        BindDoorAudio(null);
         List<Exception>? failures = null;
         if (!drawnByActiveSnapshot)
         {
@@ -917,8 +904,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         // Newly created materials start in their summer variant, including after a location reload.
         materialSeason = DaggerfallExteriorSeason.Summer;
         winterMaterials = false;
-        if (inputs.Doors.Count != 0 && doors is null)
-            throw new ArgumentException("Door visuals require the selected door runtime.", nameof(doors));
+        if (inputs.Doors.Count != 0 && parts is null)
+            throw new ArgumentException("Door visuals require the selected door runtime.", nameof(parts));
         foreach (NormalizedMaterial material in inputs.Materials)
         {
             RenderResourceInfo texture = appearance.OpenTexture(content, material.TexturePath, material.TextureSha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate);
@@ -998,8 +985,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (DaggerfallCityGateDefinition gate in inputs.CityGates)
             gateVisuals.Add(gate.Id, (StaticVisual(gate.Open.Visual, $"City gate '{gate.Id}'"), StaticVisual(gate.Closed.Visual, $"City gate '{gate.Id}'"),
                 NextLocationVisualOrdinal()));
-        if (dungeonMotion is null) return;
-        foreach ((DaggerfallDungeonActionModelDefinition model, _) in dungeonMotion.Visuals)
+        if (parts is null) return;
+        foreach ((DaggerfallDungeonActionModelDefinition model, _) in parts.ActionModels())
         {
             Appearance created = appearance.CreateStaticMesh(content, model.Visual.Path, model.Visual.Sha256, worldAppearance.Tint, admittingOffUpdate);
             try

@@ -6,38 +6,6 @@ using WorldRpg.Kit.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
-/// <summary>One state of a city gate: the mesh it draws and the model-local collision it blocks with.</summary>
-internal sealed record DaggerfallCityGateState(DaggerfallDoorVisual Visual, Vector3 LocalBoundsMin, Vector3 LocalBoundsMax,
-    Vector3[] CollisionVertices, Triangle[] CollisionTriangles)
-{
-    internal DaggerfallCityGateState Validate()
-    {
-        Visual.Validate();
-        if (CollisionTriangles.Length == 0) throw new ArgumentException("A city gate state must block with its own collision.", nameof(CollisionTriangles));
-        if (CollisionTriangles.Any(triangle => Math.Max(triangle.A, Math.Max(triangle.B, triangle.C)) >= CollisionVertices.Length))
-            throw new ArgumentException("A city gate collision triangle names a vertex the state does not carry.", nameof(CollisionTriangles));
-        return this;
-    }
-}
-
-/// <summary>
-/// One city gate placed in a profile: its pose in the profile frame and its open and closed states. The donor's
-/// <c>DaggerfallCityGate</c> swaps the placement's model between them at dusk and dawn.
-/// </summary>
-internal sealed record DaggerfallCityGateDefinition(string Id, Transform Pose, DaggerfallCityGateState Open, DaggerfallCityGateState Closed)
-{
-    internal DaggerfallCityGateDefinition Validate()
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(Id);
-        Open.Validate();
-        Closed.Validate();
-        return this;
-    }
-
-    /// <summary>Gates close for the night and open again by day (<c>DaggerfallCityGate.Update</c>).</summary>
-    internal static bool OpenAt(DaggerfallCalendar calendar) => calendar.IsDay;
-}
-
 /// <summary>
 /// A profile's city gates as Engine entities whose triangle collision is the current state's, published through
 /// the profile's SpatialSession. Both states' collision assets stay resident; a state change swaps which one the
@@ -45,6 +13,9 @@ internal sealed record DaggerfallCityGateDefinition(string Id, Transform Pose, D
 /// </summary>
 internal sealed class DaggerfallCityGates : IDisposable
 {
+    /// <summary>Gates close for the night and open again by day (<c>DaggerfallCityGate.Update</c>).</summary>
+    internal static bool OpenAt(DaggerfallCalendar calendar) => calendar.IsDay;
+
     private const ulong AssetPrefix = 0xDA00_0000_0000_0000UL;
     private const ulong InstancePrefix = 0xDB00_0000_0000_0000UL;
     private const ulong IdentityMask = 0x00FF_FFFF_FFFF_FFFFUL;

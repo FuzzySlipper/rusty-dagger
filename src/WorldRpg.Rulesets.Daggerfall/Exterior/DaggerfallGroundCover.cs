@@ -106,7 +106,7 @@ internal sealed class DaggerfallGroundCover : IDisposable
     }
 
     /// <summary>A nature archive's tuft layer in the flora field.</summary>
-    internal static uint TuftLayer(int natureArchive) => TuftLayerBase + (uint)(natureArchive - DaggerfallExteriorEnvironment.FirstNatureArchive);
+    internal static uint TuftLayer(int natureArchive) => TuftLayerBase + (uint)(natureArchive - DaggerfallNatureArchives.First);
 
     private bool _grass = true, _reliefShown = true;
 

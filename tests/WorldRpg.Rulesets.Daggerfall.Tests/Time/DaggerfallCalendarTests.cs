@@ -165,7 +165,7 @@ public sealed class DaggerfallCalendarTests
         Assert.True(full.Crossed.DaylightChanged);
 
         // The same for an advance that stays inside the day but steps over dusk.
-        DaggerfallCalendarAdvance dusk = new DaggerfallCalendar(405, 5, 0, DaggerfallCalendar.DuskHour - 1, 0, 0).AdvanceToFirstConsequence(7200, []);
+        DaggerfallCalendarAdvance dusk = new DaggerfallCalendar(405, 5, 0, DaggerfallSkyTime.DuskHour - 1, 0, 0).AdvanceToFirstConsequence(7200, []);
         Assert.True(dusk.Crossed.DaylightChanged);
 
         // An advance inside one stretch of daylight crosses none.
@@ -229,13 +229,13 @@ public sealed class DaggerfallCalendarTests
         Assert.Equal(DaggerfallSeason.Autumn, new DaggerfallCalendar(405, 8, 0, 0, 0, 0).Season);
         Assert.Equal(DaggerfallSeason.Autumn, new DaggerfallCalendar(405, 10, 0, 0, 0, 0).Season);
 
-        Assert.False(new DaggerfallCalendar(405, 5, 0, DaggerfallCalendar.DawnHour - 1, 0, 0).IsDay);
-        Assert.True(new DaggerfallCalendar(405, 5, 0, DaggerfallCalendar.DawnHour, 0, 0).IsDay);
-        Assert.True(new DaggerfallCalendar(405, 5, 0, DaggerfallCalendar.DuskHour - 1, 0, 0).IsDay);
-        Assert.False(new DaggerfallCalendar(405, 5, 0, DaggerfallCalendar.DuskHour, 0, 0).IsDay);
+        Assert.False(new DaggerfallCalendar(405, 5, 0, DaggerfallSkyTime.DawnHour - 1, 0, 0).IsDay);
+        Assert.True(new DaggerfallCalendar(405, 5, 0, DaggerfallSkyTime.DawnHour, 0, 0).IsDay);
+        Assert.True(new DaggerfallCalendar(405, 5, 0, DaggerfallSkyTime.DuskHour - 1, 0, 0).IsDay);
+        Assert.False(new DaggerfallCalendar(405, 5, 0, DaggerfallSkyTime.DuskHour, 0, 0).IsDay);
 
         // Crossing dawn or dusk is reported, which is what a light or a schedule reacts to.
-        DaggerfallCalendar beforeDawn = new(405, 5, 0, DaggerfallCalendar.DawnHour - 1, 59, 0);
+        DaggerfallCalendar beforeDawn = new(405, 5, 0, DaggerfallSkyTime.DawnHour - 1, 59, 0);
         _ = beforeDawn.Advance(120, out DaggerfallCalendarElapsed crossed);
         Assert.True(crossed.DaylightChanged);
         _ = new DaggerfallCalendar(405, 5, 0, 12, 0, 0).Advance(600, out DaggerfallCalendarElapsed steady);
@@ -248,14 +248,14 @@ public sealed class DaggerfallCalendarTests
     [InlineData(16, false)]
     [InlineData(17, true)]
     public void City_lamps_and_windows_share_their_hours(int hour, bool on) =>
-        Assert.Equal(on, Presentation.DaggerfallSiteLighting.CityLightsOn(new DaggerfallCalendar(405, 11, 21, hour, 0, 0)));
+        Assert.Equal(on, Presentation.DaggerfallSiteLighting.CityLightsOn(new DaggerfallCalendar(405, 11, 21, hour, 0, 0).Sky));
 
     [Fact]
     public void Lamps_go_out_by_day_only_outdoors()
     {
         DaggerfallCalendar noon = new(405, 11, 21, 12, 0, 0);
-        Assert.False(Presentation.DaggerfallSiteLighting.LampsLit(Content.DaggerfallWorldProfileKind.Exterior, noon));
-        Assert.True(Presentation.DaggerfallSiteLighting.LampsLit(Content.DaggerfallWorldProfileKind.Interior, noon));
-        Assert.True(Presentation.DaggerfallSiteLighting.LampsLit(Content.DaggerfallWorldProfileKind.Dungeon, noon));
+        Assert.False(Presentation.DaggerfallSiteLighting.LampsLit(Content.DaggerfallWorldProfileKind.Exterior, noon.Sky));
+        Assert.True(Presentation.DaggerfallSiteLighting.LampsLit(Content.DaggerfallWorldProfileKind.Interior, noon.Sky));
+        Assert.True(Presentation.DaggerfallSiteLighting.LampsLit(Content.DaggerfallWorldProfileKind.Dungeon, noon.Sky));
     }
 }

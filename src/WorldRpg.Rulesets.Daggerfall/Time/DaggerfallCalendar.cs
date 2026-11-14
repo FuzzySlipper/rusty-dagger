@@ -1,21 +1,5 @@
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
-/// <summary>Which part of the year a date falls in, as the donor's season table divides it.</summary>
-public enum DaggerfallSeason
-{
-    /// <summary>Frost Fall through First Seed: months 11, 0 and 1.</summary>
-    Winter,
-
-    /// <summary>Rain's Hand through Mid Year: months 2, 3 and 4.</summary>
-    Spring,
-
-    /// <summary>Sun's Height through Last Seed: months 5, 6 and 7.</summary>
-    Summer,
-
-    /// <summary>Hearth Fire through Frost Fall's eve: months 8, 9 and 10.</summary>
-    Autumn,
-}
-
 /// <summary>
 /// The instant the world's calendar reads: a date and a time of day in explicit units.
 /// </summary>
@@ -67,12 +51,6 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
     /// <summary>The month the corpus's calendar starts in, zero-based.</summary>
     public const int FirstMonth = 5;
 
-    /// <summary>The hour dawn begins, which is when the world's day changes character.</summary>
-    public const int DawnHour = 6;
-
-    /// <summary>The hour dusk begins.</summary>
-    public const int DuskHour = 18;
-
     /// <summary>The calendar the corpus starts a game on.</summary>
     public static DaggerfallCalendar Start => new(FirstYear, FirstMonth, 0, 0, 0, 0);
 
@@ -80,7 +58,10 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
     public int SecondOfDay => (Hour * MinutesPerHour * SecondsPerMinute) + (Minute * SecondsPerMinute) + Second;
 
     /// <summary>Whether it is day: dawn to dusk, as the world's own hours divide it.</summary>
-    public bool IsDay => Hour >= DawnHour && Hour < DuskHour;
+    public bool IsDay => Hour >= DaggerfallSkyTime.DawnHour && Hour < DaggerfallSkyTime.DuskHour;
+
+    /// <summary>Where the day and the year stand, as the sky, the lights and the moons show them.</summary>
+    internal DaggerfallSkyTime Sky => new(Hour, SecondOfDay, DayOfYear, Season, LunarCycleDay(true), LunarCycleDay(false));
 
     /// <summary>
     /// The season the date falls in, by the donor's own month table: winter wraps the year from Frost
@@ -384,8 +365,8 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
 
         int start = SecondOfDay;
         int end = start + (int)seconds;
-        int dawn = DawnHour * MinutesPerHour * SecondsPerMinute;
-        int dusk = DuskHour * MinutesPerHour * SecondsPerMinute;
+        int dawn = DaggerfallSkyTime.DawnHour * MinutesPerHour * SecondsPerMinute;
+        int dusk = DaggerfallSkyTime.DuskHour * MinutesPerHour * SecondsPerMinute;
         return (start < dawn && end >= dawn)
             || (start < dusk && end >= dusk)
             || (start >= dawn && end >= SecondsPerDay + dawn)

@@ -39,9 +39,9 @@ internal sealed class DaggerfallMoons : IDisposable
     internal static int Frame(int cycleDay) => (cycleDay + FullFrame) % CycleDays;
 
     /// <summary>The way to a moon at this time on this day of its cycle, its path leaning south by <paramref name="tiltDegrees"/>.</summary>
-    internal static Vector3 Direction(DaggerfallCalendar calendar, int cycleDay, float tiltDegrees)
+    internal static Vector3 Direction(DaggerfallSkyTime sky, int cycleDay, float tiltDegrees)
     {
-        float sun = MathF.PI * ((calendar.SecondOfDay / 3_600F) - DaggerfallCalendar.DawnHour) / (DaggerfallCalendar.DuskHour - DaggerfallCalendar.DawnHour);
+        float sun = MathF.PI * ((sky.SecondOfDay / 3_600F) - DaggerfallSkyTime.DawnHour) / (DaggerfallSkyTime.DuskHour - DaggerfallSkyTime.DawnHour);
         float along = sun - (2 * MathF.PI * (cycleDay + NewDay) / CycleDays);
         float tilt = tiltDegrees * MathF.PI / 180;
         return new(-MathF.Cos(along), MathF.Sin(along) * MathF.Cos(tilt), MathF.Sin(along) * MathF.Sin(tilt));
@@ -51,13 +51,13 @@ internal sealed class DaggerfallMoons : IDisposable
     internal static float Phase(int cycleDay) => (1 + MathF.Cos(2 * MathF.PI * cycleDay / CycleDays)) / 2;
 
     /// <summary>How much of a full night's moonlight falls now, from 0 to 1: each moon gives its share by its phase, while it stands above the horizon.</summary>
-    internal float Moonlight(DaggerfallCalendar calendar)
+    internal float Moonlight(DaggerfallSkyTime sky)
     {
         float light = 0;
         foreach (DaggerfallSkyMoon moon in _media.Moons)
         {
-            int day = calendar.LunarCycleDay(moon.Masser);
-            float height = Direction(calendar, day, moon.Masser ? _tuning.MasserTiltDegrees : _tuning.SecundaTiltDegrees).Y;
+            int day = sky.LunarCycleDay(moon.Masser);
+            float height = Direction(sky, day, moon.Masser ? _tuning.MasserTiltDegrees : _tuning.SecundaTiltDegrees).Y;
             light += Phase(day) * Math.Clamp(height * RisingHeight, 0, 1) * (moon.Masser ? _tuning.MasserLight : 1 - _tuning.MasserLight);
         }
 
@@ -65,26 +65,26 @@ internal sealed class DaggerfallMoons : IDisposable
     }
 
     /// <summary>Stands the moons where the calendar puts them, paler by day, and the stars behind them.</summary>
-    internal void Show(DaggerfallCalendar calendar, float daylight)
+    internal void Show(DaggerfallSkyTime sky, float daylight)
     {
-        ShowStars(calendar, daylight);
-        (int, int, int) now = (calendar.DayOfYear, calendar.SecondOfDay / 60, (int)(daylight * 20));
+        ShowStars(sky, daylight);
+        (int, int, int) now = (sky.DayOfYear, sky.SecondOfDay / 60, (int)(daylight * 20));
         if (_shown == now) return;
         _shown = now;
         float radiance = 1 - ((1 - _tuning.MoonDayBrightness) * Math.Clamp(daylight, 0, 1));
         foreach (DaggerfallSkyMoon moon in _media.Moons)
         {
-            int day = calendar.LunarCycleDay(moon.Masser);
+            int day = sky.LunarCycleDay(moon.Masser);
             (Vector2 min, Vector2 max) = moon.Frame(Frame(day));
             // The art draws its own phase, so the disc is lit whole.
-            _engine.CameraView.SetMoon(new MoonRequest(Direction(calendar, day, moon.Masser ? _tuning.MasserTiltDegrees : _tuning.SecundaTiltDegrees),
+            _engine.CameraView.SetMoon(new MoonRequest(Direction(sky, day, moon.Masser ? _tuning.MasserTiltDegrees : _tuning.SecundaTiltDegrees),
                 moon.Masser ? _tuning.MasserRadiusDegrees : _tuning.SecundaRadiusDegrees, Vector3.One, radiance, 1, 0, 0, 0,
                 Slot(moon), new RenderResourceReference(Texture(moon)), min, max) with { LightIntensity = Phase(day) * _tuning.MoonCloudLight });
         }
     }
 
     /// <summary>The stars come out as the day goes, fewer under a bright moon, and turn once a day about their pole.</summary>
-    private void ShowStars(DaggerfallCalendar calendar, float daylight)
+    private void ShowStars(DaggerfallSkyTime sky, float daylight)
     {
         float dark = 1 - Math.Clamp(daylight / _tuning.StarsFromDaylight, 0, 1);
         if (dark <= 0)
@@ -94,9 +94,9 @@ internal sealed class DaggerfallMoons : IDisposable
         }
 
         float pole = _tuning.StarPoleDegrees * MathF.PI / 180;
-        Quaternion turn = Quaternion.CreateFromAxisAngle(new(0, MathF.Sin(pole), -MathF.Cos(pole)), 2 * MathF.PI * calendar.SecondOfDay / 86_400F);
+        Quaternion turn = Quaternion.CreateFromAxisAngle(new(0, MathF.Sin(pole), -MathF.Cos(pole)), 2 * MathF.PI * sky.SecondOfDay / 86_400F);
         _stars ??= _media.Open(_engine.Graphics, _media.Stars);
-        _engine.CameraView.SetStars(new(_stars, default, turn, _tuning.StarLimit - (Moonlight(calendar) * _tuning.StarMoonWash), _tuning.StarBrightness * dark, 0, _tuning.StarTwinkle));
+        _engine.CameraView.SetStars(new(_stars, default, turn, _tuning.StarLimit - (Moonlight(sky) * _tuning.StarMoonWash), _tuning.StarBrightness * dark, 0, _tuning.StarTwinkle));
         _starsShown = true;
     }
 

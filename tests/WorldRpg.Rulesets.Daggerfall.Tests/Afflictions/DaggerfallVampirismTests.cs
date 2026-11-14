@@ -35,7 +35,7 @@ public sealed class DaggerfallVampirismTests
         Assert.Equal(4, fixture.Random.Requests[^1].Maximum);
 
         int hour = fixture.Time.Calendar.Hour;
-        Assert.Equal(14L * DaggerfallCalendar.SecondsPerDay + (DaggerfallCalendar.DuskHour + 1 - hour) * 3600L,
+        Assert.Equal(14L * DaggerfallCalendar.SecondsPerDay + (DaggerfallSkyTime.DuskHour + 1 - hour) * 3600L,
             fixture.Vampirism.AwakeningSeconds);
     }
 

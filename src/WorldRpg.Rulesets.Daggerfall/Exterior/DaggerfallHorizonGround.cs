@@ -203,7 +203,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             double x = tile.SampleX(i), z = tile.SampleZ(j);
             (int mapX, int mapY) = MapPixel(x, z);
             int climate = Climate(mapX, mapY);
-            samples.SetGround(i, j, (uint)(DaggerfallExteriorEnvironment.NatureTextureArchive(climate, season) - DaggerfallExteriorEnvironment.FirstNatureArchive));
+            samples.SetGround(i, j, (uint)(DaggerfallExteriorEnvironment.NatureTextureArchive(climate, season) - DaggerfallNatureArchives.First));
             samples.SetCover(i, j, FloraCover(x, z, ground[((j + 1) * heightSide) + i + 1], Slope(ground, heightSide, i, j, tile.CellSize),
                 climate, winter, materials, flora));
         }
@@ -281,7 +281,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             double x = tile.SampleX(i), z = tile.SampleZ(j);
             (int mapX, int mapY) = MapPixel(x, z);
             int climate = Climate(mapX, mapY);
-            samples.SetGround(i, j, (uint)(DaggerfallExteriorEnvironment.NatureTextureArchive(climate, season) - DaggerfallExteriorEnvironment.FirstNatureArchive));
+            samples.SetGround(i, j, (uint)(DaggerfallExteriorEnvironment.NatureTextureArchive(climate, season) - DaggerfallNatureArchives.First));
             double height = ground[((j + 1) * heightSide) + i + 1];
             float slope = Slope(ground, heightSide, i, j, tile.CellSize);
             samples.SetCover(i, j, grass is { } g

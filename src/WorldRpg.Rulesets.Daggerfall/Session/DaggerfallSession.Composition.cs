@@ -915,7 +915,7 @@ internal sealed partial class DaggerfallSession
             // what emits above 1 rolls off, and it is what bloom spreads.
             engine.CameraView.SetToneMapping(new(ToneMappingOperator.Rolloff, 1));
             engine.CameraView.SetBloom(new(1, tuning.SiteLighting.Bloom));
-            _weatherPresentation = new DaggerfallWeatherPresentation(engine, composition.Sky, tuning.Weather, tuning.Ambient, tuning.Horizon, tuning.PresentationAudio,
+            _weatherPresentation = new DaggerfallWeatherPresentation(engine, composition.Sky, tuning.Ambient, tuning.Horizon, tuning.PresentationAudio,
                 (profile, clip) => audioBundles?.Require(profile).OpenClip(engine.Audio, clip));
             partiallyConstructed.Add(_weatherPresentation);
             DaggerfallHorizonGround ground = new(definitions.Terrain,

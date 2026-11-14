@@ -1753,11 +1753,12 @@ internal sealed class DaggerfallExteriorWorld
 
     internal void UpdateResidentCityLights()
     {
+        DaggerfallSkyTime sky = _time.Calendar.Sky;
         foreach (var resident in _residentExteriorLocations.Values)
         {
-            resident.Projection.Lighting.UpdateCityLights(_time.Calendar);
-            resident.Projection.Lighting.UpdateWindowGlass(resident.Projection.Appearance, _time.Calendar);
-            resident.Projection.Lighting.UpdateLampGlow(resident.Projection.Appearance, _time.Calendar);
+            resident.Projection.Lighting.UpdateCityLights(sky);
+            resident.Projection.Lighting.UpdateWindowGlass(resident.Projection.Appearance, sky);
+            resident.Projection.Lighting.UpdateLampGlow(resident.Projection.Appearance, sky);
         }
     }
 

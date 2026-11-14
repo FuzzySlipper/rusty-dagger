@@ -293,11 +293,11 @@ internal sealed class DaggerfallFastTravel(
     internal static long ArrivalDelay(DaggerfallCalendar calendar, bool sunlightVulnerable, bool cautious = true)
     {
         long timeOfDay = calendar.SecondOfDay;
-        if (sunlightVulnerable) return calendar.IsDay ? DaggerfallCalendar.DuskHour * (DaggerfallCalendar.MinutesPerHour * DaggerfallCalendar.SecondsPerMinute) - timeOfDay : 0;
+        if (sunlightVulnerable) return calendar.IsDay ? DaggerfallSkyTime.DuskHour * (DaggerfallCalendar.MinutesPerHour * DaggerfallCalendar.SecondsPerMinute) - timeOfDay : 0;
         if (!cautious) return 0;
         const long morning = 7 * (DaggerfallCalendar.MinutesPerHour * DaggerfallCalendar.SecondsPerMinute) + 10 * DaggerfallCalendar.SecondsPerMinute;
         if (timeOfDay < morning) return morning - timeOfDay;
-        return calendar.Hour >= DaggerfallCalendar.DuskHour ? DaggerfallCalendar.SecondsPerDay - timeOfDay + morning : 0;
+        return calendar.Hour >= DaggerfallSkyTime.DuskHour ? DaggerfallCalendar.SecondsPerDay - timeOfDay + morning : 0;
     }
 
     /// <summary>

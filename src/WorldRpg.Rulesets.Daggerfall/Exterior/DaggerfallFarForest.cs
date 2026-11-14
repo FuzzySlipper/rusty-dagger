@@ -77,11 +77,11 @@ internal sealed class DaggerfallFarForest : IDisposable
         }
 
         _engine.Vegetation.SetFocus(new(_field, VegetationFocus.At(x, 0, z)));
-        int underfoot = _ground.NatureArchive(x, z, winter) - DaggerfallExteriorEnvironment.FirstNatureArchive;
+        int underfoot = _ground.NatureArchive(x, z, winter) - DaggerfallNatureArchives.First;
         Interlocked.Or(ref _found, 1 << underfoot);
         int found = Volatile.Read(ref _found);
-        for (int index = 0; index < DaggerfallExteriorEnvironment.NatureArchiveCount; index++)
-            if ((found & (1 << index)) != 0 && _grown.Add(index)) Grow(DaggerfallExteriorEnvironment.FirstNatureArchive + index, looks);
+        for (int index = 0; index < DaggerfallNatureArchives.Count; index++)
+            if ((found & (1 << index)) != 0 && _grown.Add(index)) Grow(DaggerfallNatureArchives.First + index, looks);
         _streamer!.Update();
     }
 
@@ -130,7 +130,7 @@ internal sealed class DaggerfallFarForest : IDisposable
         for (int record = 1; record <= Records; record++)
         {
             if (looks(archive, record) is not { } look || look.Size.Y < _tuning.FarTreeMetres) continue;
-            uint layer = LayerBase + (uint)(((archive - DaggerfallExteriorEnvironment.FirstNatureArchive) * 32) + record);
+            uint layer = LayerBase + (uint)(((archive - DaggerfallNatureArchives.First) * 32) + record);
             if (!_layers.TryGetValue(layer, out var grown))
             {
                 RenderResource image = _engine.Graphics.OpenTexture(_engine.Content, look.Image.Path, look.Image.Sha256, TextureFilter.NearestMipmapped).Handle;
@@ -151,7 +151,7 @@ internal sealed class DaggerfallFarForest : IDisposable
             float near = _tuning.ReachOf(look.Size.Y), reach = _tuning.FarReach;
             _engine.Vegetation.SetLayer(new VegetationLayerRequest(_field!, layer, grown.Sprite.Look, default, density, reach) with
             {
-                Grounds = VegetationLayerRequest.Ground((uint)(archive - DaggerfallExteriorEnvironment.FirstNatureArchive)),
+                Grounds = VegetationLayerRequest.Ground((uint)(archive - DaggerfallNatureArchives.First)),
                 SlopeLimitDegrees = _tuning.SlopeLimitDegrees,
                 // Fading in over the band near flora fades out over, so the two cross.
                 Near = near - Math.Min(_tuning.Fade, near / 2),

@@ -106,11 +106,11 @@ internal sealed class DaggerfallFloraField : IDisposable
         _engine.Vegetation.SetFocus(new(_field, Focus(local)));
         // A field asks for tiles only within its layers' reach, so the climate underfoot grows at once; the workers find the rest.
         int underfoot = _ground.NatureArchive(local.X + (frame.MapX * DaggerfallExteriorCellResidency.CellSize),
-            local.Z + (frame.MapY * DaggerfallExteriorCellResidency.CellSize), winter) - DaggerfallExteriorEnvironment.FirstNatureArchive;
+            local.Z + (frame.MapY * DaggerfallExteriorCellResidency.CellSize), winter) - DaggerfallNatureArchives.First;
         Interlocked.Or(ref _found, 1 << underfoot);
         int found = Volatile.Read(ref _found);
-        for (int index = 0; index < DaggerfallExteriorEnvironment.NatureArchiveCount; index++)
-            if ((found & (1 << index)) != 0 && _grown.Add(index)) Grow(DaggerfallExteriorEnvironment.FirstNatureArchive + index, looks);
+        for (int index = 0; index < DaggerfallNatureArchives.Count; index++)
+            if ((found & (1 << index)) != 0 && _grown.Add(index)) Grow(DaggerfallNatureArchives.First + index, looks);
         _streamer!.Update();
     }
 
@@ -164,7 +164,7 @@ internal sealed class DaggerfallFloraField : IDisposable
     {
         _density = density;
         if (_field is null || _looks is null) return;
-        foreach (int index in _grown) Grow(DaggerfallExteriorEnvironment.FirstNatureArchive + index, _looks);
+        foreach (int index in _grown) Grow(DaggerfallNatureArchives.First + index, _looks);
     }
 
     /// <summary>
@@ -187,7 +187,7 @@ internal sealed class DaggerfallFloraField : IDisposable
             float reach = _tuning.ReachOf(grown.Height);
             _engine.Vegetation.SetLayer(new VegetationLayerRequest(_field!, layer, grown.Look, default, density, reach) with
             {
-                Grounds = VegetationLayerRequest.Ground((uint)(archive - DaggerfallExteriorEnvironment.FirstNatureArchive)),
+                Grounds = VegetationLayerRequest.Ground((uint)(archive - DaggerfallNatureArchives.First)),
                 SlopeLimitDegrees = _tuning.SlopeLimitDegrees,
                 // The Engine wants a fade short of the reach; a short record's reach is all fade otherwise.
                 Fade = Math.Min(_tuning.Fade, reach / 2),
@@ -295,7 +295,7 @@ internal sealed class DaggerfallFloraField : IDisposable
     {
         if (_field is null) return "not grown";
         VegetationReadout read = _engine.Vegetation.Read(_field);
-        string archives = string.Join(",", _grown.Order().Select(index => DaggerfallExteriorEnvironment.FirstNatureArchive + index));
+        string archives = string.Join(",", _grown.Order().Select(index => DaggerfallNatureArchives.First + index));
         return string.Create(System.Globalization.CultureInfo.InvariantCulture,
             $"{(read.Visible ? "shown" : "hidden")}, archives [{archives}] in {_layers.Count} layers, {read.Tiles} tiles ({read.PendingTiles} waiting), {read.Instances} copies in {read.Patches} patches, {read.OverBudget} over budget");
     }
@@ -309,7 +309,7 @@ internal sealed class DaggerfallFloraField : IDisposable
     {
         VegetationLayerRequest request = new VegetationLayerRequest(_field!, layer, look, default, density, reach) with
         {
-            Grounds = VegetationLayerRequest.Ground((uint)(natureArchive - DaggerfallExteriorEnvironment.FirstNatureArchive)),
+            Grounds = VegetationLayerRequest.Ground((uint)(natureArchive - DaggerfallNatureArchives.First)),
             TintLow = tintLow,
             TintHigh = tintHigh,
             SlopeLimitDegrees = _tuning.SlopeLimitDegrees,

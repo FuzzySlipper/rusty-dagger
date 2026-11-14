@@ -26,7 +26,7 @@ public sealed class DaggerfallViewLightTests
             DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/site.json", Hash, 1), new ContentArtifact("mesh/site.json", Hash)),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
             site: new DaggerfallSiteId(17, 4), profileKind: kind, logicalProfileId: "worldrpg/test/site", lights: lights);
-        return new(appearance, engine.Context.CameraView, profile, Tuning, calendar);
+        return new(appearance, engine.Context.CameraView, profile, Tuning, calendar.Sky);
     }
 
     private static Vector3 Level(DaggerfallSiteLighting lighting, Vector3 eye = default) =>
@@ -35,7 +35,7 @@ public sealed class DaggerfallViewLightTests
     private static DaggerfallSiteLighting Sky(DaggerfallCalendar calendar, float daylight)
     {
         DaggerfallSiteLighting lighting = Lighting(DaggerfallWorldProfileKind.Exterior, calendar);
-        lighting.UpdateAmbient(calendar, daylight);
+        lighting.UpdateAmbient(calendar.Sky, daylight);
         return lighting;
     }
 

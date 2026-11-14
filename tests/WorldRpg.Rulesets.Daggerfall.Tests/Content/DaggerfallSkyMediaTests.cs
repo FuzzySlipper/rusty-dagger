@@ -17,18 +17,18 @@ public sealed class DaggerfallSkyMediaTests
         var fixture = Fixture();
         var media = DaggerfallSkyMedia.Read(TestSessions.Data(fixture.Content));
         var summer = new DaggerfallCalendar(405,5,0,12,0,0);
-        Assert.Equal("sky-2-32", media.Select(226, summer, DaggerfallWeatherKind.Sunny, 0).First);
-        Assert.Equal("sky-13-32", media.Select(224, summer, DaggerfallWeatherKind.Thunder, 1).First);
-        Assert.Equal("sky-30-32", media.Select(229, summer, DaggerfallWeatherKind.Snow, 0).First);
-        Assert.Equal("night-2", media.Select(231, summer with {Hour=0}, DaggerfallWeatherKind.Overcast, 0).First);
-        Assert.Equal("sky-21-0", media.Select(231, summer with {Hour=0}, DaggerfallWeatherKind.Fog, 1).First);
-        Assert.Equal("sky-16-32", media.Select(227, summer with {Month=0}, DaggerfallWeatherKind.Sunny, 0).First);
+        Assert.Equal("sky-2-32", media.Select(226, summer.Sky, DaggerfallWeatherKind.Sunny, 0).First);
+        Assert.Equal("sky-13-32", media.Select(224, summer.Sky, DaggerfallWeatherKind.Thunder, 1).First);
+        Assert.Equal("sky-30-32", media.Select(229, summer.Sky, DaggerfallWeatherKind.Snow, 0).First);
+        Assert.Equal("night-2", media.Select(231, (summer with {Hour=0}).Sky, DaggerfallWeatherKind.Overcast, 0).First);
+        Assert.Equal("sky-21-0", media.Select(231, (summer with {Hour=0}).Sky, DaggerfallWeatherKind.Fog, 1).First);
+        Assert.Equal("sky-16-32", media.Select(227, (summer with {Month=0}).Sky, DaggerfallWeatherKind.Sunny, 0).First);
         var graphics = new AppearanceFake([]);
         using var resource = media.Open(graphics, "sky-13-32");
         Assert.Equal((DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/sky-13-32.png"), fixture.Service.OpenedReferences.Single());
         Assert.Single(graphics.OpenResourceContentRequests);
         Assert.Equal(TextureWrap.Clamp, graphics.OpenResourceContentRequests[0].Wrap);
-        Assert.Equal(new Color(.1f,.2f,.3f,1), media.ClearColor(media.Select(226, summer, DaggerfallWeatherKind.Sunny,0)));
+        Assert.Equal(new Color(.1f,.2f,.3f,1), media.ClearColor(media.Select(226, summer.Sky, DaggerfallWeatherKind.Sunny,0)));
     }
 
     [Fact]

@@ -117,12 +117,12 @@ internal sealed class DaggerfallSkyMedia
         return new(content, resources, frames, nights, cleared, curve, moons, starsId);
     }
 
-    internal DaggerfallSkySelection Select(int climate, DaggerfallCalendar calendar, DaggerfallWeatherKind weather, int variant)
+    internal DaggerfallSkySelection Select(int climate, DaggerfallSkyTime sky, DaggerfallWeatherKind weather, int variant)
     {
         int skyBase = climate switch {226 => 0, 224 or 225 => 8, 227 or 231 or 232 => 16,
             223 or 228 or 229 or 230 => 24, _ => throw new ArgumentOutOfRangeException(nameof(climate))};
         bool badWeather = weather is DaggerfallWeatherKind.Rain or DaggerfallWeatherKind.Thunder or DaggerfallWeatherKind.Fog or DaggerfallWeatherKind.Snow;
-        if (!calendar.IsDay && !badWeather)
+        if (!sky.IsDay && !badWeather)
         {
             string night = _nights[skyBase switch {0 => 3, 8 => 1, 16 => 2, _ => 0}];
             return new(night, night, 0);
@@ -130,11 +130,11 @@ internal sealed class DaggerfallSkyMedia
         int offset = weather switch
         {
             DaggerfallWeatherKind.Rain or DaggerfallWeatherKind.Thunder or DaggerfallWeatherKind.Fog => 4 + variant,
-            DaggerfallWeatherKind.Snow => 6 + variant, _ => (int)calendar.Season,
+            DaggerfallWeatherKind.Snow => 6 + variant, _ => (int)sky.Season,
         };
-        float normalized = (calendar.SecondOfDay / 60f - DaggerfallCalendar.DawnHour * 60f)
-            / ((DaggerfallCalendar.DuskHour - DaggerfallCalendar.DawnHour) * 60f);
-        float frame = calendar.IsDay ? Math.Clamp(Evaluate(Math.Clamp(normalized,0,1)) * 64, 0, 63) : 0;
+        float normalized = (sky.SecondOfDay / 60f - DaggerfallSkyTime.DawnHour * 60f)
+            / ((DaggerfallSkyTime.DuskHour - DaggerfallSkyTime.DawnHour) * 60f);
+        float frame = sky.IsDay ? Math.Clamp(Evaluate(Math.Clamp(normalized,0,1)) * 64, 0, 63) : 0;
         int first = (int)frame, second = Math.Min(first + 1, 63);
         return new(_frames[(skyBase + offset, first)], _frames[(skyBase + offset, second)], frame - first);
     }
