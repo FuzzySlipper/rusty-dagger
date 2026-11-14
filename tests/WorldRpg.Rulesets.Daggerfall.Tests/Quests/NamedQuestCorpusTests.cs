@@ -13,7 +13,7 @@ public sealed class NamedQuestCorpusTests
     [InlineData("cures", 2)]
     public void Named_receipts_use_actual_action_capabilities(string id, int count)
     {
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallNamedQuestCorpusContent.Read(Payload(id), TestPayload.Definitions);
+        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallNamedQuestCorpusContent.Read(Payload(id), TestPayload.Definitions, new DaggerfallQuestLanguage());
         Assert.Equal(count, receipts.Count);
         DaggerfallQuestRuntimeAdmission admission = new(receipts);
         foreach (DaggerfallFightersGuildQuestRuntimeReceipt receipt in receipts)
@@ -28,7 +28,7 @@ public sealed class NamedQuestCorpusTests
     {
         JsonObject payload = JsonNode.Parse(Payload("story-early"))!.AsObject();
         payload["quests"]![0]!["protectedLifecycle"] = true;
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallNamedQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions));
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallNamedQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions, new DaggerfallQuestLanguage()));
         Assert.False(DaggerfallQuestSourceDefinition.IsProtectedMainQuest("_TUTOR__.txt"));
         foreach (string name in new[] { "S0000999", "S0000977", "_BRISIEN" })
             Assert.True(DaggerfallQuestSourceDefinition.IsProtectedMainQuest(name + ".txt"));

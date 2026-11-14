@@ -218,7 +218,7 @@ public sealed class StoryQuestSessionTests
         using var title = fixture.Start(fixture.StartProfile, composition => composition with
         {
             NewGameQuests = ["_TUTOR__.txt", "_BRISIEN.txt"],
-            QuestAdmission = new(DaggerfallNamedQuestCorpusContent.Read(NamedQuestCorpusTests.Payload("story-late"), TestPayload.Definitions)),
+            QuestAdmission = new(DaggerfallNamedQuestCorpusContent.Read(NamedQuestCorpusTests.Payload("story-late"), TestPayload.Definitions, new DaggerfallQuestLanguage())),
         });
         Assert.Empty(title.State.Quests.All);
         NewGameSessionTests.Commit(title);
@@ -271,7 +271,7 @@ public sealed class StoryQuestSessionTests
     [InlineData("cures")]
     public void Retained_named_corpus_has_no_unsupported_program_lines(string id)
     {
-        var receipts = DaggerfallNamedQuestCorpusContent.Read(NamedQuestCorpusTests.Payload(id), TestPayload.Definitions);
+        var receipts = DaggerfallNamedQuestCorpusContent.Read(NamedQuestCorpusTests.Payload(id), TestPayload.Definitions, new DaggerfallQuestLanguage());
         Assert.True(receipts.All(receipt => receipt.Runnable), string.Join('\n', receipts.Where(receipt => !receipt.Runnable)
             .SelectMany(receipt => receipt.Diagnostics.Select(diagnostic => $"{receipt.SourceFile}:{diagnostic.Line}: {diagnostic.Text}: {diagnostic.Reason}"))));
     }

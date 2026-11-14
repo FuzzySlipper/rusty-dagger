@@ -196,7 +196,7 @@ public sealed class CommittedBundleCompositionTests
         JsonObject payload = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.mages.json")))!.AsObject();
         payload["id"] = "a-corpus-no-code-names";
 
-        IReadOnlyList<DaggerfallClassicQuestCorpusReceipt> receipts = DaggerfallClassicQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions);
+        IReadOnlyList<DaggerfallClassicQuestCorpusReceipt> receipts = DaggerfallClassicQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions, new DaggerfallQuestLanguage());
 
         Assert.NotEmpty(receipts);
         Assert.All(receipts, receipt => Assert.True(receipt.IsOrdinaryOffer));

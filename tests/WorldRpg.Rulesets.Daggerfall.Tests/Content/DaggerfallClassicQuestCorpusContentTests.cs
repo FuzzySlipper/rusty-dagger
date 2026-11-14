@@ -21,7 +21,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
 
         foreach ((string id, int count) in expected)
         {
-            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = [.. DaggerfallClassicQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, $"content/worldrpg/payloads/daggerfall.quests.{id}.json")), definitions).Select(receipt => receipt.Runtime)];
+            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = [.. DaggerfallClassicQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, $"content/worldrpg/payloads/daggerfall.quests.{id}.json")), definitions, new DaggerfallQuestLanguage()).Select(receipt => receipt.Runtime)];
             Assert.Equal(count, receipts.Count);
             Assert.All(receipts.Where(receipt => receipt.Runnable), receipt => Assert.Empty(receipt.Diagnostics));
             Assert.All(receipts.Where(receipt => !receipt.Runnable), receipt => Assert.NotEmpty(receipt.Diagnostics));
@@ -36,7 +36,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
         JsonObject payload = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.temples.json")))!.AsObject();
         payload["categories"]![0]!["catalogGroup"] = "MagesGuild";
 
-        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallClassicQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), definitions));
+        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallClassicQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), definitions, new DaggerfallQuestLanguage()));
 
         Assert.Contains("does not retain category 'general' exactly", failure.Message, StringComparison.Ordinal);
     }
@@ -53,7 +53,7 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
         for (int index = quests.Count - 1; index >= 0; index--)
             if (quests[index]!["category"]!.GetValue<string>() == "specific") quests.RemoveAt(index);
 
-        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallClassicQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), definitions));
+        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallClassicQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), definitions, new DaggerfallQuestLanguage()));
 
         Assert.Contains("does not agree with the admitted HolyOrder catalog selection", failure.Message, StringComparison.Ordinal);
     }
@@ -63,8 +63,8 @@ public sealed class DaggerfallClassicQuestCorpusContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> vampire = [.. DaggerfallClassicQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.merchants-vampires.json")), definitions).Select(receipt => receipt.Runtime)];
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> nobility = [.. DaggerfallClassicQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.nobility.json")), definitions).Select(receipt => receipt.Runtime)];
+        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> vampire = [.. DaggerfallClassicQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.merchants-vampires.json")), definitions, new DaggerfallQuestLanguage()).Select(receipt => receipt.Runtime)];
+        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> nobility = [.. DaggerfallClassicQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.nobility.json")), definitions, new DaggerfallQuestLanguage()).Select(receipt => receipt.Runtime)];
 
         Assert.Equal(10, vampire.Count(receipt => receipt.Name.StartsWith("P", StringComparison.Ordinal)));
         Assert.All(vampire, receipt => Assert.True(receipt.Runnable, string.Join("; ", receipt.Diagnostics)));

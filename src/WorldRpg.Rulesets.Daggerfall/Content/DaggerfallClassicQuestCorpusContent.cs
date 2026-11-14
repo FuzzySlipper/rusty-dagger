@@ -5,8 +5,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>
 /// One runtime reader for retained classic corpus packs. The corpus states its own categories; the reader
-/// verifies each against the admitted catalog, verifies each receipt against its catalog row, and uses the
-/// current compilers for readiness. No corpus is known by name, so a bundle may select any of them.
+/// verifies each against the admitted catalog, verifies each receipt against its catalog row, and asks the
+/// quest language for readiness. No corpus is known by name, so a bundle may select any of them.
 /// </summary>
 internal static class DaggerfallClassicQuestCorpusContent
 {
@@ -18,9 +18,10 @@ internal static class DaggerfallClassicQuestCorpusContent
     internal const string SummonOnly = "summonOnly";
 
     internal static IReadOnlyList<DaggerfallClassicQuestCorpusReceipt> Read(ReadOnlyMemory<byte> payload,
-        DaggerfallDefinitions definitions)
+        DaggerfallDefinitions definitions, IDaggerfallQuestLanguage language)
     {
         ArgumentNullException.ThrowIfNull(definitions);
+        ArgumentNullException.ThrowIfNull(language);
         using JsonDocument document = JsonDocument.Parse(payload);
         string corpusId = document.RootElement.GetProperty("id").GetString() is { Length: > 0 } id && !string.IsNullOrWhiteSpace(id)
             ? id : throw new DaggerfallContentException(["Classic quest corpus does not identify itself."]);
@@ -100,8 +101,8 @@ internal static class DaggerfallClassicQuestCorpusContent
             string[] actualSourceDiagnostics = [.. source.Diagnostics
                 .Select(diagnostic => $"{diagnostic.Line}\0{diagnostic.Text}\0{diagnostic.Reason}")];
             if (!publishedSourceDiagnostics.SequenceEqual(actualSourceDiagnostics)) throw new DaggerfallContentException([$"Classic quest receipt '{sourceFile}' does not retain exact source diagnostics."]);
-            List<DaggerfallQuestDiagnosticDefinition> diagnostics = [.. source.Diagnostics, .. DaggerfallQuestTaskCompiler.Assess(source)];
-            try { _ = DaggerfallQuestClockCompiler.Compile(source); }
+            List<DaggerfallQuestDiagnosticDefinition> diagnostics = [.. source.Diagnostics, .. language.Assess(source)];
+            try { language.CompileClocks(source); }
             catch (ArgumentException exception) { diagnostics.Add(new(1, sourceFile, exception.Message)); }
             if (availability == NotOffered) diagnostics.Add(new(1, sourceFile, "Disabled classic quest entries are not ordinary offers."));
             result.Add(new(availability, new(name, sourceFile, diagnostics.Count == 0, diagnostics)));

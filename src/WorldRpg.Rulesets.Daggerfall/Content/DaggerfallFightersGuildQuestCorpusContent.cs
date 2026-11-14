@@ -3,12 +3,13 @@ using Rusty.Engine;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
-/// <summary>Admits the published Fighters Guild receipt and assesses it with the actual task compiler.</summary>
+/// <summary>Admits the published Fighters Guild receipt and assesses it with the quest language.</summary>
 internal static class DaggerfallFightersGuildQuestCorpusContent
 {
-    internal static IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> Read(ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
+    internal static IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> Read(ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions, IDaggerfallQuestLanguage language)
     {
         ArgumentNullException.ThrowIfNull(definitions);
+        ArgumentNullException.ThrowIfNull(language);
         using JsonDocument document = JsonDocument.Parse(payload);
         JsonElement quests = document.RootElement.GetProperty("quests");
         DaggerfallQuestCatalogRow[] catalog = [.. definitions.QuestSources.Catalog.Rows
@@ -43,10 +44,10 @@ internal static class DaggerfallFightersGuildQuestCorpusContent
             string[] publishedSourceDiagnostics = [.. receipt.GetProperty("sourceDiagnostics").EnumerateArray().Select(diagnostic => $"{diagnostic.GetProperty("line").GetInt32()}\0{diagnostic.GetProperty("text").GetString()}\0{diagnostic.GetProperty("reason").GetString()}")];
             string[] actualSourceDiagnostics = [.. source.Diagnostics.Select(diagnostic => $"{diagnostic.Line}\0{diagnostic.Text}\0{diagnostic.Reason}")];
             if (!publishedSourceDiagnostics.SequenceEqual(actualSourceDiagnostics)) throw new DaggerfallContentException([$"Fighters Guild receipt '{sourceFile}' does not retain its exact source diagnostics."]);
-            List<DaggerfallQuestDiagnosticDefinition> diagnostics = [.. source.Diagnostics, .. DaggerfallQuestTaskCompiler.Assess(source)];
+            List<DaggerfallQuestDiagnosticDefinition> diagnostics = [.. source.Diagnostics, .. language.Assess(source)];
             try
             {
-                _ = DaggerfallQuestClockCompiler.Compile(source);
+                language.CompileClocks(source);
             }
             catch (ArgumentException exception) { diagnostics.Add(new DaggerfallQuestDiagnosticDefinition(1, sourceFile, exception.Message)); }
             receipts.Add(new(name, sourceFile, diagnostics.Count == 0, diagnostics));

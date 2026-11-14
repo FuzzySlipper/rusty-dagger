@@ -12,7 +12,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")), definitions);
+        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")), definitions, new DaggerfallQuestLanguage());
 
         Assert.Equal(20, receipts.Count);
         Assert.Equal(
@@ -30,7 +30,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")), definitions);
+        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts = DaggerfallFightersGuildQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.fighters.json")), definitions, new DaggerfallQuestLanguage());
         Assert.All(receipts, receipt => Assert.True(receipt.Runnable));
         // Exercise rejection with an explicitly denied receipt; the retained corpus now runs.
         DaggerfallFightersGuildQuestRuntimeReceipt blocked = receipts[0] with
@@ -58,7 +58,7 @@ public sealed class DaggerfallFightersGuildQuestCorpusContentTests
         JsonArray quests = payload["quests"]!.AsArray();
         quests[1]!["name"] = quests[0]!["name"]!.GetValue<string>();
 
-        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallFightersGuildQuestCorpusContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), definitions));
+        DaggerfallContentException failure = Assert.Throws<DaggerfallContentException>(() => DaggerfallFightersGuildQuestCorpusContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), definitions, new DaggerfallQuestLanguage()));
 
         Assert.Contains("repeats a quest name", failure.Message, StringComparison.Ordinal);
     }

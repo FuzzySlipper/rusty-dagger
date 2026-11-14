@@ -5,8 +5,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>Named story and cure packs use the same compiled actions and lifecycle as catalog quests.</summary>
 internal static class DaggerfallNamedQuestCorpusContent
 {
-    internal static IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> Read(ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
+    internal static IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> Read(ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions, IDaggerfallQuestLanguage language)
     {
+        ArgumentNullException.ThrowIfNull(language);
         using JsonDocument document = JsonDocument.Parse(payload);
         List<DaggerfallFightersGuildQuestRuntimeReceipt> result = [];
         HashSet<string> names = new(StringComparer.Ordinal);
@@ -23,8 +24,8 @@ internal static class DaggerfallNamedQuestCorpusContent
                 .SelectMany(block => block.Lines.Skip(block.Kind == "headless" ? 0 : 1)
                     .Select((text, offset) => $"{block.FirstLine + offset + (block.Kind == "headless" ? 0 : 1)}\0{text}"))];
             if (!published.SequenceEqual(actual)) throw new DaggerfallContentException([$"Named quest receipt '{file}' lost action provenance."]);
-            List<DaggerfallQuestDiagnosticDefinition> diagnostics = [.. source.Diagnostics, .. DaggerfallQuestTaskCompiler.Assess(source)];
-            try { _ = DaggerfallQuestClockCompiler.Compile(source); }
+            List<DaggerfallQuestDiagnosticDefinition> diagnostics = [.. source.Diagnostics, .. language.Assess(source)];
+            try { language.CompileClocks(source); }
             catch (ArgumentException exception) { diagnostics.Add(new(1, file, exception.Message)); }
             result.Add(new(name, file, diagnostics.Count == 0, diagnostics));
         }

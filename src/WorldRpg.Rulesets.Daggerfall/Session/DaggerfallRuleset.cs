@@ -207,16 +207,17 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             // every site, so a start site without one would leave the player's hands unpresented.
             if (inputs.ClassicPresentation.Viewmodel is null || inputs.ClassicPresentation.UnarmedVisual is null)
                 throw new InvalidOperationException($"New-game start site '{startPack}' publishes no classic viewmodel selection for the session.");
+            DaggerfallQuestLanguage questLanguage = new();
             IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> fightersGuildQuests =
-                [.. roles[FightersGuildQuestCorpusRole].SelectMany(pack => DaggerfallFightersGuildQuestCorpusContent.Read(pack.Payload, definitions))];
+                [.. roles[FightersGuildQuestCorpusRole].SelectMany(pack => DaggerfallFightersGuildQuestCorpusContent.Read(pack.Payload, definitions, questLanguage))];
             DaggerfallClassicQuestCorpusReceipt[] classicCorpus =
-                [.. roles[QuestCorpusRole].SelectMany(pack => DaggerfallClassicQuestCorpusContent.Read(pack.Payload, definitions))];
+                [.. roles[QuestCorpusRole].SelectMany(pack => DaggerfallClassicQuestCorpusContent.Read(pack.Payload, definitions, questLanguage))];
             DaggerfallDisabledQuestSelection disabledQuestSelection = DaggerfallDisabledQuestSelection.From(classicCorpus);
             IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> classicQuestReceipts =
             [
                 .. classicCorpus.Where(receipt => receipt.IsOrdinaryOffer).Select(receipt => receipt.Runtime),
                 .. disabledQuestSelection.Receipts,
-                .. roles[NamedQuestCorpusRole].SelectMany(pack => DaggerfallNamedQuestCorpusContent.Read(pack.Payload, definitions)),
+                .. roles[NamedQuestCorpusRole].SelectMany(pack => DaggerfallNamedQuestCorpusContent.Read(pack.Payload, definitions, questLanguage)),
             ];
             // The authored new-game definition names the quests a new game starts, so a bundle that does
             // not admit one is refused by name rather than starting a game silently without it.
