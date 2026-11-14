@@ -7,6 +7,7 @@ using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -91,6 +92,56 @@ public sealed class DaggerfallTransportTests
         Assert.Equal(DaggerfallTransportMode.Foot, restored.Mode);
         Assert.False(restored.OnShip);
         Assert.Equal(DaggerfallTransportSave.Foot, restored.Capture());
+    }
+
+    [Fact]
+    public void Access_measures_a_dungeon_from_its_nearest_entrance_and_only_an_exterior_is_outdoors()
+    {
+        DaggerfallDungeonMapContent map = new([], [], [
+            new("far", DaggerfallSiteMarkerKind.Entrance, new WorldPoint(10f, 0f, 0f)),
+            new("near", DaggerfallSiteMarkerKind.Entrance, new WorldPoint(3f, 0f, 4f)),
+            new("exit", DaggerfallSiteMarkerKind.Portal, new WorldPoint(1f, 0f, 0f), "outside")]);
+
+        DaggerfallTransportAccessContext dungeon = DaggerfallTransportAccessContext.At(DaggerfallWorldProfileKind.Dungeon,
+            new WorldPoint(0f, 0f, 0f), map, shipAccessAllowed: false);
+        Assert.True(dungeon.IsIndoor);
+        Assert.True(dungeon.IsDungeon);
+        Assert.Equal(5f, dungeon.DungeonExitDistance);
+        Assert.False(dungeon.ShipAccessAllowed);
+
+        Assert.Null(DaggerfallTransportAccessContext.At(DaggerfallWorldProfileKind.Dungeon, null, map, true).DungeonExitDistance);
+        DaggerfallTransportAccessContext interior = DaggerfallTransportAccessContext.At(DaggerfallWorldProfileKind.Interior,
+            new WorldPoint(0f, 0f, 0f), map, true);
+        Assert.True(interior.IsIndoor);
+        Assert.False(interior.IsDungeon);
+        Assert.Null(interior.DungeonExitDistance);
+        DaggerfallTransportAccessContext outside = DaggerfallTransportAccessContext.At(DaggerfallWorldProfileKind.Exterior,
+            new WorldPoint(0f, 0f, 0f), null, true);
+        Assert.False(outside.IsIndoor);
+        Assert.True(outside.MountsAllowed);
+    }
+
+    [Fact]
+    public void A_mount_takes_the_ride_step_and_gallops_only_when_urged_and_allowed()
+    {
+        using Fixture fixture = new();
+        fixture.AddHorse(21);
+        DaggerfallTransportPolicy policy = new(DaggerfallTuning.Defaults.Transport);
+        PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), 0f, 0f);
+        DaggerfallLocomotionStep foot = new(new CharacterStepControls(ForwardSpeed: 4f), false, false, SprintHeld: true);
+        Assert.Null(policy.RideTuning);
+        Assert.Throws<InvalidOperationException>(() => policy.RideStep(foot, new ProductUpdateState(1f), false, true, player));
+
+        Assert.True(policy.SelectMount(DaggerfallTransportMode.Horse, fixture.ReadPlayer(), new()).Applied);
+        ProductUpdateState update = new(1f) { PlanarIntent = new System.Numerics.Vector2(0f, 1f) };
+        DaggerfallLocomotionStep held = foot;
+        for (int i = 0; i < 20; i++) held = policy.RideStep(foot, update, false, mayGallop: false, player);
+        Assert.False(held.Galloping);
+        Assert.True(held.Controls.ForwardSpeed > 0f);
+
+        DaggerfallLocomotionStep urged = foot;
+        for (int i = 0; i < 20; i++) urged = policy.RideStep(foot, update, false, mayGallop: true, player);
+        Assert.True(urged.Galloping);
     }
 
     [Fact]

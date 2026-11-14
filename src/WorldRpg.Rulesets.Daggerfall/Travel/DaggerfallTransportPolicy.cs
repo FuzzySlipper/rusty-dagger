@@ -1,6 +1,8 @@
+using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 
@@ -43,6 +45,33 @@ internal readonly record struct DaggerfallTransportAccessContext
         this.DungeonExitDistance = DungeonExitDistance;
         this.DungeonExitOverride = DungeonExitOverride;
         this.ShipAccessAllowed = ShipAccessAllowed;
+    }
+
+    /// <summary>
+    /// The access the player has where they stand: indoors anywhere but an exterior, and in a dungeon how far the nearest
+    /// entrance lies, which is how near the wagon is. <paramref name="shipAccessAllowed"/> is whether an owned ship is
+    /// reachable here.
+    /// </summary>
+    internal static DaggerfallTransportAccessContext At(DaggerfallWorldProfileKind kind, WorldPoint? position,
+        DaggerfallDungeonMapContent? dungeonMap, bool shipAccessAllowed)
+    {
+        bool dungeon = kind == DaggerfallWorldProfileKind.Dungeon;
+        float? exitDistance = null;
+        if (dungeon && position is WorldPoint at && dungeonMap is { } map)
+        {
+            Vector3 here = at.ToVector();
+            foreach (DaggerfallSiteMarker marker in map.Markers)
+            {
+                if (marker.Kind != DaggerfallSiteMarkerKind.Entrance) continue;
+                float distance = Vector3.Distance(here, marker.Position.ToVector());
+                exitDistance = exitDistance is float current ? Math.Min(current, distance) : distance;
+            }
+        }
+        return new DaggerfallTransportAccessContext(
+            IsIndoor: kind != DaggerfallWorldProfileKind.Exterior,
+            IsDungeon: dungeon,
+            DungeonExitDistance: exitDistance,
+            ShipAccessAllowed: shipAccessAllowed);
     }
 
     internal DaggerfallTransportAccessContext Validate()
@@ -290,6 +319,19 @@ internal sealed class DaggerfallTransportPolicy : IDaggerfallRide
         DaggerfallTransportMode.Cart => _tuning.CartRide,
         _ => null,
     };
+
+    /// <summary>
+    /// The mount under the player takes the step: the sprint key urges it on and the crouch key reins it in. Asked only
+    /// while <see cref="RideTuning"/> names a mount; <paramref name="mayGallop"/> is whether the rider's fatigue allows a gallop.
+    /// </summary>
+    internal DaggerfallLocomotionStep RideStep(DaggerfallLocomotionStep step, ProductUpdateState update, bool inWater, bool mayGallop,
+        PlayerControlState player)
+    {
+        RideTuning tuning = RideTuning ?? throw new InvalidOperationException("Only a mounted rider takes a ride step.");
+        RideStep ride = Ride.Step(tuning, step.Controls.ForwardSpeed!.Value,
+            new RideIntent(update.PlanarIntent, step.SprintHeld, step.CrouchHeld, mayGallop, inWater), player, update.DeltaSeconds);
+        return step with { Controls = ride.Apply(step.Controls), Galloping = ride.Galloping };
+    }
 
     internal int MovementBaseClassicUnits() => _mode switch
     {

@@ -163,7 +163,7 @@ internal sealed partial class DaggerfallSession
         bool put = action.Kind == DaggerfallUiActionKind.PropertyPut;
         InventoryView source = put ? State.Inventory.Read() : PropertyStorage.Read(key);
         if (!ulong.TryParse(action.Revision, out ulong revision) || source.StoreRevision != revision
-            || action.Item is null || !TryWagonSelection(source, action.Item, action.Amount, out InventoryContainerSelection? selection))
+            || action.Item is null || !DaggerfallContainerSelection.TryParse(source, action.Item, action.Amount, out InventoryContainerSelection? selection))
         { Presentation.SetOutcome("Inventory changed. Choose the item again."); return; }
         if (put && _inventoryUi.Read().Items.Any(item => item.Key == action.Item && item.EquippedSlots.Length > 0))
         { Presentation.SetOutcome(UnequipBeforeStoring); return; }

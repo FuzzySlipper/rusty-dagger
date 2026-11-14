@@ -417,7 +417,9 @@ internal sealed partial class DaggerfallSession
         player.Environment = _exterior.CharacterEnvironment(State.PlayerControl.Motion);         // Exterior
         ReconcileTriggers(player.Environment, simulationStep, actionGraph);                       // Character
         ShapeLocomotion(ref player, update, generation, simulationStep);                          // Character: water, climbing, levitation
-        player.Locomotion = Ride(player.Locomotion, update, player.ActiveWater is not null);      // Travel
+        if (State.Transport.RideTuning is not null)
+            player.Locomotion = State.Transport.RideStep(player.Locomotion, update, player.ActiveWater is not null,
+                _locomotion.CanGallop(State.Actors.Player.Stats, _tuning.Transport.GallopFatigueReserve), State.PlayerControl);   // Travel, Character: the gallop's fatigue
         ConstrainLocomotion(ref player);                                                          // Character: control restrictions, slowfall
         player.Movement = _spatial.Step(State.PlayerControl, update, player.Environment, player.Locomotion.Controls);   // Character
         if (player.Movement is { } ridden)
@@ -580,6 +582,25 @@ internal sealed partial class DaggerfallSession
         Presentation.SetOutcome(_definitions.TextPresentation.Resolve(
             new(DaggerfallTextKind.Resource, "401"), DungeonTextContext()).Text);                 // Text, UiProjection
         return new(true, null);
+    }
+
+    /// <summary>
+    /// The transport change's list: what an accepted change of mount or ship does across domains. The ride starts afresh,
+    /// the player lets go of a climb, a mount takes the hands and greets its rider, and boarding or leaving a ship moves
+    /// the player to the pose the transport owner returned.
+    /// </summary>
+    private void ApplyTransportChange(DaggerfallTransportActionResult result)
+    {
+        if (!result.Applied) return;
+        State.Transport.Ride.Reset();                                                             // Travel
+        _climbing.Detach();                                                                       // Character
+        if (!State.Transport.IsOnFoot && !State.Transport.OnShip)
+        {
+            State.WeaponDrawn = false;                                                            // Combat
+            _appearance.PlayGameplaySound(99, "neigh");                                           // Scene
+        }
+        if (result.Relocation is { } returnPose)
+            ApplyRelocation(returnPose.Position, returnPose.YawRadians, returnPose.PitchRadians); // Session
     }
 
     /// <summary>

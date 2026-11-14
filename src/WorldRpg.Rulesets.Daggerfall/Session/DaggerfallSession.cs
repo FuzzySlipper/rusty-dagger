@@ -121,6 +121,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private DaggerfallSiteAppearance _appearance => _sites.Projection.Appearance;
     private DaggerfallDoorRuntime _doors => _sites.Projection.Doors;
 
+    /// <summary>The transport access where the player stands (Travel's rule), with whether an owned ship is reachable here (Economy's).</summary>
+    private DaggerfallTransportAccessContext TransportAccess() => DaggerfallTransportAccessContext.At(_activeProfileKey.Kind,
+        State.PlayerControl.Position, _sites.Projection.Inputs.DungeonMap, ResolveOwnedShipProfile() is not null);
+
     private readonly World.DaggerfallWorldTime _time;
     private readonly World.DaggerfallHolidays _holidays = new();
     private readonly DaggerfallRest _rest;

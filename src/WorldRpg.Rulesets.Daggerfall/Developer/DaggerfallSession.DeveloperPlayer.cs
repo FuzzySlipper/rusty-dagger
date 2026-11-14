@@ -167,7 +167,7 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
         if (mode != DaggerfallTransportMode.Foot && State.Transport.SelectMount(mode, State.Inventory.Read(), TransportAccess()).Rejection is DaggerfallTransportRejection.MissingHorse or DaggerfallTransportRejection.MissingCart
             && Give(mode == DaggerfallTransportMode.Horse ? "94" : "93", 1) is { Succeeded: false } refused) return refused;
         DaggerfallTransportActionResult result = State.Transport.SelectMount(mode, State.Inventory.Read(), TransportAccess());
-        AppliedTransport(result);
+        ApplyTransportChange(result);
         return result.Applied ? DebugCommandResult.Success(result.Message) : Refused(result.Message);
     }
 
