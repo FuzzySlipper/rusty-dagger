@@ -25,7 +25,7 @@ public sealed class QuestOfferTests
         var pool = session.State.Quests.OrdinaryWorkPool(faction.Id, false, 20, 100, 0, DaggerfallCharacterGender.Female);
         Assert.Equal(10, pool.Length);
         Assert.All(pool, row => Assert.Equal("Witches", row.Group));
-        string text = session.OfferQuestWork(provider);
+        string text = session.QuestWork.Offer(provider);
         Assert.True(session.State.Quests.PendingOffer is not null, text);
         var offer = Assert.IsType<DaggerfallQuestOfferSave>(session.State.Quests.PendingOffer);
         Assert.StartsWith("Q0", offer.Quest.DefinitionName);
@@ -75,7 +75,7 @@ public sealed class QuestOfferTests
         using var f = new SanguineRoseSessionTests.Fixture(random: FirstWorkOffer(), prepareComposition: c => c with {
             Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
         long giver = Provider(f.Session, 510);
-        string text = f.Session.OfferQuestWork(giver);
+        string text = f.Session.QuestWork.Offer(giver);
         Assert.Equal("K0C00Y02.txt", f.Session.State.Quests.PendingOffer!.Quest.SourceFile);
         Assert.Equal(text, f.Session.State.Quests.ReadOffer()!.Text);
         string id = f.Session.State.Quests.PendingOffer!.Quest.InstanceId;
@@ -91,7 +91,7 @@ public sealed class QuestOfferTests
     {
         using var f = new SanguineRoseSessionTests.Fixture(random: SummonRandom.Create());
         long giver = Provider(f.Session, 41);
-        Assert.Contains("unavailable", f.Session.OfferQuestWork(giver), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unavailable", f.Session.QuestWork.Offer(giver), StringComparison.OrdinalIgnoreCase);
         Assert.Null(f.Session.State.Quests.PendingOffer);
         Assert.Empty(f.Session.State.Quests.All);
     }
@@ -102,7 +102,7 @@ public sealed class QuestOfferTests
         using var f = new SanguineRoseSessionTests.Fixture(random: FirstWorkOffer(), prepareComposition: c => c with {
             Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
         long giver = Provider(f.Session, 510);
-        f.Session.OfferQuestWork(giver);
+        f.Session.QuestWork.Offer(giver);
         string id = f.Session.State.Quests.PendingOffer!.Quest.InstanceId;
         Assert.Contains("no longer available", f.Session.State.Quests.AnswerOffer(id, true, false));
         Assert.Null(f.Session.State.Quests.PendingOffer);
@@ -139,13 +139,13 @@ public sealed class QuestOfferTests
         var npc = session.State.Npcs.All.First(npc => npc.Kind == DaggerfallNpcKind.Static
             && npc.Presence == DaggerfallNpcPresence.Active && npc.Services.Contains("quest-candidate")
             && !DaggerfallNpcServiceFacts.IsChild(npc.Appearance));
-        string text = session.OfferQuestWork(npc.DurableId);
+        string text = session.QuestWork.Offer(npc.DurableId);
         var offer = Assert.IsType<DaggerfallQuestOfferSave>(session.State.Quests.PendingOffer);
         session.AnswerQuestOffer(offer.Quest.InstanceId, false);
         Assert.Empty(session.State.Quests.All);
-        Assert.Contains("no work", session.OfferQuestWork(npc.DurableId));
+        Assert.Contains("no work", session.QuestWork.Offer(npc.DurableId));
         using var restored = f.Restore(session.CaptureSave());
-        Assert.Contains("no work", restored.OfferQuestWork(npc.DurableId));
+        Assert.Contains("no work", restored.QuestWork.Offer(npc.DurableId));
         Assert.Null(restored.State.Quests.PendingOffer);
         Assert.True(restored.State.Quests.Capture().WorkPool.Contacts.Single(contact => contact.Npc == npc.DurableId).Consumed);
     }

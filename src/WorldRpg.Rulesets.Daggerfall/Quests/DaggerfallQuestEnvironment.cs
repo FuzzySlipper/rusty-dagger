@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -40,12 +42,58 @@ internal sealed partial class DaggerfallQuestInstances
         (_mediaAction ?? throw new NotSupportedException("No quest media owner is composed."))(instance, operation, state, index, calendar);
 }
 
-internal sealed partial class DaggerfallSession
+/// <summary>
+/// The world a quest reads and the media it plays: the season, weather and climate its conditions name, its sounds, songs
+/// and videos, and whether a quest's operations can run in this game at all (its offer capability).
+/// </summary>
+/// <remarks>The site's audio clips, the weather and the climate change with the site and the hour, so they are read as
+/// they are asked; the quest sound plays through the site's appearance.</remarks>
+internal sealed class DaggerfallQuestEnvironment(
+    DaggerfallDefinitions definitions,
+    DaggerfallWorldTime time,
+    DaggerfallQuestDiseases diseases,
+    DaggerfallMusicDirector? music,
+    DaggerfallMusicBundle? musicBundle,
+    bool videosEnabled,
+    DaggerfallCinematicPresentation? cinematics,
+    Func<IReadOnlyList<NormalizedAudioClip>> audio,
+    Func<DaggerfallWeatherKind> weather,
+    Func<int> currentClimate,
+    Action<string, string, int, int> playSound)
 {
     // The operation remains unfinished in the save until Engine reports completion or the player
     // skips. Restoring an unfinished operation restarts its media through the same presentation owner.
-    private (string Instance, int SourceLine)? _questVideoOwner;
-    private bool QuestEnvironmentCondition(DaggerfallQuestTaskOperation operation, DaggerfallCalendar calendar)
+    private (string Instance, int SourceLine)? _videoOwner;
+
+    /// <summary>Whether a quest's operation can run in this game: its disease is known, its condition is one this owner reads,
+    /// and its sound, song or video has an admitted asset.</summary>
+    internal bool OfferCapability(DaggerfallQuestTaskOperation operation)
+    {
+        switch (operation.Kind)
+        {
+            case DaggerfallQuestTaskOperationKind.MakePcDiseased:
+            case DaggerfallQuestTaskOperationKind.CurePcDisease:
+                return diseases.Knows(operation.Targets[0]);
+            case DaggerfallQuestTaskOperationKind.Climate:
+            case DaggerfallQuestTaskOperationKind.Season:
+            case DaggerfallQuestTaskOperationKind.Weather:
+                _ = Condition(operation, time.Calendar);
+                return true;
+            case DaggerfallQuestTaskOperationKind.PlaySound:
+                return definitions.QuestSources.Tables.Sounds.Lookup.TryGetValue(operation.Targets[0], out int sound)
+                    && audio().Any(clip => clip.SourceNumericId == sound);
+            case DaggerfallQuestTaskOperationKind.PlaySong:
+                return music is not null && musicBundle?.CanPlay(operation.Targets[0].ToLowerInvariant()) == true;
+            case DaggerfallQuestTaskOperationKind.PlayVideo:
+                return videosEnabled && cinematics is not null
+                    && int.TryParse(operation.Targets[0], out int video) && video is >= 0 and <= 9999
+                    && definitions.Cinematics.Cinematics.TryGetValue($"ANIM{video:0000}.VID", out var cinematic) && cinematic.Artifact is not null;
+            default: return true;
+        }
+    }
+
+    /// <summary>Whether the season, weather or climate a quest names holds now.</summary>
+    internal bool Condition(DaggerfallQuestTaskOperation operation, DaggerfallCalendar calendar)
     {
         string expected = operation.Targets.Single();
         if (operation.Kind == DaggerfallQuestTaskOperationKind.Season)
@@ -56,19 +104,20 @@ internal sealed partial class DaggerfallSession
         }
         if (operation.Kind == DaggerfallQuestTaskOperationKind.Weather)
         {
-            if (!Enum.TryParse<DaggerfallWeatherKind>(expected, true, out var weather)) throw new NotSupportedException($"Unknown quest weather '{expected}'.");
-            return CurrentWeather == weather;
+            if (!Enum.TryParse<DaggerfallWeatherKind>(expected, true, out var expectedWeather)) throw new NotSupportedException($"Unknown quest weather '{expected}'.");
+            return weather() == expectedWeather;
         }
         if (!(new[] { "base desert", "base mountain", "base swamp", "base temperate", "ocean", "desert", "desert2", "mountain", "rainforest", "swamp", "subtropical", "mountainwoods", "woodlands", "hauntedwoodlands" }).Contains(expected))
             throw new NotSupportedException($"Unknown quest climate '{expected}'.");
-        int climate = CurrentClimate;
+        int climate = currentClimate();
         if (expected.StartsWith("base ", StringComparison.Ordinal))
             return expected[5..] == (climate switch { 224 or 225 or 229 => "desert", 226 => "mountain", 223 or 227 or 228 => "swamp", 230 or 231 or 232 => "temperate", _ => throw new NotSupportedException($"Unresolved climate {climate}.") });
         string actual = climate switch { 223 => "ocean", 224 => "desert", 225 => "desert2", 226 => "mountain", 227 => "rainforest", 228 => "swamp", 229 => "subtropical", 230 => "mountainwoods", 231 => "woodlands", 232 => "hauntedwoodlands", _ => throw new NotSupportedException($"Unresolved climate {climate}.") };
         return expected == actual;
     }
 
-    private bool QuestMediaAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation,
+    /// <summary>Plays a quest's sound, song or video, and answers whether the operation is done.</summary>
+    internal bool Media(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation,
         DaggerfallQuestTaskRuntimeState task, int index, DaggerfallCalendar calendar)
     {
         try
@@ -76,9 +125,9 @@ internal sealed partial class DaggerfallSession
             switch (operation.Kind)
             {
                 case DaggerfallQuestTaskOperationKind.PlaySound:
-                    if (!_definitions.QuestSources.Tables.Sounds.Lookup.TryGetValue(operation.Targets[0], out int soundId))
+                    if (!definitions.QuestSources.Tables.Sounds.Lookup.TryGetValue(operation.Targets[0], out int soundId))
                         throw new NotSupportedException($"Unknown quest sound '{operation.Targets[0]}'.");
-                    var clip = _sites.Projection.Inputs.Audio.FirstOrDefault(clip => clip.SourceNumericId == soundId)
+                    var clip = audio().FirstOrDefault(clip => clip.SourceNumericId == soundId)
                         ?? throw new NotSupportedException($"Quest sound '{operation.Targets[0]}' ({soundId}) has no admitted ordinary audio asset.");
                     long second = calendar.ToAbsoluteSeconds();
                     long interval = checked(long.Parse(operation.Targets[1], CultureInfo.InvariantCulture) * 60);
@@ -87,35 +136,35 @@ internal sealed partial class DaggerfallSession
                     task.OperationState[index] = task.OperationState[index] with { Sound = sound };
                     if (count > 0 && sound.Played >= count) return true;
                     if (second - sound.LastPlayedSecond < interval) return false;
-                    _appearance.PlayQuestSound(clip.Id, instance.InstanceId, operation.SourceLine, sound.Played + 1);
+                    playSound(clip.Id, instance.InstanceId, operation.SourceLine, sound.Played + 1);
                     sound = new(second, checked(sound.Played + 1));
                     task.OperationState[index] = task.OperationState[index] with { Sound = sound, UnavailableReason = null };
                     return count > 0 && sound.Played >= count;
                 case DaggerfallQuestTaskOperationKind.PlaySong:
                     string track = operation.Targets.Single().ToLowerInvariant();
-                    if (_musicBundle?.CanPlay(track) != true || _music is null)
+                    if (musicBundle?.CanPlay(track) != true || music is null)
                         throw new NotSupportedException($"Quest song '{track}' has no admitted ordinary audio asset; MIDI playback is excluded.");
-                    if (_music.Cue(track) != track) throw new NotSupportedException($"Quest song '{track}' could not start.");
+                    if (music.Cue(track) != track) throw new NotSupportedException($"Quest song '{track}' could not start.");
                     return true;
                 case DaggerfallQuestTaskOperationKind.PlayVideo:
                     if (!int.TryParse(operation.Targets.Single(), out int number) || number is < 0 or > 9999)
                         throw new NotSupportedException("Quest video requires a source video number from 0 through 9999.");
                     // A disabled video counts as skipped: the presentation preference never holds back the
                     // quest that plays it, as the donor completes such quests whatever its video setting.
-                    if (!_composition.VideosEnabled) return true;
-                    if (Cinematics is null) throw new NotSupportedException("Quest video has no admitted Engine cinematic capability.");
-                    if (_questVideoOwner == (instance.InstanceId, operation.SourceLine))
+                    if (!videosEnabled) return true;
+                    if (cinematics is null) throw new NotSupportedException("Quest video has no admitted Engine cinematic capability.");
+                    if (_videoOwner == (instance.InstanceId, operation.SourceLine))
                     {
-                        if (Cinematics.ActiveSource is not null) return false;
-                        var result = Cinematics.TakeResult();
-                        _questVideoOwner = null;
+                        if (cinematics.ActiveSource is not null) return false;
+                        var result = cinematics.TakeResult();
+                        _videoOwner = null;
                         if (result?.Kind is Rusty.Engine.VideoRealizationFactKind.Completed or Rusty.Engine.VideoRealizationFactKind.Skipped)
                             return true;
                         throw new NotSupportedException(result?.Failure ?? "Quest video ended without a completion result.");
                     }
-                    if (Cinematics.ActiveSource is not null) return false;
-                    Cinematics.Play($"ANIM{number:0000}.VID");
-                    _questVideoOwner = (instance.InstanceId, operation.SourceLine);
+                    if (cinematics.ActiveSource is not null) return false;
+                    cinematics.Play($"ANIM{number:0000}.VID");
+                    _videoOwner = (instance.InstanceId, operation.SourceLine);
                     return false;
                 default: throw new NotSupportedException($"Unknown quest media action '{operation.Kind}'.");
             }

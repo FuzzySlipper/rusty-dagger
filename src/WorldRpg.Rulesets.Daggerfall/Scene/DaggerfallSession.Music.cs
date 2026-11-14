@@ -175,4 +175,15 @@ internal sealed partial class DaggerfallSession
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         _musicClips.Clear();
     }
+
+    /// <summary>Whether the player stands in a dungeon's castle block, the donor's IsPlayerInsideDungeonCastle.</summary>
+    /// <remarks>Music asks every update, so the scan stays a plain loop with no captured closure.</remarks>
+    private bool InsideCastleZone()
+    {
+        if (_sites.Projection.Inputs.ProfileKind != DaggerfallWorldProfileKind.Dungeon || State.PlayerControl.Position is not { } position) return false;
+        var point = position.ToVector();
+        foreach (DaggerfallAmbientZone zone in _sites.Projection.Inputs.AmbientZones)
+            if (zone.Kind == DaggerfallAmbientZoneKind.Castle && zone.Contains(point)) return true;
+        return false;
+    }
 }

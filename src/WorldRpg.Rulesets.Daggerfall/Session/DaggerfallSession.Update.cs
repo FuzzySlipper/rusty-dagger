@@ -267,7 +267,7 @@ internal sealed partial class DaggerfallSession
         foreach (string line in Banking.AdvanceLoans(before, after)) Presentation.SetOutcome(line); // Economy, its lines UiProjection
         _vampirism.AdvanceQuestOpportunities(before, after);                                      // Afflictions
         _lycanthropy.AdvanceQuestOpportunities(before, after);                                    // Afflictions
-        StartDueCriminalInvitations();                                                            // Quests
+        foreach (string line in QuestWork.StartDueInvitations()) Presentation.SetOutcome(line);   // Quests, its lines UiProjection
         ExpireConjuredItems();                                                                    // Session: the conjured items' list, below
         AdvanceRounds(before, after, ordinaryPlay, resting);                                      // Session: the round's list, below
         // An elapsed interval announces the holiday it ends on once, when it completes, rather than
@@ -971,6 +971,16 @@ internal sealed partial class DaggerfallSession
         _itemLifetime.RemoveCarriedQuestItems(instanceId);                                        // Items
         State.QuestItems.RemoveCustody(instanceId);                                               // Quests
         State.HeldEnchantments.Refresh();                                                         // Magic
+    }
+
+    /// <summary>
+    /// The answer to a quest offer: the quest accepts or declines it while its giver still offers it, its line is shown,
+    /// and the open conversation reads again whether its people still have work.
+    /// </summary>
+    internal void AnswerQuestOffer(string identity, bool accept)
+    {
+        Presentation.SetOutcome(QuestWork.Answer(identity, accept));                              // Quests, its line UiProjection
+        _dialogue?.RefreshEligibility();                                                          // Dialogue
     }
 
     /// <summary>

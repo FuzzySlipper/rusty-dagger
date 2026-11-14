@@ -323,9 +323,13 @@ internal sealed partial class DaggerfallSession
             DaggerfallGuildMembershipPolicy guildMembership = new(social,
                 skillUses.PermanentSkillValue, DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
             DaggerfallConcreteGuildMembershipRuntime concreteGuildMembership = new(guildMembership);
-            quests.BindEnvironmentActions(QuestEnvironmentCondition, QuestMediaAction);
-            quests.BindOfferCapabilities(QuestOfferCapability);
-            quests.BindDiseaseActions(QuestDiseaseAction);
+            DaggerfallQuestDiseases questDiseases = new(definitions, _diseases, effects, actors.Player.DurableId);
+            DaggerfallQuestEnvironment questEnvironment = new(definitions, _time, questDiseases, _music, _musicBundle, composition.VideosEnabled,
+                Cinematics, () => _sites.Projection.Inputs.Audio, () => CurrentWeather, () => CurrentClimate,
+                (clip, quest, line, count) => _appearance.PlayQuestSound(clip, quest, line, count));
+            quests.BindEnvironmentActions(questEnvironment.Condition, questEnvironment.Media);
+            quests.BindOfferCapabilities(questEnvironment.OfferCapability);
+            quests.BindDiseaseActions(questDiseases.Apply);
             quests.BindLycanthropyCure(() => _lycanthropy!.Cure(fromQuest: true));
             quests.BindVampirismCure(() => _vampirism!.Cure(fromQuest: true));
             quests.BindRuntime(new DaggerfallQuestRuntime(progression, playerStats, definitions,
@@ -716,12 +720,12 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindClickGold(amount => State.Currency.TrySpendGold(amount, []));
             State.Quests.BindSocial(State.Social, State.Crime, () => _site.Region);
             State.Quests.BindWorldRead(() => _sites.ReadQuestLocation());
-            State.Quests.BindWorldActions(ApplyQuestWorldAction);
+            State.Quests.BindWorldActions((instance, operation) => _questWorldActions.Apply(instance, operation));
             _inventoryUi.BindQuestDrops(State.Quests.CanDropItem, State.Quests.ItemDropped);
             State.Quests.BindFoeCommands(ApplyQuestFoeCommand);
             State.Quests.BindFoeSpawning(SpawnQuestFoe);
             State.Quests.BindEnemyRelations(ApplyAllEnemyCommand, id => actors.TryGet(id, out var actor) && !actor.IsDefeated);
-            State.Quests.BindGuardSpawning(SpawnQuestGuards);
+            State.Quests.BindGuardSpawning((operation, immediate, elapsed, state) => _questGuards.Spawn(operation, immediate, elapsed, state));
             State.Quests.BindRewards(OfferQuestReward, PresentQuestReward, tuning.QuestRewards);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, FastTravel.RevealFromMap, _itemCondition, _notebook,
                 useDrug: template => _poisoning.UseDrug(template) == DaggerfallPoisonAdmission.Admitted,
@@ -931,6 +935,11 @@ internal sealed partial class DaggerfallSession
                 providerAvailable: State.Services.ProviderAvailable,
                 openTeleport: OpenGuildTeleport,
                 knightlyHouse: Holdings.AwardKnightlyHouse);
+            _questWorldActions = new DaggerfallQuestWorldActions(_site, _sites, definitions, _notebook);
+            _questGuards = new DaggerfallQuestGuards(State.Actors, State.Npcs, State.PlayerControl, State.Crime, _roster.Definitions, _sites, _time,
+                Crimes, Law, Civilians, tuning.QuestSpawning, tuning.Law);
+            QuestWork = new DaggerfallQuestWork(State.Quests, State.Npcs, State.Services, State.Social, State.Crime, GuildProviders, definitions,
+                State.Progression, _time, _site, tuning.QuestOffers, CurrentInteriorBuilding, () => _sites.ActiveProfile.Kind, InsideCastleZone);
             _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));
             _vitality.ConditionTrackLost += AppendSpellTrackLoss;
             _vitality.SpellTrackRestored += (target, track, requested, restored) =>
@@ -1041,7 +1050,7 @@ internal sealed partial class DaggerfallSession
             resolveQuestRumor: index => State.Quests.ResolveDialogueRumor(State.Quests.DialogueRumors()[index]),
             resolveQuestTopic: ResolveQuestTopic,
             calendar: () => _time.Calendar,
-            workAvailable: DialogueWorkAvailable, offerWork: OfferQuestWork,
+            workAvailable: npc => QuestWork.HasWork(npc), offerWork: provider => QuestWork.Offer(provider),
             readVariable: address => State.Variables.Read(address),
             templeService: (npc, topic, amount) => State.TempleServices.Resolve(npc, CurrentInteriorBuilding(), topic switch
             {
@@ -1065,14 +1074,6 @@ internal sealed partial class DaggerfallSession
         return State.Quests.TryResolveDialogueTopic(npcId, topicId,
             out string? text, out IReadOnlyList<string> diagnostics)
             ? (text!, diagnostics) : null;
-    }
-
-    private bool DialogueWorkAvailable(long npcId)
-    {
-        if (QuestProvider(npcId) is not { } context) return false;
-        return State.Quests.HasOrdinaryWorkOffer(context.Faction, context.Member, State.Progression.Level, context.Reputation, context.Rank,
-            context.Provider.Appearance.Gender == "Female" ? DaggerfallCharacterGender.Female : DaggerfallCharacterGender.Male,
-            checked((int)_time.Calendar.DayNumber));
     }
 
     private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();

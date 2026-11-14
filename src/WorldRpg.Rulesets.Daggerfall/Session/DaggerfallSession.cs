@@ -1041,6 +1041,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The guilds' providers: what a guild's NPC answers to its topics, its welcome and its free passage.</summary>
     internal DaggerfallGuildProviders GuildProviders { get; } = null!;
 
+    /// <summary>Who offers quest work, the offers and their answers, and the criminal guilds' invitations.</summary>
+    internal DaggerfallQuestWork QuestWork { get; } = null!;
+
+    /// <summary>What a quest does to the world: variants, revealed places and the quest teleport.</summary>
+    private readonly DaggerfallQuestWorldActions _questWorldActions = null!;
+
+    /// <summary>The city guards a quest calls.</summary>
+    private readonly DaggerfallQuestGuards _questGuards = null!;
+
     /// <summary>The greeting a building gives as the player walks in, holding the entry until it is read.</summary>
     private readonly DaggerfallBuildingGreeting _buildingGreeting;
 
