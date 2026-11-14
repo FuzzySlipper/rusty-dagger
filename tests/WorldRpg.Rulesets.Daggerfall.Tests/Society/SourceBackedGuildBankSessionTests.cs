@@ -38,7 +38,7 @@ public sealed class SourceBackedGuildBankSessionTests
         Assert.Contains(dialogue.Topics, topic => topic.Id == "directions");
 
         Submit(session, 1, new { action = "bank-open", revision = dialogue.Revision });
-        Assert.True(session.ReadPropertyPresentation().BankAvailable);
+        Assert.True(session.EconomyPanels.ReadPropertyPresentation().BankAvailable);
 
         AddGold(session, 1_000_000);
         Submit(session, 2, new { action = "currency-deposit-gold", amount = 1_000_000 });
@@ -48,7 +48,7 @@ public sealed class SourceBackedGuildBankSessionTests
         // Charing is a source town with a bank but no port-town byte, so its admitted bank offers
         // the actual local house deed rather than a fabricated ship deed. The bank remains the
         // ordinary authority for this source property purchase.
-        DaggerfallPropertyOfferView house = Assert.Single(session.ReadPropertyPresentation().Offers,
+        DaggerfallPropertyOfferView house = Assert.Single(session.EconomyPanels.ReadPropertyPresentation().Offers,
             offer => offer.Key.StartsWith("house/", StringComparison.Ordinal) && offer.CanBuy);
         ulong housePrice = ulong.Parse(house.Price, System.Globalization.CultureInfo.InvariantCulture);
         ulong carriedBeforePurchase = session.State.Currency.Read().Gold;

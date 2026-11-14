@@ -23,14 +23,14 @@ public sealed class PropertySessionTests
     {
         using Fixture f = new(questBuildingScenario: true, automaticQuest: true); f.OpenBank();
         var session = f.Session; var site = session.Site.ActiveSite!;
-        var before = session.ReadPropertyPresentation().Offers;
+        var before = session.EconomyPanels.ReadPropertyPresentation().Offers;
         var started = session.State.Quests.Start(new("allocated-house", "allocation.txt", "allocation", DaggerfallQuestLifecycle.Active, null, [], []));
         var resource = Assert.Single(started.Resources); var claim = resource.Binding.Building!;
         var building = site.Exterior!.Buildings[new(claim.BlockX, claim.BlockY, claim.Index)];
         string key = HouseKey(site.Id, building);
         Assert.Contains(before, offer => offer.Key == key);
-        Assert.DoesNotContain(session.ReadPropertyPresentation().Offers, offer => offer.Key == key);
-        Assert.Contains(session.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id,
+        Assert.DoesNotContain(session.EconomyPanels.ReadPropertyPresentation().Offers, offer => offer.Key == key);
+        Assert.Contains(session.EconomyPanels.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id,
             site.Exterior.Buildings.Values.First(value => value.Source.BuildingType == 1 && value.ModelRadius > 0)));
         Assert.True(session.TryTransitionTo(f.Destination.ProfileKey));
         using var restored = f.Restore(session.CaptureSave());
@@ -40,7 +40,7 @@ public sealed class PropertySessionTests
         restored.State.Quests.Complete("allocated-house", "complete");
         Assert.False(restored.State.Quests.ClaimsBuilding(site.Id, building));
         Assert.True(restored.TryTransitionTo(f.Land.ProfileKey)); f.OpenBank(restored);
-        Assert.Contains(restored.ReadPropertyPresentation().Offers, offer => offer.Key == key);
+        Assert.Contains(restored.EconomyPanels.ReadPropertyPresentation().Offers, offer => offer.Key == key);
     }
 
     [Fact]
@@ -50,13 +50,13 @@ public sealed class PropertySessionTests
         var s = f.Session; var site = s.Site.ActiveSite!;
         var house = site.Exterior!.Buildings.Values.Single(building => HouseKey(site.Id, building)
             == DaggerfallPropertyStorageKey.ForHouse(f.HouseIdentity).Value);
-        var offer = s.ReadPropertyPresentation().Offers.Single(value => value.Key == HouseKey(site.Id, house));
+        var offer = s.EconomyPanels.ReadPropertyPresentation().Offers.Single(value => value.Key == HouseKey(site.Id, house));
         Assert.True(s.State.Bank.TryCreditAccount(site.Region, ulong.Parse(offer.Price)));
         f.Submit(new { action = "property-buy", key = offer.Key });
         Assert.True(s.State.Property.OwnsHouse(f.HouseIdentity));
         StartBuilding(s, "owned-claim", house);
         Assert.True(s.State.Quests.ClaimsBuilding(site.Id, house));
-        Assert.True(s.ReadPropertyPresentation().Offers.Single(value => value.Key == offer.Key).CanEnter);
+        Assert.True(s.EconomyPanels.ReadPropertyPresentation().Offers.Single(value => value.Key == offer.Key).CanEnter);
         f.Submit(new { action = "property-enter", key = offer.Key });
         Assert.Equal(f.House.ProfileKey, s.Sites.ActiveProfile);
         using var restored = f.Restore(s.CaptureSave());
@@ -64,7 +64,7 @@ public sealed class PropertySessionTests
         Assert.True(s.TryTransitionTo(f.Land.ProfileKey)); f.OpenBank();
         f.Submit(new { action = "property-sell", key = offer.Key });
         Assert.False(s.State.Property.OwnsHouse(f.HouseIdentity));
-        Assert.All(s.ReadPropertyPresentation().Offers.Where(value => value.Key == offer.Key), value =>
+        Assert.All(s.EconomyPanels.ReadPropertyPresentation().Offers.Where(value => value.Key == offer.Key), value =>
         { Assert.False(value.Owned); Assert.False(value.CanSell); Assert.False(value.CanEnter); });
     }
 
@@ -73,30 +73,30 @@ public sealed class PropertySessionTests
     {
         using Fixture f = new(questBuildingScenario: true); f.OpenBank();
         var s = f.Session; var site = s.Site.ActiveSite!;
-        var offers = s.ReadPropertyPresentation().Offers;
+        var offers = s.EconomyPanels.ReadPropertyPresentation().Offers;
         var house = site.Exterior!.Buildings.Values.First(building => building.Source.BuildingType is >= 17 and <= 20
             && offers.Any(offer => offer.Key == HouseKey(site.Id, building)));
         var other = site.Exterior.Buildings.Values.First(building => building.Source.BuildingType is >= 17 and <= 20 && building.Id != house.Id);
         StartBuilding(s, "claimed-house", house);
         Assert.True(s.State.Quests.ClaimsBuilding(site.Id, house));
         Assert.False(s.State.Quests.ClaimsBuilding(site.Id, other));
-        Assert.DoesNotContain(s.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, house));
-        Assert.Contains(s.ReadPropertyPresentation().Offers, offer => offer.Key.StartsWith("house/")
+        Assert.DoesNotContain(s.EconomyPanels.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, house));
+        Assert.Contains(s.EconomyPanels.ReadPropertyPresentation().Offers, offer => offer.Key.StartsWith("house/")
             && site.Exterior.Buildings.Values.Any(building => building.Source.BuildingType is >= 17 and <= 20 && HouseKey(site.Id, building) == offer.Key));
         var explicitHouse = site.Exterior.Buildings.Values.Single(building => building.Source.Id == f.HouseIdentity.Building
             && building.Id.BlockX == f.HouseIdentity.BlockX && building.Id.BlockY == f.HouseIdentity.BlockY);
         StartBuilding(s, "claimed-explicit", explicitHouse);
-        Assert.Contains(s.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, explicitHouse));
+        Assert.Contains(s.EconomyPanels.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, explicitHouse));
         Assert.True(s.TryTransitionTo(f.Destination.ProfileKey));
         Assert.True(s.State.Quests.ClaimsBuilding(site.Id, house));
         using var restored = f.Restore(s.CaptureSave());
         Assert.True(restored.State.Quests.ClaimsBuilding(site.Id, house));
         Assert.True(restored.TryTransitionTo(f.Land.ProfileKey));
         f.OpenBank(restored);
-        Assert.DoesNotContain(restored.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, house));
+        Assert.DoesNotContain(restored.EconomyPanels.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, house));
         restored.State.Quests.Complete("claimed-house", "finished");
         Assert.False(restored.State.Quests.ClaimsBuilding(site.Id, house));
-        Assert.Contains(restored.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, house));
+        Assert.Contains(restored.EconomyPanels.ReadPropertyPresentation().Offers, offer => offer.Key == HouseKey(site.Id, house));
         using var finished = f.Restore(restored.CaptureSave());
         Assert.False(finished.State.Quests.ClaimsBuilding(site.Id, house));
         Assert.True(finished.State.Quests.ClaimsBuilding(site.Id, explicitHouse));
@@ -228,11 +228,11 @@ public sealed class PropertySessionTests
         DaggerfallExteriorCellResidencySave residency = f.Session.Exterior.CaptureExteriorResidency()!.Value;
         Assert.Equal(f.Session.Exterior.CurrentExteriorCell(), residency.Center);
         f.AddGold(4);
-        DaggerfallPropertyStorageView storage = f.Session.ReadPropertyPresentation().Storage!;
+        DaggerfallPropertyStorageView storage = f.Session.EconomyPanels.ReadPropertyPresentation().Storage!;
         string coins = f.Session.State.Inventory.Read().Stacks.First(item => item.Definition.Value == "gold-piece").Id.Value;
         f.Submit(new { action = "property-put", key, item = $"stack:{coins}", amount = 4, revision = storage.Revision });
-        Assert.Equal("4", Assert.Single(f.Session.ReadPropertyPresentation().Storage!.Items).Quantity);
-        Assert.True(Assert.Single(f.Session.ReadPropertyPresentation().Storage!.Items).Stackable, "Stored rows are inventory rows, so a part of a stack can be taken.");
+        Assert.Equal("4", Assert.Single(f.Session.EconomyPanels.ReadPropertyPresentation().Storage!.Items).Quantity);
+        Assert.True(Assert.Single(f.Session.EconomyPanels.ReadPropertyPresentation().Storage!.Items).Stackable, "Stored rows are inventory rows, so a part of a stack can be taken.");
         // The store refuses exactly what is worn, and says so, so the screen offers only what it takes.
         string[] worn = [.. f.Session.ReadInventoryPresentation().Items.Where(item => item.EquippedSlots.Length > 0).Select(item => item.Key)];
         Assert.Equal(worn, storage.StoreRefusals.Select(refusal => refusal.Item));
@@ -240,12 +240,12 @@ public sealed class PropertySessionTests
         RulesetSavePayload saved = f.Session.CaptureSave();
         using DaggerfallSession restored = f.Restore(saved);
         Assert.Equal(ship.ProfileKey, restored.Sites.ActiveProfile);
-        Assert.Equal("4", Assert.Single(restored.ReadPropertyPresentation().Storage!.Items).Quantity);
+        Assert.Equal("4", Assert.Single(restored.EconomyPanels.ReadPropertyPresentation().Storage!.Items).Quantity);
         restored.Update(new ProductUpdate(OuterUpdate(99), [Ui("{\"action\":\"transport-leave-ship\"}")]));
         Assert.False(restored.State.Transport.OnShip);
         Assert.Equal(f.Land.ProfileKey, restored.Sites.ActiveProfile);
         Assert.Equal(landPosition, restored.State.PlayerControl.Position);
-        Assert.Null(restored.ReadPropertyPresentation().Storage);
+        Assert.Null(restored.EconomyPanels.ReadPropertyPresentation().Storage);
         Assert.True(restored.State.Property.OwnsShip);
         // Storage is property-owned, so leaving does not retire its item contents.
         Assert.Equal(4UL, Assert.Single(restored.Holdings.Storage.Read(new(key)).Stacks).Quantity);
@@ -255,7 +255,7 @@ public sealed class PropertySessionTests
     public void Property_storage_keeps_the_carried_material_name_after_reload()
     {
         using Fixture f = new(); f.OpenBank(); var s = f.Session;
-        var offer = s.ReadPropertyPresentation().Offers.Single(value => value.Key == DaggerfallPropertyStorageKey.ForHouse(f.HouseIdentity).Value);
+        var offer = s.EconomyPanels.ReadPropertyPresentation().Offers.Single(value => value.Key == DaggerfallPropertyStorageKey.ForHouse(f.HouseIdentity).Value);
         Assert.True(s.State.Bank.TryCreditAccount(f.Land.Site!.Value.Region, ulong.Parse(offer.Price)));
         f.Submit(new { action = "property-buy", key = offer.Key });
         f.Submit(new { action = "property-enter", key = offer.Key });
@@ -265,31 +265,31 @@ public sealed class PropertySessionTests
         s.State.ItemInstances.ReplaceUnique(identity, metadata with { Material = "dwarven" });
         string label = s.ReadInventoryPresentation().Items.Single(value => value.Definition == "iron-dagger").Label;
         Assert.Contains("Dwarven", label);
-        var storage = s.ReadPropertyPresentation().Storage!;
+        var storage = s.EconomyPanels.ReadPropertyPresentation().Storage!;
         f.Submit(new { action = "property-put", key = offer.Key, item = $"unique:{item.Entity.Value}", amount = 1, revision = storage.Revision });
-        Assert.Equal(label, Assert.Single(s.ReadPropertyPresentation().Storage!.Items).Label);
+        Assert.Equal(label, Assert.Single(s.EconomyPanels.ReadPropertyPresentation().Storage!.Items).Label);
         using var restored = f.Restore(s.CaptureSave());
-        Assert.Equal(label, Assert.Single(restored.ReadPropertyPresentation().Storage!.Items).Label);
+        Assert.Equal(label, Assert.Single(restored.EconomyPanels.ReadPropertyPresentation().Storage!.Items).Label);
     }
 
     [Fact]
     public void Purchased_house_gates_real_entrance_rest_storage_and_sale_retains_contents()
     {
         using Fixture f = new(); f.OpenBank();
-        DaggerfallPropertyOfferView offer = f.Session.ReadPropertyPresentation().Offers.Single(value => value.Key == DaggerfallPropertyStorageKey.ForHouse(f.HouseIdentity).Value);
+        DaggerfallPropertyOfferView offer = f.Session.EconomyPanels.ReadPropertyPresentation().Offers.Single(value => value.Key == DaggerfallPropertyStorageKey.ForHouse(f.HouseIdentity).Value);
         Assert.True(f.Session.State.Bank.TryCreditAccount(f.Land.Site!.Value.Region, ulong.Parse(offer.Price)));
         f.Submit(new { action = "property-buy", key = offer.Key });
         Assert.True(f.Session.State.Property.OwnsHouse(f.HouseIdentity));
-        Assert.True(f.Session.ReadPropertyPresentation().Offers.Single(value => value.Key == offer.Key).CanEnter);
+        Assert.True(f.Session.EconomyPanels.ReadPropertyPresentation().Offers.Single(value => value.Key == offer.Key).CanEnter);
         f.Submit(new { action = "property-enter", key = offer.Key });
         Assert.Equal(f.House.ProfileKey, f.Session.Sites.ActiveProfile);
         f.AddGold(2);
-        var storage = f.Session.ReadPropertyPresentation().Storage!;
+        var storage = f.Session.EconomyPanels.ReadPropertyPresentation().Storage!;
         string coins = f.Session.State.Inventory.Read().Stacks.First(item => item.Definition.Value == "gold-piece").Id.Value;
         f.Submit(new { action = "property-put", key = offer.Key, item = $"stack:{coins}", amount = 2, revision = storage.Revision });
         var saved = f.Session.CaptureSave();
         using var restored = f.Restore(saved);
-        Assert.Equal("2", Assert.Single(restored.ReadPropertyPresentation().Storage!.Items).Quantity);
+        Assert.Equal("2", Assert.Single(restored.EconomyPanels.ReadPropertyPresentation().Storage!.Items).Quantity);
         restored.Update(new ProductUpdate(OuterUpdate(98), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
         Assert.Equal(3600, restored.RestPanel.View.ElapsedSeconds);
         Assert.True(f.Session.TryTransitionTo(f.Land.ProfileKey)); f.OpenBank();
@@ -302,7 +302,7 @@ public sealed class PropertySessionTests
     public void House_without_admitted_interior_cannot_be_purchased_or_entered()
     {
         using Fixture f = new(); f.OpenBank();
-        var unavailable = f.Session.ReadPropertyPresentation().Offers.First(offer => offer.Key.StartsWith("house/")
+        var unavailable = f.Session.EconomyPanels.ReadPropertyPresentation().Offers.First(offer => offer.Key.StartsWith("house/")
             && offer.Key != DaggerfallPropertyStorageKey.ForHouse(f.HouseIdentity).Value);
         Assert.False(unavailable.CanBuy);
         Assert.True(f.Session.State.Bank.TryCreditAccount(f.Land.Site!.Value.Region, ulong.Parse(unavailable.Price)));
@@ -334,14 +334,14 @@ public sealed class PropertySessionTests
         string revision = f.OpenBankDialogue();
         Assert.True(f.Session.ActivationView.Dialogue!.BankAvailable);
         f.Submit(new { action = "bank-open", revision = "stale" });
-        Assert.False(f.Session.ReadPropertyPresentation().BankAvailable);
+        Assert.False(f.Session.EconomyPanels.ReadPropertyPresentation().BankAvailable);
         f.Submit(new { action = "bank-open", revision });
-        Assert.True(f.Session.ReadPropertyPresentation().BankAvailable);
+        Assert.True(f.Session.EconomyPanels.ReadPropertyPresentation().BankAvailable);
         Assert.Null(f.Session.ActivationView.Dialogue);
         f.Session.State.Npcs.SetPresence(f.BankerId, DaggerfallNpcPresence.Removed);
-        Assert.False(f.Session.ReadPropertyPresentation().BankAvailable);
+        Assert.False(f.Session.EconomyPanels.ReadPropertyPresentation().BankAvailable);
         f.Submit(new { action = "bank-open", revision });
-        Assert.False(f.Session.ReadPropertyPresentation().BankAvailable);
+        Assert.False(f.Session.EconomyPanels.ReadPropertyPresentation().BankAvailable);
     }
 
     [Fact]

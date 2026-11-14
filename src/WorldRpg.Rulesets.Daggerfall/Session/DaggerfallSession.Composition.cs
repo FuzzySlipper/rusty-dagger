@@ -724,7 +724,7 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindFoeSpawning((operation, foe, send) => QuestFoes.Spawn(operation, foe, send));
             State.Quests.BindEnemyRelations(clear => QuestFoes.CommandAllEnemies(clear), id => actors.TryGet(id, out var actor) && !actor.IsDefeated);
             State.Quests.BindGuardSpawning((operation, immediate, elapsed, state) => _questGuards.Spawn(operation, immediate, elapsed, state));
-            State.Quests.BindRewards((instance, symbol) => _questItemPlacement.OfferReward(instance, symbol), PresentQuestReward, tuning.QuestRewards);
+            State.Quests.BindRewards((instance, symbol) => _questItemPlacement.OfferReward(instance, symbol), pile => _lootActions.PresentQuestReward(pile), tuning.QuestRewards);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, FastTravel.RevealFromMap, _itemCondition, _notebook,
                 useDrug: template => _poisoning.UseDrug(template) == DaggerfallPoisonAdmission.Admitted,
                 useOghma: () =>
@@ -1034,6 +1034,16 @@ internal sealed partial class DaggerfallSession
                 () => { _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard(); });
             LocalMap = new DaggerfallLocalMap(State.PlayerControl, _site, State.DungeonDiscoveries, () => _sites.Projection.Inputs,
                 () => _sites.ActiveProfile, point => _exterior.ExteriorSitePosition(point), Presentation);
+            _characterActions = new DaggerfallCharacterActions(_creation, State.Character, State.LevelUps, _controls, definitions.NewGame.QuickEntry,
+                () => _mode == ProductMode.Title && !_newGameInitialized, Presentation);
+            _lootActions = new DaggerfallLootActions(_lootUi, _corpseLoot, _groundContainers, _facts, State.Encumbrance, definitions,
+                State.ItemInstances, State.Inventory, State.PlayerControl, _input, State.Quests.ItemClicked, PropertyLoot.Open, PropertyLoot.ObserveTake,
+                Presentation);
+            EconomyPanels = new DaggerfallEconomyPanels(Banking, State.Bank, MerchantTrade, RoomRental, State.Tavern, State.SkillTraining, Holdings,
+                State.Inventory, State.Wagon, _inventoryUi, definitions, () => _dialogue, CurrentInteriorBuilding, TransportAccess, RequestPanel,
+                destination => TryTransitionTo(destination), Presentation);
+            _travelPanel = new DaggerfallTravelPanel(FastTravel, State.Transport, State.Wagon, State.Inventory, _inventoryUi, _hud.RequestTravelPlaces,
+                TransportAccess, AcceptTravel, BoardPropertyShip, LeavePropertyShip, ApplyTransportChange, Presentation);
             _textActions = new DaggerfallTextActions(DungeonText, _notebook, DungeonActions.ContinueAcceptedAnswer, Presentation, ContinueBuildingEntry);
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,
@@ -1183,7 +1193,7 @@ internal sealed partial class DaggerfallSession
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
             reach,
             new DaggerfallActivationContributions(
-                new DaggerfallCorpseActivationOwner(() => _corpseLoot.Corpses.Keys, _corpseLoot.ContainerName, State.Actors, _sight.Corpse, OpenCorpseLoot),
+                new DaggerfallCorpseActivationOwner(() => _corpseLoot.Corpses.Keys, _corpseLoot.ContainerName, State.Actors, _sight.Corpse, actor => _lootActions.OpenCorpse(actor)),
                 door = new DaggerfallDoorActivationOwner(_doors, DungeonActions.TriggerDoor, ForceLock, id => _doorSpells.Activate(_doors, id),
                     (door, forceMode) => EnterExteriorBuilding(door, forceMode, skipGreeting: false),
                     door => Entrance.Door(_doors, door, _activeProfileKey.Site), door => Entrance.Name(_doors, door, _activeProfileKey.Site),
@@ -1192,7 +1202,7 @@ internal sealed partial class DaggerfallSession
                     logicalProfile => (_sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted."))
                         .RequireLogicalKey(logicalProfile),
                     EnterPortal),
-                new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyLoot.InteractionPoint, OpenGroundLoot),
+                new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyLoot.InteractionPoint, id => _lootActions.OpenGround(id)),
                 npc: people));
         Activation.Use(module, door);
     }

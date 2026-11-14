@@ -104,7 +104,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.DaedraAnswer:
                 ChangeSummoning(action); break;
             case DaggerfallUiActionKind.Begin:
-                if (_definitions.NewGame.QuickEntry) _creation.QuickStart();
+                _characterActions.Begin();
                 break;
             // A running game already has its content; only the unavailable session imports it.
             case DaggerfallUiActionKind.ContentImport:
@@ -131,16 +131,15 @@ internal sealed partial class DaggerfallSession
             // A reloaded DOM holds no art and asks for the revision it is missing; the projection
             // answers on its next snapshot rather than a second delivery channel existing.
             case DaggerfallUiActionKind.ArtRequest: _hud.RequestArt(action.Revision!); break;
-            case DaggerfallUiActionKind.ActionDrivenTime: _controls.ChangePlayerTime(action.Enabled!.Value); break;
-            case DaggerfallUiActionKind.ControlsLook: _controls.Change(settings => settings.SetLook(action.Sensitivity!.Value, action.Invert!.Value)); break;
-            case DaggerfallUiActionKind.ControlsUiScale: _controls.Change(settings => settings.SetUiScale(action.Scale)); break;
-            case DaggerfallUiActionKind.ControlsGroundCover: _controls.Change(settings => settings.SetGroundCover(action.Enabled!.Value)); break;
-            case DaggerfallUiActionKind.ControlsClutterDistance: _controls.Change(settings => settings.SetClutterDistance(action.Scale!.Value)); break;
-            case DaggerfallUiActionKind.ControlsRebind: _controls.Change(settings => settings.Rebind(action.Item!, [action.Key!], action.Confirm)); break;
+            case DaggerfallUiActionKind.ActionDrivenTime:
+            case DaggerfallUiActionKind.ControlsLook:
+            case DaggerfallUiActionKind.ControlsUiScale:
+            case DaggerfallUiActionKind.ControlsGroundCover:
+            case DaggerfallUiActionKind.ControlsClutterDistance:
+            case DaggerfallUiActionKind.ControlsRebind:
             case DaggerfallUiActionKind.ControlsRebindButton:
-                _controls.Change(settings => settings.RebindButton(action.Item!, checked((int)action.Amount!.Value), _controls.PadActions, action.Confirm)); break;
-            case DaggerfallUiActionKind.ControlsVolume: _controls.Change(settings => settings.SetVolume(action.Item!, action.Scale!.Value)); break;
-            case DaggerfallUiActionKind.ControlsReset: _controls.Reset(); break;
+            case DaggerfallUiActionKind.ControlsVolume:
+            case DaggerfallUiActionKind.ControlsReset: _characterActions.ChangeControls(action); break;
             case DaggerfallUiActionKind.CharacterClassQuestions:
             case DaggerfallUiActionKind.CharacterClassAnswer:
             case DaggerfallUiActionKind.CharacterClassBack:
@@ -149,9 +148,9 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.CharacterBackgroundReroll:
             case DaggerfallUiActionKind.CharacterCommit:
             case DaggerfallUiActionKind.CharacterCancel:
-            case DaggerfallUiActionKind.CharacterQuickStart: ChangeCharacter(action); break;
+            case DaggerfallUiActionKind.CharacterQuickStart: _characterActions.ChangeCharacter(action); break;
             case DaggerfallUiActionKind.CharacterLevelAllocate:
-            case DaggerfallUiActionKind.CharacterLevelCommit: ChangeLevelUp(action); break;
+            case DaggerfallUiActionKind.CharacterLevelCommit: _characterActions.ChangeLevelUp(action); break;
             case DaggerfallUiActionKind.ActivationMode: ApplyActivationMode(action); break;
             case DaggerfallUiActionKind.SpellReady:
             case DaggerfallUiActionKind.SpellUnready:
@@ -177,42 +176,38 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.DialogueTone:
             case DaggerfallUiActionKind.DialogueTopic:
             case DaggerfallUiActionKind.DialogueClose: _ = ApplyDialogueAction(action); break;
-            case DaggerfallUiActionKind.TavernBuy: BuyTavernMeal(action); break;
-            case DaggerfallUiActionKind.TrainingCommit: ApplyTrainingAction(action); break;
+            case DaggerfallUiActionKind.TavernBuy: EconomyPanels.BuyTavernMeal(action); break;
+            case DaggerfallUiActionKind.TrainingCommit: EconomyPanels.ApplyTraining(action); break;
             case DaggerfallUiActionKind.MerchantBuy:
             case DaggerfallUiActionKind.MerchantSell:
             case DaggerfallUiActionKind.MerchantRepair:
             case DaggerfallUiActionKind.MerchantCollectRepair:
             case DaggerfallUiActionKind.MerchantIdentify:
-            case DaggerfallUiActionKind.MerchantShoplift: ChangeMerchant(action); break;
-            case DaggerfallUiActionKind.MerchantQuote: QuoteMerchantTrade(action); break;
+            case DaggerfallUiActionKind.MerchantShoplift: EconomyPanels.ChangeMerchant(action); break;
+            case DaggerfallUiActionKind.MerchantQuote: EconomyPanels.QuoteMerchantTrade(action); break;
             case DaggerfallUiActionKind.TransportSelect:
             case DaggerfallUiActionKind.TransportLeaveShip:
-            case DaggerfallUiActionKind.TransportBoardShip: ChangeTransport(action); break;
+            case DaggerfallUiActionKind.TransportBoardShip: _travelPanel.ChangeTransport(action); break;
             case DaggerfallUiActionKind.PropertyBuy:
             case DaggerfallUiActionKind.PropertySell:
             case DaggerfallUiActionKind.PropertyEnter:
             case DaggerfallUiActionKind.PropertyPut:
-            case DaggerfallUiActionKind.PropertyTake: ChangeProperty(action); break;
-            case DaggerfallUiActionKind.TravelSearch: FastTravel.Search(action.Text); break;
-            case DaggerfallUiActionKind.TravelPreview:
-                FastTravel.Select(action.Region, action.Destination, action.Cautious, action.Inn, action.Ship); break;
-            case DaggerfallUiActionKind.TravelMap:
-                if (action.Open) OpenTravelMap();
-                else FastTravel.CloseMap();
-                break;
-            case DaggerfallUiActionKind.AtlasTiles: FastTravel.GrantAtlasTiles(action.Tiles!); break;
+            case DaggerfallUiActionKind.PropertyTake: EconomyPanels.ChangeProperty(action); break;
+            case DaggerfallUiActionKind.TravelSearch: _travelPanel.Search(action); break;
+            case DaggerfallUiActionKind.TravelPreview: _travelPanel.Preview(action); break;
+            case DaggerfallUiActionKind.TravelMap: _travelPanel.ChangeMap(action); break;
+            case DaggerfallUiActionKind.AtlasTiles: _travelPanel.GrantAtlasTiles(action); break;
             case DaggerfallUiActionKind.TravelAccept:
-                if (!elapsedSubmitted) { elapsedSubmitted = true; AcceptTravel(action.Key!, action.Amount!.Value); }
+                if (!elapsedSubmitted) { elapsedSubmitted = true; _travelPanel.Accept(action); }
                 break;
             // One rest per input slice: explicit elapsed time is applied once.
             case DaggerfallUiActionKind.LodgingQuote:
-            case DaggerfallUiActionKind.LodgingBook: ChangeLodging(action); break;
+            case DaggerfallUiActionKind.LodgingBook: EconomyPanels.ChangeLodging(action); break;
             case DaggerfallUiActionKind.Rest:
                 if (!elapsedSubmitted) { RestPanel.Change(action); elapsedSubmitted = true; }
                 break;
             case DaggerfallUiActionKind.WagonPut:
-            case DaggerfallUiActionKind.WagonTake: ChangeWagon(action); break;
+            case DaggerfallUiActionKind.WagonTake: _travelPanel.ChangeWagon(action); break;
             case DaggerfallUiActionKind.QuestChoice:
                 if (State.Quests.ChoosePrompt(State.Variables, action.QuestInstance!, action.QuestMessage!.Value, action.QuestPrompt!, action.QuestChoice!.Value))
                     Presentation.SetOutcome("Quest choice recorded.");
@@ -238,14 +233,14 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.CurrencyWithdrawGold:
             case DaggerfallUiActionKind.CurrencyDepositLetters:
             case DaggerfallUiActionKind.CurrencyWithdrawLetter:
-            case DaggerfallUiActionKind.BankTransfer: ChangeCurrency(action); break;
-            case DaggerfallUiActionKind.BankOpen: OpenCurrentBank(action.Revision); break;
+            case DaggerfallUiActionKind.BankTransfer: EconomyPanels.ChangeCurrency(action); break;
+            case DaggerfallUiActionKind.BankOpen: EconomyPanels.OpenCurrentBank(action.Revision); break;
             case DaggerfallUiActionKind.BankLoanIssue:
             case DaggerfallUiActionKind.BankLoanRepayAccount:
-            case DaggerfallUiActionKind.BankLoanRepayCarried: ChangeLoan(action); break;
+            case DaggerfallUiActionKind.BankLoanRepayCarried: EconomyPanels.ChangeLoan(action); break;
             case DaggerfallUiActionKind.LootClose: _lootUi.Close(action.Container); break;
-            case DaggerfallUiActionKind.LootTake: TakeLoot(action); break;
-            case DaggerfallUiActionKind.LootTakeAll: TakeAllLoot(action); break;
+            case DaggerfallUiActionKind.LootTake: _lootActions.Take(action); break;
+            case DaggerfallUiActionKind.LootTakeAll: _lootActions.TakeAll(action); break;
             // Quick save and quick load follow the Host's slot naming; the menu's slot actions name
             // their own slots. All of them use the same catalog owner.
             case DaggerfallUiActionKind.SaveGame: _saveSlotRequest = new(SaveSlotOperation.QuickSave); break;
@@ -260,75 +255,6 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.DeathQuit: _deathScreen.Choose(action); break;
             default: throw new InvalidOperationException($"Admitted UI action '{action.Kind}' has no dispatch.");
         }
-    }
-
-    /// <summary>
-    /// Takes every row of the shown container through the ordinary take, each whole and against the
-    /// container's current revision, and stops at the first one refused (too heavy, out of reach), so
-    /// what was taken stays taken and the refusal is reported. It reports once, not once per row.
-    /// </summary>
-    private void TakeAllLoot(DaggerfallPlayerUiAction action)
-    {
-        LootPresentation? shown = _lootUi.Read();
-        if (shown is null || shown.Container != action.Container || shown.Revision != action.Revision)
-        {
-            Presentation.SetOutcome("Loot changed. Choose the item again.");
-            return;
-        }
-        int taken = 0;
-        foreach (string key in shown.Items.Select(item => item.Key).ToArray())
-        {
-            LootPresentation? current = _lootUi.Read();
-            if (current?.Items.SingleOrDefault(item => item.Key == key) is not { } row) continue;
-            TakeLoot(new DaggerfallPlayerUiAction("loot-take", current.Revision, key, Container: current.Container,
-                Amount: ulong.Parse(row.Quantity, CultureInfo.InvariantCulture)), report: false);
-            if (_lootUi.Read()?.Items.Any(item => item.Key == key) ?? false) break;
-            taken++;
-        }
-        _lootUi.CompleteAll(taken, _lootUi.Read()?.Empty ?? true);
-        Presentation.SetOutcome(_lootUi.Message);
-    }
-
-    /// <summary>
-    /// A valid take applies at once: the transfer commits, its completed-change facts deliver at the
-    /// update's boundary even while the modal holds the world, and the published presentation already
-    /// reflects the result. A refused take (a stale revision, a closed container) states its reason too.
-    /// </summary>
-    private void TakeLoot(DaggerfallPlayerUiAction action, bool report = true)
-    {
-        if (_lootUi.PrepareGroundTake(action) is { } groundTake)
-        {
-            if (!State.Encumbrance.CanCarry(_definitions.RequireItem(new DaggerfallItemId(groundTake.Definition)), groundTake.Quantity,
-                groundTake.Selection.UniqueEntityId is ulong entity ? State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(new(entity)).Value) : null))
-            {
-                _lootUi.CompleteGround(false, "You cannot carry any more.");
-                if (report) Presentation.SetOutcome(_lootUi.Message);
-                return;
-            }
-            try
-            {
-                _groundContainers.TryGet(groundTake.Id, out var source);
-                var questItem = QuestLootMetadata(DaggerfallItemOwner.Ground(groundTake.Id), groundTake.Selection);
-                var transfer = _groundContainers.Take(groundTake.Id, groundTake.Selection, groundTake.ExpectedWorldRevision);
-                if (questItem is not null) State.Quests.ItemClicked(questItem);
-                PropertyLoot.ObserveTake(source, transfer, groundTake.Definition, groundTake.Quantity);
-                _lootUi.CompleteGround(true);
-            }
-            catch (Exception rejection) when (rejection is InvalidOperationException or ArgumentException)
-            {
-                _lootUi.CompleteGround(false, "That item cannot be taken.");
-            }
-            if (report) Presentation.SetOutcome(_lootUi.Message);
-            return;
-        }
-        if (_lootUi.PrepareTake(action, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl)) is { } take)
-        {
-            var questItem = take.Selection is { } selection ? QuestLootMetadata(DaggerfallItemOwner.Corpse(take.ActorId), selection) : null;
-            var result = _corpseLoot.TryCommitLoot(take, _facts);
-            if (result == CorpseLootCommitResult.Committed && questItem is not null) State.Quests.ItemClicked(questItem);
-            _lootUi.Complete(result);
-        }
-        if (report) Presentation.SetOutcome(_lootUi.Message);
     }
 
     // Opening a panel or preparing a spell must work without spending a world step. Physical
@@ -367,7 +293,7 @@ internal sealed partial class DaggerfallSession
             case "transport": RequestPanel(DaggerfallPanel.Travel); break;
             case "logbook": RequestPanel(DaggerfallPanel.Journal); break;
             case "notebook": RequestPanel(DaggerfallPanel.Notebook); break;
-            case "travel-map": OpenTravelMap(); RequestPanel(DaggerfallPanel.Travel); break;
+            case "travel-map": _travelPanel.OpenMap(); RequestPanel(DaggerfallPanel.Travel); break;
             case "use-magic-item": RequestPanel("magic-items"); break;
             case "radial": RequestPanel(DaggerfallPanel.Radial); break;
             case "abort-spell": ChangeSpell(new("spell-unready")); break;
@@ -377,95 +303,6 @@ internal sealed partial class DaggerfallSession
         }
     }
 
-    private void ChangeCharacter(DaggerfallPlayerUiAction action)
-    {
-        ArgumentNullException.ThrowIfNull(action);
-        if (_mode != ProductMode.Title || _newGameInitialized)
-        {
-            Presentation.SetOutcome("Character creation is available from the title screen.");
-            return;
-        }
-        try
-        {
-            switch (action.Kind)
-            {
-                case DaggerfallUiActionKind.CharacterBegin:
-                    _creation.Begin();
-                    Presentation.SetOutcome("Character choices opened.");
-                    break;
-                case DaggerfallUiActionKind.CharacterClassQuestions:
-                    _creation.OpenClassQuestions(SheetFields(action));
-                    Presentation.SetOutcome("Class questions opened.");
-                    break;
-                case DaggerfallUiActionKind.CharacterClassAnswer:
-                    _creation.AnswerClassQuestion(action.Question ?? throw new ArgumentException("Class question is incomplete."),
-                        action.Answer ?? throw new ArgumentException("Class answer is incomplete."));
-                    Presentation.SetOutcome(State.Character.CreationMode == "character-pick" ? "Recommended career selected; review your choices, then Start." : "Class answer accepted.");
-                    break;
-                case DaggerfallUiActionKind.CharacterClassBack:
-                    State.Character.BackToClassPick();
-                    Presentation.SetOutcome("Returned to character choices.");
-                    break;
-                case DaggerfallUiActionKind.CharacterCancel:
-                    State.Character.AbandonCreation();
-                    Presentation.SetOutcome("Character choices cancelled.");
-                    break;
-                case DaggerfallUiActionKind.CharacterUpdate:
-                    _creation.Update(SheetFields(action));
-                    Presentation.SetOutcome("Character choices updated.");
-                    break;
-                case DaggerfallUiActionKind.CharacterBackgroundReroll:
-                    _creation.RerollBackground(SheetFields(action));
-                    Presentation.SetOutcome("Character background rerolled.");
-                    break;
-                case DaggerfallUiActionKind.CharacterCommit:
-                    _creation.Commit(SheetFields(action));
-                    Presentation.SetOutcome("Character committed. Review the final summary, then begin the new game.");
-                    break;
-                case DaggerfallUiActionKind.CharacterQuickStart:
-                    _creation.QuickStart(SheetFields(action));
-                    Presentation.SetOutcome("Quick start: character committed; beginning the new game.");
-                    break;
-                default:
-                    throw new ArgumentException($"'{action.Action}' is not a character action.", nameof(action));
-            }
-        }
-        catch (ArgumentException error)
-        {
-            Presentation.SetOutcome($"Character choice was not accepted: {DaggerfallRejectionText.For(error)}");
-        }
-    }
-
-    private static DaggerfallCharacterSheetFields SheetFields(DaggerfallPlayerUiAction action) => new(
-        action.Name, action.Race, action.Gender, action.FaceIndex, action.Reflexes, action.Career,
-        action.PrimarySkills, action.MajorSkills, action.MinorSkills, action.HitPointsPerLevel, action.Advantages, action.Disadvantages,
-        action.BackgroundAnswers, action.AttributeAllocations, action.SkillAllocations);
-
-    /// <summary>Applies a real character-sheet level-up action while ordinary play is active.</summary>
-    private void ChangeLevelUp(DaggerfallPlayerUiAction action)
-    {
-        ArgumentNullException.ThrowIfNull(action);
-        try
-        {
-            switch (action.Kind)
-            {
-                case DaggerfallUiActionKind.CharacterLevelAllocate:
-                    State.LevelUps.Allocate(action.Attribute ?? throw new ArgumentException("Level-up attribute is incomplete.", nameof(action)));
-                    Presentation.SetOutcome("Level-up point allocated.");
-                    break;
-                case DaggerfallUiActionKind.CharacterLevelCommit:
-                    State.LevelUps.Commit();
-                    Presentation.SetOutcome("Level-up committed.");
-                    break;
-                default:
-                    throw new ArgumentException($"'{action.Action}' is not a level-up action.", nameof(action));
-            }
-        }
-        catch (ArgumentException error)
-        {
-            Presentation.SetOutcome($"Level-up choice was not accepted: {DaggerfallRejectionText.For(error)}");
-        }
-    }
     private DaggerfallItemMakerView? ReadItemMaker()
     {
         if (CurrentSpellProvider(service: "make-magic-items") is not { } context) return null;
@@ -513,13 +350,6 @@ internal sealed partial class DaggerfallSession
         if (CurrentSpellProvider(service: "make-potions") is not { } context) return null;
         return new(_activationPresentation.View.Dialogue!.Revision, _activationPresentation.View.Dialogue.TargetLabel,
             PotionMaker.CanUse(context.Provider), PotionMaker.ReadIngredients(), PotionMaker.ReadRecipes());
-    }
-
-    /// <summary>Opens the travel map; an open map's places travel again, since the page opened it afresh or lost them.</summary>
-    private void OpenTravelMap()
-    {
-        FastTravel.OpenMap();
-        _hud.RequestTravelPlaces();
     }
 
     private void MakePotion(DaggerfallPlayerUiAction action)

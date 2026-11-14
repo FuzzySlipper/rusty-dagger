@@ -708,6 +708,18 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The local map panel: the map it shows, its building selection and notes.</summary>
     internal DaggerfallLocalMap LocalMap { get; } = null!;
 
+    /// <summary>The character screen's and the controls screen's actions.</summary>
+    private readonly DaggerfallCharacterActions _characterActions = null!;
+
+    /// <summary>The loot window's actions, the windows a body or a pile opens, and a quest reward's pile.</summary>
+    private readonly DaggerfallLootActions _lootActions = null!;
+
+    /// <summary>The service panels: bank and loans, property, merchant, tavern, rooms and training.</summary>
+    internal DaggerfallEconomyPanels EconomyPanels { get; } = null!;
+
+    /// <summary>The travel panel's actions: fast travel, transport and the wagon.</summary>
+    private readonly DaggerfallTravelPanel _travelPanel = null!;
+
     /// <summary>The dungeon text modal's and the notebook's actions.</summary>
     private readonly DaggerfallTextActions _textActions = null!;
 
@@ -979,7 +991,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         InventoryPresentation inventory = _inventoryUi.Read();
         _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, Presentation, _mode, State.PlayerControl, Slots,
             Inventory: inventory,
-            Property: ReadPropertyPresentation(),
+            Property: EconomyPanels.ReadPropertyPresentation(),
             Loot: _lootUi.Read(),
             Character: DaggerfallCharacterSheetText.Describe(_characterUi.Read(State.Actors.Player, State.Progression), _definitions, CurrentTextContext()),
             CharacterCreationAvailable: !_newGameInitialized,

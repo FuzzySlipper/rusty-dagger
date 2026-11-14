@@ -30,7 +30,7 @@ internal sealed partial class DaggerfallSession
             ComprehendLanguagesBonus = State.Effects.PerceptionFor(DaggerfallActorIdentity.PlayerEntityId).ComprehendLanguagesBonus,
             Training = State.SkillTraining.ReadProvider(_dialogue?.CurrentNpc(dialogue.Revision)),
             Tavern = State.Tavern.ReadAt(_dialogue?.CurrentNpc(dialogue.Revision), CurrentInteriorBuilding),
-            Merchant = ReadCurrentMerchant(),
+            Merchant = EconomyPanels.ReadCurrentMerchant(),
         }) : null,
     };
 

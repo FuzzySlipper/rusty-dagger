@@ -80,13 +80,13 @@ public sealed class GuildDialogueSessionTests
         using var session = fixture.Start(source.Profile);
         var npc = session.State.Npcs.All.Single(value => value.StableKey == source.Placement.Id);
         Open(session, npc);
-        Assert.False(session.ReadCurrentMerchant()!.CanBuy);
+        Assert.False(session.EconomyPanels.ReadCurrentMerchant()!.CanBuy);
         var guild = GuildFor(source.Profile.InteriorBuilding!.FactionId);
         session.State.Social.JoinGuild(guild.FactionId, 0);
         int rank = guild.Services.Single(value => value.Service == DaggerfallConcreteGuildService.BuyMagicItems).MinimumRank!.Value;
-        Assert.False(session.ReadCurrentMerchant()!.CanBuy);
+        Assert.False(session.EconomyPanels.ReadCurrentMerchant()!.CanBuy);
         for (int day = 1; day <= rank; day++) session.State.Social.PromoteGuild(guild.FactionId, day);
-        var view = session.ReadCurrentMerchant()!;
+        var view = session.EconomyPanels.ReadCurrentMerchant()!;
         Assert.True(view.CanBuy);
         Assert.False(view.CanShoplift);
         Assert.NotEmpty(view.Stock);
@@ -94,7 +94,7 @@ public sealed class GuildDialogueSessionTests
         // Each stock row draws the icon its item draws in the pack, generated magic items included: its template's.
         Assert.All(view.Stock, item => Assert.False(string.IsNullOrEmpty(item.Icon)));
         AddGold(session);
-        view = session.ReadCurrentMerchant()!;
+        view = session.EconomyPanels.ReadCurrentMerchant()!;
         var item = view.Stock.First(value => value.Key.StartsWith("unique:", StringComparison.Ordinal));
         Submit(session, new { action = "merchant-buy", revision = view.Revision, item = item.Key, amount = 1, confirm = true });
         Assert.Contains(session.State.Inventory.Read().UniqueItems, value => value.Definition.Value == item.Definition);
@@ -144,17 +144,17 @@ public sealed class GuildDialogueSessionTests
             var kind = service == "buy-soulgems" ? DaggerfallConcreteGuildService.BuySoulgems : DaggerfallConcreteGuildService.SellMagicItems;
             int rank = guild.Services.Single(value => value.Service == kind).MinimumRank!.Value;
             Open(session, npc);
-            var view = session.ReadCurrentMerchant()!;
+            var view = session.EconomyPanels.ReadCurrentMerchant()!;
             Assert.False(service == "buy-soulgems" ? view.CanBuy && view.Stock.Any(item => item.Definition == "template-274") : view.CanSell);
             session.State.Social.JoinGuild(guild.FactionId, 0);
             for (int day = 1; day < rank; day++) session.State.Social.PromoteGuild(guild.FactionId, day);
-            view = session.ReadCurrentMerchant()!;
+            view = session.EconomyPanels.ReadCurrentMerchant()!;
             Assert.False(service == "buy-soulgems" ? view.CanBuy && view.Stock.Any(item => item.Definition == "template-274") : view.CanSell);
             session.State.Social.PromoteGuild(guild.FactionId, rank);
             if (service == "buy-soulgems")
             {
                 AddGold(session);
-                view = session.ReadCurrentMerchant()!;
+                view = session.EconomyPanels.ReadCurrentMerchant()!;
                 Assert.True(view.CanBuy);
                 // Mages sell gems alongside magic items at their shared merchant.
                 var gem = view.Stock.First(value => value.Definition == "template-274");
@@ -168,7 +168,7 @@ public sealed class GuildDialogueSessionTests
                     Race: "breton", Gender: "male", MagicItemKey: "magic-item.0022"));
                 var id = session.UniqueItemAllocator.AllocateReference();
                 factory.Materialize(item, session.State.Inventory, session.State.ItemInstances, unique: id);
-                view = session.ReadCurrentMerchant()!;
+                view = session.EconomyPanels.ReadCurrentMerchant()!;
                 Assert.True(view.CanSell);
                 Assert.Contains(view.PlayerItems, value => value.Key == "unique:" + id.Value && value.CanSell);
                 Assert.Contains(view.PlayerItems, value => !value.CanSell);

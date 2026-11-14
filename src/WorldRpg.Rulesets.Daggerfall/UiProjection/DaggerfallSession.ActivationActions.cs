@@ -4,8 +4,7 @@ using WorldRpg.Rulesets.Daggerfall.Presentation;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// Activation's presentation: the mode and outcome the HUD shows, the mode action, and the loot windows a body or a
-/// pile opens when used.
+/// Activation's presentation: the mode and outcome the HUD shows, and the mode action.
 /// </summary>
 internal sealed partial class DaggerfallSession
 {
@@ -34,19 +33,4 @@ internal sealed partial class DaggerfallSession
         Presentation.SetOutcome(_activationPresentation.View.Message);
         return true;
     }
-
-    /// <summary>What using a body does: opens its loot window, an empty one committed at once.</summary>
-    private DaggerfallActivationOutcome OpenCorpseLoot(long actorId)
-    {
-        if (_lootUi.OpenResolved(actorId) is { IsEmpty: true } empty)
-            _corpseLoot.TryCommitLoot(empty, _facts);
-        return _lootUi.Read() is null
-            ? new(false, _lootUi.Message)
-            : new(true, _lootUi.Message);
-    }
-
-    /// <summary>What using a pile or a property container does: stocks it as it opens, then opens its loot window.</summary>
-    private DaggerfallActivationOutcome OpenGroundLoot(long id) =>
-        PropertyLoot.Open(id) is not bool privateProperty ? new(false, "That container is no longer available.")
-        : _lootUi.OpenGround(id, privateProperty) ? new(true, _lootUi.Message) : new(false, _lootUi.Message);
 }
