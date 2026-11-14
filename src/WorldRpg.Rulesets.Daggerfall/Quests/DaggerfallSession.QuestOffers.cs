@@ -61,7 +61,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallConcreteGuildDefinition? guild = null;
         if (service == "quests" && CurrentInteriorBuilding() is { BuildingType: 11 or 14 or 18 } building)
         {
-            if (!TryResolveGuildProvider(npc, building, DaggerfallConcreteGuildService.Quests, out guild, out _, out _)) return null;
+            if (!GuildProviders.TryResolve(npc, building, DaggerfallConcreteGuildService.Quests, out guild, out _, out _)) return null;
             faction = guild!.Kind is DaggerfallConcreteGuildKind.Temple or DaggerfallConcreteGuildKind.KnightlyOrder ? building.FactionId : guild.FactionId;
         }
         if (service == "quests" && guild is null) return null;

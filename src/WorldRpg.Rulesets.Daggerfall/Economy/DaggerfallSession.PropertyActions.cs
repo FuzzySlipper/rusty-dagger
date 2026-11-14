@@ -3,6 +3,7 @@ using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Property;
@@ -26,6 +27,42 @@ internal sealed record DaggerfallPropertyView(bool BankAvailable, DaggerfallProp
 
 internal sealed partial class DaggerfallSession
 {
+    /// <summary>
+    /// A knightly order's house: once the order offers it, one local house the player can be given (drawn when there
+    /// are several) is awarded as property and the claim completes.
+    /// </summary>
+    private DaggerfallGuildProviderResult AwardKnightlyHouse(
+        int factionId,
+        int currentDay,
+        DaggerfallConcreteGuildServiceInput input)
+    {
+        DaggerfallKnightlyHouseOfferResult offered = State.KnightlyClaimActions.OfferHouse(factionId, currentDay, input);
+        if (!offered.Offered)
+            return DaggerfallGuildProviders.KnightlyRefusal(offered.Denial, offered.Service);
+
+        DaggerfallHouseOffer[] houses = [.. CurrentHouseOffers()
+            .Where(offer => HouseProfile(offer.Identity) is not null)
+            .Where(offer => !State.Property.OwnsHouseInRegion(offer.Identity.Site.Region))];
+        if (houses.Length == 0)
+            return DaggerfallGuildProviderResult.Refused(DaggerfallGuildProviderDenial.NoHouseAvailable,
+                "The order has no eligible local house to award.");
+
+        int selected = houses.Length == 1
+            ? 0
+            : checked((int)_random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.guild.knightly-house.v1",
+                $"{factionId}:{currentDay}", 0, houses.Length - 1)).Value);
+        DaggerfallHouseOffer house = houses[selected];
+        DaggerfallKnightlyClaimTransactionResult claim = State.KnightlyClaimActions.CompleteHouse(
+            offered.Offer!, currentDay,
+            _ => DaggerfallKnightlyHouseAllocationResult.FromPropertyTransaction(State.Property.AwardHouse(house)),
+            input);
+        if (!claim.Applied)
+            return DaggerfallGuildProviders.KnightlyRefusal(claim.Denial, claim.ServiceDecision, claim);
+        return new(true, DaggerfallGuildProviderDenial.None,
+            $"The order awards you the local house {house.StorageKey.Value}.", Claim: claim);
+    }
+
+
     // The donor uses a monthly random subset of ordinary houses plus all explicit HouseForSale
     // buildings. Keep the selection stable by durable site and month, not Unity's object hash.
     private DaggerfallHouseOffer[] CurrentHouseOffers(bool includeOwned = false)

@@ -322,7 +322,7 @@ public sealed class DaggerfallDialogueTests
             IRandomService? random = null, DaggerfallDialogueDestination? destination = null,
             Func<DaggerfallDialogueDestination>? destinationFactory = null, Func<string, bool>? disclose = null,
             string[]? services = null, IReadOnlyList<DaggerfallQuestDialogueTopic>? questTopics = null,
-            Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? guildService = null)
+            Func<DaggerfallNpc, DaggerfallGuildProviderTopic, string?, DaggerfallGuildProviderResult>? guildService = null)
         {
             DaggerfallSiteRecord site = session.Site.ActiveSite
                 ?? throw new InvalidOperationException("The focused talk test needs the admitted fixture site.");

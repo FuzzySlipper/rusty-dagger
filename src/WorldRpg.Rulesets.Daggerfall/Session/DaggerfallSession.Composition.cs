@@ -586,7 +586,7 @@ internal sealed partial class DaggerfallSession
                         State.Property?.OwnsShip ?? false,
                         AvailableGold: checked(funds.Gold + funds.LettersOfCredit),
                         AvailableGoldPieces: funds.Gold,
-                        FreeShipPassage: HasFreeGuildShipTravel());
+                        FreeShipPassage: GuildProviders.FreeShipPassage());
                 },
                 classicArt: () => _classicArt,
                 yaw: () => State.PlayerControl.YawRadians);
@@ -883,6 +883,15 @@ internal sealed partial class DaggerfallSession
                 makeHostile: id => _enemyBehavior.MakeHostile(id),
                 retireCivilian: Civilians.Retire);
             crime.IncidentRecorded += Law.Admit;
+            GuildProviders = new DaggerfallGuildProviders(State.ConcreteGuildServices, State.ConcreteGuildMembership, State.KnightlyClaimActions,
+                new DaggerfallGuildAdmission(State.ConcreteGuildMembership, State.Social, State.SkillUses, State.Crime,
+                    dialogueRevision: () => _activationPresentation.View.Dialogue?.Revision),
+                State.Actors, State.Effects, State.Character, definitions, _random, _uniqueItems, State.Inventory, State.ItemInstances,
+                calendar: () => _time.Calendar,
+                noRegeneration: () => _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind).NoRegeneration,
+                providerAvailable: State.Services.ProviderAvailable,
+                openTeleport: OpenGuildTeleport,
+                knightlyHouse: AwardKnightlyHouse);
             _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));
             _vitality.ConditionTrackLost += AppendSpellTrackLoss;
             _vitality.SpellTrackRestored += (target, track, requested, restored) =>

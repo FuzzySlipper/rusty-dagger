@@ -1038,6 +1038,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The law: the legal response, the court, the sentence and the standing law.</summary>
     internal DaggerfallLaw Law { get; } = null!;
 
+    /// <summary>The guilds' providers: what a guild's NPC answers to its topics, its welcome and its free passage.</summary>
+    internal DaggerfallGuildProviders GuildProviders { get; } = null!;
+
     /// <summary>The atlas the import drew and the tiles granted to the page, or null when the data container carries none and the travel map draws classic art.</summary>
     private readonly DaggerfallAtlasTiles? _atlasTiles;
     internal DaggerfallDetectors Detectors { get; } = null!;

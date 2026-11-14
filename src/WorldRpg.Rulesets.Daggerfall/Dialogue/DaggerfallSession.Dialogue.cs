@@ -135,6 +135,20 @@ internal static class DaggerfallPersonServices
 /// </summary>
 internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
 {
+    /// <summary>The guild provider topic a guild dialogue topic asks.</summary>
+    private static DaggerfallGuildProviderTopic GuildTopic(DaggerfallDialogueTopic topic) => topic switch
+    {
+        DaggerfallDialogueTopic.RankReview => DaggerfallGuildProviderTopic.RankReview,
+        DaggerfallDialogueTopic.Armor => DaggerfallGuildProviderTopic.Armor,
+        DaggerfallDialogueTopic.House => DaggerfallGuildProviderTopic.House,
+        DaggerfallDialogueTopic.Join => DaggerfallGuildProviderTopic.Join,
+        DaggerfallDialogueTopic.Teleport => DaggerfallGuildProviderTopic.Teleport,
+        DaggerfallDialogueTopic.Spymaster => DaggerfallGuildProviderTopic.Spymaster,
+        DaggerfallDialogueTopic.RestoreAttributes => DaggerfallGuildProviderTopic.RestoreAttributes,
+        _ => throw new ArgumentOutOfRangeException(nameof(topic), topic,
+            "This dialogue topic is not a guild provider service."),
+    };
+
     private const int Merchants = 1;
     private const int NormalQuestionReaction = 0;
     private const int LocationQuestionReaction = 5;
@@ -188,7 +202,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<string, bool>? _discloseDirection;
     private readonly DaggerfallDialogueWorldState _dialogueWorld;
     private readonly Func<DaggerfallNpc, DaggerfallDialogueTopic, ulong?, DaggerfallTempleServiceResult>? _templeService;
-    private readonly Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? _guildService;
+    private readonly Func<DaggerfallNpc, DaggerfallGuildProviderTopic, string?, DaggerfallGuildProviderResult>? _guildService;
     private readonly Func<bool> _suppressTalk;
     private readonly Func<DaggerfallNpc, DaggerfallGuildProviderResult?>? _guildWelcome;
     private TalkSession? _current;
@@ -217,7 +231,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<long, string>? offerWork = null,
         Func<DaggerfallVariableStore?>? variables = null,
         Func<DaggerfallNpc, DaggerfallDialogueTopic, ulong?, DaggerfallTempleServiceResult>? templeService = null,
-        Func<DaggerfallNpc, DaggerfallDialogueTopic, string?, DaggerfallGuildProviderResult>? guildService = null,
+        Func<DaggerfallNpc, DaggerfallGuildProviderTopic, string?, DaggerfallGuildProviderResult>? guildService = null,
         Func<DaggerfallWorldProfileKey>? activeProfile = null,
         Func<string, bool>? discloseDirection = null,
         DaggerfallDialogueWorldState? dialogueWorld = null, Func<bool>? suppressTalk = null,
@@ -452,7 +466,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         {
             if (_guildService is null || !OffersGuildTopic(npc, topic))
                 return Reject("That guild service is not available here.");
-            DaggerfallGuildProviderResult result = _guildService(npc, topic, key);
+            DaggerfallGuildProviderResult result = _guildService(npc, GuildTopic(topic), key);
             session.ProviderTopics.Clear();
             if (result.Options is { } options)
                 session.ProviderTopics.AddRange(options.Select(option => new DaggerfallDialogueTopicOption(option.Topic ?? topic.ToString().ToLowerInvariant(), option.Label, option.Key)));
