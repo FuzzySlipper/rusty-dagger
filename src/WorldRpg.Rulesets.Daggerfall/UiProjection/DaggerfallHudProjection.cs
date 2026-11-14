@@ -133,7 +133,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("kind", builder.String(contact.Kind)), ("id", builder.String(contact.Id)), ("label", builder.String(contact.Label)),
                     ("distance", builder.Number(contact.Distance)), ("bearingRadians", builder.Number(contact.BearingRadians)),
                     ("distanceLabel", builder.String(DaggerfallHudText.Distance(contact.Distance))),
-                    ("direction", builder.String(DaggerfallMapProjection.Compass((float)contact.BearingRadians))),
+                    ("direction", builder.String(DaggerfallCompass.Word((float)contact.BearingRadians))),
                     ("items", builder.Array(contact.Items.Select(item => builder.Object(("id", builder.String(item.Id)),
                         ("definition", builder.String(item.Definition)), ("quantity", builder.Number(checked((long)item.Quantity))))).ToArray())))).ToArray())))).ToArray())),
             ("identify", frame.Identify is not { } identify ? builder.Null() : builder.Object(
@@ -195,7 +195,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("view", builder.Object(
                 ("yawRadians", builder.Number(controls.YawRadians)),
                 ("interaction", builder.String(mode == ProductMode.Modal ? "modal" : mode == ProductMode.Playing ? "aiming" : "held")),
-                ("heading", builder.String(DaggerfallMapProjection.Compass(controls.YawRadians))))),
+                ("heading", builder.String(DaggerfallCompass.Word(controls.YawRadians))))),
             ("radial", builder.Array(frame.Radial.Select(command => builder.Object(("id", builder.String(command.Id)),
                 ("label", builder.String(command.Label)), ("available", builder.Boolean(command.Available)), ("current", builder.Boolean(command.Current)),
                 ("reason", command.Reason is { } reason ? builder.String(reason) : builder.Null()))).ToArray())),

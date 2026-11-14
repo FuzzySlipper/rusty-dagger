@@ -89,32 +89,10 @@ internal static class DaggerfallMapProjection
         {
             DaggerfallSiteBuildingRecord building = site.RequireBuilding(current.Id, source.Id);
             if (!site.IsBuildingDiscovered(current.Id, source.Id) || string.IsNullOrWhiteSpace(building.Name)) continue;
-            WorldPoint point = BuildingPosition(site, current.Id, source.Id);
+            WorldPoint point = site.BuildingMapPosition(current.Id, source.Id);
             labels.Add(new(source.Id.ToString(), building.Name, point.X, point.Y, point.Z, site.SelectedBuilding == (current.Id, source.Id)));
         }
         return new(current.Id.ToString(), current.Name, "city", player, yaw, areas, labels, current.Region, current.Index);
-    }
-
-    internal static WorldPoint BuildingPosition(DaggerfallSiteContext site, DaggerfallSiteId location, DaggerfallSiteBuildingId building)
-    {
-        DaggerfallSiteBuildingSource source = site.RequireBuildingSource(location, building);
-        DaggerfallBlocksSnapshot blocks = site.Blocks ?? throw new InvalidOperationException("City map blocks have not been admitted.");
-        WorldPoint point = blocks.RmbBuildings[source.Source.Id].MapPosition;
-        float size = blocks.Maps[source.Source.Id.SourceKey].BlockSize;
-        return new(point.X + building.BlockX * size, point.Y, point.Z - building.BlockY * size);
-    }
-
-    private static readonly string[] CompassWords = ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"];
-
-    /// <summary>
-    /// The compass word for a bearing in radians, clockwise from north (map up, world -Z), the way the
-    /// player's yaw and a direction hint both read it.
-    /// </summary>
-    internal static string Compass(float radians)
-    {
-        float turn = MathF.PI * 2;
-        float bearing = ((radians % turn) + turn) % turn;
-        return CompassWords[(int)MathF.Round(bearing / (MathF.PI / 4)) % 8];
     }
 
     /// <summary>The legend's words for each area category the map colours.</summary>
@@ -142,7 +120,7 @@ internal static class DaggerfallMapProjection
             ("x", builder.Number(label.X)), ("y", builder.Number(label.Y)), ("z", builder.Number(label.Z)), ("selected", builder.Boolean(label.Selected)),
             ("note", builder.Boolean(label.Note)))).ToArray())),
         ("canAddNote", builder.Boolean(map.CanAddNote)),
-        ("facing", builder.String(Compass(map.Yaw))),
+        ("facing", builder.String(DaggerfallCompass.Word(map.Yaw))),
         // The legend names only the categories this map draws, in the order they first appear.
         ("legend", builder.Array(map.Areas.Select(area => area.Category).Distinct(StringComparer.Ordinal).Select(category => builder.Object(
             ("category", builder.String(category)), ("label", builder.String(CategoryLabel(category))))).ToArray())));

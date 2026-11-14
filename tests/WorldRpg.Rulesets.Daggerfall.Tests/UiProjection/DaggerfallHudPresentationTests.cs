@@ -49,7 +49,7 @@ public sealed class DaggerfallHudPresentationTests
         session.Update(new ProductUpdate(OuterUpdate(2), []));
         var hud = Assert.IsType<Dictionary<string, object?>>(f.Engine.Published());
         var view = Assert.IsType<Dictionary<string, object?>>(hud["view"]);
-        Assert.Equal(DaggerfallMapProjection.Compass(session.State.PlayerControl.YawRadians), view["heading"]);
+        Assert.Equal(DaggerfallCompass.Word(session.State.PlayerControl.YawRadians), view["heading"]);
         Assert.False(view.ContainsKey("pitchRadians"));
         var weapon = Assert.IsType<Dictionary<string, object?>>(hud["weapon"]);
         Assert.Equal(true, weapon["drawn"]);

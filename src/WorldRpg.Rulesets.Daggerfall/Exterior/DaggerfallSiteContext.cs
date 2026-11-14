@@ -205,6 +205,16 @@ internal sealed class DaggerfallSiteContext
         return selected;
     }
 
+    /// <summary>Where a building stands on its location's city map: its block's map position offset by the block it is in.</summary>
+    internal WorldPoint BuildingMapPosition(DaggerfallSiteId location, DaggerfallSiteBuildingId building)
+    {
+        DaggerfallSiteBuildingSource source = RequireBuildingSource(location, building);
+        DaggerfallBlocksSnapshot blocks = Blocks ?? throw new InvalidOperationException("City map blocks have not been admitted.");
+        WorldPoint point = blocks.RmbBuildings[source.Source.Id].MapPosition;
+        float size = blocks.Maps[source.Source.Id.SourceKey].BlockSize;
+        return new(point.X + building.BlockX * size, point.Y, point.Z - building.BlockY * size);
+    }
+
     internal DaggerfallSiteBuildingSource RequireBuildingSource(DaggerfallSiteId site, DaggerfallSiteBuildingId building)
     {
         DaggerfallSiteRecord record = Require(site);

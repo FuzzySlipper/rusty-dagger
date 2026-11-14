@@ -82,7 +82,7 @@ public sealed class DaggerfallMapPresentationTests
     [InlineData(-MathF.PI / 4, "north-west")]
     [InlineData(MathF.PI * 2 + 0.1f, "north")]
     public void Facing_reads_the_yaw_clockwise_from_north(float yaw, string expected) =>
-        Assert.Equal(expected, DaggerfallMapProjection.Compass(yaw));
+        Assert.Equal(expected, DaggerfallCompass.Word(yaw));
 
     [Fact]
     public void City_map_uses_real_placed_ids_source_footprints_and_building_names()
@@ -106,7 +106,7 @@ public sealed class DaggerfallMapPresentationTests
         var after = DaggerfallMapProjection.City(sites, map.Player, map.Yaw);
         var label = Assert.Single(after.Labels, label => label.Selected);
         Assert.Equal(selected.Name, label.Name); Assert.Equal(source.Id.ToString(), label.Id);
-        WorldPoint point = DaggerfallMapProjection.BuildingPosition(sites, city.Id, source.Id);
+        WorldPoint point = sites.BuildingMapPosition(city.Id, source.Id);
         Assert.Equal(point.X, label.X); Assert.Equal(point.Z, label.Z);
         Assert.Throws<InvalidOperationException>(() => sites.SelectBuilding(city.Id, new(999, 999, 999)));
         Assert.Equal((city.Id, source.Id), sites.SelectedBuilding);

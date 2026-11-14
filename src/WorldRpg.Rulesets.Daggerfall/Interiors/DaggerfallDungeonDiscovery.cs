@@ -306,6 +306,16 @@ internal sealed class DaggerfallDungeonDiscovery
 
     internal bool RemoveNoteMarker(string id) => _notes.Remove(id);
 
+    /// <summary>The next unused note identity on this dungeon's map.</summary>
+    internal string NextNoteId()
+    {
+        int next = 1;
+        foreach (DaggerfallDungeonNoteMarker note in NoteMarkers)
+            if (note.Id.StartsWith("note-", StringComparison.Ordinal) && int.TryParse(note.Id.AsSpan(5), out int used) && used >= next)
+                next = checked(used + 1);
+        return $"note-{next.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+    }
+
     internal DaggerfallDungeonDiscoverySnapshot Capture() => new(
         Profile,
         _discoveredPlacements.Order(StringComparer.Ordinal).ToArray(),
