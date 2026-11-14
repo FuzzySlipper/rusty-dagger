@@ -24,7 +24,7 @@ internal static class DaggerfallItemNames
         {
             if (magic.Type != 0) return magic.Name;
             name = definitions.TextPresentation.ResolveRaw(magic.Name, new(DaggerfallTextKind.Internal, "item-name"),
-                DaggerfallTextContext.Empty with { Item = DaggerfallTextContexts.Item(definitions, item, metadata, name) }).Text;
+                DaggerfallTextContext.Empty with { Item = DaggerfallItemTextContext.For(definitions, item, metadata, name) }).Text;
         }
         var native = definitions.SourceTemplateFor(item);
         bool weapon = native?.Groups.Contains("Weapons") == true && native.Index != 131;

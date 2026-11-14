@@ -621,7 +621,7 @@ internal sealed class DaggerfallInventoryPresentation
                 : metadata.PotionRecipeKey is not null ? 1008
                 : metadata.CapturedSoulMobileId is not null || definition.Template?.Index == 275 ? 1004
                 : metadata.CreditValue is not null ? 1007 : 1003;
-            var context = DaggerfallTextContext.Empty with { Item = DaggerfallTextContexts.Item(definitions,
+            var context = DaggerfallTextContext.Empty with { Item = DaggerfallItemTextContext.For(definitions,
                 definition, metadata, DaggerfallItemNames.BaseName(definitions, definition), quantity, CurrentValue(definition, metadata)) };
             details = definitions.TextPresentation.Resolve(new(DaggerfallTextKind.Resource,
                 record.ToString(CultureInfo.InvariantCulture)), context).Text.Trim();

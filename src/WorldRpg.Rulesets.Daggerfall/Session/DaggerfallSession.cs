@@ -1080,9 +1080,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>What the text macros name now, read from every domain that answers one.</summary>
     internal DaggerfallTextContext CurrentTextContext() => DaggerfallTextContext.Empty with
     {
-        Player = DaggerfallTextContexts.Player(_definitions, State.Character.Identity, State.Actors.Player.Stats,
+        Player = DaggerfallPlayerTextContext.For(_definitions, State.Character.Identity, State.Actors.Player.Stats,
             State.Currency.Read().Gold, State.Character.Career),
-        Calendar = DaggerfallTextContexts.Calendar(_definitions, _time.Calendar),
+        Calendar = DaggerfallCalendarTextContext.For(_definitions, _time.Calendar),
         Location = new(City: _site.ActiveSite?.Name,
             Region: _site.Region is int region ? _definitions.BuildingNames.RegionName(region) : null),
         Faction = new(VampireClan: State.RacialOverrides.Current?.State.Vampire is { } vampire

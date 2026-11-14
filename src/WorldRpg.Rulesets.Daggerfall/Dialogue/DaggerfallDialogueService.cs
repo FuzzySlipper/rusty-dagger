@@ -667,7 +667,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             .FirstOrDefault();
         string? oath = ResolveOath(faction?.Race ?? province?.Race);
         return new(
-            _currentText?.Invoke().Player ?? DaggerfallTextContexts.Player(_definitions, player, _playerStats),
+            _currentText?.Invoke().Player ?? DaggerfallPlayerTextContext.For(_definitions, player, _playerStats),
             CalendarContext(),
             new DaggerfallTextLocationContext(
                 City: site?.Name,
@@ -684,7 +684,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             new DaggerfallTextStoryContext(GreetingOrFollowUp: opening));
     }
 
-    private DaggerfallTextCalendarContext CalendarContext() => DaggerfallTextContexts.Calendar(_definitions, _calendar());
+    private DaggerfallTextCalendarContext CalendarContext() => DaggerfallCalendarTextContext.For(_definitions, _calendar());
 
     private string? ResolveOath(int? race)
     {

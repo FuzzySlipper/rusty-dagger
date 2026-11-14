@@ -16,7 +16,7 @@ public sealed class TextOwnerContextTests
     public void Calendar_macros_use_published_names_and_the_donor_date_format(int month, string name, string sign, string season)
     {
         var definitions = TestPayload.Definitions;
-        var context = DaggerfallTextContext.Empty with { Calendar = DaggerfallTextContexts.Calendar(definitions, new(405, month, 20, 13, 4, 0)) };
+        var context = DaggerfallTextContext.Empty with { Calendar = DaggerfallCalendarTextContext.For(definitions, new(405, month, 20, 13, 4, 0)) };
         var rendered = Render("%dat; %tim; %day; %dayn; %days; %mon; %monn; %year; %min; %hour; %sign; %sea", context);
         Assert.True(rendered.IsComplete, string.Join(",", rendered.Diagnostics));
         Assert.Equal($"Loredas the 21st of {name}; 13:04; 21; Loredas; 21st; {month + 1}; {name}; 405; 4; 13; {sign}; {season}", rendered.Text);
@@ -54,7 +54,7 @@ public sealed class TextOwnerContextTests
         var definition = definitions.RequireItem(new("iron-dagger"));
         var metadata = new DaggerfallItemInstanceMetadata("iron-dagger", "steel", 0, 50, 100, true, false,
             null, null, null, DaggerfallItemOwner.Player, WeightClassicUnits: 500);
-        var context = DaggerfallTextContext.Empty with { Item = DaggerfallTextContexts.Item(definitions, definition, metadata, "Dagger", 2, 7) };
+        var context = DaggerfallTextContext.Empty with { Item = DaggerfallItemTextContext.For(definitions, definition, metadata, "Dagger", 2, 7) };
         var rendered = Render("%it; %wep; %arm; %a; %wth; %mat; %qua; %kg; %wdm", context);
         Assert.True(rendered.IsComplete, string.Join(",", rendered.Diagnostics));
         Assert.Equal("Dagger; Dagger; Dagger; 2; 14; Steel; Used; 2.50; 1 - 6", rendered.Text);
