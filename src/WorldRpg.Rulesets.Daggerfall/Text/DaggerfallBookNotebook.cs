@@ -103,32 +103,31 @@ internal sealed class DaggerfallBookNotebook(DaggerfallDefinitions definitions, 
         return new(_revision.ToString(System.Globalization.CultureInfo.InvariantCulture), book, [.. _notes]);
     }
 
-    internal DaggerfallNotebookActionResult Apply(DaggerfallPlayerUiAction action)
+    /// <summary>Turns the open book to a page, when the reader is at this revision.</summary>
+    internal DaggerfallNotebookActionResult TurnPage(string? revision, int page) =>
+        Change(revision, () => { SetPage(page); return "Book page turned."; });
+
+    /// <summary>Adds a personal note at the end, when the notebook is at this revision.</summary>
+    internal DaggerfallNotebookActionResult AddNote(string? revision, string text) =>
+        Change(revision, () => { Add(text); return "Note added."; });
+
+    internal DaggerfallNotebookActionResult EditNote(string? revision, string note, string text) =>
+        Change(revision, () => { Edit(note, text); return "Note updated."; });
+
+    internal DaggerfallNotebookActionResult RemoveNote(string? revision, string note) =>
+        Change(revision, () => { Remove(note); return "Note removed."; });
+
+    /// <summary>Moves a note to a final zero-based position, when the notebook is at this revision.</summary>
+    internal DaggerfallNotebookActionResult MoveNote(string? revision, string note, int destination) =>
+        Change(revision, () => { Move(note, destination); return "Note reordered."; });
+
+    /// <summary>One revision-guarded change: a stale revision changes nothing, and a refusal is said in the game's words.</summary>
+    private DaggerfallNotebookActionResult Change(string? revision, Func<string> change)
     {
-        if (!MatchesRevision(action.Revision)) return new(false, "Notebook changed. Choose the page or note again.");
+        if (!MatchesRevision(revision)) return new(false, "Notebook changed. Choose the page or note again.");
         try
         {
-            switch (action.Kind)
-            {
-                case DaggerfallUiActionKind.NotebookPage:
-                    if (action.Page is not int page) return new(false, "Choose a readable book page.");
-                    SetPage(page);
-                    return new(true, "Book page turned.");
-                case DaggerfallUiActionKind.NotebookAdd:
-                    Add(action.Text!);
-                    return new(true, "Note added.");
-                case DaggerfallUiActionKind.NotebookEdit:
-                    Edit(action.Note!, action.Text!);
-                    return new(true, "Note updated.");
-                case DaggerfallUiActionKind.NotebookRemove:
-                    Remove(action.Note!);
-                    return new(true, "Note removed.");
-                case DaggerfallUiActionKind.NotebookMove:
-                    Move(action.Note!, action.Destination!.Value);
-                    return new(true, "Note reordered.");
-                default:
-                    return new(false, "That notebook action is not available.");
-            }
+            return new(true, change());
         }
         catch (ArgumentException error)
         {

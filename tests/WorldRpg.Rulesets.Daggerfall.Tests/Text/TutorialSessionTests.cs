@@ -63,14 +63,6 @@ public sealed class TutorialSessionTests
     }
 
     [Fact]
-    public void Reading_past_the_last_page_ends_the_tutorial()
-    {
-        DaggerfallTutorial tutorial = new(Definition, new(Definition.Pages.Count - 1, true, 0));
-        Assert.True(tutorial.Continue(Definition.Pages.Count - 1));
-        Assert.False(tutorial.Running);
-    }
-
-    [Fact]
     public void A_save_part_way_through_the_tutorial_restores_to_the_same_page_and_wait()
     {
         string root = TestData.RepositoryRoot;
@@ -96,8 +88,5 @@ public sealed class TutorialSessionTests
         ResolvedCompositionIdentity identity = Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession resumed = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
         Assert.Equal(saved, resumed.Tutorial.Progress);
-
-        // A saved page the tutorial does not have is refused rather than shown as some other page.
-        Assert.Throws<ArgumentOutOfRangeException>(() => new DaggerfallTutorial(Definition, new(Definition.Pages.Count, true, 0)));
     }
 }

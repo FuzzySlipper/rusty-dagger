@@ -22,12 +22,12 @@ public sealed class DaggerfallBookNotebookTests
         Assert.Equal(book.Title, opened.Book!.Title);
         Assert.Equal(book.Pages[0], opened.Book.Text);
 
-        Assert.True(original.Apply(new("notebook-add", opened.Revision, Text: "First account.")).Applied);
-        Assert.True(original.Apply(new("notebook-add", original.Read().Revision, Text: "Second account.")).Applied);
+        Assert.True(original.AddNote(opened.Revision, "First account.").Applied);
+        Assert.True(original.AddNote(original.Read().Revision, "Second account.").Applied);
         DaggerfallNotebookPresentation beforeMove = original.Read();
-        Assert.True(original.Apply(new("notebook-move", beforeMove.Revision, Note: beforeMove.Notes[1].Id, Destination: 0)).Applied);
+        Assert.True(original.MoveNote(beforeMove.Revision, beforeMove.Notes[1].Id, 0).Applied);
         DaggerfallNotebookPresentation beforeEdit = original.Read();
-        Assert.True(original.Apply(new("notebook-edit", beforeEdit.Revision, Note: beforeEdit.Notes[0].Id, Text: "Revised account.")).Applied);
+        Assert.True(original.EditNote(beforeEdit.Revision, beforeEdit.Notes[0].Id, "Revised account.").Applied);
 
         DaggerfallNotebookSave saved = original.Capture();
         Assert.Single(saved.Books);
@@ -52,17 +52,43 @@ public sealed class DaggerfallBookNotebookTests
         DaggerfallBookNotebook notebook = new(definitions, new DaggerfallTextResolver(definitions.Text));
         _ = notebook.Open(59);
         string stale = notebook.Read().Revision;
-        Assert.True(notebook.Apply(new("notebook-add", stale, Text: "Keep this.")).Applied);
+        Assert.True(notebook.AddNote(stale, "Keep this.").Applied);
         DaggerfallNotebookPresentation afterAdd = notebook.Read();
 
-        DaggerfallNotebookActionResult stalePage = notebook.Apply(new("notebook-page", stale, Page: 1));
-        DaggerfallNotebookActionResult staleRemove = notebook.Apply(new("notebook-remove", stale, Note: afterAdd.Notes[0].Id));
+        DaggerfallNotebookActionResult stalePage = notebook.TurnPage(stale, 1);
+        DaggerfallNotebookActionResult staleRemove = notebook.RemoveNote(stale, afterAdd.Notes[0].Id);
 
         Assert.False(stalePage.Applied);
         Assert.False(staleRemove.Applied);
         DaggerfallNotebookPresentation current = notebook.Read();
         Assert.Equal(0, current.Book!.Page);
         Assert.Equal(["Keep this."], current.Notes.Select(note => note.Text));
+    }
+
+    [Fact]
+    public void A_change_at_the_current_revision_applies_and_one_the_notebook_refuses_is_said_and_changes_nothing()
+    {
+        DaggerfallDefinitions definitions = ReadDefinitions();
+        DaggerfallBookNotebook notebook = new(definitions, new DaggerfallTextResolver(definitions.Text));
+        _ = notebook.Open(59);
+        Assert.True(notebook.Read().Book!.PageCount > 1);
+
+        DaggerfallNotebookActionResult turned = notebook.TurnPage(notebook.Read().Revision, 1);
+        Assert.Equal(new DaggerfallNotebookActionResult(true, "Book page turned."), turned);
+        Assert.Equal(1, notebook.Read().Book!.Page);
+
+        string revision = notebook.Read().Revision;
+        DaggerfallNotebookActionResult missing = notebook.RemoveNote(revision, "note:9");
+        DaggerfallNotebookActionResult outside = notebook.TurnPage(revision, notebook.Read().Book!.PageCount);
+        Assert.False(missing.Applied);
+        Assert.False(outside.Applied);
+        Assert.False(string.IsNullOrWhiteSpace(missing.Message));
+        Assert.Equal(revision, notebook.Read().Revision);
+
+        Assert.Equal(new DaggerfallNotebookActionResult(true, "Note added."), notebook.AddNote(revision, "A note."));
+        DaggerfallUserNote added = Assert.Single(notebook.Read().Notes);
+        Assert.Equal(new DaggerfallNotebookActionResult(true, "Note removed."), notebook.RemoveNote(notebook.Read().Revision, added.Id));
+        Assert.Empty(notebook.Read().Notes);
     }
 
     [Fact]

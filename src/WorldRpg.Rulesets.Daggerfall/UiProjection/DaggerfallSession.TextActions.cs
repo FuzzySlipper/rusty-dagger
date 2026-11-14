@@ -5,8 +5,9 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// The text modal's actions: each reads the text's action and revision and asks Text's owner, a building's greeting
-/// closing lets its entry go ahead, and a riddle answered right goes on along the dungeon's graph.
+/// Text's actions. The text modal's read the text's action and revision and ask Text's owner, a building's greeting
+/// closing lets its entry go ahead, and a riddle answered right goes on along the dungeon's graph. The reader's and
+/// notebook's each ask the notebook for one revision-guarded change.
 /// </summary>
 internal sealed partial class DaggerfallSession
 {
@@ -49,4 +50,17 @@ internal sealed partial class DaggerfallSession
         else Presentation.SetOutcome("Answer rejected.");
     }
 
+    private void ApplyNotebookAction(DaggerfallPlayerUiAction action)
+    {
+        DaggerfallNotebookActionResult result = action.Kind switch
+        {
+            DaggerfallUiActionKind.NotebookPage => _notebook.TurnPage(action.Revision, action.Page!.Value),
+            DaggerfallUiActionKind.NotebookAdd => _notebook.AddNote(action.Revision, action.Text!),
+            DaggerfallUiActionKind.NotebookEdit => _notebook.EditNote(action.Revision, action.Note!, action.Text!),
+            DaggerfallUiActionKind.NotebookRemove => _notebook.RemoveNote(action.Revision, action.Note!),
+            DaggerfallUiActionKind.NotebookMove => _notebook.MoveNote(action.Revision, action.Note!, action.Destination!.Value),
+            _ => new(false, "That notebook action is not available."),
+        };
+        Presentation.SetOutcome(result.Message);
+    }
 }
