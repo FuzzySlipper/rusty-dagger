@@ -195,7 +195,7 @@ internal sealed partial class DaggerfallSession
             PublishPresentation();                                                                // UiProjection
             // The score follows the world this admitted update settled: a site change or a change of day
             // is real once the step applied it, and the director is told once per admitted update.
-            AdvanceMusic();                                                                       // Scene
+            if (Music.Scored) Music.Advance(MusicContext(), _time.Calendar.DayNumber);            // Scene
         }
         UpdatePlayerTime(facts);                                                                  // Session: player time's hand-off, below
         // Play time counts the time the world runs in play; menus, the title and held moments do not.
@@ -523,7 +523,7 @@ internal sealed partial class DaggerfallSession
         ApplyDeferredPlayerActs();                                                                // Character
         ResolveExhaustion();                                                                      // Condition
         PublishPresentation();                                                                    // UiProjection
-        AdvanceMusic();                                                                           // Scene
+        if (Music.Scored) Music.Advance(MusicContext(), _time.Calendar.DayNumber);                // Scene
     }
 
     /// <summary>
@@ -708,6 +708,22 @@ internal sealed partial class DaggerfallSession
             _tuning.Weather.Daylight(_time.Calendar, conditions.Kind), LocalWeather.Climate, conditions,
             LocalWeather.SkyVariant, player, sheltered, seconds, playing, _horizon.FogDensity);       // Scene
     }
+
+    /// <summary>
+    /// The entry's list: a quick entry goes straight to play; otherwise the opening cinematic starts, and a start that
+    /// fails says why on the outcome line.
+    /// </summary>
+    public EntryScreenStartupResult StartEntry()
+    {
+        if (_definitions.NewGame.QuickEntry) return EntryScreenStartupResult.ReadyForPlay;                      // Content
+        EntryScreenStartupResult result = _openingCinematics.Start();                                            // Scene
+        if (result == EntryScreenStartupResult.Failed)
+            Presentation.SetOutcome(_openingCinematics.Failure?.Failure ?? "The opening cinematic could not start.");   // UiProjection
+        return result;
+    }
+
+    /// <summary>Whether the opening cinematic has ended and play may begin, taken once.</summary>
+    public bool TakeEntryReadyForPlay() => _openingCinematics.TakeReady();                                      // Scene
 
     /// <summary>The arrest's list: the watch halts the player, who lets go of the controls and the open menu.</summary>
     private void Arrest(DaggerfallLegalResponseSave response)

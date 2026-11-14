@@ -35,7 +35,7 @@ public sealed class DaggerfallMusicSessionTests
 
         session.Update(Update());
         // The first listed dungeon song is the published one, and it plays through the real resolver.
-        Assert.Equal("song_dungeon", session.MusicTrack);
+        Assert.Equal("song_dungeon", session.Music.Track);
         Assert.Single(engine.StartedAudioVoices);
         // The voice is a clip the resolver opened from content, which is the path a substituted or
         // pre-baked clip could not take.
@@ -46,7 +46,7 @@ public sealed class DaggerfallMusicSessionTests
         Assert.Equal(bundle.MissingTracks.Count == 0 ? 0 : 1, engine.PublishedDiagnostics.Count(value => value.StartsWith("daggerfall.music/tracks.missing:", StringComparison.Ordinal)));
         // The same world in the next admitted update keeps that one loop: no second voice, no release.
         session.Update(Update());
-        Assert.Equal("song_dungeon", session.MusicTrack);
+        Assert.Equal("song_dungeon", session.Music.Track);
         Assert.Single(engine.StartedAudioVoices);
         Assert.Equal(0, engine.ReleasedAudioVoices);
         Assert.Single(Cues(engine));
@@ -75,11 +75,11 @@ public sealed class DaggerfallMusicSessionTests
         session.Update(Update());
         // Donor SongManager: IsPlayerInsideDungeonCastle selects CastleSongs over the dungeon list.
         Assert.Equal(DaggerfallMusicContext.Castle, session.MusicContext());
-        Assert.Equal("song_gpalac", session.MusicTrack);
+        Assert.Equal("song_gpalac", session.Music.Track);
         session.State.PlayerControl.MoveTo(start + System.Numerics.Vector3.UnitX * 30);
         session.Update(Update());
         Assert.Equal(DaggerfallMusicContext.Dungeon, session.MusicContext());
-        Assert.Equal("song_dungeon", session.MusicTrack);
+        Assert.Equal("song_dungeon", session.Music.Track);
     }
 
     [Fact]
@@ -102,12 +102,12 @@ public sealed class DaggerfallMusicSessionTests
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([inputs, castle]));
 
         session.Update(Update());
-        Assert.Equal("song_dungeon", session.MusicTrack);
+        Assert.Equal("song_dungeon", session.Music.Track);
         Assert.Single(engine.StartedAudioVoices);
 
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
         // The transition itself ends the loop: the world the song belonged to is gone.
-        Assert.Null(session.MusicTrack);
+        Assert.Null(session.Music.Track);
         Assert.Equal(1, engine.ReleasedAudioVoices);
         Assert.Equal(
             ["daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'.",
@@ -116,7 +116,7 @@ public sealed class DaggerfallMusicSessionTests
 
         // The destination's own cue starts on the update that settles the new world, as one voice.
         session.Update(Update());
-        Assert.Equal("song_dungeon6", session.MusicTrack);
+        Assert.Equal("song_dungeon6", session.Music.Track);
         Assert.Equal(2, engine.StartedAudioVoices.Count);
         Assert.Equal(
             ["daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'.",
@@ -145,7 +145,7 @@ public sealed class DaggerfallMusicSessionTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity));
 
         session.Update(Update());
-        Assert.Null(session.MusicTrack);
+        Assert.Null(session.Music.Track);
         Assert.Empty(engine.StartedAudioVoices);
         // No cue, no change to report: a silent score is silent in the diagnostics too.
         Assert.Empty(engine.PublishedDiagnostics.Where(value => value.StartsWith("daggerfall.music/", StringComparison.Ordinal)));
@@ -175,7 +175,7 @@ public sealed class DaggerfallMusicSessionTests
         Assert.True(session.TryTransitionTo(interior.ProfileKey));
         session.Update(Update());
         Assert.Equal(context, session.MusicContext());
-        Assert.Equal(track, session.MusicTrack);
+        Assert.Equal(track, session.Music.Track);
         Assert.Equal(2, fixture.OpenedMusicClips);
         Assert.Equal(1, fixture.ReleasedMusicClips);
         Assert.Equal(1, fixture.ReleasedAudioVoices);
@@ -198,15 +198,15 @@ public sealed class DaggerfallMusicSessionTests
             new(TestPayload.Definitions, inputs, tuning) { Music = Score(content),
                 Sky = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content)) });
         session.Update(Update());
-        Assert.Equal(night, session.MusicTrack);
+        Assert.Equal(night, session.Music.Track);
         session.AdvanceElapsedTime(12 * 60 * 60);
         session.Update(Update());
         Assert.Equal(DaggerfallMusicContext.Rain, session.MusicContext());
-        Assert.Equal(rain, session.MusicTrack);
+        Assert.Equal(rain, session.Music.Track);
         Assert.Equal(1, fixture.ReleasedMusicClips);
         session.AdvanceElapsedTime(12 * 60 * 60);
         session.Update(Update());
-        Assert.Equal(night, session.MusicTrack);
+        Assert.Equal(night, session.Music.Track);
         Assert.Equal(2, fixture.ReleasedMusicClips);
     }
 
@@ -241,7 +241,7 @@ public sealed class DaggerfallMusicSessionTests
         ulong step = 2;
         RunSeconds(session, ref step, DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast.Windup + 2d / 60d);
         Assert.Equal(1, session.State.Progression.SkillUses["long-blade"]);
-        Assert.Equal("song_dungeon", session.MusicTrack);
+        Assert.Equal("song_dungeon", session.Music.Track);
         Assert.Equal(1, engine.OpenedMusicClips);
         Assert.Single(engine.PublishedDiagnostics, value => value.Contains("cue.started"));
         Assert.Equal(0, engine.ReleasedMusicClips);

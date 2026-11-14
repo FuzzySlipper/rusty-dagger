@@ -101,15 +101,8 @@ internal sealed partial class DaggerfallSession
             _newGameInitialized = saved is not null;
             _tuning = tuning;
             _viewLight = new(tuning.SiteLighting);
-            // The score's tracks are read by name from the music container, so the resolver the director asks is
-            // this session's own: it keeps the Engine resource alive for as long as the session plays that track
-            // and releases it on disposal.
-            _musicBundle = music;
-            if (music is not null)
-            {
-                _music = new DaggerfallMusicDirector(engine.Audio, ResolveMusicClip, ReportMusicRetired, tuning.Music.AlternatePlaylists);
-                ReportMissingTracks(music);
-            }
+            Music = new DaggerfallMusic(engine, music, tuning.Music.AlternatePlaylists,
+                DaggerfallConcreteGuildCatalog.MagesFactionId, DaggerfallConcreteGuildCatalog.FightersTrainerFactionId);
             // A 3D viewmodel without its art draws the classic sprites; say why once rather than silently.
             if (tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && composition.HeldArt is null)
                 engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
@@ -327,7 +320,7 @@ internal sealed partial class DaggerfallSession
                 skillUses.PermanentSkillValue, DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
             DaggerfallConcreteGuildMembershipRuntime concreteGuildMembership = new(guildMembership);
             DaggerfallQuestDiseases questDiseases = new(definitions, _diseases, effects, actors.Player.DurableId);
-            DaggerfallQuestEnvironment questEnvironment = new(definitions, _time, questDiseases, _music, _musicBundle, composition.VideosEnabled,
+            DaggerfallQuestEnvironment questEnvironment = new(definitions, _time, questDiseases, Music.Director, Music.Bundle, composition.VideosEnabled,
                 Cinematics, () => _sites.Projection.Inputs.Audio, () => LocalWeather.Current, () => LocalWeather.Climate,
                 (clip, quest, line, count) => _appearance.PlayQuestSound(clip, quest, line, count));
             quests.BindEnvironmentActions(questEnvironment.Condition, questEnvironment.Media);

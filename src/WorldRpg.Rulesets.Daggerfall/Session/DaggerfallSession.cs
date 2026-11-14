@@ -141,6 +141,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>The weather where the player is; rules read its conditions.</summary>
     internal DaggerfallWeather LocalWeather { get; }
+    /// <summary>The ordinary music: what plays where the player stands.</summary>
+    internal DaggerfallMusic Music { get; }
     private readonly DaggerfallWeatherPresentation _weatherPresentation;
     private readonly DaggerfallHorizon _horizon;
 
@@ -305,7 +307,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         Casting.ClearTransient();
         _enemyMagic.Clear();
         _enemyBehavior.ClearEnemyMagic();
-        ChangeMusicSite();
+        Music.ChangeSite();                                                                      // Scene
         if (_site.ActiveSite is { } offerSite) State.Quests.EnterOfferSite(offerSite.Id, _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon);
         Law.ReconcileSite();
     }
@@ -445,6 +447,29 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private bool InHolyPlace() => IsHolyPlace(_activeProfileKey.Kind,
         _activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior
             ? CurrentInteriorBuilding() : null);
+
+    /// <summary>
+    /// The donor music context the admitted world answers: the music owner's rules, read in this order so that each
+    /// domain is asked only where it decides (a dungeon's castle block, a building, a night place, the hour, the weather).
+    /// </summary>
+    internal DaggerfallMusicContext MusicContext()
+    {
+        if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon) return DaggerfallMusic.Underground(InsideCastleZone());
+        if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior) return Music.Inside(CurrentInteriorBuilding());
+        if (DaggerfallMusic.NightPlace(_site.ActiveSite?.Kind) || !_time.Calendar.IsDay) return DaggerfallMusicContext.Night;
+        return DaggerfallMusic.Outside(LocalWeather.Current);
+    }
+
+    /// <summary>Whether the player stands in a dungeon's castle block, the donor's IsPlayerInsideDungeonCastle.</summary>
+    /// <remarks>Music asks every update, so the scan stays a plain loop with no captured closure.</remarks>
+    private bool InsideCastleZone()
+    {
+        if (_sites.Projection.Inputs.ProfileKind != DaggerfallWorldProfileKind.Dungeon || State.PlayerControl.Position is not { } position) return false;
+        var point = position.ToVector();
+        foreach (DaggerfallAmbientZone zone in _sites.Projection.Inputs.AmbientZones)
+            if (zone.Kind == DaggerfallAmbientZoneKind.Castle && zone.Contains(point)) return true;
+        return false;
+    }
 
     private DaggerfallInteriorBuilding? CurrentInteriorBuilding()
     {
@@ -788,7 +813,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         // The score's loop and the clips it opened belong to this session, so they are retired before
         // the Engine context that produced them is asked for anything else.
-        DisposeMusic(ref failure);
+        Music.Dispose(ref failure);
         // Site lighting may have retained an interior background after its resources were
         // released; clear that product-owned camera state only after the final projection dispose.
         try { _engine.CameraView.ClearSkyBackground(default); }
