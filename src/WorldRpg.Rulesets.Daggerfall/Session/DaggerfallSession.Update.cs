@@ -149,7 +149,7 @@ internal sealed partial class DaggerfallSession
                     _time.Advance(deltaSeconds * facts.AdmittedStepCount);                        // Time
                     (long minuteBefore, long minuteAfter) =
                         AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.OrdinaryPlay);   // Session: the calendar's list, below
-                    AdvanceWorldEncounters(minuteBefore, minuteAfter);                            // Actors
+                    WorldEncounters.Advance(minuteBefore, minuteAfter);                            // Actors
                     CheckStandingLaw(minuteBefore, minuteAfter);                                  // Society
                     // One admitted update owns one input slice. Later catch-up steps derive only committed
                     // held keyboard/mapped-direction intent; direct axes, direct digital movement, pointer
@@ -465,7 +465,7 @@ internal sealed partial class DaggerfallSession
         // Location-scoped consumers (law, civilians, NPC projection, quest placements) keep their
         // own loaded-location guards.
         if (!player.Alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
-        _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, pending => PlaceEncounter(pending, simulationStep));   // Actors
+        _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, pending => WorldEncounters.Place(pending, simulationStep));   // Actors
         UpdateLaw(update.DeltaSeconds);                                                           // Society
         if (LegalModalOpen) return;
         _reactions.Step(State.Actors, update.DeltaSeconds, ThrownLanding);                       // Actors
@@ -535,7 +535,7 @@ internal sealed partial class DaggerfallSession
         NeutralizeGuard();                                                                        // Combat
         State.Transport.Ride.Reset();                                                             // Travel
         bool inWater = State.Swimming.IsSwimming;
-        bool enemiesNearby = HasNearbyRestEnemy();                                                // Actors
+        bool enemiesNearby = _senses.EnemyNearby();                                                // Actors
         if (inWater || enemiesNearby)
         {
             var (death, line) =
@@ -608,7 +608,7 @@ internal sealed partial class DaggerfallSession
         double fixedDeltaSeconds = facts.FixedDeltaSeconds;
         if (!double.IsFinite(fixedDeltaSeconds) || fixedDeltaSeconds <= 0d)
             throw new ArgumentOutOfRangeException(nameof(facts), "Admitted ranged-flight step time must be finite and positive.");
-        _combat.AdvanceRangedFlight(generation, simulationStep, fixedDeltaSeconds * facts.AdmittedStepCount, CurrentPositions(), _facts);   // Combat
+        _combat.AdvanceRangedFlight(generation, simulationStep, fixedDeltaSeconds * facts.AdmittedStepCount, _placement.CurrentPositions(), _facts);   // Combat
         SpellFlights.Advance(facts, generation, fixedDeltaSeconds);                                // Magic
         DeliverFacts();                                                                           // Session
     }
@@ -694,7 +694,7 @@ internal sealed partial class DaggerfallSession
         if (!_sites.Projection.Inputs.MobileSprites.ContainsKey(result.HostileMobile)) return;  // Scene
         while (Summoning.Last is { HostilesRemaining: > 0 } pending)                            // Quests
         {
-            if (!TrySpawnPose($"summoning:{pending.Sequence}:foe:{pending.Spawned.Length}","daggerfall.daedric-summoning",player,
+            if (!_placement.TrySpawnPose($"summoning:{pending.Sequence}:foe:{pending.Spawned.Length}","daggerfall.daedric-summoning",player,
                 pending.Refusal ? 8 : 4,64,out ActorPose pose)) return;                          // Actors
             long id=_roster.Spawn(actor.Id.Value,pose); _enemyBehavior.MakeHostile(id);          // Actors
             Summoning.Spawned(id);                                                              // Quests

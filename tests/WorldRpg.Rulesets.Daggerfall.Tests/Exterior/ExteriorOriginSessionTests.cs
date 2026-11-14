@@ -437,7 +437,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
         session.State.PlayerControl.MoveTo(new Vector3(1000, 1, 5));
         session.State.PlayerControl.YawRadians = .3f;
-        var encounter = session.QueueEncounter(new(DaggerfallEncounterContext.WildernessDay, 1, Climate: 224));
+        var encounter = session.WorldEncounters.Queue(new(DaggerfallEncounterContext.WildernessDay, 1, Climate: 224));
         Assert.NotNull(encounter.ActorDefinition);
         session.Exterior.RebaseExteriorIfNeeded();
         Vector3 delta = session.Exterior.LocalCompensation;

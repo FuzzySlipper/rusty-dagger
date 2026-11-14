@@ -642,7 +642,7 @@ public sealed class ControlsInputSessionTests
         int entry = definitions.Encounters.Tables[DaggerfallEncounterPolicy.TableFor(request)]
             .Select((mobile, index) => (Mobile: mobile, Index: index))
             .First(value => value.Mobile is >= 128 and <= 145 && value.Index <= 14).Index;
-        var encounter = session.QueueEncounter(request with { PlayerLevel = entry + 3 });
+        var encounter = session.WorldEncounters.Queue(request with { PlayerLevel = entry + 3 });
         Assert.NotNull(encounter.ActorDefinition);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         var spawned = Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Resolved);

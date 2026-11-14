@@ -74,6 +74,10 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private readonly DaggerfallGroundContainers _groundContainers;
     private readonly DaggerfallBookNotebook _notebook;
     private readonly DaggerfallEncounterRuntime _encounters;
+    private readonly DaggerfallActorPlacement _placement;
+    private readonly DaggerfallEnemySenses _senses;
+    private readonly DaggerfallDungeonPopulation _dungeonPopulation;
+    internal DaggerfallWorldEncounters WorldEncounters { get; }
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
     private readonly DaggerSessionPersistence _persistence;
     private readonly HashSet<ulong> _authoredEntityIds;
@@ -297,7 +301,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     bool IDaggerfallRestSurroundings.MustFeed => _vampirism.MustFeed;
     bool IDaggerfallRestSurroundings.EncounterPending => _encounters.HasPending(_activeProfileKey.LogicalId);
-    bool IDaggerfallRestSurroundings.EnemyNearby => HasNearbyRestEnemy();
+    bool IDaggerfallRestSurroundings.EnemyNearby => _senses.EnemyNearby();
     bool IDaggerfallRestSurroundings.QuestPromptPending => State.Quests.Messages.Pending is not null;
     bool IDaggerfallRestSurroundings.PlayerDefeated => State.Actors.Player.IsDefeated;
     bool IDaggerfallRestSurroundings.HasPosition => State.PlayerControl.Position is not null;
@@ -339,8 +343,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord site) && site.Exterior is { } exterior
         && _exterior.CurrentExteriorCell() == new DaggerfallExteriorCellId(exterior.MapPixelX, exterior.MapPixelY);
 
-    bool IDaggerfallRestSurroundings.EncounterArrives(long minute) =>
-        WorldEncounterRequest(minute, resting: true) is { } encounter && QueueEncounter(encounter).Choice.MobileId is not null;
+    bool IDaggerfallRestSurroundings.EncounterArrives(long minute) => WorldEncounters.ArrivesWhileResting(minute);
 
     // What a ready infection asks before its permanent change; the change itself is the transformation's list.
     bool IDaggerfallTransformationConsumer.HasRacialOverride => State.RacialOverrides.Current is not null;
@@ -634,36 +637,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private DaggerfallQuestPresentation DrawnEscorts(DaggerfallQuestPresentation quests) => DrawnArt is { } art
         ? quests with { EscortFaces = [.. quests.EscortFaces.Select(face => face with { MediaId = art.Drawn(face.MediaId) })] }
         : quests;
-
-    /// <summary>
-    /// Resolves one rest/travel/time encounter at the player pose. The result remains durable but
-    /// unmaterialized until an admitted simulation step places it around the player, which makes a save
-    /// between the two operations restore the selected source result rather than draw again.
-    /// </summary>
-    internal DaggerfallEncounterResolution QueueEncounter(DaggerfallEncounterRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        WorldPoint pose = State.PlayerControl.Position
-            ?? throw new InvalidOperationException("Daggerfall cannot select an encounter without a player position.");
-        ulong generation = _latestUpdateGeneration is > 0 ? _latestUpdateGeneration.Value : 1UL;
-        return _encounters.Select(request, generation, _activeProfileKey.LogicalId, new ActorPose(pose, State.PlayerControl.YawRadians));
-    }
-
-    /// <summary>
-    /// Places one selected encounter around the player at the donor's distances, or leaves it pending
-    /// for the next step when no floor and clearance were found, as the donor's spawner retries each frame.
-    /// </summary>
-    private long? PlaceEncounter(DaggerfallEncounterResolution pending, ulong simulationStep)
-    {
-        if (State.PlayerControl.Position is not WorldPoint player) return null;
-        DaggerfallEncounterContext context = pending.Request.Context;
-        if (!TrySpawnPose($"generation:{pending.Generation}:sequence:{pending.Sequence}:step:{simulationStep}",
-                "daggerfall.encounter.placement", player, DaggerfallEncounterPolicy.MinimumSpawnDistance(context),
-                DaggerfallEncounterPolicy.MaximumSpawnDistance, out ActorPose pose,
-                DaggerfallEncounterPolicy.PlacesOutsideView(context) ? SpawnDirection.BesideView : SpawnDirection.Any))
-            return null;
-        return SpawnActor(pending.ActorDefinition!, pose, pending.Request.PlayerLevel);
-    }
 
     public void Dispose()
     {

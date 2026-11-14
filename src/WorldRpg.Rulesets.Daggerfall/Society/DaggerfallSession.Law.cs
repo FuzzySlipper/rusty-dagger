@@ -136,7 +136,7 @@ internal sealed partial class DaggerfallSession
         foreach (long guard in live) _enemyBehavior.MakeHostile(guard);
         if (response.Phase == DaggerfallLegalPhase.Pursuit && State.PlayerControl.Position is WorldPoint position)
         {
-            var visible = QueryEnemies(DaggerfallActorIdentity.PlayerEntityId, position, Vector3.UnitZ, _tuning.Law.ArrestReach, -1,
+            var visible = _placement.QueryEnemies(DaggerfallActorIdentity.PlayerEntityId, position, Vector3.UnitZ, _tuning.Law.ArrestReach, -1,
                 definition => definition.MobileId == 146).Where(pair => pair.Kind == PerceptionPairKind.Visible);
             if (visible.Any(pair => live.Contains(checked((long)pair.Target)))) OpenArrest(response);
         }
@@ -163,11 +163,11 @@ internal sealed partial class DaggerfallSession
                     && destination.ProfileKind == DaggerfallWorldProfileKind.Exterior)
                 .OrderBy(portal => portal.Position.Y).ThenBy(portal => portal.Id, StringComparer.Ordinal).FirstOrDefault();
             origin = entrance?.Position ?? profile.Anchors["start"].Position;
-            origin = WorldPoint.From(origin.ToVector() + Vector3.UnitY * SummonSeparation);
+            origin = WorldPoint.From(origin.ToVector() + Vector3.UnitY * DaggerfallActorPlacement.SummonSeparation);
             minimum = 0;
-            maximum = SummonSeparation * 2; // Space a small arriving group around the entrance clearance.
+            maximum = DaggerfallActorPlacement.SummonSeparation * 2; // Space a small arriving group around the entrance clearance.
         }
-        if (!TrySpawnPose(operation, "daggerfall.guard-arrival.v1", origin, minimum, maximum, out pose)) return false;
+        if (!_placement.TrySpawnPose(operation, "daggerfall.guard-arrival.v1", origin, minimum, maximum, out pose)) return false;
         pose = new(pose.Position, MathF.Atan2(player.X - pose.Position.X, -(player.Z - pose.Position.Z)));
         return true;
     }

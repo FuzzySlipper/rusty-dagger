@@ -274,11 +274,11 @@ internal sealed partial class DaggerfallSession
                 .. DaggerfallRestorationEffects.Definitions(engine.Random,
                     id => id == actors.Player.DurableId ? actors.Player.Progression.Level : authored[id].Level ?? 1, _vitality),
                 .. DaggerfallContinuousDestructionEffects.Definitions(_random, _vitality, AppendEffectDamage, AppendSpellTrackLoss,
-                    id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition), ReactToSpellAttack),
+                    id => authored.TryGetValue(id, out var definition) && _senses!.IsHostile(id, definition), ReactToSpellAttack),
                 .. DaggerfallTransferEffects.Definitions(_vitality, AppendSpellTransfer,
-                    id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition), ReactToSpellAttack),
+                    id => authored.TryGetValue(id, out var definition) && _senses!.IsHostile(id, definition), ReactToSpellAttack),
                 .. DaggerfallDestructionEffects.Definitions(_vitality, AppendEffectDamage, AppendSpellTrackLoss,
-                    id => authored.TryGetValue(id, out var definition) && IsHostileActor(id, definition),
+                    id => authored.TryGetValue(id, out var definition) && _senses!.IsHostile(id, definition),
                     ReactToSpellAttack),
                 DaggerfallRacialOverrides.Definition(character, tuning.Lycanthropy, tuning.Vampirism),
                 .. DaggerfallTransformationInfectionPolicy.Definitions(effect => Infections!.Advance(effect)),
@@ -335,8 +335,21 @@ internal sealed partial class DaggerfallSession
             _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves);
             _itemEnchanting = new DaggerfallItemEnchanting(definitions, itemInstances, _equipmentMoves, _itemCondition, inventory, () => ItemSouls.Gems);
             _itemCondition.Broken += item => ItemSouls.ReleaseBoundSoul(item);
+            _placement = new DaggerfallActorPlacement(actors, assembled.PlayerControl, npcs.IsGameplayActive, authored, EffectiveFoeTeam,
+                id => _enemyBehavior!.IsPacified(id), id => assembled.Quests.AllowsFoeInfighting(id), _spatial, engine.Perception, _random,
+                () => _exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.EnemyBehavior.DetectionDistance,
+                (float)_tuning.Camera.FieldOfViewYDegrees);
+            _senses = new DaggerfallEnemySenses(actors, assembled.PlayerControl, definitions, authored, EffectiveFoeTeam,
+                id => _enemyBehavior!.IsPacified(id), () => _enemyBehavior!.LastPerception, effects, _locomotion,
+                () => State!.WeaponDrawn, () => _combat!.PlayerHoldsBow(), () => _time.Calendar.MinuteNumber, _random,
+                () => _activeProfileKey, _encounters);
+            WorldEncounters = new DaggerfallWorldEncounters(_encounters, _placement, definitions, assembled.PlayerControl,
+                () => actors.Player.Progression.Level, () => State!.Swimming.IsSwimming, () => State!.Transport.OnShip, () => _activeProfileKey,
+                () => _site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord site) ? site : null,
+                () => { DaggerfallExteriorCellId cell = _exterior.CurrentExteriorCell(); return (cell.X, cell.Y); },
+                () => _exterior.LocationAtPlayer() is not null, () => _latestUpdateGeneration, (definition, pose, level) => SpawnActor(definition, pose, level));
             SpellTargets = new DaggerfallSpellTargets(definitions, actors, character, effects, _spatial, npcs.IsGameplayActive,
-                id => DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null, CurrentPositions,
+                id => DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null, _placement.CurrentPositions,
                 request => _engine.Perception.QueryVisibility(request));
             _heldEnchantments = new DaggerfallHeldEnchantments(equipmentCoordinator, itemInstances, definitions.Magic,
                 playerStats, actors.Entities, playerEntity, () => _time.Calendar,
@@ -361,9 +374,9 @@ internal sealed partial class DaggerfallSession
                 () => _time.Calendar, () => assembled.PlayerControl.Position, equipmentCoordinator, actorInventories,
                 id => id == actors.Player.DurableId ? actors.Player.Actor : actors.TryGet(id, out var actor) ? actor.Actor : null,
                 id => DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null,
-                (origin, radius, eligible) => QueryEnemies(DaggerfallActorIdentity.PlayerEntityId, origin, Vector3.UnitZ, radius, -1d, eligible),
+                (origin, radius, eligible) => _placement.QueryEnemies(DaggerfallActorIdentity.PlayerEntityId, origin, Vector3.UnitZ, radius, -1d, eligible),
                 mobile => _sites.Projection.Inputs.MobileSprites.ContainsKey(mobile),
-                (operation, scope, origin, minimum, maximum) => TrySpawnPose(operation, scope, origin, minimum, maximum, out var pose) ? pose : null,
+                (operation, scope, origin, minimum, maximum) => _placement.TrySpawnPose(operation, scope, origin, minimum, maximum, out var pose) ? pose : null,
                 (definition, pose, allied) => _roster!.Spawn(definition, pose, playerAllied: allied),
                 id => assembled.Quests.ProtectsActor(id), (id, mobile) => _roster!.Transform(id, mobile));
             DaggerfallContactInputs contactInputs = new(definitions, () => character, _random,
@@ -421,11 +434,11 @@ internal sealed partial class DaggerfallSession
                 actors,
                 kit.Attacks,
                 tuning.EnemyBehavior,
-                contextProvider: BuildEnemyPerceptionContext,
+                contextProvider: _senses.PerceptionContext,
                 recordSkillUse: use => skillUses.Record(use),
-                random: _random, motorContext: BuildEnemyMotorContext,
+                random: _random, motorContext: _senses.MotorContext,
                 isPlayerAllied: id => EffectiveFoeTeam(id) == "player-ally",
-                selectAllyTarget: SelectAllyTarget, controlRestrictions: effects.ControlsFor, reactions: _reactions,
+                selectAllyTarget: _placement.SelectAllyTarget, controlRestrictions: effects.ControlsFor, reactions: _reactions,
                 movementPolicy: id => DaggerfallEnemyBehaviorModule.PolicyFor(
                     id,
                     authored,
@@ -548,7 +561,7 @@ internal sealed partial class DaggerfallSession
                 spawn =>
                 {
                     if (!_sites.Projection.Inputs.MobileSprites.ContainsKey(spawn.Mobile)
-                        || !TrySpawnPose(spawn.Operation, spawn.RandomScope, spawn.Origin, spawn.MinimumDistance, spawn.MaximumDistance, out var pose)) return false;
+                        || !_placement.TrySpawnPose(spawn.Operation, spawn.RandomScope, spawn.Origin, spawn.MinimumDistance, spawn.MaximumDistance, out var pose)) return false;
                     _enemyBehavior.MakeHostile(_roster!.Spawn(spawn.Definition.Id.Value, pose, playerAllied: false));
                     return true;
                 });
@@ -683,7 +696,7 @@ internal sealed partial class DaggerfallSession
                 () => _latestUpdateGeneration, () => _latestSimulationStep, State.Character.IsGrantedSpell, combatRules);
             State.Quests.BindCasting(Casting, effects.Catalog);
             SpellRelease = new DaggerfallSpellRelease(Casting, SpellTargets, definitions, actors, State.Character, State.Inventory, Presentation,
-                _tuning.Camera.EyeHeight, CurrentPositions, cast => _touch.Reach(cast), _contact,
+                _tuning.Camera.EyeHeight, _placement.CurrentPositions, cast => _touch.Reach(cast), _contact,
                 () => _exterior.CharacterEnvironment(State.PlayerControl.Motion), StrikeAim.PassesThrough,
                 (sequence, element, point) => _appearance.PlaySpellImpact(sequence, element, point));
             SpellFlights = new DaggerfallSpellFlights(Casting, SpellRelease);
@@ -726,6 +739,9 @@ internal sealed partial class DaggerfallSession
             _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
             _roster.ActorRetired += State.Quests.ObserveFoeRemoval;
+            _dungeonPopulation = new DaggerfallDungeonPopulation(definitions, _random, _uniqueItems, _groundContainers, _grounding.RestingPosition, _encounters,
+                (definition, pose, spawnDistance, passive) => _roster.Spawn(definition, pose, spawnDistance: spawnDistance, passive: passive),
+                State.Character, () => State.Progression.Level);
             if (saved is null) _roster.GrantInitialAuthoredEquipment();
             CreateItemChoice = new DaggerfallCreateItem(definitions, _random, State.Inventory, State.ItemInstances, State.Encumbrance,
                 _uniqueItems, State.Character, () => _time.Calendar, Presentation, saved?.PendingCreateItem);

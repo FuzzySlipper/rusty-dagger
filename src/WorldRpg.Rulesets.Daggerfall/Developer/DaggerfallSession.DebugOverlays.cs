@@ -179,7 +179,7 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
                 || player.HorizontalDistanceTo(actor.Position) > OverlayRadius) continue;
             Vector3 centre = State.Kit.Targeting.AimPoint(actor);
             string label = _roster.Definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition) ? definition.Id.Value : "actor";
-            Color color = definition is not null && IsHostileActor(actor.DurableId, definition) ? Ink.Hostile : Ink.People;
+            Color color = definition is not null && _senses.IsHostile(actor.DurableId, definition) ? Ink.Hostile : Ink.People;
             items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre, (float)(_combat.ReachOf(actor.DurableId) ?? 0), color));
             if (_enemyBehavior.LastSenses.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionSource? senses))
             {

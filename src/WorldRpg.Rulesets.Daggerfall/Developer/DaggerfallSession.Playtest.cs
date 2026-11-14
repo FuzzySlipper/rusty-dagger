@@ -246,7 +246,7 @@ internal sealed partial class DaggerfallSession
         {
             w.WriteStartObject(); w.WriteString("id", $"actor:{actor.DurableId}");
             w.WriteString("label", _roster.Definitions.TryGetValue(actor.DurableId, out var definition) ? definition.Id.Value : "loaded actor");
-            if (definition is not null) w.WriteBoolean("hostile", IsHostileActor(actor.DurableId, definition)); else w.WriteNull("hostile");
+            if (definition is not null) w.WriteBoolean("hostile", _senses.IsHostile(actor.DurableId, definition)); else w.WriteNull("hostile");
             w.WriteBoolean("alive", !actor.IsDefeated); w.WriteBoolean("attackEligible", State.Kit.Targeting.IsValidTarget(actor));
             w.WriteNumber("health", actor.Stats.GetTrack(TrackId.Parse("health")).Current);
             WriteLocation(w, State.Kit.Targeting.AimPoint(actor));

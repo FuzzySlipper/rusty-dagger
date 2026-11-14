@@ -17,7 +17,7 @@ internal sealed partial class DaggerfallSession
         bool wilderness = location.Profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && location.ExteriorLocation is null;
         // Source CreateFoe uses the same floor/clearance admission as the existing summon
         // owner, with its authored near-player ranges for a location versus wilderness.
-        if (!TrySpawnPose(operation, "daggerfall.quest.foe-placement", player, wilderness ? _tuning.QuestSpawning.MinimumWildernessDistance : _tuning.QuestSpawning.MinimumFoeDistance,
+        if (!_placement.TrySpawnPose(operation, "daggerfall.quest.foe-placement", player, wilderness ? _tuning.QuestSpawning.MinimumWildernessDistance : _tuning.QuestSpawning.MinimumFoeDistance,
             wilderness ? _tuning.QuestSpawning.MaximumWildernessDistance : _tuning.QuestSpawning.MaximumFoeDistance, out var pose)) return null;
         long id = _roster.Spawn(foe.Definition, pose);
         _enemyBehavior.MakeHostile(id);

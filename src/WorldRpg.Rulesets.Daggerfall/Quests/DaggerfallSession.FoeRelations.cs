@@ -28,14 +28,14 @@ internal sealed partial class DaggerfallSession
     {
         if (!State.Actors.TryGet(observerId, out var observer) || observer.IsDefeated || State.Quests.IsFoeRestrained(observerId)) return null;
         if (EffectiveFoeTeam(observerId) == "player-ally")
-            return State.Quests.AllowsFoeInfighting(observerId) ? SelectAllyTarget(observerId) : null;
+            return State.Quests.AllowsFoeInfighting(observerId) ? _placement.SelectAllyTarget(observerId) : null;
         var player = State.PlayerControl.Position;
         PursuitTarget? selected = player is { } position ? new(DaggerfallActorIdentity.PlayerEntityId, position) : null;
         if (!State.Quests.AllowsFoeInfighting(observerId) || !State.Quests.HasInfightingFoes) return selected;
         double best = player is { } target ? Vector3.Distance(observer.Position.ToVector(), target.ToVector()) : double.PositiveInfinity;
         Vector3 forward = ActorHeading.Forward(observer.HeadingYawRadians);
         string? team = EffectiveFoeTeam(observerId);
-        foreach (var pair in QueryEnemies(observerId, observer.Position, forward,
+        foreach (var pair in _placement.QueryEnemies(observerId, observer.Position, forward,
             Math.Max(_tuning.EnemyBehavior.DetectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),
             DaggerfallPerceptionQueryDefaults.MinimumFacingCosine, _ => true)
             .Where(pair => pair.Kind == PerceptionPairKind.Visible).OrderBy(pair => pair.Distance).ThenBy(pair => pair.Target))
