@@ -496,8 +496,8 @@ internal sealed partial class DaggerfallSession
             DaggerfallRegionalBankState bank = new(currency, inventory, itemInstances, saved?.Bank);
             DaggerfallLoanState loans = new(saved?.Loans);
             DaggerfallPropertyState property = new(tuning.Property, saved?.Property);
-            _propertyStorage = new DaggerfallPropertyStorage(containers, itemInstances, definitions, _actorIdentities, property, playerEntity);
-            if (saved?.Property is { } savedProperty) _propertyStorage.Restore(savedProperty);
+            DaggerfallPropertyStorage propertyStorage = new(containers, itemInstances, definitions, _actorIdentities, property, playerEntity);
+            if (saved?.Property is { } savedProperty) propertyStorage.Restore(savedProperty);
             DaggerfallCrimeState crime = new(saved?.Crime, () => racialOverrides.Current?.SuppressCrime == true);
             DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
                 currency, _uniqueItems, containers, playerEntity, () => _time.Calendar, () => _site.ActiveSite is { } active
@@ -605,6 +605,18 @@ internal sealed partial class DaggerfallSession
                 calendar: () => _time.Calendar,
                 activeProfile: () => _activeProfileKey,
                 building: CurrentInteriorBuilding);
+            Holdings = new DaggerfallPropertyHoldings(State.Property, propertyStorage, State.Bank, State.Currency, State.Transport,
+                State.KnightlyClaimActions, _site, _random, State.PlayerControl,
+                calendar: () => _time.Calendar,
+                activeProfile: () => _activeProfileKey,
+                profiles: () => _sites.Profiles,
+                building: CurrentInteriorBuilding,
+                questBuilding: State.Quests.ClaimsBuilding,
+                atEntrance: (profile, building) => State.PlayerControl.Position is { } position
+                    && (_sites.Projection.Portals.All.Any(value => value.Portal.DestinationLogicalProfile == profile.LogicalId
+                            && Vector3.Distance(position.ToVector(), value.Portal.Position.ToVector()) <= value.Portal.Radius)
+                        || _doors.All.Any(door => _doors.ExteriorBuildingOf(door.Id) == building
+                            && Vector3.Distance(position.ToVector(), door.Pose.Translation) <= _tuning.LootInteraction.MaximumDistance)));
             ItemSouls = new DaggerfallItemSouls(new(State.Inventory, State.ItemInstances, definitions.Magic, _uniqueItems), definitions,
                 State.ItemInstances, _heldEnchantments, State.Effects, _facts, Presentation,
                 id => DefinitionsByActor.TryGetValue(id, out var actor) ? actor : null,
@@ -785,7 +797,7 @@ internal sealed partial class DaggerfallSession
                 strikeTuning: tuning.StrikeEnchantments);
             _itemEnchanting.Enchanted += _itemCastTriggers.Enchanted;
             effects.Completed += _itemCastTriggers.EffectCompleted;
-            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, _dungeonText, CapturePropertyStorage, FastTravel.Position, authored, () => Casting.NextSequence);
+            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, _dungeonText, propertyStorage.Capture, FastTravel.Position, authored, () => Casting.NextSequence);
             _persistence.EquipCountdown = () => _combat.EquipCountdown;
             if (saved is not null) _combat.EquipCountdown = saved.EquipCountdown;
             _roster = new DaggerfallActorRoster(actors, State.ActorInventories, State.Character, State.Containers, State.Effects, State.InventoryStore,
@@ -802,6 +814,13 @@ internal sealed partial class DaggerfallSession
                     if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();
                     _enemyBehavior.MakeHostile(target);
                 });
+            PropertyLoot = new DaggerfallPropertyLoot(_groundContainers, definitions, _random, _uniqueItems, Crimes, State.Crime,
+                State.ItemInstances, State.Actors, State.Progression, State.Character, State.SkillUses, State.PlayerControl, _site,
+                calendar: () => _time.Calendar,
+                activeProfile: () => _activeProfileKey,
+                placements: () => _sites.Projection.Inputs.PropertyContainers,
+                building: CurrentInteriorBuilding,
+                owned: Holdings.OwnsInterior);
             _dungeonPopulation = new DaggerfallDungeonPopulation(definitions, _random, _uniqueItems, _groundContainers, _grounding.RestingPosition, _encounters,
                 (definition, pose, spawnDistance, passive) => _roster.Spawn(definition, pose, spawnDistance: spawnDistance, passive: passive),
                 State.Character, () => State.Progression.Level);
@@ -906,7 +925,7 @@ internal sealed partial class DaggerfallSession
                 noRegeneration: () => _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind).NoRegeneration,
                 providerAvailable: State.Services.ProviderAvailable,
                 openTeleport: OpenGuildTeleport,
-                knightlyHouse: AwardKnightlyHouse);
+                knightlyHouse: Holdings.AwardKnightlyHouse);
             _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));
             _vitality.ConditionTrackLost += AppendSpellTrackLoss;
             _vitality.SpellTrackRestored += (target, track, requested, restored) =>

@@ -125,7 +125,9 @@ internal sealed partial class DaggerfallSession
                 _doorActivation = new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, id => _doorSpells.Activate(_doors, id), EnterExteriorBuilding, ExteriorBuildingDoor, ExteriorBuildingName, DescribeLockDifficulty, DiscoverExteriorBuilding),
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination,
                     EnterPortal),
-                new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyInteractionPoint, OpenPropertyLoot),
+                new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyLoot.InteractionPoint, id =>
+                    PropertyLoot.Open(id) is not bool privateProperty ? new(false, "That container is no longer available.")
+                    : _lootUi.OpenGround(id, privateProperty) ? new(true, _lootUi.Message) : new(false, _lootUi.Message)),
                 npc: new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
                     id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), PersonSightHeight)));
     }
@@ -152,7 +154,7 @@ internal sealed partial class DaggerfallSession
         // hash keeps its low 63 bits (and is never zero).
         long owner = Math.Max(1L, (long)(_doors.IdentityOf(door).Value & long.MaxValue));
         bool forced = forceMode is not null;
-        bool owned = OwnsInteriorBuilding(interior);
+        bool owned = Holdings.OwnsInterior(interior);
         // Walking in while the building's own entry rule holds it shut is trespass; an entrance the rule
         // opens (its hours, a guild's standing, a quest) is not.
         bool closed = !(ExteriorBuildingDoor(door)?.Entry.Unlocked

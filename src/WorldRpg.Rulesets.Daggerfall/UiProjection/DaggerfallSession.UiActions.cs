@@ -311,7 +311,7 @@ internal sealed partial class DaggerfallSession
                 var questItem = QuestLootMetadata(DaggerfallItemOwner.Ground(groundTake.Id), groundTake.Selection);
                 var transfer = _groundContainers.Take(groundTake.Id, groundTake.Selection, groundTake.ExpectedWorldRevision);
                 if (questItem is not null) State.Quests.ItemClicked(questItem);
-                ObservePropertyLoot(groundTake, source, transfer);
+                PropertyLoot.ObserveTake(source, transfer, groundTake.Definition, groundTake.Quantity);
                 _lootUi.CompleteGround(true);
             }
             catch (Exception rejection) when (rejection is InvalidOperationException or ArgumentException)

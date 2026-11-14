@@ -248,7 +248,7 @@ public sealed class PropertySessionTests
         Assert.Null(restored.ReadPropertyPresentation().Storage);
         Assert.True(restored.State.Property.OwnsShip);
         // Storage is property-owned, so leaving does not retire its item contents.
-        Assert.Equal(4UL, Assert.Single(restored.PropertyStorage.Read(new(key)).Stacks).Quantity);
+        Assert.Equal(4UL, Assert.Single(restored.Holdings.Storage.Read(new(key)).Stacks).Quantity);
     }
 
     [Fact]
@@ -295,7 +295,7 @@ public sealed class PropertySessionTests
         Assert.True(f.Session.TryTransitionTo(f.Land.ProfileKey)); f.OpenBank();
         f.Submit(new { action = "property-sell", key = offer.Key });
         Assert.False(f.Session.State.Property.OwnsHouse(f.HouseIdentity));
-        Assert.Equal(2UL, Assert.Single(f.Session.PropertyStorage.Read(new(offer.Key)).Stacks).Quantity);
+        Assert.Equal(2UL, Assert.Single(f.Session.Holdings.Storage.Read(new(offer.Key)).Stacks).Quantity);
     }
 
     [Fact]
@@ -324,7 +324,7 @@ public sealed class PropertySessionTests
         Assert.False(f.Session.State.Transport.OnShip);
         Assert.Equal(f.Land.ProfileKey, f.Session.Sites.ActiveProfile);
         f.Submit(new { action = "property-put", key = "ship/small", item = "stack:missing", revision = "1", amount = 1 });
-        Assert.Empty(f.Session.PropertyStorage.MaterializedKeys);
+        Assert.Empty(f.Session.Holdings.Storage.MaterializedKeys);
     }
 
     [Fact]

@@ -817,6 +817,44 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
+    /// Boarding the owned ship's list: Economy refuses or names the deck, the exterior's origin is normalized, the deck
+    /// is admitted and the land's return retired before Economy boards through the transport owner, which keeps the
+    /// pose to return to.
+    /// </summary>
+    private DaggerfallTransportActionResult BoardPropertyShip()
+    {
+        DaggerfallTransportAccessContext context = TransportAccess();                             // Travel
+        if (Holdings.BoardingRefusal(context, out DaggerfallWorldProfileKey ship) is { } refused) return refused; // Economy
+        _exterior.NormalizeExteriorOrigin();                                                      // Exterior
+        DaggerfallWorldProfileKey land = _activeProfileKey;
+        DaggerfallTransportPose pose = new(State.PlayerControl.Position!.Value, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians);
+        // Admit the real ship projection before changing transport ownership or return state.
+        if (!_sites.TryRelocate(new(ship, "start")))                                              // Interiors
+            return new(false, State.Transport.Mode, State.Transport.OnShip, DaggerfallTransportRejection.ShipUnavailableAtSite, "The ship world is unavailable.");
+        _sites.ClearReturnDestination();                                                          // Interiors
+        return Holdings.Board(context, pose, land);                                               // Economy
+    }
+
+    /// <summary>Leaving the owned ship's list: the saved land is readmitted before its return relation retires and the transport owner lets the player off.</summary>
+    private DaggerfallTransportActionResult LeavePropertyShip()
+    {
+        if (State.Transport.ShipReturnProfile is not { } land || State.Transport.ShipReturnPose is null)
+            return State.Transport.LeaveShip();                                                   // Travel
+        // Retire the return relation only after the land projection has actually been readmitted.
+        if (!_sites.TryTransitionTo(land))                                                        // Interiors
+            return new(false, State.Transport.Mode, true, DaggerfallTransportRejection.ShipUnavailableAtSite, "The saved land destination is unavailable.");
+        _sites.ClearReturnDestination();                                                          // Interiors
+        return State.Transport.LeaveShip();                                                       // Travel
+    }
+
+    /// <summary>The site's containers' list: the dungeon's population, then the property containers' stock.</summary>
+    private void ReconcilePropertyContainers()
+    {
+        _dungeonPopulation.Populate(_sites.Projection.Inputs);                                    // Actors
+        PropertyLoot.Stock();                                                                     // Economy
+    }
+
+    /// <summary>
     /// The transport change's list: what an accepted change of mount or ship does across domains. The ride starts afresh,
     /// the player lets go of a climb, a mount takes the hands and greets its rider, and boarding or leaving a ship moves
     /// the player to the pose the transport owner returned.

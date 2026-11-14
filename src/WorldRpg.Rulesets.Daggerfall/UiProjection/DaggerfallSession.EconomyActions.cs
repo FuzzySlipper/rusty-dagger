@@ -1,11 +1,25 @@
+using System.Globalization;
+using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Banking;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Property;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// The service panels' actions: the bank and its loans, the merchant, the tavern, the tavern's rooms and training.
+/// An accessible property's storage: its rows as the inventory describes them, and the carried
+/// items it will not take now with the reason, so the transfer screen offers only what the store accepts.
+/// </summary>
+internal sealed record DaggerfallPropertyStorageView(string Key, string Revision, InventoryItemPresentation[] Items, DaggerfallTransferRefusal[] StoreRefusals);
+/// <summary>A carried item a transfer refuses, and why.</summary>
+internal sealed record DaggerfallTransferRefusal(string Item, string Reason);
+internal sealed record DaggerfallPropertyView(bool BankAvailable, DaggerfallPropertyOfferView[] Offers, DaggerfallPropertyStorageView? Storage);
+
+/// <summary>
+/// The service panels' actions: the bank and its loans, the property panel, the merchant, the tavern, the tavern's
+/// rooms and training.
 /// Each reads its action and asks Economy's owner, then says the outcome.
 /// </summary>
 internal sealed partial class DaggerfallSession
@@ -99,4 +113,63 @@ internal sealed partial class DaggerfallSession
     private void ChangeLoan(DaggerfallPlayerUiAction action) => Presentation.SetOutcome(action.Kind == DaggerfallUiActionKind.BankLoanIssue
         ? Banking.Borrow(action.Amount)
         : Banking.Repay(action.Amount, fromAccount: action.Kind == DaggerfallUiActionKind.BankLoanRepayAccount));
+
+    /// <summary>The property panel: the houses and ships offered here, and the storage the player can reach with its rows.</summary>
+    internal DaggerfallPropertyView ReadPropertyPresentation()
+    {
+        bool bank = Banking.ActiveRegion is not null;
+        DaggerfallPropertyOfferView[] offers = Holdings.Offers(bank);
+        DaggerfallPropertyStorageView? storage = null;
+        if (Holdings.AccessibleStorage() is { } key)
+        {
+            InventoryView contents = Holdings.Storage.Read(key);
+            storage = new(key.Value, contents.StoreRevision.ToString(CultureInfo.InvariantCulture), PropertyItems(contents, Holdings.Storage.DaggerfallItemOwnerFor(key)),
+                [.. _inventoryUi.Read().Items.Where(item => item.EquippedSlots.Length > 0).Select(item => new DaggerfallTransferRefusal(item.Key, UnequipBeforeStoring))]);
+        }
+        return new(bank, offers, storage);
+    }
+
+    private void ChangeProperty(DaggerfallPlayerUiAction action)
+    {
+        if (action.Kind is DaggerfallUiActionKind.PropertyPut or DaggerfallUiActionKind.PropertyTake)
+        { ChangePropertyStorage(action); return; }
+        DaggerfallHouseOffer? house = Holdings.HouseOffer(action.Key);
+        if (action.Kind == DaggerfallUiActionKind.PropertyEnter)
+        {
+            if (Holdings.Entrance(house) is not { } interior)
+            { Presentation.SetOutcome("Stand at your house entrance to enter the admitted interior."); return; }
+            Presentation.SetOutcome(TryTransitionTo(interior) ? "Entered your house." : "The house interior is unavailable.");
+            return;
+        }
+        if (Banking.ActiveRegion is null) { Presentation.SetOutcome(DaggerfallBanking.Unavailable); return; }
+        Presentation.SetOutcome(Holdings.Trade(action.Kind == DaggerfallUiActionKind.PropertyBuy, house, action.Key)?.Message
+            ?? "That property offer is no longer available.");
+    }
+
+    private void ChangePropertyStorage(DaggerfallPlayerUiAction action)
+    {
+        if (Holdings.AccessibleStorage() is not { } key || key.Value != action.Key)
+        { Presentation.SetOutcome("You must be inside your property to use its storage."); return; }
+        bool put = action.Kind == DaggerfallUiActionKind.PropertyPut;
+        InventoryView source = put ? State.Inventory.Read() : Holdings.Storage.Read(key);
+        if (!ulong.TryParse(action.Revision, out ulong revision) || source.StoreRevision != revision
+            || action.Item is null || !DaggerfallContainerSelection.TryParse(source, action.Item, action.Amount, out InventoryContainerSelection? selection))
+        { Presentation.SetOutcome("Inventory changed. Choose the item again."); return; }
+        if (put && _inventoryUi.Read().Items.Any(item => item.Key == action.Item && item.EquippedSlots.Length > 0))
+        { Presentation.SetOutcome(UnequipBeforeStoring); return; }
+        try
+        {
+            if (put) Holdings.Storage.TransferTo(key, selection!, revision);
+            else Holdings.Storage.TransferFrom(key, selection!, revision);
+            Presentation.SetOutcome(put ? "Item stored in property." : "Item taken from property.");
+        }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException or OverflowException)
+        { Presentation.SetOutcome(put ? "That item cannot be stored here." : "That item cannot be taken from storage."); }
+    }
+
+    private const string UnequipBeforeStoring = "Unequip that item before storing it.";
+
+    private InventoryItemPresentation[] PropertyItems(InventoryView contents, DaggerfallItemOwner owner) =>
+        [.. contents.UniqueItems.Select(item => _inventoryUi.DescribeItem($"unique:{item.Entity.Value}", item.Definition.Value, 1, owner: owner)),
+            .. contents.Stacks.Select(item => _inventoryUi.DescribeItem($"stack:{item.Id.Value}", item.Definition.Value, item.Quantity, owner: owner))];
 }

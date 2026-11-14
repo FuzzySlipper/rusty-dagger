@@ -123,7 +123,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>The transport access where the player stands (Travel's rule), with whether an owned ship is reachable here (Economy's).</summary>
     private DaggerfallTransportAccessContext TransportAccess() => DaggerfallTransportAccessContext.At(_activeProfileKey.Kind,
-        State.PlayerControl.Position, _sites.Projection.Inputs.DungeonMap, ResolveOwnedShipProfile() is not null);
+        State.PlayerControl.Position, _sites.Projection.Inputs.DungeonMap, Holdings.OwnedShipProfile() is not null);
 
     private readonly World.DaggerfallWorldTime _time;
     private readonly World.DaggerfallHolidays _holidays = new();
@@ -1049,6 +1049,12 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>Renting a room at the tavern the player stands in.</summary>
     internal DaggerfallRoomRental RoomRental { get; } = null!;
+
+    /// <summary>The player's houses and ship: ownership, the offers, trading, entering, storage, boarding and the knightly house.</summary>
+    internal DaggerfallPropertyHoldings Holdings { get; } = null!;
+
+    /// <summary>The goods of an interior's property containers: their stock and the theft of them.</summary>
+    internal DaggerfallPropertyLoot PropertyLoot { get; } = null!;
 
     /// <summary>The atlas the import drew and the tiles granted to the page, or null when the data container carries none and the travel map draws classic art.</summary>
     private readonly DaggerfallAtlasTiles? _atlasTiles;
