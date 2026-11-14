@@ -91,16 +91,16 @@ internal sealed class DaggerfallDialogueWorldState
     }
 
     /// <summary>
-    /// Applies every authored dialogue-world rule to its complete scope. The variable store is
-    /// the source of the transition; this owner retains the generated event and its expiry so
+    /// Applies every authored dialogue-world rule to its complete scope. The world variables,
+    /// read one at a time through <paramref name="read"/>, are the source of the transition; this owner retains the generated event and its expiry so
     /// opening a conversation is normally only a read of current news. The dialogue owner may
     /// invoke this same synchronization as a bounded catch-up when a variable changed between
     /// admitted updates.
     /// </summary>
-    internal void Synchronize(DaggerfallDialogueWorldRules rules, DaggerfallVariableStore variables, long nowMinute)
+    internal void Synchronize(DaggerfallDialogueWorldRules rules, Func<DaggerfallVariableAddress, bool> read, long nowMinute)
     {
         ArgumentNullException.ThrowIfNull(rules);
-        ArgumentNullException.ThrowIfNull(variables);
+        ArgumentNullException.ThrowIfNull(read);
         if (nowMinute < 0) throw new ArgumentOutOfRangeException(nameof(nowMinute), nowMinute, "A dialogue-world transition starts before the calendar origin.");
 
         foreach (DaggerfallDialogueWorldNewsRule rule in rules.News)
@@ -113,7 +113,7 @@ internal sealed class DaggerfallDialogueWorldState
                 // enabled. Current content carries one key (RegionDataFlags.CrimeWave), while
                 // All retains the correct conjunction if another source-backed rule adds keys.
                 bool enabled = rule.VariableKeys.Count != 0
-                    && rule.VariableKeys.All(key => variables.Read(new DaggerfallVariableAddress(rule.Scope, region, key)) == rule.RequiredValue);
+                    && rule.VariableKeys.All(key => read(new DaggerfallVariableAddress(rule.Scope, region, key)) == rule.RequiredValue);
                 Synchronize(rule.Type, region, rule.TextId, enabled, nowMinute);
             }
         }

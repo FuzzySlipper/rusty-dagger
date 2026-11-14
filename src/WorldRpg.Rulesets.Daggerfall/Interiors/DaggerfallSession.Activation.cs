@@ -24,7 +24,6 @@ internal sealed partial class DaggerfallSession
 {
     private DaggerfallActivationModule? _activation;
     private readonly DaggerfallActivationPresentation _activationPresentation = new();
-    private DaggerfallDialogueService? _dialogue;
 
     // A wielded item's template and metal, which choose how the 3D first-person art draws it.
     private (int? Template, string Metal, bool Enchanted) HeldItem(UniqueInventoryItem item)
@@ -83,40 +82,7 @@ internal sealed partial class DaggerfallSession
     private void InitializeActivation(IEngineContext engine, DaggerfallLootInteractionTuning reach)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        _dialogue = new DaggerfallDialogueService(
-            State.Npcs,
-            State.Actors,
-            State.Social,
-            State.SkillUses,
-            State.Actors.Player.Stats,
-            _definitions,
-            _random,
-            () => _site.ActiveSite,
-            () => State.Character.Identity,
-            view => _activationPresentation.SetDialogue(view),
-            message => Presentation.SetOutcome(message), MapDirections, State.Quests.IsNpcMuted, State.Quests.QuestContacts,
-            resolveDirection: ResolveDialogueDirection,
-            directionDirectory: DialogueDirectory,
-            questTopics: State.Quests.DialogueTopics,
-            questRumors: State.Quests.DialogueRumors,
-            resolveQuestRumor: State.Quests.ResolveDialogueRumor,
-            resolveQuestTopic: ResolveQuestTopic,
-            calendar: () => _time.Calendar,
-            workAvailable: DialogueWorkAvailable, offerWork: OfferQuestWork,
-            variables: () => State.Variables,
-            templeService: (npc, topic, amount) => State.TempleServices.Resolve(npc, CurrentInteriorBuilding(), topic switch
-            {
-                DaggerfallDialogueTopic.Donate => true,
-                DaggerfallDialogueTopic.Cure => false,
-                _ => throw new ArgumentOutOfRangeException(nameof(topic), topic, "This dialogue topic is not a temple service."),
-            }, amount),
-            guildService: (npc, topic, key) => GuildProviders.Resolve(npc, CurrentInteriorBuilding(), topic, key),
-            guildWelcome: npc => GuildProviders.Benefits(npc, CurrentInteriorBuilding()),
-            currentText: CurrentTextContext,
-            activeProfile: () => _sites.ActiveProfile,
-            discloseDirection: DiscloseDialogueDirection,
-            dialogueWorld: State.DialogueWorld, suppressTalk: () => State.RacialOverrides.Current?.SuppressTalk == true);
-        _dialogue.SynchronizeWorldState();
+        IDaggerfallNpcActivationOwner people = ComposeDialogue();
         _activation = new DaggerfallActivationModule(
             new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
             reach,
@@ -128,8 +94,7 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyLoot.InteractionPoint, id =>
                     PropertyLoot.Open(id) is not bool privateProperty ? new(false, "That container is no longer available.")
                     : _lootUi.OpenGround(id, privateProperty) ? new(true, _lootUi.Message) : new(false, _lootUi.Message)),
-                npc: new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
-                    id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), PersonSightHeight)));
+                npc: people));
     }
 
     private DaggerfallWorldProfileKey ResolvePortalDestination(string logicalProfile) =>
@@ -270,48 +235,8 @@ internal sealed partial class DaggerfallSession
 
     internal DaggerfallActivationMode ActivationMode => _activation?.Mode ?? DaggerfallActivationMode.Grab;
     internal InteractionTargetingEvidence? LastActivationTargeting => _activation?.LastEvidence;
-    internal DaggerfallActivationView ActivationView => _activationPresentation.View with
-    {
-        Dialogue = _activationPresentation.View.Dialogue is { } dialogue ? WithServices(dialogue with
-        {
-            BankAvailable = Banking.Offers(_dialogue?.CurrentNpc()),
-            ComprehendLanguagesBonus = State.Effects.PerceptionFor(DaggerfallActorIdentity.PlayerEntityId).ComprehendLanguagesBonus,
-            Training = State.SkillTraining.ReadProvider(_dialogue?.CurrentNpc(dialogue.Revision)),
-            Tavern = State.Tavern.ReadAt(_dialogue?.CurrentNpc(dialogue.Revision), CurrentInteriorBuilding),
-            Merchant = ReadCurrentMerchant(),
-        }) : null,
-    };
-
-    // The chooser lists a service exactly when the view its page draws is published: the dialogue's own
-    // trade, training and tavern, and the spellbook's sale, makers and summoning for this person.
-    private DaggerfallDialogueView WithServices(DaggerfallDialogueView dialogue) => dialogue with
-    {
-        Services = DaggerfallPersonServices.For(dialogue.Merchant, dialogue.Training is not null, dialogue.Tavern is not null,
-            ReadSpellSale() is not null,
-            CurrentSpellProvider(service: "make-magic-items") is not null,
-            CurrentSpellProvider(service: "make-potions") is not null,
-            CurrentSpellProvider(service: "make-spells") is not null,
-            CurrentSummoner() is not null),
-    };
-    internal DaggerfallDialogueService Dialogue => _dialogue ?? throw new InvalidOperationException("The session has no dialogue owner.");
-
     /// <summary>Lets the ordinary HUD projection callback carry activation state with its snapshot.</summary>
     internal void PublishActivationView(Action<DaggerfallActivationView> publish) => publish(ActivationView);
-
-    private (string Text, IReadOnlyList<string> Diagnostics)? ResolveQuestTopic(long npcId, string topicId)
-    {
-        return State.Quests.TryResolveDialogueTopic(npcId, topicId,
-            out string? text, out IReadOnlyList<string> diagnostics)
-            ? (text!, diagnostics) : null;
-    }
-
-    private bool DialogueWorkAvailable(long npcId)
-    {
-        if (QuestProvider(npcId) is not { } context) return false;
-        return State.Quests.HasOrdinaryWorkOffer(context.Faction, context.Member, State.Progression.Level, context.Reputation, context.Rank,
-            context.Provider.Appearance.Gender == "Female" ? DaggerfallCharacterGender.Female : DaggerfallCharacterGender.Male,
-            checked((int)_time.Calendar.DayNumber));
-    }
 
     /// <summary>Consumes one parsed mode action; it does not turn into a world activation.</summary>
     private bool ApplyActivationMode(DaggerfallPlayerUiAction action)

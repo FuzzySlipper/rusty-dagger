@@ -80,7 +80,6 @@ internal sealed record DaggerfallQuestRenderedMessage(
     public string? EntryId { get; init; }
 }
 internal sealed record DaggerfallQuestEscortFace(string InstanceId, string Symbol, string Name, string MediaId);
-internal sealed record DaggerfallQuestContact(string InstanceId, string Symbol);
 /// <summary>
 /// One source-declared topic a quest NPC can answer. The message ids stay with the quest message
 /// owner; dialogue only carries the stable topic identity to the session action.

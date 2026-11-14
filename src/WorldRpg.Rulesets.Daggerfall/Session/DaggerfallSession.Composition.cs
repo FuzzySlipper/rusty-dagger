@@ -9,6 +9,7 @@ using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
+using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
@@ -1002,6 +1003,65 @@ internal sealed partial class DaggerfallSession
             if (failures.Count == 1) throw;
             throw new AggregateException(failures);
         }
+    }
+
+    /// <summary>
+    /// Builds the conversation for the active site with what it asks of the other domains, synchronizes its world news,
+    /// and answers the owner of activating a person over it. Activation rebuilds it with each site.
+    /// </summary>
+    private IDaggerfallNpcActivationOwner ComposeDialogue()
+    {
+        _dialogue = new DaggerfallDialogueService(
+            State.Npcs,
+            State.Actors,
+            State.Social,
+            State.SkillUses,
+            State.Actors.Player.Stats,
+            _definitions,
+            _random,
+            () => _site.ActiveSite,
+            () => State.Character.Identity,
+            view => _activationPresentation.SetDialogue(view),
+            message => Presentation.SetOutcome(message), MapDirections, State.Quests.IsNpcMuted, State.Quests.QuestContacts,
+            resolveDirection: ResolveDialogueDirection,
+            directionDirectory: DialogueDirectory,
+            questTopics: npcId => [.. State.Quests.DialogueTopics(npcId).Select(topic => new DaggerfallDialogueTopicOption(topic.Id, topic.Label))],
+            questRumorCount: () => State.Quests.DialogueRumors().Count,
+            resolveQuestRumor: index => State.Quests.ResolveDialogueRumor(State.Quests.DialogueRumors()[index]),
+            resolveQuestTopic: ResolveQuestTopic,
+            calendar: () => _time.Calendar,
+            workAvailable: DialogueWorkAvailable, offerWork: OfferQuestWork,
+            readVariable: address => State.Variables.Read(address),
+            templeService: (npc, topic, amount) => State.TempleServices.Resolve(npc, CurrentInteriorBuilding(), topic switch
+            {
+                DaggerfallDialogueTopic.Donate => true,
+                DaggerfallDialogueTopic.Cure => false,
+                _ => throw new ArgumentOutOfRangeException(nameof(topic), topic, "This dialogue topic is not a temple service."),
+            }, amount),
+            guildService: (npc, topic, key) => GuildProviders.Resolve(npc, CurrentInteriorBuilding(), topic, key),
+            guildWelcome: npc => GuildProviders.Benefits(npc, CurrentInteriorBuilding()),
+            currentText: CurrentTextContext,
+            activeProfile: () => _sites.ActiveProfile,
+            discloseDirection: DiscloseDialogueDirection,
+            dialogueWorld: State.DialogueWorld, suppressTalk: () => State.RacialOverrides.Current?.SuppressTalk == true);
+        _dialogue.SynchronizeWorldState();
+        return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
+            id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), PersonSightHeight);
+    }
+
+    private (string Text, IReadOnlyList<string> Diagnostics)? ResolveQuestTopic(long npcId, string topicId)
+    {
+        return State.Quests.TryResolveDialogueTopic(npcId, topicId,
+            out string? text, out IReadOnlyList<string> diagnostics)
+            ? (text!, diagnostics) : null;
+    }
+
+    private bool DialogueWorkAvailable(long npcId)
+    {
+        if (QuestProvider(npcId) is not { } context) return false;
+        return State.Quests.HasOrdinaryWorkOffer(context.Faction, context.Member, State.Progression.Level, context.Reputation, context.Rank,
+            context.Provider.Appearance.Gender == "Female" ? DaggerfallCharacterGender.Female : DaggerfallCharacterGender.Male,
+            checked((int)_time.Calendar.DayNumber));
     }
 
     private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();

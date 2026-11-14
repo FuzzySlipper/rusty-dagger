@@ -13,121 +13,6 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal enum DaggerfallDialogueTone { Polite, Normal, Blunt }
-internal enum DaggerfallDialogueTopic { Directions, News, Work, QuestInfo, Donate, Cure, RankReview, Armor, House, Join, Teleport, Spymaster, RestoreAttributes }
-
-/// <param name="Group">The heading the conversation lists the topic under (<see cref="DaggerfallDialogueTopicGroups"/>).</param>
-/// <param name="Category">The list inside that heading the topic belongs to, such as a kind of building; null when the heading has no lists.</param>
-internal sealed record DaggerfallDialogueTopicOption(string Id, string Label, string? Key = null, string Group = DaggerfallDialogueTopicGroups.Services,
-    string? Category = null);
-
-/// <summary>The headings a conversation groups its topics under, in the order it shows them.</summary>
-internal static class DaggerfallDialogueTopicGroups
-{
-    internal const string Talk = "talk";
-    internal const string Places = "places";
-    internal const string Quests = "quests";
-    internal const string Services = "services";
-    internal static readonly (string Id, string Label)[] All =
-        [(Talk, "Ask about"), (Quests, "Your business"), (Places, "Where is…"), (Services, "Services")];
-
-    /// <summary>
-    /// The kinds of building the "Where is" directory lists, in the donor's order, each under its own list
-    /// (DFU TalkManager.AssembleTopicListLocation and BuildingTypeToGroupString). Every other kind - houses,
-    /// walls, the palace, ships, furniture stores and the specials - is on the donor's skip list.
-    /// </summary>
-    internal static readonly IReadOnlyDictionary<int, (int Order, string Label)> BuildingCategories = new Dictionary<int, (int, string)>
-    {
-        [0] = (0, "Alchemists"), [2] = (1, "Armorers"), [3] = (2, "Banks"), [5] = (3, "Bookstores"),
-        [6] = (4, "Clothing stores"), [8] = (5, "Gem stores"), [9] = (6, "General stores"), [10] = (7, "Libraries"),
-        [11] = (8, "Guilds"), [12] = (9, "Pawn shops"), [13] = (10, "Weaponsmiths"), [14] = (11, "Temples"), [15] = (12, "Taverns"),
-    };
-    internal const string People = "People";
-    internal const string Elsewhere = "Elsewhere in the region";
-    internal const string QuestPlaces = "Your business";
-}
-/// <param name="Known">Whether the map already discloses this destination; subject knowledge is resolved separately.</param>
-internal sealed record DaggerfallDialogueDestination(string Id, string Name, string Hint, bool Known = true)
-{
-    /// <summary>Whether the speaking NPC shares the destination's building.</summary>
-    internal bool SameBuilding { get; init; }
-    /// <summary>Whether the speaking NPC belongs to the destination's organization.</summary>
-    internal bool SameOrganization { get; init; }
-    /// <summary>Whether the destination is a current quest-local subject.</summary>
-    internal bool QuestLocality { get; init; }
-}
-internal sealed record DaggerfallDialogueView(
-    string Revision,
-    string TargetLabel,
-    string Greeting,
-    string Tone,
-    string? Question,
-    string? Reply,
-    IReadOnlyList<DaggerfallDialogueTopicOption> Topics,
-    IReadOnlyList<string> Diagnostics)
-{
-    internal int ComprehendLanguagesBonus { get; init; }
-    internal bool BankAvailable { get; init; }
-    internal IReadOnlyList<DaggerfallQuestContact> QuestContacts { get; init; } = [];
-    internal DaggerfallTavernView? Tavern { get; init; }
-    internal DaggerfallSkillTrainingProviderView? Training { get; init; }
-    internal DaggerfallMerchantView? Merchant { get; init; }
-    /// <summary>What the person offers, in the order the person screen's chooser lists it; talk is always first.</summary>
-    internal IReadOnlyList<DaggerfallPersonService> Services { get; init; } = DaggerfallPersonServices.TalkOnly;
-    /// <summary>The page contact opens on: talk for a person who offers nothing else, otherwise the chooser.</summary>
-    internal string OpensOn => Services.Count == 1 ? DaggerfallPersonServices.Talk : DaggerfallPersonServices.Chooser;
-}
-
-/// <summary>One service a person offers, as the person screen's chooser names it.</summary>
-internal sealed record DaggerfallPersonService(string Id, string Label);
-
-/// <summary>
-/// The services a person offers in conversation, in the donor's service-window order: talk first, then
-/// the trade, training, food and drink, spells for sale, the makers and Daedric summoning. Each is listed
-/// only when its own page has something to draw, so the chooser never offers an empty page. Temple
-/// donation, curing, banking and the guild topics are asked about in talk and are not separate pages.
-/// </summary>
-internal static class DaggerfallPersonServices
-{
-    internal const string Chooser = "services";
-    internal const string Talk = "talk";
-    internal const string Trade = "trade";
-    internal const string Training = "training";
-    internal const string Tavern = "tavern";
-    internal const string Spells = "spells";
-    internal const string ItemMaker = "item-maker";
-    internal const string PotionMaker = "potion-maker";
-    internal const string SpellMaker = "spell-maker";
-    internal const string Summoning = "summoning";
-
-    internal static readonly IReadOnlyList<DaggerfallPersonService> TalkOnly = [new(Talk, "Talk")];
-
-    internal static IReadOnlyList<DaggerfallPersonService> For(DaggerfallMerchantView? merchant, bool training, bool tavern,
-        bool spells, bool itemMaker, bool potionMaker, bool spellMaker, bool summoning)
-    {
-        List<DaggerfallPersonService> services = [.. TalkOnly];
-        if (merchant is not null && TradeLabel(merchant) is { } trade) services.Add(new(Trade, trade));
-        if (training) services.Add(new(Training, "Training"));
-        if (tavern) services.Add(new(Tavern, "Food and drink"));
-        if (spells) services.Add(new(Spells, "Buy spells"));
-        if (itemMaker) services.Add(new(ItemMaker, "Make magic items"));
-        if (potionMaker) services.Add(new(PotionMaker, "Make potions"));
-        if (spellMaker) services.Add(new(SpellMaker, "Make spells"));
-        if (summoning) services.Add(new(Summoning, "Summon a Daedra"));
-        return services;
-    }
-
-    /// <summary>The trade's name from what this provider deals in, as "Buy, sell and repair"; null when it deals in nothing.</summary>
-    private static string? TradeLabel(DaggerfallMerchantView merchant)
-    {
-        string[] parts = [.. new[] { (merchant.CanBuy, "buy"), (merchant.CanSell, "sell"), (merchant.CanRepair, "repair"), (merchant.CanIdentify, "identify") }
-            .Where(part => part.Item1).Select(part => part.Item2)];
-        if (parts.Length == 0) return null;
-        string joined = parts.Length == 1 ? parts[0] : $"{string.Join(", ", parts[..^1])} and {parts[^1]}";
-        return char.ToUpperInvariant(joined[0]) + joined[1..];
-    }
-}
-
 /// <summary>
 /// Daggerfall talk policy over the existing NPC identity and actor owners. The owner admits only a
 /// current talk-service target at the active site; a DOM choice is rechecked against the same actor,
@@ -187,9 +72,9 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<(string Name, string Hint)?>? _directions;
     private readonly Func<string?, DaggerfallDialogueDestination?>? _resolveDirection;
     private readonly Func<IReadOnlyList<DaggerfallDialogueTopicOption>>? _directionDirectory;
-    private readonly Func<IReadOnlyList<DaggerfallQuestMessageDeliverySave>> _questRumors;
-    private readonly Func<DaggerfallQuestMessageDeliverySave, (string Text, IReadOnlyList<string> Diagnostics)>? _resolveQuestRumor;
-    private readonly Func<long, IReadOnlyList<DaggerfallQuestDialogueTopic>> _questTopics;
+    private readonly Func<int> _questRumorCount;
+    private readonly Func<int, (string Text, IReadOnlyList<string> Diagnostics)>? _resolveQuestRumor;
+    private readonly Func<long, IReadOnlyList<DaggerfallDialogueTopicOption>> _questTopics;
     private readonly Func<long, string, (string Text, IReadOnlyList<string> Diagnostics)?>? _resolveQuestTopic;
     private readonly Func<DaggerfallCalendar> _calendar;
     private readonly Func<DaggerfallTextContext>? _currentText;
@@ -197,7 +82,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     private readonly Func<long, IReadOnlyList<DaggerfallQuestContact>> _questContacts;
     private readonly Func<long, bool> _workAvailable;
     private readonly Func<long, string>? _offerWork;
-    private readonly Func<DaggerfallVariableStore?>? _variables;
+    private readonly Func<DaggerfallVariableAddress, bool>? _readVariable;
     private readonly Func<DaggerfallWorldProfileKey>? _activeProfile;
     private readonly Func<string, bool>? _discloseDirection;
     private readonly DaggerfallDialogueWorldState _dialogueWorld;
@@ -224,19 +109,19 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         Func<long, IReadOnlyList<DaggerfallQuestContact>>? questContacts = null,
         Func<string?, DaggerfallDialogueDestination?>? resolveDirection = null,
         Func<IReadOnlyList<DaggerfallDialogueTopicOption>>? directionDirectory = null,
-        Func<long, IReadOnlyList<DaggerfallQuestDialogueTopic>>? questTopics = null,
+        Func<long, IReadOnlyList<DaggerfallDialogueTopicOption>>? questTopics = null,
         Func<long, string, (string Text, IReadOnlyList<string> Diagnostics)?>? resolveQuestTopic = null,
         Func<DaggerfallCalendar>? calendar = null,
         Func<long, bool>? workAvailable = null,
         Func<long, string>? offerWork = null,
-        Func<DaggerfallVariableStore?>? variables = null,
+        Func<DaggerfallVariableAddress, bool>? readVariable = null,
         Func<DaggerfallNpc, DaggerfallDialogueTopic, ulong?, DaggerfallTempleServiceResult>? templeService = null,
         Func<DaggerfallNpc, DaggerfallGuildProviderTopic, string?, DaggerfallGuildProviderResult>? guildService = null,
         Func<DaggerfallWorldProfileKey>? activeProfile = null,
         Func<string, bool>? discloseDirection = null,
         DaggerfallDialogueWorldState? dialogueWorld = null, Func<bool>? suppressTalk = null,
-        Func<IReadOnlyList<DaggerfallQuestMessageDeliverySave>>? questRumors = null,
-        Func<DaggerfallQuestMessageDeliverySave, (string Text, IReadOnlyList<string> Diagnostics)>? resolveQuestRumor = null,
+        Func<int>? questRumorCount = null,
+        Func<int, (string Text, IReadOnlyList<string> Diagnostics)>? resolveQuestRumor = null,
         Func<DaggerfallNpc, DaggerfallGuildProviderResult?>? guildWelcome = null,
         Func<DaggerfallTextContext>? currentText = null)
     {
@@ -257,14 +142,14 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         _directionDirectory = directionDirectory;
         _muted = muted ?? (_ => false);
         _questContacts = questContacts ?? (_ => []);
-        _questRumors = questRumors ?? (() => []);
+        _questRumorCount = questRumorCount ?? (() => 0);
         _resolveQuestRumor = resolveQuestRumor;
         _questTopics = questTopics ?? (_ => []);
         _resolveQuestTopic = resolveQuestTopic;
         _calendar = calendar ?? (() => DaggerfallCalendar.Start);
         _workAvailable = workAvailable ?? (_ => false);
         _offerWork = offerWork;
-        _variables = variables;
+        _readVariable = readVariable;
         _activeProfile = activeProfile;
         _discloseDirection = discloseDirection;
         _dialogueWorld = dialogueWorld ?? new();
@@ -331,39 +216,58 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         return new(true, $"You speak with {npc!.DisplayName ?? npc.Role}.");
     }
 
-    internal DaggerfallActivationOutcome ApplyAction(DaggerfallPlayerUiAction action)
+    /// <summary>Ends the conversation the player sees at this revision.</summary>
+    internal DaggerfallActivationOutcome End(string? revision)
     {
-        ArgumentNullException.ThrowIfNull(action);
-        if (action.Kind == DaggerfallUiActionKind.DialogueClose)
-        {
-            if (!MatchesRevision(action.Revision)) return Reject("That conversation has already ended.");
-            Close();
-            return Report(new(true, "You end the conversation."));
-        }
+        if (!MatchesRevision(revision)) return Reject("That conversation has already ended.");
+        Close();
+        return Report(new(true, "You end the conversation."));
+    }
 
-        if (action.Kind is not (DaggerfallUiActionKind.DialogueTone or DaggerfallUiActionKind.DialogueTopic) || !MatchesRevision(action.Revision))
-            return Reject("That conversation choice is no longer current.");
-        if (!ValidateCurrent(out DaggerfallNpc? npc, out DaggerfallDialogueNpc? actor, out DaggerfallSiteRecord? site))
-        {
-            Close();
-            return Reject("That person has moved or is no longer available.");
-        }
+    /// <summary>Speaks in a tone ("polite", "normal" or "blunt") from now on in the conversation at this revision.</summary>
+    internal DaggerfallActivationOutcome ChooseTone(string? revision, string? tone)
+    {
+        if (!AdmitChoice(revision, out DaggerfallNpc? npc, out _, out DaggerfallSiteRecord? site, out DaggerfallActivationOutcome? refused))
+            return refused!;
+        if (!TryParseTone(tone, out DaggerfallDialogueTone chosen))
+            return Reject("That tone is not available.");
+        _current!.Tone = chosen;
+        _current.Question = null;
+        _current.Reply = null;
+        _current.Diagnostics.Clear();
+        Publish(npc!, site!);
+        return Report(new(true, $"You choose a {chosen.ToString().ToLowerInvariant()} tone."));
+    }
 
-        if (action.Kind == DaggerfallUiActionKind.DialogueTone)
-        {
-            if (!TryParseTone(action.Tone, out DaggerfallDialogueTone tone))
-                return Reject("That tone is not available.");
-            _current!.Tone = tone;
-            _current.Question = null;
-            _current.Reply = null;
-            _current.Diagnostics.Clear();
-            Publish(npc!, site!);
-            return Report(new(true, $"You choose a {tone.ToString().ToLowerInvariant()} tone."));
-        }
-
-        if (!TryParseTopic(action.Topic, out DaggerfallDialogueTopic topic, out string? topicTarget))
+    /// <summary>Asks about a topic in the conversation at this revision, with a donation's amount or a provider option's key.</summary>
+    internal DaggerfallActivationOutcome Ask(string? revision, string? topic, ulong? amount, string? key)
+    {
+        if (!AdmitChoice(revision, out DaggerfallNpc? npc, out DaggerfallDialogueNpc? actor, out DaggerfallSiteRecord? site, out DaggerfallActivationOutcome? refused))
+            return refused!;
+        if (!TryParseTopic(topic, out DaggerfallDialogueTopic asked, out string? topicTarget))
             return Reject("That topic is not available.");
-        return ResolveTopic(npc!, actor!, site!, topic, topicTarget, action.Amount, action.Key);
+        return ResolveTopic(npc!, actor!, site!, asked, topicTarget, amount, key);
+    }
+
+    private bool AdmitChoice(string? revision, out DaggerfallNpc? npc, out DaggerfallDialogueNpc? actor, out DaggerfallSiteRecord? site,
+        out DaggerfallActivationOutcome? refused)
+    {
+        npc = null;
+        actor = null;
+        site = null;
+        refused = null;
+        if (!MatchesRevision(revision))
+        {
+            refused = Reject("That conversation choice is no longer current.");
+            return false;
+        }
+        if (!ValidateCurrent(out npc, out actor, out site))
+        {
+            Close();
+            refused = Reject("That person has moved or is no longer available.");
+            return false;
+        }
+        return true;
     }
 
     internal DaggerfallNpc? CurrentNpc(string? revision = null) =>
@@ -392,8 +296,8 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     /// </summary>
     internal void SynchronizeWorldState()
     {
-        if (_variables?.Invoke() is { } variables)
-            _dialogueWorld.Synchronize(_definitions.DialogueWorldRules, variables, _currentCalendarMinute());
+        if (_readVariable is { } read)
+            _dialogueWorld.Synchronize(_definitions.DialogueWorldRules, read, _currentCalendarMinute());
     }
 
     internal void Rebase(System.Numerics.Vector3 delta)
@@ -610,8 +514,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
                 rumor.Faction2,
                 TimeLimit: rumor.TimeLimit))];
         SynchronizeWorldState();
-        DaggerfallVariableStore? variables = _variables?.Invoke();
-        if (variables is not null)
+        if (_readVariable is { } read)
         {
             foreach (DaggerfallDialogueWorldNewsRule rule in _definitions.DialogueWorldRules.News)
             {
@@ -623,7 +526,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
                     _ => throw new InvalidOperationException($"Dialogue world rule {rule.Type}/{rule.TextId} names an unsupported variable scope."),
                 };
                 bool enabled = rule.VariableKeys.Count != 0
-                    && rule.VariableKeys.All(key => variables.Read(new DaggerfallVariableAddress(rule.Scope, owner, key)) == rule.RequiredValue);
+                    && rule.VariableKeys.All(key => read(new DaggerfallVariableAddress(rule.Scope, owner, key)) == rule.RequiredValue);
                 DaggerfallDialogueWorldRumorSave? generated = rule.Type == DaggerfallDialogueWorldState.CrimeWaveType
                     && rule.Scope == DaggerfallVariableScope.Region
                     ? _dialogueWorld.ReadActive(rule.Type, site.Id.Region, rule.TextId, currentMinute)
@@ -638,18 +541,18 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             }
         }
         candidates.RemoveAll(candidate => candidate.TimeLimit > 0 && candidate.TimeLimit <= currentMinute);
-        var questRumors = _resolveQuestRumor is null ? [] : _questRumors();
-        if (candidates.Count + questRumors.Count == 0)
+        int questRumors = _resolveQuestRumor is null ? 0 : _questRumorCount();
+        if (candidates.Count + questRumors == 0)
         {
             (string empty, diagnostics) = RenderSelectedRun(Resource(1457), context,
                 $"{session.Revision}:{session.QuestionCount}:news:empty");
             return empty;
         }
 
-        int selected = Draw(session, $"{session.QuestionCount}:news:select", 0, candidates.Count + questRumors.Count - 1);
+        int selected = Draw(session, $"{session.QuestionCount}:news:select", 0, candidates.Count + questRumors - 1);
         if (selected >= candidates.Count)
         {
-            var answer = _resolveQuestRumor!(questRumors[selected - candidates.Count]);
+            var answer = _resolveQuestRumor!(selected - candidates.Count);
             diagnostics = answer.Diagnostics;
             return answer.Text;
         }
@@ -873,8 +776,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             topics.Add(new("work", "Do you know of any work?", Group: Talk));
         if (_directionDirectory is not null)
             topics.AddRange(_directionDirectory().Select(topic => topic with { Group = DaggerfallDialogueTopicGroups.Places }));
-        foreach (DaggerfallQuestDialogueTopic topic in _questTopics(npc.DurableId))
-            topics.Add(new(topic.Id, topic.Label, Group: DaggerfallDialogueTopicGroups.Quests));
+        topics.AddRange(_questTopics(npc.DurableId).Select(topic => topic with { Group = DaggerfallDialogueTopicGroups.Quests }));
         if (_templeService is not null && OffersTopic(npc, DaggerfallDialogueTopic.Donate))
             topics.Add(new("donate", "Donate gold"));
         if (_templeService is not null && OffersTopic(npc, DaggerfallDialogueTopic.Cure))
@@ -1020,17 +922,5 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
         internal HashSet<DaggerfallSkillUseReason> SkillReasons { get; } = [];
         internal List<string> Diagnostics { get; } = [];
         internal List<DaggerfallDialogueTopicOption> ProviderTopics { get; } = [];
-    }
-}
-
-/// <summary>DaggerfallSession composition and strict semantic-action boundary for the dialogue owner.</summary>
-internal sealed partial class DaggerfallSession
-{
-    private bool ApplyDialogueAction(DaggerfallPlayerUiAction action)
-    {
-        if (action.Kind is not (DaggerfallUiActionKind.DialogueTone or DaggerfallUiActionKind.DialogueTopic or DaggerfallUiActionKind.DialogueClose) || _dialogue is null)
-            return false;
-        _dialogue.ApplyAction(action);
-        return true;
     }
 }

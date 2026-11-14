@@ -22,8 +22,8 @@ public sealed class DaggerfallDialogueTests
         Assert.Equal(session.State.Npcs.Require((long)talk.Target.Identity.Value).DisplayName, opening.TargetLabel);
         Assert.NotEmpty(opening.Greeting);
 
-        Assert.True(talk.Service.ApplyAction(new("dialogue-tone", Revision: opening.Revision, Tone: "polite")).Applied);
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: opening.Revision, Topic: "directions")).Applied);
+        Assert.True(talk.Service.ChooseTone(opening.Revision, "polite").Applied);
+        Assert.True(talk.Service.Ask(opening.Revision, "directions", null, null).Applied);
         DaggerfallDialogueView answer = Assert.IsType<DaggerfallDialogueView>(talk.View);
         Assert.False(string.IsNullOrWhiteSpace(answer.Question));
         Assert.False(string.IsNullOrWhiteSpace(answer.Reply));
@@ -31,10 +31,10 @@ public sealed class DaggerfallDialogueTests
         Assert.Equal(1, session.State.Progression.SkillUses["etiquette"]);
 
         // Repeating a question in the same conversation reuses the selected tone result's one skill use.
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: opening.Revision, Topic: "directions")).Applied);
+        Assert.True(talk.Service.Ask(opening.Revision, "directions", null, null).Applied);
         Assert.Equal(1, session.State.Progression.SkillUses["etiquette"]);
 
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: opening.Revision, Topic: "news")).Applied);
+        Assert.True(talk.Service.Ask(opening.Revision, "news", null, null).Applied);
         DaggerfallDialogueView news = Assert.IsType<DaggerfallDialogueView>(talk.View);
         Assert.False(string.IsNullOrWhiteSpace(news.Reply));
         Assert.DoesNotContain("%", news.Reply!, StringComparison.Ordinal);
@@ -54,9 +54,9 @@ public sealed class DaggerfallDialogueTests
         var delta = new System.Numerics.Vector3(-1000, 0, -1000);
         talk.Actor.ApplyPose(new ActorPose(DaggerfallSceneOrigin.Shift(talk.Actor.Position, delta), talk.Actor.HeadingYawRadians));
         talk.Service.Rebase(delta);
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "directions")).Applied);
+        Assert.True(talk.Service.Ask(revision, "directions", null, null).Applied);
         talk.Actor.ApplyPose(new ActorPose(new WorldPoint(talk.Actor.Position.X + 1, talk.Actor.Position.Y, talk.Actor.Position.Z), talk.Actor.HeadingYawRadians));
-        Assert.False(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "news")).Applied);
+        Assert.False(talk.Service.Ask(revision, "news", null, null).Applied);
     }
 
     [Theory]
@@ -74,7 +74,7 @@ public sealed class DaggerfallDialogueTests
         else
             fixture.Session.State.Npcs.SetPresence(talk.Npc.DurableId, DaggerfallNpcPresence.Removed);
 
-        DaggerfallActivationOutcome stale = talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "news"));
+        DaggerfallActivationOutcome stale = talk.Service.Ask(revision, "news", null, null);
         Assert.False(stale.Applied);
         Assert.Null(talk.View);
     }
@@ -87,9 +87,9 @@ public sealed class DaggerfallDialogueTests
         Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
         string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
 
-        Assert.True(talk.Service.ApplyAction(new("dialogue-close", Revision: revision)).Applied);
+        Assert.True(talk.Service.End(revision).Applied);
         Assert.Null(talk.View);
-        Assert.False(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "directions")).Applied);
+        Assert.False(talk.Service.Ask(revision, "directions", null, null).Applied);
         Assert.Null(talk.View);
     }
 
@@ -106,7 +106,7 @@ public sealed class DaggerfallDialogueTests
         Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
         string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
 
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "news")).Applied);
+        Assert.True(talk.Service.Ask(revision, "news", null, null).Applied);
         DaggerfallDialogueView news = Assert.IsType<DaggerfallDialogueView>(talk.View);
         Assert.True(news.Reply?.Contains("criminal", StringComparison.OrdinalIgnoreCase) == true
             || news.Reply?.Contains("killed", StringComparison.OrdinalIgnoreCase) == true);
@@ -138,7 +138,7 @@ public sealed class DaggerfallDialogueTests
         Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
         string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
 
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: destination.Id)).Applied);
+        Assert.True(talk.Service.Ask(revision, destination.Id, null, null).Applied);
         DaggerfallDialogueView first = Assert.IsType<DaggerfallDialogueView>(talk.View);
         Assert.False(disclosed);
         Assert.False(string.IsNullOrWhiteSpace(first.Reply));
@@ -148,7 +148,7 @@ public sealed class DaggerfallDialogueTests
         Assert.Single(knowledgeKeys);
         Assert.Contains($":topic:{destination.Id}", knowledgeKeys[0], StringComparison.Ordinal);
 
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: destination.Id)).Applied);
+        Assert.True(talk.Service.Ask(revision, destination.Id, null, null).Applied);
         Assert.False(disclosed);
         Assert.False(string.IsNullOrWhiteSpace(Assert.IsType<DaggerfallDialogueView>(talk.View).Reply));
         string[] repeatedKnowledgeKeys = [.. random.Requests
@@ -171,7 +171,7 @@ public sealed class DaggerfallDialogueTests
         Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
         string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
 
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: target)).Applied);
+        Assert.True(talk.Service.Ask(revision, target, null, null).Applied);
         Assert.Contains(random.Requests, request => request.Key.StartsWith("knowledge:npc:", StringComparison.Ordinal)
             && request.Key.EndsWith($":topic:{target}", StringComparison.Ordinal));
     }
@@ -208,7 +208,7 @@ public sealed class DaggerfallDialogueTests
         string topic = $"direction:npc:{targetId}";
         Assert.Contains(opening.Topics, option => option.Id == topic);
 
-        Assert.True(session.Dialogue.ApplyAction(new("dialogue-topic", Revision: opening.Revision, Topic: topic)).Applied);
+        Assert.True(session.Dialogue.Ask(opening.Revision, topic, null, null).Applied);
         Assert.Contains(random.Requests, request => request.Key.StartsWith("knowledge:npc:", StringComparison.Ordinal)
             && request.Key.EndsWith($":topic:{topic}", StringComparison.Ordinal));
     }
@@ -240,7 +240,7 @@ public sealed class DaggerfallDialogueTests
         Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
         string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
 
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: target)).Applied);
+        Assert.True(talk.Service.Ask(revision, target, null, null).Applied);
         Assert.Equal(1, disclosures);
         Assert.True(known);
         Assert.True(fixture.Session.Site.IsDiscovered(destination.Id));
@@ -249,7 +249,7 @@ public sealed class DaggerfallDialogueTests
         using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(save));
         Assert.True(restored.Site.IsDiscovered(destination.Id));
 
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: target)).Applied);
+        Assert.True(talk.Service.Ask(revision, target, null, null).Applied);
         Assert.Equal(1, disclosures);
     }
 
@@ -306,11 +306,11 @@ public sealed class DaggerfallDialogueTests
         Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
         string revision = talk.View!.Revision;
 
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "quest-rumor:q:person")).Applied);
+        Assert.True(talk.Service.Ask(revision, "quest-rumor:q:person", null, null).Applied);
         Assert.Equal("quest-rumor:q:person", talk.View!.Reply);
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "spymaster")).Applied);
+        Assert.True(talk.Service.Ask(revision, "spymaster", null, null).Applied);
         // Donor GetDialogHint2: once consulted, the spymaster gives the anyInfo answer, never the rumor.
-        Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "quest-rumor:q:person")).Applied);
+        Assert.True(talk.Service.Ask(revision, "quest-rumor:q:person", null, null).Applied);
         Assert.Equal("quest-info:q:person", talk.View!.Reply);
     }
 
@@ -348,11 +348,11 @@ public sealed class DaggerfallDialogueTests
                 view => _view = view,
                 _ => { },
                 resolveDirection: destinationFactory is not null ? _ => destinationFactory() : destination is not null ? _ => destination : null,
-                variables: attachVariables ? () => session.State.Variables : null,
+                readVariable: attachVariables ? address => session.State.Variables.Read(address) : null,
                 activeProfile: () => session.Sites.ActiveProfile,
                 discloseDirection: disclose,
                 dialogueWorld: session.State.DialogueWorld,
-                questTopics: questTopics is null ? null : _ => questTopics,
+                questTopics: questTopics is null ? null : _ => [.. questTopics.Select(topic => new DaggerfallDialogueTopicOption(topic.Id, topic.Label))],
                 resolveQuestTopic: questTopics is null ? null : (_, topic) => (topic, []),
                 guildService: guildService);
             Target = Assert.Single(Service.NpcTargets());
