@@ -90,7 +90,7 @@ public sealed class DungeonPopulationSessionTests
         spatial.FloorHit = request => request.Direction.Y < -.5 ? default
             : new SpatialHit { Present = true, Kind = SpatialHitKind.Entity, Entity = entity.Value, Point = position, Distance = 1 };
         Update(Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact"));
-        Assert.True(session.ActivationView.Applied, session.ActivationView.Message);
+        Assert.True(session.ActivationPanel.View.Applied, session.ActivationPanel.View.Message);
         int taken = 0;
         while (session.OpenLoot is { Items.Length: > 0 } loot)
         {

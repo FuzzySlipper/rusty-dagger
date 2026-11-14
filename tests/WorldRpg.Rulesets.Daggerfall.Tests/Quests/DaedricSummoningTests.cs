@@ -96,12 +96,12 @@ public sealed class DaedricSummoningTests
         var provider=Provider(f.Session,419);Fund(f);
         var quote=f.Session.Summoning.Quote(provider);Assert.True(quote.Eligible,quote.Reason);
         Assert.True(f.Session.Summoning.Summon(provider,quote.Key,quote.Gold,true)=="Offered",f.Session.Summoning.Last?.Diagnostic);
-        var offer=f.Session.ReadSummoning()!;Assert.NotNull(offer.OfferRevision);Assert.Empty(offer.Diagnostics);
+        var offer=f.Session.SummoningPanel.Read()!;Assert.NotNull(offer.OfferRevision);Assert.Empty(offer.Diagnostics);
         using(var pending=f.Restore())
         {
             Assert.Empty(pending.State.Quests.Capture().Instances);
-            Assert.Equal(offer.Message,pending.ReadSummoning()!.Message);
-            Assert.Equal(offer.OfferRevision,pending.ReadSummoning()!.OfferRevision);
+            Assert.Equal(offer.Message,pending.SummoningPanel.Read()!.Message);
+            Assert.Equal(offer.OfferRevision,pending.SummoningPanel.Read()!.OfferRevision);
         }
         f.Submit(new { action="daedra-answer", revision=offer.OfferRevision, confirm=true });
         Assert.Equal("Accepted",f.Session.Summoning.Last!.Outcome);
@@ -117,7 +117,7 @@ public sealed class DaedricSummoningTests
         var other=TestPayload.Definitions.Factions.Factions.Values.First(x=>x.Type==8&&x.Id!=419);
         var coven=Provider(f.Session,other.Id);quote=f.Session.Summoning.Quote(coven);
         Assert.Equal("Offered",f.Session.Summoning.Summon(coven,quote.Key,quote.Gold,true));
-        offer=f.Session.ReadSummoning()!;
+        offer=f.Session.SummoningPanel.Read()!;
         f.Submit(new { action="daedra-answer",revision=offer.OfferRevision,confirm=false });
         var refusal=f.Session.Summoning.Last!;Assert.Equal("Refused",refusal.Outcome);Assert.Equal(0,refusal.HostilesRemaining);
         Assert.InRange(refusal.Spawned.Length,3,5);

@@ -40,16 +40,16 @@ public sealed class SpellMakerSessionTests
         Assert.DoesNotContain(custom.Key, TestPayload.Definitions.Magic.Spells.Keys);
         Assert.DoesNotContain(game.SpellSales.Offers(Seller(game), 10), offer => offer.Key == custom.Key);
         Magicka(game); Assert.Equal(DaggerfallCastOutcome.Ready, game.SpellRelease.ReadyPlayerSpell(custom.Key).Outcome);
-        Assert.Equal(quote.SpellPoints, game.ReadSpells().Available.Single(spell => spell.Key == custom.Key).Cost);
-        game.ChangeSpellbook(new("spell-info", Key: custom.Key));
-        Assert.Contains("duration 3 + 7 per 2", game.ReadSpells().Information!.Details[0]);
+        Assert.Equal(quote.SpellPoints, game.Spellbook.Read().Available.Single(spell => spell.Key == custom.Key).Cost);
+        game.Spellbook.ChangeSpellbook(new("spell-info", Key: custom.Key));
+        Assert.Contains("duration 3 + 7 per 2", game.Spellbook.Read().Information!.Details[0]);
         using var restored = f.Restore(game.CaptureSave());
-        Assert.Equal(custom.Key, restored.ReadSpells().Ready);
+        Assert.Equal(custom.Key, restored.Spellbook.Read().Ready);
         Assert.Equal(custom, Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).CustomSpells) with { Effects = custom.Effects });
         var cast = restored.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, cast.Outcome);
         Assert.Equal("free-action", Assert.Single(restored.State.Effects.Active).Definition.Key);
-        restored.ChangeSpellbook(new("spell-delete", Key: custom.Key, Confirm: true));
+        restored.Spellbook.ChangeSpellbook(new("spell-delete", Key: custom.Key, Confirm: true));
         Assert.DoesNotContain(custom.Key, restored.State.Character.KnownSpells);
         Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).CustomSpells);
     }
@@ -145,7 +145,7 @@ public sealed class SpellMakerSessionTests
         Assert.Equal(before - offer.Price, game.State.Currency.Read().Gold);
         Assert.Equal(DaggerfallCastOutcome.Ready, game.SpellRelease.ReadyPlayerSpell(eligible.Key).Outcome);
         using var restored = f.Restore(game.CaptureSave());
-        Assert.Equal(eligible.Key, restored.ReadSpells().Ready);
+        Assert.Equal(eligible.Key, restored.Spellbook.Read().Ready);
         Assert.Empty(DaggerfallSavePayload.Read(restored.CaptureSave()).CustomSpells);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted, restored.SpellRelease.ReleaseReadySpell(1, Vector3.UnitZ).Outcome);
         Assert.Equal("free-action", Assert.Single(restored.State.Effects.Active).Definition.Key);
@@ -156,7 +156,7 @@ public sealed class SpellMakerSessionTests
     {
         using var f = new KnownReadySpellSessionTests.Fixture();
         f.Submit(new { action = "spellmaker-draft", revision = "missing", text = "{}" });
-        Assert.Equal("This spellmaker is unavailable to you.", f.Session.ReadSpells().Result);
+        Assert.Equal("This spellmaker is unavailable to you.", f.Session.Spellbook.Read().Result);
         Assert.NotNull(DaggerfallUiAction.Parse("{\"action\":\"spellmaker-draft\",\"revision\":\"1\",\"text\":\"{}\"}"u8));
         Assert.Null(DaggerfallUiAction.Parse("{\"action\":\"spellmaker-draft\",\"text\":\"{}\"}"u8));
         Assert.NotNull(DaggerfallUiAction.Parse("{\"action\":\"spellmaker-buy\",\"revision\":\"1\",\"key\":\"2\",\"amount\":10,\"confirm\":true}"u8));

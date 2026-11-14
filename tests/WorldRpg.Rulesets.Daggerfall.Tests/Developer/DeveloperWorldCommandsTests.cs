@@ -145,7 +145,7 @@ public sealed class DeveloperWorldCommandsTests
         // From there the trainer's person screen offers training.
         DaggerfallActivationTarget target = Assert.Single(session.Dialogue.NpcTargets(), value => value.Identity.Value == checked((ulong)trainer.DurableId));
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);
-        Assert.Contains(session.ActivationView.Dialogue!.Services, service => service.Id == DaggerfallPersonServices.Training);
+        Assert.Contains(session.ActivationPanel.View.Dialogue!.Services, service => service.Id == DaggerfallPersonServices.Training);
 
         // While the conversation holds the world, movement is refused and nothing moves; the conversation stays open.
         Vector3 talking = Position(session);
@@ -155,7 +155,7 @@ public sealed class DeveloperWorldCommandsTests
         Assert.False(session.Travel("Charing").Succeeded);
         Assert.False(session.GoTo($"Actor:{trainer.DurableId}").Succeeded);
         Assert.Equal(talking, Position(session));
-        Assert.NotNull(session.ActivationView.Dialogue);
+        Assert.NotNull(session.ActivationPanel.View.Dialogue);
         session.Dialogue.Close();
 
         // Unknown and ambiguous names are refused with what was found.

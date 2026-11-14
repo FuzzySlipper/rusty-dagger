@@ -497,7 +497,7 @@ public sealed class ControlsInputSessionTests
 
         Assert.Equal(DaggerfallActivationMode.Info, session.ActivationMode);
         Assert.Null(session.LastMeleeTargeting);
-        Assert.False(session.ActivationView.Applied);
+        Assert.False(session.ActivationPanel.View.Applied);
     }
 
     [Fact]
@@ -519,7 +519,7 @@ public sealed class ControlsInputSessionTests
         ]));
 
         Assert.Null(session.LastMeleeTargeting);
-        Assert.Contains("No eligible target", session.ActivationView.Message, StringComparison.Ordinal);
+        Assert.Contains("No eligible target", session.ActivationPanel.View.Message, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -51,7 +51,7 @@ public sealed class QuestNpcOverlayTests
         f.Update();
         var quests = f.Session.State.Quests;
         Assert.Null(dialogue.CurrentNpc());
-        Assert.Null(f.Session.ActivationView.Dialogue);
+        Assert.Null(f.Session.ActivationPanel.View.Dialogue);
         Assert.True(quests.IsNpcMuted(id));
         Assert.Equal(2, quests.QuestContacts(id).Count);
         Assert.DoesNotContain(dialogue.NpcTargets(), value => value.Identity == ActorsState.Identity(id));

@@ -40,17 +40,17 @@ public sealed class FidelityGapSessionTests
         using var f = new SanguineRoseSessionTests.Fixture();
         var s = f.Session;
         foreach (var key in new[] { "spell.001", "spell.002", "spell.003" }) s.State.Character.LearnSpell(key);
-        var before = s.ReadSpells().Available.Select(spell => spell.Key).ToArray();
+        var before = s.Spellbook.Read().Available.Select(spell => spell.Key).ToArray();
         f.Submit(new { action = "spell-swap", key = before[0], item = before[^1] });
-        var swapped = s.ReadSpells().Available.Select(spell => spell.Key).ToArray();
+        var swapped = s.Spellbook.Read().Available.Select(spell => spell.Key).ToArray();
         Assert.Equal(before[^1], swapped[0]); Assert.Equal(before[0], swapped[^1]);
         using var restored = f.Restore();
-        Assert.Equal(swapped, restored.ReadSpells().Available.Select(spell => spell.Key));
+        Assert.Equal(swapped, restored.Spellbook.Read().Available.Select(spell => spell.Key));
         f.Submit(new { action = "spell-sort" });
-        Assert.Equal(s.ReadSpells().Available.Select(spell => spell.Name).Order(StringComparer.OrdinalIgnoreCase),
-            s.ReadSpells().Available.Select(spell => spell.Name));
+        Assert.Equal(s.Spellbook.Read().Available.Select(spell => spell.Name).Order(StringComparer.OrdinalIgnoreCase),
+            s.Spellbook.Read().Available.Select(spell => spell.Name));
         f.Submit(new { action = "spell-sort" });
-        Assert.Equal(before.Order(), s.ReadSpells().Available.Select(spell => spell.Key).Order());
+        Assert.Equal(before.Order(), s.Spellbook.Read().Available.Select(spell => spell.Key).Order());
     }
 
     [Fact]

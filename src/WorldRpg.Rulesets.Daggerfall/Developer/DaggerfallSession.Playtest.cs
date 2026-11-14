@@ -202,7 +202,7 @@ internal sealed partial class DaggerfallSession
         if (_lastPlaytestUseStep is { } useStep) w.WriteString("lastUseStep", useStep.ToString()); else w.WriteNull("lastUseStep");
         w.WriteString("attackTiming", "Bounded observation window from current equipment, live speed, longest eligible strike and cooldown; inspect again for recovery.");
         w.WriteString("activationMode", ActivationMode.ToString());
-        w.WriteString("interactionMessage", ActivationView.Message);
+        w.WriteString("interactionMessage", ActivationPanel.View.Message);
         w.WriteString("lastInteractionRefusal", _lastPlaytestUseRefusal);
         if (OpenLoot is { } loot)
         {

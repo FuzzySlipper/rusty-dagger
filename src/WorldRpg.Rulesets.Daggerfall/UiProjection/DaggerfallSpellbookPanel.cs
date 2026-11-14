@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -7,41 +9,43 @@ using WorldRpg.Rulesets.Daggerfall.Presentation;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// The spellbook frame: the spells the player knows and the one ready, with the guild's spell sale, spellmaker
-/// and summoning panes beside them, and the actions that change them, worded for the player.
+/// The spellbook frame: the spells the player knows and the one ready, with the guild's spell sale, spellmaker, the
+/// makers' and summoning panes beside them, and the actions that change them, worded for the player.
 /// </summary>
-internal sealed partial class DaggerfallSession
+/// <param name="actors">The actors, whose player knows and casts the spells.</param>
+/// <param name="drawnArt">The refreshed art set drawn, or null for the classic one.</param>
+internal sealed class DaggerfallSpellbookPanel(DaggerfallCharacterState character, ActorsState actors, DaggerfallCasting casting,
+    DaggerfallSpellRelease release, DaggerfallDefinitions definitions, DaggerfallSpellSales sales, DaggerfallSpellMaker maker,
+    DaggerfallServiceCounter counter, DaggerfallMakerPanels makers, DaggerfallSummoningPanel summoning,
+    Func<DaggerfallArtReplacements?> drawnArt, PresentationState presentation)
 {
-    internal DaggerfallSpellSales SpellSales { get; private set; } = null!;
-    internal DaggerfallSpellMaker SpellMaker { get; private set; } = null!;
-
     private string _spellResult="";
-    internal DaggerfallSpellbookView ReadSpells() => new(
-        State.Character.KnownSpells.Select(key =>
+    internal DaggerfallSpellbookView Read() => new(
+        character.KnownSpells.Select(key =>
         {
-            int? cost = Casting.AvailableSpellCost(State.Actors.Player.DurableId, key);
-            DaggerfallSpellDefinition spell = _definitions.Magic.Spells[key];
-            string school = spell.Effects.Count == 0 ? string.Empty : _definitions.Magic.RequireEffectCost(spell.Effects[0]).School;
-            return new DaggerfallKnownSpellView(key, State.Character.IsGrantedSpell(key) ? spell.Name.TrimStart('!') : spell.Name, cost ?? 0, cost is not null,
+            int? cost = casting.AvailableSpellCost(actors.Player.DurableId, key);
+            DaggerfallSpellDefinition spell = definitions.Magic.Spells[key];
+            string school = spell.Effects.Count == 0 ? string.Empty : definitions.Magic.RequireEffectCost(spell.Effects[0]).School;
+            return new DaggerfallKnownSpellView(key, character.IsGrantedSpell(key) ? spell.Name.TrimStart('!') : spell.Name, cost ?? 0, cost is not null,
                 Math.Clamp(spell.Icon, 0, DaggerfallSpellConstruction.IconCount - 1), school);
         }).ToArray(),
-        Casting.ReadyFor(State.Actors.Player.DurableId) is { Source: DaggerfallCastSource.Spell or DaggerfallCastSource.DungeonAction } ready ? ready.SpellKey : null,
-        _spellResult, ReadSpellSale(), ReadSpellInformation(), ReadSpellMaker(), ReadPotionMaker(), ReadItemMaker(), ReadSummoning(),
-        DrawnArt is { } art ? DaggerfallSpellArt.From(art) : null);
-    private void ChangeSpell(WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallPlayerUiAction action)
+        casting.ReadyFor(actors.Player.DurableId) is { Source: DaggerfallCastSource.Spell or DaggerfallCastSource.DungeonAction } ready ? ready.SpellKey : null,
+        _spellResult, ReadSpellSale(), ReadSpellInformation(), ReadSpellMaker(), makers.ReadPotionMaker(), makers.ReadItemMaker(), summoning.Read(),
+        drawnArt() is { } art ? DaggerfallSpellArt.From(art) : null);
+    internal void ChangeSpell(DaggerfallPlayerUiAction action)
     {
         var result=action.Kind switch
         {
-            WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallUiActionKind.SpellReady=>SpellRelease.ReadyPlayerSpell(action.Key!),
-            _=>Casting.Cancel(State.Actors.Player.DurableId),
+            DaggerfallUiActionKind.SpellReady=>release.ReadyPlayerSpell(action.Key!),
+            _=>casting.Cancel(actors.Player.DurableId),
         };
         ReportCast(result.Outcome);
     }
 
-    private void ReportCast(DaggerfallCastOutcome outcome)
+    internal void ReportCast(DaggerfallCastOutcome outcome)
     {
         _spellResult=CastOutcomeText(outcome);
-        Presentation.SetOutcome(_spellResult);
+        presentation.SetOutcome(_spellResult);
     }
 
     /// <summary>Player wording for the result of readying, cancelling or releasing the player's spell.</summary>
@@ -59,28 +63,19 @@ internal sealed partial class DaggerfallSession
 
     private string? _spellInfo;
 
-    private (DaggerfallServiceProvider Provider, int Quality)? CurrentSpellProvider(string? revision = null, string service = "buy-spells")
+    internal DaggerfallSpellSaleView? ReadSpellSale()
     {
-        var npc = _dialogue?.CurrentNpc(revision);
-        var building = CurrentInteriorBuilding();
-        if (npc is null || building is null || !npc.Services.Contains(service, StringComparer.Ordinal)) return null;
-        var source = _site.RequireBuildingSource(_activeProfileKey.Site, new(building.BlockX, building.BlockY, building.Building.Index));
-        return (new(npc.DurableId, npc.Site, service), source.Quality);
-    }
-
-    private DaggerfallSpellSaleView? ReadSpellSale()
-    {
-        if (CurrentSpellProvider() is not { } context) return null;
-        var offers = SpellSales.Offers(context.Provider, context.Quality);
-        return offers.Length == 0 ? null : new(_activationPresentation.View.Dialogue!.Revision,
-            _activationPresentation.View.Dialogue.TargetLabel, offers);
+        if (counter.Provider() is not { } context) return null;
+        var offers = sales.Offers(context.Provider, context.Quality);
+        return offers.Length == 0 ? null : new(counter.Page.Revision,
+            counter.Page.TargetLabel, offers);
     }
 
     private DaggerfallSpellInformation? ReadSpellInformation()
     {
-        if (_spellInfo is not { } key || !_definitions.Magic.Spells.TryGetValue(key, out var spell)) return null;
-        return new(key, State.Character.IsGrantedSpell(key) ? spell.Name.TrimStart('!') : spell.Name, Policies.DaggerfallMagicCostPolicy.ElementLabel(spell.Element), Policies.DaggerfallMagicCostPolicy.TargetLabel(spell.RangeType),
-            spell.Effects.Select(effect => $"{_definitions.Magic.RequireEffectCost(effect).School}: duration {effect.DurationBase} + {effect.DurationMod} per {effect.DurationPerLevel} levels; chance {effect.ChanceBase}% + {effect.ChanceMod}% per {effect.ChancePerLevel} levels; magnitude {effect.MagnitudeBaseLow}–{effect.MagnitudeBaseHigh} + {effect.MagnitudeLevelBase}–{effect.MagnitudeLevelHigh} per {effect.MagnitudePerLevel} levels.").ToArray(),
+        if (_spellInfo is not { } key || !definitions.Magic.Spells.TryGetValue(key, out var spell)) return null;
+        return new(key, character.IsGrantedSpell(key) ? spell.Name.TrimStart('!') : spell.Name, DaggerfallMagicCostPolicy.ElementLabel(spell.Element), DaggerfallMagicCostPolicy.TargetLabel(spell.RangeType),
+            spell.Effects.Select(effect => $"{definitions.Magic.RequireEffectCost(effect).School}: duration {effect.DurationBase} + {effect.DurationMod} per {effect.DurationPerLevel} levels; chance {effect.ChanceBase}% + {effect.ChanceMod}% per {effect.ChancePerLevel} levels; magnitude {effect.MagnitudeBaseLow}–{effect.MagnitudeBaseHigh} + {effect.MagnitudeLevelBase}–{effect.MagnitudeLevelHigh} per {effect.MagnitudePerLevel} levels.").ToArray(),
             spell.RangeType, spell.Element);
     }
 
@@ -89,31 +84,31 @@ internal sealed partial class DaggerfallSession
         switch (action.Kind)
         {
             case DaggerfallUiActionKind.SpellSort:
-                State.Character.SortSpells(DaggerfallMagicCostPolicy.KnownSpellPoints(_definitions.Magic, State.Actors.Player.Stats, State.Character.IsGrantedSpell)); _spellResult = "Spellbook sorted."; break;
+                character.SortSpells(DaggerfallMagicCostPolicy.KnownSpellPoints(definitions.Magic, actors.Player.Stats, character.IsGrantedSpell)); _spellResult = "Spellbook sorted."; break;
             case DaggerfallUiActionKind.SpellSwap:
-                _spellResult = State.Character.SwapSpells(action.Key!, action.Item!) ? "Spell order changed." : "Those spells cannot be swapped.";
+                _spellResult = character.SwapSpells(action.Key!, action.Item!) ? "Spell order changed." : "Those spells cannot be swapped.";
                 break;
             case DaggerfallUiActionKind.SpellInfo:
-                if (State.Character.KnownSpells.Contains(action.Key!) || ReadSpellSale()?.Offers.Any(offer => offer.Key == action.Key) == true)
+                if (character.KnownSpells.Contains(action.Key!) || ReadSpellSale()?.Offers.Any(offer => offer.Key == action.Key) == true)
                     _spellInfo = action.Key;
                 else _spellResult = SpellbookOutcomeText("SpellUnavailable");
                 break;
             case DaggerfallUiActionKind.SpellDelete:
                 // Normalized source record for classic spell identity 92. Cure owns removal;
                 // Vampire and lycanthrope grants carry protected source tags from the racial owner.
-                string deleted = (action.Key == "spell.085" || State.Character.IsGrantedSpell(action.Key!)) && State.Character.KnownSpells.Contains(action.Key)
+                string deleted = (action.Key == "spell.085" || character.IsGrantedSpell(action.Key!)) && character.KnownSpells.Contains(action.Key)
                     ? "ProtectedSpell" : !action.Confirm ? "ConfirmationRequired"
-                    : State.Character.ForgetSpell(action.Key!) ? "Forgotten" : "UnknownSpell";
+                    : character.ForgetSpell(action.Key!) ? "Forgotten" : "UnknownSpell";
                 if (deleted == "Forgotten" && _spellInfo == action.Key) _spellInfo = null;
                 _spellResult = SpellbookOutcomeText(deleted);
                 break;
             case DaggerfallUiActionKind.SpellBuy:
-                _spellResult = SpellbookOutcomeText(CurrentSpellProvider(action.Revision) is { } context
-                    ? SpellSales.Buy(context.Provider, context.Quality, action.Key!, action.Amount!.Value, action.Confirm).Outcome
+                _spellResult = SpellbookOutcomeText(counter.Provider(action.Revision) is { } context
+                    ? sales.Buy(context.Provider, context.Quality, action.Key!, action.Amount!.Value, action.Confirm).Outcome
                     : "ProviderUnavailable");
                 break;
         }
-        Presentation.SetOutcome(_spellResult);
+        presentation.SetOutcome(_spellResult);
     }
 
     /// <summary>Player wording for spellbook information, forgetting and spell purchase results.</summary>
@@ -130,14 +125,14 @@ internal sealed partial class DaggerfallSession
 
     private DaggerfallSpellMakerView? ReadSpellMaker()
     {
-        if (CurrentSpellProvider(service: "make-spells") is not { } context) return null;
-        return new(_activationPresentation.View.Dialogue!.Revision, _activationPresentation.View.Dialogue.TargetLabel,
-            SpellMaker.Effects, SpellMaker.Draft, SpellMaker.Quote(context.Provider));
+        if (counter.Provider(service: "make-spells") is not { } context) return null;
+        return new(counter.Page.Revision, counter.Page.TargetLabel,
+            maker.Effects, maker.Draft, maker.Quote(context.Provider));
     }
 
     internal void ChangeSpellMaker(DaggerfallPlayerUiAction action)
     {
-        if (CurrentSpellProvider(action.Revision, "make-spells") is not { } context)
+        if (counter.Provider(action.Revision, "make-spells") is not { } context)
             _spellResult = "ProviderUnavailable";
         else if (action.Kind == DaggerfallUiActionKind.SpellMakerDraft)
         {
@@ -147,16 +142,16 @@ internal sealed partial class DaggerfallSession
                 if (draft is null || draft.Name is null || draft.Effects is null) _spellResult = "InvalidSettings";
                 else
                 {
-                    SpellMaker.SetDraft(draft);
-                    var preview = SpellMaker.Quote(context.Provider);
+                    maker.SetDraft(draft);
+                    var preview = maker.Quote(context.Provider);
                     _spellResult = preview is { Eligible: true } ? "Preview" : preview?.Reason ?? "InvalidSettings";
                 }
             }
             catch (JsonException) { _spellResult = "InvalidSettings"; }
         }
-        else _spellResult = SpellMaker.Buy(context.Provider, action.Key!, action.Amount!.Value, action.Confirm).Outcome;
+        else _spellResult = maker.Buy(context.Provider, action.Key!, action.Amount!.Value, action.Confirm).Outcome;
         _spellResult = SpellMakerOutcomeText(_spellResult);
-        Presentation.SetOutcome(_spellResult);
+        presentation.SetOutcome(_spellResult);
     }
 
     /// <summary>Player wording for spellmaker previews, refusals and purchases.</summary>

@@ -118,7 +118,7 @@ public sealed class QuestOfferTests
             && npc.Presence == DaggerfallNpcPresence.Active && npc.Services.Contains("quests"));
         var target = Assert.Single(session.Dialogue.NpcTargets(), target => target.Identity.Value == checked((ulong)npc.DurableId));
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);
-        var dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        var dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         Assert.Contains(dialogue.Topics, topic => topic.Id == "work");
         session.Update(new ProductUpdate(OuterUpdate(1), [Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "dialogue-topic", revision = dialogue.Revision, topic = "work" }))]));
         var offer = Assert.IsType<DaggerfallQuestOfferSave>(session.State.Quests.PendingOffer);

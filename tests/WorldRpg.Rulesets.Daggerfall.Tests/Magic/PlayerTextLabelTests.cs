@@ -25,14 +25,14 @@ public sealed class PlayerTextLabelTests
     {
         foreach (string code in new[] { "SpellUnavailable", "ProtectedSpell", "ConfirmationRequired", "Forgotten", "UnknownSpell",
             "ProviderUnavailable", "InsufficientFunds", "NotMember", "PriceChanged", "SpellbookRequired" })
-            Assert.Contains(' ', DaggerfallSession.SpellbookOutcomeText(code));
+            Assert.Contains(' ', DaggerfallSpellbookPanel.SpellbookOutcomeText(code));
         foreach (string code in new[] { "InvalidCombination", "InvalidSettings", "DraftChanged", "IdentityUnavailable", "InsufficientRank" })
-            Assert.Contains(' ', DaggerfallSession.SpellMakerOutcomeText(code));
-        Assert.Equal("Today is not a Daedric summoning day.", DaggerfallSession.SummoningOutcomeText("WrongDay"));
-        Assert.Equal("Answer the prince's offer first.", DaggerfallSession.SummoningOutcomeText("AnswerPendingOffer"));
-        Assert.Equal("Spell ready.", DaggerfallSession.CastOutcomeText(DaggerfallCastOutcome.Ready));
+            Assert.Contains(' ', DaggerfallSpellbookPanel.SpellMakerOutcomeText(code));
+        Assert.Equal("Today is not a Daedric summoning day.", DaggerfallSummoningPanel.OutcomeText("WrongDay"));
+        Assert.Equal("Answer the prince's offer first.", DaggerfallSummoningPanel.OutcomeText("AnswerPendingOffer"));
+        Assert.Equal("Spell ready.", DaggerfallSpellbookPanel.CastOutcomeText(DaggerfallCastOutcome.Ready));
         // An enchantment construction refusal is already the construction owner's sentence.
-        Assert.Equal("The item lacks enchantment capacity.", DaggerfallSession.ItemMakerOutcomeText("The item lacks enchantment capacity."));
+        Assert.Equal("The item lacks enchantment capacity.", DaggerfallMakerPanels.ItemMakerOutcomeText("The item lacks enchantment capacity."));
         Assert.Equal("That service cannot be completed right now.", DaggerfallServiceOutcomeText.Common("SomeFutureCode"));
     }
 

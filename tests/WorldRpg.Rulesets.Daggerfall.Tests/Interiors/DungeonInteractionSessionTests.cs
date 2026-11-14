@@ -226,7 +226,7 @@ public sealed class DungeonInteractionSessionTests
         session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital,
             x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
 
-        Assert.False(session.ActivationView.Applied);
+        Assert.False(session.ActivationPanel.View.Applied);
         Assert.All(session.State.DungeonActions[castle.ProfileKey].State.Values,
             state => Assert.Equal(0UL, state.ActivationCount));
     }
@@ -281,7 +281,7 @@ public sealed class DungeonInteractionSessionTests
         session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital,
             x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
 
-        Assert.True(session.ActivationView.Applied, session.ActivationView.Message);
+        Assert.True(session.ActivationPanel.View.Applied, session.ActivationPanel.View.Message);
         Assert.Equal(DaggerfallDoorMotion.Opening, session.Doors.Read(door.Id).Motion);
         Assert.Equal(1UL, session.State.DungeonActions[castle.ProfileKey].State[openAction.Id].ActivationCount);
     }
@@ -601,8 +601,8 @@ public sealed class DungeonInteractionSessionTests
         Assert.Single(perception.Requests, request => request.Targets.Span.ToArray()
             .Any(target => target.Entity == checked((ulong)spawned)));
         Assert.IsType<LootPresentation>(session.OpenLoot);
-        Assert.True(session.ActivationView.Applied);
-        Assert.Equal("grab", session.ActivationView.Mode);
+        Assert.True(session.ActivationPanel.View.Applied);
+        Assert.Equal("grab", session.ActivationPanel.View.Mode);
     }
 
     [Fact]

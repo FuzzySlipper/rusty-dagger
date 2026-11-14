@@ -56,7 +56,7 @@ public sealed class DaggerfallHudPresentationTests
         Assert.Equal("Drawn", weapon["state"]);
         Assert.False(string.IsNullOrWhiteSpace(Assert.IsType<string>(weapon["name"])));
         var activation = Assert.IsType<Dictionary<string, object?>>(hud["activation"]);
-        Assert.Equal(DaggerfallHudText.ModeLabel(session.ActivationView.Mode), activation["label"]);
+        Assert.Equal(DaggerfallHudText.ModeLabel(session.ActivationPanel.View.Mode), activation["label"]);
         Assert.Equal(DaggerfallHudText.ActivationModes.Count, Assert.IsType<object[]>(activation["modes"]).Length);
         Assert.Equal("keyboard", hud["inputDevice"]);
 

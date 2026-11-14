@@ -332,12 +332,12 @@ public sealed class PropertySessionTests
     {
         using Fixture f = new();
         string revision = f.OpenBankDialogue();
-        Assert.True(f.Session.ActivationView.Dialogue!.BankAvailable);
+        Assert.True(f.Session.ActivationPanel.View.Dialogue!.BankAvailable);
         f.Submit(new { action = "bank-open", revision = "stale" });
         Assert.False(f.Session.EconomyPanels.ReadPropertyPresentation().BankAvailable);
         f.Submit(new { action = "bank-open", revision });
         Assert.True(f.Session.EconomyPanels.ReadPropertyPresentation().BankAvailable);
-        Assert.Null(f.Session.ActivationView.Dialogue);
+        Assert.Null(f.Session.ActivationPanel.View.Dialogue);
         f.Session.State.Npcs.SetPresence(f.BankerId, DaggerfallNpcPresence.Removed);
         Assert.False(f.Session.EconomyPanels.ReadPropertyPresentation().BankAvailable);
         f.Submit(new { action = "bank-open", revision });
@@ -509,7 +509,7 @@ public sealed class PropertySessionTests
             Session.Civilians.Materialize(BankerId, new ActorPose(position, 0));
             var target = Session.Dialogue.NpcTargets().Single(value => value.Identity.Value == (ulong)BankerId);
             Assert.True(Session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);
-            return Session.ActivationView.Dialogue!.Revision;
+            return Session.ActivationPanel.View.Dialogue!.Revision;
         }
         internal void AddGold(ulong amount)
         {

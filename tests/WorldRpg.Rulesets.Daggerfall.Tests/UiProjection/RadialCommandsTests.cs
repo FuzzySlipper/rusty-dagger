@@ -9,16 +9,16 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class RadialCommandsTests
 {
     private static DaggerfallRadialCommand Command(DaggerfallSession session, string id) =>
-        Assert.Single(session.Radial.Read(session.ActivationView.Mode), command => command.Id == id);
+        Assert.Single(session.Radial.Read(session.ActivationPanel.View.Mode), command => command.Id == id);
 
     [Fact]
     public void The_radial_offers_its_commands_in_ring_order_with_the_rulesets_words()
     {
         using DaggerfallSession session = FreshSession();
         Assert.Equal(["weapon", "mode-grab", "mode-info", "mode-talk", "mode-steal", "spells", "inventory", "character", "journal", "map",
-            "transport", "rest", "menu"], session.Radial.Read(session.ActivationView.Mode).Select(command => command.Id));
-        Assert.All(session.Radial.Read(session.ActivationView.Mode), command => Assert.True(command.Available));
-        Assert.True(Command(session, $"mode-{session.ActivationView.Mode}").Current);
+            "transport", "rest", "menu"], session.Radial.Read(session.ActivationPanel.View.Mode).Select(command => command.Id));
+        Assert.All(session.Radial.Read(session.ActivationPanel.View.Mode), command => Assert.True(command.Available));
+        Assert.True(Command(session, $"mode-{session.ActivationPanel.View.Mode}").Current);
         Assert.Equal("Steal / Lockpick", Command(session, "mode-steal").Label);
 
         session.State.WeaponDrawn = true;

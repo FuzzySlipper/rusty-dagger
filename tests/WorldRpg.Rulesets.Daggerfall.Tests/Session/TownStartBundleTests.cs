@@ -118,7 +118,7 @@ public sealed class TownStartBundleTests
             Present = true, Kind = SpatialHitKind.Entity, Entity = door.Entity.Value, Point = door.Pose.Translation, Distance = 1,
         };
         game.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
-        Assert.True(game.ActivationView.Applied, game.ActivationView.Message);
+        Assert.True(game.ActivationPanel.View.Applied, game.ActivationPanel.View.Message);
         var greeting = game.DungeonText.Projection!;
         game.Update(new ProductUpdate(OuterUpdate(3), [Ui(System.Text.Json.JsonSerializer.Serialize(new
             { action = "dungeon-text-close", item = greeting.ActionId, revision = greeting.Revision.ToString() }))]));

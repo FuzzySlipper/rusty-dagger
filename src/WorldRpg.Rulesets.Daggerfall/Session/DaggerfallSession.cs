@@ -720,6 +720,31 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The travel panel's actions: fast travel, transport and the wagon.</summary>
     private readonly DaggerfallTravelPanel _travelPanel = null!;
 
+    /// <summary>The guild's spell sale (Economy).</summary>
+    internal DaggerfallSpellSales SpellSales { get; private set; } = null!;
+    /// <summary>The guild's spellmaker (Economy).</summary>
+    internal DaggerfallSpellMaker SpellMaker { get; private set; } = null!;
+    /// <summary>Daedric summoning: the summoner's quote, the prince's answer and the quest it offers (Quests).</summary>
+    internal DaggerfallDaedricSummoning Summoning { get; private set; } = null!;
+
+    /// <summary>The activation view's state: mode, outcome and the conversation's page.</summary>
+    private readonly DaggerfallActivationPresentation _activationPresentation = new();
+
+    /// <summary>The person across the counter the spellbook's panes share.</summary>
+    private readonly DaggerfallServiceCounter _counter = null!;
+
+    /// <summary>The item maker's and the potion maker's panes and actions.</summary>
+    private readonly DaggerfallMakerPanels _makers = null!;
+
+    /// <summary>The summoner's pane, the prince's answer and its cinematic.</summary>
+    internal DaggerfallSummoningPanel SummoningPanel { get; } = null!;
+
+    /// <summary>The spellbook frame and its actions.</summary>
+    internal DaggerfallSpellbookPanel Spellbook { get; } = null!;
+
+    /// <summary>Activation and the conversation as the HUD draws them, the mode action and the conversation's actions.</summary>
+    internal DaggerfallActivationPanel ActivationPanel { get; } = null!;
+
     /// <summary>The dungeon text modal's and the notebook's actions.</summary>
     private readonly DaggerfallTextActions _textActions = null!;
 
@@ -1001,7 +1026,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             SaveSlotDiagnostic: _saveSlotDiagnostic,
             ControlSettings: _controls.Settings,
             ControlDiagnostic: _controls.Diagnostic,
-            Activation: ActivationView,
+            Activation: ActivationPanel.View,
             Breath: State.Swimming.ReadBreath(State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
                 State.Effects.GrantsWaterBreathing(DaggerfallActorIdentity.PlayerEntityId)),
             Quests: DrawnEscorts(State.Quests.ReadPresentation(_questTexts.For, _time.Calendar)),
@@ -1018,7 +1043,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Calendar: _time.Calendar,
             Effects: ReadActiveEffects(),
             CinematicSource: Cinematics?.ActiveSource,
-            Map: LocalMap.ReadOpen(), Legal: Law.View, CreateItem: CreateItemChoice.View, Teleport: TeleportChoice.View, Dispel: DispelChoice.View, Identify: IdentifyChoice.View, Spells: ReadSpells(), Detectors: Detectors.Read())
+            Map: LocalMap.ReadOpen(), Legal: Law.View, CreateItem: CreateItemChoice.View, Teleport: TeleportChoice.View, Dispel: DispelChoice.View, Identify: IdentifyChoice.View, Spells: Spellbook.Read(), Detectors: Detectors.Read())
         {
             ActionDrivenTime = ActionDrivenPlay, TimeHeld = PlayerTimeHeld,
             Weapon = new DaggerfallWeaponView(State.WeaponDrawn,
@@ -1028,7 +1053,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Loading = _loading,
             Screens = DaggerfallUiArt.Screens.ToDictionary(screen => screen, screen => DrawnArt?.Drawn(screen) ?? screen, StringComparer.Ordinal),
             TutorialOffer = _tutorial.Offer,
-            Radial = Radial.Read(ActivationView.Mode),
+            Radial = Radial.Read(ActivationPanel.View.Mode),
             TutorialRunning = _tutorial.Running,
             Tutorial = _tutorial.View,
         });

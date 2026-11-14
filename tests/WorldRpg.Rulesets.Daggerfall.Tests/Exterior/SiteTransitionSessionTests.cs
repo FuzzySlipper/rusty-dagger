@@ -294,7 +294,7 @@ public sealed class SiteTransitionSessionTests
             Assert.Equal(DurableEntityResolution.Unloaded,
                 session.State.Actors.Entities.Classify(spawnedIdentity, session.State.Npcs.Identities!));
             Assert.Equal(2, spatial.ReplaceCalls);
-            Assert.Equal("You pass through the entrance.", session.ActivationView.Message);
+            Assert.Equal("You pass through the entrance.", session.ActivationPanel.View.Message);
             Assert.Equal(interior.ProfileKey, DaggerfallSavePayload.Read(session.CaptureSave()).Site.ActiveProfile!.Require());
             save = session.CaptureSave();
         }
@@ -331,7 +331,7 @@ public sealed class SiteTransitionSessionTests
         Assert.Equal(new WorldPoint(9f, 0f, 9f), returnedActor.Position);
         Assert.Equal(new DaggerfallActorId("rat"), restored.DynamicActors[spawnedActor]);
         Assert.Equal(2, resumedSpatial.ReplaceCalls);
-        Assert.Equal("You pass through the entrance.", restored.ActivationView.Message);
+        Assert.Equal("You pass through the entrance.", restored.ActivationPanel.View.Message);
     }
 
     [Fact]

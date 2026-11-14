@@ -46,7 +46,7 @@ public sealed class SourceBackedServiceSessionTests
         using var session = fixture.Start(provider.Profile);
         var npc = SourceNpc(session, provider.Placement.Id);
         OpenSourceNpc(session, npc);
-        var dialogue = session.ActivationView.Dialogue!;
+        var dialogue = session.ActivationPanel.View.Dialogue!;
         var menu = dialogue.Tavern!;
         Assert.True(menu.Hungry); Assert.Equal(11, menu.Menu.Count);
         AddGold(session, 100);
@@ -57,7 +57,7 @@ public sealed class SourceBackedServiceSessionTests
         SubmitUi(session, 1, System.Text.Json.JsonSerializer.Serialize(new { action = "tavern-buy", revision = dialogue.Revision, key = item.Id, amount = item.Price }));
         Assert.Equal(gold - item.Price, session.State.Currency.Read().Gold);
         Assert.Equal(1 + item.Health, health.Current);
-        Assert.False(session.ActivationView.Dialogue!.Tavern!.Hungry);
+        Assert.False(session.ActivationPanel.View.Dialogue!.Tavern!.Hungry);
         SubmitUi(session, 2, System.Text.Json.JsonSerializer.Serialize(new { action = "tavern-buy", revision = dialogue.Revision, key = item.Id, amount = item.Price }));
         Assert.Equal(gold - item.Price, session.State.Currency.Read().Gold);
         using var restored = fixture.Restore(session.CaptureSave());
@@ -88,13 +88,13 @@ public sealed class SourceBackedServiceSessionTests
             new(DaggerfallActivationMode.Talk, target));
         Assert.True(opened.Applied, opened.Message);
 
-        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         DaggerfallDialogueTopicOption direction = dialogue.Topics.First(value =>
             value.Id.StartsWith("direction:npc:", StringComparison.Ordinal)
             && !StringComparer.Ordinal.Equals(value.Id, $"direction:npc:{npc.DurableId}"));
         SubmitUi(session, 2, $"{{\"action\":\"dialogue-topic\",\"revision\":\"{Escape(dialogue.Revision)}\",\"topic\":\"{Escape(direction.Id)}\"}}");
 
-        DaggerfallDialogueView answered = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallDialogueView answered = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         Assert.False(string.IsNullOrWhiteSpace(answered.Question));
         Assert.False(string.IsNullOrWhiteSpace(answered.Reply));
         string buildingTopic = answered.Topics.First(value => value.Id.StartsWith("direction:building:", StringComparison.Ordinal)).Id;
@@ -121,7 +121,7 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallNpc provider = SourceNpc(session, fixture.TrainingProvider.Placement.Id);
         Assert.Contains("training", provider.Services);
         OpenSourceNpc(session, provider);
-        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         DaggerfallSkillTrainingProviderView training = Assert.IsType<DaggerfallSkillTrainingProviderView>(dialogue.Training);
         DaggerfallSkillTrainingSkillView skill = training.Skills.First(value => value.PermanentValue < value.MaximumValue);
 
@@ -131,7 +131,7 @@ public sealed class SourceBackedServiceSessionTests
             && policy.RequiresMembership && !training.IsMember)
         {
             _ = session.State.Social.JoinGuild(training.MembershipFactionId, 0);
-            dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+            dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
             training = Assert.IsType<DaggerfallSkillTrainingProviderView>(dialogue.Training);
         }
 
@@ -170,7 +170,7 @@ public sealed class SourceBackedServiceSessionTests
             Quantity: 97, TemplateIndex: 131)), session.State.Inventory, session.State.ItemInstances,
             InventoryStackId.Parse("source.consumer.test.arrows"));
         OpenSourceNpc(session, SourceNpc(session, fixture.MerchantProvider.Placement.Id));
-        DaggerfallMerchantView Merchant() => Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
+        DaggerfallMerchantView Merchant() => Assert.IsType<DaggerfallMerchantView>(session.ActivationPanel.View.Dialogue!.Merchant);
 
         // Selling part of a stack: the quote for the chosen amount is exactly what the sale pays. The trade
         // formula rounds the whole line once, so it need not be the one-item price times the amount.
@@ -209,7 +209,7 @@ public sealed class SourceBackedServiceSessionTests
         Assert.Contains(provider.Services, value => value is "shop" or "merchant" or "buy-items");
         Assert.Contains(provider.Services, value => value is "shop" or "merchant" or "sell-items");
         OpenSourceNpc(session, provider);
-        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         DaggerfallMerchantView merchant = Assert.IsType<DaggerfallMerchantView>(dialogue.Merchant);
         DaggerfallSiteBuildingSource sourceBuilding = fixture.SourceBuilding(fixture.MerchantProvider.Profile);
         Assert.Equal(sourceBuilding.Quality, merchant.Quality);
@@ -230,7 +230,7 @@ public sealed class SourceBackedServiceSessionTests
         Assert.Equal("The shop's goods changed. Choose the item again.", session.Presentation.LastOutcome);
         Assert.Equal(mercantileBeforeBuy + 1, SkillUseCount(session, "mercantile"));
 
-        DaggerfallMerchantView afterBuy = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
+        DaggerfallMerchantView afterBuy = Assert.IsType<DaggerfallMerchantView>(session.ActivationPanel.View.Dialogue!.Merchant);
         DaggerfallMerchantItemView sold = Assert.Single(afterBuy.PlayerItems,
             value => value.Definition == stock.Definition && value.CanSell && value.UnitPrice > 0);
         ulong goldBeforeSell = session.State.Currency.Read().Gold;
@@ -247,7 +247,7 @@ public sealed class SourceBackedServiceSessionTests
         // The real source caller must keep refusal paths from manufacturing a trade use. The sold
         // item is no longer in the player container, so this uses the current revision and reaches
         // the ordinary ItemUnavailable branch rather than replaying the stale accepted action.
-        DaggerfallMerchantView afterSell = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
+        DaggerfallMerchantView afterSell = Assert.IsType<DaggerfallMerchantView>(session.ActivationPanel.View.Dialogue!.Merchant);
         SubmitUi(session, 8, $"{{\"action\":\"merchant-sell\",\"revision\":\"{Escape(afterSell.Revision)}\",\"item\":\"{Escape(sold.Key)}\",\"amount\":1}}");
         Assert.Equal("That item is no longer available.", session.Presentation.LastOutcome);
         Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(session, "mercantile"));
@@ -256,7 +256,7 @@ public sealed class SourceBackedServiceSessionTests
         Assert.True(carriedGold > 0);
         Assert.True(session.State.Currency.TrySpendGold(carriedGold, []));
         DaggerfallMerchantItemView unaffordable = afterSell.Stock.First(value => value.CanBuy && value.UnitPrice > 0);
-        DaggerfallMerchantView noFunds = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
+        DaggerfallMerchantView noFunds = Assert.IsType<DaggerfallMerchantView>(session.ActivationPanel.View.Dialogue!.Merchant);
         SubmitUi(session, 9, $"{{\"action\":\"merchant-buy\",\"revision\":\"{Escape(noFunds.Revision)}\",\"item\":\"{Escape(unaffordable.Key)}\",\"amount\":1,\"confirm\":true}}");
         Assert.Equal("You do not have enough gold.", session.Presentation.LastOutcome);
         Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(session, "mercantile"));
@@ -264,7 +264,7 @@ public sealed class SourceBackedServiceSessionTests
         // Shoplifting is an admitted source-backed merchant action even when the deterministic
         // fixture roll catches the player. The attempt is recorded before the caught/success result.
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("pickpocket")).BaseValue = 100;
-        DaggerfallMerchantView shopliftView = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
+        DaggerfallMerchantView shopliftView = Assert.IsType<DaggerfallMerchantView>(session.ActivationPanel.View.Dialogue!.Merchant);
         DaggerfallMerchantItemView stealable = shopliftView.Stock.First(value => value.CanBuy && value.UnitPrice > 0);
         string shopliftAction = $"{{\"action\":\"merchant-shoplift\",\"revision\":\"{Escape(shopliftView.Revision)}\",\"item\":\"{Escape(stealable.Key)}\",\"amount\":1}}";
         int crimeNotifications = 0;
@@ -295,7 +295,7 @@ public sealed class SourceBackedServiceSessionTests
         Assert.Single(restored.State.Crime.Incidents);
         DaggerfallNpc restoredProvider = SourceNpc(restored, fixture.MerchantProvider.Placement.Id);
         OpenSourceNpc(restored, restoredProvider);
-        DaggerfallMerchantView restoredMerchant = Assert.IsType<DaggerfallMerchantView>(restored.ActivationView.Dialogue!.Merchant);
+        DaggerfallMerchantView restoredMerchant = Assert.IsType<DaggerfallMerchantView>(restored.ActivationPanel.View.Dialogue!.Merchant);
         Assert.Equal(sourceBuilding.Quality, restoredMerchant.Quality);
         Assert.Equal(goldAfterSell, restored.State.Currency.Read().Gold);
         Assert.Equal(mercantileBeforeBuy + 2, SkillUseCount(restored, "mercantile"));
@@ -329,7 +329,7 @@ public sealed class SourceBackedServiceSessionTests
         DurableIdentityReference itemId = AddDamagedWeapon(session);
         string itemKey = $"unique:{itemId.Value}";
         OpenSourceNpc(session, provider);
-        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         DaggerfallMerchantView merchant = Assert.IsType<DaggerfallMerchantView>(dialogue.Merchant);
         Assert.Equal(sourceBuilding.Quality, merchant.Quality);
         Assert.True(merchant.CanRepair);
@@ -346,7 +346,7 @@ public sealed class SourceBackedServiceSessionTests
             session.Presentation.LastOutcome);
         Assert.DoesNotContain(session.State.Inventory.Read().UniqueItems,
             value => value.Entity.Value == ResolveEntity(session, itemId));
-        DaggerfallMerchantView pending = Assert.IsType<DaggerfallMerchantView>(session.ActivationView.Dialogue!.Merchant);
+        DaggerfallMerchantView pending = Assert.IsType<DaggerfallMerchantView>(session.ActivationPanel.View.Dialogue!.Merchant);
         DaggerfallRepairView repair = Assert.Single(pending.Repairs);
         // The order names the item as the shop rows do and says when it will be ready, not a minute.
         Assert.NotEqual(repair.Definition, repair.Label);
@@ -372,7 +372,7 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallNpc restoredProvider = SourceNpc(restored, fixture.GenericRepairProvider.Placement.Id);
         OpenSourceNpc(restored, restoredProvider);
         DaggerfallMerchantView restoredPending = Assert.IsType<DaggerfallMerchantView>(
-            Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue).Merchant);
+            Assert.IsType<DaggerfallDialogueView>(restored.ActivationPanel.View.Dialogue).Merchant);
         DaggerfallRepairView restoredRepair = Assert.Single(restoredPending.Repairs);
         Assert.False(restoredRepair.Ready);
         // Two days of waiting stand for rest; two days of idle fatigue loss would collapse the player.
@@ -380,7 +380,7 @@ public sealed class SourceBackedServiceSessionTests
 
         OpenSourceNpc(restored, restoredProvider);
         DaggerfallMerchantView ready = Assert.IsType<DaggerfallMerchantView>(
-            Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue).Merchant);
+            Assert.IsType<DaggerfallDialogueView>(restored.ActivationPanel.View.Dialogue).Merchant);
         DaggerfallRepairView readyRepair = Assert.Single(ready.Repairs);
         Assert.Equal(restoredRepair.RequestId, readyRepair.RequestId);
         Assert.True(readyRepair.Ready);
@@ -392,7 +392,7 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallItemInstanceMetadata repaired = restored.State.ItemInstances.RequireUnique(itemId.Value);
         Assert.Equal(repaired.MaximumCondition, repaired.CurrentCondition);
         DaggerfallMerchantView collected = Assert.IsType<DaggerfallMerchantView>(
-            Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue).Merchant);
+            Assert.IsType<DaggerfallDialogueView>(restored.ActivationPanel.View.Dialogue).Merchant);
         Assert.Empty(collected.Repairs);
 
         SubmitUi(restored, 4, $"{{\"action\":\"merchant-collect-repair\",\"revision\":\"{Escape(collected.Revision)}\",\"key\":\"{Escape(readyRepair.RequestId)}\"}}");
@@ -417,7 +417,7 @@ public sealed class SourceBackedServiceSessionTests
         Assert.DoesNotContain("identify", provider.Services);
 
         OpenSourceNpc(session, provider);
-        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         DaggerfallMerchantView merchant = Assert.IsType<DaggerfallMerchantView>(dialogue.Merchant);
         Assert.False(merchant.CanIdentify);
         Assert.True(merchant.CanBuy);
@@ -443,7 +443,7 @@ public sealed class SourceBackedServiceSessionTests
         DurableIdentityReference itemId = AddUnidentifiedMagic(session);
         string itemKey = $"unique:{itemId.Value}";
         OpenSourceNpc(session, provider);
-        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         DaggerfallMerchantView merchant = Assert.IsType<DaggerfallMerchantView>(dialogue.Merchant);
         Assert.True(merchant.CanIdentify);
         Assert.False(merchant.CanSell);
@@ -463,7 +463,7 @@ public sealed class SourceBackedServiceSessionTests
         using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(saved));
         DaggerfallNpc restoredProvider = SourceNpc(restored, fixture.MagesIdentifierProvider.Placement.Id);
         OpenSourceNpc(restored, restoredProvider);
-        DaggerfallDialogueView restoredDialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue);
+        DaggerfallDialogueView restoredDialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationPanel.View.Dialogue);
         DaggerfallMerchantView restoredMerchant = Assert.IsType<DaggerfallMerchantView>(restoredDialogue.Merchant);
         Assert.True(restored.State.ItemInstances.RequireUnique(itemId.Value).Identified);
         Assert.Equal(afterPayment, restored.State.Currency.Read().Gold);

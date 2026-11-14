@@ -26,14 +26,14 @@ public sealed class QuestActorClickTests
         f.Submit(new { action = "activation-mode", mode });
         AimActivationAt(f.Session, id);
         f.Session.Update(new ProductUpdate(OuterUpdate(50), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
-        Assert.Equal(mode, f.Session.ActivationView.Mode);
+        Assert.Equal(mode, f.Session.ActivationPanel.View.Mode);
         if (!activatesQuest)
         {
             Assert.False(Task(f.Session, "first").IsSet);
             Assert.Empty(f.Session.State.Quests.Messages.Deliveries);
             return;
         }
-        Assert.True(f.Session.ActivationView.Applied, f.Session.ActivationView.Message);
+        Assert.True(f.Session.ActivationPanel.View.Applied, f.Session.ActivationPanel.View.Message);
         Assert.True(Task(f.Session, "first").IsSet); Assert.False(Task(f.Session, "second").IsSet);
         Assert.False(f.Session.State.Quests.Capture().Instances.Single().Resources.Single().HasPlayerClicked);
         Assert.Single(f.Session.State.Quests.Messages.Deliveries);
@@ -111,7 +111,7 @@ public sealed class QuestActorClickTests
         senses.SetForcedHostile(false); senses.MagicallyPacified = true; senses.HasEncounteredPlayer = true;
         AimActivationAt(f.Session, id);
         f.Session.Update(new ProductUpdate(OuterUpdate(50), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
-        Assert.True(f.Session.ActivationView.Applied, f.Session.ActivationView.Message);
+        Assert.True(f.Session.ActivationPanel.View.Applied, f.Session.ActivationPanel.View.Message);
         Assert.False(Task(f.Session, "npc").IsSet); Assert.True(Task(f.Session, "foe").IsSet);
         Assert.Single(f.Session.State.Quests.Messages.Deliveries);
     }

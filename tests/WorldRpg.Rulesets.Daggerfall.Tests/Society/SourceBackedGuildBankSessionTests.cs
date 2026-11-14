@@ -33,7 +33,7 @@ public sealed class SourceBackedGuildBankSessionTests
         Assert.Equal("bank teller", teller.Role);
         Assert.Equal(fixture.BankProfile.Site!.Value.Region, teller.Site.Region);
         OpenSourceNpc(session, teller);
-        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         Assert.True(dialogue.BankAvailable);
         Assert.Contains(dialogue.Topics, topic => topic.Id == "directions");
 
@@ -85,11 +85,11 @@ public sealed class SourceBackedGuildBankSessionTests
         // source provider remains the NPC admitted from KDRAAL01.RMB; no test NPC is registered.
         _ = session.State.Social.JoinGuild(368, 0);
         OpenSourceNpc(session, armorer);
-        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         DaggerfallDialogueTopicOption armorTopic = Assert.Single(dialogue.Topics, topic => topic.Id == "armor");
         Submit(session, 5, new { action = "dialogue-topic", revision = dialogue.Revision, topic = armorTopic.Id });
 
-        dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        dialogue = Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
         Assert.Contains(dialogue.Topics, topic => topic.Id == "armor");
         DaggerfallDialogueTopicOption armorChoice = dialogue.Topics.First(topic => topic.Id == "armor");
         Assert.False(string.IsNullOrWhiteSpace(armorChoice.Key));
@@ -110,9 +110,9 @@ public sealed class SourceBackedGuildBankSessionTests
         // rejects the already-used rank and does not materialize a second reward.
         DaggerfallNpc restoredArmorer = SourceNpc(restored, faction: 845, service: "armor");
         OpenSourceNpc(restored, restoredArmorer);
-        DaggerfallDialogueView restoredDialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue);
+        DaggerfallDialogueView restoredDialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationPanel.View.Dialogue);
         Submit(restored, 7, new { action = "dialogue-topic", revision = restoredDialogue.Revision, topic = "armor" });
-        restoredDialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue);
+        restoredDialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationPanel.View.Dialogue);
         Assert.Contains(restoredDialogue.Topics, topic => topic.Id == "armor");
         string? repeatedChoice = restoredDialogue.Topics.First(topic => topic.Id == "armor").Key;
         Submit(restored, 8, new { action = "dialogue-topic", revision = restoredDialogue.Revision,
@@ -125,7 +125,7 @@ public sealed class SourceBackedGuildBankSessionTests
         for (int day = 1; day <= 9; day++) _ = restored.State.Social.PromoteGuild(368, day);
         DaggerfallNpc restoredSteward = SourceNpc(restored, faction: 848, service: "house");
         OpenSourceNpc(restored, restoredSteward);
-        DaggerfallDialogueView houseDialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue);
+        DaggerfallDialogueView houseDialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationPanel.View.Dialogue);
         Assert.Contains(houseDialogue.Topics, topic => topic.Id == "house");
         Submit(restored, 9, new { action = "dialogue-topic", revision = houseDialogue.Revision, topic = "house" });
         Assert.NotEmpty(restored.State.Property.OwnedHouses);
@@ -140,7 +140,7 @@ public sealed class SourceBackedGuildBankSessionTests
         DaggerfallNpc reloadedSteward = SourceNpc(reloaded, faction: 848, service: "house");
         OpenSourceNpc(reloaded, reloadedSteward);
         DaggerfallDialogueView repeatedHouseDialogue =
-            Assert.IsType<DaggerfallDialogueView>(reloaded.ActivationView.Dialogue);
+            Assert.IsType<DaggerfallDialogueView>(reloaded.ActivationPanel.View.Dialogue);
         Assert.Contains(repeatedHouseDialogue.Topics, topic => topic.Id == "house");
         Submit(reloaded, 10, new { action = "dialogue-topic", revision = repeatedHouseDialogue.Revision,
             topic = "house" });
@@ -162,21 +162,21 @@ public sealed class SourceBackedGuildBankSessionTests
         AddGold(session, 100_000);
 
         OpenSourceNpc(session, seller);
-        DaggerfallSpellbookView initial = session.ReadSpells();
+        DaggerfallSpellbookView initial = session.Spellbook.Read();
         DaggerfallSpellSaleView sale = Assert.IsType<DaggerfallSpellSaleView>(initial.Sale);
         DaggerfallSpellOffer offer = Assert.Single(sale.Offers, value => value.Key == "spell.023");
         Submit(session, 1, new { action = "spell-buy", revision = sale.Revision, key = offer.Key,
             amount = offer.Price, confirm = true });
         Assert.Contains(offer.Key, session.State.Character.KnownSpells);
-        Assert.Equal("Spell added to your spellbook.", session.ReadSpells().Result);
+        Assert.Equal("Spell added to your spellbook.", session.Spellbook.Read().Result);
 
         FillMagicka(session);
         Submit(session, 2, new { action = "spell-ready", key = offer.Key });
-        Assert.Equal(offer.Key, session.ReadSpells().Ready);
+        Assert.Equal(offer.Key, session.Spellbook.Read().Ready);
         DaggerfallSavePayload sellerSave = DaggerfallSavePayload.Read(session.CaptureSave());
         using DaggerfallSession restoredSeller = fixture.Restore(DaggerfallSavePayload.Encode(sellerSave));
         Assert.Contains(offer.Key, restoredSeller.State.Character.KnownSpells);
-        Assert.Equal(offer.Key, restoredSeller.ReadSpells().Ready);
+        Assert.Equal(offer.Key, restoredSeller.Spellbook.Read().Ready);
 
         // Spellmaking requires the same canonical Mages Guild membership that the concrete source
         // catalog names for faction 64. The provider itself remains the admitted MAGEAA14.RMB NPC.
@@ -184,33 +184,33 @@ public sealed class SourceBackedGuildBankSessionTests
         AddGold(restoredSeller, 100_000);
         DaggerfallNpc restoredMaker = SourceNpc(restoredSeller, faction: 64, service: "make-spells");
         OpenSourceNpc(restoredSeller, restoredMaker);
-        DaggerfallSpellMakerView makerView = Assert.IsType<DaggerfallSpellMakerView>(restoredSeller.ReadSpells().Maker);
+        DaggerfallSpellMakerView makerView = Assert.IsType<DaggerfallSpellMakerView>(restoredSeller.Spellbook.Read().Maker);
         DaggerfallSpellMakerEffect effect = Assert.Single(makerView.Effects, value => value.Key == "free-action");
         DaggerfallSpellEffectDefinition setting = new(effect.Key, effect.Type, effect.SubType,
             3, 7, 2, 1, 1, 1, 1, 1, 1, 1, 1);
         DaggerfallSpellDraft draft = new("Source freedom", 4, 0, 1, [setting]);
         string draftText = JsonSerializer.Serialize(draft, DaggerfallSpellDraftJsonContext.Default.DaggerfallSpellDraft);
         Submit(restoredSeller, 3, new { action = "spellmaker-draft", revision = makerView.Revision, text = draftText });
-        makerView = Assert.IsType<DaggerfallSpellMakerView>(restoredSeller.ReadSpells().Maker);
+        makerView = Assert.IsType<DaggerfallSpellMakerView>(restoredSeller.Spellbook.Read().Maker);
         DaggerfallSpellConstructionQuote quote = Assert.IsType<DaggerfallSpellConstructionQuote>(makerView.Quote);
         Assert.True(quote.Eligible);
         Submit(restoredSeller, 4, new { action = "spellmaker-buy", revision = makerView.Revision,
             key = quote.Key, amount = (ulong)quote.Gold, confirm = true });
-        Assert.Equal("Custom spell added to your spellbook.", restoredSeller.ReadSpells().Result);
+        Assert.Equal("Custom spell added to your spellbook.", restoredSeller.Spellbook.Read().Result);
         string customKey = Assert.Single(restoredSeller.State.Character.KnownSpells,
             value => value.StartsWith("custom-spell.", StringComparison.Ordinal));
         Submit(restoredSeller, 5, new { action = "spellmaker-buy", revision = makerView.Revision,
             key = quote.Key, amount = (ulong)quote.Gold, confirm = true });
-        Assert.Equal("Check the current spell construction preview before buying.", restoredSeller.ReadSpells().Result);
+        Assert.Equal("Check the current spell construction preview before buying.", restoredSeller.Spellbook.Read().Result);
 
         FillMagicka(restoredSeller);
         Submit(restoredSeller, 6, new { action = "spell-ready", key = customKey });
-        Assert.Equal(customKey, restoredSeller.ReadSpells().Ready);
+        Assert.Equal(customKey, restoredSeller.Spellbook.Read().Ready);
         DaggerfallSavePayload makerSave = DaggerfallSavePayload.Read(restoredSeller.CaptureSave());
         Assert.Contains(makerSave.CustomSpells, value => value.Key == customKey && !value.SpellsForSale);
         using DaggerfallSession restoredMakerSession = fixture.Restore(DaggerfallSavePayload.Encode(makerSave));
         Assert.Contains(customKey, restoredMakerSession.State.Character.KnownSpells);
-        Assert.Equal(customKey, restoredMakerSession.ReadSpells().Ready);
+        Assert.Equal(customKey, restoredMakerSession.Spellbook.Read().Ready);
     }
 
     [Fact]
@@ -227,11 +227,11 @@ public sealed class SourceBackedGuildBankSessionTests
         AddGold(session, 100_000);
 
         OpenSourceNpc(session, seller);
-        Assert.Null(session.ReadSpells().Sale);
+        Assert.Null(session.Spellbook.Read().Sale);
         _ = session.State.Social.JoinGuild(36, 0);
         for (int rank = 0; rank < 3; rank++) _ = session.State.Social.PromoteGuild(36, 0);
         OpenSourceNpc(session, seller);
-        DaggerfallSpellSaleView sale = Assert.IsType<DaggerfallSpellSaleView>(session.ReadSpells().Sale);
+        DaggerfallSpellSaleView sale = Assert.IsType<DaggerfallSpellSaleView>(session.Spellbook.Read().Sale);
         DaggerfallSpellOffer offer = Assert.Single(sale.Offers, value => value.Key == "spell.023");
         Submit(session, 1, new { action = "spell-buy", revision = sale.Revision, key = offer.Key,
             amount = offer.Price, confirm = true });
@@ -242,7 +242,7 @@ public sealed class SourceBackedGuildBankSessionTests
         AddGold(restored, 1);
         DaggerfallNpc restoredPriest = SourceNpc(restored, faction: 810, service: "donate");
         OpenSourceNpc(restored, restoredPriest);
-        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationView.Dialogue);
+        DaggerfallDialogueView dialogue = Assert.IsType<DaggerfallDialogueView>(restored.ActivationPanel.View.Dialogue);
         Assert.Contains(dialogue.Topics, value => value.Id == "donate");
         Submit(restored, 2, new { action = "dialogue-topic", revision = dialogue.Revision,
             topic = "donate", amount = 1UL });

@@ -31,19 +31,19 @@ public sealed class GuildDialogueSessionTests
             session.State.Actors.Player.Stats.GetStat(StatId.Parse(skill)).BaseValue = 0;
         Open(session, npc);
         Ask(session, "join");
-        Assert.DoesNotContain(session.ActivationView.Dialogue!.Topics, value => value.Key == "yes");
+        Assert.DoesNotContain(session.ActivationPanel.View.Dialogue!.Topics, value => value.Key == "yes");
         Assert.False(session.State.Social.GuildEligibility(40).IsMember);
         foreach (string skill in DaggerfallConcreteGuildCatalog.ForFaction(40).GuildSkills)
             session.State.Actors.Player.Stats.GetStat(StatId.Parse(skill)).BaseValue = 100;
         Ask(session, "join");
-        Assert.Contains(session.ActivationView.Dialogue!.Topics, value => value.Key == "yes");
+        Assert.Contains(session.ActivationPanel.View.Dialogue!.Topics, value => value.Key == "yes");
         Assert.False(session.State.Social.GuildEligibility(40).IsMember);
         Ask(session, "join", "no");
         Assert.False(session.State.Social.GuildEligibility(40).IsMember);
         Ask(session, "join"); Ask(session, "join", "yes");
         Assert.True(session.State.Social.GuildEligibility(40).IsMember);
         Assert.Equal(0, session.State.Social.GuildEligibility(40).Rank);
-        Assert.Empty(session.ActivationView.Dialogue!.Diagnostics);
+        Assert.Empty(session.ActivationPanel.View.Dialogue!.Diagnostics);
         session.State.ConcreteGuildMembership.Expel(40, 0);
         Ask(session, "join"); Ask(session, "join", "yes");
         Assert.True(session.State.Social.GuildEligibility(40).IsMember);
@@ -64,11 +64,11 @@ public sealed class GuildDialogueSessionTests
             foreach (string skill in guild.GuildSkills) session.State.Actors.Player.Stats.GetStat(StatId.Parse(skill)).BaseValue = 100;
             Open(session, session.State.Npcs.All.Single(value => value.StableKey == source.Placement.Id));
             Ask(session, "join");
-            Assert.Contains(session.ActivationView.Dialogue!.Topics, value => value.Key == "yes");
-            Assert.Empty(session.ActivationView.Dialogue!.Diagnostics);
+            Assert.Contains(session.ActivationPanel.View.Dialogue!.Topics, value => value.Key == "yes");
+            Assert.Empty(session.ActivationPanel.View.Dialogue!.Diagnostics);
             Ask(session, "join", "yes");
             Assert.True(session.State.Social.GuildEligibility(guild.FactionId).IsMember);
-            Assert.Empty(session.ActivationView.Dialogue!.Diagnostics);
+            Assert.Empty(session.ActivationPanel.View.Dialogue!.Diagnostics);
         }
     }
 
@@ -190,15 +190,15 @@ public sealed class GuildDialogueSessionTests
         var npc = session.State.Npcs.All.Single(value => value.StableKey == source.Placement.Id);
         var guild = GuildFor(source.Profile.InteriorBuilding!.FactionId);
         Open(session, npc); Ask(session, "spymaster");
-        Assert.Contains("join", session.ActivationView.Dialogue!.Reply);
+        Assert.Contains("join", session.ActivationPanel.View.Dialogue!.Reply);
         session.State.Social.JoinGuild(guild.FactionId, 0);
         int rank = guild.Services.Single(value => value.Service == DaggerfallConcreteGuildService.Spymaster).MinimumRank!.Value;
         for (int day = 1; day < rank; day++) session.State.Social.PromoteGuild(guild.FactionId, day);
-        Ask(session, "spymaster"); Assert.Contains("rank", session.ActivationView.Dialogue!.Reply);
+        Ask(session, "spymaster"); Assert.Contains("rank", session.ActivationPanel.View.Dialogue!.Reply);
         session.State.Social.PromoteGuild(guild.FactionId, rank);
         Ask(session, "spymaster");
-        Assert.NotEmpty(session.ActivationView.Dialogue!.Reply);
-        Assert.DoesNotContain("rank does not", session.ActivationView.Dialogue!.Reply);
+        Assert.NotEmpty(session.ActivationPanel.View.Dialogue!.Reply);
+        Assert.DoesNotContain("rank does not", session.ActivationPanel.View.Dialogue!.Reply);
     }
 
     [Fact]
@@ -237,7 +237,7 @@ public sealed class GuildDialogueSessionTests
         DaggerfallAttributeDrainEffects.DrainArtifactStrength(session.State.Effects, "guild-heal-test", 1, 1, 1, 4);
         Open(session, npc); Assert.Equal(health.Maximum.Value, health.Current);
         Assert.Equal(strength - 4, session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).Value);
-        Assert.Contains(session.ActivationView.Dialogue!.Topics, value => value.Id == "restore-attributes" && value.Key == "yes");
+        Assert.Contains(session.ActivationPanel.View.Dialogue!.Topics, value => value.Id == "restore-attributes" && value.Key == "yes");
         Ask(session, "restore-attributes", "yes");
         Assert.Equal(strength, session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).Value);
     }
@@ -250,8 +250,8 @@ public sealed class GuildDialogueSessionTests
         Assert.True(result.Applied, result.Message);
     }
     private void Ask(DaggerfallSession session, string topic, string? key = null) => Submit(session,
-        key is null ? new { action = "dialogue-topic", revision = session.ActivationView.Dialogue!.Revision, topic }
-            : new { action = "dialogue-topic", revision = session.ActivationView.Dialogue!.Revision, topic, key });
+        key is null ? new { action = "dialogue-topic", revision = session.ActivationPanel.View.Dialogue!.Revision, topic }
+            : new { action = "dialogue-topic", revision = session.ActivationPanel.View.Dialogue!.Revision, topic, key });
     private ulong _step;
     private void Submit(DaggerfallSession session, object action)
     {

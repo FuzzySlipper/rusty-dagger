@@ -43,11 +43,11 @@ public sealed class QuestDialogueLinkTests
         Assert.Equal(new[] { "location", "gift" }.Order(), resource.DialogueLinks.Order());
         f.Session.State.Quests.SetResource("first", resource with { Text = resource.Text! with { Name = "Current Person" } });
         Open(f.Session, npc);
-        var view = f.Session.ActivationView.Dialogue!;
+        var view = f.Session.ActivationPanel.View.Dialogue!;
         Assert.Contains(view.Topics, topic => topic.Id == "direction:quest:first:location");
         string topic = "quest-info:first:person";
         Assert.True(f.Session.Dialogue.Ask(view.Revision, topic, null, null).Applied);
-        Assert.Equal("Information about Current Person.", f.Session.ActivationView.Dialogue!.Reply);
+        Assert.Equal("Information about Current Person.", f.Session.ActivationPanel.View.Dialogue!.Reply);
         Assert.Empty(f.Session.State.Quests.DialogueRumors());
         Assert.Contains(f.Session.State.Quests.Messages.Deliveries, d => d.InstanceId == "first" && d.MessageId == 100 && d.Delivery == DaggerfallQuestMessageDelivery.Popup);
         Assert.True(f.Session.Dialogue.Ask(view.Revision, "quest-rumor:first:person", null, null).Applied);
@@ -55,13 +55,13 @@ public sealed class QuestDialogueLinkTests
         using var restored = f.Restore();
         Assert.Equal(3, restored.State.Quests.DialogueTopics(npc).Count);
         Open(restored, npc);
-        Assert.True(restored.Dialogue.Ask(restored.ActivationView.Dialogue!.Revision, topic, null, null).Applied);
-        Assert.Equal("Information about Current Person.", restored.ActivationView.Dialogue!.Reply);
+        Assert.True(restored.Dialogue.Ask(restored.ActivationPanel.View.Dialogue!.Revision, topic, null, null).Applied);
+        Assert.Equal("Information about Current Person.", restored.ActivationPanel.View.Dialogue!.Reply);
         SetTask(restored, "second", "reveal"); Advance(restored);
         restored.State.Quests.Complete("first", "done");
         Assert.All(restored.State.Quests.DialogueTopics(npc), value => Assert.Equal("second", value.InstanceId));
         Assert.Empty(Quest(restored, "first").Resources.SelectMany(value => value.DialogueLinks));
-        Assert.False(restored.Dialogue.Ask(restored.ActivationView.Dialogue!.Revision, topic, null, null).Applied);
+        Assert.False(restored.Dialogue.Ask(restored.ActivationPanel.View.Dialogue!.Revision, topic, null, null).Applied);
     }
 
     [Fact]
@@ -107,8 +107,8 @@ public sealed class QuestDialogueLinkTests
             quests.SetResource(id, person with { Text = person.Text! with { Name = "New Name" } });
         }
         Open(f.Session, npc);
-        Assert.True(f.Session.Dialogue.Ask(f.Session.ActivationView.Dialogue!.Revision, "news", null, null).Applied);
-        Assert.Equal("The rumor concerns New Name.", f.Session.ActivationView.Dialogue!.Reply);
+        Assert.True(f.Session.Dialogue.Ask(f.Session.ActivationPanel.View.Dialogue!.Revision, "news", null, null).Applied);
+        Assert.Equal("The rumor concerns New Name.", f.Session.ActivationPanel.View.Dialogue!.Reply);
         using var restored = f.Restore();
         Assert.Equal(new[] { "first", "second" }, restored.State.Quests.DialogueRumors().Select(value => value.InstanceId));
         restored.State.Quests.Complete("first", "done");
@@ -128,8 +128,8 @@ public sealed class QuestDialogueLinkTests
         Assert.Contains("missing", Quest(f.Session, "first").Tasks.First().OperationState[0].UnavailableReason);
         Assert.Empty(f.Session.State.Quests.DialogueRumors());
         Open(f.Session, npc);
-        Assert.True(f.Session.Dialogue.Ask(f.Session.ActivationView.Dialogue!.Revision, "quest-info:first:person", null, null).Applied);
-        Assert.NotEmpty(f.Session.ActivationView.Dialogue!.Diagnostics);
+        Assert.True(f.Session.Dialogue.Ask(f.Session.ActivationPanel.View.Dialogue!.Revision, "quest-info:first:person", null, null).Applied);
+        Assert.NotEmpty(f.Session.ActivationPanel.View.Dialogue!.Diagnostics);
         using var restored = f.Restore();
         Assert.NotNull(Quest(restored, "first").Tasks.First().OperationState[0].UnavailableReason);
     }
@@ -144,9 +144,9 @@ public sealed class QuestDialogueLinkTests
         long npc = QuestNpcOverlayTests.Giver(f, definitions);
         Start(f, "names", npc); Advance(f.Session);
         Open(f.Session, npc);
-        Assert.True(f.Session.Dialogue.Ask(f.Session.ActivationView.Dialogue!.Revision, "quest-info:names:person", null, null).Applied);
-        Assert.Equal("A Breton in Daggerfall on Sundas the 1st of Midyear, Sundas in Midyear.", f.Session.ActivationView.Dialogue!.Reply);
-        Assert.DoesNotContain(f.Session.ActivationView.Dialogue.Diagnostics, diagnostic =>
+        Assert.True(f.Session.Dialogue.Ask(f.Session.ActivationPanel.View.Dialogue!.Revision, "quest-info:names:person", null, null).Applied);
+        Assert.Equal("A Breton in Daggerfall on Sundas the 1st of Midyear, Sundas in Midyear.", f.Session.ActivationPanel.View.Dialogue!.Reply);
+        Assert.DoesNotContain(f.Session.ActivationPanel.View.Dialogue.Diagnostics, diagnostic =>
             diagnostic.Contains("MissingContext", StringComparison.Ordinal));
     }
 

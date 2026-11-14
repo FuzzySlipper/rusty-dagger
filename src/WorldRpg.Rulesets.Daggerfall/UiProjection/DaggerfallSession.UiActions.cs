@@ -102,7 +102,7 @@ internal sealed partial class DaggerfallSession
             // the mode by the time an action in ordinary play could arrive. The DOM owns its panels.
             case DaggerfallUiActionKind.DaedraSummon:
             case DaggerfallUiActionKind.DaedraAnswer:
-                ChangeSummoning(action); break;
+                SummoningPanel.Change(action); break;
             case DaggerfallUiActionKind.Begin:
                 _characterActions.Begin();
                 break;
@@ -151,20 +151,20 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.CharacterQuickStart: _characterActions.ChangeCharacter(action); break;
             case DaggerfallUiActionKind.CharacterLevelAllocate:
             case DaggerfallUiActionKind.CharacterLevelCommit: _characterActions.ChangeLevelUp(action); break;
-            case DaggerfallUiActionKind.ActivationMode: ApplyActivationMode(action); break;
+            case DaggerfallUiActionKind.ActivationMode: ActivationPanel.ChangeMode(action); break;
             case DaggerfallUiActionKind.SpellReady:
             case DaggerfallUiActionKind.SpellUnready:
-                if (!opensInteraction) ChangeSpell(action); break;
+                if (!opensInteraction) Spellbook.ChangeSpell(action); break;
             case DaggerfallUiActionKind.SpellBuy:
             case DaggerfallUiActionKind.SpellDelete:
             case DaggerfallUiActionKind.SpellSwap:
             case DaggerfallUiActionKind.SpellSort:
-            case DaggerfallUiActionKind.SpellInfo: ChangeSpellbook(action); break;
+            case DaggerfallUiActionKind.SpellInfo: Spellbook.ChangeSpellbook(action); break;
             case DaggerfallUiActionKind.ItemMakerDraft:
-            case DaggerfallUiActionKind.ItemMakerBuy: ChangeItemMaker(action); break;
-            case DaggerfallUiActionKind.PotionMix: MakePotion(action); break;
+            case DaggerfallUiActionKind.ItemMakerBuy: _makers.ChangeItemMaker(action); break;
+            case DaggerfallUiActionKind.PotionMix: _makers.MakePotion(action); break;
             case DaggerfallUiActionKind.SpellMakerDraft:
-            case DaggerfallUiActionKind.SpellMakerBuy: ChangeSpellMaker(action); break;
+            case DaggerfallUiActionKind.SpellMakerBuy: Spellbook.ChangeSpellMaker(action); break;
             case DaggerfallUiActionKind.SpellCast:
                 if (!opensInteraction && !_interactions.HoldsWorldOpen) PlayerAttack.Clock.PressCast(); break;
             case DaggerfallUiActionKind.Attack: if (!opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
@@ -175,7 +175,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.TutorialEnd: _tutorial.End(); break;
             case DaggerfallUiActionKind.DialogueTone:
             case DaggerfallUiActionKind.DialogueTopic:
-            case DaggerfallUiActionKind.DialogueClose: _ = ApplyDialogueAction(action); break;
+            case DaggerfallUiActionKind.DialogueClose: _ = ActivationPanel.ApplyDialogue(action); break;
             case DaggerfallUiActionKind.TavernBuy: EconomyPanels.BuyTavernMeal(action); break;
             case DaggerfallUiActionKind.TrainingCommit: EconomyPanels.ApplyTraining(action); break;
             case DaggerfallUiActionKind.MerchantBuy:
@@ -280,7 +280,7 @@ internal sealed partial class DaggerfallSession
     {
         if (id.StartsWith("activation.", StringComparison.Ordinal))
         {
-            ApplyActivationMode(new("activation-mode", Mode: id["activation.".Length..]));
+            ActivationPanel.ChangeMode(new("activation-mode", Mode: id["activation.".Length..]));
             return;
         }
         switch (id)
@@ -296,89 +296,10 @@ internal sealed partial class DaggerfallSession
             case "travel-map": _travelPanel.OpenMap(); RequestPanel(DaggerfallPanel.Travel); break;
             case "use-magic-item": RequestPanel("magic-items"); break;
             case "radial": RequestPanel(DaggerfallPanel.Radial); break;
-            case "abort-spell": ChangeSpell(new("spell-unready")); break;
+            case "abort-spell": Spellbook.ChangeSpell(new("spell-unready")); break;
             case "recast":
                 PlayerAttack.Clock.PressCast();
                 break;
         }
     }
-
-    private DaggerfallItemMakerView? ReadItemMaker()
-    {
-        if (CurrentSpellProvider(service: "make-magic-items") is not { } context) return null;
-        return new(_activationPresentation.View.Dialogue!.Revision, _activationPresentation.View.Dialogue.TargetLabel, ItemMaker.CanUse(context.Provider),
-            ItemMaker.Items(), ItemMaker.Settings(), ItemMaker.Draft, ItemMaker.Quote(context.Provider));
-    }
-
-    private void ChangeItemMaker(DaggerfallPlayerUiAction action)
-    {
-        string outcome;
-        if (CurrentSpellProvider(action.Revision, "make-magic-items") is not { } context) outcome = "ProviderUnavailable";
-        else if (action.Kind == DaggerfallUiActionKind.ItemMakerDraft)
-        {
-            try
-            {
-                var draft = JsonSerializer.Deserialize(action.Text!, DaggerfallItemMakerJsonContext.Default.DaggerfallItemMakerDraft);
-                if (draft is null) outcome = "InvalidSettings";
-                else { ItemMaker.SetDraft(draft); outcome = "Preview"; }
-            }
-            catch (Exception exception) when (exception is JsonException or ArgumentException) { outcome = "InvalidSettings"; }
-        }
-        else outcome = ItemMaker.Buy(context.Provider, action.Key!, action.Amount!.Value, action.Confirm).Outcome;
-        Presentation.SetOutcome(ItemMakerOutcomeText(outcome));
-    }
-
-    /// <summary>
-    /// Player wording for item-maker previews, refusals and purchases. Enchantment construction refuses
-    /// a draft with its own player sentence (capacity, conflicts, weapon-only powers), which passes through.
-    /// </summary>
-    internal static string ItemMakerOutcomeText(string outcome) => outcome switch
-    {
-        "Enchanted" => "Your item has been enchanted. Equip or use it to activate its powers.",
-        "Preview" => "Enchantment preview updated.",
-        "DraftChanged" or "PriceChanged" => "Check the current enchantment preview before buying.",
-        "SoulUnavailable" => "The selected soul is no longer in your pack.",
-        "ItemUnavailable" => "The selected item is no longer available.",
-        "ProviderUnavailable" => "This enchanter is unavailable to you.",
-        "InvalidSettings" => "Choose an item and valid enchantments.",
-        _ when outcome.Contains(' ', StringComparison.Ordinal) => outcome,
-        _ => DaggerfallServiceOutcomeText.Common(outcome),
-    };
-
-    private DaggerfallPotionMakerView? ReadPotionMaker()
-    {
-        if (CurrentSpellProvider(service: "make-potions") is not { } context) return null;
-        return new(_activationPresentation.View.Dialogue!.Revision, _activationPresentation.View.Dialogue.TargetLabel,
-            PotionMaker.CanUse(context.Provider), PotionMaker.ReadIngredients(), PotionMaker.ReadRecipes());
-    }
-
-    private void MakePotion(DaggerfallPlayerUiAction action)
-    {
-        var result = new DaggerfallPotionMakingResult(false, "ProviderUnavailable");
-        if (CurrentSpellProvider(action.Revision, "make-potions") is { } context)
-        {
-            try
-            {
-                int[]? selected = JsonSerializer.Deserialize(action.Text!, DaggerfallPotionMakerJsonContext.Default.Int32Array);
-                result = PotionMaker.Mix(context.Provider, selected!);
-            }
-            catch (JsonException) { result = new(false, "InvalidIngredients"); }
-        }
-        Presentation.SetOutcome(result.Outcome switch
-        {
-            "PotionMade" => $"Made a potion of {_definitions.Magic.PotionRecipes[result.Recipe!.Value].Name}.",
-            "MixtureFailed" => "The mixture failed. The ingredients were used up.",
-            "InsufficientIngredients" => "You do not have all the selected ingredients.",
-            "Capacity" => "You cannot carry the finished potion.",
-            "InvalidIngredients" => "Choose one to eight ingredients.",
-            _ => "This potion maker is unavailable to you.",
-        });
-    }
 }
-
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow)]
-[JsonSerializable(typeof(DaggerfallItemMakerDraft))]
-internal partial class DaggerfallItemMakerJsonContext : JsonSerializerContext;
-
-[JsonSerializable(typeof(int[]))]
-internal partial class DaggerfallPotionMakerJsonContext : JsonSerializerContext;

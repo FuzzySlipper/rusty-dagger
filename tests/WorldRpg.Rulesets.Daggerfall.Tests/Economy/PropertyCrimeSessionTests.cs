@@ -146,7 +146,7 @@ public sealed class PropertyCrimeSessionTests
             session.State.PlayerControl.YawRadians = 0;
             _spatial.FloorHit = request => request.Direction.Y < -.5 ? default : new SpatialHit { Present = true, Kind = SpatialHitKind.Entity, Entity = entity.Value, Point = placement.Position.ToVector(), Distance = 1 };
             session.Update(new ProductUpdate(OuterUpdate(++_step), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
-            Assert.True(session.ActivationView.Applied, session.ActivationView.Message);
+            Assert.True(session.ActivationPanel.View.Applied, session.ActivationPanel.View.Message);
         }
         public void Dispose() => Session.Dispose();
     }

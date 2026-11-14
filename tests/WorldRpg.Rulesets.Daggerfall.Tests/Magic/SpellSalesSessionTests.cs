@@ -38,13 +38,13 @@ public sealed class SpellSalesSessionTests
         Assert.Equal(DaggerfallCastOutcome.Ready, game.SpellRelease.ReadyPlayerSpell(offer.Key).Outcome);
         using var restored = fixture.Restore(game.CaptureSave());
         Assert.Contains(offer.Key, restored.State.Character.KnownSpells);
-        Assert.Equal(offer.Key, restored.ReadSpells().Ready);
+        Assert.Equal(offer.Key, restored.Spellbook.Read().Ready);
         Assert.Equal(before - offer.Price, restored.State.Currency.Read().Gold);
-        restored.ChangeSpellbook(new("spell-delete", Key: offer.Key, Confirm: false));
+        restored.Spellbook.ChangeSpellbook(new("spell-delete", Key: offer.Key, Confirm: false));
         Assert.Contains(offer.Key, restored.State.Character.KnownSpells);
-        restored.ChangeSpellbook(new("spell-delete", Key: offer.Key, Confirm: true));
+        restored.Spellbook.ChangeSpellbook(new("spell-delete", Key: offer.Key, Confirm: true));
         Assert.DoesNotContain(offer.Key, restored.State.Character.KnownSpells);
-        Assert.Null(restored.ReadSpells().Ready);
+        Assert.Null(restored.Spellbook.Read().Ready);
         Assert.Null(DaggerfallSavePayload.Read(restored.CaptureSave()).ReadySpell);
     }
 
@@ -75,13 +75,13 @@ public sealed class SpellSalesSessionTests
         using var f = new KnownReadySpellSessionTests.Fixture();
         f.Session.State.Character.LearnSpell("spell.023");
         f.Submit(new { action = "spell-info", key = "spell.023" });
-        var info = Assert.IsType<DaggerfallSpellInformation>(f.Session.ReadSpells().Information);
+        var info = Assert.IsType<DaggerfallSpellInformation>(f.Session.Spellbook.Read().Information);
         Assert.NotEmpty(info.Details); Assert.Equal("spell.023", info.Key);
         f.Submit(new { action = "spell-delete", key = "spell.023", confirm = false });
         Assert.Contains("spell.023", f.Session.State.Character.KnownSpells);
         f.Submit(new { action = "spell-delete", key = "spell.023", confirm = true });
         Assert.DoesNotContain("spell.023", f.Session.State.Character.KnownSpells);
-        Assert.Null(f.Session.ReadSpells().Information);
+        Assert.Null(f.Session.Spellbook.Read().Information);
         Assert.NotNull(DaggerfallUiAction.Parse("{\"action\":\"spell-buy\",\"key\":\"spell.023\",\"revision\":\"1\",\"amount\":0,\"confirm\":true}"u8));
         Assert.Null(DaggerfallUiAction.Parse("{\"action\":\"spell-buy\",\"key\":\"spell.023\",\"amount\":1,\"confirm\":true}"u8));
     }

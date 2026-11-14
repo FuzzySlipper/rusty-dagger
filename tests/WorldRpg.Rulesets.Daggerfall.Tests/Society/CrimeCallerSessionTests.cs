@@ -83,13 +83,13 @@ public sealed class CrimeCallerSessionTests
         s.State.PlayerControl.MoveTo(s.State.Actors.Get(2000).Position.ToVector() + 20 * Vector3.UnitZ);
         s.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"activation-mode\",\"mode\":\"steal\"}")]));
         s.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
-        Assert.False(s.ActivationView.Applied);
+        Assert.False(s.ActivationPanel.View.Applied);
         Assert.Empty(s.State.Crime.Attempts);
         Assert.Equal(0, s.State.Progression.SkillUses.GetValueOrDefault("pickpocket"));
         s.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"activation-mode\",\"mode\":\"talk\"}")]));
         AimActivationAt(s, 2000);
         s.Update(new ProductUpdate(OuterUpdate(4), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
-        Assert.False(s.ActivationView.Applied); Assert.Empty(s.State.Crime.Attempts);
+        Assert.False(s.ActivationPanel.View.Applied); Assert.Empty(s.State.Crime.Attempts);
     }
 
     [Theory]

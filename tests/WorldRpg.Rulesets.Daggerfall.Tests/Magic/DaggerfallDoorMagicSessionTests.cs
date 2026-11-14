@@ -39,7 +39,7 @@ public sealed class DaggerfallDoorMagicSessionTests
         f.Cast(s, lockDoor: true); s.State.Progression.AdvanceTo(0, 7);
         f.Mode(s, "lockpick"); f.Interact(s, f.Door.Id);
         var door = s.Doors.Read(f.Door.Id); Assert.Equal(7, door.LockValue); Assert.Equal(DaggerfallDoorMotion.Closing, door.Motion);
-        Assert.Null(s.Doors.FailedLockpickingSkill(f.Door.Id)); Assert.Contains("locked by", s.ActivationView.Message);
+        Assert.Null(s.Doors.FailedLockpickingSkill(f.Door.Id)); Assert.Contains("locked by", s.ActivationPanel.View.Message);
         s.Doors.Advance(2); Assert.True(s.Doors.Read(f.Door.Id).CollisionEnabled);
         Assert.Empty(s.State.Effects.Active);
     }
@@ -63,7 +63,7 @@ public sealed class DaggerfallDoorMagicSessionTests
         Assert.Equal(DaggerfallDoorMagic.Open, Assert.Single(s.State.Effects.Active).Definition.DoorMagic);
         f.Interact(s, f.Door.Id); Assert.Empty(s.State.Effects.Active);
         Assert.Equal(0, s.Doors.Read(f.Door.Id).LockValue); Assert.Equal(DaggerfallDoorMotion.Opening, s.Doors.Read(f.Door.Id).Motion);
-        Assert.True(s.ActivationView.Applied); Assert.Contains("spell opens", s.ActivationView.Message);
+        Assert.True(s.ActivationPanel.View.Applied); Assert.Contains("spell opens", s.ActivationPanel.View.Message);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public sealed class DaggerfallDoorMagicSessionTests
         s.Doors.Lock(f.Door.Id, DaggerfallDoorOperationSource.Spell, 15);
         f.Cast(s, lockDoor: true); f.Interact(s, f.Door.Id);
         Assert.Equal(15, s.Doors.Read(f.Door.Id).LockValue); Assert.Equal(DaggerfallDoorMotion.Closing, s.Doors.Read(f.Door.Id).Motion);
-        Assert.True(s.ActivationView.Applied); Assert.Contains("already locked", s.ActivationView.Message); Assert.Empty(s.State.Effects.Active);
+        Assert.True(s.ActivationPanel.View.Applied); Assert.Contains("already locked", s.ActivationPanel.View.Message); Assert.Empty(s.State.Effects.Active);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class DaggerfallDoorMagicSessionTests
         using Fixture f = new(); var s = f.Session;
         s.Doors.Lock(f.Door.Id, DaggerfallDoorOperationSource.Spell, 20);
         f.Cast(s, lockDoor: false); s.State.Progression.AdvanceTo(0, 20); f.Interact(s, f.Door.Id);
-        Assert.True(s.ActivationView.Applied); Assert.Equal(0, s.Doors.Read(f.Door.Id).LockValue);
+        Assert.True(s.ActivationPanel.View.Applied); Assert.Equal(0, s.Doors.Read(f.Door.Id).LockValue);
         Assert.Equal(DaggerfallDoorMotion.Opening, s.Doors.Read(f.Door.Id).Motion); Assert.Empty(s.State.Effects.Active);
     }
 
@@ -93,9 +93,9 @@ public sealed class DaggerfallDoorMagicSessionTests
         using Fixture f = new(); var s = f.Session;
         s.Doors.Lock(f.Door.Id, DaggerfallDoorOperationSource.Spell, 30);
         f.Cast(s, lockDoor: false); f.Interact(s, f.Door.Id);
-        Assert.False(s.ActivationView.Applied); Assert.Contains("too strong", s.ActivationView.Message);
+        Assert.False(s.ActivationPanel.View.Applied); Assert.Contains("too strong", s.ActivationPanel.View.Message);
         Assert.Empty(s.State.Effects.Active); Assert.Equal(30, s.Doors.Read(f.Door.Id).LockValue);
-        f.Interact(s, f.Door.Id); Assert.False(s.ActivationView.Applied); Assert.Equal(30, s.Doors.Read(f.Door.Id).LockValue);
+        f.Interact(s, f.Door.Id); Assert.False(s.ActivationPanel.View.Applied); Assert.Equal(30, s.Doors.Read(f.Door.Id).LockValue);
     }
 
     [Theory]
@@ -107,7 +107,7 @@ public sealed class DaggerfallDoorMagicSessionTests
         ulong item = s.State.Inventory.Read().UniqueItems.Select(value => s.State.Inventory.GetDurableItemId(value.Entity).Value).First();
         Assert.Equal(DaggerfallCastOutcome.Applied, f.Cast(s, lockDoor: false, item, (DaggerfallCastSource)source));
         s.Doors.Lock(f.Door.Id, DaggerfallDoorOperationSource.Spell, 30); f.Interact(s, f.Door.Id);
-        Assert.Equal(30, s.Doors.Read(f.Door.Id).LockValue); Assert.False(s.ActivationView.Applied); Assert.Empty(s.State.Effects.Active);
+        Assert.Equal(30, s.Doors.Read(f.Door.Id).LockValue); Assert.False(s.ActivationPanel.View.Applied); Assert.Empty(s.State.Effects.Active);
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public sealed class DaggerfallDoorMagicSessionTests
         s.Doors.Lock(f.Door.Id, DaggerfallDoorOperationSource.Spell, 30);
         f.Cast(s, lockDoor: false, identity.Value, DaggerfallCastSource.ItemUse);
         using var restored = f.Restore(s.CaptureSave(), maximumRandom: true);
-        f.Interact(restored, f.Door.Id); Assert.True(restored.ActivationView.Applied);
+        f.Interact(restored, f.Door.Id); Assert.True(restored.ActivationPanel.View.Applied);
         Assert.Equal(0, restored.Doors.Read(f.Door.Id).LockValue); Assert.Equal(DaggerfallDoorMotion.Opening, restored.Doors.Read(f.Door.Id).Motion);
         Assert.Empty(restored.State.Effects.Active);
     }

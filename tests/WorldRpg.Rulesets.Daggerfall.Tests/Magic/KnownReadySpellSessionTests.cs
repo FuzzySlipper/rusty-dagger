@@ -13,20 +13,20 @@ public sealed class KnownReadySpellSessionTests
     public void Learn_select_unready_and_actual_cast_use_semantic_projection_and_shared_casting()
     {
         using Fixture f=new();var s=f.Session;Fund(s);
-        Assert.Empty(s.ReadSpells().Available);
+        Assert.Empty(s.Spellbook.Read().Available);
         Assert.True(s.State.Character.LearnSpell("spell.023"));
         Assert.False(s.State.Character.LearnSpell("spell.023"));
         f.Submit(new{action="spell-ready",key="spell.023"});
-        Assert.Equal("spell.023",s.ReadSpells().Ready);Assert.Equal("Spell ready.",s.ReadSpells().Result);
+        Assert.Equal("spell.023",s.Spellbook.Read().Ready);Assert.Equal("Spell ready.",s.Spellbook.Read().Result);
         Assert.Equal("spell.023",s.Casting.ReadyFor(1)!.SpellKey);
-        var row=Assert.Single(s.ReadSpells().Available); Assert.True(row.Cost>0);
+        var row=Assert.Single(s.Spellbook.Read().Available); Assert.True(row.Cost>0);
         s.PublishInitial();Assert.Contains("spell.023",JsonSerializer.Serialize(f.Engine.Published()));
-        f.Submit(new{action="spell-unready"});Assert.Null(s.Casting.ReadyFor(1));Assert.Null(s.ReadSpells().Ready);
-        Assert.Equal("No spell ready.",s.ReadSpells().Result);
+        f.Submit(new{action="spell-unready"});Assert.Null(s.Casting.ReadyFor(1));Assert.Null(s.Spellbook.Read().Ready);
+        Assert.Equal("No spell ready.",s.Spellbook.Read().Result);
         f.Submit(new{action="spell-ready",key="spell.023"});
         double before=Magicka(s).Current;
         f.Cast();
-        Assert.Equal("spell.023",s.ReadSpells().Ready);Assert.Equal("Spell cast.",s.ReadSpells().Result);
+        Assert.Equal("spell.023",s.Spellbook.Read().Ready);Assert.Equal("Spell cast.",s.Spellbook.Read().Result);
         Assert.Equal(before-row.Cost,Magicka(s).Current);
         Assert.Equal("regenerate",Assert.Single(s.State.Effects.Active).Definition.Key);
         Assert.Equal(2,s.Casting.NextSequence);
@@ -43,12 +43,12 @@ public sealed class KnownReadySpellSessionTests
 
         f.Cast();
         Assert.Equal(before-cost,Magicka(s).Current);
-        Assert.Equal("spell.023",s.ReadSpells().Ready);
+        Assert.Equal("spell.023",s.Spellbook.Read().Ready);
         f.Cast();
 
         Assert.Equal(before-cost*2,Magicka(s).Current);
-        Assert.Equal("spell.023",s.ReadSpells().Ready);
-        Assert.Equal("Spell cast.",s.ReadSpells().Result);
+        Assert.Equal("spell.023",s.Spellbook.Read().Ready);
+        Assert.Equal("Spell cast.",s.Spellbook.Read().Result);
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public sealed class KnownReadySpellSessionTests
 
         f.Cast();
 
-        Assert.Equal("Not enough magicka.",s.ReadSpells().Result);
+        Assert.Equal("Not enough magicka.",s.Spellbook.Read().Result);
         Assert.Equal("spell.023",s.Casting.ReadyFor(1)!.SpellKey);
         Assert.Empty(s.State.Effects.Active);
     }
@@ -101,15 +101,15 @@ public sealed class KnownReadySpellSessionTests
         using Fixture f=new();var s=f.Session;Fund(s);
         s.State.Character.LearnSpell("spell.023"); f.Submit(new{action="spell-ready",key="spell.023"});
         f.Submit(new{action="spell-ready",key="missing-record"});
-        Assert.Null(s.ReadSpells().Ready);Assert.Equal("That spell is not known or available.",s.ReadSpells().Result);
+        Assert.Null(s.Spellbook.Read().Ready);Assert.Equal("That spell is not known or available.",s.Spellbook.Read().Result);
         Assert.Throws<ArgumentException>(()=>s.State.Character.LearnSpell("missing-record"));
         // Every published classic record is castable; a hidden (!) record no grant reached is not.
         var unavailable=TestPayload.Definitions.Magic.Spells.Values.First(spell=>spell.Name.StartsWith('!')
             && s.Casting.AvailableSpellCost(1,spell.Key) is null);
         s.State.Character.LearnSpell(unavailable.Key);
-        Assert.False(Assert.Single(s.ReadSpells().Available,row=>row.Key==unavailable.Key).CanCast);
+        Assert.False(Assert.Single(s.Spellbook.Read().Available,row=>row.Key==unavailable.Key).CanCast);
         f.Submit(new{action="spell-ready",key=unavailable.Key});
-        Assert.Equal("That spell is not known or available.",s.ReadSpells().Result);Assert.Null(s.Casting.ReadyFor(1));
+        Assert.Equal("That spell is not known or available.",s.Spellbook.Read().Result);Assert.Null(s.Casting.ReadyFor(1));
         f.Submit(new{action="spell-ready",key="spell.023"});
         Assert.True(s.State.Character.ForgetSpell("spell.023"));Assert.Null(s.Casting.ReadyFor(1));
         Assert.Null(DaggerfallSavePayload.Read(s.CaptureSave()).ReadySpell);
@@ -146,7 +146,7 @@ public sealed class KnownReadySpellSessionTests
         Assert.Empty(s.State.Effects.Active);
         f.Submit(new{action="menu",open=false});f.Cast();
         Assert.NotNull(s.Casting.ReadyFor(1));Assert.Single(s.State.Effects.Active);
-        Assert.Equal("Spell cast.",s.ReadSpells().Result);
+        Assert.Equal("Spell cast.",s.Spellbook.Read().Result);
         f.Submit(new{action="spell-unready"});Assert.Null(s.Casting.ReadyFor(1));
         var item=s.State.Inventory.Read().UniqueItems.First();
         ulong id=s.State.Inventory.GetDurableItemId(item.Entity).Value;

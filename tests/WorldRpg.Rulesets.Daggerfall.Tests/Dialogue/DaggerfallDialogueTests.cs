@@ -203,7 +203,7 @@ public sealed class DaggerfallDialogueTests
         DaggerfallActivationTarget speaker = session.Dialogue.NpcTargets()
             .Single(value => value.Identity.Value == (ulong)speakerId);
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, speaker)).Applied);
-        DaggerfallDialogueView opening = session.ActivationView.Dialogue
+        DaggerfallDialogueView opening = session.ActivationPanel.View.Dialogue
             ?? throw new InvalidOperationException("The resolver test needs an open dialogue.");
         string topic = $"direction:npc:{targetId}";
         Assert.Contains(opening.Topics, option => option.Id == topic);

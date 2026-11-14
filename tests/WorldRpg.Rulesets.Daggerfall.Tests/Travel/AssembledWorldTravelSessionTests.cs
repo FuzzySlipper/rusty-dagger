@@ -67,7 +67,7 @@ public sealed class AssembledWorldTravelSessionTests
         // Enter the building through its door.
         DaggerfallDoorView live = arrived.Session.Sites.Projection.Doors.Read(door.Id);
         WorldPoint outside = arrived.Use(live.Pose.Translation, live.Entity);
-        Assert.True(arrived.Session.ActivationView.Applied, arrived.Session.ActivationView.Message);
+        Assert.True(arrived.Session.ActivationPanel.View.Applied, arrived.Session.ActivationPanel.View.Message);
         Assert.Equal(interior, arrived.Session.Sites.ActiveProfile);
         Assert.Equal(exterior, arrived.Session.Sites.ReturnProfile);
         RulesetSavePayload inside = arrived.Session.CaptureSave();
@@ -226,19 +226,19 @@ public sealed class AssembledWorldTravelSessionTests
 
         DaggerfallDoorView live = run.Session.Sites.Projection.Doors.Read(shop.Id);
         run.Use(live.Pose.Translation, live.Entity);
-        Assert.False(run.Session.ActivationView.Applied);
-        Assert.StartsWith("Locked.", run.Session.ActivationView.Message);
+        Assert.False(run.Session.ActivationPanel.View.Applied);
+        Assert.StartsWith("Locked.", run.Session.ActivationPanel.View.Message);
         Assert.Equal(exterior, run.Session.Sites.ActiveProfile);
         run.SetMode("info");
         run.Use(live.Pose.Translation, live.Entity);
         string name = run.Session.Site.RequireBuilding(city.Id, shop.ExteriorBuilding!.Value).Name;
         Assert.False(string.IsNullOrWhiteSpace(name));
-        Assert.StartsWith($"{name}. Store is closed. Open from ", run.Session.ActivationView.Message);
+        Assert.StartsWith($"{name}. Store is closed. Open from ", run.Session.ActivationPanel.View.Message);
         run.AdvanceToHour(10);
         run.SetMode("grab");
         live = run.Session.Sites.Projection.Doors.Read(shop.Id);
         run.Use(live.Pose.Translation, live.Entity);
-        Assert.True(run.Session.ActivationView.Applied, run.Session.ActivationView.Message);
+        Assert.True(run.Session.ActivationPanel.View.Applied, run.Session.ActivationPanel.View.Message);
         run.ContinueGreeting();
         Assert.Equal(Inside(shop), run.Session.Sites.ActiveProfile);
         Assert.Empty(run.Session.State.Crime.Incidents);
@@ -246,29 +246,29 @@ public sealed class AssembledWorldTravelSessionTests
         using AssembledWorldRun drinking = world.Restore(night, city.Id, tavern.ExteriorBuilding);
         live = drinking.Session.Sites.Projection.Doors.Read(tavern.Id);
         drinking.Use(live.Pose.Translation, live.Entity);
-        Assert.True(drinking.Session.ActivationView.Applied, drinking.Session.ActivationView.Message);
+        Assert.True(drinking.Session.ActivationPanel.View.Applied, drinking.Session.ActivationPanel.View.Message);
         Assert.Equal(Inside(tavern), drinking.Session.Sites.ActiveProfile);
         Assert.Empty(drinking.Session.State.Crime.Incidents);
 
         using AssembledWorldRun burgling = world.Restore(night, city.Id, house.ExteriorBuilding);
         live = burgling.Session.Sites.Projection.Doors.Read(house.Id);
         burgling.Use(live.Pose.Translation, live.Entity);
-        Assert.False(burgling.Session.ActivationView.Applied);
-        Assert.StartsWith("Locked.", burgling.Session.ActivationView.Message);
+        Assert.False(burgling.Session.ActivationPanel.View.Applied);
+        Assert.StartsWith("Locked.", burgling.Session.ActivationPanel.View.Message);
         // The lock is the house's: a pick that fails is refused again at the same skill (this run's draws are the maximum).
         burgling.Session.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).BaseValue = 100;
         burgling.SetMode("steal");
         burgling.Use(live.Pose.Translation, live.Entity);
-        Assert.False(burgling.Session.ActivationView.Applied);
-        Assert.Equal("The lock resists your pick.", burgling.Session.ActivationView.Message);
+        Assert.False(burgling.Session.ActivationPanel.View.Applied);
+        Assert.Equal("The lock resists your pick.", burgling.Session.ActivationPanel.View.Message);
         burgling.Use(live.Pose.Translation, live.Entity);
-        Assert.Equal("You have already tried that skill against this lock.", burgling.Session.ActivationView.Message);
+        Assert.Equal("You have already tried that skill against this lock.", burgling.Session.ActivationPanel.View.Message);
         Assert.Equal(exterior, burgling.Session.Sites.ActiveProfile);
         // From six to six the house stands open to callers.
         burgling.AdvanceToHour(12);
         burgling.SetMode("grab");
         burgling.Use(live.Pose.Translation, live.Entity);
-        Assert.True(burgling.Session.ActivationView.Applied, burgling.Session.ActivationView.Message);
+        Assert.True(burgling.Session.ActivationPanel.View.Applied, burgling.Session.ActivationPanel.View.Message);
         burgling.ContinueGreeting();
         Assert.Equal(Inside(house), burgling.Session.Sites.ActiveProfile);
     }

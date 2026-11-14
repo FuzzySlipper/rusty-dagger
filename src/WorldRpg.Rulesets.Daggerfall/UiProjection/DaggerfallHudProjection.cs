@@ -165,7 +165,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("quote",summon.Quote is not { } quote ? builder.Null() : builder.Object(
                         ("key",builder.String(quote.Key)),("name",builder.String(quote.Name)),("quest",builder.String(quote.Quest)),
                         ("gold",builder.Number(checked((long)quote.Gold))),("eligible",builder.Boolean(quote.Eligible)),
-                        ("reason",quote.Reason is null ? builder.Null() : builder.String(DaggerfallSession.SummoningOutcomeText(quote.Reason))))))),
+                        ("reason",quote.Reason is null ? builder.Null() : builder.String(DaggerfallSummoningPanel.OutcomeText(quote.Reason))))))),
                 ("maker", frame.Spells.Maker is not { } spellMaker ? builder.Null() : SpellMaker(builder, spellMaker, frame.Spells.Art)),
                 ("itemMaker", frame.Spells.ItemMaker is not { } itemMaker ? builder.Null() : ItemMaker(builder, itemMaker)),
                 ("potionMaker", frame.Spells.PotionMaker is not { } potionMaker ? builder.Null() : PotionMaker(builder, potionMaker)),
@@ -628,7 +628,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("magnitudePerLevel", builder.Number(effect.MagnitudePerLevel)))).ToArray())))),
         ("quote", maker.Quote is not { } quote ? builder.Null() : builder.Object(("key", builder.String(quote.Key)),
             ("gold", builder.Number(quote.Gold)), ("spellPoints", builder.Number(quote.SpellPoints)), ("eligible", builder.Boolean(quote.Eligible)),
-            ("reason", quote.Reason is null ? builder.Null() : builder.String(DaggerfallSession.SpellMakerOutcomeText(quote.Reason))))));
+            ("reason", quote.Reason is null ? builder.Null() : builder.String(DaggerfallSpellbookPanel.SpellMakerOutcomeText(quote.Reason))))));
 
     private static uint ItemMaker(UiValueBuilder builder, DaggerfallItemMakerView maker) => builder.Object(
         ("revision", builder.String(maker.Revision)), ("provider", builder.String(maker.Provider)), ("eligible", builder.Boolean(maker.Eligible)),
@@ -639,7 +639,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("settings", builder.Array(maker.Draft.Settings.Select(builder.String).ToArray())))),
         ("quote", maker.Quote is not { } quote ? builder.Null() : builder.Object(("key", builder.String(quote.Key)),
             ("capacity", builder.Number(quote.Capacity)), ("power", builder.Number(quote.Power)), ("gold", builder.Number(quote.Gold)),
-            ("eligible", builder.Boolean(quote.Eligible)), ("reason", quote.Reason is null ? builder.Null() : builder.String(DaggerfallSession.ItemMakerOutcomeText(quote.Reason))),
+            ("eligible", builder.Boolean(quote.Eligible)), ("reason", quote.Reason is null ? builder.Null() : builder.String(DaggerfallMakerPanels.ItemMakerOutcomeText(quote.Reason))),
             ("payloads", builder.Array(quote.Payloads.Select(setting => ItemMakerSetting(builder, setting)).ToArray())))));
 
     internal static uint PotionMaker(UiValueBuilder builder, DaggerfallPotionMakerView maker) => builder.Object(

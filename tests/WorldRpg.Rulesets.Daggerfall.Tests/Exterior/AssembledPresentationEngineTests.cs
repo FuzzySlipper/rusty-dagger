@@ -776,8 +776,8 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             host.Call(_ => run.AimAt(door.Pose.Translation));
             OnGround(host, run);
             _ = host.Call(_ => run.UseFromHere(door.Entity));
-            Assert.False(run.Session.ActivationView.Applied);
-            Assert.StartsWith("Locked.", run.Session.ActivationView.Message);
+            Assert.False(run.Session.ActivationPanel.View.Applied);
+            Assert.StartsWith("Locked.", run.Session.ActivationPanel.View.Message);
             Assert.Equal(key, run.Session.Sites.ActiveProfile);
 
             host.Call(_ => run.AdvanceToHour(10));
@@ -786,7 +786,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
             host.Call(_ => run.AimAt(door.Pose.Translation));
             OnGround(host, run);
             _ = host.Call(_ => run.UseFromHere(door.Entity));
-            Assert.True(run.Session.ActivationView.Applied, run.Session.ActivationView.Message);
+            Assert.True(run.Session.ActivationPanel.View.Applied, run.Session.ActivationPanel.View.Message);
             host.Call(_ => run.ContinueGreeting());
             Assert.Equal(interior, run.Session.Sites.ActiveProfile);
             Assert.Empty(run.Session.State.Crime.Incidents);

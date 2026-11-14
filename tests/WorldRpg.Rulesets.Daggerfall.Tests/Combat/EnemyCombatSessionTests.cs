@@ -181,7 +181,7 @@ public sealed class EnemyCombatSessionTests
 
         Assert.True(session.State.Actors.Player.IsDefeated);
         Assert.Null(session.OpenLoot);
-        Assert.False(session.ActivationView.Applied);
+        Assert.False(session.ActivationPanel.View.Applied);
     }
 
     [Fact]

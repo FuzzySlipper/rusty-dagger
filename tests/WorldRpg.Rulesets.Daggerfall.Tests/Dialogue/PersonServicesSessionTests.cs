@@ -78,6 +78,6 @@ public sealed class PersonServicesSessionTests
             value => value.Identity.Value == checked((ulong)npc.DurableId));
         DaggerfallActivationOutcome outcome = session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target));
         Assert.True(outcome.Applied, outcome.Message);
-        return Assert.IsType<DaggerfallDialogueView>(session.ActivationView.Dialogue);
+        return Assert.IsType<DaggerfallDialogueView>(session.ActivationPanel.View.Dialogue);
     }
 }

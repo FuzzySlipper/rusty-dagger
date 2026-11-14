@@ -36,7 +36,7 @@ public sealed class AdditionalControlSessionTests
     {
         using var f = new SanguineRoseSessionTests.Fixture();
         Press(f.Session, "activation." + mode);
-        Assert.Equal(mode, f.Session.ActivationView.Mode);
+        Assert.Equal(mode, f.Session.ActivationPanel.View.Mode);
     }
 
     [Fact]

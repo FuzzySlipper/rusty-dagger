@@ -123,7 +123,7 @@ public sealed class QuestNpcLifecycleTests
             value.Entity, 1d, 1d, value.Entity == (ulong)target ? PerceptionPairKind.Visible : PerceptionPairKind.Occluded, 1d)).ToArray());
         AimActivationAt(session, target);
         session.Update(new ProductUpdate(OuterUpdate(50), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
-        Assert.True(session.ActivationView.Applied, session.ActivationView.Message);
+        Assert.True(session.ActivationPanel.View.Applied, session.ActivationPanel.View.Message);
         Assert.False(Available(session));
         StartTask(session, "hide", "reservation");
         session.Update(new ProductUpdate(OuterUpdate(51), []));

@@ -773,7 +773,7 @@ internal sealed partial class DaggerfallSession
             SpellFlights = new DaggerfallSpellFlights(Casting, SpellRelease);
             PlayerAttack = new DaggerfallPlayerAttack(_tuning.Attacks, _combat, actors, State.PlayerControl, () => _input.ResolveCurrentLook(State.PlayerControl),
                 () => State.WeaponDrawn, effects, State.Kit.Attacks, _guard, StrikeAim, _contact,
-                () => _sites?.Exterior.CharacterEnvironment(State.PlayerControl.Motion), Casting, SpellRelease, definitions, _facts, ReportCast,
+                () => _sites?.Exterior.CharacterEnvironment(State.PlayerControl.Motion), Casting, SpellRelease, definitions, _facts, outcome => Spellbook.ReportCast(outcome),
                 look =>
                 {
                     // WeaponManager sends Attack to an action on the environment after the ordinary hit query. The safe
@@ -1044,6 +1044,14 @@ internal sealed partial class DaggerfallSession
                 destination => TryTransitionTo(destination), Presentation);
             _travelPanel = new DaggerfallTravelPanel(FastTravel, State.Transport, State.Wagon, State.Inventory, _inventoryUi, _hud.RequestTravelPlaces,
                 TransportAccess, AcceptTravel, BoardPropertyShip, LeavePropertyShip, ApplyTransportChange, Presentation);
+            _counter = new DaggerfallServiceCounter(() => _dialogue, CurrentInteriorBuilding, _site, () => _sites.ActiveProfile, _activationPresentation);
+            _makers = new DaggerfallMakerPanels(_itemMaker, _potionMaker, definitions, _counter, Presentation);
+            SummoningPanel = new DaggerfallSummoningPanel(Summoning, State.Quests, Cinematics, composition.VideosEnabled, _counter,
+                ReconcileSummoningFoes, Presentation);
+            Spellbook = new DaggerfallSpellbookPanel(State.Character, State.Actors, Casting, SpellRelease, definitions, SpellSales, SpellMaker,
+                _counter, _makers, SummoningPanel, () => DrawnArt, Presentation);
+            ActivationPanel = new DaggerfallActivationPanel(_activationPresentation, Activation, () => _dialogue, Banking, State.Effects,
+                State.SkillTraining, State.Tavern, CurrentInteriorBuilding, EconomyPanels, Spellbook, _counter, Presentation);
             _textActions = new DaggerfallTextActions(DungeonText, _notebook, DungeonActions.ContinueAcceptedAnswer, Presentation, ContinueBuildingEntry);
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,
