@@ -43,3 +43,6 @@ internal sealed class DaggerfallAtlasTiles(DaggerfallAtlas atlas, DaggerfallData
         _urls.Clear();
     }
 }
+
+/// <summary>One atlas tile the page asks for: its level, column and row.</summary>
+internal readonly record struct DaggerfallAtlasTileRequest(int Level, int Column, int Row);

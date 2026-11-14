@@ -1295,55 +1295,6 @@ internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong Remai
 
 internal sealed record DaggerfallCalendarSave(int Year, int Month, int Day, int Hour, int Minute, int Second, double RemainderSeconds);
 
-internal sealed record DaggerfallSiteSave(
-    DaggerfallSiteIdSave? Active,
-    DaggerfallSiteIdSave? ReturnAnchor,
-    DaggerfallSiteIdSave[] Discovered,
-    DaggerfallSiteReturnPoseSave? ReturnPose = null,
-    DaggerfallWorldProfileKeySave? ActiveProfile = null,
-    DaggerfallWorldProfileKeySave? ReturnProfile = null)
-{
-    [JsonRequired] public DaggerfallBuildingDiscovery[] Buildings { get; init; } = [];
-    [JsonRequired] public DaggerfallBuildingLockpickSave[] FailedBuildingPicks { get; init; } = [];
-
-    internal void Validate()
-    {
-        ArgumentNullException.ThrowIfNull(Discovered);
-        ArgumentNullException.ThrowIfNull(Buildings);
-        ArgumentNullException.ThrowIfNull(FailedBuildingPicks);
-        if (FailedBuildingPicks.Any(value => value is null || value.Skill is < 0 or > 100)
-            || FailedBuildingPicks.Select(value => (value.Site, value.Building)).Distinct().Count() != FailedBuildingPicks.Length)
-            throw new ArgumentException("Saved building lockpick memory is malformed or duplicated.");
-        if (Buildings.Any(value => value is null) || Buildings.Distinct().Count() != Buildings.Length)
-            throw new ArgumentException("Saved building discovery contains null or repeated buildings.");
-        Active?.Validate("active site");
-        ReturnAnchor?.Validate("return anchor");
-        if (ReturnAnchor is not null && Active is null)
-            throw new ArgumentException("A saved return anchor requires an active site.");
-        if (ReturnAnchor is null && ReturnPose is not null)
-            throw new ArgumentException("A saved return pose requires a return anchor.");
-        if (ReturnAnchor is not null && ReturnPose is null)
-            throw new ArgumentException("A saved return anchor requires its exact return pose.");
-        if (ReturnProfile is not null && ReturnAnchor is null)
-            throw new ArgumentException("A saved return projection requires its geographic return anchor.");
-        ReturnPose?.Validate();
-        ActiveProfile?.Validate();
-        ReturnProfile?.Validate();
-        if (ActiveProfile is not null && Active is not null && ActiveProfile.Site.Require() != Active.Require())
-            throw new ArgumentException("Saved active projection must belong to the saved active site.");
-        if (ReturnProfile is not null && ReturnAnchor is not null && ReturnProfile.Site.Require() != ReturnAnchor.Require())
-            throw new ArgumentException("Saved return projection must belong to the saved return site.");
-        HashSet<(int Region, int Index)> seen = [];
-        foreach (DaggerfallSiteIdSave discovered in Discovered)
-        {
-            ArgumentNullException.ThrowIfNull(discovered);
-            discovered.Validate("discovered site");
-            if (!seen.Add((discovered.Region!.Value, discovered.Index!.Value)))
-                throw new ArgumentException("A save must record each discovered site once.");
-        }
-    }
-}
-
 /// <summary>One persisted variable: its scope, owner, key and value.</summary>
 internal sealed record DaggerfallVariableSave(int Scope, int Owner, int Key, bool Value)
 {

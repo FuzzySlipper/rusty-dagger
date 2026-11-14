@@ -18,9 +18,6 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
     internal DaggerfallUiActionKind Kind { get; } = DaggerfallUiAction.KindOf(Action);
 }
 
-/// <summary>One atlas tile the page asks for: its level, column and row.</summary>
-internal readonly record struct DaggerfallAtlasTileRequest(int Level, int Column, int Row);
-
 /// <summary>Every player action the <c>dagger.ui.action.v1</c> contract carries, by meaning.</summary>
 internal enum DaggerfallUiActionKind
 {
