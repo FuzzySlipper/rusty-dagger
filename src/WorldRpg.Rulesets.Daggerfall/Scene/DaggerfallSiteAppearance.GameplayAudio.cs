@@ -108,14 +108,15 @@ internal sealed partial class DaggerfallSiteAppearance
             pitch: audioTuning.Pitch + DrawCue(identity, "pitch", 0, 30) / 100F);
     }
 
-    internal void PlayEquip(DaggerfallItemDefinition item, DaggerfallItemInstanceMetadata metadata)
+    /// <summary>The sound of equipping <paramref name="item"/>, whose armour sounds by its <paramref name="material"/>.</summary>
+    internal void PlayEquip(DaggerfallItemDefinition item, string material)
     {
         var template = mobileDefinitions?.SourceTemplateFor(item);
         if (template is null) return;
         int ordinal = template.Groups.Any(group => group is "MensClothing" or "WomensClothing") ? 381
             : template.Groups.Any(group => group is "Jewellery" or "Gems") ? 383
             : template.Groups.Contains("Armor") ? item.Shield is not null || template.Index == 107 ? 419
-                : metadata.Material == "leather" ? 417 : metadata.Material == "chain" ? 418 : 419
+                : material == "leather" ? 417 : material == "chain" ? 418 : 419
             : template.Groups.Contains("Weapons") ? template.ClassicIndex switch
             {
                 113 or 114 or 116 or 117 => 377, 118 or 119 or 120 or 121 => 378, 122 or 123 => 379,

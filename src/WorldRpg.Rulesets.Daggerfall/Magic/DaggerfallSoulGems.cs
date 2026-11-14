@@ -6,7 +6,6 @@ using KitItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal enum DaggerfallStarCaptureOutcome { Captured, Occupied, Ineligible, Unavailable }
 internal sealed record DaggerfallStarCaptureResult(DaggerfallStarCaptureOutcome Outcome, ulong? ItemId);
 
 /// <summary>Captured creature meaning on actual inventory items, shared by trapping and soul consumers.</summary>

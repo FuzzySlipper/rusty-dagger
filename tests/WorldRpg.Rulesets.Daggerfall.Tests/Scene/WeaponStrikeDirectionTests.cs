@@ -30,8 +30,8 @@ public sealed class WeaponStrikeDirectionTests
         stage.Presentation.CompleteAdmittedUpdate();
 
         SpritePlaybackCreateRequest draw = stage.Appearance.PlaybackRequests.Last();
-        Assert.Equal(DaggerfallFormulaPolicy.BowWeaponHitFrame, draw.Frames.Length); // of the bow's strikeDown, never its four-frame strikeUp
-        Assert.All(draw.Frames.Span.ToArray(), frame => Assert.Equal(1.25d / DaggerfallFormulaPolicy.BowWeaponHitFrame, frame.DurationSeconds, 6));
+        Assert.Equal(NormalizedClassicWeapon.BowWeaponHitFrame, draw.Frames.Length); // of the bow's strikeDown, never its four-frame strikeUp
+        Assert.All(draw.Frames.Span.ToArray(), frame => Assert.Equal(1.25d / NormalizedClassicWeapon.BowWeaponHitFrame, frame.DurationSeconds, 6));
 
         stage.Presentation.BeginAdmittedUpdate();
         stage.Presentation.React(new PlayerAttackMotionFact(DaggerfallAttackIds.Shot, new(.25d, .25d, .25d), 3, 4));
@@ -39,7 +39,7 @@ public sealed class WeaponStrikeDirectionTests
 
         // The last drawn frame through the windup, then the hit frame and those after it.
         SpritePlaybackCreateRequest loose = stage.Appearance.PlaybackRequests.Last();
-        Assert.Equal(7 - DaggerfallFormulaPolicy.BowWeaponHitFrame + 1, loose.Frames.Length);
+        Assert.Equal(7 - NormalizedClassicWeapon.BowWeaponHitFrame + 1, loose.Frames.Length);
         Assert.Equal(.25d, loose.Frames.Span[0].DurationSeconds, 6);
     }
 

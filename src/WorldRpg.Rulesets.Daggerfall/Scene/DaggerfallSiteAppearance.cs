@@ -228,7 +228,12 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// The session's classic presentation (weapon viewmodels, held-item visuals, spell effects), which the
     /// start site publishes for the whole session; null uses this site's own, as a lone-site composition does.
     /// </param>
-    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null, DaggerfallDefinitions? definitions = null, DaggerfallFlatsTuning? flats = null, DaggerfallSiteLightingTuning? lighting = null, bool prepareLocationOffUpdate = false)
+    /// <param name="actorGender">
+    /// The gender a fixed enemy authored with none takes, from its placement identity, its authored gender and its sprite;
+    /// null draws every enemy as authored.
+    /// </param>
+    internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallDoorRuntime? doors = null, DaggerfallDungeonMotionProjection? dungeonMotion = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallCityGates? cityGates = null, DaggerfallDefinitions? definitions = null, DaggerfallFlatsTuning? flats = null, DaggerfallSiteLightingTuning? lighting = null, bool prepareLocationOffUpdate = false,
+        Func<long, string, NormalizedActorSprite, string>? actorGender = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
@@ -244,9 +249,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         this.audio = audio;
         this.audioBundle = audioBundle;
         this.random = random;
-        this.audioTuning = (audioTuning ?? DaggerfallTuning.Defaults.PresentationAudio).Validate();
-        this.flats = (flats ?? DaggerfallTuning.Defaults.Flats).Validate();
-        this.lighting = (lighting ?? DaggerfallTuning.Defaults.SiteLighting).Validate();
+        this.audioTuning = (audioTuning ?? DaggerfallPresentationAudioTuning.Classic).Validate();
+        this.flats = (flats ?? DaggerfallFlatsTuning.Default).Validate();
+        this.lighting = (lighting ?? DaggerfallSiteLightingTuning.Classic).Validate();
         hitCues = inputs.Audio.Count == 0 ? [] : DaggerfallSiteContent.OrderedHitCues(inputs.Audio);
         classicPresentation = sessionPresentation ?? inputs.ClassicPresentation;
         classicEffects = classicPresentation.Effects.ToDictionary(effect => effect.Name, StringComparer.Ordinal);
@@ -276,8 +281,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             foreach ((long entityId, NormalizedActorSprite sprite) in inputs.ActorSprites.OrderBy(pair => pair.Key))
             {
                 // A fixed human enemy with no gender flag takes its random gender keyed by its placement identity.
-                NormalizedActorSprite placed = random is not null && inputs.Project.Actors.TryGetValue(entityId, out AuthoredActor? actor)
-                    ? sprite.ForGender(DaggerfallActorGender.Resolve(random, entityId, actor.Gender, sprite)) : sprite;
+                NormalizedActorSprite placed = actorGender is not null && inputs.Project.Actors.TryGetValue(entityId, out AuthoredActor? actor)
+                    ? sprite.ForGender(actorGender(entityId, actor.Gender, sprite)) : sprite;
                 ActorVisual visual = CreateActorVisual(content, entityId, placed);
                 actors.Add(entityId, visual);
             }
@@ -1354,7 +1359,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private void PlayAttackMotion(string attack, DaggerfallAttackTiming? timing)
     {
         if (viewmodel is null || !viewmodel.Weapon.Actions.TryGetValue(NormalizedClassicWeapon.PlayedStrike, out NormalizedClassicWeaponAction? strike)) return;
-        int hit = attack is DaggerfallAttackIds.ShotDraw or DaggerfallAttackIds.Shot ? DaggerfallFormulaPolicy.BowWeaponHitFrame : DaggerfallFormulaPolicy.MeleeWeaponHitFrame;
+        int hit = attack is DaggerfallAttackIds.ShotDraw or DaggerfallAttackIds.Shot ? NormalizedClassicWeapon.BowWeaponHitFrame : NormalizedClassicWeapon.MeleeWeaponHitFrame;
         // Admission refuses art whose strikes end before the hit frame the rules use, so a strike that cannot reach it
         // is a broken composition.
         if (hit >= strike.PlayedFrameCount)

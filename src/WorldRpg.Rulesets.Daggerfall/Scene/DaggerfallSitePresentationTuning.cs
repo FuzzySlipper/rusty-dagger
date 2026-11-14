@@ -5,6 +5,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Ruleset-authored descriptor values for one-shot classic presentation audio.</summary>
 internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pitch, float SpatialBlend, float MaxDistance)
 {
+    /// <summary>The classic one-shot audio: full volume and pitch, unspatialized, heard to sixteen metres.</summary>
+    internal static DaggerfallPresentationAudioTuning Classic { get; } = new(1F, 1F, 0F, 16F);
+
     internal float AttractRadius { get; init; } = 16F;
     internal int AttractMinimumDelaySeconds { get; init; } = 3;
     internal int AttractMaximumDelaySeconds { get; init; } = 9;
@@ -137,4 +140,11 @@ internal sealed record DaggerfallSiteLightingTuning(
                 throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Site ambient values must be finite normalized RGB levels.");
         return this;
     }
+}
+
+internal sealed record DaggerfallNormalLightTuning(float Distance, float HeightFraction, float Range, float Intensity)
+{
+    internal DaggerfallNormalLightTuning Validate() => float.IsFinite(Distance) && Distance > 0
+        && float.IsFinite(HeightFraction) && HeightFraction is >= 0 and <= 1 && float.IsFinite(Range) && Range > 0
+        && float.IsFinite(Intensity) && Intensity > 0 ? this : throw new ArgumentException("Normal light tuning requires a finite pose, range and intensity.");
 }

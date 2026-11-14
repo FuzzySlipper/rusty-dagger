@@ -41,7 +41,7 @@ internal sealed class DaggerfallAmbientPresentation : IDisposable
     {
         _audio = audio; _random = random;
         _tuning = tuning.Validate(); _openClip = openClip;
-        _audioTuning = (audioTuning ?? DaggerfallTuning.Defaults.PresentationAudio).Validate();
+        _audioTuning = (audioTuning ?? DaggerfallPresentationAudioTuning.Classic).Validate();
     }
 
     internal float FlashIntensity => _flashOn ? _tuning.FlashIntensity : 0;

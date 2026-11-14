@@ -657,21 +657,8 @@ internal static class DaggerfallFormulaPolicy
         return (10 * (100 - liveSpeed) + 800) / ClassicFrameUpdate;
     }
 
-    /// <summary>The classic weapon animation frame a melee swing's damage lands on. The donor's FPSWeapon
-    /// reports frame 2 for every melee weapon and frame 5 for a bow, and WeaponManager runs its melee
-    /// damage when the playing swing's current frame reaches it, which is why one swing is not one
-    /// instant.
-    /// </summary>
-    internal const int MeleeWeaponHitFrame = 2;
-
-    /// <summary>
-    /// The classic bow animation frame a loosed arrow leaves on: the donor's FPSWeapon reports frame 5
-    /// for a bow where every melee weapon reports frame 2.
-    /// </summary>
-    internal const int BowWeaponHitFrame = 5;
-
     /// <summary>The classic animation frame a player attack's impact leaves on, by whether a bow looses it.</summary>
-    internal static int WeaponHitFrame(bool bow) => bow ? BowWeaponHitFrame : MeleeWeaponHitFrame;
+    internal static int WeaponHitFrame(bool bow) => bow ? NormalizedClassicWeapon.BowWeaponHitFrame : NormalizedClassicWeapon.MeleeWeaponHitFrame;
 
     /// <summary>
     /// The donor's item-condition display unit. Items without condition use are complete rather than

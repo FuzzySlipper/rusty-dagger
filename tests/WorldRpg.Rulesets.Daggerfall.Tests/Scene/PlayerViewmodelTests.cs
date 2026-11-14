@@ -165,11 +165,11 @@ public sealed class PlayerViewmodelTests
 
         // A windup of .5 s up to the hit on the classic frame 2: the two frames before it last .25 s each.
         SpritePlaybackCreateRequest strike = appearance.PlaybackRequests.Last();
-        Assert.All(strike.Frames.Span[..DaggerfallFormulaPolicy.MeleeWeaponHitFrame].ToArray(), frame => Assert.Equal(.25d, frame.DurationSeconds, 6));
+        Assert.All(strike.Frames.Span[..NormalizedClassicWeapon.MeleeWeaponHitFrame].ToArray(), frame => Assert.Equal(.25d, frame.DurationSeconds, 6));
 
         // The rules' clock delivers the blow: the playback carries no marker, and any frame it reports delivers nothing.
         Assert.True(strike.Markers.IsEmpty);
-        appearance.AdvanceReceiptForAll = WeaponHitReading(DaggerfallFormulaPolicy.MeleeWeaponHitFrame, (uint)DaggerfallFormulaPolicy.MeleeWeaponHitFrame);
+        appearance.AdvanceReceiptForAll = WeaponHitReading(NormalizedClassicWeapon.MeleeWeaponHitFrame, (uint)NormalizedClassicWeapon.MeleeWeaponHitFrame);
         presentation.Advance(OuterUpdate(1));
         Assert.Empty(presentation.TakeAttackImpacts());
     }
@@ -184,7 +184,7 @@ public sealed class PlayerViewmodelTests
         using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"), weaponDrawn: true);
         int played = ClassicWeapon().Weapons["weapon.dagger.steel"].Actions[NormalizedClassicWeapon.PlayedStrike].PlayedFrameCount;
-        const int hit = DaggerfallFormulaPolicy.MeleeWeaponHitFrame;
+        const int hit = NormalizedClassicWeapon.MeleeWeaponHitFrame;
 
         presentation.BeginAdmittedUpdate();
         presentation.React(new PlayerAttackMotionFact(DaggerfallAttackIds.PowerIn, new(.5d, 0d, 0d), 2, 3));
@@ -223,7 +223,7 @@ public sealed class PlayerViewmodelTests
         presentation.React(new PlayerAttackMotionFact("fastA", timing, 1, 1));
 
         SpritePlaybackFrame[] frames = appearance.PlaybackRequests.Last().Frames.ToArray();
-        Assert.Equal(timing.Windup, frames.Take(DaggerfallFormulaPolicy.MeleeWeaponHitFrame).Sum(frame => frame.DurationSeconds), 6);
+        Assert.Equal(timing.Windup, frames.Take(NormalizedClassicWeapon.MeleeWeaponHitFrame).Sum(frame => frame.DurationSeconds), 6);
         Assert.Equal(timing.Duration, frames.Sum(frame => frame.DurationSeconds), 6);
     }
 

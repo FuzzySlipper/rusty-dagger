@@ -8,9 +8,6 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 
-/// <summary>One materialized dropped-item container in the shared Engine inventory store.</summary>
-internal sealed record DaggerfallGroundContainer(DaggerfallWorldProfileKey Profile, long Id, EntityId Owner, WorldPoint Position, string? PropertyPlacement = null, long StockedDay = 0, string? TreasurePlacement = null);
-
 /// <summary>
 /// Daggerfall policy for ground piles. Kit's container coordinator owns every transfer; this owner
 /// supplies the durable container identity, position, and Daggerfall metadata move after commit.

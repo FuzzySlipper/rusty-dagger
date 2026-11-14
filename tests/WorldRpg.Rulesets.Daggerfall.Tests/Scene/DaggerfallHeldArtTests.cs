@@ -163,7 +163,7 @@ public sealed class DaggerfallHeldArtTests
         foreach (string mount in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.art-replacements/first-person/mounts"), "*.glb"))
             service.Add(DaggerfallHeldArt.ContainerName, $"first-person/mounts/{Path.GetFileName(mount)}", EmptyGlb);
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
-        DaggerfallHeldArt art = DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(Document().ToJsonString()));
+        DaggerfallHeldArt art = DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(Document().ToJsonString()), DaggerfallAttackTuning.Default.Classes.Keys);
 
         Assert.Equal(0u, art.MetalSlot("first-person/weapons/dagger.glb"));
         Color[] slots = art.SlotTints("first-person/weapons/saber.glb", new("#808080", 1));
@@ -224,7 +224,7 @@ public sealed class DaggerfallHeldArtTests
         ProductContent content = TestSessions.FullContent(TestData.RepositoryRoot, "worldrpg/imports/privateers-hold");
         ResolvedGameComposition composition = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();
 
-        Assert.Null(DaggerfallHeldArt.For(composition));
+        Assert.Null(DaggerfallHeldArt.For(composition, DaggerfallAttackTuning.Default.Classes.Keys));
     }
 
     [Fact]
@@ -825,6 +825,6 @@ public sealed class DaggerfallHeldArtTests
         foreach (string arcs in Directory.GetFiles(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.art-replacements/first-person/weapons"), "*.arcs.json"))
             service.Add(DaggerfallHeldArt.ContainerName, $"first-person/weapons/{Path.GetFileName(arcs)}", File.ReadAllBytes(arcs));
         ProductContentBundle container = new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallHeldArt.ContainerName);
-        return DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()));
+        return DaggerfallHeldArt.Read(container, System.Text.Encoding.UTF8.GetBytes(document.ToJsonString()), DaggerfallAttackTuning.Default.Classes.Keys);
     }
 }

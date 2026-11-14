@@ -7,8 +7,6 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal enum DaggerfallRacialKind { Werewolf, Wereboar, Vampire }
-
 /// <summary>Meaningful permanent curse values inside the existing source-owned effect save.</summary>
 internal sealed record DaggerfallRacialOverrideState(
     [property: JsonRequired] DaggerfallRacialKind Kind,

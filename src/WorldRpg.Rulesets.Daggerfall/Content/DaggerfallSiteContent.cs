@@ -2213,8 +2213,8 @@ internal static partial class DaggerfallSiteContent
         // that ends before it would spend the swing and never land it. The bow's own frame is checked
         // where the selection says which weapons are bows.
         foreach (string strike in NormalizedClassicWeapon.StrikeActions)
-            if (actions.TryGetValue(strike, out NormalizedClassicWeaponAction? played) && played.PlayedFrameCount <= DaggerfallFormulaPolicy.MeleeWeaponHitFrame)
-                diagnostics.Add($"Classic weapon '{resource.Id}' strike '{strike}' plays {played.PlayedFrameCount} frames, so it never reaches the melee hit frame {DaggerfallFormulaPolicy.MeleeWeaponHitFrame}.");
+            if (actions.TryGetValue(strike, out NormalizedClassicWeaponAction? played) && played.PlayedFrameCount <= NormalizedClassicWeapon.MeleeWeaponHitFrame)
+                diagnostics.Add($"Classic weapon '{resource.Id}' strike '{strike}' plays {played.PlayedFrameCount} frames, so it never reaches the melee hit frame {NormalizedClassicWeapon.MeleeWeaponHitFrame}.");
         {
             if (!resource.Frames.Select(frame => frame.Id).Order().SequenceEqual(Enumerable.Range(0, resource.Frames.Count).Select(index => (uint)index))) diagnostics.Add("Classic weaponSprite frames must use contiguous canonical frame indexes.");
             HashSet<int> covered = [];
@@ -2298,8 +2298,8 @@ internal static partial class DaggerfallSiteContent
             DaggerfallItemDefinition? item = definitions.Items.GetValueOrDefault(id) ?? definitions.TemplateItems.GetValueOrDefault(id);
             if (item?.Weapon is not { IsBow: true } || !classic.Weapons.TryGetValue(resource, out NormalizedClassicWeapon? art)
                 || !art.Actions.TryGetValue(NormalizedClassicWeapon.PlayedStrike, out NormalizedClassicWeaponAction? loosed)) continue;
-            if (loosed.PlayedFrameCount <= DaggerfallFormulaPolicy.BowWeaponHitFrame)
-                diagnostics.Add($"Bow '{itemId}' selects classic weapon '{resource}', whose '{NormalizedClassicWeapon.PlayedStrike}' plays {loosed.PlayedFrameCount} frames and never reaches the bow hit frame {DaggerfallFormulaPolicy.BowWeaponHitFrame}.");
+            if (loosed.PlayedFrameCount <= NormalizedClassicWeapon.BowWeaponHitFrame)
+                diagnostics.Add($"Bow '{itemId}' selects classic weapon '{resource}', whose '{NormalizedClassicWeapon.PlayedStrike}' plays {loosed.PlayedFrameCount} frames and never reaches the bow hit frame {NormalizedClassicWeapon.BowWeaponHitFrame}.");
         }
         string unarmed = DaggerfallBaseContent.Text(presentation, "unarmedVisual", diagnostics);
         if (!classic.Weapons.ContainsKey(unarmed)) diagnostics.Add("Unarmed presentation must select admitted weaponSprite media.");
@@ -2665,6 +2665,19 @@ internal sealed record NormalizedClassicWeapon(string ResourceId, string Texture
 
     /// <summary>The strike action a swing or a bow's release plays.</summary>
     internal const string PlayedStrike = "strikeDown";
+
+    /// <summary>The classic weapon animation frame a melee swing's damage lands on. The donor's FPSWeapon
+    /// reports frame 2 for every melee weapon and frame 5 for a bow, and WeaponManager runs its melee
+    /// damage when the playing swing's current frame reaches it, which is why one swing is not one
+    /// instant.
+    /// </summary>
+    internal const int MeleeWeaponHitFrame = 2;
+
+    /// <summary>
+    /// The classic bow animation frame a loosed arrow leaves on: the donor's FPSWeapon reports frame 5
+    /// for a bow where every melee weapon reports frame 2.
+    /// </summary>
+    internal const int BowWeaponHitFrame = 5;
 }
 internal sealed record NormalizedClassicEffect(string Name, string MediaId, int SourceRecordOrdinal, string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, IReadOnlyList<int> Sequence, float FramesPerSecond, bool Loops);
 internal sealed record NormalizedClassicPresentation(IReadOnlyDictionary<string, NormalizedClassicWeapon> Weapons, IReadOnlyList<NormalizedClassicEffect> Effects)

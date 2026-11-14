@@ -167,17 +167,19 @@ internal sealed class DaggerfallHeldArt
     }
 
     /// <summary>The art a composition resolved over, or nothing when no first-person container was opened.</summary>
-    internal static DaggerfallHeldArt? For(ResolvedGameComposition composition)
+    /// <param name="weaponClasses">The weapon classes a family may name.</param>
+    internal static DaggerfallHeldArt? For(ResolvedGameComposition composition, IEnumerable<string> weaponClasses)
     {
         ArgumentNullException.ThrowIfNull(composition);
         return composition.Installed.FirstOrDefault(installed => installed.Name == ContainerName)?.Container is { } container
-            ? Read(container, composition.Content.ReadBytes(DocumentPath)) : null;
+            ? Read(container, composition.Content.ReadBytes(DocumentPath), weaponClasses) : null;
     }
 
-    /// <summary>Reads and checks the held definition against the container's models.</summary>
+    /// <summary>Reads and checks the held definition against the container's models and the weapon classes a family may name.</summary>
     /// <exception cref="InvalidDataException">The definition is unreadable, or names what cannot be drawn.</exception>
-    internal static DaggerfallHeldArt Read(ProductContentBundle container, ReadOnlyMemory<byte> definition)
+    internal static DaggerfallHeldArt Read(ProductContentBundle container, ReadOnlyMemory<byte> definition, IEnumerable<string> weaponClasses)
     {
+        ArgumentNullException.ThrowIfNull(weaponClasses);
         ArgumentNullException.ThrowIfNull(container);
         DaggerfallHeldArtDocument document;
         try
@@ -214,8 +216,8 @@ internal sealed class DaggerfallHeldArt
                     problems.Add($"{at}.strikes.{action}: is not an attack with a timed clip ({string.Join(", ", DaggerfallAttackIds.Held.Except([DaggerfallAttackIds.PowerHold]))}).");
                 Add(clip.Problems(), $"{at}.strikes.{action}");
             }
-            if (!DaggerfallAttackTuning.Default.Classes.ContainsKey(family.Class))
-                problems.Add($"{at}.class: '{family.Class}' is no weapon class ({string.Join(", ", DaggerfallAttackTuning.Default.Classes.Keys)}).");
+            if (!weaponClasses.Contains(family.Class))
+                problems.Add($"{at}.class: '{family.Class}' is no weapon class ({string.Join(", ", weaponClasses)}).");
             if (family.PowerHold is { } hold && (hold.Clip.Length == 0 || (hold.Seconds is > 0) == (hold.At is >= 0F and <= 1F)))
                 problems.Add($"{at}.powerHold: must name a clip with either seconds to loop over or a point (0 to 1) to hold at.");
             foreach (string action in (family.LeftHand ?? []).Where(action => !family.Strikes.ContainsKey(action)))

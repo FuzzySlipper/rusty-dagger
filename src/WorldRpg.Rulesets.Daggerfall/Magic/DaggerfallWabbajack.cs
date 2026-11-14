@@ -6,7 +6,6 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Current transformation meaning attached to the canonical replacement actor.</summary>
 internal sealed record DaggerfallWabbajackState(string Definition);
 
-internal enum DaggerfallWabbajackOutcome { Transformed, ProtectedQuestTarget, AlreadyTransformed, InvalidTarget, SourceUnavailable, UnavailableAppearance }
 internal sealed record DaggerfallWabbajackResult(DaggerfallWabbajackOutcome Outcome, long TargetId, string? Definition = null);
 
 internal static class DaggerfallWabbajack

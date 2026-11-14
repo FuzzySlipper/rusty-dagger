@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using System.Runtime.CompilerServices;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -225,7 +226,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' admits no quest source for the new-game quests {string.Join(", ", missingNewGameQuests.Select(file => $"'{file}'"))}.");
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(data, inputs.ClassicPresentation);
             DaggerfallMusicBundle? music = DaggerfallMusicBundle.For(selected);
-            DaggerfallHeldArt? heldArt = DaggerfallHeldArt.For(selected);
+            DaggerfallHeldArt? heldArt = DaggerfallHeldArt.For(selected, DaggerfallAttackTuning.Default.Classes.Keys);
             ContentPack[] artPacks = [.. roles[ArtReplacementsRole]];
             if (artPacks.Length > 1)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {artPacks.Length} '{ArtReplacementsRole.Value}' content packs; a session draws one refreshed art set.");

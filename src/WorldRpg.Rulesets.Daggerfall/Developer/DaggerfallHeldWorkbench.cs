@@ -237,7 +237,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
         string skill = art!.Document.Families[art.Look(shown)!.Family].Class;
         if (attacks.Timing(action, skill) is not { } timing) return null;
         return (new PhaseTiming((float)timing.Windup, MathF.Max((float)timing.Commit, .001F), MathF.Max((float)timing.Recovery, .001F)),
-            (float)(timing.Windup / DaggerfallFormulaPolicy.MeleeWeaponHitFrame));
+            (float)(timing.Windup / NormalizedClassicWeapon.MeleeWeaponHitFrame));
     }
 
     // When each mark plays in the strike: the start at its beginning, the strike at the hit, the recovery once the commit

@@ -101,7 +101,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
             if (!deferMotionCollisionAdmission) gates.ActivateCollisionResidency();
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
                 tuning.PresentationAudio, random, audioBundle, doors, motion, sessionPresentation, gates, definitions, tuning.Flats, tuning.SiteLighting,
-                prepareLocationOffUpdate);
+                prepareLocationOffUpdate, (id, gender, sprite) => DaggerfallActorGender.Resolve(random, id, gender, sprite));
             configureAppearance(appearance);
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar, carriesSky);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);

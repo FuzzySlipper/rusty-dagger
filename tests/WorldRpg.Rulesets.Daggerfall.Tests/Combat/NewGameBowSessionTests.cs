@@ -82,7 +82,7 @@ public sealed class NewGameBowSessionTests
         var bow = f.Inputs.ClassicPresentation.Weapons["weapon.bow"];
         var strike = bow.Actions["strikeDown"];
         // The draw plays the frames before the hit, and the shot looses once it is drawn and let go.
-        Assert.Equal((strike.Sequence ?? Enumerable.Range(strike.FrameStart, strike.FrameCount).ToArray()).Take(DaggerfallFormulaPolicy.BowWeaponHitFrame),
+        Assert.Equal((strike.Sequence ?? Enumerable.Range(strike.FrameStart, strike.FrameCount).ToArray()).Take(NormalizedClassicWeapon.BowWeaponHitFrame),
             f.Appearance.PlaybackRequests.Last().Frames.ToArray().Select(frame => (int)frame.FrameId));
 
         f.Drawn();

@@ -136,13 +136,13 @@ public sealed class NormalizedMediaValidationTests
         DaggerfallContentException melee = Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media =>
             WeaponAction(media, "weapon.dagger.steel", "strikeUp")["sequence"] = new JsonArray(26, 27))), payload, definitions));
         Assert.Contains(melee.Diagnostics, message => message.Contains("'weapon.dagger.steel' strike 'strikeUp' plays 2 frames", StringComparison.Ordinal)
-            && message.Contains($"melee hit frame {DaggerfallFormulaPolicy.MeleeWeaponHitFrame}", StringComparison.Ordinal));
+            && message.Contains($"melee hit frame {NormalizedClassicWeapon.MeleeWeaponHitFrame}", StringComparison.Ordinal));
 
         // The bow's loosing strike shorter than the bow hit frame: the arrow would never leave.
         DaggerfallContentException bow = Assert.Throws<DaggerfallContentException>(() => DaggerfallSiteContent.Read(TestSessions.Data(MutateClassicMedia(root, media =>
             WeaponAction(media, "weapon.bow", "strikeDown")["sequence"] = new JsonArray(0, 1, 2, 3, 4))), payload, definitions));
         Assert.Contains(bow.Diagnostics, message => message.Contains("Bow 'iron-short-bow' selects classic weapon 'weapon.bow', whose 'strikeDown' plays 5 frames", StringComparison.Ordinal)
-            && message.Contains($"bow hit frame {DaggerfallFormulaPolicy.BowWeaponHitFrame}", StringComparison.Ordinal));
+            && message.Contains($"bow hit frame {NormalizedClassicWeapon.BowWeaponHitFrame}", StringComparison.Ordinal));
 
         // The bow's up strike is shorter than the bow hit frame, as published, and is admitted: a bow
         // never plays it.

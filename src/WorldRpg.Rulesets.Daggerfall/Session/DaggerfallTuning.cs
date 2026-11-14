@@ -78,7 +78,7 @@ internal sealed record DaggerfallTuning(
         new DaggerfallEnemyBehaviorTuning(12d, 3f, 1024),
         new DaggerfallLootInteractionTuning(2.25d, .5d),
         new DaggerfallTimeTuning(12d),
-        new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 16F),
+        DaggerfallPresentationAudioTuning.Classic,
         new DaggerfallProgressionTuning(EnableExperimentalKillExperience: false, ExperiencePerLevel: 500),
         DaggerfallSiteLightingTuning.Classic,
         DaggerfallClimbingTuning.Classic,
@@ -525,17 +525,6 @@ internal readonly record struct PlayerInitialLook(float YawRadians, float PitchR
 /// <summary>Chooses the donor's standard or alternate playlists; JSON admission requires a Boolean.</summary>
 internal sealed record DaggerfallMusicTuning(bool AlternatePlaylists);
 
-/// <summary>How the first-person weapon is drawn.</summary>
-internal enum DaggerfallViewmodelStyle
-{
-    /// <summary>The classic weapon sprites.</summary>
-    Classic,
-    /// <summary>The 3D arms and weapon of the first-person art, moving by its held motion.</summary>
-    Held,
-    /// <summary>The 3D art sampled at the classic frame time and held between samples, without blending.</summary>
-    HeldRetro,
-}
-
 /// <summary>
 /// The first-person weapon's look. A 3D style draws the art installed beside the product
 /// (<see cref="Presentation.DaggerfallHeldArt"/>) for the weapons it covers and strikes it has motion for, and the
@@ -556,11 +545,4 @@ internal sealed record DaggerfallViewmodelTuning(DaggerfallViewmodelStyle Style)
             _ => throw new InvalidDataException($"viewmodel.style '{style}' is not one of classic, held, heldRetro."),
         };
     }
-}
-
-internal sealed record DaggerfallNormalLightTuning(float Distance, float HeightFraction, float Range, float Intensity)
-{
-    internal DaggerfallNormalLightTuning Validate() => float.IsFinite(Distance) && Distance > 0
-        && float.IsFinite(HeightFraction) && HeightFraction is >= 0 and <= 1 && float.IsFinite(Range) && Range > 0
-        && float.IsFinite(Intensity) && Intensity > 0 ? this : throw new ArgumentException("Normal light tuning requires a finite pose, range and intensity.");
 }

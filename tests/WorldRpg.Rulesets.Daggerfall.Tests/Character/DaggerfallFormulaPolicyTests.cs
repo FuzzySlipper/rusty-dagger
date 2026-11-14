@@ -299,11 +299,11 @@ public sealed class DaggerfallFormulaPolicyTests
         Assert.Equal((10d * (100 - 50) + 800) / 980d, DaggerfallFormulaPolicy.BowCooldownSeconds(50), 9);
         Assert.Equal((10d * (100 - 100) + 800) / 980d, DaggerfallFormulaPolicy.BowCooldownSeconds(100), 9);
         Assert.True(DaggerfallFormulaPolicy.BowCooldownSeconds(80) < DaggerfallFormulaPolicy.BowCooldownSeconds(20));
-        Assert.Equal(5, DaggerfallFormulaPolicy.BowWeaponHitFrame);
+        Assert.Equal(5, NormalizedClassicWeapon.BowWeaponHitFrame);
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.BowCooldownSeconds(-1));
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.BowCooldownSeconds(101));
         // The classic swing's damage frame is the donor's own constant for every melee weapon.
-        Assert.Equal(2, DaggerfallFormulaPolicy.MeleeWeaponHitFrame);
+        Assert.Equal(2, NormalizedClassicWeapon.MeleeWeaponHitFrame);
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(-1));
         Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallFormulaPolicy.MeleeWeaponAnimationSeconds(101));
     }

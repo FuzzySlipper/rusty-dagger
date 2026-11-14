@@ -58,16 +58,7 @@ internal sealed record DaggerfallMagicDefense(int AbsorptionChance, int Reflecti
     }
 }
 
-internal enum DaggerfallCastOutcome
-{
-    Ready, Released, Cancelled, Unready, UnknownSpell, UnsupportedEffect, SourceUnavailable,
-    InsufficientMagicka, Silenced, InvalidTarget, Immune, Absorbed, Reflected, Resisted, ChanceFailed,
-    Missed, Applied, NoMatch, Refreshed, Replaced, DeliveryCompleted, IncumbentRejected, AlreadyDelivered, TargetUnavailable,
-}
 internal sealed record DaggerfallCastResult(DaggerfallCastOutcome Outcome, DaggerfallLiveSpell? Bundle = null);
-internal sealed record DaggerfallCastEffectResult(int EffectIndex, long? TargetId, DaggerfallCastOutcome Outcome,
-    int SavePercent = 100, string? Instance = null);
-internal sealed record DaggerfallSpellAbsorptionResult(long TargetId, int AdmittedSpellPoints, double RestoredSpellPoints, ulong[] SourceItems);
 internal enum DaggerfallCastSource { Spell, ItemUse, ItemHeld, ItemStrike, DungeonAction, Potion, Quest }
 internal sealed record DaggerfallReadySpell(string SpellKey, ulong? ItemId, int Cost, DaggerfallCastSource Source);
 internal sealed class DaggerfallSpellReadiness { internal DaggerfallReadySpell? Ready { get; set; } }

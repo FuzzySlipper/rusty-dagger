@@ -909,7 +909,7 @@ internal sealed partial class DaggerfallSession
             {
                 if (change.Equipped is { } equipped)
                     _appearance.PlayEquip(definitions.RequireItem(new(equipped.Definition.Value)),
-                        State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(new(equipped.EntityId)).Value));
+                        State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(new(equipped.EntityId)).Value).Material);
             };
             // Painted art wants its values untouched: this operator leaves everything below a highlight exact, so only
             // what emits above 1 rolls off, and it is what bloom spreads.
