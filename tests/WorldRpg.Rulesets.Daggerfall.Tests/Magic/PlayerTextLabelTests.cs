@@ -53,7 +53,7 @@ public sealed class PlayerTextLabelTests
         Assert.Equal("1 minute", DaggerfallCalendar.DescribeDuration(60));
         Assert.Equal("2 hours", DaggerfallCalendar.DescribeDuration(7200));
         Assert.Equal("1 day and 1 hour", DaggerfallCalendar.DescribeDuration(DaggerfallCalendar.SecondsPerDay + 3600 + 61));
-        Assert.Equal("You were defeated on the road.", DaggerfallSession.TravelInterruptionText(Travel.DaggerfallTravelOutcome.Defeated));
+        Assert.Equal("You were defeated on the road.", Travel.DaggerfallFastTravel.InterruptionText(Travel.DaggerfallTravelOutcome.Defeated));
         Assert.Equal("Damage health", DaggerfallEffectCatalog.Label("damage-health"));
     }
 

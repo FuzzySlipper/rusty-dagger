@@ -187,10 +187,8 @@ public sealed class DaggerfallItemConditionServiceTests
         InventoryStackId oil = InventoryStackId.Parse("condition.oil");
         f.Inventory.Grant(new InventoryGrant(new InventoryItemId(oilDefinition.Id.Value), oil, 2));
         f.Instances.RegisterDefaultStack(DaggerfallItemOwner.Player, f.Inventory.Read().Stacks.Single(stack => stack.Id == oil), oilDefinition);
-        DaggerfallSiteRecord active = f.Definitions.Locations.Records.First();
         DaggerfallInventoryUseService use = new(f.Inventory, f.Definitions, f.Instances,
-            new DaggerfallUniqueItemAllocator(1_000), new DaggerfallSiteContext(f.Definitions.Locations, active.Id, null, []),
-            DispatchProxy.Create<IRandomService, UnusedRandom>(), f.Service);
+            new DaggerfallUniqueItemAllocator(1_000), _ => throw new InvalidOperationException("Lantern oil reveals no location."), f.Service);
 
         DaggerfallInventoryUseResult result = use.Use($"stack:{oil.Value}", f.Inventory.Read().StoreRevision);
 

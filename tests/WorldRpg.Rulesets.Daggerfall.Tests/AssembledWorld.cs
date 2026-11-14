@@ -400,8 +400,8 @@ internal sealed class AssembledWorldRun : IDisposable
         Session.State.Inventory.Grant(new(new InventoryItemId(gold.Id.Value), JourneyGold, 100_000));
         Session.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Player, JourneyGold, DaggerfallItemInstanceMetadata.Default(gold, DaggerfallItemOwner.Player));
         Submit(new { action = "travel-preview", region = destination.Region, destination = destination.Index, cautious = false, inn = true, ship = false });
-        DaggerfallTravelQuote quote = Session.ReadTravelPresentation().Quote ?? throw new InvalidOperationException(Session.ReadTravelPresentation().Message);
-        Assert.Null(Session.ReadTravelPresentation().Message);
+        DaggerfallTravelQuote quote = Session.FastTravel.Read().Quote ?? throw new InvalidOperationException(Session.FastTravel.Read().Message);
+        Assert.Null(Session.FastTravel.Read().Message);
         Submit(new { action = "travel-accept", key = quote.Identity, amount = quote.TotalCost });
     }
 

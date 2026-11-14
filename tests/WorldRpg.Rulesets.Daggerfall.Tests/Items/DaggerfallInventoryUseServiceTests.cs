@@ -32,8 +32,8 @@ public sealed class DaggerfallInventoryUseServiceTests
         instances.RegisterStack(DaggerfallItemOwner.Player, stack,
             DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player) with { BookId = 59 });
         DaggerfallBookNotebook notebook = new(definitions, new DaggerfallTextResolver(definitions.Text));
-        DaggerfallSiteContext sites = new(definitions.Locations, definitions.Locations.Records[0].Id, null, []);
-        DaggerfallInventoryUseService use = new(inventory, definitions, instances, new DaggerfallUniqueItemAllocator(1_000), sites, RandomMinimum.Create(), notebook: notebook);
+        DaggerfallInventoryUseService use = new(inventory, definitions, instances, new DaggerfallUniqueItemAllocator(1_000),
+            _ => throw new InvalidOperationException("A book reveals no location."), notebook: notebook);
         ulong revision = inventory.Read().StoreRevision;
 
         DaggerfallInventoryUseResult result = use.Use($"stack:{stack.Value}", revision);
@@ -48,12 +48,9 @@ public sealed class DaggerfallInventoryUseServiceTests
     }
 
     [Fact]
-    public void Map_discovery_selects_an_undiscovered_location_then_consumes_and_tombstones_the_unique_item()
+    public void A_map_that_reveals_a_location_is_consumed_and_tombstoned_and_one_that_reveals_nothing_is_kept()
     {
         DaggerfallDefinitions definitions = ReadDefinitions();
-        DaggerfallSiteRecord active = definitions.Locations.Records.First(record => definitions.Locations.Records.Count(candidate => candidate.Id.Region == record.Id.Region && !candidate.Discovered) > 1);
-        DaggerfallSiteContext sites = new(definitions.Locations, active.Id, null, []);
-        DaggerfallSiteRecord expected = sites.Records.First(record => record.Id.Region == active.Id.Region && !sites.IsDiscovered(record.Id));
         using EntityDirectory entities = new();
         InventoryStore store = new();
         EntityId player = entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 1), new EntityTypeId("player"));
@@ -78,12 +75,23 @@ public sealed class DaggerfallInventoryUseServiceTests
         _ = equipment.Materialize(identity, new InventoryItemId(map.Id.Value));
         DaggerfallItemInstances instances = new();
         instances.RegisterDefaultUnique(identity.Value, map, DaggerfallItemOwner.Player);
-        DaggerfallInventoryUseService use = new(inventory, definitions, instances, unique, sites, RandomMinimum.Create());
+        DaggerfallMapReveal reveal = new(null, "You have already discovered every location in this region.");
+        List<string> asked = [];
+        DaggerfallInventoryUseService use = new(inventory, definitions, instances, unique, key => { asked.Add(key); return reveal; });
+        string key = $"unique:{inventory.Read().UniqueItems.Single().Entity.Value}";
 
-        DaggerfallInventoryUseResult result = use.Use($"unique:{inventory.Read().UniqueItems.Single().Entity.Value}", inventory.Read().StoreRevision);
+        DaggerfallInventoryUseResult refused = use.Use(key, inventory.Read().StoreRevision);
+        Assert.False(refused.Applied);
+        Assert.Equal(reveal.Refusal, refused.Message);
+        Assert.Single(inventory.Read().UniqueItems);
+
+        reveal = new("Lost Keep", null);
+        DaggerfallInventoryUseResult result = use.Use(key, inventory.Read().StoreRevision);
 
         Assert.True(result.Applied, result.Message);
-        Assert.True(sites.IsDiscovered(expected.Id));
+        Assert.Equal("Map reveals Lost Keep.", result.Message);
+        // The reveal is drawn by the map's durable identity, not its runtime entity.
+        Assert.Equal([$"unique:{identity.Value}", $"unique:{identity.Value}"], asked);
         Assert.Empty(inventory.Read().UniqueItems);
         Assert.Contains(identity.Value, unique.RemovedEntityIds);
         Assert.Contains(unique.CaptureState().Kinds.Single(kind => kind.Kind == DurableIdentityKind.Item).Removed, value => value == identity.Value);

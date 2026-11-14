@@ -369,7 +369,7 @@ internal sealed partial class DaggerfallSession
     {
         var profile = destination == _activeProfileKey ? _sites.Projection.Inputs : _sites.RequireProfiles().Require(destination);
         if (profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && profile.Site is not null)
-            _sites.TryRelocatePlayer(destination, ArrivalLanding(profile, null, $"court:{destination.LogicalId}:{_time.Calendar.MinuteNumber}"));
+            _sites.TryRelocatePlayer(destination, FastTravel.Landing(profile, null, $"court:{destination.LogicalId}:{_time.Calendar.MinuteNumber}"));
         else if (profile.Project.PlayerPosition is WorldPoint entrance)
             _sites.TryRelocatePlayer(destination, new("court-release", entrance, 0, 0));
     }

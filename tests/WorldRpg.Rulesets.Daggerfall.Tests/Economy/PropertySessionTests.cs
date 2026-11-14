@@ -354,11 +354,11 @@ public sealed class PropertySessionTests
         f.Session.Site.Discover(f.Destination.Site!.Value);
         f.Submit(new { action = "travel-preview", region = f.Destination.Site.Value.Region,
             destination = f.Destination.Site.Value.Index, cautious = false, inn = true, ship = true });
-        var landQuote = f.Session.ReadTravelPresentation().Quote!;
+        var landQuote = f.Session.FastTravel.Read().Quote!;
         f.Submit(new { action = "transport-board-ship" });
         f.Submit(new { action = "travel-preview", region = f.Destination.Site.Value.Region,
             destination = f.Destination.Site.Value.Index, cautious = false, inn = true, ship = true });
-        var shipQuote = f.Session.ReadTravelPresentation().Quote!;
+        var shipQuote = f.Session.FastTravel.Read().Quote!;
         Assert.Equal(landQuote.Origin, shipQuote.Origin);
         Assert.Equal(landQuote.TravelSeconds, shipQuote.TravelSeconds);
         Assert.Equal(0, shipQuote.ShipCost);

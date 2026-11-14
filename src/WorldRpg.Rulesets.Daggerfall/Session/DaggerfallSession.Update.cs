@@ -6,9 +6,12 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -582,6 +585,129 @@ internal sealed partial class DaggerfallSession
         Presentation.SetOutcome(_definitions.TextPresentation.Resolve(
             new(DaggerfallTextKind.Resource, "401"), DungeonTextContext()).Text);                 // Text, UiProjection
         return new(true, null);
+    }
+
+    /// <summary>
+    /// The guild teleport's offer: the travel map opens for a free teleport while the Mages Guild still grants it to the
+    /// player through this provider, and the travel panel comes up.
+    /// </summary>
+    private DaggerfallGuildProviderResult OpenGuildTeleport(DaggerfallServiceProvider provider)
+    {
+        string offer = FastTravel.OfferGuildTeleport(provider.NpcId, () => State.ConcreteGuildServices.Evaluate(
+            DaggerfallConcreteGuildCatalog.MagesFactionId, DaggerfallConcreteGuildService.Teleport,
+            checked((int)_time.Calendar.DayNumber), new(provider)).CanUse);                       // Travel, asking Society
+        RequestPanel(DaggerfallPanel.Travel);                                                     // UiProjection
+        return new(true, DaggerfallGuildProviderDenial.None, offer);                              // Society
+    }
+
+    /// <summary>Accepts the live quote once; all elapsed consequences use the session's single calendar.</summary>
+    internal DaggerfallTravelResult? ExecuteTravel(string expectedQuote, ulong expectedCost) =>
+        Depart(expectedQuote, expectedCost) is { } journey ? Arrive(journey) : null;
+
+    /// <summary>
+    /// The departure's list: the live quote is accepted and paid for, and the journey's days pass on the road. Null when
+    /// the journey was refused, or when a guild teleport (which has no road) already arrived; otherwise the journey that
+    /// <see cref="Arrive"/> ends.
+    /// </summary>
+    private DaggerfallJourney? Depart(string expectedQuote, ulong expectedCost)
+    {
+        if (FastTravel.Accept(expectedQuote, expectedCost) is not { } accepted)                  // Travel
+        {
+            Presentation.SetOutcome(FastTravel.Message!);                                         // UiProjection
+            return null;
+        }
+        (DaggerfallTravelQuote quote, DaggerfallSiteProfile destination) = accepted;
+        if (FastTravel.GuildTeleport)
+        {
+            bool arrived = _sites.TryRelocatePlayer(destination.ProfileKey,
+                FastTravel.Landing(destination, null, quote.Identity));                          // Travel, Interiors
+            if (arrived)
+            {
+                FastTravel.Depart();                                                              // Travel
+                _dialogue?.Close();                                                               // Dialogue
+                _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                // Character, Combat
+                RequestPanel(DaggerfallPanel.Resume);                                             // UiProjection
+            }
+            Presentation.SetOutcome(FastTravel.Teleported(arrived, quote));                       // Travel, UiProjection
+            return null;
+        }
+        if (quote.TotalCost > 0 && !State.Currency.TrySpendCarried((ulong)quote.TotalCost, (ulong)quote.InnCost))   // Economy
+        {
+            Presentation.SetOutcome(FastTravel.Unpaid()); return null;                            // Travel, UiProjection
+        }
+        FastTravel.Depart();                                                                      // Travel
+        _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                        // Character, Combat
+        DaggerfallWorldProfileKey origin = _activeProfileKey;
+        long started = _time.Calendar.ToAbsoluteSeconds();
+        FastTravel.Begin(State.Transport.ShipReturnProfile?.Site ?? origin.Site, quote, started);  // Travel
+        DaggerfallTravelOutcome outcome = DaggerfallTravelOutcome.Stopped;
+        DaggerfallTravelMapPixel departure = default;
+        try
+        {
+            if (quote.Options.SpeedCautious)
+            {
+                (_, bool noRegen) = _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind);   // Time
+                DaggerfallRestRecoveryModule.RecoverForCautiousTravel(State.Actors.Player.Stats, noRegen,
+                    quote.Options.SleepModeInn ? 1 : _tuning.Rest.InnFatigueMultiplier);         // Condition
+            }
+            departure = FastTravel.Position();                                                    // Travel
+            outcome = FastTravel.Road(quote.TravelSeconds, origin);                               // Travel, through Time
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException)
+        {
+            outcome = DaggerfallTravelOutcome.Unavailable;
+            FastTravel.Fail();                                                                    // Travel
+        }
+        return new(quote, destination, started, departure, outcome);
+    }
+
+    /// <summary>
+    /// The arrival's list: on arrival the player is placed at the destination, disembarks and waits for the arrival hour;
+    /// either way the journey's result is recorded and published, skills and level advance for the time it took, the time
+    /// increase ends once, and the player is back in control where it ended rather than under a menu.
+    /// </summary>
+    private DaggerfallTravelResult Arrive(DaggerfallJourney journey)
+    {
+        DaggerfallTravelOutcome outcome = journey.Outcome;
+        try
+        {
+            if (outcome == DaggerfallTravelOutcome.Arrived && !_sites.TryRelocatePlayer(journey.Destination.ProfileKey,
+                    FastTravel.Landing(journey.Destination, journey.Departure, $"travel:{journey.Quote.Identity}:{journey.Started}")))   // Travel, Interiors
+                outcome = DaggerfallTravelOutcome.Unavailable;
+            if (outcome == DaggerfallTravelOutcome.Arrived)
+            {
+                if (State.Transport.OnShip)
+                {
+                    // Source fast travel disembarks at the destination; stored ship contents
+                    // remain on the inactive ship, while its detached land return is retired.
+                    _ = State.Transport.LeaveShip();                                              // Travel
+                    _sites.ClearReturnDestination();                                              // Interiors
+                }
+                long delay = DaggerfallFastTravel.ArrivalDelay(_time.Calendar,
+                    State.RacialOverrides.Current?.IsVampire == true || _passives.PlayerSpecials.SunDamage,
+                    journey.Quote.Options.SpeedCautious);                                         // Travel
+                // Effects and deadlines of the arrival adjustment run at the actual destination
+                // through the shared calendar.
+                if (delay > 0) outcome = FastTravel.Road(delay, _activeProfileKey);               // Travel, through Time
+            }
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException)
+        {
+            outcome = DaggerfallTravelOutcome.Unavailable;
+            FastTravel.Fail();                                                                    // Travel
+        }
+        // The completed journey is published once, as the travel result.
+        DaggerfallTravelResult result = FastTravel.Complete(journey, outcome);                    // Travel
+        Presentation.SetOutcome(result.Message);                                                  // UiProjection
+        if (result.EndedSeconds > journey.Started && !State.Actors.Player.IsDefeated)
+        {
+            State.SkillUses.RaiseSkills(result.EndedSeconds); State.LevelUps.BeginIfEligible();   // Character
+        }
+        // Like rest, a journey is one synthetic time increase: held items reroll once, on arrival.
+        if (result.EndedSeconds > journey.Started) CompleteTimeIncrease();                       // Session: the increase's end
+        // The donor's travel windows are gone once the journey ends, arrived or interrupted.
+        RequestPanel(DaggerfallPanel.Resume);                                                     // UiProjection
+        return result;
     }
 
     /// <summary>

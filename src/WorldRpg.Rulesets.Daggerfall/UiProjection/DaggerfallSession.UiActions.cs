@@ -194,10 +194,14 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.PropertyEnter:
             case DaggerfallUiActionKind.PropertyPut:
             case DaggerfallUiActionKind.PropertyTake: ChangeProperty(action); break;
-            case DaggerfallUiActionKind.TravelSearch:
-            case DaggerfallUiActionKind.TravelPreview: ChangeTravel(action); break;
-            case DaggerfallUiActionKind.TravelMap: ChangeTravelMap(action); break;
-            case DaggerfallUiActionKind.AtlasTiles: DemandAtlasTiles(action.Tiles!); break;
+            case DaggerfallUiActionKind.TravelSearch: FastTravel.Search(action.Text); break;
+            case DaggerfallUiActionKind.TravelPreview:
+                FastTravel.Select(action.Region, action.Destination, action.Cautious, action.Inn, action.Ship); break;
+            case DaggerfallUiActionKind.TravelMap:
+                if (action.Open) OpenTravelMap();
+                else FastTravel.CloseMap();
+                break;
+            case DaggerfallUiActionKind.AtlasTiles: FastTravel.GrantAtlasTiles(action.Tiles!); break;
             case DaggerfallUiActionKind.TravelAccept:
                 if (!elapsedSubmitted) { elapsedSubmitted = true; AcceptTravel(action.Key!, action.Amount!.Value); }
                 break;
@@ -363,7 +367,7 @@ internal sealed partial class DaggerfallSession
             case "transport": RequestPanel(DaggerfallPanel.Travel); break;
             case "logbook": RequestPanel(DaggerfallPanel.Journal); break;
             case "notebook": RequestPanel(DaggerfallPanel.Notebook); break;
-            case "travel-map": ChangeTravelMap(new("travel-map", Open: true)); RequestPanel(DaggerfallPanel.Travel); break;
+            case "travel-map": OpenTravelMap(); RequestPanel(DaggerfallPanel.Travel); break;
             case "use-magic-item": RequestPanel("magic-items"); break;
             case "radial": RequestPanel(DaggerfallPanel.Radial); break;
             case "abort-spell": ChangeSpell(new("spell-unready")); break;
@@ -509,6 +513,13 @@ internal sealed partial class DaggerfallSession
         if (CurrentSpellProvider(service: "make-potions") is not { } context) return null;
         return new(_activationPresentation.View.Dialogue!.Revision, _activationPresentation.View.Dialogue.TargetLabel,
             PotionMaker.CanUse(context.Provider), PotionMaker.ReadIngredients(), PotionMaker.ReadRecipes());
+    }
+
+    /// <summary>Opens the travel map; an open map's places travel again, since the page opened it afresh or lost them.</summary>
+    private void OpenTravelMap()
+    {
+        FastTravel.OpenMap();
+        _hud.RequestTravelPlaces();
     }
 
     private void MakePotion(DaggerfallPlayerUiAction action)

@@ -28,8 +28,8 @@ public sealed class DaggerfallTravelSessionTests
         var session = fixture.Session;
         var region = TestPayload.Definitions.BuildingNames.RegionNames[fixture.Destination.Site!.Value.Region];
         fixture.Submit(new { action = "travel-search", text = region });
-        Assert.NotEmpty(session.ReadTravelPresentation().Destinations);
-        Assert.All(session.ReadTravelPresentation().Destinations, value => Assert.Equal(fixture.Destination.Site.Value.Region, value.Id.Region));
+        Assert.NotEmpty(session.FastTravel.Read().Destinations);
+        Assert.All(session.FastTravel.Read().Destinations, value => Assert.Equal(fixture.Destination.Site.Value.Region, value.Id.Region));
         var quote = fixture.Preview(inn: false);
         fixture.Accept(quote);
         Assert.Equal(DaggerfallTravelOutcome.Arrived, session.State.Travel.LastResult!.Outcome);
@@ -64,7 +64,7 @@ public sealed class DaggerfallTravelSessionTests
         foreach (DaggerfallSiteRecord record in TestPayload.Definitions.Locations.Records.Where(record => record.Region == city.Region))
             fixture.Session.Site.Discover(record.Id);
         fixture.Submit(new { action = "travel-search", text = "daggerfall" });
-        IReadOnlyList<DaggerfallTravelDestination> found = fixture.Session.ReadTravelPresentation().Destinations;
+        IReadOnlyList<DaggerfallTravelDestination> found = fixture.Session.FastTravel.Read().Destinations;
         Assert.Equal(40, found.Count);
         Assert.Equal(city.Id, found[0].Id);
     }
@@ -89,7 +89,7 @@ public sealed class DaggerfallTravelSessionTests
         session.Update(new ProductUpdate(OuterUpdate(1), [Ui(JsonSerializer.Serialize(new { action = "travel-preview",
             region = fixture.Destination.Site!.Value.Region, destination = fixture.Destination.Site.Value.Index,
             cautious, inn = true, ship = false }))]));
-        var quote = session.ReadTravelPresentation().Quote!;
+        var quote = session.FastTravel.Read().Quote!;
         Assert.NotNull(quote);
         session.Update(new ProductUpdate(OuterUpdate(2), [Ui(JsonSerializer.Serialize(new { action = "travel-accept", key = quote.Identity, amount = quote.TotalCost }))]));
         Assert.Equal(DaggerfallTravelOutcome.Arrived, session.State.Travel.LastResult!.Outcome);
@@ -158,8 +158,8 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal(arrived, restored.Exterior.ExteriorSitePosition(restoredDestination));
         Assert.Equal(savedProfileDestination, WorldPoint.From(restored.Exterior.LocalToProfile(
             restoredDestination.ToVector())));
-        Assert.Null(restored.ReadTravelPresentation().Quote);
-        Assert.Contains("Arrived", restored.ReadTravelPresentation().LastResult!.Message);
+        Assert.Null(restored.FastTravel.Read().Quote);
+        Assert.Contains("Arrived", restored.FastTravel.Read().LastResult!.Message);
         // Elapsed time reads as game time, not raw seconds.
         Assert.Contains(" passed.", result.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("seconds", result.Message, StringComparison.Ordinal);
@@ -170,7 +170,7 @@ public sealed class DaggerfallTravelSessionTests
     {
         using Fixture fixture = new();
         fixture.PreviewSite(fixture.Origin.Site!.Value);
-        DaggerfallTravelPresentation travel = fixture.Session.ReadTravelPresentation();
+        DaggerfallTravelPresentation travel = fixture.Session.FastTravel.Read();
         Assert.Null(travel.Quote);
         Assert.Equal("No travel route to that destination is available right now.", travel.Message);
     }
@@ -180,7 +180,7 @@ public sealed class DaggerfallTravelSessionTests
     {
         using Fixture fixture = new();
         DaggerfallTravelDestination destination = fixture.Preview(inn: false).Destination;
-        DaggerfallTravelPresentation travel = fixture.Session.ReadTravelPresentation();
+        DaggerfallTravelPresentation travel = fixture.Session.FastTravel.Read();
         Assert.Equal("City", DaggerfallSiteKinds.Label(destination.Kind));
         Assert.Equal(TestPayload.Definitions.BuildingNames.RegionNames[destination.Id.Region], travel.RegionName(destination.Id.Region));
         Assert.Equal("an unnamed region", travel.RegionName(-1));
@@ -190,9 +190,9 @@ public sealed class DaggerfallTravelSessionTests
     public void The_travel_map_projects_the_regions_the_discovered_places_at_their_map_pixels_and_the_player()
     {
         using Fixture fixture = new();
-        Assert.Null(fixture.Session.ReadTravelPresentation().Map);
+        Assert.Null(fixture.Session.FastTravel.Read().Map);
         fixture.Submit(new { action = "travel-map", open = true });
-        DaggerfallTravelMapView world = fixture.Session.ReadTravelPresentation().Map!;
+        DaggerfallTravelMapView world = fixture.Session.FastTravel.Read().Map!;
         // The test content carries no atlas, so the map is drawn on the classic art.
         Assert.Null(world.Base.Atlas);
         Assert.Equal("map.trav0i00", world.Base.ClassicWorld.MediaId);
@@ -223,18 +223,18 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal(quote.Origin, world.Player);
 
         fixture.Submit(new { action = "travel-map", open = false });
-        Assert.Null(fixture.Session.ReadTravelPresentation().Map);
+        Assert.Null(fixture.Session.FastTravel.Read().Map);
 
         // Leaving play for the entry screen or death leaves the travel workflow and closes the map; a
         // host pause keeps it for the resume.
         foreach (ProductMode leaving in new[] { ProductMode.Title, ProductMode.Dead })
         {
             fixture.Submit(new { action = "travel-map", open = true });
-            Assert.NotNull(fixture.Session.ReadTravelPresentation().Map);
+            Assert.NotNull(fixture.Session.FastTravel.Read().Map);
             fixture.Session.ApplyProductMode(ProductMode.Paused);
-            Assert.NotNull(fixture.Session.ReadTravelPresentation().Map);
+            Assert.NotNull(fixture.Session.FastTravel.Read().Map);
             fixture.Session.ApplyProductMode(leaving);
-            Assert.Null(fixture.Session.ReadTravelPresentation().Map);
+            Assert.Null(fixture.Session.FastTravel.Read().Map);
             fixture.Session.ApplyProductMode(ProductMode.Playing);
         }
     }
@@ -249,7 +249,7 @@ public sealed class DaggerfallTravelSessionTests
         Dictionary<string, object?> opened = Map();
         object?[] places = Assert.IsType<object?[]>(opened["places"]);
         Assert.NotEmpty(places);
-        Assert.Equal(fixture.Session.ReadTravelPresentation().Map!.Places.Count, places.Length);
+        Assert.Equal(fixture.Session.FastTravel.Read().Map!.Places.Count, places.Length);
         // The next snapshot names the same places by revision alone; opening the map again sends them again.
         fixture.Submit(new { action = "travel-search", text = "" });
         Dictionary<string, object?> next = Map();
@@ -266,10 +266,10 @@ public sealed class DaggerfallTravelSessionTests
         fixture.AddGold(1000);
         DaggerfallSiteId destination = fixture.Destination.Site!.Value;
         fixture.Submit(new { action = "travel-map", open = true });
-        Assert.NotNull(fixture.Session.ReadTravelPresentation().Map);
+        Assert.NotNull(fixture.Session.FastTravel.Read().Map);
         fixture.Accept(fixture.Preview(inn: false));
         Assert.Equal(DaggerfallTravelOutcome.Arrived, fixture.Session.State.Travel.LastResult!.Outcome);
-        Assert.Null(fixture.Session.ReadTravelPresentation().Map);
+        Assert.Null(fixture.Session.FastTravel.Read().Map);
     }
 
     [Fact]
@@ -369,7 +369,7 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal(before, fixture.Session.State.Currency.Read());
         Assert.Equal(now, fixture.Now);
         Assert.Equal(fixture.Origin.Site!.Value, fixture.Session.Site.Active);
-        Assert.Contains("changed", fixture.Session.ReadTravelPresentation().Message);
+        Assert.Contains("changed", fixture.Session.FastTravel.Read().Message);
     }
 
     [Fact]
@@ -383,8 +383,8 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Null(fixture.Session.State.Travel.LastResult);
         Assert.Equal(100UL, fixture.Session.State.Currency.Read().Gold);
         Assert.Equal(now, fixture.Now);
-        Assert.Equal($"You cannot travel to {quote.Destination.Name} from here.", fixture.Session.ReadTravelPresentation().Message);
-        Assert.False(fixture.Session.ReadTravelPresentation().ExecutionAvailable);
+        Assert.Equal($"You cannot travel to {quote.Destination.Name} from here.", fixture.Session.FastTravel.Read().Message);
+        Assert.False(fixture.Session.FastTravel.Read().ExecutionAvailable);
     }
 
     [Fact]
@@ -475,8 +475,8 @@ public sealed class DaggerfallTravelSessionTests
         Assert.Equal(1000UL - (ulong)quote.TotalCost, restored.State.Currency.Read().Gold);
         Assert.Equal(savedResult.EndedSeconds, Absolute(restored.CaptureSave()));
         Assert.Equal(fixture.Origin.Site!.Value, restored.Site.Active);
-        Assert.Null(restored.ReadTravelPresentation().Quote);
-        Assert.Contains("stopped", restored.ReadTravelPresentation().LastResult!.Message);
+        Assert.Null(restored.FastTravel.Read().Quote);
+        Assert.Contains("stopped", restored.FastTravel.Read().LastResult!.Message);
     }
 
     [Fact]
@@ -503,7 +503,7 @@ public sealed class DaggerfallTravelSessionTests
     [InlineData(false)]
     [InlineData(true)]
     public void Sunlight_arrival_policy_applies_to_both_travel_speeds(bool cautious) =>
-        Assert.Equal(6 * 3600, DaggerfallSession.TravelArrivalDelay(new(405, 5, 0, 12, 0, 0), true, cautious));
+        Assert.Equal(6 * 3600, DaggerfallFastTravel.ArrivalDelay(new(405, 5, 0, 12, 0, 0), true, cautious));
 
     [Theory]
     [InlineData(7, 9, false, 60)]
@@ -513,7 +513,7 @@ public sealed class DaggerfallTravelSessionTests
     [InlineData(12, 0, true, 21600)]
     [InlineData(19, 0, true, 0)]
     public void Cautious_arrival_retains_donor_morning_and_sunlight_boundaries(int hour, int minute, bool sunlight, long delay) =>
-        Assert.Equal(delay, DaggerfallSession.TravelArrivalDelay(new(405, 1, 1, hour, minute, 0), sunlight));
+        Assert.Equal(delay, DaggerfallFastTravel.ArrivalDelay(new(405, 1, 1, hour, minute, 0), sunlight));
 
     [Fact]
     public void Current_travel_save_requires_result_fields_and_refuses_false_arrival()
@@ -614,7 +614,7 @@ public sealed class DaggerfallTravelSessionTests
         {
             Submit(new { action = "travel-preview", region = Destination.Site!.Value.Region, destination = Destination.Site!.Value.Index,
                 cautious, inn, ship });
-            return Session.ReadTravelPresentation().Quote!;
+            return Session.FastTravel.Read().Quote!;
         }
         internal void PreviewSite(DaggerfallSiteId site) => Submit(new { action = "travel-preview", region = site.Region,
             destination = site.Index, cautious = false, inn = false, ship = false });

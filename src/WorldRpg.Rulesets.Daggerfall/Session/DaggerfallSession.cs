@@ -714,7 +714,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _mode = mode;
         // Travel is offered in play and modal interaction; the entry screen and death leave it. A host
         // pause keeps the map, since resuming returns to the same workflow.
-        if (mode is ProductMode.Title or ProductMode.Dead) CloseTravelMap();
+        if (mode is ProductMode.Title or ProductMode.Dead) FastTravel.CloseMap();
         _input.Neutralize();
         _locomotion.Neutralize(); NeutralizeGuard();
         _appearance.ResetFootsteps();
@@ -939,7 +939,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Death: _deathPresentation.View,
             Rest: RestView,
             Lodging: LodgingView,
-            Travel: ReadTravelPresentation(),
+            Travel: FastTravel.Read(),
             SiteName: Site.ActiveSite?.Name,
             Calendar: _time.Calendar,
             Effects: ReadActiveEffects(),
@@ -1028,6 +1028,12 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal DaggerfallCreateItem CreateItemChoice { get; } = null!;
     internal DaggerfallItemSouls ItemSouls { get; } = null!;
     internal DaggerfallTeleport TeleportChoice { get; } = null!;
+
+    /// <summary>Fast travel: the travel panel, its map and the journeys it starts.</summary>
+    internal DaggerfallFastTravel FastTravel { get; } = null!;
+
+    /// <summary>The atlas the import drew and the tiles granted to the page, or null when the data container carries none and the travel map draws classic art.</summary>
+    private readonly DaggerfallAtlasTiles? _atlasTiles;
     internal DaggerfallDetectors Detectors { get; } = null!;
     internal DaggerfallCasting Casting { get; private set; } = null!;
     internal DaggerfallSpellTargets SpellTargets { get; } = null!;

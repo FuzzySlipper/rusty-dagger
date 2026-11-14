@@ -168,7 +168,7 @@ internal sealed partial class DaggerfallSession
                     ToSiteReturnPose(restoredSite.ReturnPose),
                     restoredSite.Discovered.Select(id => id.Require()), restoredSite.Buildings, restoredSite.FailedBuildingPicks)
                 : new World.DaggerfallSiteContext(definitions.Locations, inputs.Site, null, []);
-            _travelPolicy = new DaggerfallTravelPolicy(_site, definitions.Grids, tuning.Transport);
+            DaggerfallTravelPolicy travelPolicy = new(_site, definitions.Grids, tuning.Transport);
             DaggerfallWorldProfileKey activeProfile = saved?.Site.ActiveProfile?.Require() ?? inputs.ProfileKey;
             if (DaggerfallWorldProfileIds.TryParse(activeProfile.LogicalId, out _, out var arrivedBuilding) && arrivedBuilding is { } building)
                 _site.DiscoverBuilding(activeProfile.Site, building);
@@ -330,7 +330,7 @@ internal sealed partial class DaggerfallSession
                 questTraining, tuning.Locomotion, _random, () => _time.Calendar,
                 // Training spends its own source fatigue cost, so its minutes charge no idle loss.
                 seconds => AdvanceQuestTime(seconds, idleFatigue: false)));
-            quests.BindTravelMinutes(site => _travelPolicy.CautiousQuestLegMinutes(QuestTravelOrigin(), site));
+            quests.BindTravelMinutes(site => FastTravel.QuestLegMinutes(site));
             character.BindCareerCommitted(skillUses.RebaseForCareerSelection);
             DaggerfallLevelUpState levelUps = new(progression, skillUses, playerStats,
                 definitions, () => character.Career, _random, _rewards);
@@ -564,6 +564,32 @@ internal sealed partial class DaggerfallSession
                 dungeonActions: dungeonActions,
                 dialogueWorld: new DaggerfallDialogueWorldState(saved?.DialogueWorld));
             _creation = new DaggerfallCharacterCreation(State.Character, definitions, _random);
+            _atlasTiles = composition.Data is { } atlasData && DaggerfallAtlas.Read(atlasData) is { } atlas ? new(atlas, atlasData, engine.Ui) : null;
+            FastTravel = new DaggerfallFastTravel(travelPolicy, State.Travel, State.Transport, _site, _random,
+                definitions.BuildingNames.RegionNames, definitions.WorldNames,
+                new DaggerfallExteriorWorldBounds(definitions.Terrain.Width, definitions.Terrain.Height), _atlasTiles,
+                calendar: () => _time.Calendar,
+                passTime: slice => AdvanceElapsedTime(slice, deferSkillAdvancement: true, idleFatigue: false, completeTimeIncrease: false),
+                activeProfile: () => _activeProfileKey,
+                exteriorCell: () => _exterior.CurrentExteriorCell(),
+                playerDefeated: () => State.Actors.Player.IsDefeated,
+                isVampire: () => State.RacialOverrides.Current?.IsVampire == true,
+                encounterPending: _encounters.HasPending,
+                enemyNearby: () => _senses.EnemyNearby(),
+                profiles: () => _sites.Profiles,
+                options: selected =>
+                {
+                    DaggerfallCurrencyTotals funds = State.Currency.Read();
+                    return new(selected.Cautious, selected.Inn, selected.Ship,
+                        State.Transport.HasHorse(State.Inventory.Read()),
+                        State.Transport.HasCart(State.Inventory.Read()),
+                        State.Property?.OwnsShip ?? false,
+                        AvailableGold: checked(funds.Gold + funds.LettersOfCredit),
+                        AvailableGoldPieces: funds.Gold,
+                        FreeShipPassage: HasFreeGuildShipTravel());
+                },
+                classicArt: () => _classicArt,
+                yaw: () => State.PlayerControl.YawRadians);
             ItemSouls = new DaggerfallItemSouls(new(State.Inventory, State.ItemInstances, definitions.Magic, _uniqueItems), definitions,
                 State.ItemInstances, _heldEnchantments, State.Effects, _facts, Presentation,
                 id => DefinitionsByActor.TryGetValue(id, out var actor) ? actor : null,
@@ -665,7 +691,7 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindEnemyRelations(ApplyAllEnemyCommand, id => actors.TryGet(id, out var actor) && !actor.IsDefeated);
             State.Quests.BindGuardSpawning(SpawnQuestGuards);
             State.Quests.BindRewards(OfferQuestReward, PresentQuestReward, tuning.QuestRewards);
-            _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, _site, _random, _itemCondition, _notebook,
+            _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, FastTravel.RevealFromMap, _itemCondition, _notebook,
                 useDrug: template => _poisoning.UseDrug(template) == DaggerfallPoisonAdmission.Admitted,
                 useOghma: () =>
                 {
@@ -744,7 +770,7 @@ internal sealed partial class DaggerfallSession
                 strikeTuning: tuning.StrikeEnchantments);
             _itemEnchanting.Enchanted += _itemCastTriggers.Enchanted;
             effects.Completed += _itemCastTriggers.EffectCompleted;
-            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
+            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, _dungeonText, CapturePropertyStorage, FastTravel.Position, authored, () => Casting.NextSequence);
             _persistence.EquipCountdown = () => _combat.EquipCountdown;
             if (saved is not null) _combat.EquipCountdown = saved.EquipCountdown;
             _roster = new DaggerfallActorRoster(actors, State.ActorInventories, State.Character, State.Containers, State.Effects, State.InventoryStore,
@@ -881,7 +907,6 @@ internal sealed partial class DaggerfallSession
                 Help = definitions.Help,
             };
             partiallyConstructed.Add(_hud);
-            _atlasTiles = composition.Data is { } atlasData && DaggerfallAtlas.Read(atlasData) is { } atlas ? new(atlas, atlasData, engine.Ui) : null;
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);
             foreach (var spell in definitions.Magic.Spells.Values.Where(spell => spell.IsCustom))

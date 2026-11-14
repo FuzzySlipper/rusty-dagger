@@ -12,20 +12,23 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Named deferred use owners; the inventory does not pretend their effects succeeded.</summary>
 internal enum DaggerfallInventoryUseReceiver { BookReading, PotionConsumption, UsedEnchantment }
+
+/// <summary>What a map's use revealed: the location's name, or why it revealed nothing.</summary>
+internal readonly record struct DaggerfallMapReveal(string? Revealed, string? Refusal);
+
 internal sealed record DaggerfallInventoryUseResult(bool Applied, string Message, DaggerfallInventoryUseReceiver? DeferredTo = null,
     DaggerfallReadableBook? OpenedBook = null);
 
 /// <summary>
-/// Daggerfall item-use policy over the existing Engine inventory and site owners. Map use is complete
-/// here; book, potion, and enchantment payloads delegate to their named session owners.
+/// Daggerfall item-use policy over the existing Engine inventory. A map's reveal is Travel's, handed in;
+/// book, potion, and enchantment payloads delegate to their named session owners.
 /// </summary>
 internal sealed class DaggerfallInventoryUseService(
     MechanicsInventoryCoordinator inventory,
     DaggerfallDefinitions definitions,
     DaggerfallItemInstances instances,
     DaggerfallUniqueItemAllocator uniqueItems,
-    DaggerfallSiteContext sites,
-    IRandomService random,
+    Func<string, DaggerfallMapReveal> revealMap,
     DaggerfallItemConditionService? condition = null,
     DaggerfallBookNotebook? notebook = null,
     Func<int, bool>? useDrug = null,
@@ -44,8 +47,6 @@ internal sealed class DaggerfallInventoryUseService(
     private const int MapTemplate = 287;
     private const int OilTemplate = 252;
     private const int LanternTemplate = 248;
-    private const ulong RandomSeed = 0;
-    private const string RandomScope = "daggerfall.inventory.map-use.v1";
 
     internal DaggerfallInventoryUseResult Use(string key, ulong expectedWorldRevision)
     {
@@ -188,17 +189,11 @@ internal sealed class DaggerfallInventoryUseService(
 
         if (Template(itemId) != MapTemplate)
             return new(false, "This item cannot be used.");
-        if (sites.Region is not int region)
-            return new(false, "A map can only reveal a location while you are in a region.");
-        DaggerfallSiteRecord[] eligible = sites.Records.Where(site => site.Id.Region == region && !sites.IsDiscovered(site.Id)).ToArray();
-        if (eligible.Length == 0)
-            return new(false, "You have already discovered every location in this region.");
-        int selected = checked((int)random.DrawKeyed(new KeyedRngRequest(RandomSeed, RandomScope,
-            $"region:{region}:{useKey}", 0, eligible.Length - 1)).Value);
-        DaggerfallSiteRecord revealed = eligible[selected];
-        sites.Discover(revealed.Id);
+        // Which location the map reveals is Travel's rule; using it up is this one.
+        DaggerfallMapReveal reveal = revealMap(useKey);
+        if (reveal.Refusal is { } refusal) return new(false, refusal);
         consume();
-        return new(true, $"Map reveals {revealed.Name}.");
+        return new(true, $"Map reveals {reveal.Revealed}.");
     }
 
     private DaggerfallInventoryUseResult RefuelLantern(InventoryView current, InventoryStackId oil, DaggerfallItemInstanceMetadata oilMetadata)

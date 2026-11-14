@@ -110,24 +110,24 @@ public sealed class GuildDialogueSessionTests
         using var session = fixture.Start(source.Profile);
         var npc = session.State.Npcs.All.Single(value => value.StableKey == source.Placement.Id);
         Open(session, npc); Ask(session, "teleport");
-        Assert.False(session.ReadTravelPresentation().GuildTeleport);
+        Assert.False(session.FastTravel.Read().GuildTeleport);
         session.State.Social.JoinGuild(40, 0);
         for (int day = 1; day <= 7; day++) session.State.Social.PromoteGuild(40, day);
-        Ask(session, "teleport"); Assert.False(session.ReadTravelPresentation().GuildTeleport);
+        Ask(session, "teleport"); Assert.False(session.FastTravel.Read().GuildTeleport);
         session.State.Social.PromoteGuild(40, 8);
         Ask(session, "teleport");
-        Assert.True(session.ReadTravelPresentation().GuildTeleport);
+        Assert.True(session.FastTravel.Read().GuildTeleport);
         session.Site.Discover(fixture.PopulationProfile.Site!.Value);
         Submit(session, new { action = "travel-search", text = "" });
-        var destination = session.ReadTravelPresentation().Destinations.First(value => value.Id == fixture.PopulationProfile.Site);
+        var destination = session.FastTravel.Read().Destinations.First(value => value.Id == fixture.PopulationProfile.Site);
         Submit(session, new { action = "travel-preview", region = destination.Id.Region, destination = destination.Id.Index, cautious = false, inn = false, ship = false });
-        var travel = session.ReadTravelPresentation();
+        var travel = session.FastTravel.Read();
         Assert.True(travel.ExecutionAvailable, travel.Message);
         Assert.Equal(0, travel.Quote!.TotalCost); Assert.Equal(0, travel.Quote.TravelMinutes);
         var before = DaggerfallSavePayload.Read(session.CaptureSave());
         Submit(session, new { action = "travel-accept", key = travel.Quote.Identity, amount = 0 });
         Assert.Equal(fixture.PopulationProfile.ProfileKey, session.Sites.ActiveProfile);
-        Assert.False(session.ReadTravelPresentation().GuildTeleport);
+        Assert.False(session.FastTravel.Read().GuildTeleport);
         Assert.Equal(before.Calendar, DaggerfallSavePayload.Read(session.CaptureSave()).Calendar);
     }
 

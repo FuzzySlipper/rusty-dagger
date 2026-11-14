@@ -1,6 +1,7 @@
 using WorldRpg.Kit;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -70,7 +71,7 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
     /// </summary>
     private void AcceptTravel(string expectedQuote, ulong expectedCost)
     {
-        if (!StagesSlowWork || CurrentTravelQuote() is not { } quote)
+        if (!StagesSlowWork || FastTravel.Quote() is not { } quote)
         {
             _ = ExecuteTravel(expectedQuote, expectedCost);
             return;
@@ -78,7 +79,7 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
         string place = quote.Destination.Name;
         DaggerfallJourney? journey = null;
         StageWorldChange($"Travelling to {place}", [
-            new($"Reading {place}", () => _ = TravelRefusal(quote, out _)),
+            new($"Reading {place}", () => _ = FastTravel.Refusal(quote, out _)),
             new($"On the road to {place}", () => journey = Depart(expectedQuote, expectedCost)),
             new($"Arriving at {place}", () => { if (journey is { } road) _ = Arrive(road); }),
         ], error => $"The journey to {place} could not be made: {error.Message}");

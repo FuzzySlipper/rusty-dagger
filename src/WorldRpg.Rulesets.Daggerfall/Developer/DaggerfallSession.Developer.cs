@@ -386,7 +386,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     /// </summary>
     private DebugCommandResult Land(Vector3 feet, float yaw, float pitch, string anchor)
     {
-        CloseTravelMap();
+        FastTravel.CloseMap();
         Vector3 centre = feet + Vector3.UnitY * ((_spatial.CurrentController.Shape.StandingHeight * .5F) + FloorClearance);
         Vector3 position = ProfilePosition(new WorldPoint(centre.X, centre.Y, centre.Z));
         if (!_sites.TryRelocatePlayer(_activeProfileKey, new(anchor, new(position.X, position.Y, position.Z), yaw, pitch)))
@@ -397,8 +397,8 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     /// <summary>Arrives at a place's exterior as guild teleport does: its keyed landing, with no time or cost.</summary>
     private bool ArriveAt(DaggerfallSiteProfile exterior)
     {
-        CloseTravelMap();
-        return _sites.TryRelocatePlayer(exterior.ProfileKey, ArrivalLanding(exterior, null, $"developer:{exterior.ProfileKey.LogicalId}"));
+        FastTravel.CloseMap();
+        return _sites.TryRelocatePlayer(exterior.ProfileKey, FastTravel.Landing(exterior, null, $"developer:{exterior.ProfileKey.LogicalId}"));
     }
 
     /// <summary>A place by region/index or by name, ranked as travel's search ranks; null when exactly one admitted exterior answers.</summary>
@@ -414,7 +414,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         else
         {
             var ranked = _site.Records.Where(record => record.Exterior is not null)
-                .Select(record => (Record: record, Rank: PlaceRank(record.Name, record.Id.Region, place))).Where(value => value.Rank is not null).ToArray();
+                .Select(record => (Record: record, Rank: FastTravel.PlaceRank(record.Name, record.Id.Region, place))).Where(value => value.Rank is not null).ToArray();
             int? best = ranked.Length == 0 ? null : ranked.Min(value => value.Rank);
             candidates = [.. ranked.Where(value => value.Rank == best).Select(value => value.Record)];
         }
