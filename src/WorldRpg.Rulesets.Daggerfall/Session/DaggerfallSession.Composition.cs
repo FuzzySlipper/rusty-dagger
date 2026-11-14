@@ -120,7 +120,7 @@ internal sealed partial class DaggerfallSession
             tuning = tuning.Validate();
             _definitions = definitions;
             _buildingGreeting = new DaggerfallBuildingGreeting(definitions, _random);
-            _dungeonText = new DaggerfallDungeonTextActions(new DaggerfallTextResolver(definitions.Text));
+            DungeonText = new DaggerfallDungeonText(new DaggerfallTextResolver(definitions.Text));
             _encounters = new DaggerfallEncounterRuntime(definitions, _random);
             Cinematics = composition.Data is null ? null : new DaggerfallCinematicPresentation(engine, composition.Data, definitions.Cinematics);
             if (Cinematics is not null) partiallyConstructed.Add(Cinematics);
@@ -746,7 +746,7 @@ internal sealed partial class DaggerfallSession
             _interactions = new DaggerfallOpenInteractions(
                 () => _lootUi.Read(),
                 () => _lootUi.Message,
-                dungeonTextOpen: () => _dungeonTextProjection is not null,
+                dungeonTextOpen: () => DungeonText.Projection is not null,
                 dialogueOpen: () => _activationPresentation.View.Dialogue is not null,
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
@@ -810,7 +810,7 @@ internal sealed partial class DaggerfallSession
                 strikeTuning: tuning.StrikeEnchantments);
             _itemEnchanting.Enchanted += _itemCastTriggers.Enchanted;
             effects.Completed += _itemCastTriggers.EffectCompleted;
-            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, _dungeonText, propertyStorage.Capture, FastTravel.Position, authored, () => Casting.NextSequence);
+            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, DungeonText, propertyStorage.Capture, FastTravel.Position, authored, () => Casting.NextSequence);
             _persistence.EquipCountdown = () => _combat.EquipCountdown;
             if (saved is not null) _combat.EquipCountdown = saved.EquipCountdown;
             _roster = new DaggerfallActorRoster(actors, State.ActorInventories, State.Character, State.Containers, State.Effects, State.InventoryStore,
@@ -990,9 +990,7 @@ internal sealed partial class DaggerfallSession
                 tuning.Camera.EyeHeight, tuning.Spatial.CollisionVoxelSize, Traps.SpreadHurt, combatRules, _random,
                 (source, spell, target) => Casting.TriggerDungeonAction(source, spell, target), _facts,
                 damage => AppendDamage(damage, DaggerfallDamageCause.Hazard, 0),
-                () => _latestUpdateGeneration, () => _latestSimulationStep, ExecuteDungeonTextAction,
-                actionId => _dungeonTextProjection is { Kind: DaggerfallDungeonTextActionKind.DoorText, ActionId: var shown }
-                    && string.Equals(shown, actionId, StringComparison.Ordinal),
+                () => _latestUpdateGeneration, () => _latestSimulationStep, ExecuteDungeonTextAction, DungeonText.ShowsDoorText,
                 message => Presentation.SetOutcome(message));
             Activation = new DaggerfallActivation(DungeonActions, State.Actors, State.PlayerControl, () => _doors,
                 tuning.LootInteraction.MaximumDistance, tuning.MeleeTargeting.MaximumDistance);
@@ -1038,7 +1036,8 @@ internal sealed partial class DaggerfallSession
             };
             partiallyConstructed.Add(_hud);
             if (restore is not null)
-                _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments, RestoreDungeonText);
+                _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,
+                    snapshot => DungeonText.Restore(snapshot, () => DungeonActions.ActiveActions, CurrentTextContext));
             foreach (var spell in definitions.Magic.Spells.Values.Where(spell => spell.IsCustom))
                 if (Casting.AvailableSpellCost(actors.Player.DurableId, spell.Key) is null)
                     throw new ArgumentException($"Custom spell '{spell.Key}' contains an unavailable compiled construction effect or combination.");

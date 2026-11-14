@@ -119,7 +119,7 @@ public sealed class TownStartBundleTests
         };
         game.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
         Assert.True(game.ActivationView.Applied, game.ActivationView.Message);
-        var greeting = game.DungeonTextProjection!;
+        var greeting = game.DungeonText.Projection!;
         game.Update(new ProductUpdate(OuterUpdate(3), [Ui(System.Text.Json.JsonSerializer.Serialize(new
             { action = "dungeon-text-close", item = greeting.ActionId, revision = greeting.Revision.ToString() }))]));
         FinishLoading(product, 4);

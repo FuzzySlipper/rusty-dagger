@@ -281,7 +281,7 @@ internal sealed class AssembledWorldRun : IDisposable
 
     internal void ContinueGreeting()
     {
-        var prompt = Session.DungeonTextProjection;
+        var prompt = Session.DungeonText.Projection;
         Assert.NotNull(prompt);
         Submit(new { action = "dungeon-text-close", item = prompt.ActionId, revision = prompt.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture) });
     }

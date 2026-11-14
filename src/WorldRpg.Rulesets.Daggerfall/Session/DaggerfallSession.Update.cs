@@ -586,8 +586,23 @@ internal sealed partial class DaggerfallSession
         AdvanceQuestTime(_vampirism.AwakeningSeconds, idleFatigue: false);                        // Time
         if (!_vampirism.Become(transition, clan)) return new(false, "A racial override is already active.");   // Afflictions
         Presentation.SetOutcome(_definitions.TextPresentation.Resolve(
-            new(DaggerfallTextKind.Resource, "401"), DungeonTextContext()).Text);                 // Text, UiProjection
+            new(DaggerfallTextKind.Resource, "401"), CurrentTextContext()).Text);                 // Text, UiProjection
         return new(true, null);
+    }
+
+    /// <summary>
+    /// A text action the dungeon's graph runs (the graph's text action input): Text resolves it at the action's
+    /// activation count, a door warning's trespass turns the enemies, the text goes up over what is up, and the graph
+    /// takes the outcome. Null for an action that is no text.
+    /// </summary>
+    internal DaggerfallDungeonActionExecution? ExecuteDungeonTextAction(DaggerfallDungeonActionDefinition action)
+    {
+        if (!DaggerfallDungeonText.Shows(action)) return null;                                     // Text
+        ulong count = DungeonActions.ActivationCount(action.Id);                                    // Interiors
+        DaggerfallDungeonTextActionResult result = DungeonText.Execute(action, count, CurrentTextContext());   // Text
+        if (result.ApplyDoorTrespass) _enemyBehavior.MakeActiveEnemiesHostile();                    // Actors
+        DungeonText.Show(result.Projection);                                                        // Text
+        return DaggerfallDungeonActions.TextExecution(action.Id, result);                           // Interiors
     }
 
     /// <summary>
@@ -600,7 +615,7 @@ internal sealed partial class DaggerfallSession
     {
         DaggerfallSiteProfiles profiles = _sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted.");
         if (Entrance.Plan(_doors, door, forceMode, skipGreeting, _activeProfileKey, profiles) is not { } plan) return null;   // Interiors
-        if (plan.Greeting is { } greeting) _dungeonTextProjection = greeting;                    // Text
+        if (plan.Greeting is { } greeting) DungeonText.Greet(greeting);                          // Text
         if (plan.Outcome is { } said) return said;
         var witnesses = plan.Crime is not null ? Crimes.QueryWitnesses() : DaggerfallCrimeWitnessEvidence.NotQueried;   // Society
         DaggerfallSiteAnchor landing = BuildingLanding(plan.Inside!, door);                       // Interiors
@@ -625,7 +640,7 @@ internal sealed partial class DaggerfallSession
     private void ContinueBuildingEntry()
     {
         var held = Entrance.TakeHeldEntry();                                                      // Interiors
-        _dungeonTextProjection = null;                                                            // Text
+        DungeonText.CloseGreeting();                                                              // Text
         if (held is { } entry && EnterExteriorBuilding(entry.Door, entry.ForceMode, skipGreeting: true) is { } result)
             Presentation.SetOutcome(result.Message);                                              // UiProjection
     }

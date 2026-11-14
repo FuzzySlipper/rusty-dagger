@@ -422,7 +422,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         source.DeactivateWaterTriggers(_latestSimulationStep ?? 0UL);
         RetireDepartingSwing(source);
         _combat.ClearRangedFlight();
-        CancelDungeonTextOnUnload();
+        _buildingGreeting.Release();
+        DungeonText.CancelOnUnload();
         // The destination is committed; restored item lifetimes settle before any presentation.
         ExpireConjuredItems();
     }
@@ -946,7 +947,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Transport: DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),
                 ownsShip: State.Property.OwnsShip, wagon: State.Wagon, itemLabel: (key, definition, quantity) => _inventoryUi.DescribeItem(key, definition, quantity,
                     owner: DaggerfallItemOwner.Wagon(State.Wagon.Id!.Value)).Label),
-            DungeonText: _dungeonTextProjection,
+            DungeonText: DungeonText.Projection,
             Death: _deathPresentation.View,
             Rest: RestView,
             Lodging: RoomRental.View,
@@ -1072,6 +1073,21 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>The greeting a building gives as the player walks in, holding the entry until it is read.</summary>
     private readonly DaggerfallBuildingGreeting _buildingGreeting;
+
+    /// <summary>The dungeon text or greeting that is up, the texts it covers and a riddle's waiting answer.</summary>
+    internal DaggerfallDungeonText DungeonText { get; }
+
+    /// <summary>What the text macros name now, read from every domain that answers one.</summary>
+    internal DaggerfallTextContext CurrentTextContext() => DaggerfallTextContext.Empty with
+    {
+        Player = DaggerfallTextContexts.Player(_definitions, State.Character.Identity, State.Actors.Player.Stats,
+            State.Currency.Read().Gold, State.Character.Career),
+        Calendar = DaggerfallTextContexts.Calendar(_definitions, _time.Calendar),
+        Location = new(City: _site.ActiveSite?.Name,
+            Region: _site.Region is int region ? _definitions.BuildingNames.RegionName(region) : null),
+        Faction = new(VampireClan: State.RacialOverrides.Current?.State.Vampire is { } vampire
+            ? DaggerfallVampirismPolicy.ClanName(_definitions, vampire.Clan) : null),
+    };
 
     /// <summary>The conversation with the person the player talks to; activation rebuilds it with each site.</summary>
     private DaggerfallDialogueService? _dialogue;

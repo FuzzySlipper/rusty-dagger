@@ -43,7 +43,7 @@ internal sealed class DaggerSessionPersistence : IDaggerfallSiteDeltas
     private readonly DaggerfallLocomotionPolicy _locomotion;
     private readonly DaggerfallClimbingPolicy _climbing;
     private readonly DaggerfallSwimmingPolicy _swimming;
-    private readonly DaggerfallDungeonTextActions _dungeonText;
+    private readonly DaggerfallDungeonText _dungeonText;
     private readonly Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> _capturePropertyStorage;
     private readonly Func<DaggerfallTravelMapPixel> _travelPosition;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _actorDefinitions;
@@ -66,7 +66,7 @@ internal sealed class DaggerSessionPersistence : IDaggerfallSiteDeltas
     internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
         DaggerfallEffectLifecycle effects, Func<DaggerfallDoorRuntime> doors, DaggerfallLocomotionPolicy locomotion,
-        DaggerfallClimbingPolicy climbing, DaggerfallSwimmingPolicy swimming, DaggerfallDungeonTextActions dungeonText,
+        DaggerfallClimbingPolicy climbing, DaggerfallSwimmingPolicy swimming, DaggerfallDungeonText dungeonText,
         Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> capturePropertyStorage, Func<DaggerfallTravelMapPixel> travelPosition, IReadOnlyDictionary<long, DaggerfallActorDefinition> actorDefinitions, Func<long> nextCastSequence)
     {
         _nextCastSequence = nextCastSequence;

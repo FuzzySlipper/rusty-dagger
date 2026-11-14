@@ -213,6 +213,31 @@ internal sealed class DaggerfallDungeonActions(
         return dispatch.Applied;
     }
 
+    /// <summary>How many times an action of the active graph has been admitted, counting this one.</summary>
+    internal ulong ActivationCount(string actionId) => graphs[activeProfile()].State[actionId].ActivationCount;
+
+    /// <summary>The active site's actions, or null when it has no action graph.</summary>
+    internal IReadOnlyList<DaggerfallDungeonActionDefinition>? ActiveActions =>
+        graphs.TryGetValue(activeProfile(), out DaggerfallDungeonActionGraph? graph) ? graph.Definitions : null;
+
+    /// <summary>A riddle answered right: the action it held goes on along its link, when the site has a graph.</summary>
+    internal void ContinueAcceptedAnswer(string actionId)
+    {
+        if (graphs.TryGetValue(activeProfile(), out DaggerfallDungeonActionGraph? graph))
+            _ = Report(graph.ContinueAcceptedAnswer(actionId));
+    }
+
+    /// <summary>What a text action's result is to the graph.</summary>
+    internal static DaggerfallDungeonActionExecution TextExecution(string actionId, DaggerfallDungeonTextActionResult result) =>
+        new(actionId, result.Outcome switch
+        {
+            DaggerfallDungeonTextOutcome.Presented => DaggerfallDungeonActionOutcome.Applied,
+            DaggerfallDungeonTextOutcome.AwaitingAnswer => DaggerfallDungeonActionOutcome.AwaitingAnswer,
+            DaggerfallDungeonTextOutcome.SkippedDoorText => DaggerfallDungeonActionOutcome.AppliedWithoutChange,
+            DaggerfallDungeonTextOutcome.Busy => DaggerfallDungeonActionOutcome.RejectedOperation,
+            _ => DaggerfallDungeonActionOutcome.RejectedOperation,
+        }, Diagnostic: result.Diagnostic);
+
     internal DaggerfallDungeonActionExecution? Execute(DaggerfallDungeonActionDefinition action)
     {
         if (action.ActionFlag == (byte)DaggerfallDungeonActionFlag.CastSpell)
@@ -221,7 +246,7 @@ internal sealed class DaggerfallDungeonActions(
             return Teleport(action);
         if (DaggerfallDungeonDoorActions.Execute(action, Doors) is { } door) return door;
         if (ActivateMotion(action) is { } motion) return motion;
-        ulong count = graphs[activeProfile()].State[action.Id].ActivationCount;
+        ulong count = ActivationCount(action.Id);
         DaggerfallDungeonHazardActionResult? hazard = DaggerfallDungeonHazardActions.Execute(action,
             new(actors.Player.Actor, actors.Player.Actor, actors.Player.Progression.Level, count),
             combat, random);

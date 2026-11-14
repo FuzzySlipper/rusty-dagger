@@ -134,24 +134,25 @@ public sealed class DaggerfallDungeonTextActionsTests
         Assert.Null(result.Projection);
     }
 
-    private static DaggerfallDungeonActionDefinition Action(
+    internal static DaggerfallDungeonActionDefinition Action(
         DaggerfallDungeonActionFlag flag,
         byte soundIndex,
         byte axis = 0,
-        string? next = null) =>
-        new("action", 1, 2, (byte)flag, axis, 0, 0, next is null ? -1 : 2, next, SoundIndex: soundIndex);
+        string? next = null,
+        string id = "action") =>
+        new(id, 1, 2, (byte)flag, axis, 0, 0, next is null ? -1 : 2, next, SoundIndex: soundIndex);
 
-    private static DaggerfallTextResolver Resolver(params DaggerfallTextValue[] values) =>
+    internal static DaggerfallTextResolver Resolver(params DaggerfallTextValue[] values) =>
         new(new(values.ToDictionary(value => value.Key), []));
 
-    private static DaggerfallTextValue Resource(string id, string text) => Value(new(DaggerfallTextKind.Resource, id), text);
+    internal static DaggerfallTextValue Resource(string id, string text) => Value(new(DaggerfallTextKind.Resource, id), text);
 
-    private static DaggerfallTextValue Internal(string id, string text) => Value(new(DaggerfallTextKind.Internal, id), text);
+    internal static DaggerfallTextValue Internal(string id, string text) => Value(new(DaggerfallTextKind.Internal, id), text);
 
     private static DaggerfallTextValue Value(DaggerfallTextKey key, string text) =>
         new(key, "test", "en", 0, 0, text.Length, 1, DaggerfallTextState.Read, string.Empty, [],
             [new(DaggerfallTextCode.Text, text, null, null)]);
 
-    private static DaggerfallTextContext Context(string player) =>
+    internal static DaggerfallTextContext Context(string player) =>
         new(new(Name: player), new(), new(), new(), new(), new());
 }

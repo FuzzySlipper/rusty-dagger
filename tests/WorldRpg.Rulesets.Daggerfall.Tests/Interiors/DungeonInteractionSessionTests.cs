@@ -346,9 +346,9 @@ public sealed class DungeonInteractionSessionTests
         session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital,
             x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
 
-        Assert.Equal(DaggerfallDungeonTextActionKind.DoorText, session.DungeonTextProjection?.Kind);
+        Assert.Equal(DaggerfallDungeonTextActionKind.DoorText, session.DungeonText.Projection?.Kind);
         Assert.Equal(DaggerfallDoorMotion.Closed, session.Doors.Read(door.Id).Motion);
-        DaggerfallDungeonTextProjection first = Assert.IsType<DaggerfallDungeonTextProjection>(session.DungeonTextProjection);
+        DaggerfallDungeonTextProjection first = Assert.IsType<DaggerfallDungeonTextProjection>(session.DungeonText.Projection);
         ProductInputEvent close = Input(InputEventKind.DirectDigital) with
         {
             ValueKind = InputValueKind.ProductPayload,
@@ -356,7 +356,7 @@ public sealed class DungeonInteractionSessionTests
             PayloadData = Encoding.UTF8.GetBytes($"{{\"action\":\"dungeon-text-close\",\"item\":\"{first.ActionId}\",\"revision\":\"{first.Revision}\"}}"),
         };
         session.Update(new ProductUpdate(OuterUpdate(2), [close]));
-        Assert.Null(session.DungeonTextProjection);
+        Assert.Null(session.DungeonText.Projection);
 
         session.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.DirectDigital,
             x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
@@ -526,7 +526,7 @@ public sealed class DungeonInteractionSessionTests
         DaggerfallDungeonActionDispatch initial = graph.Trigger(prompt.Id, DaggerfallDungeonActionEvent.Direct);
         Assert.Contains(initial.Executions, entry => entry.Outcome == DaggerfallDungeonActionOutcome.AwaitingAnswer);
         Assert.False(session.State.Variables.Read(new(DaggerfallVariableScope.Global, 0, 7)));
-        DaggerfallDungeonTextProjection projection = Assert.IsType<DaggerfallDungeonTextProjection>(session.DungeonTextProjection);
+        DaggerfallDungeonTextProjection projection = Assert.IsType<DaggerfallDungeonTextProjection>(session.DungeonText.Projection);
         Assert.Equal(5404, projection.TextId);
         Assert.Equal(prompt.Id, DaggerfallSavePayload.Read(session.CaptureSave()).DungeonText.Pending?.ActionId);
 
@@ -538,7 +538,7 @@ public sealed class DungeonInteractionSessionTests
         };
         session.Update(new ProductUpdate(OuterUpdate(1), [answer]));
         Assert.True(session.State.Variables.Read(new(DaggerfallVariableScope.Global, 0, 7)));
-        Assert.Null(session.DungeonTextProjection);
+        Assert.Null(session.DungeonText.Projection);
         Assert.Null(DaggerfallSavePayload.Read(session.CaptureSave()).DungeonText.Pending);
         Assert.Equal(1UL, graph.State[link.Id].ActivationCount);
 
@@ -552,7 +552,7 @@ public sealed class DungeonInteractionSessionTests
         session.State.DungeonActions[inputs.ProfileKey] = new DaggerfallDungeonActionGraph(inputs.ProfileKey.LogicalId,
             [first, linked], session.State.Variables.Write, executeFamilyAction: session.ExecuteDungeonTextAction);
         _ = session.State.DungeonActions[inputs.ProfileKey].Trigger(first.Id, DaggerfallDungeonActionEvent.Direct);
-        DaggerfallDungeonTextProjection top = Assert.IsType<DaggerfallDungeonTextProjection>(session.DungeonTextProjection);
+        DaggerfallDungeonTextProjection top = Assert.IsType<DaggerfallDungeonTextProjection>(session.DungeonText.Projection);
         Assert.Equal(8604, top.TextId);
 
         ProductInputEvent close = Input(InputEventKind.DirectDigital) with
@@ -562,11 +562,11 @@ public sealed class DungeonInteractionSessionTests
             PayloadData = Encoding.UTF8.GetBytes($"{{\"action\":\"dungeon-text-close\",\"item\":\"{top.ActionId}\",\"revision\":\"{top.Revision}\"}}"),
         };
         session.Update(new ProductUpdate(OuterUpdate(3), [close]));
-        DaggerfallDungeonTextProjection beneath = Assert.IsType<DaggerfallDungeonTextProjection>(session.DungeonTextProjection);
+        DaggerfallDungeonTextProjection beneath = Assert.IsType<DaggerfallDungeonTextProjection>(session.DungeonText.Projection);
         Assert.Equal(8600, beneath.TextId);
         close = close with { PayloadData = Encoding.UTF8.GetBytes($"{{\"action\":\"dungeon-text-close\",\"item\":\"{beneath.ActionId}\",\"revision\":\"{beneath.Revision}\"}}") };
         session.Update(new ProductUpdate(OuterUpdate(4), [close]));
-        Assert.Null(session.DungeonTextProjection);
+        Assert.Null(session.DungeonText.Projection);
     }
 
     [Fact]

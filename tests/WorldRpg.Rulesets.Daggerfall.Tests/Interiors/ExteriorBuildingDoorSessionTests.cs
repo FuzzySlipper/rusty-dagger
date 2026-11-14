@@ -114,7 +114,7 @@ public sealed class ExteriorBuildingDoorSessionTests
         fixture.Interact(Residence);
         Assert.True(session.ActivationView.Applied, session.ActivationView.Message);
         Assert.Equal(fixture.Exterior.ProfileKey, session.Sites.ActiveProfile);
-        Assert.Equal(256, session.DungeonTextProjection!.TextId);
+        Assert.Equal(256, session.DungeonText.Projection!.TextId);
         fixture.ContinueGreeting();
         Assert.Equal(fixture.InteriorOf(Residence), session.Sites.ActiveProfile);
         Assert.Empty(session.State.Crime.Incidents);
@@ -157,8 +157,8 @@ public sealed class ExteriorBuildingDoorSessionTests
         fixture.SetMode("info");
         fixture.Interact(GeneralStore);
         Assert.Equal(name, session.ActivationView.Message);
-        Assert.Equal(267, session.DungeonTextProjection!.TextId);
-        Assert.False(string.IsNullOrWhiteSpace(session.DungeonTextProjection.Text));
+        Assert.Equal(267, session.DungeonText.Projection!.TextId);
+        Assert.False(string.IsNullOrWhiteSpace(session.DungeonText.Projection.Text));
         Assert.Equal(fixture.Exterior.ProfileKey, session.Sites.ActiveProfile);
         fixture.ContinueGreeting();
         Assert.Equal(fixture.InteriorOf(GeneralStore), session.Sites.ActiveProfile);
@@ -230,7 +230,7 @@ public sealed class ExteriorBuildingDoorSessionTests
     public void Lock_spell_does_not_change_a_building_and_remains_ready_for_an_action_door()
     {
         using Fixture f = new(); f.AdvanceToHour(6); f.CastOpen(lockDoor: true); f.Interact(Residence);
-        Assert.Equal(DaggerfallDungeonTextActionKind.BuildingGreeting, f.Session.DungeonTextProjection!.Kind);
+        Assert.Equal(DaggerfallDungeonTextActionKind.BuildingGreeting, f.Session.DungeonText.Projection!.Kind);
         Assert.False(f.Session.Doors.Read(f.DoorOf(Residence)).IsLocked);
         Assert.Equal(DaggerfallDoorMagic.Lock, Assert.Single(f.Session.State.Effects.Active).Definition.DoorMagic);
         f.ContinueGreeting();
@@ -351,7 +351,7 @@ public sealed class ExteriorBuildingDoorSessionTests
 
         internal void ContinueGreeting()
         {
-            var prompt = Session.DungeonTextProjection!;
+            var prompt = Session.DungeonText.Projection!;
             Session.Update(new ProductUpdate(OuterUpdate(++_step), [Ui(System.Text.Json.JsonSerializer.Serialize(new
                 { action = "dungeon-text-close", item = prompt.ActionId, revision = prompt.Revision.ToString() }))]));
         }
