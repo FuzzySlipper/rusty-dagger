@@ -84,6 +84,47 @@ public sealed class DaggerfallDungeonActionsTests
         Assert.Null(none.Owner.TriggerDoorDirect(DoorId));
     }
 
+    [Fact]
+    public void A_riddles_count_and_actions_are_the_active_graphs_and_its_accepted_answer_goes_on_along_its_link()
+    {
+        using Stage stage = new(
+        [
+            Action("riddle", 1, DaggerfallDungeonActionFlag.ShowTextWithInput) with { NextObjectOffset = 2, NextActionId = "lock" },
+            Action("lock", 2, DaggerfallDungeonActionFlag.LockDoor, DaggerfallDungeonActionGraph.DoorSourceId(DoorId)),
+        ]);
+        Assert.Equal(["lock", "riddle"], stage.Owner.ActiveActions!.Select(action => action.Id).Order());
+
+        _ = stage.Graph.Trigger("riddle", DaggerfallDungeonActionEvent.Direct);
+        Assert.Equal(["riddle"], stage.Texts);
+        Assert.Equal(1UL, stage.Owner.ActivationCount("riddle"));
+        Assert.False(stage.Doors.Read(DoorId).IsLocked);
+
+        stage.Owner.ContinueAcceptedAnswer("riddle");
+        Assert.True(stage.Doors.Read(DoorId).IsLocked);
+
+        // A site with no graph has no actions, and an answer there goes nowhere.
+        using Stage none = new([], graph: false);
+        Assert.Null(none.Owner.ActiveActions);
+        none.Owner.ContinueAcceptedAnswer("riddle");
+    }
+
+    [Fact]
+    public void A_text_actions_outcome_is_what_the_graph_takes_with_its_diagnostic()
+    {
+        (DaggerfallDungeonTextOutcome Text, DaggerfallDungeonActionOutcome Action)[] outcomes =
+        [
+            (DaggerfallDungeonTextOutcome.Presented, DaggerfallDungeonActionOutcome.Applied),
+            (DaggerfallDungeonTextOutcome.AwaitingAnswer, DaggerfallDungeonActionOutcome.AwaitingAnswer),
+            (DaggerfallDungeonTextOutcome.SkippedDoorText, DaggerfallDungeonActionOutcome.AppliedWithoutChange),
+            (DaggerfallDungeonTextOutcome.Busy, DaggerfallDungeonActionOutcome.RejectedOperation),
+            (DaggerfallDungeonTextOutcome.MissingText, DaggerfallDungeonActionOutcome.RejectedOperation),
+            (DaggerfallDungeonTextOutcome.InvalidAction, DaggerfallDungeonActionOutcome.RejectedOperation),
+        ];
+        foreach ((DaggerfallDungeonTextOutcome text, DaggerfallDungeonActionOutcome action) in outcomes)
+            Assert.Equal(new DaggerfallDungeonActionExecution("text", action, Diagnostic: "why"),
+                DaggerfallDungeonActions.TextExecution("text", new(text, Diagnostic: "why")));
+    }
+
     private static DaggerfallDungeonActionDefinition Action(string id, int offset, DaggerfallDungeonActionFlag flag, string? door = null) =>
         new(id, offset, (uint)DaggerfallDungeonTriggerFlag.Direct, (byte)flag, 0, 0, 0, 0, null, door);
 
