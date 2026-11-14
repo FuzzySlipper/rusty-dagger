@@ -41,7 +41,7 @@ internal static partial class DaggerfallBaseContent
             if (definition is not null)
             {
                 if (!definition.Groups.Contains("Weapons", StringComparer.Ordinal)) diagnostics.Add($"Starting weapon template {template} is not a weapon.");
-                if (template == 131 ? material is not null : material is null || !DaggerfallItemMaterialPolicy.IsWeaponMaterial(material))
+                if (template == 131 ? material is not null : material is null || !DaggerfallItemMaterials.IsWeaponMaterial(material))
                     diagnostics.Add($"Starting weapon template {template} has invalid material '{material}'.");
                 if (!definition.Stackable && quantity != 1) diagnostics.Add($"Unique starting template {template} must have quantity one.");
                 string key = material is null ? $"template-{template}" : $"template-{template}-{material}";

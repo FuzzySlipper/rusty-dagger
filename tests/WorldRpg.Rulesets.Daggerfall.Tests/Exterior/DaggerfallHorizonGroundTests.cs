@@ -12,7 +12,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallHorizonGroundTests
 {
-    private const double Size = DaggerfallTerrainSurfaceBuilder.HorizontalSize;
+    private const double Size = DaggerfallWorldGrid.HorizontalSize;
 
     [Fact]
     public void The_horizon_stands_on_the_walked_grounds_own_vertices()

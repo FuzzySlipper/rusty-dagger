@@ -19,15 +19,15 @@ internal readonly record struct DaggerfallExteriorTerrainVariant(
 {
     internal bool IsWinter => Season == DaggerfallExteriorSeason.Winter;
     /// <summary>The donor nature archive selected from the source climate, including its winter set when supported.</summary>
-    internal int NatureTextureArchive => DaggerfallExteriorEnvironment.NatureTextureArchive(ClimateValue, Season);
+    internal int NatureTextureArchive => DaggerfallClimateArchives.NatureTextureArchive(ClimateValue, Season);
 
     /// <summary>The donor suppresses winter for desert and subtropical ground sets.</summary>
-    internal bool GroundSupportsWinter => DaggerfallExteriorEnvironment.GroundSupportsWinter(ClimateValue);
+    internal bool GroundSupportsWinter => DaggerfallClimateArchives.GroundSupportsWinter(ClimateValue);
 
     /// <summary>The donor nature archives carrying snow are mountains and the three woodland sets.</summary>
-    internal bool NatureSupportsWinter => DaggerfallExteriorEnvironment.NatureSupportsWinter(ClimateValue);
+    internal bool NatureSupportsWinter => DaggerfallClimateArchives.NatureSupportsWinter(ClimateValue);
 
-    internal bool IsDesert => DaggerfallExteriorEnvironment.IsDesertClimate(ClimateValue);
+    internal bool IsDesert => DaggerfallClimateArchives.IsDesertClimate(ClimateValue);
 }
 
 /// <summary>A deterministic nature flat admitted beside one source terrain cell.</summary>
@@ -250,7 +250,7 @@ internal sealed class DaggerfallExteriorEnvironment
                 cell,
                 climate.Value,
                 climate.Name,
-                GroundTextureArchive(climate.Value, variantSeason),
+                DaggerfallClimateArchives.GroundTextureArchive(climate.Value, variantSeason),
                 variantSeason);
             _cells.TryGetValue(cell, out CellFacts? held);
             if (held is not null && held.Variant == variant && (!held.NatureWaiting || waitingPlaced))
@@ -314,7 +314,7 @@ internal sealed class DaggerfallExteriorEnvironment
     internal CharacterWaterVolume? AtSurface(CharacterWaterVolume volume, Vector3 localPosition, DaggerfallExteriorWorldOrigin origin)
     {
         if (_rivers is not { } rivers || !_riverBoxes.Contains(volume.Trigger)) return volume;
-        const float size = DaggerfallTerrainSurfaceBuilder.HorizontalSize;
+        const float size = DaggerfallWorldGrid.HorizontalSize;
         Vector3 engineLocal = localPosition - origin.Compensation;
         // The rivers are measured from the heightmap's corner, a map pixel west of the ground's.
         double x = engineLocal.X + ((origin.MapPixelX - 1) * (double)size), z = engineLocal.Z + (origin.MapPixelY * (double)size);
@@ -380,45 +380,8 @@ internal sealed class DaggerfallExteriorEnvironment
     /// <summary>Every ground archive open ground wears, summer and winter.</summary>
     internal static int[] GroundArchives { get; } = [2, 102, 103, 302, 303, 402, 403];
 
-    internal static int GroundTextureArchive(int climateValue, DaggerfallExteriorSeason season)
-    {
-        int archive = climateValue switch
-        {
-            223 or 227 or 228 => 402,
-            224 or 225 or 229 => 2,
-            226 or 230 => 102,
-            _ => 302,
-        };
-        return season == DaggerfallExteriorSeason.Rain ? archive + 2
-            : season == DaggerfallExteriorSeason.Winter && GroundSupportsWinter(climateValue) ? archive + 1 : archive;
-    }
-
-    /// <summary>Maps MapsFile.GetWorldClimateSettings to its nature set and winter variant.</summary>
-    internal static int NatureTextureArchive(int climateValue, DaggerfallExteriorSeason season)
-    {
-        int archive = climateValue switch
-        {
-            223 or 231 => 504,
-            224 or 225 => 503,
-            226 => 510,
-            227 => 500,
-            228 => 502,
-            229 => 501,
-            230 => 506,
-            232 => 508,
-            _ => 504,
-        };
-        return season == DaggerfallExteriorSeason.Winter && NatureSupportsWinter(climateValue)
-            ? archive + 1
-            : archive;
-    }
-
-    internal static bool IsDesertClimate(int climateValue) => climateValue is 224 or 225 or 229;
-
     /// <summary>The open sea's climate, which only its shores' land wears.</summary>
     internal static bool IsOceanClimate(int climateValue) => climateValue == 223;
-
-    internal static bool GroundSupportsWinter(int climateValue) => !IsDesertClimate(climateValue);
 
     /// <summary>
     /// Whether a tile of a location's map pixel is kept clear of nature. TerrainHelper.SetLocationTiles publishes an
@@ -446,8 +409,6 @@ internal sealed class DaggerfallExteriorEnvironment
         int y = Math.Max(Math.Max(rect.MinY - tileY, tileY - (rect.MaxY - 1)), 0);
         return Math.Max(x, y);
     }
-
-    internal static bool NatureSupportsWinter(int climateValue) => climateValue is 223 or 226 or 230 or 231 or 232;
 
     private static IReadOnlyList<DaggerfallExteriorWaterVolume> BuildWater(
         DaggerfallExteriorCellId cell,
@@ -520,7 +481,7 @@ internal sealed class DaggerfallExteriorEnvironment
     private static IEnumerable<DaggerfallExteriorWaterVolume> BuildRiverWater(DaggerfallExteriorCellId cell, DaggerfallTerrainSurface surface)
     {
         if (surface.Rivers is not { } rivers) yield break;
-        const float size = DaggerfallTerrainSurfaceBuilder.HorizontalSize, tile = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
+        const float size = DaggerfallWorldGrid.HorizontalSize, tile = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
         // A cell's corner is heightmap pixel (X - 1, Y), its rows running north from there.
         double cornerX = (cell.X - 1) * (double)size, cornerZ = cell.Y * (double)size;
         int section = 0;

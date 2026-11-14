@@ -266,7 +266,7 @@ internal sealed class DaggerfallDungeonActions(
     {
         Vector3? position = action.NextObjectPosition;
         Vector3 degrees = action.NextObjectRotationDegrees ?? Vector3.Zero;
-        Quaternion rotation = DaggerfallDungeonMotionPolicy.InitialTransform(Vector3.Zero, degrees).Rotation;
+        Quaternion rotation = DaggerfallSiteGeometry.InitialTransform(Vector3.Zero, degrees).Rotation;
         if (action.NextActionId is string target)
         {
             // Linked actions run first; a moving target therefore uses its current admitted pose.

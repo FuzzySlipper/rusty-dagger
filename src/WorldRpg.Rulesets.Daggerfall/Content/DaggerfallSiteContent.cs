@@ -256,7 +256,7 @@ internal static partial class DaggerfallSiteContent
     /// <summary>Ground tiles use the terrain climate's archive; models use the published climate swap table.</summary>
     internal static int ExteriorTextureArchive(DaggerfallClimateGridDefinition swaps, int archive, int record,
         int climate, int groundClimate, DaggerfallClimateSeason season) => archive < 500 && archive % 100 == 2
-        ? DaggerfallExteriorEnvironment.GroundTextureArchive(groundClimate, season switch
+        ? DaggerfallClimateArchives.GroundTextureArchive(groundClimate, season switch
         {
             DaggerfallClimateSeason.Winter => DaggerfallExteriorSeason.Winter,
             DaggerfallClimateSeason.Rain => DaggerfallExteriorSeason.Rain,
@@ -863,7 +863,7 @@ internal static partial class DaggerfallSiteContent
                         modelIndex,
                         rawIndex,
                         visual,
-                        DaggerfallDungeonMotionPolicy.InitialTransform(position, rotation),
+                        DaggerfallSiteGeometry.InitialTransform(position, rotation),
                         boundsMin,
                         boundsMax,
                         [.. collisionVertices],

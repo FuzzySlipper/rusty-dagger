@@ -3489,7 +3489,7 @@ internal static partial class DaggerfallBaseContent
             if (actor.Kind == "monster" && (actor.MobileId is null || actor.MobileId is < 0 || actor.MobileId >= DaggerfallEncounterActors.FirstClassMobile)) diagnostics.Add($"Monster '{actor.Id.Value}' has an unsupported mobile id.");
             if (actor.Level is < 1 or > 100 || actor.Weight is < 0 or > 100_000 || actor.Armor is < -MaximumAuthoredArmor or > MaximumAuthoredArmor || actor.Rewards.ExperienceReward is < 0 or > 1_000_000) diagnostics.Add($"Actor '{actor.Id.Value}' has an out-of-range level, weight, armor, or xp reward.");
             if (actor.Team is { } team && !ValidId(team)) diagnostics.Add($"Actor '{actor.Id.Value}' has an invalid team.");
-            if (actor.MinimumMaterial is { } material && !DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks.ContainsKey(material)) diagnostics.Add($"Actor '{actor.Id.Value}' refers to unknown minimum weapon material '{material}'.");
+            if (actor.MinimumMaterial is { } material && !DaggerfallItemMaterials.IsWeaponMaterial(material)) diagnostics.Add($"Actor '{actor.Id.Value}' refers to unknown minimum weapon material '{material}'.");
             if (actor.LootTableKey is { } lootTable && !lootTables.ContainsKey(lootTable)) diagnostics.Add($"Actor '{actor.Id.Value}' refers to missing loot table '{lootTable}'.");
             if (actor.ActionId is { } actionId && !actions.ContainsKey(actionId)) diagnostics.Add($"Actor '{actor.Id.Value}' refers to missing action '{actionId}'.");
             if (actor.Attacks.Any(range => range.MinimumDamage < 0 || range.MaximumDamage < range.MinimumDamage || range.MaximumDamage > MaximumAuthoredDamage)) diagnostics.Add($"Actor '{actor.Id.Value}' has an invalid attack range.");
@@ -3517,7 +3517,7 @@ internal static partial class DaggerfallBaseContent
             if (!ValidId(resource.Id) || string.IsNullOrWhiteSpace(resource.Label) || !vocabulary.Tracks.Contains(resource.Track) || resource.Track != DaggerfallMechanicsIds.Health && resource.Track != DaggerfallMechanicsIds.Fatigue && resource.Track != DaggerfallMechanicsIds.Stamina && resource.Track != DaggerfallMechanicsIds.Magicka) diagnostics.Add($"HUD resource '{resource.Id}' refers to an unsupported track or is malformed.");
         foreach (DaggerfallItemDefinition item in items.Values)
         {
-            if (item.Weapon is not null && (!DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks.ContainsKey(item.Weapon.Material) || !vocabulary.Skills.Any(skill => skill.Value == item.Weapon.Skill))) diagnostics.Add($"Weapon '{item.Id.Value}' refers to an unknown classic weapon material or skill.");
+            if (item.Weapon is not null && (!DaggerfallItemMaterials.IsWeaponMaterial(item.Weapon.Material) || !vocabulary.Skills.Any(skill => skill.Value == item.Weapon.Skill))) diagnostics.Add($"Weapon '{item.Id.Value}' refers to an unknown classic weapon material or skill.");
             if (item.Armor is not null && (!armorValues.ContainsKey(item.Armor.Material) || !vocabulary.ArmorParts.Contains(item.Armor.Part))) diagnostics.Add($"Armor '{item.Id.Value}' refers to an unknown material or armor part.");
             if (item.Shield is { Armor: < 0 or > MaximumAuthoredArmor }) diagnostics.Add($"Shield '{item.Id.Value}' armor is outside the Daggerfall policy range.");
             if (item.Weapon is not null && item.Armor is not null || item.Weapon is not null && item.Shield is not null || item.Armor is not null && item.Shield is not null) diagnostics.Add($"Item '{item.Id.Value}' cannot be weapon, armor, and shield simultaneously.");
@@ -4073,7 +4073,7 @@ internal static partial class DaggerfallBaseContent
         if (!actions.TryGetValue(DaggerfallEncounterActors.ClassEquippedMeleeAction, out DaggerfallActionDefinition? classMelee) || classMelee.Interpretation != "enemy-equipped-melee")
             diagnostics.Add($"Base payload must author '{DaggerfallEncounterActors.ClassEquippedMeleeAction}' as enemy-equipped melee; classic class encounters fight through it.");
         // Dungeon treasure resolves through the ruleset's dungeon-type map, which names these tables.
-        foreach (string key in DaggerfallLootPolicy.DungeonTableKeysInUse.Where(key => !loot.ContainsKey(key)))
+        foreach (string key in DaggerfallDungeonLootTables.DungeonTableKeysInUse.Where(key => !loot.ContainsKey(key)))
             diagnostics.Add($"Base payload is missing loot table '{key}', which dungeon treasure selects.");
     }
 

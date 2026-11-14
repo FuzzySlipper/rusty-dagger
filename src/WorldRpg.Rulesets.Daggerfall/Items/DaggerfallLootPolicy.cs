@@ -99,7 +99,7 @@ internal static class DaggerfallLootPolicy
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(draw);
-        string tableKey = DungeonTableKey(dungeonType);
+        string tableKey = DaggerfallDungeonLootTables.DungeonTableKey(dungeonType);
         DaggerfallLootResult ordinary = Generate(definitions, tableKey, playerLevel, draw, clothingGroup);
         List<DaggerfallLootDrop> drops = ordinary.Drops.ToList();
         List<DaggerfallLootExtraRoll> extras = [];
@@ -156,22 +156,9 @@ internal static class DaggerfallLootPolicy
         if (success) drops.Add(new DaggerfallLootDrop(itemId, 1, kind, recipe));
     }
 
-    /// <summary>The donor's <c>DFRegion.DungeonTypes</c> ordinal to loot-letter table.</summary>
-    internal static string DungeonTableKey(int dungeonType) => dungeonType >= 0 && dungeonType < DungeonTableKeys.Length
-        ? DungeonTableKeys[dungeonType]
-        : throw new ArgumentOutOfRangeException(nameof(dungeonType), "Daggerfall publishes nineteen dungeon loot table types (0 through 18).");
-
-    /// <summary>The loot tables the dungeon-type map selects, which an admitted base pack must therefore carry.</summary>
-    internal static IEnumerable<string> DungeonTableKeysInUse => DungeonTableKeys.Distinct(StringComparer.Ordinal);
-
     internal static string GoldRollId(string tableKey) => $"loot.{tableKey}.gold";
     internal static string SuccessRollId(string tableKey, string category, int slot) => $"loot.{tableKey}.{category}.{slot}";
     internal static string PickRollId(string tableKey, string category, int slot) => $"{SuccessRollId(tableKey, category, slot)}.pick";
-
-    private static readonly string[] DungeonTableKeys =
-    [
-        "K", "N", "N", "N", "K", "M", "M", "Q", "K", "U", "D", "N", "L", "F", "S", "N", "M", "L", "N",
-    ];
 
     private static readonly int[] DungeonMapChances = [2, 1, 1, 2, 2, 15];
 

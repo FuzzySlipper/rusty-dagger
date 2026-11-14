@@ -49,5 +49,5 @@ internal static class DaggerfallArmorVariantPolicy
         };
     }
 
-    private static bool IsPlate(string material) => DaggerfallItemMaterialPolicy.IsWeaponMaterial(material);
+    private static bool IsPlate(string material) => DaggerfallItemMaterials.IsWeaponMaterial(material);
 }

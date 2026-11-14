@@ -12,7 +12,7 @@ internal static class DaggerfallExteriorPopulation
         DaggerfallSiteRecord location, IEnumerable<(int X, int Z)> clear)
     {
         const int automapSide = 64;
-        const float blockSide = DaggerfallTerrainSurfaceBuilder.HorizontalSize / 8f;
+        const float blockSide = DaggerfallWorldGrid.HorizontalSize / 8f;
         const float cellSize = blockSide / automapSide;
         var factions = definitions.Factions.Factions.Values;
         var people = factions.Where(faction => faction.Type == 15 && faction.Region == location.Id.Region && faction.Flats.Count != 0)

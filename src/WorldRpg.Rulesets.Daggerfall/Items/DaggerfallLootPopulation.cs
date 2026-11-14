@@ -167,7 +167,7 @@ internal sealed record DaggerfallLootPopulationRequest(
             || PlayerLevel < 1 || Generation == 0 || Sequence == 0 || DungeonType is < 0 or > 18
             || Gender is not ("male" or "female") || ClothingGroup is not ("MensClothing" or "WomensClothing"))
             throw new ArgumentException("Loot population request carries invalid source, level, or player appearance data.");
-        if (DungeonType is int dungeonType && !string.Equals(TableKey, DaggerfallLootPolicy.DungeonTableKey(dungeonType), StringComparison.Ordinal))
+        if (DungeonType is int dungeonType && !string.Equals(TableKey, DaggerfallDungeonLootTables.DungeonTableKey(dungeonType), StringComparison.Ordinal))
             throw new ArgumentException("Dungeon loot population must use the table selected by its dungeon type.", nameof(TableKey));
         return this;
     }

@@ -245,7 +245,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         // The authored condition is the factory's own material adjustment of the same native template,
         // so a starting item and a created item of one template and material cannot disagree.
         Assert.Equal(
-            DaggerfallItemMaterialPolicy.Apply(definitions.ItemTemplateCatalog.Templates[120], "iron").MaximumCondition,
+            DaggerfallItemMaterials.Apply(definitions.ItemTemplateCatalog.Templates[120], "iron").MaximumCondition,
             longsword);
         Assert.True(longsword > 100 && dagger > 0 && cuirass > 100);
         Assert.Equal(longsword, fixture.Condition(1001));

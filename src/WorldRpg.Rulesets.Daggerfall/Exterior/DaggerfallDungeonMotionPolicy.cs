@@ -42,14 +42,6 @@ internal static class DaggerfallDungeonMotionPolicy
     private const float TranslationSourceUnitScale = 0.025f;
     private const float RotationSourceUnitDivisor = 5.68888888888889f;
 
-    /// <summary>Builds the initial Engine pose from the normalized source Euler tuple.</summary>
-    internal static Transform InitialTransform(Vector3 position, Vector3 rotationDegrees)
-    {
-        if (!IsFinite(position) || !IsFinite(rotationDegrees))
-            throw new ArgumentOutOfRangeException(nameof(position), "Action model pose must be finite.");
-        return DaggerfallSiteGeometry.Pose(position, rotationDegrees);
-    }
-
     /// <summary>
     /// Interprets a retained model action. The optional description is only used for DFU's
     /// explicitly named TRP rotation correction; it must come from source/model admission.
@@ -127,9 +119,6 @@ internal static class DaggerfallDungeonMotionPolicy
             _ => Vector3.Zero,
         };
     }
-
-    private static bool IsFinite(Vector3 value) =>
-        float.IsFinite(value.X) && float.IsFinite(value.Y) && float.IsFinite(value.Z);
 
     private static (Vector3 Axis, ushort Magnitude) Rotation(byte axis, ushort magnitude, string? modelDescription)
     {

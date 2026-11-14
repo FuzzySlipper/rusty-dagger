@@ -17,7 +17,7 @@ internal static class DaggerfallBuildingArrival
         float yaw = interior.InitialLook.YawRadians;
         if (interior.InteriorBuilding is { EntryFrame: { } frame } building)
         {
-            const float blockSide = DaggerfallTerrainSurfaceBuilder.HorizontalSize / 8f;
+            const float blockSide = DaggerfallWorldGrid.HorizontalSize / 8f;
             Vector3 origin = frame.ExteriorOrigin + new Vector3(building.BlockX * blockSide, 0f, -building.BlockY * blockSide);
             Vector3 check = Vector3.Transform(exteriorDoor - origin,
                 Quaternion.CreateFromAxisAngle(Vector3.UnitY, -frame.ExteriorYawDegrees * MathF.PI / 180f));

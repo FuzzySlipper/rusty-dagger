@@ -33,7 +33,7 @@ internal sealed record DaggerfallKnightlyArmorOffer(
             throw new ArgumentException($"Faction {FactionId} is not a retained knightly order.", nameof(FactionId));
         if (Rank is < 0 or > DaggerfallSocialState.MaximumGuildRank)
             throw new ArgumentOutOfRangeException(nameof(Rank));
-        if (!string.Equals(Material, Policies.DaggerfallItemMaterialPolicy.WeaponMaterials[Rank], StringComparison.Ordinal))
+        if (!string.Equals(Material, Policies.DaggerfallItemMaterials.WeaponMaterials[Rank], StringComparison.Ordinal))
             throw new ArgumentException("Knightly armor material does not match the donor rank band.", nameof(Material));
         ArgumentNullException.ThrowIfNull(TemplateIndices);
         if (TemplateIndices.Count is < 4 or > 7
@@ -188,7 +188,7 @@ internal sealed class DaggerfallKnightlyOrderClaimRuntime
         DaggerfallKnightlyArmorOffer offer = new DaggerfallKnightlyArmorOffer(
             factionId,
             rank,
-            Policies.DaggerfallItemMaterialPolicy.WeaponMaterials[rank],
+            Policies.DaggerfallItemMaterials.WeaponMaterials[rank],
             Array.AsReadOnly(templates)).Validate();
         return new(service, offer, DaggerfallKnightlyClaimTransactionDenial.None);
     }

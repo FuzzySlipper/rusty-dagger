@@ -217,11 +217,7 @@ internal sealed class DaggerfallExteriorWorld
     // A retired neighbour's drawn location stays in the last accepted snapshot until the next one is accepted
     // without it; only then can the Engine release it.
     private readonly List<IDisposable> _retiredResidentLocations = [];
-    // Exterior artifacts publish navigation cells at the source terrain's 0.8-unit grid. One
-    // wilderness map pixel is 819.2 world units, so adjacent location closures are exactly 1024
-    // navigation cells apart in the shared Engine artifact grid.
-    internal const long NavigationCellsPerExteriorCell = 1024;
-    private const float NavigationCellSize = DaggerfallExteriorCellResidency.CellSize / NavigationCellsPerExteriorCell;
+    private const float NavigationCellSize = DaggerfallExteriorCellResidency.CellSize / DaggerfallWorldGrid.NavigationCellsPerExteriorCell;
 
     /// <summary>
     /// A nearby normalized exterior profile has the same lifetime as its cell admission, while the
@@ -332,8 +328,8 @@ internal sealed class DaggerfallExteriorWorld
                     ? ActiveOrigin(residency)
                     : DaggerfallExteriorWorldOrigin.At(cell));
             (long frameColumns, long frameRows) = ExteriorLocationFrameCells(profile);
-            columnOffset = checked(((long)(cell.X - origin.MapPixelX) * NavigationCellsPerExteriorCell) + frameColumns);
-            rowOffset = checked(((long)(cell.Y - origin.MapPixelY) * NavigationCellsPerExteriorCell) + frameRows);
+            columnOffset = checked(((long)(cell.X - origin.MapPixelX) * DaggerfallWorldGrid.NavigationCellsPerExteriorCell) + frameColumns);
+            rowOffset = checked(((long)(cell.Y - origin.MapPixelY) * DaggerfallWorldGrid.NavigationCellsPerExteriorCell) + frameRows);
             translation = Vector3.UnitY * ExteriorLocationSampleHeight(profile);
         }
 

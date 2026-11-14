@@ -100,8 +100,8 @@ internal sealed class DaggerfallGroundCover : IDisposable
     {
         Dictionary<int, int> grounds = [];
         foreach (DaggerfallClimateValueDefinition climate in climates.Where(climate => !DaggerfallExteriorEnvironment.IsOceanClimate(climate.Value)))
-            grounds.TryAdd(DaggerfallExteriorEnvironment.NatureTextureArchive(climate.Value, DaggerfallExteriorSeason.Summer),
-                DaggerfallExteriorEnvironment.GroundTextureArchive(climate.Value, DaggerfallExteriorSeason.Summer));
+            grounds.TryAdd(DaggerfallClimateArchives.NatureTextureArchive(climate.Value, DaggerfallExteriorSeason.Summer),
+                DaggerfallClimateArchives.GroundTextureArchive(climate.Value, DaggerfallExteriorSeason.Summer));
         return grounds;
     }
 

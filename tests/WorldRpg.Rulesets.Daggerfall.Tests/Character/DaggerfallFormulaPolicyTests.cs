@@ -232,8 +232,8 @@ public sealed class DaggerfallFormulaPolicyTests
         DaggerfallDefinitions definitions = LoadDefinitions();
         Assert.Equal(
             ["K", "N", "N", "N", "K", "M", "M", "Q", "K", "U", "D", "N", "L", "F", "S", "N", "M", "L", "N"],
-            Enumerable.Range(0, 19).Select(DaggerfallLootPolicy.DungeonTableKey));
-        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallLootPolicy.DungeonTableKey(19));
+            Enumerable.Range(0, 19).Select(DaggerfallDungeonLootTables.DungeonTableKey));
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallDungeonLootTables.DungeonTableKey(19));
 
         DaggerfallDungeonLootResult dungeon = DaggerfallLootPolicy.GenerateDungeon(definitions, 12, 1, (_, minimum, _) => minimum);
 

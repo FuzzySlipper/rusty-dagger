@@ -205,7 +205,7 @@ internal sealed class DaggerfallGroundContainers
         try
         {
             var generated = population.Generate(new(new("world-treasure", identity.Value), DaggerfallItemOwner.Ground(id),
-                Policies.DaggerfallLootPolicy.DungeonTableKey(dungeonType), level, 1, 1, race, gender,
+                Policies.DaggerfallDungeonLootTables.DungeonTableKey(dungeonType), level, 1, 1, race, gender,
                 gender == "male" ? "MensClothing" : "WomensClothing", DungeonType: dungeonType));
             if (generated.Seeds.Count > 0) _containers.Seed(owner, generated.Seeds);
             population.RegisterGeneratedMetadata(generated, _instances);

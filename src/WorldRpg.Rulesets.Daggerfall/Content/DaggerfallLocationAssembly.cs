@@ -29,10 +29,10 @@ internal sealed class DaggerfallLocationAssembly
 {
     // Every block artifact is derived on the sites' 0.8-unit navigation grid: a map pixel (one terrain cell)
     // is eight RMB blocks or sixteen RDB blocks wide, so blocks sit whole cells apart.
-    private const float RmbBlockSide = DaggerfallTerrainSurfaceBuilder.HorizontalSize / 8F;
-    private const float RdbBlockSide = DaggerfallTerrainSurfaceBuilder.HorizontalSize / 16F;
-    private const long RmbBlockCells = DaggerfallExteriorWorld.NavigationCellsPerExteriorCell / 8;
-    private const long RdbBlockCells = DaggerfallExteriorWorld.NavigationCellsPerExteriorCell / 16;
+    private const float RmbBlockSide = DaggerfallWorldGrid.HorizontalSize / 8F;
+    private const float RdbBlockSide = DaggerfallWorldGrid.HorizontalSize / 16F;
+    private const long RmbBlockCells = DaggerfallWorldGrid.NavigationCellsPerExteriorCell / 8;
+    private const long RdbBlockCells = DaggerfallWorldGrid.NavigationCellsPerExteriorCell / 16;
 
     private const int AutomapSide = 64;
 
@@ -837,7 +837,7 @@ internal sealed class DaggerfallLocationAssembly
             {
                 _actionModels.Add(new DaggerfallDungeonActionModelDefinition(place(action.ActionId), doorId, doorIdentity, action.Description,
                     action.ModelIndex, action.RawIndex, new DaggerfallDoorVisual(mesh.Path, mesh.Sha256, [new DaggerfallMeshMaterialBinding(0, 0)]),
-                    DaggerfallDungeonMotionPolicy.InitialTransform(origin + model.Position, model.RotationDegrees), bounds.Minimum, bounds.Maximum,
+                    DaggerfallSiteGeometry.InitialTransform(origin + model.Position, model.RotationDegrees), bounds.Minimum, bounds.Maximum,
                     model.CollisionVertices, model.CollisionTriangles).Validate());
             }
             catch (ArgumentException exception) { diagnostics.Add($"Action model '{model.Id}' is invalid: {exception.Message}"); }

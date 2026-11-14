@@ -24,7 +24,7 @@ public sealed class DaggerfallTerrainSurfaceBuilderTests
         Assert.InRange(MathF.Abs(surface.Vertices[0].Y - expectedWorldHeight), 0F, .00001F);
         Assert.InRange(MathF.Abs(surface.Vertices[0].X), 0F, .000001F);
         Assert.InRange(MathF.Abs(surface.Vertices[0].Z), 0F, .000001F);
-        Assert.InRange(MathF.Abs(surface.Vertices[128].X - DaggerfallTerrainSurfaceBuilder.HorizontalSize), 0F, .00001F);
+        Assert.InRange(MathF.Abs(surface.Vertices[128].X - DaggerfallWorldGrid.HorizontalSize), 0F, .00001F);
         Assert.InRange(MathF.Abs(surface.Vertices[129].Z + DaggerfallTerrainSurfaceBuilder.SampleSpacing), 0F, .00001F);
 
     }

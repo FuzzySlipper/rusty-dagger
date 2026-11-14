@@ -28,8 +28,8 @@ internal static partial class DaggerfallSiteContent
                 || !int.TryParse(archiveText, out int archive) || !int.TryParse(recordText, out int record))
             { diagnostics.Add($"Decoration '{id}' has invalid sprite '{spriteId}'."); continue; }
             bool nature = kind == DaggerfallWorldProfileKind.Exterior && OptionalBoolean(flat, "climateNature", false, diagnostics);
-            int summer = nature ? DaggerfallExteriorEnvironment.NatureTextureArchive(climate, DaggerfallExteriorSeason.Summer) : archive;
-            int winter = nature ? DaggerfallExteriorEnvironment.NatureTextureArchive(climate, DaggerfallExteriorSeason.Winter) : archive;
+            int summer = nature ? DaggerfallClimateArchives.NatureTextureArchive(climate, DaggerfallExteriorSeason.Summer) : archive;
+            int winter = nature ? DaggerfallClimateArchives.NatureTextureArchive(climate, DaggerfallExteriorSeason.Winter) : archive;
             if (!sprites.TryGetValue((summer, record), out var warm) || !sprites.TryGetValue((winter, record), out var cold))
             { diagnostics.Add($"Decoration '{id}' lacks shared sprite {summer}/{record} or {winter}/{record}."); continue; }
             var position = ObjectVector3(flat.GetProperty("position"), id, diagnostics);

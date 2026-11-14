@@ -120,7 +120,7 @@ internal sealed class DaggerfallExteriorCellResidency
 {
     internal const int StreamingRadius = 3;
     internal const int StreamingDimension = (StreamingRadius * 2) + 1;
-    internal const float CellSize = DaggerfallTerrainSurfaceBuilder.HorizontalSize;
+    internal const float CellSize = DaggerfallWorldGrid.HorizontalSize;
 
     private readonly DaggerfallExteriorWorldBounds _bounds;
     private readonly HashSet<DaggerfallExteriorCellId> _resident = [];

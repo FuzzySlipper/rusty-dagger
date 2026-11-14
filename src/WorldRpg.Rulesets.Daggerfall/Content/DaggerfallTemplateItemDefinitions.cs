@@ -123,7 +123,7 @@ internal static class DaggerfallTemplateItemDefinitions
         DaggerfallItemId id = new(material == "none" ? $"template-{template.Index}" : $"template-{template.Index}-{material}");
         DaggerfallMaterializedItemProperties properties = material == "none"
             ? new(Weight(template.BaseWeight), template.BasePrice, template.HitPoints)
-            : DaggerfallItemMaterialPolicy.Apply(template, material);
+            : DaggerfallItemMaterials.Apply(template, material);
         DaggerfallWeaponDefinition? weapon = source?.Weapon is { } sourceWeapon
             ? sourceWeapon with { Material = material == "none" ? sourceWeapon.Material : material, Value = properties.Value, Weight = properties.Weight }
             : null;
@@ -164,9 +164,9 @@ internal static class DaggerfallTemplateItemDefinitions
     private static IEnumerable<string> MaterialsFor(DaggerfallItemTemplateDefinition template)
     {
         if (template.Groups.Contains("Weapons", StringComparer.Ordinal) && template.Index != 131)
-            return DaggerfallItemMaterialPolicy.WeaponMaterials;
+            return DaggerfallItemMaterials.WeaponMaterials;
         if (template.Groups.Contains("Armor", StringComparer.Ordinal))
-            return ["leather", "chain", .. DaggerfallItemMaterialPolicy.WeaponMaterials];
+            return ["leather", "chain", .. DaggerfallItemMaterials.WeaponMaterials];
         return [];
     }
 

@@ -22,7 +22,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
 {
     /// <summary>Cells along a tile's side: the finest ring's tile is one map pixel, each coarser tile four of the last.</summary>
     internal const uint TileCells = 16;
-    internal const double FineCellMetres = DaggerfallTerrainSurfaceBuilder.HorizontalSize / TileCells;
+    internal const double FineCellMetres = DaggerfallWorldGrid.HorizontalSize / TileCells;
     internal const double MiddleCellMetres = FineCellMetres * 4, CoarseCellMetres = FineCellMetres * 16;
     internal const double FineReachMetres = 8_192, MiddleReachMetres = 49_152, CoarseReachMetres = 204_800;
     private const double Spacing = DaggerfallTerrainSurfaceBuilder.SampleSpacing;
@@ -127,7 +127,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         _groundsAbout = (mapX, mapY);
         Dictionary<DaggerfallExteriorCellId, DaggerfallGroundTileGrid> held = Volatile.Read(ref _grounds);
         Dictionary<DaggerfallExteriorCellId, DaggerfallGroundTileGrid>? read = null;
-        int reach = (int)Math.Ceiling(NearReachMetres / DaggerfallTerrainSurfaceBuilder.HorizontalSize) + 1;
+        int reach = (int)Math.Ceiling(NearReachMetres / DaggerfallWorldGrid.HorizontalSize) + 1;
         for (int cellY = mapY - reach; cellY <= mapY + reach; cellY++)
         for (int cellX = mapX - reach; cellX <= mapX + reach; cellX++)
         {
@@ -203,7 +203,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             double x = tile.SampleX(i), z = tile.SampleZ(j);
             (int mapX, int mapY) = MapPixel(x, z);
             int climate = Climate(mapX, mapY);
-            samples.SetGround(i, j, (uint)(DaggerfallExteriorEnvironment.NatureTextureArchive(climate, season) - DaggerfallNatureArchives.First));
+            samples.SetGround(i, j, (uint)(DaggerfallClimateArchives.NatureTextureArchive(climate, season) - DaggerfallNatureArchives.First));
             samples.SetCover(i, j, FloraCover(x, z, ground[((j + 1) * heightSide) + i + 1], Slope(ground, heightSide, i, j, tile.CellSize),
                 climate, winter, materials, flora));
         }
@@ -281,7 +281,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             double x = tile.SampleX(i), z = tile.SampleZ(j);
             (int mapX, int mapY) = MapPixel(x, z);
             int climate = Climate(mapX, mapY);
-            samples.SetGround(i, j, (uint)(DaggerfallExteriorEnvironment.NatureTextureArchive(climate, season) - DaggerfallNatureArchives.First));
+            samples.SetGround(i, j, (uint)(DaggerfallClimateArchives.NatureTextureArchive(climate, season) - DaggerfallNatureArchives.First));
             double height = ground[((j + 1) * heightSide) + i + 1];
             float slope = Slope(ground, heightSide, i, j, tile.CellSize);
             samples.SetCover(i, j, grass is { } g
@@ -365,7 +365,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         for (int i = 1; i < 4; i++) if (look.Weights[i] > look.Weights[layer]) layer = i;
         if (look.Weights[layer] < share) return null;
         (int mapX, int mapY) = MapPixel(x, z);
-        if (DaggerfallExteriorEnvironment.IsDesertClimate(Climate(mapX, mapY))) return "sand";
+        if (DaggerfallClimateArchives.IsDesertClimate(Climate(mapX, mapY))) return "sand";
         return layer switch
         {
             0 => look.Archive % 100 == 3 ? "snow" : "grass",
@@ -388,8 +388,8 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
             for (int i = 0; i < points; i++)
             {
                 double angle = 2 * Math.PI * i / points, px = x + (ring * Math.Cos(angle)), pz = z + (ring * Math.Sin(angle));
-                if (px < Spacing || pz < Spacing || px >= _terrain.Width * DaggerfallTerrainSurfaceBuilder.HorizontalSize
-                    || pz >= _terrain.Height * DaggerfallTerrainSurfaceBuilder.HorizontalSize) continue;
+                if (px < Spacing || pz < Spacing || px >= _terrain.Width * DaggerfallWorldGrid.HorizontalSize
+                    || pz >= _terrain.Height * DaggerfallWorldGrid.HorizontalSize) continue;
                 // A spot in the middle of its kind, not on its edge, so the whole view about it shows it.
                 if (Kind(px, pz, winter) == kind && Kind(px + 12, pz, winter) == kind && Kind(px, pz + 12, winter) == kind
                     && Kind(px - 12, pz, winter) == kind && Kind(px, pz - 12, winter) == kind) return (px, pz);
@@ -416,7 +416,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         (int mapX, int mapY) = MapPixel(x, z);
         float elevation = Math.Clamp(_terrain.Heightmap[(Math.Clamp(mapY, 0, _terrain.Height - 1) * _terrain.Width) + Math.Clamp(mapX, 0, _terrain.Width - 1)] / 128F, .4F, 1F);
         float chance = (look.X * flora.GrassChance) + (look.Y * flora.DirtChance) + (look.Z * flora.StoneChance);
-        return Math.Clamp(chance * elevation * (DaggerfallExteriorEnvironment.IsDesertClimate(climate) ? flora.DesertShare : 1), 0, 1);
+        return Math.Clamp(chance * elevation * (DaggerfallClimateArchives.IsDesertClimate(climate) ? flora.DesertShare : 1), 0, 1);
     }
 
     /// <summary>Whether a point lies in a location's clearing: its flattened rectangle and the donor's clearance about it.</summary>
@@ -458,8 +458,8 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     internal double Floor(double x, double z)
     {
         // Heightmap pixel (X, Y) is vertex (0, 0) of map pixel (X + 1, Y).
-        double mapX = Math.Clamp((x / DaggerfallTerrainSurfaceBuilder.HorizontalSize) - 1, 0, _terrain.Width - 1.001);
-        double mapY = Math.Clamp(z / DaggerfallTerrainSurfaceBuilder.HorizontalSize, 0, _terrain.Height - 1.001);
+        double mapX = Math.Clamp((x / DaggerfallWorldGrid.HorizontalSize) - 1, 0, _terrain.Width - 1.001);
+        double mapY = Math.Clamp(z / DaggerfallWorldGrid.HorizontalSize, 0, _terrain.Height - 1.001);
         int ix = (int)mapX, iy = (int)mapY, at = (iy * _terrain.Width) + ix;
         double fx = mapX - ix, fy = mapY - iy;
         double top = _floor[at] + ((_floor[at + 1] - _floor[at]) * fx);
@@ -507,9 +507,9 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     }
 
     /// <summary>Whether a point of the map lies in a river, as a sampling this coarse holds it. The rivers are measured from the heightmap's corner, a map pixel west of the ground's.</summary>
-    private bool InChannel(double x, double z, double finestMetres) => _terrain.Rivers?.InChannel(x - DaggerfallTerrainSurfaceBuilder.HorizontalSize, z, finestMetres) ?? false;
+    private bool InChannel(double x, double z, double finestMetres) => _terrain.Rivers?.InChannel(x - DaggerfallWorldGrid.HorizontalSize, z, finestMetres) ?? false;
 
-    private bool OnBank(double x, double z) => _terrain.Rivers?.OnBank(x - DaggerfallTerrainSurfaceBuilder.HorizontalSize, z, Spacing * 2) ?? false;
+    private bool OnBank(double x, double z) => _terrain.Rivers?.OnBank(x - DaggerfallWorldGrid.HorizontalSize, z, Spacing * 2) ?? false;
 
     private ArchiveMaterials Archive(double x, double z, bool winter, GroundMaterials materials) => materials.Archives[GroundArchive(x, z, winter)];
 
@@ -520,14 +520,14 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     internal int NatureArchive(double x, double z, bool winter)
     {
         (int mapX, int mapY) = MapPixel(x, z);
-        return DaggerfallExteriorEnvironment.NatureTextureArchive(Climate(mapX, mapY), winter ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer);
+        return DaggerfallClimateArchives.NatureTextureArchive(Climate(mapX, mapY), winter ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer);
     }
 
     /// <summary>The ground archive at a point.</summary>
     internal int GroundArchive(double x, double z, bool winter)
     {
         (int mapX, int mapY) = MapPixel(x, z);
-        return DaggerfallExteriorEnvironment.GroundTextureArchive(Climate(mapX, mapY), winter ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer);
+        return DaggerfallClimateArchives.GroundTextureArchive(Climate(mapX, mapY), winter ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer);
     }
 
     /// <summary>The walked surface at a point: its vertices flattened under locations, and between them a straight line.</summary>
@@ -690,8 +690,8 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     }
 
     internal static (int X, int Y) MapPixel(double x, double z) => (
-        (int)Math.Floor(x / DaggerfallTerrainSurfaceBuilder.HorizontalSize),
-        (int)Math.Ceiling(z / DaggerfallTerrainSurfaceBuilder.HorizontalSize));
+        (int)Math.Floor(x / DaggerfallWorldGrid.HorizontalSize),
+        (int)Math.Ceiling(z / DaggerfallWorldGrid.HorizontalSize));
 
     private int Climate(int mapX, int mapY) =>
         _climate(Math.Clamp(mapX, 0, _terrain.Width - 1), Math.Clamp(mapY, 0, _terrain.Height - 1));

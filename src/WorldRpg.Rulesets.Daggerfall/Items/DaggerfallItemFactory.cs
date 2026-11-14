@@ -134,9 +134,9 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
 
     private static string? MagicMaterial(DaggerfallMagicItemDefinition magic, string category) => category switch
     {
-        "Weapons" when magic.Material is >= 0 and < 10 => DaggerfallItemMaterialPolicy.WeaponMaterials[magic.Material],
+        "Weapons" when magic.Material is >= 0 and < 10 => DaggerfallItemMaterials.WeaponMaterials[magic.Material],
         // SetArtifact adds 0x200 to the MAGIC.DEF material; its stored value is the metal ordinal.
-        "Armor" when magic.Material is >= 0 and < 10 => DaggerfallItemMaterialPolicy.WeaponMaterials[magic.Material],
+        "Armor" when magic.Material is >= 0 and < 10 => DaggerfallItemMaterials.WeaponMaterials[magic.Material],
         "Armor" => throw new InvalidOperationException($"Magic armor '{magic.Key}' has unknown material {magic.Material}."),
         _ => null,
     };
@@ -171,8 +171,8 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         }
         if (request.Material is { } selected)
         {
-            if (weapon && DaggerfallItemMaterialPolicy.IsWeaponMaterial(selected)) return selected;
-            if (armor && DaggerfallItemMaterialPolicy.IsArmorMaterial(selected)) return selected;
+            if (weapon && DaggerfallItemMaterials.IsWeaponMaterial(selected)) return selected;
+            if (armor && DaggerfallItemMaterials.IsArmorMaterial(selected)) return selected;
             throw new ArgumentException($"Material '{selected}' is not valid for template {template.Index}.", nameof(request));
         }
         if (template.Groups.Contains("Weapons", StringComparer.Ordinal))
@@ -294,7 +294,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
     {
         ArgumentNullException.ThrowIfNull(template);
         if (template.Index == 131) return 0;
-        return material is null or "none" ? template.HitPoints : DaggerfallItemMaterialPolicy.Apply(template, material).MaximumCondition;
+        return material is null or "none" ? template.HitPoints : DaggerfallItemMaterials.Apply(template, material).MaximumCondition;
     }
 
     private static string MaterializedItemId(DaggerfallItemTemplateDefinition template, string material) =>

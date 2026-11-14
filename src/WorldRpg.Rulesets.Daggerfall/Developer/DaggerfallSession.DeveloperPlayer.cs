@@ -206,7 +206,7 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
         foreach (DaggerfallItemTemplateDefinition template in DeveloperTemplates()
             .Where(template => template.Name.Contains(filter ?? "", StringComparison.OrdinalIgnoreCase)))
             text.AppendLine($"{template.Index} {template.Name} ({template.Groups[0]})");
-        text.AppendLine($"Weapon materials: {string.Join(", ", DaggerfallItemMaterialPolicy.WeaponMaterials)}; armour also leather, chain.");
+        text.AppendLine($"Weapon materials: {string.Join(", ", DaggerfallItemMaterials.WeaponMaterials)}; armour also leather, chain.");
         text.Append($"Skills: {string.Join(", ", State.SkillUses.Skills)}.");
         return DebugCommandResult.Success(text.ToString());
     }
@@ -222,7 +222,7 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
         material = null;
         string text = (requested ?? "").Trim();
         if (text.Length == 0) return "Name an item; player.items lists them.";
-        string[] materials = [.. DaggerfallItemMaterialPolicy.WeaponMaterials, "leather", "chain"];
+        string[] materials = [.. DaggerfallItemMaterials.WeaponMaterials, "leather", "chain"];
         material = materials.FirstOrDefault(name => text.StartsWith(name + " ", StringComparison.OrdinalIgnoreCase));
         string name = material is null ? text : text[(material.Length + 1)..].Trim();
         DaggerfallItemTemplateDefinition[] all = [.. DeveloperTemplates()];
@@ -235,8 +235,8 @@ internal sealed partial class DaggerfallSession : IDeveloperPlayerSession
             return $"'{requested}' names {found.Length} items: {string.Join(", ", found.Take(8).Select(candidate => $"{candidate.Index} {candidate.Name}"))}{(found.Length > 8 ? ", ..." : "")}.";
         template = found[0];
         string group = template.Groups[0];
-        if (material is not null && !(group == "Weapons" ? DaggerfallItemMaterialPolicy.IsWeaponMaterial(material)
-            : group == "Armor" && DaggerfallItemMaterialPolicy.IsArmorMaterial(material)))
+        if (material is not null && !(group == "Weapons" ? DaggerfallItemMaterials.IsWeaponMaterial(material)
+            : group == "Armor" && DaggerfallItemMaterials.IsArmorMaterial(material)))
             return $"{template.Name} ({group}) takes no material '{material}'.";
         return null;
     }

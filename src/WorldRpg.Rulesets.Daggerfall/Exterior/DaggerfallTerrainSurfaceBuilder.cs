@@ -46,7 +46,7 @@ internal sealed class DaggerfallTerrainSurface
     {
         if (Rivers is not { } rivers) return false;
         (double mapX, double mapY) = DaggerfallTerrainSurfaceBuilder.ReliefPoint(MapPixelX, MapPixelY, tileX + .5, tileY + .5);
-        return rivers.OnBank(mapX * DaggerfallTerrainSurfaceBuilder.HorizontalSize, mapY * DaggerfallTerrainSurfaceBuilder.HorizontalSize, DaggerfallTerrainSurfaceBuilder.SampleSpacing * 2);
+        return rivers.OnBank(mapX * DaggerfallWorldGrid.HorizontalSize, mapY * DaggerfallWorldGrid.HorizontalSize, DaggerfallTerrainSurfaceBuilder.SampleSpacing * 2);
     }
 }
 
@@ -91,7 +91,6 @@ internal static class DaggerfallTerrainSurfaceBuilder
     internal const float OceanElevation = 27.2F;
     internal const float MaxTerrainHeight = 1539F;
     internal const float TerrainScale = 1.5F;
-    internal const float HorizontalSize = 819.2F;
     internal const float SampleSpacing = 6.4F;
     internal const float TerrainVerticalSize = MaxTerrainHeight * TerrainScale;
     // Daggerfall Unity's location parent samples Terrain at HeightmapDimension * .55. The
@@ -171,11 +170,11 @@ internal static class DaggerfallTerrainSurfaceBuilder
     }
 
     private static double Gullies(DaggerfallTerrainRivers? rivers, double mapX, double mapY) =>
-        rivers?.GullyShare(mapX * HorizontalSize, mapY * HorizontalSize) ?? 1;
+        rivers?.GullyShare(mapX * DaggerfallWorldGrid.HorizontalSize, mapY * DaggerfallWorldGrid.HorizontalSize) ?? 1;
 
     /// <summary>A normalized height with any river cut into it; a channel reaching the sea stops at the ocean clamp, where the seabed takes over.</summary>
     private static float Carved(DaggerfallTerrainRivers rivers, float normalized, double mapX, double mapY, double finestMetres) =>
-        Math.Max(OceanElevation / MaxTerrainHeight, (float)(rivers.Carve(mapX * HorizontalSize, mapY * HorizontalSize, normalized * (double)TerrainVerticalSize, finestMetres) / TerrainVerticalSize));
+        Math.Max(OceanElevation / MaxTerrainHeight, (float)(rivers.Carve(mapX * DaggerfallWorldGrid.HorizontalSize, mapY * DaggerfallWorldGrid.HorizontalSize, normalized * (double)TerrainVerticalSize, finestMetres) / TerrainVerticalSize));
 
     /// <summary>Vertex (0, 0) of map pixel (X, Y) is heightmap pixel (X - 1, Y), and its rows run north to (X, Y - 1).</summary>
     internal static (double X, double Y) ReliefPoint(int mapPixelX, int mapPixelY, double x, double y) =>

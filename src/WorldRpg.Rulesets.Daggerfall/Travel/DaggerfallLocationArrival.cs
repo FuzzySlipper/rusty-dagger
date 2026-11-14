@@ -19,7 +19,7 @@ internal enum DaggerfallArrivalSide { North = 0, South = 1, East = 2, West = 3 }
 internal static class DaggerfallLocationArrival
 {
     // RMBLayout.RMBSide: one RMB block, a map pixel's eighth.
-    private const float BlockSide = DaggerfallTerrainSurfaceBuilder.HorizontalSize / 8F;
+    private const float BlockSide = DaggerfallWorldGrid.HorizontalSize / 8F;
 
     // Buildings can stand at a block's very edge; the donor lands a tenth of a block outside the location.
     private const float Clearance = BlockSide * 0.1F;

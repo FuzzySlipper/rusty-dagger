@@ -115,6 +115,14 @@ internal sealed class DaggerfallSiteGeometry
     internal static Transform Pose(Vector3 position, Vector3 rotationDegrees) =>
         new(position, SourceRotation(rotationDegrees), Vector3.One);
 
+    /// <summary>An action model's initial Engine pose from its normalized source Euler tuple, refused unless finite.</summary>
+    internal static Transform InitialTransform(Vector3 position, Vector3 rotationDegrees)
+    {
+        if (!IsFinite(position) || !IsFinite(rotationDegrees))
+            throw new ArgumentOutOfRangeException(nameof(position), "Action model pose must be finite.");
+        return Pose(position, rotationDegrees);
+    }
+
     /// <summary>The right-handed rotation the donor's source Euler degrees turn a model by.</summary>
     internal static Quaternion SourceRotation(Vector3 rotationDegrees)
     {
@@ -123,4 +131,7 @@ internal sealed class DaggerfallSiteGeometry
             * Quaternion.CreateFromAxisAngle(Vector3.UnitX, -radians.X)
             * Quaternion.CreateFromAxisAngle(Vector3.UnitY, -radians.Y));
     }
+
+    private static bool IsFinite(Vector3 value) =>
+        float.IsFinite(value.X) && float.IsFinite(value.Y) && float.IsFinite(value.Z);
 }

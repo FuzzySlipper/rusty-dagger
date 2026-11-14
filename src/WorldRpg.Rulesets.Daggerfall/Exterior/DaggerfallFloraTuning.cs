@@ -58,7 +58,7 @@ internal sealed record DaggerfallFloraTuning(float Density, IReadOnlyDictionary<
         Dictionary<int, float> density = [];
         foreach (DaggerfallClimateValueDefinition climate in named)
         foreach (DaggerfallExteriorSeason season in new[] { DaggerfallExteriorSeason.Summer, DaggerfallExteriorSeason.Winter })
-            density[DaggerfallExteriorEnvironment.NatureTextureArchive(climate.Value, season)] = ClimateDensity[climate.Name];
+            density[DaggerfallClimateArchives.NatureTextureArchive(climate.Value, season)] = ClimateDensity[climate.Name];
         return density;
     }
 
