@@ -1,0 +1,13 @@
+scripts/route.py main: passed
+rusty-dagger verify at a7d99b69acf661ce57a6dcbd21852d998c405b63 passed in 38.1 min
+verify on den-m5, 38.1 min, pass: /home/agent/dev/rusty-dagger/local/build/route/main-a7d99b69acf6-20261114T013103/verify.log
+    lane: run 5cc894af08cfae58989ff7cda0e14ff6 of verify on den-m5 at a7d99b69acf661ce57a6dcbd21852d998c405b63 (0 s)
+    lane: tooling took 10 s, peak memory 38 MiB
+    Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 206 ms - WorldRpg.Architecture.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:   876, Skipped:     0, Total:   876, Duration: 15 m 54 s - Daggerfall.Import.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:  4136, Skipped:     8, Total:  4144, Duration: 16 m 10 s - WorldRpg.Rulesets.Daggerfall.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:   271, Skipped:     0, Total:   271, Duration: 93 ms - WorldRpg.Kit.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:    52, Skipped:     0, Total:    52, Duration: 62 ms - WorldRpg.Host.Tests.dll (net10.0)
+    play-smoke 20.8s passed: mode Playing, drawn cameras 1, characterStepCalls 1, voxelResidencyCalls 0, music cue started
+    Verified Engine pair 0.1.0-dev.d23eb7881a8d: CoreCLR. Use --aot for the NativeAOT fidelity publish.
+    lane: verify took 2012 s, peak memory 18069 MiB
