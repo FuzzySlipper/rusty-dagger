@@ -23,6 +23,9 @@ public enum DaggerfallSeason
 /// </summary>
 internal readonly record struct DaggerfallSkyTime(int Hour, int SecondOfDay, int DayOfYear, DaggerfallSeason Season, int MasserCycleDay, int SecundaCycleDay)
 {
+    /// <summary>Hours in a day.</summary>
+    internal const int HoursPerDay = 24;
+
     /// <summary>Days in each moon's cycle, full moon to full moon.</summary>
     internal const int CycleDays = 32;
 

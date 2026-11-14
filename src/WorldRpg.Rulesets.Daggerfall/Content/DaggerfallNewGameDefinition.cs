@@ -113,7 +113,7 @@ internal static partial class DaggerfallBaseContent
             if (quests.Any(string.IsNullOrWhiteSpace) || quests.Distinct(StringComparer.Ordinal).Count() != quests.Length)
                 diagnostics.Add($"New-game start pack '{packId}' must name distinct quest sources.");
             int startHour = OptionalInteger(root, "startHour", diagnostics) ?? baseline.StartHour;
-            if (startHour is < 0 or >= DaggerfallCalendar.HoursPerDay) diagnostics.Add($"New-game start pack '{packId}' names start hour {startHour}, outside the day.");
+            if (startHour is < 0 or >= DaggerfallSkyTime.HoursPerDay) diagnostics.Add($"New-game start pack '{packId}' names start hour {startHour}, outside the day.");
             bool quickEntry = root.TryGetProperty("quickEntry", out JsonElement quick) && quick.GetBoolean();
             diagnostics.ThrowIfAny();
             return baseline with { Gold = gold, StartSitePack = startSite, Quests = quests, StartHour = startHour, QuickEntry = quickEntry };

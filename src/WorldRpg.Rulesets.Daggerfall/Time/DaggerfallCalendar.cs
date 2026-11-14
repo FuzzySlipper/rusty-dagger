@@ -25,7 +25,7 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
     public const int MinutesPerHour = 60;
 
     /// <summary>Hours in a day.</summary>
-    public const int HoursPerDay = 24;
+    public const int HoursPerDay = DaggerfallSkyTime.HoursPerDay;
 
     /// <summary>Days in a week, which is what cycles the weekday.</summary>
     public const int DaysPerWeek = 7;
