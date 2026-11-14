@@ -20,7 +20,7 @@ public sealed class DaggerfallHudPresentationTests
     [InlineData("Steal", "Container", "Steal from")]
     [InlineData("Bash", "Door", "Bash")]
     public void The_prompt_names_what_use_does_in_each_mode(string mode, string kind, string action) =>
-        Assert.Equal(action, DaggerfallHudText.PromptAction(Enum.Parse<DaggerfallActivationMode>(mode), Enum.Parse<DaggerfallActivationTargetKind>(kind)));
+        Assert.Equal(action, DaggerfallActivationPrompt.Action(Enum.Parse<DaggerfallActivationMode>(mode), Enum.Parse<DaggerfallActivationTargetKind>(kind)));
 
     [Theory]
     [InlineData(24, false, true)]

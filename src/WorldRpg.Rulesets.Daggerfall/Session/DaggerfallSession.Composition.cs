@@ -204,7 +204,7 @@ internal sealed partial class DaggerfallSession
                     admitted.DungeonActions,
                     variables.Write,
                     snapshot,
-                    ExecuteDungeonFamilyAction));
+                    action => DungeonActions.Execute(action)));
             }
             // ResolveRestore admitted every saved discovery against a dungeon profile of the catalog.
             Dictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries = [];
@@ -244,7 +244,7 @@ internal sealed partial class DaggerfallSession
             _camera = new FirstPersonCameraSystem(engine.CameraView, assembled.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
             TargetingService targeting = new(engine.Perception, _spatial, actors,
-                new DaggerTargetingPolicy(authored, tuning.MeleeTargeting, () => _sites.Projection.Inputs, npcs.IsGameplayActive, PersonSightHeight));
+                new DaggerTargetingPolicy(authored, tuning.MeleeTargeting, () => _sites.Projection.Inputs, npcs.IsGameplayActive, id => _sight.PersonHeight(id)));
             CombatResolution combatRules = new();
             _combatResolution = combatRules;
             _vitality = new DaggerfallVitalityConsequences(combatRules);
@@ -785,7 +785,7 @@ internal sealed partial class DaggerfallSession
                     // WeaponManager sends Attack to an action on the environment after the ordinary hit query. The safe
                     // Engine hit reports a static surface rather than a source id, so the normalized placement resolver
                     // is the product-side identity join.
-                    _ = TryTriggerDungeonActionRay(look.Forward, _tuning.MeleeTargeting.MaximumDistance, DaggerfallDungeonActionEvent.Attack);
+                    _ = DungeonActions.TriggerRay(look.Forward, _tuning.MeleeTargeting.MaximumDistance, DaggerfallDungeonActionEvent.Attack);
                     TryBashDoorWithSwing(look);
                 });
             DaggerfallEnemySpellRelease enemySpells = new(Casting, SpellTargets, cast => _touch.Reach(cast), _contact, _spatial,
@@ -880,7 +880,7 @@ internal sealed partial class DaggerfallSession
             _persistence.BanishedActors = () => _roster.BanishedActors;
             DaggerfallInteriors interiors = new(actionTriggers, State.DungeonActions, State.DungeonDiscoveries,
                 (key, admitted) => new DaggerfallDungeonActionGraph(key.LogicalId, admitted.DungeonActions, State.Variables.Write,
-                    executeFamilyAction: ExecuteDungeonFamilyAction), _site);
+                    executeFamilyAction: action => DungeonActions.Execute(action)), _site);
             _sites = new DaggerfallSiteCrossing(engine, State.Actors, State.Npcs, State.PlayerControl, State.Effects, State.Transport.ForceFootOnInteriorTransition,
                 definitions, tuning.Site, _time, _site, _spatial, _camera, audioBundles,
                 _roster, _persistence, (id, definition, offset) => _persistence.CaptureDynamicActorDelta(id, definition, offset),
@@ -982,7 +982,21 @@ internal sealed partial class DaggerfallSession
                 ownsInterior: interior => Holdings.OwnsInterior(interior),
                 questClaims: State.Quests.ClaimsBuilding);
             Locks = new DaggerfallLocks(State.Actors, State.SkillUses, State.Equipment, _site, definitions, _random);
-            InitializeActivation(engine, tuning.LootInteraction);
+            _sight = new DaggerfallActivationSight(() => _sites.Projection.Inputs, State.Npcs, State.Actors, _roster.Definitions);
+            DungeonActions = new DaggerfallDungeonActions(State.DungeonActions, () => _activeProfileKey,
+                () => _sites.Projection.Inputs, () => _doors, () => _sites.Projection.Motion,
+                _sites.Interiors.ActionTriggers, _spatial, () => _exterior.CharacterEnvironment(State.PlayerControl.Motion),
+                _exterior.LocalToProfile, _sites.TryRelocatePlayer, State.PlayerControl, State.Actors,
+                tuning.Camera.EyeHeight, tuning.Spatial.CollisionVoxelSize, Traps.SpreadHurt, combatRules, _random,
+                (source, spell, target) => Casting.TriggerDungeonAction(source, spell, target), _facts,
+                damage => AppendDamage(damage, DaggerfallDamageCause.Hazard, 0),
+                () => _latestUpdateGeneration, () => _latestSimulationStep, ExecuteDungeonTextAction,
+                actionId => _dungeonTextProjection is { Kind: DaggerfallDungeonTextActionKind.DoorText, ActionId: var shown }
+                    && string.Equals(shown, actionId, StringComparison.Ordinal),
+                message => Presentation.SetOutcome(message));
+            Activation = new DaggerfallActivation(DungeonActions, State.Actors, State.PlayerControl, () => _doors,
+                tuning.LootInteraction.MaximumDistance, tuning.MeleeTargeting.MaximumDistance);
+            ComposeActivation(engine, tuning.LootInteraction);
             _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps, State.Social, State.SkillUses);
             _characterUi.UseGuildMembership(State.GuildMembership, () => checked((int)_time.Calendar.DayNumber));
             _characterUi.UseLegalStanding(() => _site.Region, region => State.Crime.BanishedRegions.Contains(region));
@@ -1096,7 +1110,7 @@ internal sealed partial class DaggerfallSession
             dialogueWorld: State.DialogueWorld, suppressTalk: () => State.RacialOverrides.Current?.SuppressTalk == true);
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
-            id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), PersonSightHeight);
+            id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), _sight.PersonHeight);
     }
 
     private (string Text, IReadOnlyList<string> Diagnostics)? ResolveQuestTopic(long npcId, string topicId)
@@ -1104,6 +1118,84 @@ internal sealed partial class DaggerfallSession
         return State.Quests.TryResolveDialogueTopic(npcId, topicId,
             out string? text, out IReadOnlyList<string> diagnostics)
             ? (text!, diagnostics) : null;
+    }
+
+    // A wielded item's template and metal, which choose how the 3D first-person art draws it.
+    private (int? Template, string Metal, bool Enchanted) HeldItem(KitUniqueInventoryItem item)
+    {
+        DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(item.Definition.Value));
+        var metadata = _inventoryUi.EquippedMetadata(item.EntityId);
+        return (_definitions.SourceTemplateFor(definition)?.Index, metadata?.Material ?? definition.Weapon?.Material ?? DaggerfallHeldDrawing.Steel, metadata?.HasEnchantment == true);
+    }
+
+    // The shield worn on the off arm: its template and metal, which the 3D first-person art draws it by.
+    private (int Template, string Metal)? HeldShield(EquipmentRead equipment)
+    {
+        foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in equipment.Assignments)
+        {
+            if (assignment.Slot.Value != "left-hand") continue;
+            DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value));
+            if (definition.Shield is not null && _definitions.SourceTemplateFor(definition) is { } template)
+                return (template.Index, _inventoryUi.EquippedMetadata(assignment.Item.EntityId)?.Material ?? definition.Armor?.Material ?? DaggerfallHeldDrawing.Steel);
+        }
+        return null;
+    }
+
+    // The arm set the 3D first-person art draws: the player's gender, and the heaviest armour on the arms.
+    private string HeldArms(DaggerfallHeldArt art, EquipmentRead equipment)
+    {
+        if (State.RacialOverrides.Current is { State.BeastForm: true } form) return art.Arms(form.State.Kind);
+        List<string> worn = [];
+        foreach (WorldRpg.Kit.Inventory.EquipmentAssignment assignment in equipment.Assignments)
+        {
+            if (!DaggerfallArmWearPolicy.Slots.Contains(assignment.Slot.Value)) continue;
+            DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value));
+            if ((_inventoryUi.EquippedMetadata(assignment.Item.EntityId)?.Material ?? definition.Armor?.Material) is { } material) worn.Add(material);
+        }
+        return art.Arms(State.Character.Identity.Gender, DaggerfallArmWearPolicy.Heaviest(worn));
+    }
+
+    /// <summary>Binds live session policy once whenever a site appearance is created.</summary>
+    private void ConfigureSiteAppearance(DaggerfallSiteAppearance appearance)
+    {
+        appearance.UseEnemyAudibleRange(() => EnemyAudibleRange);
+        appearance.UsePlayerVampireGender(() => State.RacialOverrides.Current?.IsVampire == true ? State.Character.Identity.Gender == DaggerfallCharacterGender.Female : null);
+        appearance.UsePlayerRide(() => (State.Transport.Mode, new Vector2(State.PlayerControl.Motion.ControlledVelocity.X, State.PlayerControl.Motion.ControlledVelocity.Z).Length(), State.PlayerControl.PitchRadians, State.Transport.Ride.TurnFrom(State.PlayerControl.YawRadians)));
+        appearance.UseViewLight(_engine.Tween, _viewLight);
+        appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
+        appearance.UsePeopleRigs(() => _peopleRigs);
+        if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
+            appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem, HeldShield, equipment => HeldArms(art, equipment));
+        if (_composition.ArtReplacements is { } refreshed)
+            appearance.UseEffectArt(_engine.Presentation, _engine.Animation, refreshed, () => DrawnArt is not null);
+    }
+
+    /// <summary>
+    /// Composes activation over the site now active: Dialogue's people first, then the corpse, door, portal and pile
+    /// owners in a new module handed to <see cref="Activation"/>, so each site starts in Grab. Composition calls it
+    /// once and every site change again.
+    /// </summary>
+    private void ComposeActivation(IEngineContext engine, DaggerfallLootInteractionTuning reach)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        IDaggerfallNpcActivationOwner people = ComposeDialogue();
+        DaggerfallDoorActivationOwner door;
+        DaggerfallActivationModule module = new(
+            new InteractionTargetingService(engine.Perception, _spatial, State.Actors.Entities),
+            reach,
+            new DaggerfallActivationContributions(
+                new DaggerfallCorpseActivationOwner(() => _corpseLoot.Corpses.Keys, _corpseLoot.ContainerName, State.Actors, _sight.Corpse, OpenCorpseLoot),
+                door = new DaggerfallDoorActivationOwner(_doors, DungeonActions.TriggerDoor, ForceLock, id => _doorSpells.Activate(_doors, id),
+                    (door, forceMode) => EnterExteriorBuilding(door, forceMode, skipGreeting: false),
+                    door => Entrance.Door(_doors, door, _activeProfileKey.Site), door => Entrance.Name(_doors, door, _activeProfileKey.Site),
+                    Locks.DescribeDifficulty, door => Entrance.Discover(_doors, door, _activeProfileKey.Site)),
+                new DaggerfallPortalActivationOwner(_sites.Projection.Portals,
+                    logicalProfile => (_sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted."))
+                        .RequireLogicalKey(logicalProfile),
+                    EnterPortal),
+                new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyLoot.InteractionPoint, OpenGroundLoot),
+                npc: people));
+        Activation.Use(module, door);
     }
 
     /// <summary>Who needs exterior ground beside the player: the living, past a town's people, who have its ground plane.</summary>

@@ -8,6 +8,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
@@ -124,6 +125,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     internal DaggerfallBuildingEntrance Entrance { get; }
     /// <summary>Picking and bashing a door's lock.</summary>
     internal DaggerfallLocks Locks { get; }
+    /// <summary>What the active site's dungeon actions do and how the player sets them off.</summary>
+    internal DaggerfallDungeonActions DungeonActions { get; } = null!;
+    /// <summary>The activation in force over the active site.</summary>
+    internal DaggerfallActivation Activation { get; } = null!;
+    private DaggerfallActivationModule? _activation => Activation.Module;
+    internal DaggerfallActivationMode ActivationMode => Activation.Mode;
+    internal InteractionTargetingEvidence? LastActivationTargeting => Activation.LastEvidence;
+    // Where a body or a person is sighted for use.
+    private readonly DaggerfallActivationSight _sight = null!;
 
     /// <summary>Where entering through an exterior door lands inside its building.</summary>
     private DaggerfallSiteAnchor BuildingLanding(DaggerfallSiteProfile inside, DaggerfallRdbDoorId door) =>
@@ -270,7 +280,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     {
         ReconcileNpcProjection();
         ReconcilePropertyContainers();
-        InitializeActivation(_engine, _tuning.LootInteraction);
+        ComposeActivation(_engine, _tuning.LootInteraction);
         SyncWeatherContext();
     }
 

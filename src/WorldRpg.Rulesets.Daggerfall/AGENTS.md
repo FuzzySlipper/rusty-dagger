@@ -57,7 +57,7 @@ On top of the root `AGENTS.md`.
 - Arrival and load hold play until ground stands under the player and every tracked actor.
 - The lift's floor is fixed on the map, never measured from the player; its fade is linear.
 - Brightness comes from the lights, not exposure; the tone operator stays `Rolloff`.
-- Rules read weather from `DaggerfallSession.CurrentConditions`, not from which sky draws.
+- Rules read weather from `DaggerfallWeather.Conditions` (the session's `LocalWeather`), not from which sky draws.
 - World sprites use `SpriteAlphaMode.Mask`; only glowing and translucent ones blend.
 - Tune by eye for one run: `world.horizon-set LIFT FOG`, `world.ground-blend CONTRAST METRES SHARPNESS`, `world.weather KIND`, `world.ground-weather WET SNOW`, `world.hour HOUR`.
 

@@ -311,7 +311,7 @@ internal sealed partial class DaggerfallSession
         SpatialTriggerReconcileResult reconciliation = _spatial.ReconcileTriggers(simulationStep, triggers);
         State.Swimming.ObserveTriggers(reconciliation.Facts.Span, player.Value, environment.WaterVolumes.Span);
         if (actionGraph is not null)
-            _ = ReportDungeonActions(_sites.Interiors.ActionTriggers.Dispatch(actionGraph, reconciliation.Facts.Span, player));
+            _ = DungeonActions.Report(_sites.Interiors.ActionTriggers.Dispatch(actionGraph, reconciliation.Facts.Span, player));
     }
 
     private void ApplyAttackImpacts()

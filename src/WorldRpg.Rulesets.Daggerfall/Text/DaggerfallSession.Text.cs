@@ -100,7 +100,7 @@ internal sealed partial class DaggerfallSession
         if (submitted.Outcome == DaggerfallDungeonTextOutcome.AcceptedAnswer)
         {
             if (State.DungeonActions.TryGetValue(_activeProfileKey, out DaggerfallDungeonActionGraph? graph))
-                _ = ReportDungeonAction(graph.ContinueAcceptedAnswer(actionId));
+                _ = DungeonActions.Report(graph.ContinueAcceptedAnswer(actionId));
             Presentation.SetOutcome("Answer accepted.");
         }
         else Presentation.SetOutcome("Answer rejected.");

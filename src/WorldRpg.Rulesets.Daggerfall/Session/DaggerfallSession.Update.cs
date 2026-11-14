@@ -630,6 +630,30 @@ internal sealed partial class DaggerfallSession
             Presentation.SetOutcome(result.Message);                                              // UiProjection
     }
 
+    /// <summary>
+    /// One use of what the player aims at. Returning true means contextual activation owned the input, even when no
+    /// object was eligible, so callers never fall through to an unrelated use path.
+    /// </summary>
+    private bool TryActivateContextual(LookReceipt look)
+    {
+        if (Activation.Module is null) return false;
+        _lastPlaytestUseStep = _latestSimulationStep ?? 0;                                         // Developer
+        _lastPlaytestUseRefusal = null;                                                           // Developer
+        DaggerfallActivationOutcome outcome = Activation.Activate(look, out string? refusal)!;    // Interiors
+        _lastPlaytestUseRefusal = refusal;                                                        // Developer
+        _activationPresentation.Report(outcome);                                                  // UiProjection
+        Presentation.SetOutcome(outcome.Message);                                                 // UiProjection
+        return true;
+    }
+
+    /// <summary>A swing that reaches no creature bashes the shut door it strikes, and says so.</summary>
+    private void TryBashDoorWithSwing(LookReceipt look)
+    {
+        if (Activation.BashWithSwing(look, State.Kit.Targeting.LastEvidence?.SelectedTargetId is not null) is not { } outcome) return;   // Interiors
+        _activationPresentation.Report(outcome);                                                  // UiProjection
+        Presentation.SetOutcome(outcome.Message);                                                 // UiProjection
+    }
+
     /// <summary>A pick or a bash on a door's lock: the lock, what it means to the law, then the incident's notice.</summary>
     private DaggerfallActivationOutcome ForceLock(DaggerfallRdbDoorId door, DaggerfallActivationMode mode)
     {

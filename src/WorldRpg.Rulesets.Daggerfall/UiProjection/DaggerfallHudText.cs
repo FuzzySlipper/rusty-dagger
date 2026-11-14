@@ -39,32 +39,6 @@ internal static class DaggerfallHudText
     internal static string ModeLabel(string mode) =>
         ActivationModes.FirstOrDefault(row => row.Id == mode).Label ?? mode;
 
-    /// <summary>
-    /// What ordinary use does to a target of this kind in this mode, as the prompt's verb, where the kind
-    /// alone decides it; null where use would be refused, so no prompt promises it. A door's verb depends
-    /// on its state, so its owner words it (<c>IDaggerfallDoorActivationOwner.PromptAction</c>) and this is
-    /// only its fallback.
-    /// </summary>
-    internal static string? PromptAction(DaggerfallActivationMode mode, DaggerfallActivationTargetKind kind) => (mode, kind) switch
-    {
-        // Information names a static person and opens a conversation with a passer-by; either way it is about them.
-        (DaggerfallActivationMode.Info, DaggerfallActivationTargetKind.Npc) => "Ask about",
-        (DaggerfallActivationMode.Info, _) => "Examine",
-        // A person is not approached by force, and a door does not answer talk.
-        (DaggerfallActivationMode.Bash, DaggerfallActivationTargetKind.Npc) => null,
-        (DaggerfallActivationMode.Talk, DaggerfallActivationTargetKind.Door) => null,
-        (DaggerfallActivationMode.Steal, DaggerfallActivationTargetKind.Door) => "Pick the lock of",
-        (DaggerfallActivationMode.Steal, DaggerfallActivationTargetKind.Npc) => "Pickpocket",
-        (DaggerfallActivationMode.Steal, _) => "Steal from",
-        (DaggerfallActivationMode.Bash, _) => "Bash",
-        (_, DaggerfallActivationTargetKind.Npc) => "Talk to",
-        (_, DaggerfallActivationTargetKind.Door) => "Open",
-        (_, DaggerfallActivationTargetKind.Portal) => "Go through",
-        (_, DaggerfallActivationTargetKind.Corpse) => "Search",
-        (_, DaggerfallActivationTargetKind.Item) => "Take",
-        _ => "Open",
-    };
-
     /// <summary>The prompt's name for a target that carries no label of its own.</summary>
     internal static string TargetName(DaggerfallActivationTargetKind kind) => kind switch
     {

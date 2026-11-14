@@ -5,7 +5,6 @@ using Rusty.Engine.Interaction;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Targeting;
 using WorldRpg.Kit.World;
-using WorldRpg.Rulesets.Daggerfall.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 
@@ -43,6 +42,36 @@ internal readonly record struct DaggerfallActivationTarget(
 /// </summary>
 internal readonly record struct DaggerfallActivationReach(WorldPoint From, double Distance);
 
+/// <summary>The verbs the HUD's prompt promises: what ordinary use does to a target, worded by activation.</summary>
+internal static class DaggerfallActivationPrompt
+{
+    /// <summary>
+    /// What ordinary use does to a target of this kind in this mode, as the prompt's verb, where the kind
+    /// alone decides it; null where use would be refused, so no prompt promises it. A door's verb depends
+    /// on its state, so its owner words it (<see cref="IDaggerfallDoorActivationOwner.PromptAction"/>) and this is
+    /// only its fallback.
+    /// </summary>
+    internal static string? Action(DaggerfallActivationMode mode, DaggerfallActivationTargetKind kind) => (mode, kind) switch
+    {
+        // Information names a static person and opens a conversation with a passer-by; either way it is about them.
+        (DaggerfallActivationMode.Info, DaggerfallActivationTargetKind.Npc) => "Ask about",
+        (DaggerfallActivationMode.Info, _) => "Examine",
+        // A person is not approached by force, and a door does not answer talk.
+        (DaggerfallActivationMode.Bash, DaggerfallActivationTargetKind.Npc) => null,
+        (DaggerfallActivationMode.Talk, DaggerfallActivationTargetKind.Door) => null,
+        (DaggerfallActivationMode.Steal, DaggerfallActivationTargetKind.Door) => "Pick the lock of",
+        (DaggerfallActivationMode.Steal, DaggerfallActivationTargetKind.Npc) => "Pickpocket",
+        (DaggerfallActivationMode.Steal, _) => "Steal from",
+        (DaggerfallActivationMode.Bash, _) => "Bash",
+        (_, DaggerfallActivationTargetKind.Npc) => "Talk to",
+        (_, DaggerfallActivationTargetKind.Door) => "Open",
+        (_, DaggerfallActivationTargetKind.Portal) => "Go through",
+        (_, DaggerfallActivationTargetKind.Corpse) => "Search",
+        (_, DaggerfallActivationTargetKind.Item) => "Take",
+        _ => "Open",
+    };
+}
+
 /// <summary>Stable mode and target selected from one Engine perception query.</summary>
 internal sealed record DaggerfallActivationSelection(DaggerfallActivationMode Mode, DaggerfallActivationTarget Target);
 
@@ -60,7 +89,7 @@ internal interface IDaggerfallDoorActivationOwner
     /// What activating this door would do now, from its own state (open or shut, locked, a building's
     /// entrance), for the HUD's prompt; null when use would do nothing. It changes nothing.
     /// </summary>
-    string? PromptAction(DaggerfallActivationSelection selection) => DaggerfallHudText.PromptAction(selection.Mode, DaggerfallActivationTargetKind.Door);
+    string? PromptAction(DaggerfallActivationSelection selection) => DaggerfallActivationPrompt.Action(selection.Mode, DaggerfallActivationTargetKind.Door);
 }
 
 internal interface IDaggerfallPortalActivationOwner
@@ -125,7 +154,7 @@ internal sealed class DaggerfallActivationContributions(
     internal string? PromptAction(DaggerfallActivationSelection selection) => selection.Target.Kind switch
     {
         DaggerfallActivationTargetKind.Door => _door?.PromptAction(selection),
-        _ => DaggerfallHudText.PromptAction(selection.Mode, selection.Target.Kind),
+        _ => DaggerfallActivationPrompt.Action(selection.Mode, selection.Target.Kind),
     };
 
     internal DaggerfallActivationOutcome Activate(DaggerfallActivationSelection selection) => selection.Target.Kind switch
