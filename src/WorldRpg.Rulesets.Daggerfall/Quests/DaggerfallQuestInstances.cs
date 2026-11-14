@@ -5,6 +5,7 @@ using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Travel;
+using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -34,6 +35,15 @@ internal sealed record DaggerfallQuestResourceBinding(DaggerfallQuestResourceBin
     internal static DaggerfallQuestResourceBinding UniqueItem(ulong itemId) => new(DaggerfallQuestResourceBindingKind.Item, [], [itemId], [], []);
     internal static DaggerfallQuestResourceBinding Stack(DaggerfallItemOwnerSave owner, string stackId) => new(DaggerfallQuestResourceBindingKind.Item, [], [], [new(owner, stackId)], []);
     internal static DaggerfallQuestResourceBinding Place(DaggerfallSiteIdSave place) => new(DaggerfallQuestResourceBindingKind.Place, [], [], [], [place]);
+    internal static DaggerfallQuestResourceBinding Placed(DaggerfallPlacedItem item) => item.UniqueId is { } unique ? UniqueItem(unique)
+        : Stack(new(item.Owner.Scope, item.Owner.Id), item.Stack!.Value);
+
+    /// <summary>The bound stacks by their live owners, as Items places them.</summary>
+    internal (DaggerfallItemOwner Owner, string StackId)[] StackOwners => [.. Stacks.Select(stack => (new DaggerfallItemOwner(stack.Owner.Scope, stack.Owner.Id), stack.StackId))];
+
+    /// <summary>The binding once Items moved its stacks into a new pile; a unique item's binding names no owner.</summary>
+    internal DaggerfallQuestResourceBinding MovedTo(long? pile) => pile is not { } id || UniqueItemIds.Length > 0 ? this : this with
+        { Stacks = Stacks.Select(stack => stack with { Owner = new("ground", id) }).Distinct().ToArray() };
 
     /// <summary>Normalizes the source place's exact building through the admitted directory.</summary>
     internal static DaggerfallQuestResourceBinding PlaceBuilding(DaggerfallSiteContext sites, int mapId, int buildingKey)
@@ -1175,14 +1185,6 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         DaggerfallQuestTaskCompiler.ValidateState(Program(instance.SourceFile), captured.Tasks, instance.SourceFile);
     }
 
-    internal static bool IsProtectedMainQuest(string sourceFile)
-    {
-        string name = Path.GetFileNameWithoutExtension(sourceFile);
-        return name.Equals("S0000999", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("S0000977", StringComparison.OrdinalIgnoreCase)
-            || name.Equals("_BRISIEN", StringComparison.OrdinalIgnoreCase);
-    }
-
     /// <summary>Schedules a named child source under an existing parent using the same cycle and duplicate policy as run-quest.</summary>
     internal void ScheduleChild(string parentInstanceId, string sourceReference, int factionId, string childInstanceId)
     {
@@ -1292,7 +1294,7 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
                 instance.TombstoneAtSeconds = now;
             }
         string[] expired = [.. _instances.Values
-            .Where(instance => instance.Lifecycle == DaggerfallQuestLifecycle.Tombstoned && !IsProtectedMainQuest(instance.SourceFile)
+            .Where(instance => instance.Lifecycle == DaggerfallQuestLifecycle.Tombstoned && !DaggerfallQuestSourceDefinition.IsProtectedMainQuest(instance.SourceFile)
                 && now - instance.TombstoneAtSeconds!.Value > TombstoneRetentionSeconds)
             .Select(instance => instance.InstanceId)];
         foreach (string id in expired)

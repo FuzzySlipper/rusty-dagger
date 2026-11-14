@@ -40,9 +40,8 @@ public sealed class DaggerfallGroundContainersTests
             containers.Seed(old.Owner, [new(new("apple"), 1, Stack: other)]);
             instances.RegisterStack(DaggerfallItemOwner.Ground(old.Id), other, Metadata(DaggerfallItemOwner.Ground(old.Id)));
         }
-        var binding = DaggerfallQuestResourceBinding.Stack(new("ground", old.Id), dropped.Value) with
-        { Stacks = [new(new("ground", old.Id), dropped.Value), new(new("player", 0), stack.Value)] };
-        ground.PlaceQuestItem(binding, new(4, 0, 8), [DaggerfallItemOwner.Ground(old.Id), DaggerfallItemOwner.Player], target =>
+        (DaggerfallItemOwner, string)[] stacks = [(DaggerfallItemOwner.Ground(old.Id), dropped.Value), (new DaggerfallItemOwner("player", 0), stack.Value)];
+        ground.PlaceQuestItem([], stacks, new(4, 0, 8), [DaggerfallItemOwner.Ground(old.Id), DaggerfallItemOwner.Player], target =>
         {
             var destination = entities.Resolve(new(DurableIdentityKind.Container, checked((ulong)target.Id)));
             foreach (var source in new[] { (old.Owner, DaggerfallItemOwner.Ground(old.Id), dropped), (player, DaggerfallItemOwner.Player, stack) })

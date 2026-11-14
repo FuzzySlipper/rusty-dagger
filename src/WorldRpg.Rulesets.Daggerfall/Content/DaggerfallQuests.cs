@@ -24,7 +24,17 @@ internal sealed record DaggerfallQuestSourceDefinition(
     DaggerfallQuestDisposition Disposition,
     IReadOnlyList<DaggerfallQuestMessageDefinition> Messages,
     IReadOnlyList<DaggerfallQuestBlockDefinition> Blocks,
-    IReadOnlyList<DaggerfallQuestDiagnosticDefinition> Diagnostics);
+    IReadOnlyList<DaggerfallQuestDiagnosticDefinition> Diagnostics)
+{
+    /// <summary>Whether a source is one of the main quests whose finished instances are never tombstoned away.</summary>
+    internal static bool IsProtectedMainQuest(string sourceFile)
+    {
+        string name = Path.GetFileNameWithoutExtension(sourceFile);
+        return name.Equals("S0000999", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("S0000977", StringComparison.OrdinalIgnoreCase)
+            || name.Equals("_BRISIEN", StringComparison.OrdinalIgnoreCase);
+    }
+}
 
 /// <summary>One normalized message block: its id, first line and lines.</summary>
 /// <param name="Id">The message id.</param>

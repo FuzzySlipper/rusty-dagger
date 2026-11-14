@@ -1,5 +1,6 @@
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 
@@ -10,7 +11,9 @@ internal sealed record DaggerfallQuestCustodySave(string InstanceId, long Id, Da
 internal sealed record DaggerfallQuestCustody(string InstanceId, long Id, EntityId Owner);
 
 /// <summary>Retains taken quest items in actual Engine inventories for identity-preserving reoffers.</summary>
-internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentityAllocator identities,
+internal sealed class DaggerfallQuestItems(DaggerfallQuestInstances quests, ActorsState actors, InventoryStore inventoryStore,
+    MechanicsInventoryContainerCoordinator containers, MechanicsEquipmentCoordinator equipmentCoordinator, DaggerfallItemInstances itemInstances,
+    DaggerfallCurrencyService currency, DaggerfallHeldEnchantments heldEnchantments, DurableIdentityAllocator identities,
     DaggerfallUniqueItemAllocator uniqueItems, Func<DaggerfallItemOwner, EntityId> ownerEntity, Action<ulong> destroyUnique, Action<DaggerfallItemOwner, InventoryStackId> consumeStack, DaggerfallEquipmentMoves equipmentMoves)
 {
     private readonly Dictionary<string, DaggerfallQuestCustody> _custody = new(StringComparer.Ordinal);
@@ -47,12 +50,12 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         try { Move(primaryUnique, primaryStack, DaggerfallItemOwner.Quest(custody.Id), unique.Except(primaryUnique).ToArray(), stacks.Except(primaryStack).ToArray()); }
         catch (MechanicsException)
         {
-            if (newOwner && state.Containers.Read(custody.Owner) is { Stacks.Count: 0, UniqueItems.Count: 0 }) RetireCustody(custody);
+            if (newOwner && containers.Read(custody.Owner) is { Stacks.Count: 0, UniqueItems.Count: 0 }) RetireCustody(custody);
             return DaggerfallQuestItemResult.Unavailable;
         }
         catch
         {
-            if (newOwner && state.Containers.Read(custody.Owner) is { Stacks.Count: 0, UniqueItems.Count: 0 }) RetireCustody(custody);
+            if (newOwner && containers.Read(custody.Owner) is { Stacks.Count: 0, UniqueItems.Count: 0 }) RetireCustody(custody);
             throw;
         }
         if (primaryUnique.Length == 1)
@@ -60,7 +63,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         else if (primaryStack.Length == 1)
         {
             var prototype = primaryStack[0];
-            ulong quantity = state.Containers.Read(custody.Owner).Stacks.Single(value => value.Id == prototype.Stack).Quantity;
+            ulong quantity = containers.Read(custody.Owner).Stacks.Single(value => value.Id == prototype.Stack).Quantity;
             var updated = instance.Resources.Single(value => value.Symbol == symbol);
             SetResource(instance, updated with { Binding = resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Pending ? DaggerfallQuestResourceBinding.Stack(new("quest", custody.Id), prototype.Stack.Value) : updated.Binding, SelectedItem = resource.SelectedItem! with { Quantity = quantity, Metadata = prototype.Metadata with { Owner = DaggerfallItemOwner.Player, HeldCast = null } } });
         }
@@ -78,12 +81,12 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
             created = resource.SelectedItem!;
         }
         if (created.TemplateIndex == 276)
-            return state.Currency.ReceiveGold(created.Quantity) ? DaggerfallQuestItemResult.Changed : DaggerfallQuestItemResult.Unavailable;
+            return currency.ReceiveGold(created.Quantity) ? DaggerfallQuestItemResult.Changed : DaggerfallQuestItemResult.Unavailable;
         // An already-carried canonical item needs no removal/recreation to be handed back.
         // Reoffers never reroll definitions or replace a live item's current meaning.
-        if (resource.Binding.UniqueItemIds is [var id] && state.ItemInstances.ContainsUnique(id))
+        if (resource.Binding.UniqueItemIds is [var id] && itemInstances.ContainsUnique(id))
         {
-            var item = state.ItemInstances.RequireUnique(id);
+            var item = itemInstances.RequireUnique(id);
             if (item.Owner == DaggerfallItemOwner.Player) return DaggerfallQuestItemResult.AlreadyCarried;
             Move([new(id, item)], [], DaggerfallItemOwner.Player);
             return DaggerfallQuestItemResult.Changed;
@@ -92,7 +95,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         {
             var stacks = resource.Binding.Stacks.Take(1).Select(value => (Owner: new DaggerfallItemOwner(value.Owner.Scope, value.Owner.Id), Stack: InventoryStackId.Parse(value.StackId)))
                 .Where(value => value.Owner != DaggerfallItemOwner.Player)
-                .Select(value => (value.Owner, value.Stack, Metadata: state.ItemInstances.RequireStack(value.Owner, value.Stack))).ToArray();
+                .Select(value => (value.Owner, value.Stack, Metadata: itemInstances.RequireStack(value.Owner, value.Stack))).ToArray();
             if (stacks.Length == 0) return DaggerfallQuestItemResult.AlreadyCarried;
             Move([], stacks, DaggerfallItemOwner.Player);
             return DaggerfallQuestItemResult.Changed;
@@ -112,15 +115,15 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         if (resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Pending) return selected;
         if (resource.Binding.UniqueItemIds is [var id])
         {
-            if (!state.ItemInstances.ContainsUnique(id)) throw new NotSupportedException("A consumed quest Item cannot be queued on a foe.");
-            return selected with { Metadata = state.ItemInstances.RequireUnique(id) };
+            if (!itemInstances.ContainsUnique(id)) throw new NotSupportedException("A consumed quest Item cannot be queued on a foe.");
+            return selected with { Metadata = itemInstances.RequireUnique(id) };
         }
         if (resource.Binding.Stacks.FirstOrDefault() is { } stack)
         {
             var owner = new DaggerfallItemOwner(stack.Owner.Scope, stack.Owner.Id);
             var stackId = InventoryStackId.Parse(stack.StackId);
-            return selected with { Metadata = state.ItemInstances.RequireStack(owner, stackId),
-                Quantity = state.Containers.Read(ownerEntity(owner)).Stacks.Single(value => value.Id == stackId).Quantity };
+            return selected with { Metadata = itemInstances.RequireStack(owner, stackId),
+                Quantity = containers.Read(ownerEntity(owner)).Stacks.Single(value => value.Id == stackId).Quantity };
         }
         throw new NotSupportedException("A consumed quest Item has no queueable prototype.");
     }
@@ -130,18 +133,18 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         InventoryStackId? stack = created.Stackable ? InventoryStackId.Parse(stackIdentity) : null;
         DurableIdentityReference? identity = created.Stackable ? null : uniqueItems.AllocateReference();
         var metadata = (created.Metadata with { Owner = owner }).Validate();
-        if (stack is not null && state.ItemInstances.ContainsStack(owner, stack)) throw new InvalidOperationException("Quest item stack identity already exists.");
+        if (stack is not null && itemInstances.ContainsStack(owner, stack)) throw new InvalidOperationException("Quest item stack identity already exists.");
         var binding = stack is not null ? DaggerfallQuestResourceBinding.Stack(new(owner.Scope, owner.Id), stack.Value)
             : DaggerfallQuestResourceBinding.UniqueItem(identity!.Value.Value);
-        try { state.Containers.Seed(ownerEntity(owner), [new(created.Item, created.Quantity, identity, stack,
+        try { containers.Seed(ownerEntity(owner), [new(created.Item, created.Quantity, identity, stack,
             CapacityCosts: created.Stackable ? null : DaggerfallEncumbrancePolicy.CapacityOverride(metadata.WeightClassicUnits))]); }
         catch
         {
             if (identity is { } issued) uniqueItems.Remove(issued);
             throw;
         }
-        if (stack is not null) state.ItemInstances.RegisterStack(owner, stack, metadata);
-        else state.ItemInstances.RegisterUnique(identity!.Value.Value, metadata);
+        if (stack is not null) itemInstances.RegisterStack(owner, stack, metadata);
+        else itemInstances.RegisterUnique(identity!.Value.Value, metadata);
         return binding;
     }
 
@@ -151,28 +154,28 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         // The virtual prototype and all carried copies cease to be quest items. Ownership,
         // condition, enchantment and native containment remain unchanged.
         foreach (var item in MatchingUnique(instance.InstanceId, Symbol(symbol), DaggerfallItemOwner.Player).ToArray())
-            state.ItemInstances.ReplaceUnique(item.Key, Permanent(item.Value));
+            itemInstances.ReplaceUnique(item.Key, Permanent(item.Value));
         foreach (var stack in MatchingStacks(instance.InstanceId, Symbol(symbol), DaggerfallItemOwner.Player).ToArray())
-            state.ItemInstances.ReplaceStack(stack.Owner, stack.Stack, Permanent(stack.Metadata));
+            itemInstances.ReplaceStack(stack.Owner, stack.Stack, Permanent(stack.Metadata));
         // A retained canonical prototype also carries the permanent meaning into a later Get.
-        foreach (ulong id in resource.Binding.UniqueItemIds.Where(state.ItemInstances.ContainsUnique))
-            state.ItemInstances.ReplaceUnique(id, Permanent(state.ItemInstances.RequireUnique(id)));
+        foreach (ulong id in resource.Binding.UniqueItemIds.Where(itemInstances.ContainsUnique))
+            itemInstances.ReplaceUnique(id, Permanent(itemInstances.RequireUnique(id)));
         foreach (var stack in resource.Binding.Stacks)
         {
             var owner = new DaggerfallItemOwner(stack.Owner.Scope, stack.Owner.Id);
             var id = InventoryStackId.Parse(stack.StackId);
-            state.ItemInstances.ReplaceStack(owner, id, Permanent(state.ItemInstances.RequireStack(owner, id)));
+            itemInstances.ReplaceStack(owner, id, Permanent(itemInstances.RequireStack(owner, id)));
         }
         SetResource(instance, resource with { SelectedItem = resource.SelectedItem! with { Metadata = Permanent(resource.SelectedItem.Metadata) } });
         return DaggerfallQuestItemResult.Changed;
     }
 
     private static DaggerfallItemInstanceMetadata Permanent(DaggerfallItemInstanceMetadata metadata) => metadata with { QuestId = null, QuestItemSymbol = null };
-    private void SetResource(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestResourceState resource) => state.Quests.SetResource(instance.InstanceId, resource);
+    private void SetResource(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestResourceState resource) => quests.SetResource(instance.InstanceId, resource);
     private IEnumerable<KeyValuePair<ulong, DaggerfallItemInstanceMetadata>> MatchingUnique(string quest, string symbol, DaggerfallItemOwner owner) =>
-        state.ItemInstances.UniqueItems.Where(value => value.Value.Owner == owner && value.Value.QuestId == quest && value.Value.QuestItemSymbol == symbol);
+        itemInstances.UniqueItems.Where(value => value.Value.Owner == owner && value.Value.QuestId == quest && value.Value.QuestItemSymbol == symbol);
     private IEnumerable<(DaggerfallItemOwner Owner, InventoryStackId Stack, DaggerfallItemInstanceMetadata Metadata)> MatchingStacks(string quest, string symbol, DaggerfallItemOwner owner) =>
-        state.ItemInstances.StackItems.Where(value => value.Owner == owner && value.Metadata.QuestId == quest && value.Metadata.QuestItemSymbol == symbol);
+        itemInstances.StackItems.Where(value => value.Owner == owner && value.Metadata.QuestId == quest && value.Metadata.QuestItemSymbol == symbol);
 
     private DaggerfallQuestCustody RequireCustody(string instanceId)
     {
@@ -181,20 +184,20 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         EntityId owner;
         try
         {
-            owner = state.Containers.Entities.Create(identity, DaggerfallItemContainers.QuestCustody);
-            state.Containers.RegisterOwner(owner);
+            owner = containers.Entities.Create(identity, DaggerfallItemContainers.QuestCustody);
+            containers.RegisterOwner(owner);
         }
         catch
         {
-            if (state.Containers.Entities.TryResolve(identity, out var failed))
+            if (containers.Entities.TryResolve(identity, out var failed))
             {
-                if (state.InventoryStore.TryGetInventory(failed, out _))
+                if (inventoryStore.TryGetInventory(failed, out _))
                 {
-                    using var edit = state.InventoryStore.Prepare();
+                    using var edit = inventoryStore.Prepare();
                     edit.RetireOwner(failed);
                     edit.Publish();
                 }
-                state.Containers.Entities.Destroy(identity);
+                containers.Entities.Destroy(identity);
             }
             identities.Remove(identity);
             throw;
@@ -213,21 +216,21 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         discardedUnique ??= [];
         discardedStacks ??= [];
         EntityId target = ownerEntity(destination);
-        var equipmentBefore = state.Equipment.Read();
+        var equipmentBefore = equipmentCoordinator.Read();
         var removed = equipmentBefore.Assignments.Select(value => value.Item).DistinctBy(value => value.EntityId)
             .Where(value => unique.Concat(discardedUnique).Any(item => item.Value.Owner == DaggerfallItemOwner.Player
-                && state.Actors.Entities.Resolve(new(DurableIdentityKind.Item, item.Key)).Value == value.EntityId)).ToArray();
-        var quantities = stacks.Select(value => state.Containers.Read(ownerEntity(value.Owner)).Stacks.Single(stack => stack.Id == value.Stack).Quantity).ToArray();
-        foreach (var stack in stacks) state.ItemInstances.EnsureTransferCompatible(stack.Owner, destination, stack.Stack, stack.Stack);
+                && actors.Entities.Resolve(new(DurableIdentityKind.Item, item.Key)).Value == value.EntityId)).ToArray();
+        var quantities = stacks.Select(value => containers.Read(ownerEntity(value.Owner)).Stacks.Single(stack => stack.Id == value.Stack).Quantity).ToArray();
+        foreach (var stack in stacks) itemInstances.EnsureTransferCompatible(stack.Owner, destination, stack.Stack, stack.Stack);
         // Equipment removal and every selected copy transfer publish together. A failure
         // leaves the player's inventory/equipment and metadata untouched.
         void Apply(InventoryEdit edit)
         {
             foreach (var item in unique)
             {
-                EntityId entity = state.Actors.Entities.Resolve(new(DurableIdentityKind.Item, item.Key));
+                EntityId entity = actors.Entities.Resolve(new(DurableIdentityKind.Item, item.Key));
                 EntityId source = ownerEntity(item.Value.Owner);
-                if (state.InventoryStore.TryGetEquipment(source, out var equipment) && equipment!.Assignments.Any(value => value.Item == entity))
+                if (inventoryStore.TryGetEquipment(source, out var equipment) && equipment!.Assignments.Any(value => value.Item == entity))
                     edit.Unequip(source, entity);
                 edit.TransferUnique(entity, source, target);
             }
@@ -235,33 +238,33 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
                 edit.TransferFungible(ownerEntity(stacks[index].Owner), target, stacks[index].Stack, stacks[index].Stack, quantities[index]);
             foreach (var item in discardedUnique)
             {
-                var entity = state.Actors.Entities.Resolve(new(DurableIdentityKind.Item, item.Key));
+                var entity = actors.Entities.Resolve(new(DurableIdentityKind.Item, item.Key));
                 var source = ownerEntity(item.Value.Owner);
-                if (state.InventoryStore.TryGetEquipment(source, out var equipment) && equipment!.Assignments.Any(value => value.Item == entity)) edit.Unequip(source, entity);
+                if (inventoryStore.TryGetEquipment(source, out var equipment) && equipment!.Assignments.Any(value => value.Item == entity)) edit.Unequip(source, entity);
                 edit.DestroyUnique(entity);
             }
             foreach (var stack in discardedStacks)
-                edit.Consume(ownerEntity(stack.Owner), stack.Stack, state.Containers.Read(ownerEntity(stack.Owner)).Stacks.Single(value => value.Id == stack.Stack).Quantity);
+                edit.Consume(ownerEntity(stack.Owner), stack.Stack, containers.Read(ownerEntity(stack.Owner)).Stacks.Single(value => value.Id == stack.Stack).Quantity);
         }
-        if (retainedSeeds is { Length: > 0 }) state.Containers.Seed(target, retainedSeeds, Apply);
+        if (retainedSeeds is { Length: > 0 }) containers.Seed(target, retainedSeeds, Apply);
         else
         {
-            using var edit = state.InventoryStore.Prepare();
+            using var edit = inventoryStore.Prepare();
             Apply(edit);
             edit.Publish();
         }
-        foreach (var item in unique) state.ItemInstances.MoveUnique(item.Key, destination);
-        foreach (var stack in stacks) state.ItemInstances.TransferStack(stack.Owner, destination, stack.Stack, stack.Stack, true);
+        foreach (var item in unique) itemInstances.MoveUnique(item.Key, destination);
+        foreach (var stack in stacks) itemInstances.TransferStack(stack.Owner, destination, stack.Stack, stack.Stack, true);
         foreach (var item in discardedUnique)
         {
-            state.ItemInstances.RemoveUnique(item.Key);
+            itemInstances.RemoveUnique(item.Key);
             var identity = new DurableIdentityReference(DurableIdentityKind.Item, item.Key);
-            state.Actors.Entities.Destroy(identity);
+            actors.Entities.Destroy(identity);
             uniqueItems.Remove(identity);
         }
-        foreach (var stack in discardedStacks) state.ItemInstances.RemoveStack(stack.Owner, stack.Stack);
+        foreach (var stack in discardedStacks) itemInstances.RemoveStack(stack.Owner, stack.Stack);
         equipmentMoves.NotifyRemoved(equipmentBefore, removed);
-        state.HeldEnchantments.Refresh();
+        heldEnchantments.Refresh();
     }
 
     internal void RemoveCustody(string instanceId)
@@ -270,11 +273,11 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
         var owner = DaggerfallItemOwner.Quest(custody.Id);
         // Permanent prototypes remain real items. Return retained rewards to the
         // player before retiring their temporary quest owner.
-        var permanentUnique = state.ItemInstances.UniqueItems.Where(value => value.Value.Owner == owner && value.Value.QuestId is null).ToArray();
-        var permanentStacks = state.ItemInstances.StackItems.Where(value => value.Owner == owner && value.Metadata.QuestId is null).ToArray();
+        var permanentUnique = itemInstances.UniqueItems.Where(value => value.Value.Owner == owner && value.Value.QuestId is null).ToArray();
+        var permanentStacks = itemInstances.StackItems.Where(value => value.Owner == owner && value.Metadata.QuestId is null).ToArray();
         if (permanentUnique.Length != 0 || permanentStacks.Length != 0) Move(permanentUnique, permanentStacks, DaggerfallItemOwner.Player);
-        foreach (var item in state.ItemInstances.UniqueItems.Where(value => value.Value.Owner == owner).ToArray()) destroyUnique(item.Key);
-        foreach (var stack in state.ItemInstances.StackItems.Where(value => value.Owner == owner).ToArray()) consumeStack(owner, stack.Stack);
+        foreach (var item in itemInstances.UniqueItems.Where(value => value.Value.Owner == owner).ToArray()) destroyUnique(item.Key);
+        foreach (var stack in itemInstances.StackItems.Where(value => value.Owner == owner).ToArray()) consumeStack(owner, stack.Stack);
         RetireCustody(custody);
     }
 
@@ -284,24 +287,24 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
     {
         retainedSeeds ??= [];
         var unique = binding.UniqueItemIds.Where(id => !retainedSeeds.Any(seed => seed.UniqueItem?.Value == id))
-            .Select(id => new KeyValuePair<ulong, DaggerfallItemInstanceMetadata>(id, state.ItemInstances.RequireUnique(id))).ToArray();
+            .Select(id => new KeyValuePair<ulong, DaggerfallItemInstanceMetadata>(id, itemInstances.RequireUnique(id))).ToArray();
         var stacks = binding.Stacks.Select(value => (Owner: new DaggerfallItemOwner(value.Owner.Scope, value.Owner.Id), Stack: InventoryStackId.Parse(value.StackId)))
             .Where(value => retainedStacks?.Contains((value.Owner, value.Stack.Value)) != true)
-            .Select(value => (value.Owner, value.Stack, Metadata: state.ItemInstances.RequireStack(value.Owner, value.Stack))).ToArray();
+            .Select(value => (value.Owner, value.Stack, Metadata: itemInstances.RequireStack(value.Owner, value.Stack))).ToArray();
         if (unique.Length == 0 && stacks.Length == 0 && retainedSeeds.Length == 0) throw new NotSupportedException("A consumed quest item has no physical owner to place again.");
         Move(unique, stacks, destination, retainedSeeds: retainedSeeds);
     }
 
     private void RetireCustody(DaggerfallQuestCustody custody)
     {
-        using (var edit = state.InventoryStore.Prepare())
+        using (var edit = inventoryStore.Prepare())
         {
             edit.RetireOwner(custody.Owner);
             edit.Publish();
         }
         _custody.Remove(custody.InstanceId);
         var identity = new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)custody.Id));
-        state.Actors.Entities.Destroy(identity);
+        actors.Entities.Destroy(identity);
         identities.Remove(identity);
     }
 
@@ -309,14 +312,14 @@ internal sealed class DaggerfallQuestItems(DaggerfallState state, DurableIdentit
     {
         foreach (var value in saved)
         {
-            var owner = state.Containers.Entities.Create(new(DurableIdentityKind.Container, checked((ulong)value.Id)), DaggerfallItemContainers.QuestCustody);
-            state.Containers.RegisterOwner(owner);
+            var owner = containers.Entities.Create(new(DurableIdentityKind.Container, checked((ulong)value.Id)), DaggerfallItemContainers.QuestCustody);
+            containers.RegisterOwner(owner);
             _custody.Add(value.InstanceId, new(value.InstanceId, value.Id, owner));
             var seeds = value.Inventory.Stacks.Select(stack => new InventoryContainerSeed(new(stack.ItemId), stack.Quantity, Stack: InventoryStackId.Parse(stack.StackId)))
                 .Concat(value.Inventory.UniqueItems.Select(item => new InventoryContainerSeed(new(item.ItemId), UniqueItem: new(DurableIdentityKind.Item, item.EntityId), CapacityCosts: DaggerfallEncumbrancePolicy.CapacityOverride(item.Metadata.WeightClassicUnits)))).ToArray();
-            if (seeds.Length > 0) state.Containers.Seed(owner, seeds);
-            foreach (var stack in value.Inventory.Stacks) state.ItemInstances.RegisterStack(DaggerfallItemOwner.Quest(value.Id), InventoryStackId.Parse(stack.StackId), DaggerfallItemInstanceMetadata.Restore(stack.ItemId, stack.Metadata));
-            foreach (var item in value.Inventory.UniqueItems) state.ItemInstances.RegisterUnique(item.EntityId, DaggerfallItemInstanceMetadata.Restore(item.ItemId, item.Metadata));
+            if (seeds.Length > 0) containers.Seed(owner, seeds);
+            foreach (var stack in value.Inventory.Stacks) itemInstances.RegisterStack(DaggerfallItemOwner.Quest(value.Id), InventoryStackId.Parse(stack.StackId), DaggerfallItemInstanceMetadata.Restore(stack.ItemId, stack.Metadata));
+            foreach (var item in value.Inventory.UniqueItems) itemInstances.RegisterUnique(item.EntityId, DaggerfallItemInstanceMetadata.Restore(item.ItemId, item.Metadata));
         }
     }
 }

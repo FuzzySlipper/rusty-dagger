@@ -30,7 +30,7 @@ public sealed class DaggerfallInteriorsTests
         DaggerfallInteriors interiors = new(triggers, graphs, discoveries, (key, inputs) =>
         {
             graphsMade++;
-            return new DaggerfallDungeonActionGraph(key.LogicalId, inputs.DungeonActions, new DaggerfallVariableStore(new Dictionary<string, int>(StringComparer.Ordinal)));
+            return new DaggerfallDungeonActionGraph(key.LogicalId, inputs.DungeonActions, new DaggerfallVariableStore(new Dictionary<string, int>(StringComparer.Ordinal)).Write);
         }, new DaggerfallSiteContext(TestPayload.Definitions.Locations));
 
         interiors.Enter(dungeon.ProfileKey, dungeon);

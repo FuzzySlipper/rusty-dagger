@@ -32,7 +32,7 @@ internal sealed partial class DaggerfallSession
             {
                 return PlaceBoundQuestItem(resource.Binding, position);
             }
-            return _groundContainers.CreateQuestItem(item, position, _uniqueItems);
+            return DaggerfallQuestResourceBinding.Placed(_groundContainers.CreateQuestItem(item, position, _uniqueItems));
         }
         if (resource.SelectedPerson is not null)
         {

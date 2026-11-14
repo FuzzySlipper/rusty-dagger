@@ -15,6 +15,9 @@ internal sealed record DaggerfallGroundContainer(DaggerfallWorldProfileKey Profi
 /// Daggerfall policy for ground piles. Kit's container coordinator owns every transfer; this owner
 /// supplies the durable container identity, position, and Daggerfall metadata move after commit.
 /// </summary>
+/// <summary>Where a created item went: its owner and its stack, or its unique id.</summary>
+internal sealed record DaggerfallPlacedItem(DaggerfallItemOwner Owner, InventoryStackId? Stack, ulong? UniqueId);
+
 internal sealed class DaggerfallGroundContainers
 {
     private readonly MechanicsInventoryContainerCoordinator _containers;
@@ -283,8 +286,8 @@ internal sealed class DaggerfallGroundContainers
         return container;
     }
 
-    /// <summary>Creates a selected quest item directly in the actual ground inventory owner.</summary>
-    internal DaggerfallQuestResourceBinding CreateQuestItem(DaggerfallCreatedItem created, WorldPoint position,
+    /// <summary>Creates a selected quest item directly in the actual ground inventory owner, and answers where it is.</summary>
+    internal DaggerfallPlacedItem CreateQuestItem(DaggerfallCreatedItem created, WorldPoint position,
         DaggerfallUniqueItemAllocator uniqueItems)
     {
         var containerIdentity = _identities.Allocate(DurableIdentityKind.Container);
@@ -300,19 +303,19 @@ internal sealed class DaggerfallGroundContainers
             unique = created.Stackable ? null : uniqueItems.AllocateReference();
             _containers.Seed(owner, [new(created.Item, created.Quantity, Stack: stack, UniqueItem: unique)]);
             seeded = true;
-            DaggerfallQuestResourceBinding binding;
+            DaggerfallPlacedItem placed;
             if (stack is not null)
             {
                 _instances.RegisterStack(metadata.Owner, stack, metadata);
-                binding = DaggerfallQuestResourceBinding.Stack(new(metadata.Owner.Scope, metadata.Owner.Id), stack.Value);
+                placed = new(metadata.Owner, stack, null);
             }
             else
             {
                 _instances.RegisterUnique(unique!.Value.Value, metadata);
-                binding = DaggerfallQuestResourceBinding.UniqueItem(unique.Value.Value);
+                placed = new(metadata.Owner, null, unique.Value.Value);
             }
             _ground.Add(id, new(_activeProfile, id, owner, position));
-            return binding;
+            return placed;
         }
         catch
         {
@@ -343,13 +346,18 @@ internal sealed class DaggerfallGroundContainers
         }
     }
 
-    internal DaggerfallQuestResourceBinding PlaceQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position, DaggerfallItemOwner[] owners, Action<DaggerfallItemOwner> transfer)
+    /// <summary>
+    /// Places a quest item's unique item or stacks at a position: piles already on the ground move there, and anything
+    /// else is transferred into a new pile, whose id is returned (null when the piles only moved).
+    /// </summary>
+    internal long? PlaceQuestItem(ulong[] uniqueItemIds, (DaggerfallItemOwner Owner, string StackId)[] stacks, WorldPoint position,
+        DaggerfallItemOwner[] owners, Action<DaggerfallItemOwner> transfer)
     {
         if (owners.Length == 0) throw new NotSupportedException("A consumed quest item has no physical owner to place again.");
         if (owners.All(owner => owner.Scope == "ground" && _ground.ContainsKey(owner.Id)))
         {
-            RelocateQuestItem(binding, position);
-            return binding;
+            RelocateQuestItem(uniqueItemIds, stacks, position);
+            return null;
         }
         var identity = _identities.Allocate(DurableIdentityKind.Container);
         long id = checked((long)identity.Value);
@@ -361,8 +369,7 @@ internal sealed class DaggerfallGroundContainers
             _ground.Add(id, new(_activeProfile, id, owner, position));
             foreach (long source in owners.Where(value => value.Scope == "ground").Select(value => value.Id).Distinct())
                 RetireEmptyPile(source);
-            return binding.UniqueItemIds.Length > 0 ? binding : binding with
-                { Stacks = binding.Stacks.Select(stack => stack with { Owner = new("ground", id) }).Distinct().ToArray() };
+            return id;
         }
         catch
         {
@@ -386,19 +393,19 @@ internal sealed class DaggerfallGroundContainers
         }
     }
 
-    private void RelocateQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position)
+    private void RelocateQuestItem(ulong[] uniqueItemIds, (DaggerfallItemOwner Owner, string StackId)[] stacks, WorldPoint position)
     {
-        if (binding.UniqueItemIds.Length == 1 && !_instances.ContainsUnique(binding.UniqueItemIds[0])
-            || binding.UniqueItemIds.Length == 0 && binding.Stacks.Length == 0)
+        if (uniqueItemIds.Length == 1 && !_instances.ContainsUnique(uniqueItemIds[0])
+            || uniqueItemIds.Length == 0 && stacks.Length == 0)
             throw new NotSupportedException("A consumed quest item has no physical owner to place again.");
-        DaggerfallItemOwner[] owners = binding.UniqueItemIds.Length == 1
-            ? [_instances.RequireUnique(binding.UniqueItemIds[0]).Owner]
-            : binding.Stacks.Select(stack => new DaggerfallItemOwner(stack.Owner.Scope, stack.Owner.Id)).Distinct().ToArray();
+        DaggerfallItemOwner[] owners = uniqueItemIds.Length == 1
+            ? [_instances.RequireUnique(uniqueItemIds[0]).Owner]
+            : stacks.Select(stack => stack.Owner).Distinct().ToArray();
         if (owners.Any(owner => owner.Scope != "ground" || !_ground.ContainsKey(owner.Id)))
             throw new NotSupportedException("A quest item can be placed again only while all its canonical owners are ground piles.");
-        foreach (var stack in binding.Stacks)
+        foreach (var stack in stacks)
         {
-            var owner = new DaggerfallItemOwner(stack.Owner.Scope, stack.Owner.Id);
+            var owner = stack.Owner;
             var id = InventoryStackId.Parse(stack.StackId);
             var metadata = _instances.RequireStack(owner, id);
             if (!_containers.Read(_ground[owner.Id].Owner).Stacks.Any(value => value.Id == id && value.Definition.Value == metadata.ItemId && value.Quantity > 0))

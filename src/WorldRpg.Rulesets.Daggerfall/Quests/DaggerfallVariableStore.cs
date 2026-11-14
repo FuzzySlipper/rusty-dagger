@@ -10,9 +10,6 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </summary>
 public sealed class DaggerfallVariableStore
 {
-    /// <summary>How many globals the donor numbers.</summary>
-    public const int GlobalCount = 64;
-
     private readonly IReadOnlyDictionary<string, int> _globalKeys;
 
     /// <summary>Uses the aliases admitted from the selected content pack.</summary>
@@ -91,9 +88,9 @@ public sealed class DaggerfallVariableStore
         switch (address.Scope)
         {
             case DaggerfallVariableScope.Global:
-                if (address.Owner != 0 || address.Key is < 0 or >= GlobalCount)
+                if (address.Owner != 0 || address.Key is < 0 or >= DaggerfallVariableAddress.GlobalCount)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(address), address.Key, $"A quest global names key {address.Key} outside the donor's {GlobalCount}.");
+                    throw new ArgumentOutOfRangeException(nameof(address), address.Key, $"A quest global names key {address.Key} outside the donor's {DaggerfallVariableAddress.GlobalCount}.");
                 }
 
                 break;

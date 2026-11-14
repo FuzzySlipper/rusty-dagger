@@ -15,4 +15,8 @@ public enum DaggerfallVariableScope
 /// <param name="Scope">The scope the key lives in.</param>
 /// <param name="Owner">The region or faction identity; zero for globals.</param>
 /// <param name="Key">The numeric key, identical keys in different scopes being different variables.</param>
-public readonly record struct DaggerfallVariableAddress(DaggerfallVariableScope Scope, int Owner, int Key);
+public readonly record struct DaggerfallVariableAddress(DaggerfallVariableScope Scope, int Owner, int Key)
+{
+    /// <summary>How many globals the donor numbers.</summary>
+    public const int GlobalCount = 64;
+}

@@ -61,11 +61,4 @@ internal sealed partial class DaggerfallSession
         State.Quests.SetResource(instance.InstanceId, item with { Binding = binding });
         return new(symbol, recipient, null, [targetId]);
     }
-
-    private DaggerfallItemInstanceMetadata? QuestLootMetadata(DaggerfallItemOwner owner, InventoryContainerSelection selection)
-    {
-        if (selection.UniqueEntityId is { } entity)
-            return State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(new(entity)).Value);
-        return selection.Stack is { } stack ? State.ItemInstances.RequireStack(owner, stack) : null;
-    }
 }

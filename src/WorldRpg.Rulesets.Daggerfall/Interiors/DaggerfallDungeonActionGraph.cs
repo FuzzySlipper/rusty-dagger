@@ -211,7 +211,7 @@ internal sealed record DaggerfallDungeonActionDispatch(
 internal sealed class DaggerfallDungeonActionGraph
 {
     private readonly string _profileId;
-    private readonly DaggerfallVariableStore _variables;
+    private readonly Func<DaggerfallVariableAddress, bool, bool> _writeVariable;
     private readonly Func<DaggerfallDungeonActionDefinition, DaggerfallDungeonActionExecution?>? _executeFamilyAction;
     private readonly IReadOnlyDictionary<string, DaggerfallDungeonActionDefinition> _definitions;
     private readonly Dictionary<string, NodeState> _states;
@@ -219,13 +219,13 @@ internal sealed class DaggerfallDungeonActionGraph
     internal DaggerfallDungeonActionGraph(
         string profileId,
         IEnumerable<DaggerfallDungeonActionDefinition> definitions,
-        DaggerfallVariableStore variables,
+        Func<DaggerfallVariableAddress, bool, bool> writeVariable,
         DaggerfallDungeonActionGraphSnapshot? restored = null,
         Func<DaggerfallDungeonActionDefinition, DaggerfallDungeonActionExecution?>? executeFamilyAction = null)
     {
         if (string.IsNullOrWhiteSpace(profileId)) throw new ArgumentException("A dungeon action graph requires its profile id.", nameof(profileId));
         ArgumentNullException.ThrowIfNull(definitions);
-        _variables = variables ?? throw new ArgumentNullException(nameof(variables));
+        _writeVariable = writeVariable ?? throw new ArgumentNullException(nameof(writeVariable));
         _executeFamilyAction = executeFamilyAction;
         _profileId = profileId;
 
@@ -461,7 +461,7 @@ internal sealed class DaggerfallDungeonActionGraph
         {
             try
             {
-                bool changed = _variables.Write(new DaggerfallVariableAddress(DaggerfallVariableScope.Global, 0, definition.Axis), true);
+                bool changed = _writeVariable(new DaggerfallVariableAddress(DaggerfallVariableScope.Global, 0, definition.Axis), true);
                 return new(definition.Id,
                     changed ? DaggerfallDungeonActionOutcome.Applied : DaggerfallDungeonActionOutcome.AppliedWithoutChange,
                     VariableChanged: changed);

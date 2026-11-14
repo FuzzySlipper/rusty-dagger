@@ -12,6 +12,9 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+/// <summary>Where the player is, as quests read it: the site profile, the town or other place outside, and a dungeon's type.</summary>
+internal sealed record DaggerfallQuestLocationRead(DaggerfallSiteProfile Profile, DaggerfallSiteRecord? ExteriorLocation, int? DungeonType);
+
 /// <summary>
 /// The session consequences a crossing reaches that it does not own, beside those the exterior reaches. The crossing
 /// calls each at one fixed point of the transition; the session answers.

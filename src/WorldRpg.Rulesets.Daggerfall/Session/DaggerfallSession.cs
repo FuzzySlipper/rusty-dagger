@@ -930,7 +930,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Activation: ActivationView,
             Breath: State.Swimming.ReadBreath(State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
                 State.Effects.GrantsWaterBreathing(DaggerfallActorIdentity.PlayerEntityId)),
-            Quests: DrawnEscorts(State.Quests.ReadPresentation(QuestTextContext, _time.Calendar)),
+            Quests: DrawnEscorts(State.Quests.ReadPresentation(_questTexts.For, _time.Calendar)),
             Notebook: _notebook.Read(),
             Transport: DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),
                 ownsShip: State.Property.OwnsShip, wagon: State.Wagon, itemLabel: (key, definition, quantity) => _inventoryUi.DescribeItem(key, definition, quantity,
@@ -1047,6 +1047,14 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The conversation with the person the player talks to; activation rebuilds it with each site.</summary>
     private DaggerfallDialogueService? _dialogue;
     internal DaggerfallDialogueService Dialogue => _dialogue ?? throw new InvalidOperationException("The session has no dialogue owner.");
+
+    private DaggerfallTutorial _tutorial = null!;
+
+    /// <summary>What each quest's messages name.</summary>
+    private DaggerfallQuestTextContext _questTexts = null!;
+
+    /// <summary>The tutorial Help offers, and the page of it that is up.</summary>
+    internal DaggerfallTutorial Tutorial => _tutorial;
 
     /// <summary>The "Where is" directory and what a direction's answer discloses.</summary>
     internal DaggerfallDialogueDirections DialogueDirections { get; } = null!;

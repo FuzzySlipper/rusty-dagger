@@ -23,7 +23,8 @@ internal sealed partial class DaggerfallSession
 
     /// <summary>Rejoins retained site values with canonical live containment in one Engine admission.</summary>
     private DaggerfallQuestResourceBinding PlaceBoundQuestItem(DaggerfallQuestResourceBinding binding, WorldPoint position) =>
-        TransferBoundQuestItem(binding, (owners, transfer) => _groundContainers.PlaceQuestItem(binding, position, owners, transfer));
+        TransferBoundQuestItem(binding, (owners, transfer) =>
+            binding.MovedTo(_groundContainers.PlaceQuestItem(binding.UniqueItemIds, binding.StackOwners, position, owners, transfer)));
 
     private DaggerfallQuestResourceBinding TransferBoundQuestItem(DaggerfallQuestResourceBinding binding,
         Func<DaggerfallItemOwner[], Action<DaggerfallItemOwner>, DaggerfallQuestResourceBinding> admit)

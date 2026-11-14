@@ -699,30 +699,3 @@ internal sealed record DaggerfallNormalLightTuning(float Distance, float HeightF
         && float.IsFinite(HeightFraction) && HeightFraction is >= 0 and <= 1 && float.IsFinite(Range) && Range > 0
         && float.IsFinite(Intensity) && Intensity > 0 ? this : throw new ArgumentException("Normal light tuning requires a finite pose, range and intensity.");
 }
-
-internal sealed record DaggerfallQuestSpawningTuning(float MinimumFoeDistance, float MaximumFoeDistance,
-    float MinimumWildernessDistance, float MaximumWildernessDistance, int MaximumActiveGuards,
-    float GuardWitnessDistance, float GuardWitnessAngleDegrees, float GuardConversionAngleDegrees, int GuardConversionChance)
-{
-    internal DaggerfallQuestSpawningTuning Validate() => float.IsFinite(MinimumFoeDistance) && MinimumFoeDistance > 0
-        && float.IsFinite(MaximumFoeDistance) && MaximumFoeDistance >= MinimumFoeDistance
-        && float.IsFinite(MinimumWildernessDistance) && MinimumWildernessDistance > 0
-        && float.IsFinite(MaximumWildernessDistance) && MaximumWildernessDistance >= MinimumWildernessDistance
-        && MaximumActiveGuards >= 0 && float.IsFinite(GuardWitnessDistance) && GuardWitnessDistance > 0
-        && float.IsFinite(GuardWitnessAngleDegrees) && GuardWitnessAngleDegrees is >= 0 and <= 180
-        && float.IsFinite(GuardConversionAngleDegrees) && GuardConversionAngleDegrees is >= 0 and <= 180
-        && GuardConversionChance is >= 0 and <= 100 ? this : throw new ArgumentException("Quest spawn tuning has invalid ranges, angles, count, or chance.");
-}
-
-internal sealed record DaggerfallQuestRewardTuning(int MinimumDeliveryHour, int MaximumDeliveryHour, int MinimumDelaySeconds, int MaximumDelaySeconds)
-{
-    internal DaggerfallQuestRewardTuning Validate() => MinimumDeliveryHour is >= 0 and <= 23 && MaximumDeliveryHour >= MinimumDeliveryHour
-        && MaximumDeliveryHour <= 23 && MinimumDelaySeconds >= 0 && MaximumDelaySeconds >= MinimumDelaySeconds && MaximumDelaySeconds <= int.MaxValue / 10
-        ? this : throw new ArgumentException("Quest reward delivery tuning requires ordered hours and bounded nonnegative delays.");
-}
-
-internal sealed record DaggerfallQuestOfferTuning(int SocialProviderChancePercent, int CastleProviderChancePercent)
-{
-    internal DaggerfallQuestOfferTuning Validate() => SocialProviderChancePercent is >= 0 and <= 100 && CastleProviderChancePercent is >= 0 and <= 100
-        ? this : throw new ArgumentException("Quest provider chances must be percentages.");
-}

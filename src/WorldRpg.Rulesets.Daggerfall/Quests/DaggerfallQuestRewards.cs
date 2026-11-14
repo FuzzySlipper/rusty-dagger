@@ -3,6 +3,13 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+internal sealed record DaggerfallQuestRewardTuning(int MinimumDeliveryHour, int MaximumDeliveryHour, int MinimumDelaySeconds, int MaximumDelaySeconds)
+{
+    internal DaggerfallQuestRewardTuning Validate() => MinimumDeliveryHour is >= 0 and <= 23 && MaximumDeliveryHour >= MinimumDeliveryHour
+        && MaximumDeliveryHour <= 23 && MinimumDelaySeconds >= 0 && MaximumDelaySeconds >= MinimumDelaySeconds && MaximumDelaySeconds <= int.MaxValue / 10
+        ? this : throw new ArgumentException("Quest reward delivery tuning requires ordered hours and bounded nonnegative delays.");
+}
+
 internal sealed record DaggerfallQuestRewardState(bool WaitingForTown, double DelaySeconds, long? GroundContainer = null,
     ulong? DeliveryId = null, bool LootOpened = false);
 

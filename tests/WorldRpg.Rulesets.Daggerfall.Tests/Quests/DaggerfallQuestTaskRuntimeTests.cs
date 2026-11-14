@@ -830,7 +830,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     [InlineData("S0000001.txt")]
     public void Protected_main_quest_names_are_a_daggerfall_lifecycle_policy(string source)
     {
-        Assert.Equal(source is not "S0000001.txt", DaggerfallQuestInstances.IsProtectedMainQuest(source));
+        Assert.Equal(source is not "S0000001.txt", DaggerfallQuestSourceDefinition.IsProtectedMainQuest(source));
     }
 
     private static DaggerfallQuestInstanceSave Advance(DaggerfallQuestSourceDefinition source)

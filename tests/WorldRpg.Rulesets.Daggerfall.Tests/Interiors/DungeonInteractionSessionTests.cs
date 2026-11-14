@@ -260,7 +260,7 @@ public sealed class DungeonInteractionSessionTests
         session.State.DungeonActions[castle.ProfileKey] = new DaggerfallDungeonActionGraph(
             castle.ProfileKey.LogicalId,
             castle.DungeonActions.Select(action => action.Id == openAction.Id ? openAction : action),
-            session.State.Variables,
+            session.State.Variables.Write,
             executeFamilyAction: action => DaggerfallDungeonDoorActions.Execute(action, session.Doors));
         DaggerfallDoorView door = session.Doors.All.Single(value =>
             DaggerfallDungeonActionGraph.DoorSourceId(value.Id) == openAction.DoorId);
@@ -328,7 +328,7 @@ public sealed class DungeonInteractionSessionTests
         session.State.DungeonActions[castle.ProfileKey] = new DaggerfallDungeonActionGraph(
             castle.ProfileKey.LogicalId,
             [warning],
-            session.State.Variables,
+            session.State.Variables.Write,
             executeFamilyAction: session.ExecuteDungeonTextAction);
 
         session.State.PlayerControl.MoveTo(door.Pose.Translation + Vector3.UnitZ);
@@ -519,7 +519,7 @@ public sealed class DungeonInteractionSessionTests
             (byte)DaggerfallDungeonActionFlag.ShowTextWithInput, 0, 0, 0, 200, "test/link", SoundIndex: 4);
         DaggerfallDungeonActionDefinition link = new("test/link", 200, 0,
             (byte)DaggerfallDungeonActionFlag.SetGlobalVar, 7, 0, 0, 0, null);
-        DaggerfallDungeonActionGraph graph = new(inputs.ProfileKey.LogicalId, [prompt, link], session.State.Variables,
+        DaggerfallDungeonActionGraph graph = new(inputs.ProfileKey.LogicalId, [prompt, link], session.State.Variables.Write,
             executeFamilyAction: session.ExecuteDungeonTextAction);
         session.State.DungeonActions[inputs.ProfileKey] = graph;
 
@@ -550,7 +550,7 @@ public sealed class DungeonInteractionSessionTests
         DaggerfallDungeonActionDefinition linked = new("test/linked-text", 400, 0,
             (byte)DaggerfallDungeonActionFlag.ShowText, 0, 0, 0, 0, null, SoundIndex: 0);
         session.State.DungeonActions[inputs.ProfileKey] = new DaggerfallDungeonActionGraph(inputs.ProfileKey.LogicalId,
-            [first, linked], session.State.Variables, executeFamilyAction: session.ExecuteDungeonTextAction);
+            [first, linked], session.State.Variables.Write, executeFamilyAction: session.ExecuteDungeonTextAction);
         _ = session.State.DungeonActions[inputs.ProfileKey].Trigger(first.Id, DaggerfallDungeonActionEvent.Direct);
         DaggerfallDungeonTextProjection top = Assert.IsType<DaggerfallDungeonTextProjection>(session.DungeonTextProjection);
         Assert.Equal(8604, top.TextId);

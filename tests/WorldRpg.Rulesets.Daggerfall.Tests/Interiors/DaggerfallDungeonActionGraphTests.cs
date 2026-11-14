@@ -38,7 +38,7 @@ public sealed class DaggerfallDungeonActionGraphTests
         DaggerfallDungeonActionDefinition root = new("root", 10, 2, 0x1E, 0, 0, 0, 20, "child");
         DaggerfallDungeonActionDefinition child = new("child", 20, 0, 0x1F, 7, 13, 19, -1, null);
         DaggerfallVariableStore variables = Variables();
-        DaggerfallDungeonActionGraph graph = new("profile", [root, child], variables);
+        DaggerfallDungeonActionGraph graph = new("profile", [root, child], variables.Write);
 
         DaggerfallDungeonActionDispatch result = graph.Trigger("root", DaggerfallDungeonActionEvent.Direct);
 
@@ -58,7 +58,7 @@ public sealed class DaggerfallDungeonActionGraphTests
         DaggerfallDungeonActionDefinition reward = new("reward", 20, 0,
             (byte)DaggerfallDungeonActionFlag.SetGlobalVar, 7, 0, 0, -1, null);
         DaggerfallVariableStore variables = Variables();
-        DaggerfallDungeonActionGraph graph = new("profile", [question, reward], variables,
+        DaggerfallDungeonActionGraph graph = new("profile", [question, reward], variables.Write,
             executeFamilyAction: action => new(action.Id, DaggerfallDungeonActionOutcome.AwaitingAnswer));
 
         DaggerfallDungeonActionDispatch shown = graph.Trigger("question", DaggerfallDungeonActionEvent.Direct);
@@ -103,7 +103,7 @@ public sealed class DaggerfallDungeonActionGraphTests
         DaggerfallDungeonActionDefinition door = new("door", 10, 5, 0x1E, 0, 0, 0, 20, "set-global", DoorId: "door/one");
         DaggerfallDungeonActionDefinition setGlobal = new("set-global", 20, 0, 0x1F, 9, 0, 0, -1, null, DoorId: "door/one");
         DaggerfallVariableStore variables = Variables();
-        DaggerfallDungeonActionGraph graph = new("profile", [door, setGlobal], variables);
+        DaggerfallDungeonActionGraph graph = new("profile", [door, setGlobal], variables.Write);
 
         DaggerfallDungeonActionDispatch result = graph.Trigger("door", DaggerfallDungeonActionEvent.Attack);
 
@@ -237,7 +237,7 @@ public sealed class DaggerfallDungeonActionGraphTests
             attempts++;
             return new(action.Id, DaggerfallDungeonActionOutcome.RejectedOperation, Diagnostic: "Immune target.");
         }
-        DaggerfallDungeonActionGraph graph = new("profile", [spell, child], Variables(), executeFamilyAction: Attempt);
+        DaggerfallDungeonActionGraph graph = new("profile", [spell, child], Variables().Write, executeFamilyAction: Attempt);
         var first = graph.Trigger("spell", DaggerfallDungeonActionEvent.Direct);
         Assert.Equal(["child", "spell"], first.Executions.Select(execution => execution.ActionId));
         Assert.Equal(DaggerfallDungeonActionOutcome.RejectedOperation, first.Executions[1].Outcome);
@@ -253,7 +253,7 @@ public sealed class DaggerfallDungeonActionGraphTests
 
         byte[] encoded = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(graph.Capture(), DaggerfallSaveJsonContext.Default.DaggerfallDungeonActionGraphSnapshot);
         DaggerfallDungeonActionGraphSnapshot saved = System.Text.Json.JsonSerializer.Deserialize(encoded, DaggerfallSaveJsonContext.Default.DaggerfallDungeonActionGraphSnapshot)!;
-        DaggerfallDungeonActionGraph restored = new("profile", [spell, child], Variables(), saved, Attempt);
+        DaggerfallDungeonActionGraph restored = new("profile", [spell, child], Variables().Write, saved, Attempt);
         float sourceCounter = saved.Nodes.Single(node => node.Id == "spell").RemainingSpellCooldown;
         for (int activation = 0; activation < 30 && attempts == 1; activation++)
         {
@@ -271,7 +271,7 @@ public sealed class DaggerfallDungeonActionGraphTests
     {
         DaggerfallDungeonActionDefinition unknown = new("unknown", 1, 2, 0x7E, 0, 0, 0, -1, null);
         DaggerfallDungeonActionDefinition invalidGlobal = new("invalid-global", 2, 2, 0x1F, 64, 0, 0, -1, null);
-        DaggerfallDungeonActionGraph graph = new("profile", [unknown, invalidGlobal], Variables());
+        DaggerfallDungeonActionGraph graph = new("profile", [unknown, invalidGlobal], Variables().Write);
 
         DaggerfallDungeonActionExecution unsupported = graph.Trigger("unknown", DaggerfallDungeonActionEvent.Direct).Executions.Single();
         DaggerfallDungeonActionExecution invalid = graph.Trigger("invalid-global", DaggerfallDungeonActionEvent.Direct).Executions.Single();
@@ -290,17 +290,17 @@ public sealed class DaggerfallDungeonActionGraphTests
         DaggerfallDungeonActionGraphSnapshot snapshot = graph.Capture();
 
         Assert.Throws<ArgumentException>(() => new DaggerfallDungeonActionGraph(
-            "other-profile", [definition], Variables(), snapshot));
+            "other-profile", [definition], Variables().Write, snapshot));
         Assert.Throws<ArgumentException>(() => new DaggerfallDungeonActionGraph(
-            "profile", [definition], Variables(), new DaggerfallDungeonActionGraphSnapshot(
+            "profile", [definition], Variables().Write, new DaggerfallDungeonActionGraphSnapshot(
                 "profile", [new DaggerfallDungeonActionNodeSave("missing", 0, 0)])));
     }
 
     private static DaggerfallDungeonActionGraph Create(params DaggerfallDungeonActionDefinition[] definitions) =>
-        new("profile", definitions, Variables());
+        new("profile", definitions, Variables().Write);
 
     private static DaggerfallDungeonActionGraph Create(DaggerfallDungeonActionDefinition definition, DaggerfallDungeonActionGraphSnapshot snapshot) =>
-        new("profile", [definition], Variables(), snapshot);
+        new("profile", [definition], Variables().Write, snapshot);
 
     private static DaggerfallVariableStore Variables() => new(new Dictionary<string, int>(StringComparer.Ordinal));
 }

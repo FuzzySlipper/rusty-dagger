@@ -3,6 +3,20 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+internal sealed record DaggerfallQuestSpawningTuning(float MinimumFoeDistance, float MaximumFoeDistance,
+    float MinimumWildernessDistance, float MaximumWildernessDistance, int MaximumActiveGuards,
+    float GuardWitnessDistance, float GuardWitnessAngleDegrees, float GuardConversionAngleDegrees, int GuardConversionChance)
+{
+    internal DaggerfallQuestSpawningTuning Validate() => float.IsFinite(MinimumFoeDistance) && MinimumFoeDistance > 0
+        && float.IsFinite(MaximumFoeDistance) && MaximumFoeDistance >= MinimumFoeDistance
+        && float.IsFinite(MinimumWildernessDistance) && MinimumWildernessDistance > 0
+        && float.IsFinite(MaximumWildernessDistance) && MaximumWildernessDistance >= MinimumWildernessDistance
+        && MaximumActiveGuards >= 0 && float.IsFinite(GuardWitnessDistance) && GuardWitnessDistance > 0
+        && float.IsFinite(GuardWitnessAngleDegrees) && GuardWitnessAngleDegrees is >= 0 and <= 180
+        && float.IsFinite(GuardConversionAngleDegrees) && GuardConversionAngleDegrees is >= 0 and <= 180
+        && GuardConversionChance is >= 0 and <= 100 ? this : throw new ArgumentException("Quest spawn tuning has invalid ranges, angles, count, or chance.");
+}
+
 internal sealed record DaggerfallQuestFoeSpawn(int IntervalSeconds, int? MaximumGroups, int Chance, bool Send);
 internal sealed record DaggerfallQuestFoeSpawnState(long? LastAttemptSeconds, int Attempts, int CompletedGroups,
     int PendingRemaining, DaggerfallWorldProfileKey? PendingProfile, bool MessageSent);

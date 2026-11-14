@@ -2828,14 +2828,14 @@ internal static partial class DaggerfallBaseContent
                 int id = Integer(row, "id", diagnostics);
                 string name = Text(row, "name", diagnostics);
                 int line = Integer(row, "sourceLine", diagnostics);
-                if (id < 0 || (globals && id >= DaggerfallVariableStore.GlobalCount) || line <= 0)
+                if (id < 0 || (globals && id >= DaggerfallVariableAddress.GlobalCount) || line <= 0)
                     diagnostics.Add($"Quest table '{key}' has an invalid ID or source line for '{name}'.");
                 if (aliases.TryGetValue(name, out int previous) && previous != id)
                     diagnostics.Add($"Quest table '{key}' alias '{name}' resolves to both {previous} and {id}.");
                 aliases[name] = id;
                 rows.Add(new(id, name, line));
             }
-            if (rows.Count == 0 || (globals && rows.Select(row => row.Id).Distinct().Count() != DaggerfallVariableStore.GlobalCount))
+            if (rows.Count == 0 || (globals && rows.Select(row => row.Id).Distinct().Count() != DaggerfallVariableAddress.GlobalCount))
                 diagnostics.Add($"Quest table '{key}' is empty or omits global slots.");
             return new(path, rows.AsReadOnly());
         }

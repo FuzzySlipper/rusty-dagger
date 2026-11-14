@@ -218,7 +218,7 @@ public sealed class DaggerfallDungeonHazardActionsTests
         DaggerfallDungeonActionGraph graph = new(
             "hazard-profile",
             [action],
-            new DaggerfallVariableStore(new Dictionary<string, int>()),
+            new DaggerfallVariableStore(new Dictionary<string, int>()).Write,
             executeFamilyAction: definition =>
             {
                 familyActivations++;

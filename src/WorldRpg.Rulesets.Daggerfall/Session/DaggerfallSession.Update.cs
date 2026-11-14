@@ -142,7 +142,7 @@ internal sealed partial class DaggerfallSession
                     // A standing panel request ages on the same admitted world time as everything else.
                     _interactions.AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);       // Interiors
                     // The tutorial's next page waits on play, not on a menu or a held moment.
-                    _tutorial.Age(deltaSeconds * facts.AdmittedStepCount);                        // Quests
+                    _tutorial.Age(deltaSeconds * facts.AdmittedStepCount);                        // Text
 
                     // Ordering within this one admitted update is clock, calendar consumers (magic rounds among
                     // them), simulation, then locomotion minutes. A normal game minute is one magic round; a

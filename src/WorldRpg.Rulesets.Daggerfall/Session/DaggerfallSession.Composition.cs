@@ -199,7 +199,7 @@ internal sealed partial class DaggerfallSession
                 dungeonActions.Add(key, new DaggerfallDungeonActionGraph(
                     key.LogicalId,
                     admitted.DungeonActions,
-                    variables,
+                    variables.Write,
                     snapshot,
                     ExecuteDungeonFamilyAction));
             }
@@ -640,7 +640,9 @@ internal sealed partial class DaggerfallSession
                 key => Casting.AvailableSpellCost(State.Actors.Player.DurableId, key), () => _time.Calendar);
             SpellMaker = new DaggerfallSpellMaker(definitions, State.Effects.Catalog, State.Npcs, State.ConcreteGuildServices,
                 State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar);
-            State.Quests.BindTextContext(QuestTextContext);
+            _questTexts = new DaggerfallQuestTextContext(definitions, _site, State.Npcs, State.ItemInstances,
+                item => DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, item), CurrentTextContext);
+            State.Quests.BindTextContext(_questTexts.For);
             DaggerfallNames questNames = new(definitions, engine.Random);
             npcs.BindNames(npc => questNames.NpcName(npc.Appearance, npc.Site.Region));
             var questPlaces = new DaggerfallQuestPlaceAllocator(definitions, _site, engine.Random,
@@ -700,7 +702,8 @@ internal sealed partial class DaggerfallSession
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
             quests.BindNotebook(_notebook.AddQuestNote);
             quests.BindItemCleanup(RemoveCarriedQuestItems);
-            State.QuestItems = new(State, _actorIdentities, _uniqueItems, _itemOwnership.Entity, _itemLifetime.DestroyUnique, _itemLifetime.ConsumeStack, _equipmentMoves);
+            State.QuestItems = new(State.Quests, State.Actors, State.InventoryStore, State.Containers, State.Equipment, State.ItemInstances,
+                State.Currency, State.HeldEnchantments, _actorIdentities, _uniqueItems, _itemOwnership.Entity, _itemLifetime.DestroyUnique, _itemLifetime.ConsumeStack, _equipmentMoves);
             State.Quests.BindItems(State.QuestItems);
             State.Quests.BindPlacementNpcs(State.Npcs);
             State.Npcs.BindQuestPresence(State.Quests.IsNpcUnavailable);
@@ -868,7 +871,7 @@ internal sealed partial class DaggerfallSession
             _roster.BanishedActors.UnionWith(saved?.BanishedActors ?? []);
             _persistence.BanishedActors = () => _roster.BanishedActors;
             DaggerfallInteriors interiors = new(actionTriggers, State.DungeonActions, State.DungeonDiscoveries,
-                (key, admitted) => new DaggerfallDungeonActionGraph(key.LogicalId, admitted.DungeonActions, State.Variables,
+                (key, admitted) => new DaggerfallDungeonActionGraph(key.LogicalId, admitted.DungeonActions, State.Variables.Write,
                     executeFamilyAction: ExecuteDungeonFamilyAction), _site);
             _sites = new DaggerfallSiteCrossing(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,
                 _roster, _persistence, _groundContainers, _enemyBehavior, interiors, this,

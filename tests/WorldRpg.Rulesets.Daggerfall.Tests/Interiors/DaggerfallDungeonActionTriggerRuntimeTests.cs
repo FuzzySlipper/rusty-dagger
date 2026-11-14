@@ -41,7 +41,7 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
             new DurableIdentityReference(DurableIdentityKind.Resource, 0xCAFE),
             new EntityTypeId("test-player"));
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), 0f, 0f);
-        DaggerfallDungeonActionGraph graph = new(secondInputs.ProfileKey.LogicalId, secondInputs.DungeonActions, Variables());
+        DaggerfallDungeonActionGraph graph = new(secondInputs.ProfileKey.LogicalId, secondInputs.DungeonActions, Variables().Write);
         SpatialEntityCollider waterRow = SpatialMovementSystem.ProjectWaterCollider(
             new CharacterWaterVolume(water, new Vector3(-5f, -5f, -5f), new Vector3(5f, 5f, 5f)));
         SpatialTriggerFact[] Step(ulong tick)
@@ -95,8 +95,8 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
         Assert.Equal(firstAction.Id, actionId);
 
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), 0f, 0f);
-        DaggerfallDungeonActionGraph firstGraph = new(firstKey.LogicalId, firstInputs.DungeonActions, Variables());
-        DaggerfallDungeonActionGraph secondGraph = new(secondKey.LogicalId, secondInputs.DungeonActions, Variables());
+        DaggerfallDungeonActionGraph firstGraph = new(firstKey.LogicalId, firstInputs.DungeonActions, Variables().Write);
+        DaggerfallDungeonActionGraph secondGraph = new(secondKey.LogicalId, secondInputs.DungeonActions, Variables().Write);
 
         IReadOnlyList<DaggerfallDungeonActionDispatch> firstEntry = Reconcile(runtime, movement, firstGraph, player, playerEntity, 1);
         DaggerfallDungeonActionDispatch firstDispatch = Assert.Single(firstEntry);
@@ -163,7 +163,7 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
             [(key, inputs)],
             key);
         runtime.RebaseRestoredPlayer(player, playerEntity);
-        DaggerfallDungeonActionGraph graph = new(key.LogicalId, inputs.DungeonActions, Variables());
+        DaggerfallDungeonActionGraph graph = new(key.LogicalId, inputs.DungeonActions, Variables().Write);
 
         Assert.Empty(Reconcile(runtime, movement, graph, player, playerEntity, 1));
         Assert.Equal(0UL, graph.State[action.Id].ActivationCount);
@@ -208,8 +208,8 @@ public sealed class DaggerfallDungeonActionTriggerRuntimeTests
             new DurableIdentityReference(DurableIdentityKind.Resource, 0xCAFE),
             new EntityTypeId("test-player"));
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), 0f, 0f);
-        DaggerfallDungeonActionGraph firstGraph = new(firstKey.LogicalId, firstInputs.DungeonActions, Variables());
-        DaggerfallDungeonActionGraph secondGraph = new(secondKey.LogicalId, secondInputs.DungeonActions, Variables());
+        DaggerfallDungeonActionGraph firstGraph = new(firstKey.LogicalId, firstInputs.DungeonActions, Variables().Write);
+        DaggerfallDungeonActionGraph secondGraph = new(secondKey.LogicalId, secondInputs.DungeonActions, Variables().Write);
 
         Assert.Single(Reconcile(runtime, movement, firstGraph, player, playerEntity, 1));
 

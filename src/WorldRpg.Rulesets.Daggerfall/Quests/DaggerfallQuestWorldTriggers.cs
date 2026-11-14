@@ -3,7 +3,6 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal sealed record DaggerfallQuestLocationRead(DaggerfallSiteProfile Profile, DaggerfallSiteRecord? ExteriorLocation, int? DungeonType);
 internal sealed record DaggerfallQuestLocationTransition(int? Current, int? Previous)
 {
     internal void Validate()

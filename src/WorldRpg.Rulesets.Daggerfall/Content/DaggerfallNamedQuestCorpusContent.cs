@@ -16,7 +16,7 @@ internal static class DaggerfallNamedQuestCorpusContent
             string file = receipt.GetProperty("sourceFile").GetString()!;
             if (!names.Add(name) || !definitions.QuestSources.Quests.TryGetValue(file, out DaggerfallQuestSourceDefinition? source)
                 || source.Name != name || source.DisplayName != receipt.GetProperty("displayName").GetString()
-                || receipt.GetProperty("protectedLifecycle").GetBoolean() != DaggerfallQuestInstances.IsProtectedMainQuest(file))
+                || receipt.GetProperty("protectedLifecycle").GetBoolean() != DaggerfallQuestSourceDefinition.IsProtectedMainQuest(file))
                 throw new DaggerfallContentException([$"Named quest receipt '{file}' disagrees with its source or lifecycle policy."]);
             string[] published = [.. receipt.GetProperty("actionLines").EnumerateArray().Select(line => $"{line.GetProperty("line").GetInt32()}\0{line.GetProperty("text").GetString()}")];
             string[] actual = [.. source.Blocks.Where(block => block.Kind is "headless" or "task" or "variable" or "global")

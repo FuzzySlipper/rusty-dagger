@@ -53,7 +53,7 @@ public sealed class DaggerfallDoorRuntimeTests
             Action("close", 4, DaggerfallDungeonActionFlag.CloseDoor, sourceId),
         ];
         DaggerfallDungeonActionGraph graph = new("site", actions,
-            new DaggerfallVariableStore(new Dictionary<string, int>()),
+            new DaggerfallVariableStore(new Dictionary<string, int>()).Write,
             executeFamilyAction: action => DaggerfallDungeonDoorActions.Execute(action, doors));
 
         Assert.Equal(DaggerfallDungeonActionOutcome.Applied, graph.Trigger("unlock", DaggerfallDungeonActionEvent.Direct).Executions.Single().Outcome);

@@ -23,7 +23,7 @@ public sealed class DaggerfallDungeonPoisonContentTests
         diagnostics.ThrowIfAny();
         Assert.Equal((20287, (byte)7, (byte)7, -2), (action.SourceOffset, action.RawIndex, action.SoundIndex, action.NextObjectOffset));
         int effectCalls = 0;
-        DaggerfallDungeonActionGraph graph = new("profile", [action], new DaggerfallVariableStore(new Dictionary<string, int>()),
+        DaggerfallDungeonActionGraph graph = new("profile", [action], new DaggerfallVariableStore(new Dictionary<string, int>()).Write,
             executeFamilyAction: _ => { effectCalls++; return new(action.Id, DaggerfallDungeonActionOutcome.Applied); });
         var result = graph.Trigger(action.Id, DaggerfallDungeonActionEvent.Direct);
         Assert.False(result.Applied);
@@ -31,7 +31,7 @@ public sealed class DaggerfallDungeonPoisonContentTests
         Assert.Equal(0, effectCalls);
         Assert.Contains("source-unresolved", Assert.Single(result.Executions).Diagnostic);
         Assert.Contains("N0000007.RDB:20287", Assert.Single(result.Executions).Diagnostic);
-        DaggerfallDungeonActionGraph restored = new("profile", [action], new DaggerfallVariableStore(new Dictionary<string, int>()), graph.Capture());
+        DaggerfallDungeonActionGraph restored = new("profile", [action], new DaggerfallVariableStore(new Dictionary<string, int>()).Write, graph.Capture());
         Assert.Equal(DaggerfallDungeonActionOutcome.UnsupportedAction, Assert.Single(restored.Trigger(action.Id, DaggerfallDungeonActionEvent.Direct).Executions).Outcome);
         Assert.Equal(2UL, restored.State[action.Id].ActivationCount);
     }

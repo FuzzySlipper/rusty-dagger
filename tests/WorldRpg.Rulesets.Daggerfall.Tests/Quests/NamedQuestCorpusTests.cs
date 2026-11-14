@@ -29,9 +29,9 @@ public sealed class NamedQuestCorpusTests
         JsonObject payload = JsonNode.Parse(Payload("story-early"))!.AsObject();
         payload["quests"]![0]!["protectedLifecycle"] = true;
         Assert.Throws<DaggerfallContentException>(() => DaggerfallNamedQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions));
-        Assert.False(DaggerfallQuestInstances.IsProtectedMainQuest("_TUTOR__.txt"));
+        Assert.False(DaggerfallQuestSourceDefinition.IsProtectedMainQuest("_TUTOR__.txt"));
         foreach (string name in new[] { "S0000999", "S0000977", "_BRISIEN" })
-            Assert.True(DaggerfallQuestInstances.IsProtectedMainQuest(name + ".txt"));
+            Assert.True(DaggerfallQuestSourceDefinition.IsProtectedMainQuest(name + ".txt"));
     }
 
     internal static byte[] Payload(string id) => TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, $"content/worldrpg/payloads/daggerfall.quests.{id}.json"));

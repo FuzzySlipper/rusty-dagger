@@ -352,7 +352,7 @@ internal sealed record DaggerfallSavePayload(
             _ = new DaggerfallDungeonActionGraph(
                 snapshot.ProfileId,
                 selected.DungeonActions,
-                new DaggerfallVariableStore(definitions.QuestSources.Tables.Globals.Lookup),
+                new DaggerfallVariableStore(definitions.QuestSources.Tables.Globals.Lookup).Write,
                 snapshot);
         }
         if (profiles is null && DungeonActions.Any(snapshot =>

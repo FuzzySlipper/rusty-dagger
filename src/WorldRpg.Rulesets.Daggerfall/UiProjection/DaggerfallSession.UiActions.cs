@@ -171,9 +171,9 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.Attack: if (!opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
             case DaggerfallUiActionKind.Loot: firstStep.Request(DaggerfallInput.Interact); break;
             case DaggerfallUiActionKind.WeaponToggle: ToggleWeapon(); break;
-            case DaggerfallUiActionKind.TutorialStart:
-            case DaggerfallUiActionKind.TutorialContinue:
-            case DaggerfallUiActionKind.TutorialEnd: ApplyTutorialAction(action); break;
+            case DaggerfallUiActionKind.TutorialStart: _tutorial.Start(); break;
+            case DaggerfallUiActionKind.TutorialContinue: _tutorial.Continue(action.Page!.Value); break;
+            case DaggerfallUiActionKind.TutorialEnd: _tutorial.End(); break;
             case DaggerfallUiActionKind.DialogueTone:
             case DaggerfallUiActionKind.DialogueTopic:
             case DaggerfallUiActionKind.DialogueClose: _ = ApplyDialogueAction(action); break;
