@@ -563,7 +563,7 @@ internal sealed partial class DaggerfallSession
                 State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar);
             State.Quests.BindTextContext(QuestTextContext);
             DaggerfallNames questNames = new(definitions, engine.Random);
-            npcs.BindNames(questNames.NpcName);
+            npcs.BindNames(npc => questNames.NpcName(npc.Appearance, npc.Site.Region));
             var questPlaces = new DaggerfallQuestPlaceAllocator(definitions, _site, engine.Random,
                 (site, building) => State.Property.OwnsHouse(new(site, building.Source.Id, building.Id.BlockX, building.Id.BlockY)),
                 region => region >= 0 && region < definitions.BuildingNames.RegionNames.Count ? definitions.BuildingNames.RegionNames[region] : null,

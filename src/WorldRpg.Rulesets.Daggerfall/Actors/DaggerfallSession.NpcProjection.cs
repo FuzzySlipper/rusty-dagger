@@ -20,7 +20,7 @@ internal sealed class DaggerfallNpcBody
     internal static Transform Placement(WorldPoint position) =>
         new(position.ToVector(), System.Numerics.Quaternion.Identity, System.Numerics.Vector3.One);
 }
-internal sealed record DaggerfallNpcView(long Id, WorldPoint Position);
+
 
 internal sealed partial class DaggerfallSession
 {

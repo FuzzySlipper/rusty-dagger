@@ -471,8 +471,6 @@ internal sealed class DaggerfallEnemyBehaviorModule
     };
 }
 
-internal enum EnemyBehaviorState { Idle, Chase, Retreat, Strafe, Attack, Blocked, Search, TargetLost, Unloaded, Dead }
-
 /// <summary>Copied Engine receipts used to explain one enemy's most recent ruleset decision.</summary>
 internal sealed record EnemyBehaviorEvidence(long ActorId, EnemyBehaviorState State, PerceptionReadoutResult? Visibility, NavigationStepResult? Navigation)
 {
