@@ -14,7 +14,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>
 /// Society's owners' inputs without the session: the player with the classic stats, the NPC registry and its
 /// civilians at an exterior site the player stands at, the crime and social state, a keyed draw that answers
-/// <c>roll</c>, a perception that sees no one, and the crime owner with its gold grants and provocations recorded.
+/// <c>roll</c>, a perception that sees no one, the crime owner with its gold grants and provocations recorded, and
+/// the law over them with its sentence time, purse and hostility recorded (no watch arrives or converts here).
 /// </summary>
 internal sealed class SocietyStage : IDisposable
 {
@@ -39,6 +40,29 @@ internal sealed class SocietyStage : IDisposable
         Crimes = new DaggerfallCrimes(Crime, Actors, Npcs, Player, Sites, ActorDefinitions, Definitions, ItemInstances, SkillUses,
             Overrides, Random.Service, Perception.Service, () => new SpatialSession(new SpatialSessionHandle(1), static () => { }),
             () => Calendar, Granted.Add, Provoked.Add);
+        _ = CombatCollaborators.Targeting(Actors, ActorDefinitions, out _spatial, out _);
+        Placement = new DaggerfallActorPlacement(Actors, Player, Npcs.IsGameplayActive, ActorDefinitions, _ => null, _ => false, _ => true,
+            _spatial, Perception.Service, Random.Service, () => default, allyDetectionDistance: 10d, fieldOfViewYDegrees: 60f);
+        Active = DaggerfallWorldProfileIds.Exterior(Site.Id);
+        Law = new DaggerfallLaw(Crime, Social, Definitions, DaggerfallTuning.Defaults.Law, Crimes, Actors, Npcs, Player, Sites, Placement,
+            SkillUses, Overrides,
+            activeProfile: () => Active,
+            calendar: () => Calendar,
+            passTime: seconds =>
+            {
+                Passed.Add(seconds);
+                long applied = Math.Min(seconds, PassLimit);
+                return new(Calendar, applied, seconds - applied, DaggerfallCalendar.NoConsequence, default);
+            },
+            gold: () => Gold,
+            locationLoaded: () => true,
+            activeInputs: () => throw new InvalidOperationException("No profile inputs in this stage."),
+            profiles: () => null,
+            returnProfile: () => Active,
+            spawn: (_, _) => throw new InvalidOperationException("No watch arrives in this stage."),
+            makeHostile: Hostile.Add,
+            retireCivilian: _ => throw new InvalidOperationException("No guard converts in this stage."));
+        Crime.IncidentRecorded += Law.Admit;
     }
 
     internal DaggerfallDefinitions Definitions { get; }
@@ -59,6 +83,14 @@ internal sealed class SocietyStage : IDisposable
     internal PerceptionFake Perception { get; } = PerceptionFake.Create();
     internal DaggerfallCalendar Calendar { get; set; } = DaggerfallCalendar.Start;
     internal DaggerfallCrimes Crimes { get; }
+    internal DaggerfallActorPlacement Placement { get; }
+    internal DaggerfallLaw Law { get; }
+    internal DaggerfallWorldProfileKey Active { get; set; }
+    internal ulong Gold { get; set; }
+    /// <summary>The most a sentence's pass-time applies before a consequence would stop it.</summary>
+    internal long PassLimit { get; set; } = long.MaxValue;
+    internal List<long> Passed { get; } = [];
+    internal List<long> Hostile { get; } = [];
     internal List<InventoryAtomicGrant> Granted { get; } = [];
     internal List<long> Provoked { get; } = [];
     internal DaggerfallNpcSite NpcSite => new(Site.Id.Region, Site.Name, string.Empty);
@@ -66,6 +98,7 @@ internal sealed class SocietyStage : IDisposable
     private readonly DaggerfallMechanicsState _mechanics = new();
     private readonly InventoryStore _inventories = new();
     private long _nextWatch = 9000;
+    private readonly SpatialMovementSystem _spatial;
 
     /// <summary>A civilian of the site the player stands at, live as an actor at the origin.</summary>
     internal long Civilian(string role = "civilian")
@@ -92,5 +125,10 @@ internal sealed class SocietyStage : IDisposable
         health.SetCurrent(health.Minimum);
     }
 
-    public void Dispose() => Actors.Dispose();
+    /// <summary>A reported crime of this kind by the player in the site's region, now.</summary>
+    internal DaggerfallCrimeIncidentSave Reported(string operation, DaggerfallCrimeKind kind = DaggerfallCrimeKind.Theft) =>
+        new(operation, kind, DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, null, Site.Id.Region,
+            Calendar.MinuteNumber, DaggerfallCrimeTargetKind.Unknown, DaggerfallCrimeWitnessEvidence.NotQueried, DaggerfallCrimeGuildCredit.None, Reported: true);
+
+    public void Dispose() { _spatial.Dispose(); Actors.Dispose(); }
 }

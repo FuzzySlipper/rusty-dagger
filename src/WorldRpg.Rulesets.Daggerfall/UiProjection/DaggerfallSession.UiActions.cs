@@ -82,7 +82,7 @@ internal sealed partial class DaggerfallSession
             Presentation.SetOutcome(DaggerfallRacialOverrideView.InventoryRefusal);
             return;
         }
-        if (LegalModalOpen && action.Kind is not (DaggerfallUiActionKind.LegalChoice or DaggerfallUiActionKind.SaveGame
+        if (Law.ModalOpen && action.Kind is not (DaggerfallUiActionKind.LegalChoice or DaggerfallUiActionKind.SaveGame
             or DaggerfallUiActionKind.LoadGame or DaggerfallUiActionKind.SaveSlots or DaggerfallUiActionKind.SaveSlot
             or DaggerfallUiActionKind.LoadSlot)) return;
         ApplyUiAction(action, firstStep, opensInteraction, ref elapsedSubmitted);

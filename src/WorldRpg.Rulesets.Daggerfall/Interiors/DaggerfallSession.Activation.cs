@@ -121,7 +121,7 @@ internal sealed partial class DaggerfallSession
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination,
                     EnterPortal),
                 new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyInteractionPoint, OpenPropertyLoot),
-                npc: new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, IsLawGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
+                npc: new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),
                     id => State.RacialOverrides.Current?.SuppressTalk != true && State.Quests.ActorClicked(id), PersonSightHeight)));
     }
 

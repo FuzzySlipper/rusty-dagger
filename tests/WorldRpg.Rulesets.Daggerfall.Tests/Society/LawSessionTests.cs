@@ -25,7 +25,7 @@ public sealed class LawSessionTests
         Assert.All(response.Guards, id => Assert.Equal(146, s.DefinitionsByActor[id].MobileId));
         Assert.NotEmpty(f.Spatial.OverlapRequests);
         Assert.All(f.Spatial.FloorProbes.Where(probe => probe.Direction.Y == 0), probe => Assert.InRange(probe.MaxDistance, 0, 3));
-        Assert.Equal("arrest", s.LegalView!.Phase);
+        Assert.Equal("arrest", s.Law.View!.Phase);
         Assert.Single(f.InitialEngine.EmittedAudio, request => request.SignalId.Contains("guard-halt"));
         f.Choose("resist");
         foreach (long id in response.Guards) s.State.Actors.Get(id).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0);
@@ -41,24 +41,24 @@ public sealed class LawSessionTests
     {
         using var f = new Fixture(); var s = f.Session;
         long guard = f.Guard(); f.Charge(); f.Step();
-        Assert.Equal("arrest", s.LegalView!.Phase);
-        string old = s.LegalView.Revision;
+        Assert.Equal("arrest", s.Law.View!.Phase);
+        string old = s.Law.View.Revision;
         Assert.Equal(ProductMode.Modal, s.PendingModeRequest);
         long pausedAt = Seconds(s);
         f.Step();
         Assert.Equal(pausedAt, Seconds(s)); // The session holds immediately, before the host acknowledges the modal mode.
         f.Choose("resist");
-        Assert.Null(s.LegalView); Assert.Null(s.PendingModeRequest);
-        s.ChooseLegal(old, "yield"); Assert.Null(s.LegalView);
+        Assert.Null(s.Law.View); Assert.Null(s.PendingModeRequest);
+        s.ChooseLegal(old, "yield"); Assert.Null(s.Law.View);
         Assert.True(s.TryTransitionTo(f.Other.ProfileKey));
         Assert.Equal(DaggerfallLegalPhase.Escaped, s.State.Crime.LegalResponses.Single().Phase);
         Assert.True(s.TryTransitionTo(f.Inputs.ProfileKey));
         Assert.True(s.State.Actors.TryGet(guard, out _));
         f.Step();
-        Assert.Equal("arrest", s.LegalView!.Phase);
+        Assert.Equal("arrest", s.Law.View!.Phase);
         Assert.Contains(guard, s.State.Crime.LegalResponses.Single().Guards);
         s.ChooseLegal(old, "yield");
-        Assert.Equal("arrest", s.LegalView!.Phase); // A choice from the first arrest cannot surrender at the later one.
+        Assert.Equal("arrest", s.Law.View!.Phase); // A choice from the first arrest cannot surrender at the later one.
         Assert.Single(s.State.Crime.Incidents);
     }
 
@@ -90,25 +90,25 @@ public sealed class LawSessionTests
     public void Court_plea_save_judgment_and_prison_apply_fine_once_and_shared_days_then_release_controls()
     {
         using var f = new Fixture(); var s = f.Session; f.Guard(); f.Charge(); f.Step();
-        f.Choose("yield"); Assert.Equal("court", s.LegalView!.Phase);
+        f.Choose("yield"); Assert.Equal("court", s.Law.View!.Phase);
         var current = s.State.Crime.LegalResponses.Single();
         // Exercise the actual court response and settlement with a fixed already-accused penalty.
         s.State.Crime.SetResponse(current with { Penalty = new(40, 4, false) });
         ulong gold = s.State.Currency.Read().Gold;
-        f.Choose("guilty"); Assert.Equal("sentence", s.LegalView!.Phase);
+        f.Choose("guilty"); Assert.Equal("sentence", s.Law.View!.Phase);
         var save = s.CaptureSave();
         using var restored = f.Restore(save);
         long before = Seconds(restored);
         var sentence = restored.State.Crime.LegalResponses.Single().Sentence!;
-        string revision = restored.LegalView!.Revision;
+        string revision = restored.Law.View!.Revision;
         restored.ChooseLegal(revision, "accept");
         Assert.Equal(gold - (ulong)sentence.Fine, restored.State.Currency.Read().Gold);
-        Assert.Equal("prison", restored.LegalView!.Phase);
+        Assert.Equal("prison", restored.Law.View!.Phase);
         restored.ChooseLegal(revision, "accept");
         Assert.Equal(gold - (ulong)sentence.Fine, restored.State.Currency.Read().Gold);
         using var prisoner = f.Restore(restored.CaptureSave());
-        prisoner.ChooseLegal(prisoner.LegalView!.Revision, "continue");
-        Assert.Null(prisoner.LegalView);
+        prisoner.ChooseLegal(prisoner.Law.View!.Revision, "continue");
+        Assert.Null(prisoner.Law.View);
         Assert.Empty(prisoner.State.Crime.PendingCharges(current.Region));
         Assert.Equal(DaggerfallCourtOutcome.Convicted, prisoner.State.Crime.Incidents.Single().Disposition!.Outcome);
         long after = Seconds(prisoner);
@@ -122,7 +122,7 @@ public sealed class LawSessionTests
     {
         using var f = new Fixture(); var s = f.Session; f.Guard(); f.Charge(); f.Step(); f.Choose("yield");
         int before = s.State.Progression.SkillUses.GetValueOrDefault(skill);
-        string revision = s.LegalView!.Revision;
+        string revision = s.Law.View!.Revision;
         f.Choose(skill);
         Assert.Equal(before + 1, s.State.Progression.SkillUses[skill]);
         s.ChooseLegal(revision, skill);
@@ -136,7 +136,7 @@ public sealed class LawSessionTests
         using var f = new Fixture(); int region = f.Session.Site.Region!.Value;
         int before = f.Session.State.Social.RegionalReputation(region);
         f.Charge(witnessed: false);
-        f.Step(); Assert.Null(f.Session.LegalView); Assert.Empty(f.Session.State.Crime.LegalResponses);
+        f.Step(); Assert.Null(f.Session.Law.View); Assert.Empty(f.Session.State.Crime.LegalResponses);
         Assert.Equal(before, f.Session.State.Social.RegionalReputation(region));
     }
 
@@ -184,11 +184,11 @@ public sealed class LawSessionTests
     {
         using var f = new Fixture(exteriorCourt: true); var s = f.Session;
         f.Guard(); f.Charge(); f.Step(); f.Choose("yield");
-        Assert.Equal("court", s.LegalView!.Phase);
+        Assert.Equal("court", s.Law.View!.Phase);
         var saved = DaggerfallSavePayload.Read(s.CaptureSave());
         Assert.Equal(f.Outside!.ProfileKey, saved.Site.ActiveProfile!.Require());
         using var restored = f.Restore(s.CaptureSave());
-        Assert.Equal("court", restored.LegalView!.Phase);
+        Assert.Equal("court", restored.Law.View!.Phase);
         Assert.Equal(f.Outside.ProfileKey, DaggerfallSavePayload.Read(restored.CaptureSave()).Site.ActiveProfile!.Require());
     }
 
@@ -216,7 +216,7 @@ public sealed class LawSessionTests
         var parts = s.State.Crime.PendingCharges(region).Select(charge => DaggerfallCourtPolicy.Accuse(charge.Crime, reputation, ulong.MaxValue, (_, max) => max)).ToArray();
         var expected = DaggerfallCourtPolicy.FitAvailableGold(new(DaggerfallCourtOutcome.Convicted, parts.Sum(part => part.Fine), parts.Sum(part => part.PrisonDays)), s.State.Currency.Read().Gold);
         f.Choose("yield");
-        Assert.Equal(2, s.LegalView!.Charges.Length);
+        Assert.Equal(2, s.Law.View!.Charges.Length);
         Assert.Equal(expected.Fine, s.State.Crime.LegalResponses.Single().Penalty!.Fine);
         Assert.Equal(expected.PrisonDays, s.State.Crime.LegalResponses.Single().Penalty!.PrisonDays);
     }
@@ -283,12 +283,12 @@ public sealed class LawSessionTests
         var items = s.State.Inventory.Read().UniqueItems.Select(item => item.Entity).ToArray();
         f.Guard(); f.Charge(); f.Step(); f.Choose("yield"); f.Choose("etiquette");
         Assert.Equal(DaggerfallCourtOutcome.Acquitted, s.State.Crime.LegalResponses.Single().Sentence!.Outcome);
-        string judgment = s.LegalView!.Revision;
+        string judgment = s.Law.View!.Revision;
         f.Choose("accept"); s.ChooseLegal(judgment, "accept");
         Assert.Equal(gold, s.State.Currency.Read().Gold);
         Assert.Equal(items, s.State.Inventory.Read().UniqueItems.Select(item => item.Entity));
         Assert.Equal(DaggerfallCourtOutcome.Acquitted, s.State.Crime.Incidents.Single().Disposition!.Outcome);
-        Assert.Null(s.LegalView);
+        Assert.Null(s.Law.View);
     }
 
     private static long Seconds(DaggerfallSession session)
@@ -328,7 +328,7 @@ public sealed class LawSessionTests
         internal void Step() => Session.Update(new ProductUpdate(OuterUpdate(++step), []));
         internal void Choose(string key)
         {
-            var payload = JsonSerializer.Serialize(new { action = "legal-choice", revision = Session.LegalView!.Revision, key });
+            var payload = JsonSerializer.Serialize(new { action = "legal-choice", revision = Session.Law.View!.Revision, key });
             Session.Update(new ProductUpdate(OuterUpdate(++step), [Ui(payload)]));
         }
         internal long Guard() => Session.SpawnActor(TestPayload.Definitions.Actors.Values.Single(value => value.MobileId == 146).Id.Value,

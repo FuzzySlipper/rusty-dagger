@@ -82,12 +82,12 @@ internal sealed partial class DaggerfallSession
                 return state with { CandidateNpcs = state.CandidateNpcs[1..], Remaining = state.Remaining - 1 };
             pose = actor.Pose;
         }
-        else if (!TryGuardArrivalPose(operation + "/quest/" + state.SpawnedCount, player, out pose)) return state;
-        long guard = AdmitCityWatch(pose);
+        else if (!Law.TryGuardArrivalPose(operation + "/quest/" + state.SpawnedCount, player, out pose)) return state;
+        long guard = Law.AdmitCityWatch(pose);
         if (candidate is { } converted && State.Npcs.Require(converted).Role == "guard") Civilians.Retire(converted);
         // The law owner receives actual watchmen only when a current case already exists.
         // Spawning never invents an accusation or a second legal response.
-        if (CurrentLegalResponse is { Modal: false } response && response.Profile.Require() == _activeProfileKey)
+        if (Law.Current is { Modal: false } response && response.Profile.Require() == _activeProfileKey)
             State.Crime.SetResponse(response with { Guards = [.. response.Guards, guard] });
         int remaining = state.Remaining - 1;
         return state with { Remaining = remaining, SpawnedCount = state.SpawnedCount + 1,

@@ -39,11 +39,11 @@ public sealed class PlayerTextLabelTests
     [Fact]
     public void Court_release_and_every_crime_read_as_sentences()
     {
-        Assert.Equal("You were acquitted. You are free to leave.", DaggerfallSession.CourtReleaseText(DaggerfallCourtOutcome.Acquitted));
-        Assert.DoesNotContain("Convicted", DaggerfallSession.CourtReleaseText(DaggerfallCourtOutcome.Convicted), StringComparison.Ordinal);
+        Assert.Equal("You were acquitted. You are free to leave.", DaggerfallLaw.CourtReleaseText(DaggerfallCourtOutcome.Acquitted));
+        Assert.DoesNotContain("Convicted", DaggerfallLaw.CourtReleaseText(DaggerfallCourtOutcome.Convicted), StringComparison.Ordinal);
         foreach (DaggerfallCrimeKind crime in Enum.GetValues<DaggerfallCrimeKind>())
-            Assert.NotEqual("An unnamed crime", DaggerfallSession.CrimeLabel(crime));
-        Assert.Equal("Breaking and entering", DaggerfallSession.CrimeLabel(DaggerfallCrimeKind.BreakingAndEntering));
+            Assert.NotEqual("An unnamed crime", DaggerfallLaw.CrimeLabel(crime));
+        Assert.Equal("Breaking and entering", DaggerfallLaw.CrimeLabel(DaggerfallCrimeKind.BreakingAndEntering));
     }
 
     [Fact]

@@ -2,6 +2,7 @@ using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using System.Globalization;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;

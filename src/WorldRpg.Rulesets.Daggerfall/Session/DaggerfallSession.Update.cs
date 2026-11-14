@@ -5,9 +5,11 @@ using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -21,7 +23,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <see cref="AdvanceCalendar"/> is every calendar consumer, in order, which rest, travel and quest time share
 /// through <see cref="AdvanceElapsedTime"/> and <see cref="AdvanceQuestTime"/>; <see cref="SimulateStep"/> is every
 /// call one of its fixed steps makes; <see cref="ResolveExhaustion"/> is what a collapse does across domains;
-/// <see cref="RemoveCarriedQuestItems"/> is what a quest's end does to the items it lent; <see cref="ReconcileSummoningFoes"/>
+/// <see cref="RemoveCarriedQuestItems"/> is what a quest's end does to the items it lent; <see cref="Arrest"/>, <see cref="ChooseLegal"/>,
+/// <see cref="BeginCourt"/>, <see cref="ApplyCourtSentence"/> and <see cref="ServePrison"/> are what the law's steps do; <see cref="ReconcileSummoningFoes"/>
 /// is how a summoning's hostiles arrive; and <see cref="ExpireConjuredItems"/> is what a conjured item's last minute does. Each line says the domain it belongs to. Order is behaviour: a call
 /// moves only with a reason that names what it changes.
 /// </summary>
@@ -82,8 +85,8 @@ internal sealed partial class DaggerfallSession
             // An arrival whose ground the Engine refused holds the world, like a held mode, until that ground is live
             // and the player stands on it: nothing would hold anyone up meanwhile.
             bool groundless = _mode == ProductMode.Playing && !_exterior.RecoverArrivalGround(); // Exterior
-            bool playing = _mode == ProductMode.Playing && !groundless && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !LegalModalOpen && Cinematics?.ActiveSource is null && DispelChoice.Pending is null && !IdentifyChoice.Open && CreateItemChoice.Pending is null;
-            bool modal = _mode == ProductMode.Modal || Summoning.PendingOffer || State.Quests.PendingOffer is not null || LegalModalOpen || DispelChoice.Pending is not null || IdentifyChoice.Open || CreateItemChoice.Pending is not null;
+            bool playing = _mode == ProductMode.Playing && !groundless && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !Law.ModalOpen && Cinematics?.ActiveSource is null && DispelChoice.Pending is null && !IdentifyChoice.Open && CreateItemChoice.Pending is null;
+            bool modal = _mode == ProductMode.Modal || Summoning.PendingOffer || State.Quests.PendingOffer is not null || Law.ModalOpen || DispelChoice.Pending is not null || IdentifyChoice.Open || CreateItemChoice.Pending is not null;
             DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
                 : playing ? DaggerfallUiPhases.Playing
                 : modal ? DaggerfallUiPhases.Modal
@@ -153,7 +156,7 @@ internal sealed partial class DaggerfallSession
                     (long minuteBefore, long minuteAfter) =
                         AdvanceCalendar(calendarBefore, DaggerfallCalendarAdvanceKind.OrdinaryPlay);   // Session: the calendar's list, below
                     WorldEncounters.Advance(minuteBefore, minuteAfter);                            // Actors
-                    CheckStandingLaw(minuteBefore, minuteAfter);                                  // Society
+                    Law.CheckStanding(minuteBefore, minuteAfter);                                 // Society
                     // One admitted update owns one input slice. Later catch-up steps derive only committed
                     // held keyboard/mapped-direction intent; direct axes, direct digital movement, pointer
                     // deltas, and semantic actions do not replay. Simulation and reactions run per step; the
@@ -398,7 +401,7 @@ internal sealed partial class DaggerfallSession
     private void SimulateStep(ProductUpdateState update, ulong generation, ulong simulationStep,
         long? swimmingMinuteBefore = null, long? swimmingMinuteAfter = null)
     {
-        if (LegalModalOpen) return;
+        if (Law.ModalOpen) return;
         _playerTime.ClearWorldAction();                                                           // Time
         _latestUpdateGeneration = generation;                                                     // Session
         _latestSimulationStep = simulationStep;                                                   // Session
@@ -471,8 +474,8 @@ internal sealed partial class DaggerfallSession
         // own loaded-location guards.
         if (!player.Alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
         _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, pending => WorldEncounters.Place(pending, simulationStep));   // Actors
-        UpdateLaw(update.DeltaSeconds);                                                           // Society
-        if (LegalModalOpen) return;
+        if (Law.Update(update.DeltaSeconds) is { } arrest) Arrest(arrest);                       // Society
+        if (Law.ModalOpen) return;
         _reactions.Step(State.Actors, update.DeltaSeconds, ThrownLanding);                       // Actors
         _hazards.Step(update.DeltaSeconds);                                                       // Combat
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);   // Actors
@@ -585,6 +588,109 @@ internal sealed partial class DaggerfallSession
         Presentation.SetOutcome(_definitions.TextPresentation.Resolve(
             new(DaggerfallTextKind.Resource, "401"), DungeonTextContext()).Text);                 // Text, UiProjection
         return new(true, null);
+    }
+
+    /// <summary>The arrest's list: the watch halts the player, who lets go of the controls and the open menu.</summary>
+    private void Arrest(DaggerfallLegalResponseSave response)
+    {
+        Law.Arrest(response);                                                                     // Society
+        _input.ClearHeldInput();                                                                  // Character
+        _interactions.SetMenuOpen(false);                                                         // Interiors
+        _appearance.PlayGameplaySound(456, "guard-halt");                                         // Scene
+        Presentation.SetOutcome("Halt! The city watch demands your surrender.");                  // UiProjection
+    }
+
+    /// <summary>Talking to a guard of the player's case surrenders to it.</summary>
+    private DaggerfallActivationOutcome SurrenderToGuard(long actor)
+    {
+        if (!Law.IsGuard(actor)) return new(false, "This guard is not handling your case.");    // Society
+        Arrest(Law.Current!);
+        return new(true, "The guard offers to accept your surrender.");
+    }
+
+    /// <summary>A choice on the legal modal: the law admits it, and what it leaves follows.</summary>
+    internal void ChooseLegal(string revision, string choice)
+    {
+        if (Law.Choose(revision, choice) is not { } chosen) return;                              // Society
+        switch (chosen.Step)
+        {
+            case DaggerfallLegalStep.Resisted:
+                _input.ClearHeldInput();                                                          // Character
+                Presentation.SetOutcome(chosen.Line!);                                            // UiProjection
+                break;
+            case DaggerfallLegalStep.Surrendered: BeginCourt(chosen.Response); break;
+            case DaggerfallLegalStep.SentenceAccepted: ApplyCourtSentence(chosen.Response); break;
+            case DaggerfallLegalStep.PrisonContinued: ServePrison(chosen.Response); break;
+        }
+    }
+
+    /// <summary>The court's list: the player is brought low and stands before the court where it releases them.</summary>
+    private void BeginCourt(DaggerfallLegalResponseSave response)
+    {
+        State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1);              // Character
+        RelocateCourtPlayer(Law.BeginCourt(response));                                            // Society; Travel, Interiors
+    }
+
+    /// <summary>The judgment's list: a conviction takes the fine and the stolen property, then the sentence is served.</summary>
+    private void ApplyCourtSentence(DaggerfallLegalResponseSave response)
+    {
+        var sentence = Law.FitSentence(response);                                                 // Society
+        if (sentence.Outcome == DaggerfallCourtOutcome.Convicted)
+        {
+            State.Currency.TrySpendGold(checked((ulong)sentence.Fine), []);                       // Economy
+            ConfiscateStolenProperty();                                                           // Items, Magic
+        }
+        response = Law.Imprison(response, sentence);                                              // Society
+        if (sentence.PrisonDays == 0) ServePrison(response);
+    }
+
+    /// <summary>
+    /// Prison's list: the sentence's time passes; once it is served the guards leave, the player is restored and
+    /// released where the court said, and a charge still pending opens the next case.
+    /// </summary>
+    private void ServePrison(DaggerfallLegalResponseSave response)
+    {
+        if (Law.Serve(response) is not { } released) return;                                     // Society, passing time
+        foreach (long id in released.Guards)
+        {
+            if (State.Actors.TryGet(id, out _)) _roster.RemoveQuestActor(id);                    // Actors
+            else RetireDetachedActor(id);                                                         // Session
+        }
+        foreach (string id in new[] { "health", "fatigue", "stamina", "magicka" })
+        {
+            var track = State.Actors.Player.Stats.GetTrack(TrackId.Parse(id)); track.SetCurrent(track.Maximum.Value);   // Character
+        }
+        RelocateCourtPlayer(released.Profile.Require());                                          // Travel, Interiors
+        Law.ReopenPending(released.Region);                                                       // Society
+        _input.ClearHeldInput();                                                                  // Character
+        Presentation.SetOutcome(DaggerfallLaw.CourtReleaseText(released.Sentence!.Outcome));      // UiProjection
+    }
+
+    /// <summary>
+    /// Places the player at the location's entrance, as the donor's <c>PositionPlayerAtLocationEntrance</c> does:
+    /// an exterior receives them from a random side (at a city, its nearest start marker); a profile that is not
+    /// an exterior receives them at its start.
+    /// </summary>
+    private void RelocateCourtPlayer(DaggerfallWorldProfileKey destination)
+    {
+        var profile = destination == _activeProfileKey ? _sites.Projection.Inputs : _sites.RequireProfiles().Require(destination);
+        if (profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && profile.Site is not null)
+            _sites.TryRelocatePlayer(destination, FastTravel.Landing(profile, null, $"court:{destination.LogicalId}:{_time.Calendar.MinuteNumber}"));   // Travel, Interiors
+        else if (profile.Project.PlayerPosition is WorldPoint entrance)
+            _sites.TryRelocatePlayer(destination, new("court-release", entrance, 0, 0));         // Interiors
+    }
+
+    /// <summary>The court's confiscation: the player's stolen items and stacks are destroyed and their equipment let go.</summary>
+    private void ConfiscateStolenProperty()
+    {
+        var before = State.Equipment.Read();                                                      // Items
+        var inventory = State.Inventory.Read();
+        var removed = inventory.UniqueItems.Where(item => State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(item.Entity).Value).Stolen).ToArray();
+        foreach (var item in removed) _itemLifetime.DestroyUnique(State.Inventory.GetDurableItemId(item.Entity).Value);
+        foreach (var stack in State.ItemInstances.StackItems.Where(value => value.Owner == DaggerfallItemOwner.Player && value.Metadata.Stolen).ToArray())
+            _itemLifetime.ConsumeStack(stack.Owner, stack.Stack);
+        _equipmentMoves.NotifyRemoved(before, before.Assignments.Where(value => removed.Any(item => item.Entity.Value == value.Item.EntityId)).Select(value => value.Item).DistinctBy(value => value.EntityId).ToArray());
+        State.HeldEnchantments.Refresh();                                                         // Magic
     }
 
     /// <summary>
@@ -786,7 +892,7 @@ internal sealed partial class DaggerfallSession
     {
         bool presentation = _mode == ProductMode.Title || _openingCinematics.IsActive || Cinematics?.ActiveSource is not null;
         bool playing = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen
-            && !State.Actors.Player.IsDefeated && !LegalModalOpen && !Summoning.PendingOffer
+            && !State.Actors.Player.IsDefeated && !Law.ModalOpen && !Summoning.PendingOffer
             && State.Quests.PendingOffer is null && DispelChoice.Pending is null
             && !IdentifyChoice.Open && CreateItemChoice.Pending is null;
         CharacterMotion motion = State.PlayerControl.Motion;

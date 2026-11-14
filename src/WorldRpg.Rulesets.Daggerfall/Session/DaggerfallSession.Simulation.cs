@@ -276,7 +276,7 @@ internal sealed partial class DaggerfallSession
     {
         if (_deferredPlayerActs is not { } acts) return;
         _deferredPlayerActs = null;
-        if (LegalModalOpen || State.Actors.Player.IsDefeated
+        if (Law.ModalOpen || State.Actors.Player.IsDefeated
             || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d)
             return;
         ApplyPlayerActs(acts);

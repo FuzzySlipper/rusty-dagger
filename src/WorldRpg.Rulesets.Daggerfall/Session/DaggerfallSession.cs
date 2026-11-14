@@ -281,7 +281,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _enemyBehavior.ClearEnemyMagic();
         ChangeMusicSite();
         if (_site.ActiveSite is { } offerSite) State.Quests.EnterOfferSite(offerSite.Id, _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon);
-        ReconcileLawSite();
+        Law.ReconcileSite();
     }
 
     void IDaggerfallExteriorHost.AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection) =>
@@ -944,7 +944,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Calendar: _time.Calendar,
             Effects: ReadActiveEffects(),
             CinematicSource: Cinematics?.ActiveSource,
-            Map: _mapOpen ? ReadMapPresentation() : null, Legal: LegalView, CreateItem: CreateItemChoice.View, Teleport: TeleportChoice.View, Dispel: DispelChoice.View, Identify: IdentifyChoice.View, Spells: ReadSpells(), Detectors: Detectors.Read())
+            Map: _mapOpen ? ReadMapPresentation() : null, Legal: Law.View, CreateItem: CreateItemChoice.View, Teleport: TeleportChoice.View, Dispel: DispelChoice.View, Identify: IdentifyChoice.View, Spells: ReadSpells(), Detectors: Detectors.Read())
         {
             ActionDrivenTime = ActionDrivenPlay, TimeHeld = PlayerTimeHeld,
             Weapon = new DaggerfallWeaponView(State.WeaponDrawn,
@@ -1034,6 +1034,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>The player's crimes: pickpocketing, witnesses, and what an attack on a civilian or a guard charges.</summary>
     internal DaggerfallCrimes Crimes { get; } = null!;
+
+    /// <summary>The law: the legal response, the court, the sentence and the standing law.</summary>
+    internal DaggerfallLaw Law { get; } = null!;
 
     /// <summary>The atlas the import drew and the tiles granted to the page, or null when the data container carries none and the travel map draws classic art.</summary>
     private readonly DaggerfallAtlasTiles? _atlasTiles;

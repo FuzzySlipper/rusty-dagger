@@ -710,7 +710,7 @@ internal sealed partial class DaggerfallSession
                 dialogueOpen: () => _activationPresentation.View.Dialogue is not null,
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
-                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => DispelChoice.Pending is not null, identifyOpen: () => IdentifyChoice.Open, teleportOpen: () => TeleportChoice.Pending is not null, createItemOpen: () => CreateItemChoice.Pending is not null, legalOpen: () => LegalModalOpen,
+                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => DispelChoice.Pending is not null, identifyOpen: () => IdentifyChoice.Open, teleportOpen: () => TeleportChoice.Pending is not null, createItemOpen: () => CreateItemChoice.Pending is not null, legalOpen: () => Law.ModalOpen,
                 tutorialOpen: () => _tutorial.Shown);
             itemInstances.StackChanged += State.Quests.ObserveStackChange;
             // Only a held bundle lives as long as its item is worn and whole. A used or striking item's
@@ -869,7 +869,20 @@ internal sealed partial class DaggerfallSession
                     new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Flats, new Dictionary<int, float>(),
                         (tuning.GroundCover.TownShare, tuning.GroundCover.TownRamp)));
             effects.Completed += outcome => _facts.Append(new MagicEffectFact(outcome));
-            crime.IncidentRecorded += AdmitLegalIncident;
+            Law = new DaggerfallLaw(crime, State.Social, definitions, _tuning.Law, Crimes, State.Actors, State.Npcs, State.PlayerControl, _site,
+                _placement, State.SkillUses, State.RacialOverrides,
+                activeProfile: () => _activeProfileKey,
+                calendar: () => _time.Calendar,
+                passTime: seconds => AdvanceElapsedTime(seconds, idleFatigue: false),
+                gold: () => State.Currency.Read().Gold,
+                locationLoaded: () => _exterior.ActiveLocationLoaded,
+                activeInputs: () => _sites.Projection.Inputs,
+                profiles: () => _sites.Profiles,
+                returnProfile: () => _sites.ReturnProfile,
+                spawn: (definition, pose) => _roster.Spawn(definition, pose),
+                makeHostile: id => _enemyBehavior.MakeHostile(id),
+                retireCivilian: Civilians.Retire);
+            crime.IncidentRecorded += Law.Admit;
             _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));
             _vitality.ConditionTrackLost += AppendSpellTrackLoss;
             _vitality.SpellTrackRestored += (target, track, requested, restored) =>
