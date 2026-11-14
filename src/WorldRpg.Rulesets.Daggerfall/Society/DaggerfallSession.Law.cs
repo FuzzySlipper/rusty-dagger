@@ -43,7 +43,7 @@ internal sealed partial class DaggerfallSession
         bool guardSaw = incident.Witnesses.WitnessActorIds.Any(id => _roster.Definitions.GetValueOrDefault(id)?.MobileId == 146
             || State.Npcs.All.Any(npc => npc.DurableId == id && npc.Role == "guard"));
         State.Crime.SetResponse(new(incident.OperationId, incident.Region, charges, DaggerfallLegalPhase.Pursuit,
-            DaggerfallWorldProfileKeySave.Capture(_activeProfileKey), guardSaw ? 0 : CrimeRoll(incident.OperationId, "guard-delay", _tuning.Law.MinimumResponseSeconds, _tuning.Law.MaximumResponseSeconds), []));
+            DaggerfallWorldProfileKeySave.Capture(_activeProfileKey), guardSaw ? 0 : Crimes.Roll(incident.OperationId, "guard-delay", _tuning.Law.MinimumResponseSeconds, _tuning.Law.MaximumResponseSeconds), []));
     }
 
     private void ChangeLegalReputation(int region, int change)
@@ -63,9 +63,9 @@ internal sealed partial class DaggerfallSession
         for (long minute = minuteBefore + 1; minute <= minuteAfter; minute++)
         {
             string operation = $"regional-wanted:{region}:{minute}";
-            if (wanted && CrimeRoll(operation, "wanted", 1, 100) <= 5 || banished && CrimeRoll(operation, "banished", 1, 100) <= 10)
+            if (wanted && Crimes.Roll(operation, "wanted", 1, 100) <= 5 || banished && Crimes.Roll(operation, "banished", 1, 100) <= 10)
             {
-                ReportCrime(new(operation, DaggerfallCrimeKind.CriminalConspiracy, DaggerfallCrimeStage.Completed,
+                Crimes.Report(new(operation, DaggerfallCrimeKind.CriminalConspiracy, DaggerfallCrimeStage.Completed,
                     DaggerfallActorIdentity.PlayerEntityId, null, region, minute, DaggerfallCrimeTargetKind.Unknown,
                     DaggerfallCrimeWitnessEvidence.NotQueried, DaggerfallCrimeGuildCredit.None, Reported: true));
                 return;
@@ -124,7 +124,7 @@ internal sealed partial class DaggerfallSession
         }
         if (live.Count == 0 && State.PlayerControl.Position is WorldPoint player)
         {
-            int count = CrimeRoll(response.Id, "guard-count", _tuning.Law.MinimumGuards, _tuning.Law.MaximumGuards);
+            int count = Crimes.Roll(response.Id, "guard-count", _tuning.Law.MinimumGuards, _tuning.Law.MaximumGuards);
             for (int index = 0; index < count; index++)
             {
                 if (!TryGuardArrivalPose($"{response.Id}:{_activeProfileKey.LogicalId}:{response.Guards.Length}:{index}", player, out ActorPose pose)) continue;
@@ -239,7 +239,7 @@ internal sealed partial class DaggerfallSession
             int personality = State.Actors.Player.Stats.GetStat(StatId.Parse("personality")).ValueInt;
             int draw = 0;
             var sentence = DaggerfallCourtPolicy.Decide(response.Penalty!, plea, State.Social.RegionalReputation(response.Region), skill, personality,
-                (min, max) => CrimeRoll(response.Id, $"trial:{draw++}", min, max));
+                (min, max) => Crimes.Roll(response.Id, $"trial:{draw++}", min, max));
             State.Crime.SetResponse(response with { Phase = DaggerfallLegalPhase.Sentence, Sentence = sentence });
             if (plea != DaggerfallCourtPlea.Guilty)
                 State.SkillUses.Record(new(choice, plea == DaggerfallCourtPlea.Etiquette ? DaggerfallSkillUseReason.CourtEtiquette : DaggerfallSkillUseReason.CourtStreetwise, DaggerfallSkillUseOutcome.Accepted));
@@ -261,12 +261,12 @@ internal sealed partial class DaggerfallSession
         {
             var charge = State.Crime.Incidents.Single(incident => incident.OperationId == id);
             var part = DaggerfallCourtPolicy.Accuse(charge.Crime, State.Social.RegionalReputation(response.Region), ulong.MaxValue,
-                (min, max) => CrimeRoll(response.Id, $"accusation:{id}:{draw++}", min, max));
+                (min, max) => Crimes.Roll(response.Id, $"accusation:{id}:{draw++}", min, max));
             penalty = new(checked(penalty.Fine + part.Fine), checked(penalty.PrisonDays + part.PrisonDays), penalty.Severe || part.Severe);
             int? rescuingGuild = charge.Crime is DaggerfallCrimeKind.Assault or DaggerfallCrimeKind.Murder ? 108
                 : charge.Crime is DaggerfallCrimeKind.AttemptedBreakingAndEntering or DaggerfallCrimeKind.Trespassing or DaggerfallCrimeKind.BreakingAndEntering or DaggerfallCrimeKind.Pickpocketing ? 42 : null;
             rescued &= rescuingGuild is int faction && _definitions.Factions.Factions.ContainsKey(faction)
-                && State.Social.GuildEligibility(faction) is { IsMember: true } guild && guild.Rank >= CrimeRoll(response.Id, $"guild-rescue:{id}", 0, 19);
+                && State.Social.GuildEligibility(faction) is { IsMember: true } guild && guild.Rank >= Crimes.Roll(response.Id, $"guild-rescue:{id}", 0, 19);
         }
         var affordable = DaggerfallCourtPolicy.FitAvailableGold(new(DaggerfallCourtOutcome.Convicted, penalty.Fine, penalty.PrisonDays), State.Currency.Read().Gold);
         penalty = penalty with { Fine = affordable.Fine, PrisonDays = affordable.PrisonDays };

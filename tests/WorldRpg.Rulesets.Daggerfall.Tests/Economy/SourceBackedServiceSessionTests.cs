@@ -268,7 +268,7 @@ public sealed class SourceBackedServiceSessionTests
         DaggerfallMerchantItemView stealable = shopliftView.Stock.First(value => value.CanBuy && value.UnitPrice > 0);
         string shopliftAction = $"{{\"action\":\"merchant-shoplift\",\"revision\":\"{Escape(shopliftView.Revision)}\",\"item\":\"{Escape(stealable.Key)}\",\"amount\":1}}";
         int crimeNotifications = 0;
-        session.CrimeReported += _ => crimeNotifications++;
+        session.State.Crime.IncidentRecorded += _ => crimeNotifications++;
         SubmitUi(session, 10, shopliftAction);
         Assert.Equal("You were caught stealing.", session.Presentation.LastOutcome);
         Assert.Equal(pickpocketBeforeShoplift + 1, SkillUseCount(session, "pickpocket"));

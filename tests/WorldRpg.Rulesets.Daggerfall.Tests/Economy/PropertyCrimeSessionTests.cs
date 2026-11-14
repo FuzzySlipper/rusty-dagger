@@ -27,7 +27,7 @@ public sealed class PropertyCrimeSessionTests
         var loot = Assert.IsType<LootPresentation>(session.OpenLoot);
         var item = Assert.Single(loot.Items);
         int notified = 0;
-        session.CrimeReported += _ => notified++;
+        session.State.Crime.IncidentRecorded += _ => notified++;
         string action = System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = loot.Container, revision = loot.Revision, item = item.Key, amount = 1 });
         fixture.Ui(session, action);
         Assert.True(session.State.Crime.Incidents.Count > 0, session.Presentation.LastOutcome);

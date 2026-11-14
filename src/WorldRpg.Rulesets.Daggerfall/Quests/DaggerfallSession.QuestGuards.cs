@@ -28,7 +28,7 @@ internal sealed partial class DaggerfallSession
                 new(_activeProfileKey, town.Id, delay, count, 0, candidates ?? [], outcome);
             if (State.Actors.All.Count(actor => !actor.IsDefeated && _roster.Definitions.GetValueOrDefault(actor.DurableId)?.MobileId == 146)
                 > _tuning.QuestSpawning.MaximumActiveGuards) return Result(DaggerfallQuestGuardSpawnOutcome.ActiveLimit);
-            int count = CrimeRoll(operation, "quest-guard-count", _tuning.Law.MinimumGuards, _tuning.Law.MaximumGuards);
+            int count = Crimes.Roll(operation, "quest-guard-count", _tuning.Law.MinimumGuards, _tuning.Law.MaximumGuards);
             if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior)
             {
                 int building = _sites.Projection.Inputs.InteriorBuilding?.BuildingType ?? -1;
@@ -49,18 +49,18 @@ internal sealed partial class DaggerfallSession
                     float behind = MathF.Cos(_tuning.QuestSpawning.GuardConversionAngleDegrees * MathF.PI / 180f);
                     convert = candidates.Values.Where(npc => npc.Role == "guard" ||
                         Vector3.Dot(Vector3.Normalize(State.Actors.Get(npc.DurableId).Position.ToVector() - player.ToVector()), forward) <= behind
-                            && CrimeRoll(operation, "quest-guard-convert:" + npc.DurableId, 1, 100) <= _tuning.QuestSpawning.GuardConversionChance)
+                            && Crimes.Roll(operation, "quest-guard-convert:" + npc.DurableId, 1, 100) <= _tuning.QuestSpawning.GuardConversionChance)
                         .OrderByDescending(npc => npc.Role == "guard").ThenBy(npc => npc.DurableId).Select(npc => npc.DurableId).ToArray();
                     state = Result(DaggerfallQuestGuardSpawnOutcome.Pending, convert.Length == 0 ? count : convert.Length, candidates: convert);
                 }
                 else
                 {
-                    var witnesses = QueryCrimeWitnesses(actor => candidates.ContainsKey(actor.DurableId),
+                    var witnesses = Crimes.QueryWitnesses(actor => candidates.ContainsKey(actor.DurableId),
                         _tuning.QuestSpawning.GuardWitnessDistance, Math.Cos(_tuning.QuestSpawning.GuardWitnessAngleDegrees * Math.PI / 180));
                     if (witnesses.Query != DaggerfallCrimeWitnessQuery.CompletedWithWitnesses) return Result(DaggerfallQuestGuardSpawnOutcome.NoWitness);
                     convert = witnesses.WitnessActorIds.Where(id => candidates[id].Role == "guard").ToArray();
                     state = Result(DaggerfallQuestGuardSpawnOutcome.Pending, convert.Length == 0 ? count : convert.Length,
-                        convert.Length == 0 ? CrimeRoll(operation, "quest-guard-delay", _tuning.Law.MinimumResponseSeconds, _tuning.Law.MaximumResponseSeconds) : 0, convert);
+                        convert.Length == 0 ? Crimes.Roll(operation, "quest-guard-delay", _tuning.Law.MinimumResponseSeconds, _tuning.Law.MaximumResponseSeconds) : 0, convert);
                     if (state.DelaySeconds > 0) return state;
                 }
             }

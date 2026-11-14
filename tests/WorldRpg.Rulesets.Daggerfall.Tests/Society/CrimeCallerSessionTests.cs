@@ -40,7 +40,7 @@ public sealed class CrimeCallerSessionTests
     public void Failed_civilian_pickpocket_reports_even_without_visible_witness_and_repeated_activation_is_refused()
     {
         using Fixture f = new(fail: true); var s = f.Session; f.Civilian(s);
-        int notifications = 0; s.CrimeReported += _ => notifications++;
+        int notifications = 0; s.State.Crime.IncidentRecorded += _ => notifications++;
         ulong gold = s.State.Currency.Read().Gold;
         f.Steal(s, 2); f.Steal(s, 3);
         var incident = Assert.Single(s.State.Crime.Incidents);

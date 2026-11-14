@@ -788,7 +788,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private void ReactToSpellAttack(long caster, long target, string bundle)
     {
         bool killed = State.Actors.TryGet(target, out var actor) && actor.IsDefeated;
-        ObserveLegalAttack(caster, target, $"spell-attack:{bundle}:{caster}:{target}:{(killed ? "death" : "attack")}");
+        Crimes.ObserveAttack(caster, target, $"spell-attack:{bundle}:{caster}:{target}:{(killed ? "death" : "attack")}");
         ReactToAttack(caster, target);
     }
 
@@ -836,7 +836,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         if (fact is ActorStruckFact struck) StrikeFeel.Feel(struck);
         if (fact is AttackHitFact hit)
         {
-            ObserveCrimeHit(hit);
+            Crimes.ObserveHit(hit);
             DaggerfallConcealmentEffects.AfterPhysicalHit(State.Effects, hit);
             if(hit.AttackerId==DaggerfallActorIdentity.PlayerEntityId && hit.TargetId!=hit.AttackerId)
                 ReactToAttack(hit.AttackerId,hit.TargetId);
@@ -1031,6 +1031,9 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>Fast travel: the travel panel, its map and the journeys it starts.</summary>
     internal DaggerfallFastTravel FastTravel { get; } = null!;
+
+    /// <summary>The player's crimes: pickpocketing, witnesses, and what an attack on a civilian or a guard charges.</summary>
+    internal DaggerfallCrimes Crimes { get; } = null!;
 
     /// <summary>The atlas the import drew and the tiles granted to the page, or null when the data container carries none and the travel map draws classic art.</summary>
     private readonly DaggerfallAtlasTiles? _atlasTiles;

@@ -161,11 +161,11 @@ internal sealed partial class DaggerfallSession
             State.Crime.RecordGuildRequirementProgress(operation, DaggerfallCrimeGuildCredit.Thieving, minute);
         // An unsuccessful pick is discrete in the donor; only a failed bash has a 10% alarm roll.
         if (accepted) return; // The accepted building-entry caller records a completed break-in.
-        var witnesses = QueryCrimeWitnesses();
+        var witnesses = Crimes.QueryWitnesses();
         State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
             owner, _activeProfileKey.Site.Region, minute, DaggerfallCrimeAttemptOutcome.Failed, witnesses));
-        if (decision.Kind == DaggerfallLockInteractionKind.Bash && CrimeRoll(operation, "noticed", 0, 99) < 10)
-            ReportCrime(new(operation, DaggerfallCrimeKind.AttemptedBreakingAndEntering, DaggerfallCrimeStage.Attempted,
+        if (decision.Kind == DaggerfallLockInteractionKind.Bash && Crimes.Roll(operation, "noticed", 0, 99) < 10)
+            Crimes.Report(new(operation, DaggerfallCrimeKind.AttemptedBreakingAndEntering, DaggerfallCrimeStage.Attempted,
                 DaggerfallActorIdentity.PlayerEntityId, owner, _activeProfileKey.Site.Region, minute,
                 DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None, Reported: true));
     }

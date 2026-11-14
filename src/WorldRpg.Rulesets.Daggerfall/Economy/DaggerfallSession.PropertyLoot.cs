@@ -17,7 +17,7 @@ internal sealed partial class DaggerfallSession
         _dungeonPopulation.Populate(inputs);
         foreach (var placement in inputs.PropertyContainers)
             _groundContainers.EnsureProperty(placement, -1, true, new(_definitions, _random), _uniqueItems,
-                (key, min, max) => CrimeRoll(key, "property-stock", min, max), State.Progression.Level, State.Character.Identity.RaceId,
+                (key, min, max) => Crimes.Roll(key, "property-stock", min, max), State.Progression.Level, State.Character.Identity.RaceId,
                 State.Character.Identity.Gender.ToString().ToLowerInvariant());
     }
 
@@ -38,7 +38,7 @@ internal sealed partial class DaggerfallSession
             bool owned = CurrentInteriorBuilding() is { } building && OwnsInteriorBuilding(building);
             privateProperty = !owned;
             _groundContainers.EnsureProperty(placement, _time.Calendar.DayNumber, owned, new(_definitions, _random), _uniqueItems,
-                (key, min, max) => CrimeRoll(key, "property-stock", min, max), State.Progression.Level,
+                (key, min, max) => Crimes.Roll(key, "property-stock", min, max), State.Progression.Level,
                 State.Character.Identity.RaceId, State.Character.Identity.Gender.ToString().ToLowerInvariant());
         }
         return _lootUi.OpenGround(id, privateProperty) ? new(true, _lootUi.Message) : new(false, _lootUi.Message);
@@ -62,12 +62,12 @@ internal sealed partial class DaggerfallSession
         int chance = DaggerfallCrimePolicy.CalculateShopliftingChance(skill, quality,
             DaggerfallCrimePolicy.TheftWeight(definition) * take.Quantity, 1);
         string operation = $"property:{State.Crime.OperationCount + 1}";
-        bool caught = CrimeRoll(operation, "noticed", 0, 99) < chance;
-        var witnesses = QueryCrimeWitnesses();
+        bool caught = Crimes.Roll(operation, "noticed", 0, 99) < chance;
+        var witnesses = Crimes.QueryWitnesses();
         long minute = _time.Calendar.MinuteNumber;
         State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Theft, DaggerfallActorIdentity.PlayerEntityId,
             source.Id, _activeProfileKey.Site.Region, minute, DaggerfallCrimeAttemptOutcome.PropertyTransferred, witnesses));
-        ReportCrime(new(operation, DaggerfallCrimeKind.Theft, DaggerfallCrimeStage.Completed,
+        Crimes.Report(new(operation, DaggerfallCrimeKind.Theft, DaggerfallCrimeStage.Completed,
             DaggerfallActorIdentity.PlayerEntityId, source.Id, _activeProfileKey.Site.Region, minute,
             DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.Thieving, Reported: caught));
         if (!caught) State.SkillUses.Record(new("pickpocket", DaggerfallSkillUseReason.ShopliftingAttempt, DaggerfallSkillUseOutcome.Attempted));

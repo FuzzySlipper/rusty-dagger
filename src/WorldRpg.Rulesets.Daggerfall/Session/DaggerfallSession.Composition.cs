@@ -519,7 +519,7 @@ internal sealed partial class DaggerfallSession
                 inventory, containers, itemInstances, _uniqueItems, _actorIdentities, currency, services, concreteGuildServices, tradeQuotes,
                 regionalPrices, _itemCondition, skillUses, crime, () => _time.Calendar,
                 () => _dialogue?.CurrentNpc()?.Site,
-                saved?.Merchants, QueryCrimeWitnesses);
+                saved?.Merchants, () => Crimes.QueryWitnesses());
             DaggerfallTransportPolicy transport = new(tuning.Transport);
             DaggerfallWagonStorage wagon = new(containers, itemInstances, definitions,
                 playerEntity, _actorIdentities, tuning.Transport);
@@ -778,6 +778,15 @@ internal sealed partial class DaggerfallSession
                 _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection.Inputs, () => _sites.Projection.Appearance,
                 _lootUi.CloseActor, _corpseLoot);
             _roster.ActorRetired += State.Quests.ObserveFoeRemoval;
+            Crimes = new DaggerfallCrimes(State.Crime, State.Actors, State.Npcs, State.PlayerControl, _site, _roster.Definitions, definitions,
+                State.ItemInstances, State.SkillUses, State.RacialOverrides, _random, engine.Perception, () => _spatial.Session,
+                calendar: () => _time.Calendar,
+                grantGold: grant => State.Currency.TrySpendGold(0, [grant]),
+                provoke: target =>
+                {
+                    if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();
+                    _enemyBehavior.MakeHostile(target);
+                });
             _dungeonPopulation = new DaggerfallDungeonPopulation(definitions, _random, _uniqueItems, _groundContainers, _grounding.RestingPosition, _encounters,
                 (definition, pose, spawnDistance, passive) => _roster.Spawn(definition, pose, spawnDistance: spawnDistance, passive: passive),
                 State.Character, () => State.Progression.Level);

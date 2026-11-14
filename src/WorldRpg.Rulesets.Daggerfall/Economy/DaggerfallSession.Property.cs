@@ -17,6 +17,12 @@ internal sealed partial class DaggerfallSession
 
     internal DaggerfallPropertyStorage PropertyStorage => _propertyStorage;
 
+    /// <summary>Whether the player owns this interior: their ship, or a house they hold at the active site.</summary>
+    private bool OwnsInteriorBuilding(DaggerfallInteriorBuilding building) =>
+        building.BuildingType == 24 && State.Property.OwnsShip
+        || State.Property.OwnedHouses.Any(house => house.Site == _activeProfileKey.Site
+            && house.Building == building.Building && house.BlockX == building.BlockX && house.BlockY == building.BlockY);
+
     internal DaggerfallInventorySave CapturePropertyStorage(DaggerfallPropertyStorageKey key) =>
         PropertyStorage.Capture(key);
 
