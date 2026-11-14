@@ -88,7 +88,10 @@ internal sealed partial class DaggerfallSession
             reach,
             new DaggerfallActivationContributions(
                 new DaggerfallCorpseActivationOwner(_corpseLoot, _lootUi, State.Actors, _facts, CorpseSightPoint),
-                _doorActivation = new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ActivateDoorForce, id => _doorSpells.Activate(_doors, id), EnterExteriorBuilding, ExteriorBuildingDoor, ExteriorBuildingName, DescribeLockDifficulty, DiscoverExteriorBuilding),
+                _doorActivation = new DaggerfallDoorActivationOwner(_doors, TriggerDungeonDoorActions, ForceLock, id => _doorSpells.Activate(_doors, id),
+                    (door, forceMode) => EnterExteriorBuilding(door, forceMode, skipGreeting: false),
+                    door => Entrance.Door(_doors, door, _activeProfileKey.Site), door => Entrance.Name(_doors, door, _activeProfileKey.Site),
+                    Locks.DescribeDifficulty, door => Entrance.Discover(_doors, door, _activeProfileKey.Site)),
                 new DaggerfallPortalActivationOwner(_sites.Projection.Portals, ResolvePortalDestination,
                     EnterPortal),
                 new DaggerfallGroundActivationOwner(() => _groundContainers.All.Values, PropertyLoot.InteractionPoint, id =>
@@ -100,155 +103,6 @@ internal sealed partial class DaggerfallSession
     private DaggerfallWorldProfileKey ResolvePortalDestination(string logicalProfile) =>
         (_sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted."))
             .RequireLogicalKey(logicalProfile);
-
-    private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode) =>
-        EnterExteriorBuilding(door, forceMode, skipGreeting: false);
-
-    private bool PresentBuildingGreeting(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode, bool closed, bool owned)
-    {
-        if (!TryExteriorBuilding(door, out _, out var building)
-            || _buildingGreeting.Present(door, forceMode, building, closed, owned, _activeProfileKey.LogicalId, CurrentTextContext) is not { } greeting)
-            return false;
-        _dungeonTextProjection = greeting;
-        return true;
-    }
-
-    private void ContinueBuildingEntry()
-    {
-        var held = _buildingGreeting.TakeHeldEntry();
-        _dungeonTextProjection = null;
-        if (held is { } entry && EnterExteriorBuilding(entry.Door, entry.ForceMode, skipGreeting: true) is { } result)
-            Presentation.SetOutcome(result.Message);
-    }
-
-    private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode, bool skipGreeting)
-    {
-        if (_doors.ExteriorBuildingOf(door) is not { } building) return null;
-        DaggerfallSiteProfiles profiles = _sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted.");
-        // The building's interior is the one its id names: an authored override, else assembled from its block.
-        DaggerfallWorldProfileKey destination = DaggerfallWorldProfileIds.Interior(_activeProfileKey.Site, building);
-        if (!profiles.TryGet(destination, out DaggerfallSiteProfile inside))
-            return new(false, "This building has no interior to enter.");
-        var interior = inside.InteriorBuilding
-            ?? throw new InvalidOperationException($"Interior '{destination.LogicalId}' names no placed building.");
-        int region = _activeProfileKey.Site.Region;
-        // The building's door identity is a 64-bit resource hash; a crime names its owner by a positive id, so the
-        // hash keeps its low 63 bits (and is never zero).
-        long owner = Math.Max(1L, (long)(_doors.IdentityOf(door).Value & long.MaxValue));
-        bool forced = forceMode is not null;
-        bool owned = Holdings.OwnsInterior(interior);
-        // Walking in while the building's own entry rule holds it shut is trespass; an entrance the rule
-        // opens (its hours, a guild's standing, a quest) is not.
-        bool closed = !(ExteriorBuildingDoor(door)?.Entry.Unlocked
-            ?? DaggerfallBuildingEntryPolicy.IsOpenHour(interior.BuildingType, _time.Calendar.Hour));
-        if (!skipGreeting && PresentBuildingGreeting(door, forceMode, closed, owned))
-            return new(true, "Read the greeting before entering.");
-        bool trespass = !owned && closed && interior.BuildingType is >= 0 and <= 23;
-        var witnesses = !owned && (forced || trespass) ? Crimes.QueryWitnesses() : DaggerfallCrimeWitnessEvidence.NotQueried;
-        DaggerfallSiteAnchor landing = BuildingLanding(inside, door);
-        if (StagesSlowWork)
-        {
-            // The interior is already read (its rules decided the entry), so admitting it is the one slow phase.
-            string place = ExteriorBuildingName(door) ?? "the building";
-            StageWorldChange($"Entering {place}", [new($"Entering {place}", () =>
-            {
-                if (!_sites.TryEnterBuilding(destination, landing)) Presentation.SetOutcome("The building entrance cannot be used.");
-                else if (!owned && (forced || trespass)) ReportEntryCrime(owner, region, forceMode, witnesses);
-            })], error => error.Message);
-            return new(true, "You pass through the building entrance.");
-        }
-        if (!_sites.TryEnterBuilding(destination, landing))
-            return new(false, "The building entrance cannot be used.");
-        if (!owned && (forced || trespass)) ReportEntryCrime(owner, region, forceMode, witnesses);
-        return new(true, "You pass through the building entrance.");
-    }
-
-    /// <summary>Records and reports breaking into or trespassing in a building the player has just entered.</summary>
-    private void ReportEntryCrime(long owner, int region, DaggerfallActivationMode? forceMode, DaggerfallCrimeWitnessEvidence witnesses)
-    {
-        string operation = $"entry:{State.Crime.Attempts.Count + 1}";
-        long minute = _time.Calendar.MinuteNumber;
-        State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
-            owner, region, minute, DaggerfallCrimeAttemptOutcome.EntryAccepted, witnesses));
-        Crimes.Report(new(operation, forceMode is not null ? DaggerfallCrimeKind.BreakingAndEntering : DaggerfallCrimeKind.Trespassing,
-            DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, owner, region, minute,
-            DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None,
-            Reported: forceMode == DaggerfallActivationMode.Bash && Crimes.Roll(operation, "noticed", 0, 99) < 10));
-    }
-
-    /// <summary>Where entering through an exterior door lands inside its building.</summary>
-    private DaggerfallSiteAnchor BuildingLanding(DaggerfallSiteProfile inside, DaggerfallRdbDoorId door) =>
-        DaggerfallBuildingArrival.Landing(inside, _exterior.LocalToProfile(_doors.Read(door).Pose.Translation), _spatial.CurrentController.Shape);
-
-    /// <summary>The placed building an exterior door enters, when the active site's record carries it.</summary>
-    private bool TryExteriorBuilding(DaggerfallRdbDoorId door, out DaggerfallSiteId site, out DaggerfallSiteBuildingSource building)
-    {
-        site = _activeProfileKey.Site;
-        building = null!;
-        return _doors.ExteriorBuildingOf(door) is { } id
-            && _site.TryFind(site, out DaggerfallSiteRecord record)
-            && record.Exterior is { } exterior
-            && exterior.Buildings.TryGetValue(id, out building!);
-    }
-
-    /// <summary>The name an exterior door's building is labelled with, or null when it has none.</summary>
-    private void DiscoverExteriorBuilding(DaggerfallRdbDoorId door)
-    {
-        if (TryExteriorBuilding(door, out var site, out var building)) _site.DiscoverBuilding(site, building.Id);
-    }
-
-    private string? ExteriorBuildingName(DaggerfallRdbDoorId door) =>
-        TryExteriorBuilding(door, out DaggerfallSiteId site, out DaggerfallSiteBuildingSource building)
-            && BuildingDisplayName(site, building) is { Length: > 0 } name ? name : null;
-
-    /// <summary>
-    /// The building an exterior door enters, named as the donor names it, and what its entry rule says
-    /// now. Null for a door that enters no building the active site's record carries.
-    /// </summary>
-    private DaggerfallBuildingDoor? ExteriorBuildingDoor(DaggerfallRdbDoorId door)
-    {
-        if (!TryExteriorBuilding(door, out DaggerfallSiteId site, out DaggerfallSiteBuildingSource building)) return null;
-        int faction = building.Source.FactionId;
-        bool hallAnytime = false;
-        bool guildMember = false;
-        if (DaggerfallConcreteGuildCatalog.TryGet(faction, out DaggerfallConcreteGuildDefinition? guild)
-            && State.GuildMembership.IsConfigured(faction))
-        {
-            DaggerfallGuildMembershipView member = State.GuildMembership.Read(faction, checked((int)_time.Calendar.DayNumber));
-            guildMember = member.IsMember;
-            // Guild.HallAccessAnytime: the Fighters and Mages from rank 6, the Thieves Guild and Dark Brotherhood for any member.
-            hallAnytime = DaggerfallConcreteGuildPolicy.EvaluateService(guild, DaggerfallConcreteGuildService.HallAccess,
-                new DaggerfallGuildServiceContext(member.IsMember, member.Rank, CurrentRegion: site.Region)).Eligible;
-        }
-        DaggerfallBuildingEntry entry = DaggerfallBuildingEntryPolicy.Evaluate(new(building.Source.BuildingType, faction, building.Quality,
-            _time.Calendar.Hour, _time.Calendar.GetHolidayId(site.Region),
-            OwnedByPlayer: State.Property.OwnsHouse(new(site, building.Source.Id, building.Id.BlockX, building.Id.BlockY)),
-            ActiveQuestBuilding: State.Quests.ClaimsBuilding(site, building),
-            GuildHallAccessAnytime: hallAnytime,
-            GuildMember: guildMember,
-            OwnsShip: State.Property.OwnsShip));
-        string? closed = entry.Closed is { } notice
-            ? InternalText(notice.GuildHall ? "guildClosed" : "storeClosed")
-                .Replace("%d1", notice.OpensAtHour.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
-                .Replace("%d2", notice.ClosesAtHour.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
-            : null;
-        return new(BuildingDisplayName(site, building), entry, closed, InternalText("lockedExteriorDoor"));
-    }
-
-    /// <summary>
-    /// The donor's discovered-building name: a residence is only "Residence"; anything else carries its
-    /// classic generated name. An unresolvable name is empty, so the door keeps its plain label.
-    /// </summary>
-    private string BuildingDisplayName(DaggerfallSiteId site, DaggerfallSiteBuildingSource building)
-    {
-        if (_site.LearnedBuildingName(site, building) is { Length: > 0 } learned) return learned;
-        if (DaggerfallBuildingEntryPolicy.IsResidence(building.Source.BuildingType)) return InternalText("residence");
-        DaggerfallBuildingNameResult name = _site.ResolveBuildingName(site, building);
-        return name.IsResolved ? name.Name : string.Empty;
-    }
-
-    private string InternalText(string key) =>
-        string.Concat(_definitions.Text.Require(new(DaggerfallTextKind.Internal, key)).TextRuns);
 
     internal DaggerfallActivationMode ActivationMode => _activation?.Mode ?? DaggerfallActivationMode.Grab;
     internal InteractionTargetingEvidence? LastActivationTargeting => _activation?.LastEvidence;
@@ -829,9 +683,6 @@ internal sealed partial class DaggerfallSession
             return open(id);
         }
     }
-
-    /// <summary>An exterior door's building: its display name, its entry rule now and the texts that rule shows.</summary>
-    private sealed record DaggerfallBuildingDoor(string Name, DaggerfallBuildingEntry Entry, string? ClosedNotice, string LockedMessage);
 
     /// <summary>Activation contribution for the same persistent RDB owner used by semantic actions.</summary>
     private sealed class DaggerfallDoorActivationOwner : IDaggerfallDoorActivationOwner

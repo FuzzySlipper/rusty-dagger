@@ -591,6 +591,55 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
+    /// Walking in by an exterior building's door: the entrance plans it (a refusal, the greeting read first, or the
+    /// interior and whether entering is a crime), the crime's witnesses are asked before the player goes in, the
+    /// building is entered (on the loading screen when slow work is staged) and only an accepted entry reports the
+    /// break-in or trespass. Null for a door that enters no building.
+    /// </summary>
+    private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode, bool skipGreeting)
+    {
+        DaggerfallSiteProfiles profiles = _sites.Profiles ?? throw new InvalidOperationException("Site profiles have not been admitted.");
+        if (Entrance.Plan(_doors, door, forceMode, skipGreeting, _activeProfileKey, profiles) is not { } plan) return null;   // Interiors
+        if (plan.Greeting is { } greeting) _dungeonTextProjection = greeting;                    // Text
+        if (plan.Outcome is { } said) return said;
+        var witnesses = plan.Crime is not null ? Crimes.QueryWitnesses() : DaggerfallCrimeWitnessEvidence.NotQueried;   // Society
+        DaggerfallSiteAnchor landing = BuildingLanding(plan.Inside!, door);                       // Interiors
+        if (StagesSlowWork)
+        {
+            // The interior is already read (its rules decided the entry), so admitting it is the one slow phase.
+            string place = Entrance.Name(_doors, door, _activeProfileKey.Site) ?? "the building";
+            StageWorldChange($"Entering {place}", [new($"Entering {place}", () =>
+            {
+                if (!_sites.TryEnterBuilding(plan.Destination, landing)) Presentation.SetOutcome("The building entrance cannot be used.");   // Interiors, its line UiProjection
+                else if (plan.Crime is { } crime) Crimes.ReportEntry(crime.Owner, crime.Region, forceMode, witnesses);   // Society
+            })], error => error.Message);
+            return new(true, "You pass through the building entrance.");
+        }
+        if (!_sites.TryEnterBuilding(plan.Destination, landing))                                  // Interiors
+            return new(false, "The building entrance cannot be used.");
+        if (plan.Crime is { } entered) Crimes.ReportEntry(entered.Owner, entered.Region, forceMode, witnesses);   // Society
+        return new(true, "You pass through the building entrance.");
+    }
+
+    /// <summary>The greeting is read: its text closes and the entry it held goes ahead.</summary>
+    private void ContinueBuildingEntry()
+    {
+        var held = Entrance.TakeHeldEntry();                                                      // Interiors
+        _dungeonTextProjection = null;                                                            // Text
+        if (held is { } entry && EnterExteriorBuilding(entry.Door, entry.ForceMode, skipGreeting: true) is { } result)
+            Presentation.SetOutcome(result.Message);                                              // UiProjection
+    }
+
+    /// <summary>A pick or a bash on a door's lock: the lock, what it means to the law, then the incident's notice.</summary>
+    private DaggerfallActivationOutcome ForceLock(DaggerfallRdbDoorId door, DaggerfallActivationMode mode)
+    {
+        DaggerfallLockAttempt attempt = Locks.Force(_doors, door, mode, _activeProfileKey);      // Interiors
+        Crimes.ObserveLock(attempt.Decision, attempt.Operation, _doors.IdentityOf(door), _activeProfileKey.Site.Region);   // Society
+        Locks.Publish(attempt);                                                                   // Interiors
+        return attempt.Outcome;
+    }
+
+    /// <summary>
     /// The weather's list where the player stands: the exterior ground's season and wetness, the shelter overhead, how
     /// far the camera draws, the horizon shown or hidden, then the weather's presentation. The update, a site's
     /// activation, a client's first publication and an arrival's ground wait reach it.

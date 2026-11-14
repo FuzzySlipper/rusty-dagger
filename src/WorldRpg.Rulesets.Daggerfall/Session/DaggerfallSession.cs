@@ -120,6 +120,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private DaggerfallWorldProfileKey _activeProfileKey => _sites.ActiveProfile;
     private DaggerfallSiteAppearance _appearance => _sites.Projection.Appearance;
     private DaggerfallDoorRuntime _doors => _sites.Projection.Doors;
+    /// <summary>Exterior doors' buildings: their names, entry rules, greetings and what entering comes to.</summary>
+    internal DaggerfallBuildingEntrance Entrance { get; }
+    /// <summary>Picking and bashing a door's lock.</summary>
+    internal DaggerfallLocks Locks { get; }
+
+    /// <summary>Where entering through an exterior door lands inside its building.</summary>
+    private DaggerfallSiteAnchor BuildingLanding(DaggerfallSiteProfile inside, DaggerfallRdbDoorId door) =>
+        DaggerfallBuildingArrival.Landing(inside, _exterior.LocalToProfile(_doors.Read(door).Pose.Translation), _spatial.CurrentController.Shape);
+
     /// <summary>The weather where the player is; rules read its conditions.</summary>
     internal DaggerfallWeather LocalWeather { get; }
     private readonly DaggerfallWeatherPresentation _weatherPresentation;

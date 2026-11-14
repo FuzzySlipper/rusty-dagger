@@ -1,8 +1,8 @@
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.World;
 using KitEquipmentSlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
@@ -28,84 +28,125 @@ internal readonly record struct DaggerfallLockIncident(
     bool EmitsNoise,
     bool ReportsBreakingAndEntering);
 
-internal sealed partial class DaggerfallSession
+/// <summary>One pick or bash on a door's lock: what the lock policy decided, what the door did, and its words.</summary>
+internal sealed record DaggerfallLockAttempt(
+    DaggerfallRdbDoorId Door,
+    DaggerfallLockInteractionDecision Decision,
+    DaggerfallDoorOperationResult Operation,
+    DaggerfallActivationOutcome Outcome);
+
+/// <summary>
+/// The player picking or bashing a door's lock: the chance and its words, the keyed pick roll, the force of the wielded
+/// weapon, the skill use, a building's remembered failed pick, and the outcome's message. What an attempt means to the
+/// law is Society's; the session's <c>ForceLock</c> list hands it the attempt before <see cref="Publish"/> tells
+/// <see cref="Incident"/>'s subscribers.
+/// </summary>
+/// <param name="actors">The player's stats and level.</param>
+/// <param name="equipment">The player's equipment, whose weapon lends a bash its force.</param>
+/// <param name="site">The site context, which remembers a building's failed pick across visits.</param>
+internal sealed class DaggerfallLocks(
+    ActorsState actors,
+    DaggerfallSkillUseReactions skillUses,
+    MechanicsEquipmentCoordinator equipment,
+    DaggerfallSiteContext site,
+    DaggerfallDefinitions definitions,
+    IRandomService random)
 {
     private const ulong LockpickRandomSeed = 0x4C4F434BUL;
     private const string LockpickRandomScope = "daggerfall.lockpick.v1";
 
     /// <summary>
     /// Transient legal/noise seam for the owning crime and perception tasks.
-    /// The session remains the only publisher; no incident log is persisted.
+    /// This owner is the only publisher; no incident log is persisted.
     /// </summary>
-    internal event Action<DaggerfallLockIncident>? LockIncident;
+    internal event Action<DaggerfallLockIncident>? Incident;
 
-    private DaggerfallActivationOutcome ActivateDoorForce(DaggerfallRdbDoorId id, DaggerfallActivationMode mode) => mode switch
+    /// <summary>Picks (<see cref="DaggerfallActivationMode.Steal"/>) or bashes one door of the active site's projection.</summary>
+    internal DaggerfallLockAttempt Force(DaggerfallDoorRuntime doors, DaggerfallRdbDoorId id, DaggerfallActivationMode mode,
+        DaggerfallWorldProfileKey profile) => mode switch
     {
-        DaggerfallActivationMode.Steal => TryLockpickDoor(id),
-        DaggerfallActivationMode.Bash => TryBashDoor(id),
+        DaggerfallActivationMode.Steal => Pick(doors, id, profile),
+        DaggerfallActivationMode.Bash => Bash(doors, id),
         _ => throw new ArgumentOutOfRangeException(nameof(mode)),
     };
 
-    private string DescribeLockDifficulty(DaggerfallDoorView door)
+    /// <summary>Tells <see cref="Incident"/>'s subscribers what an attempt did.</summary>
+    internal void Publish(DaggerfallLockAttempt attempt)
+    {
+        DaggerfallLockInteractionDecision decision = attempt.Decision;
+        Incident?.Invoke(new(
+            attempt.Door,
+            decision.Kind,
+            decision.Surface,
+            decision.Status,
+            attempt.Operation,
+            decision.Chance,
+            decision.Roll,
+            decision.FailedSkillLevel,
+            decision.DoorDamage,
+            decision.EmitsNoise,
+            decision.ReportsBreakingAndEntering));
+    }
+
+    /// <summary>How hard a locked door's lock looks to the player's Lockpicking, in the donor's words.</summary>
+    internal string DescribeDifficulty(DaggerfallDoorView door)
     {
         if (door.IsMagicallyHeld) return InternalText("magicLock");
-        int skill = State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).ValueInt;
-        int chance = Policies.DaggerfallFormulaPolicy.CalculateInteriorLockpickingChance(Math.Max(1, State.Progression.Level), door.LockValue, skill);
+        int skill = actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).ValueInt;
+        int chance = Policies.DaggerfallFormulaPolicy.CalculateInteriorLockpickingChance(Math.Max(1, actors.Player.Progression.Level), door.LockValue, skill);
         if (chance < 30) return InternalText("lockpickChance1");
         if (chance < 35) return InternalText("lockpickChance2");
         if (chance < 45) return InternalText("lockpickChance3");
-        return _definitions.Text.RequireInternalEntry("lockpickChance", chance >= 95 ? 9 : (chance - 45) / 5);
+        return definitions.Text.RequireInternalEntry("lockpickChance", chance >= 95 ? 9 : (chance - 45) / 5);
     }
 
-    private DaggerfallActivationOutcome TryLockpickDoor(DaggerfallRdbDoorId id)
+    private DaggerfallLockAttempt Pick(DaggerfallDoorRuntime doors, DaggerfallRdbDoorId id, DaggerfallWorldProfileKey profile)
     {
-        DaggerfallDoorView door = _doors.Read(id);
+        DaggerfallDoorView door = doors.Read(id);
         // Donor lockpicking reads the current modified skill for both chance and its retry gate.
-        int skill = State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).ValueInt;
-        var building = _doors.ExteriorBuildingOf(id);
-        int? previousFailedSkill = building is { } placed ? _site.FailedBuildingPick(_activeProfileKey.Site, placed) : _doors.FailedLockpickingSkill(id);
-        DaggerfallLockInteractionSurface surface = _doors.InteractionSurface(id);
+        int skill = actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).ValueInt;
+        var building = doors.ExteriorBuildingOf(id);
+        int? previousFailedSkill = building is { } placed ? site.FailedBuildingPick(profile.Site, placed) : doors.FailedLockpickingSkill(id);
+        DaggerfallLockInteractionSurface surface = doors.InteractionSurface(id);
         DaggerfallLockInteractionDecision decision = DaggerfallLockInteractionPolicy.EvaluateLockpickDeferred(
             door,
             surface,
-            Math.Max(1, State.Progression.Level),
+            Math.Max(1, actors.Player.Progression.Level),
             skill,
             previousFailedSkill,
-            () => DrawLockpickRoll(door, skill, previousFailedSkill));
+            () => DrawLockpickRoll(profile, door, skill, previousFailedSkill));
 
         if (decision.RecordsSkillUse)
-            _ = State.SkillUses.Record(new DaggerfallSkillUse(
+            _ = skillUses.Record(new DaggerfallSkillUse(
                 DaggerfallSkills.Lockpicking,
                 DaggerfallSkillUseReason.LockpickingAttempt,
                 DaggerfallSkillUseOutcome.Attempted));
 
         if (building is { } failedBuilding && decision.Status == DaggerfallLockInteractionStatus.Failed)
-            _site.RememberBuildingPick(_activeProfileKey.Site, failedBuilding, skill);
-        DaggerfallDoorOperationResult operation = _doors.ApplyLockInteraction(id, decision);
-        PublishLockIncident(id, decision, operation);
+            site.RememberBuildingPick(profile.Site, failedBuilding, skill);
+        DaggerfallDoorOperationResult operation = doors.ApplyLockInteraction(id, decision);
         bool applied = decision.Applied && operation == DaggerfallDoorOperationResult.Started;
-        return new(applied, LockpickMessage(decision.Status, applied));
+        return new(id, decision, operation, new(applied, LockpickMessage(decision.Status, applied)));
     }
 
-    private DaggerfallActivationOutcome TryBashDoor(DaggerfallRdbDoorId id)
+    private DaggerfallLockAttempt Bash(DaggerfallDoorRuntime doors, DaggerfallRdbDoorId id)
     {
-        DaggerfallDoorView before = _doors.Read(id);
-        int strength = State.Actors.Player.Stats
+        DaggerfallDoorView before = doors.Read(id);
+        int strength = actors.Player.Stats
             .GetStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value)).ValueInt;
         int toolForce = EquippedBashToolForce();
-        DaggerfallDoorOperationResult operation = _doors.Bash(id, strength, toolForce, out DaggerfallLockInteractionDecision decision);
-        PublishLockIncident(id, decision, operation);
+        DaggerfallDoorOperationResult operation = doors.Bash(id, strength, toolForce, out DaggerfallLockInteractionDecision decision);
         bool applied = operation == DaggerfallDoorOperationResult.Started;
-        return new(applied, BashMessage(decision, operation, before.Motion));
+        return new(id, decision, operation, new(applied, BashMessage(decision, operation, before.Motion)));
     }
 
     private int EquippedBashToolForce()
     {
-        EquipmentRead equipment = State.Equipment.Read();
+        EquipmentRead worn = equipment.Read();
         foreach (string slot in new[] { "right-hand", "left-hand" })
         {
-            if (!equipment.TryGet(new KitEquipmentSlotId(slot), out KitUniqueInventoryItem item)
-                || !_definitions.Items.TryGetValue(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition? definition))
+            if (!worn.TryGet(new KitEquipmentSlotId(slot), out KitUniqueInventoryItem item)
+                || !definitions.Items.TryGetValue(new DaggerfallItemId(item.Definition.Value), out DaggerfallItemDefinition? definition))
                 continue;
             if (definition.Weapon is not { } weapon) continue;
 
@@ -117,11 +158,11 @@ internal sealed partial class DaggerfallSession
         return 0;
     }
 
-    private int DrawLockpickRoll(DaggerfallDoorView door, int skill, int? previousFailedSkill)
+    private int DrawLockpickRoll(DaggerfallWorldProfileKey profile, DaggerfallDoorView door, int skill, int? previousFailedSkill)
     {
         string previous = previousFailedSkill?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "none";
-        string key = $"{_activeProfileKey.LogicalId}:{door.Id}:{door.LockValue}:{skill}:{previous}";
-        return checked((int)_random.DrawKeyed(new KeyedRngRequest(
+        string key = $"{profile.LogicalId}:{door.Id}:{door.LockValue}:{skill}:{previous}";
+        return checked((int)random.DrawKeyed(new KeyedRngRequest(
             LockpickRandomSeed,
             LockpickRandomScope,
             key,
@@ -129,46 +170,8 @@ internal sealed partial class DaggerfallSession
             100)).Value);
     }
 
-    private void PublishLockIncident(
-        DaggerfallRdbDoorId id,
-        DaggerfallLockInteractionDecision decision,
-        DaggerfallDoorOperationResult operation)
-    {
-        ObserveCrimeLock(id, decision, operation);
-        LockIncident?.Invoke(new(
-            id,
-            decision.Kind,
-            decision.Surface,
-            decision.Status,
-            operation,
-            decision.Chance,
-            decision.Roll,
-            decision.FailedSkillLevel,
-            decision.DoorDamage,
-            decision.EmitsNoise,
-            decision.ReportsBreakingAndEntering));
-    }
-
-    private void ObserveCrimeLock(DaggerfallRdbDoorId id, DaggerfallLockInteractionDecision decision,
-        DaggerfallDoorOperationResult result)
-    {
-        if (decision.Surface != DaggerfallLockInteractionSurface.Exterior || !decision.ConsumedAttempt) return;
-        string operation = $"lock:{State.Crime.OperationCount + 1}";
-        long minute = _time.Calendar.MinuteNumber;
-        long owner = checked((long)_doors.IdentityOf(id).Value);
-        bool accepted = decision.Applied && result == DaggerfallDoorOperationResult.Started;
-        if (accepted && decision.Kind == DaggerfallLockInteractionKind.Lockpick)
-            State.Crime.RecordGuildRequirementProgress(operation, DaggerfallCrimeGuildCredit.Thieving, minute);
-        // An unsuccessful pick is discrete in the donor; only a failed bash has a 10% alarm roll.
-        if (accepted) return; // The accepted building-entry caller records a completed break-in.
-        var witnesses = Crimes.QueryWitnesses();
-        State.Crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
-            owner, _activeProfileKey.Site.Region, minute, DaggerfallCrimeAttemptOutcome.Failed, witnesses));
-        if (decision.Kind == DaggerfallLockInteractionKind.Bash && Crimes.Roll(operation, "noticed", 0, 99) < 10)
-            Crimes.Report(new(operation, DaggerfallCrimeKind.AttemptedBreakingAndEntering, DaggerfallCrimeStage.Attempted,
-                DaggerfallActorIdentity.PlayerEntityId, owner, _activeProfileKey.Site.Region, minute,
-                DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None, Reported: true));
-    }
+    private string InternalText(string key) =>
+        string.Concat(definitions.Text.Require(new(DaggerfallTextKind.Internal, key)).TextRuns);
 
     private static string LockpickMessage(DaggerfallLockInteractionStatus status, bool applied) => status switch
     {

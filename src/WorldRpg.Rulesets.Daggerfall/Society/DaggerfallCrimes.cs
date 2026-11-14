@@ -1,4 +1,5 @@
 using Rusty.Engine;
+using WorldRpg.Kit.World;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
@@ -45,6 +46,50 @@ internal sealed class DaggerfallCrimes(
 
     /// <summary>Records an incident with the canonical crime owner, which tells the law once.</summary>
     internal void Report(DaggerfallCrimeIncidentSave incident) => crime.RecordIncident(incident);
+
+    /// <summary>
+    /// The player has just entered a building by force or while its entry rule held it shut: the accepted entry is an
+    /// attempt and a completed break-in (forced) or trespass, reported when a bash was noticed, one time in ten.
+    /// </summary>
+    /// <param name="witnesses">Who saw it, queried before the player went in.</param>
+    internal void ReportEntry(long owner, int region, DaggerfallActivationMode? forceMode, DaggerfallCrimeWitnessEvidence witnesses)
+    {
+        string operation = $"entry:{crime.Attempts.Count + 1}";
+        long minute = calendar().MinuteNumber;
+        crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
+            owner, region, minute, DaggerfallCrimeAttemptOutcome.EntryAccepted, witnesses));
+        Report(new(operation, forceMode is not null ? DaggerfallCrimeKind.BreakingAndEntering : DaggerfallCrimeKind.Trespassing,
+            DaggerfallCrimeStage.Completed, DaggerfallActorIdentity.PlayerEntityId, owner, region, minute,
+            DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None,
+            Reported: forceMode == DaggerfallActivationMode.Bash && Roll(operation, "noticed", 0, 99) < 10));
+    }
+
+    /// <summary>
+    /// What a pick or a bash on an exterior door's lock means to the law: an accepted pick counts toward the Thieves
+    /// Guild's requirement; an unsuccessful attempt is recorded, and a failed bash is noticed one time in ten. An
+    /// accepted attempt is no crime here: the building entry that follows reports the break-in.
+    /// </summary>
+    /// <param name="door">The door's durable identity, which names the building's owner.</param>
+    internal void ObserveLock(DaggerfallLockInteractionDecision decision, DaggerfallDoorOperationResult result,
+        DurableIdentityReference door, int region)
+    {
+        if (decision.Surface != DaggerfallLockInteractionSurface.Exterior || !decision.ConsumedAttempt) return;
+        string operation = $"lock:{crime.OperationCount + 1}";
+        long minute = calendar().MinuteNumber;
+        long owner = checked((long)door.Value);
+        bool accepted = decision.Applied && result == DaggerfallDoorOperationResult.Started;
+        if (accepted && decision.Kind == DaggerfallLockInteractionKind.Lockpick)
+            crime.RecordGuildRequirementProgress(operation, DaggerfallCrimeGuildCredit.Thieving, minute);
+        // An unsuccessful pick is discrete in the donor; only a failed bash has a 10% alarm roll.
+        if (accepted) return;
+        var witnesses = QueryWitnesses();
+        crime.RecordAttempt(new(operation, DaggerfallCrimeAction.Entry, DaggerfallActorIdentity.PlayerEntityId,
+            owner, region, minute, DaggerfallCrimeAttemptOutcome.Failed, witnesses));
+        if (decision.Kind == DaggerfallLockInteractionKind.Bash && Roll(operation, "noticed", 0, 99) < 10)
+            Report(new(operation, DaggerfallCrimeKind.AttemptedBreakingAndEntering, DaggerfallCrimeStage.Attempted,
+                DaggerfallActorIdentity.PlayerEntityId, owner, region, minute,
+                DaggerfallCrimeTargetKind.Other, witnesses, DaggerfallCrimeGuildCredit.None, Reported: true));
+    }
 
     internal DaggerfallActivationOutcome Pickpocket(long targetId)
     {

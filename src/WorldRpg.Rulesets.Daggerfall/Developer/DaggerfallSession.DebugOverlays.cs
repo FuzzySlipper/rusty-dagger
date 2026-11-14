@@ -156,7 +156,7 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
             if (doors.TryGetValue(target.Entity, out DaggerfallDoorView door))
             {
                 if (door.IsLocked) { state = $"locked {door.LockValue}"; color = Ink.Refused; }
-                if (ExteriorBuildingDoor(door.Id) is { } building) state += building.Entry.Unlocked ? " · open now" : " · closed now";
+                if (Entrance.Door(_doors, door.Id, _activeProfileKey.Site) is { } building) state += building.Entry.Unlocked ? " · open now" : " · closed now";
             }
             items.Add(OverlayItem.Marker(OverlayPlace.World, point, .4F, color, onTop: true));
             if (target.SurfaceNormal is { } normal) items.Add(OverlayItem.Segment(OverlayPlace.World, point, point + normal, color, onTop: true));

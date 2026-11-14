@@ -975,6 +975,13 @@ internal sealed partial class DaggerfallSession
                 questSubjects: State.Quests.DialogueSubjects,
                 questClaimsBuilding: State.Quests.ClaimsBuilding,
                 questContacts: State.Quests.QuestContacts);
+            Entrance = new DaggerfallBuildingEntrance(_site, definitions, _time, _buildingGreeting, CurrentTextContext,
+                hallStanding: (faction, region) => State.GuildMembership.HallStanding(faction, _time.Calendar, region),
+                ownsHouse: (site, building) => State.Property.OwnsHouse(new(site, building.Source.Id, building.Id.BlockX, building.Id.BlockY)),
+                ownsShip: () => State.Property.OwnsShip,
+                ownsInterior: interior => Holdings.OwnsInterior(interior),
+                questClaims: State.Quests.ClaimsBuilding);
+            Locks = new DaggerfallLocks(State.Actors, State.SkillUses, State.Equipment, _site, definitions, _random);
             InitializeActivation(engine, tuning.LootInteraction);
             _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps, State.Social, State.SkillUses);
             _characterUi.UseGuildMembership(State.GuildMembership, () => checked((int)_time.Calendar.DayNumber));

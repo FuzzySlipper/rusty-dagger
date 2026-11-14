@@ -471,7 +471,7 @@ public sealed class DungeonInteractionSessionTests
         Assert.Equal(DaggerfallLockInteractionSurface.Exterior, session.Doors.InteractionSurface(door.Id));
         int skill = session.State.SkillUses.PermanentSkillValue(DaggerfallSkills.Lockpicking);
         DaggerfallLockIncident? incident = null;
-        session.LockIncident += value => incident = value;
+        session.Locks.Incident += value => incident = value;
         session.State.PlayerControl.MoveTo(door.Pose.Translation + Vector3.UnitZ);
         session.State.PlayerControl.YawRadians = 0f;
         session.State.PlayerControl.PitchRadians = 0f;

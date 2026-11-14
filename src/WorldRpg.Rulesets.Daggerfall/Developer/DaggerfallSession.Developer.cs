@@ -459,7 +459,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
 
     private string BuildingLabel(DaggerfallSiteRecord site, DaggerfallSiteBuildingId id) =>
         site.Exterior?.Buildings.TryGetValue(id, out DaggerfallSiteBuildingSource? source) == true
-            && BuildingDisplayName(site.Id, source) is { Length: > 0 } name ? name : $"building {id}";
+            && Entrance.DisplayName(site.Id, source) is { Length: > 0 } name ? name : $"building {id}";
 
     private static string TargetId(DaggerfallActivationTarget target) => $"{target.Identity.Kind}:{target.Identity.Value}";
 

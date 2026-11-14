@@ -1,3 +1,5 @@
+using WorldRpg.Rulesets.Daggerfall.World;
+
 namespace WorldRpg.Rulesets.Daggerfall.Guilds;
 
 /// <summary>Why a guild membership operation did not change the social owner.</summary>
@@ -240,6 +242,20 @@ internal sealed class DaggerfallGuildMembershipPolicy
     }
 
     internal bool IsConfigured(int factionId) => _definitions.ContainsKey(factionId);
+
+    /// <summary>
+    /// Whether the player belongs to the guild a hall's faction names, and whether that standing lets them in at any
+    /// hour (Guild.HallAccessAnytime: the Fighters and Mages from rank 6, the Thieves Guild and Dark Brotherhood for any
+    /// member). Neither, for a faction that is no configured guild.
+    /// </summary>
+    internal (bool Member, bool HallAnytime) HallStanding(int factionId, DaggerfallCalendar calendar, int region)
+    {
+        if (!DaggerfallConcreteGuildCatalog.TryGet(factionId, out DaggerfallConcreteGuildDefinition? guild) || !IsConfigured(factionId))
+            return (false, false);
+        DaggerfallGuildMembershipView member = Read(factionId, checked((int)calendar.DayNumber));
+        return (member.IsMember, DaggerfallConcreteGuildPolicy.EvaluateService(guild, DaggerfallConcreteGuildService.HallAccess,
+            new DaggerfallGuildServiceContext(member.IsMember, member.Rank, CurrentRegion: region)).Eligible);
+    }
 
     /// <summary>Reads the current membership and the privileges granted by its rank.</summary>
     internal DaggerfallGuildMembershipView Read(int factionId, int currentDay)
