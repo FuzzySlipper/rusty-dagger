@@ -5,17 +5,17 @@ using Xunit;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// The "Where is" directory built without the session: the fixture's site, people and definitions, with the quests'
-/// subjects, claims and contacts as plain inputs.
+/// The "Where is" directory built without the session, over <see cref="DialogueStage"/>: the stage's site context,
+/// people and definitions, with the quests' subjects as a plain input.
 /// </summary>
 public sealed class DaggerfallDialogueDirectionsTests
 {
     [Fact]
     public void A_quest_subject_is_listed_where_its_place_resolves_and_disclosing_it_discovers_the_site()
     {
-        using ConditionSessionFixture fixture = new();
-        DaggerfallSiteContext site = fixture.Session.Site;
-        DaggerfallSiteRecord active = site.ActiveSite ?? throw new InvalidOperationException("The directions test needs an admitted site.");
+        using DialogueStage stage = new();
+        DaggerfallSiteContext site = stage.Society.Sites;
+        DaggerfallSiteRecord active = site.ActiveSite ?? throw new InvalidOperationException("The stage stands at a site.");
         DaggerfallSiteRecord far = site.Records
             .Where(place => place.Id.Region == active.Id.Region && place.Id != active.Id && !site.IsDiscovered(place.Id))
             .OrderBy(place => place.Id.Index).First();
@@ -23,7 +23,7 @@ public sealed class DaggerfallDialogueDirectionsTests
         // A person the conversation cannot point to falls back to their home's site.
         DaggerfallDialogueQuestSubject person = new("q", "person", "Lady Sarah", [987654], far.Id, null);
         DaggerfallDialogueQuestSubject nowhere = new("q", "item", "A lost ring", [], null, null);
-        DaggerfallDialogueDirections directions = Directions(fixture, [placed, person, nowhere]);
+        DaggerfallDialogueDirections directions = stage.Directions(stage.Conversation(), [placed, person, nowhere]);
 
         IReadOnlyList<DaggerfallDialogueTopicOption> directory = directions.Directory();
         DaggerfallDialogueTopicOption listed = Assert.Single(directory, topic => topic.Id == "direction:quest:q:place");
@@ -45,10 +45,10 @@ public sealed class DaggerfallDialogueDirectionsTests
     [Fact]
     public void The_regions_other_sites_are_listed_and_a_site_elsewhere_is_neither_answered_nor_disclosed()
     {
-        using ConditionSessionFixture fixture = new();
-        DaggerfallSiteContext site = fixture.Session.Site;
-        DaggerfallSiteRecord active = site.ActiveSite ?? throw new InvalidOperationException("The directions test needs an admitted site.");
-        DaggerfallDialogueDirections directions = Directions(fixture, []);
+        using DialogueStage stage = new();
+        DaggerfallSiteContext site = stage.Society.Sites;
+        DaggerfallSiteRecord active = site.ActiveSite ?? throw new InvalidOperationException("The stage stands at a site.");
+        DaggerfallDialogueDirections directions = stage.Directions(stage.Conversation());
 
         DaggerfallDialogueTopicOption[] elsewhere = [.. directions.Directory().Where(topic => topic.Id.StartsWith("direction:site:", StringComparison.Ordinal))];
         Assert.Equal(site.Records.Count(place => place.Id.Region == active.Id.Region && place.Id != active.Id), elsewhere.Length);
@@ -64,36 +64,23 @@ public sealed class DaggerfallDialogueDirectionsTests
     }
 
     [Fact]
-    public void Only_people_the_conversation_can_talk_to_are_listed()
+    public void Only_people_the_conversation_can_talk_to_are_listed_and_a_person_is_pointed_to_here()
     {
-        using ConditionSessionFixture fixture = new();
-        DaggerfallSession session = fixture.Session;
-        DaggerfallSiteRecord site = session.Site.ActiveSite ?? throw new InvalidOperationException("The directions test needs an admitted site.");
-        (int archive, int record) = session.Sites.Projection.Inputs.BillboardSprites.Keys
-            .OrderBy(key => key.Item1).ThenBy(key => key.Item2).First();
-        long id = session.State.Npcs.RegisterCivilian(
-            new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
-            new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, 0), "baker", ["talk"]);
-        session.Civilians.Materialize(id, session.State.Actors.Get(2000).Pose);
-        session.State.Npcs.Bind(id, session.Sites.ActiveProfile);
+        using DialogueStage stage = new();
+        long baker = stage.Talker();
+        long mute = stage.Society.Civilian("mute");
+        DaggerfallDialogueService conversation = stage.Conversation();
 
-        Assert.DoesNotContain(Directions(fixture, [], live: false).Directory(), topic => topic.Id == $"direction:npc:{id}");
-        DaggerfallDialogueTopicOption person = Assert.Single(Directions(fixture, []).Directory(), topic => topic.Id == $"direction:npc:{id}");
+        Assert.DoesNotContain(stage.Directions(null).Directory(), topic => topic.Id == $"direction:npc:{baker}");
+        IReadOnlyList<DaggerfallDialogueTopicOption> directory = stage.Directions(conversation).Directory();
+        DaggerfallDialogueTopicOption person = Assert.Single(directory, topic => topic.Id == $"direction:npc:{baker}");
+        Assert.DoesNotContain(directory, topic => topic.Id == $"direction:npc:{mute}");
         Assert.Equal(DaggerfallDialogueTopicGroups.People, person.Category);
-        DaggerfallNpc baker = session.State.Npcs.Require(id);
-        Assert.Equal($"Where is {baker.DisplayName ?? baker.Role}?", person.Label);
-    }
+        DaggerfallNpc npc = stage.Society.Npcs.Require(baker);
+        Assert.Equal($"Where is {npc.DisplayName ?? npc.Role}?", person.Label);
 
-    private static DaggerfallDialogueDirections Directions(ConditionSessionFixture fixture, IReadOnlyList<DaggerfallDialogueQuestSubject> subjects,
-        bool live = true)
-    {
-        DaggerfallSession session = fixture.Session;
-        return new(session.Site, session.State.Npcs, fixture.Definitions, session.State.PlayerControl,
-            dialogue: () => live ? session.Dialogue : null,
-            activeProfile: () => session.Sites.ActiveProfile,
-            exteriorSitePosition: point => point,
-            questSubjects: () => subjects,
-            questClaimsBuilding: (_, _) => false,
-            questContacts: _ => []);
+        DaggerfallDialogueDestination answer = Assert.IsType<DaggerfallDialogueDestination>(stage.Directions(conversation).Resolve(person.Id));
+        Assert.Equal(npc.DisplayName ?? npc.Role, answer.Name);
+        Assert.Equal("here", answer.Hint);
     }
 }

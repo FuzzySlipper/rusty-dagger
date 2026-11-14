@@ -100,10 +100,10 @@ internal sealed class SocietyStage : IDisposable
     private long _nextWatch = 9000;
     private readonly SpatialMovementSystem _spatial;
 
-    /// <summary>A civilian of the site the player stands at, live as an actor at the origin.</summary>
-    internal long Civilian(string role = "civilian")
+    /// <summary>A civilian of the site the player stands at, offering these services, live as an actor at the origin.</summary>
+    internal long Civilian(string role = "civilian", params string[] services)
     {
-        long id = Npcs.RegisterCivilian(NpcSite, new DaggerfallNpcAppearance("breton", "Male", 210, 4, 7, 0), role, []);
+        long id = Npcs.RegisterCivilian(NpcSite, new DaggerfallNpcAppearance("breton", "Male", 210, 4, 7, 0), role, services);
         DaggerActorFactory.CreateCivilianActor(_mechanics, Actors, _inventories, Npcs.Require(id), default);
         return id;
     }
