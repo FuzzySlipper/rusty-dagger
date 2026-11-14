@@ -1,6 +1,6 @@
 namespace WorldRpg.Rulesets.Daggerfall.Modules;
 
-/// <summary>One complete first page for the ruleset's bounded single-query decisions.</summary>
+/// <summary>The donor's senses EnemySenses reads: sight and hearing reach, the field of view, stealth's distance and the illusions' breakthrough chances.</summary>
 internal static class DaggerfallPerceptionQueryDefaults
 {
     // These are the source units used by EnemySenses. MeshReader.GlobalScale is a
@@ -12,9 +12,6 @@ internal static class DaggerfallPerceptionQueryDefaults
     internal const double StealthMaximumDistance = 1024d * ClassicGlobalScale;
     internal const int BlendingBreakthroughChance = 8;
     internal const int ShadeBreakthroughChance = 4;
-
-    internal const uint FirstPairCursor = 0;
-    internal const uint CompleteQueryPageSize = 64;
 
     // A 180 degree field includes the exact side plane.  Keeping the admitted
     // cosine at zero also avoids excluding a side-facing pair through the

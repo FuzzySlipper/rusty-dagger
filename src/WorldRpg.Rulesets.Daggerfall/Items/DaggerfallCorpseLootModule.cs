@@ -248,8 +248,8 @@ internal sealed class DaggerfallCorpseLootModule
             new PerceptionObserver[] { new((ulong)DaggerfallActorIdentity.PlayerEntityId, position.ToVector(), look.Forward, _tuning.MaximumDistance, _tuning.MinimumFacingCosine, 1d) },
             eligible.Select(value => new PerceptionTarget((ulong)value.Actor.DurableId, value.Actor.Position.ToVector())).ToArray(),
             ReadOnlyMemory<SpatialEntityCollider>.Empty,
-            DaggerfallPerceptionQueryDefaults.FirstPairCursor,
-            DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize);
+            DaggerfallPerceptionPaging.FirstPairCursor,
+            DaggerfallPerceptionPaging.CompleteQueryPageSize);
         PerceptionReadoutResult receipt = _perception.QueryVisibility(request);
         long? selected = receipt.Pairs.ToArray()
             .Where(pair => pair.Observer == (ulong)DaggerfallActorIdentity.PlayerEntityId
