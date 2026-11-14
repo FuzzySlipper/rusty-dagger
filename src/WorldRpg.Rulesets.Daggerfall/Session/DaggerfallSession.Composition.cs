@@ -147,6 +147,7 @@ internal sealed partial class DaggerfallSession
             MechanicsInventoryContainerCoordinator containers = assembled.Containers;
             Presentation = new PresentationState("Ready", DaggerfallOutcomePresentation.MessageLifetimeSeconds,
                 DaggerfallOutcomePresentation.MaximumMessages, DaggerfallOutcomePresentation.SubsequentMessageLifetimeSeconds);
+            _deathScreen = new DaggerfallDeathScreen(Presentation, ReportPlayerDefeatOutcome);
             _time = new DaggerfallWorldTime(
                 saved?.Calendar is { } restored
                     ? new DaggerfallCalendar(restored.Year, restored.Month, restored.Day, restored.Hour, restored.Minute, restored.Second)
@@ -1028,6 +1029,12 @@ internal sealed partial class DaggerfallSession
                 Help = definitions.Help,
             };
             partiallyConstructed.Add(_hud);
+            Radial = new DaggerfallRadialCommands(State.Transport, State.RacialOverrides, () => State.WeaponDrawn);
+            RestPanel = new DaggerfallRestPanel(_rest, State.Actors.Player.Stats, this, _passives, () => _sites.ActiveProfile.Kind, ApplyRest, RequestPanel,
+                () => { _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard(); });
+            LocalMap = new DaggerfallLocalMap(State.PlayerControl, _site, State.DungeonDiscoveries, () => _sites.Projection.Inputs,
+                () => _sites.ActiveProfile, point => _exterior.ExteriorSitePosition(point), Presentation);
+            _textActions = new DaggerfallTextActions(DungeonText, _notebook, DungeonActions.ContinueAcceptedAnswer, Presentation, ContinueBuildingEntry);
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,
                     snapshot => DungeonText.Restore(snapshot, () => DungeonActions.ActiveActions, CurrentTextContext));

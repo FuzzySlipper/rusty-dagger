@@ -127,7 +127,7 @@ public sealed class CareerPassiveSessionTests
             int expected = DaggerfallFormulaPolicy.HealthRecoveryRate((int)stats.GetStat(StatId.Parse("endurance")).Value,
                 (int)stats.GetStat(StatId.Parse("medical")).Value, (int)health.Maximum.Value, rapid);
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
-            Assert.Equal(3600, session.RestView.ElapsedSeconds);
+            Assert.Equal(3600, session.RestPanel.View.ElapsedSeconds);
             Assert.Equal(Math.Min(health.Maximum.Value, 1 + expected), health.Current);
             Assert.Equal(1, magicka.Current);
             if (!ReferenceEquals(session, original)) session.Dispose();
@@ -236,7 +236,7 @@ public sealed class CareerPassiveSessionTests
             Track(session, "health").SetCurrent(1);
             magicka.SetCurrent(1);
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
-            Assert.Equal(3600, session.RestView.ElapsedSeconds);
+            Assert.Equal(3600, session.RestPanel.View.ElapsedSeconds);
             Assert.True(Track(session, "health").Current > 1);
             Assert.Equal(1, magicka.Current);
             if (!ReferenceEquals(session, original)) session.Dispose();

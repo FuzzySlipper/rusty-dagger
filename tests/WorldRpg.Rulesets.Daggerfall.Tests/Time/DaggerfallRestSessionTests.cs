@@ -46,7 +46,7 @@ public sealed class DaggerfallRestSessionTests
             int climate = definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y).Value;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
 
-            Assert.Equal(3600, session.RestView.ElapsedSeconds);
+            Assert.Equal(3600, session.RestPanel.View.ElapsedSeconds);
             DaggerfallEncounterResolution[] selected = DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Resolved;
             Assert.NotEmpty(selected);
             Assert.All(selected, value =>
@@ -73,8 +73,8 @@ public sealed class DaggerfallRestSessionTests
 
         session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"loiter\",\"hours\":12}")]));
 
-        Assert.Equal($"Loiter cannot exceed {DaggerfallRestPolicy.MaximumLoiterHours} hours.", session.RestView.Message);
-        Assert.Equal(0, session.RestView.ElapsedSeconds);
+        Assert.Equal($"Loiter cannot exceed {DaggerfallRestPolicy.MaximumLoiterHours} hours.", session.RestPanel.View.Message);
+        Assert.Equal(0, session.RestPanel.View.ElapsedSeconds);
     }
 
     [Fact]
@@ -106,9 +106,9 @@ public sealed class DaggerfallRestSessionTests
         {
             DaggerfallCalendarSave before = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
-            elapsed = session.RestView.ElapsedSeconds;
+            elapsed = session.RestPanel.View.ElapsedSeconds;
             Assert.InRange(elapsed, 1, 3599);
-            Assert.Equal(DaggerfallRestInterruption.Encounter, session.RestView.Interruption);
+            Assert.Equal(DaggerfallRestInterruption.Encounter, session.RestPanel.View.Interruption);
             saved = DaggerfallSavePayload.Read(session.CaptureSave());
             Assert.Equal(CalendarSeconds(before) + elapsed, CalendarSeconds(saved.Calendar));
             DaggerfallEncounterResolution selected = Assert.Single(saved.Encounters.Resolved);
@@ -116,13 +116,13 @@ public sealed class DaggerfallRestSessionTests
             Assert.Null(selected.SpawnedActorId);
             // The rest window closes on the encounter and its line is published once.
             Assert.Equal(DaggerfallPanel.Resume, session.LatestPanelRequest?.Panel);
-            Assert.Equal("Your rest was interrupted by an encounter.", session.RestView.Message);
+            Assert.Equal("Your rest was interrupted by an encounter.", session.RestPanel.View.Message);
 
             // Without a floor the foe waits; the refusal explains the unseen approaching encounter.
             session.Update(new ProductUpdate(OuterUpdate(2), []));
             Assert.Null(Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Encounters.Resolved).SpawnedActorId);
             session.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
-            Assert.Equal("Something approaches. Move or turn to let the encounter arrive before resting.", session.RestView.Message);
+            Assert.Equal("Something approaches. Move or turn to let the encounter arrive before resting.", session.RestPanel.View.Message);
 
             WorldPoint player = session.State.PlayerControl.Position!.Value;
             spatial.FloorHit = request => request.Direction.Y < -.99f
@@ -193,8 +193,8 @@ public sealed class DaggerfallRestSessionTests
         session.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":2}")]));
 
         Assert.NotNull(session.State.Quests.Messages.Pending);
-        Assert.Equal(DaggerfallRestInterruption.Stopped, session.RestView.Interruption);
-        Assert.Contains("pending quest message", session.RestView.Message);
+        Assert.Equal(DaggerfallRestInterruption.Stopped, session.RestPanel.View.Interruption);
+        Assert.Contains("pending quest message", session.RestPanel.View.Message);
         // The question holds developer movement as it holds the rest: nothing moves until it is answered.
         Vector3 waiting = session.State.PlayerControl.Position!.Value.ToVector();
         Assert.Equal("Answer the quest's question first.", session.Teleport(waiting.X + 2, waiting.Y, waiting.Z, force: true).Message);
@@ -202,7 +202,7 @@ public sealed class DaggerfallRestSessionTests
         long pausedAt = CalendarSeconds(DaggerfallSavePayload.Read(session.CaptureSave()).Calendar);
         session.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":8}")]));
         Assert.Equal(pausedAt, CalendarSeconds(DaggerfallSavePayload.Read(session.CaptureSave()).Calendar));
-        Assert.Contains("pending quest message", session.RestView.Message);
+        Assert.Contains("pending quest message", session.RestPanel.View.Message);
         long elapsed = CalendarSeconds(DaggerfallSavePayload.Read(session.CaptureSave()).Calendar) - before;
         Assert.InRange(elapsed, 29 * DaggerfallCalendar.SecondsPerMinute, 31 * DaggerfallCalendar.SecondsPerMinute);
     }
@@ -231,8 +231,8 @@ public sealed class DaggerfallRestSessionTests
         {
             DaggerfallCalendarSave initialCalendar = DaggerfallSavePayload.Read(session.CaptureSave()).Calendar;
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
-            Assert.Equal(0, session.RestView.ElapsedSeconds);
-            Assert.Contains("Enemies are too close", session.RestView.Message, StringComparison.Ordinal);
+            Assert.Equal(0, session.RestPanel.View.ElapsedSeconds);
+            Assert.Contains("Enemies are too close", session.RestPanel.View.Message, StringComparison.Ordinal);
             Assert.Equal(initialCalendar, DaggerfallSavePayload.Read(session.CaptureSave()).Calendar);
 
             // Exercise an eligible camp away from the dungeon's live enemy group.
@@ -251,7 +251,7 @@ public sealed class DaggerfallRestSessionTests
 
             session.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
 
-            DaggerfallRestView view = session.RestView;
+            DaggerfallRestView view = session.RestPanel.View;
             Assert.True(view.HasResult);
             Assert.Equal("Timed", view.Mode);
             Assert.Equal(DaggerfallCalendar.SecondsPerMinute * DaggerfallCalendar.MinutesPerHour, view.ElapsedSeconds);
@@ -299,15 +299,15 @@ public sealed class DaggerfallRestSessionTests
         townSession.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
         DaggerfallSavePayload townAfter = DaggerfallSavePayload.Read(townSession.CaptureSave());
 
-        Assert.Equal(0, townSession.RestView.ElapsedSeconds);
-        Assert.Contains("Camping in a town", townSession.RestView.Message, StringComparison.Ordinal);
+        Assert.Equal(0, townSession.RestPanel.View.ElapsedSeconds);
+        Assert.Contains("Camping in a town", townSession.RestPanel.View.Message, StringComparison.Ordinal);
         Assert.Equal(townBefore.Calendar, townAfter.Calendar);
         Assert.Equal(JsonSerializer.Serialize(townBefore.SkillUses), JsonSerializer.Serialize(townAfter.SkillUses));
         Assert.Equal(JsonSerializer.Serialize(townBefore.Actors), JsonSerializer.Serialize(townAfter.Actors));
 
         // Loitering is not camping: as the donor's loiter, which never asks where the player is, it passes in town.
         townSession.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"rest\",\"mode\":\"loiter\",\"hours\":1}")]));
-        Assert.Equal(3600, townSession.RestView.ElapsedSeconds);
+        Assert.Equal(3600, townSession.RestPanel.View.ElapsedSeconds);
     }
 
     [Theory]

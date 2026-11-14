@@ -45,8 +45,8 @@ public sealed class DaggerfallLodgingTests
         using Fixture fixture = new();
         var session = fixture.Session;
         fixture.Rest(1);
-        Assert.Equal(0, session.RestView.ElapsedSeconds);
-        Assert.Contains("room", session.RestView.Message);
+        Assert.Equal(0, session.RestPanel.View.ElapsedSeconds);
+        Assert.Contains("room", session.RestPanel.View.Message);
         fixture.AddGold(1000);
         ulong gold = session.State.Currency.Read().Gold;
         DaggerfallLodgingView quote = session.RoomRental.View!;
@@ -57,8 +57,8 @@ public sealed class DaggerfallLodgingTests
         Track health = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health"));
         health.SetCurrent(health.MaximumValue - 10);
         fixture.Rest(1);
-        Assert.Equal(3600, session.RestView.ElapsedSeconds);
-        Assert.True(session.RestView.HealthRecovered > 0);
+        Assert.Equal(3600, session.RestPanel.View.ElapsedSeconds);
+        Assert.True(session.RestPanel.View.HealthRecovered > 0);
         Assert.Equal(23, session.RoomRental.View!.RemainingHours);
         fixture.Quote(2);
         fixture.Book(session.RoomRental.View!);
@@ -68,7 +68,7 @@ public sealed class DaggerfallLodgingTests
         using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(saved));
         Assert.Equal(71, restored.RoomRental.View!.RemainingHours);
         restored.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
-        Assert.Equal(3600, restored.RestView.ElapsedSeconds);
+        Assert.Equal(3600, restored.RestPanel.View.ElapsedSeconds);
         Assert.Equal(70, restored.RoomRental.View!.RemainingHours);
     }
 
@@ -105,11 +105,11 @@ public sealed class DaggerfallLodgingTests
         Assert.True(session.TryRelocate(new(fixture.Other.ProfileKey, "start")));
         Assert.Equal(0, session.RoomRental.View!.RemainingHours);
         fixture.Rest(1);
-        Assert.Equal(0, session.RestView.ElapsedSeconds);
+        Assert.Equal(0, session.RestPanel.View.ElapsedSeconds);
         Assert.True(session.TryRelocate(new(fixture.Interior.ProfileKey, "start")));
         Assert.Equal(24, session.RoomRental.View!.RemainingHours);
         fixture.Rest(1);
-        Assert.Equal(3600, session.RestView.ElapsedSeconds);
+        Assert.Equal(3600, session.RestPanel.View.ElapsedSeconds);
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
         Assert.Equal(23, restored.RoomRental.View!.RemainingHours);
     }
@@ -121,16 +121,16 @@ public sealed class DaggerfallLodgingTests
         fixture.AddGold(1000);
         fixture.Book(fixture.Session.RoomRental.View!);
         fixture.Rest(25);
-        Assert.Equal(24 * 3600, fixture.Session.RestView.ElapsedSeconds);
-        Assert.Equal(DaggerfallRestInterruption.Prevented, fixture.Session.RestView.Interruption);
+        Assert.Equal(24 * 3600, fixture.Session.RestPanel.View.ElapsedSeconds);
+        Assert.Equal(DaggerfallRestInterruption.Prevented, fixture.Session.RestPanel.View.Interruption);
         Assert.Equal(0, fixture.Session.RoomRental.View!.RemainingHours);
         fixture.Rest(1);
-        Assert.Equal(0, fixture.Session.RestView.ElapsedSeconds);
+        Assert.Equal(0, fixture.Session.RestPanel.View.ElapsedSeconds);
         var saved = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
         Assert.Empty(saved.Lodging.Rooms);
         using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(saved));
         restored.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
-        Assert.Equal(0, restored.RestView.ElapsedSeconds);
+        Assert.Equal(0, restored.RestPanel.View.ElapsedSeconds);
     }
 
     [Fact]
@@ -142,9 +142,9 @@ public sealed class DaggerfallLodgingTests
         fixture.Session.AdvanceElapsedTime(DaggerfallCalendar.SecondsPerDay - 15);
         Assert.Equal(1, fixture.Session.RoomRental.View!.RemainingHours);
         fixture.Rest(1);
-        Assert.Equal(15, fixture.Session.RestView.ElapsedSeconds);
-        Assert.Equal(0, fixture.Session.RestView.RecoveryHours);
-        Assert.Equal(DaggerfallRestInterruption.Prevented, fixture.Session.RestView.Interruption);
+        Assert.Equal(15, fixture.Session.RestPanel.View.ElapsedSeconds);
+        Assert.Equal(0, fixture.Session.RestPanel.View.RecoveryHours);
+        Assert.Equal(DaggerfallRestInterruption.Prevented, fixture.Session.RestPanel.View.Interruption);
         Assert.Equal(0, fixture.Session.RoomRental.View!.RemainingHours);
     }
 

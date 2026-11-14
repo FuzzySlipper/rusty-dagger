@@ -103,10 +103,10 @@ public sealed class SourceBackedServiceSessionTests
         Assert.False(session.Site.IsBuildingDiscovered(session.Site.Active!.Value, building));
         SubmitUi(session, 3, $"{{\"action\":\"dialogue-topic\",\"revision\":\"{Escape(answered.Revision)}\",\"topic\":\"{buildingTopic}\"}}");
         Assert.True(session.Site.IsBuildingDiscovered(session.Site.Active.Value, building));
-        Assert.Contains(session.ReadMapPresentation()!.Labels, label => label.Id == building.ToString());
+        Assert.Contains(session.LocalMap.Read()!.Labels, label => label.Id == building.ToString());
         using var restored = fixture.Restore(session.CaptureSave());
         Assert.True(restored.Site.IsBuildingDiscovered(session.Site.Active.Value, building));
-        Assert.Contains(restored.ReadMapPresentation()!.Labels, label => label.Id == building.ToString());
+        Assert.Contains(restored.LocalMap.Read()!.Labels, label => label.Id == building.ToString());
     }
 
     [Fact]

@@ -55,17 +55,17 @@ public sealed class ExteriorBuildingDoorSessionTests
         Assert.Equal(DaggerfallCrimeKind.BreakingAndEntering, incident.Crime);
         Assert.Equal(mode == "bash", incident.Reported); // Minimum random notices bashing, never lockpicking.
         Assert.True(session.Site.IsBuildingDiscovered(fixture.Exterior.Site!.Value, Residence));
-        var map = session.ReadMapPresentation();
+        var map = session.LocalMap.Read();
         Assert.NotNull(map);
         Assert.Equal("interior", map.Kind);
         Assert.Empty(map.Areas);
         var discovery = session.State.DungeonDiscoveries[session.Sites.ActiveProfile];
         var placement = discovery.Content.GeometryPlacements.First();
         discovery.ObservePlacement(placement.PlacementId);
-        map = session.ReadMapPresentation()!;
+        map = session.LocalMap.Read()!;
         Assert.Equal(placement.BoundsMin.X, Assert.Single(map.Areas).MinX);
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
-        Assert.Equal(map.Areas, restored.ReadMapPresentation()!.Areas);
+        Assert.Equal(map.Areas, restored.LocalMap.Read()!.Areas);
         Assert.True(restored.Site.IsBuildingDiscovered(fixture.Exterior.Site!.Value, Residence));
         Assert.Single(restored.State.Crime.Incidents);
         Assert.True(restored.TryTransitionTo(fixture.Exterior.ProfileKey));
@@ -273,7 +273,7 @@ public sealed class ExteriorBuildingDoorSessionTests
         session.State.Quests.SetResource(quest.InstanceId, resource with { DialogueVisible = true });
         Assert.Equal("The Moorcroft Residence", f.InspectLabel(Residence));
         session.Site.DiscoverBuilding(site.Id, Residence);
-        Assert.Contains(session.ReadMapPresentation()!.Labels, label => label.Name == "The Moorcroft Residence");
+        Assert.Contains(session.LocalMap.Read()!.Labels, label => label.Name == "The Moorcroft Residence");
         using var restored = f.Restore(session.CaptureSave());
         Assert.Equal("The Moorcroft Residence", restored.Site.RequireBuilding(site.Id, Residence).Name);
     }

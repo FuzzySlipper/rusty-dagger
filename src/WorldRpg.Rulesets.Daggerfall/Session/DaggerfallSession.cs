@@ -699,11 +699,36 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         return request;
     }
 
+    /// <summary>The command radial's commands as the rules stand now.</summary>
+    internal DaggerfallRadialCommands Radial { get; } = null!;
+
+    /// <summary>The rest panel: the rest action and the last result.</summary>
+    internal DaggerfallRestPanel RestPanel { get; } = null!;
+
+    /// <summary>The local map panel: the map it shows, its building selection and notes.</summary>
+    internal DaggerfallLocalMap LocalMap { get; } = null!;
+
+    /// <summary>The dungeon text modal's and the notebook's actions.</summary>
+    private readonly DaggerfallTextActions _textActions = null!;
+
+    /// <summary>The Dead screen: its choices and the Host's defeat requests.</summary>
+    private readonly DaggerfallDeathScreen _deathScreen;
+
+    /// <summary>Lets the Host take one admitted replacement or named-slot request.</summary>
+    public PlayerDefeatOutcomeRequest? TakePlayerDefeatOutcomeRequest() => _deathScreen.TakeOutcomeRequest();
+
+    /// <summary>Publishes a Host outcome and reopens choices when the session remains defeated.</summary>
+    public void ReportPlayerDefeatOutcome(string message)
+    {
+        _deathScreen.Reopen(message);
+        PublishPresentation();
+    }
+
     /// <summary>Presents the product's save/load outcome after it honored a request.</summary>
     public void ReportSaveOutcome(string message)
     {
         Presentation.SetOutcome(message);
-        ReopenDeathChoicesAfterSaveOutcome();
+        _deathScreen.ReopenAfterSaveOutcome(_mode == ProductMode.Dead);
         PublishPresentation();
     }
 
@@ -751,7 +776,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     {
         _saveSlots = slots?.ToArray() ?? throw new ArgumentNullException(nameof(slots));
         _saveSlotDiagnostic = diagnostic;
-        SetDeathLoadAvailability(_saveSlots.Count > 0);
+        _deathScreen.SetLoadAvailable(_saveSlots.Count > 0);
         PublishPresentation();
     }
 
@@ -770,7 +795,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _input.Neutralize();
         _locomotion.Neutralize(); NeutralizeGuard();
         _appearance.ResetFootsteps();
-        ApplyDeathPresentationMode(mode);
+        ApplyDeathMode(mode);
         // A death from exhaustion keeps the donor's collapse text rather than the generic death line.
         // Returning to play clears the line a mode set for itself, but not a result reported while that
         // mode was up: a journey or rest that ends by closing the menu keeps its line for the player.
@@ -973,15 +998,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
                 ownsShip: State.Property.OwnsShip, wagon: State.Wagon, itemLabel: (key, definition, quantity) => _inventoryUi.DescribeItem(key, definition, quantity,
                     owner: DaggerfallItemOwner.Wagon(State.Wagon.Id!.Value)).Label),
             DungeonText: DungeonText.Projection,
-            Death: _deathPresentation.View,
-            Rest: RestView,
+            Death: _deathScreen.View,
+            Rest: RestPanel.View,
             Lodging: RoomRental.View,
             Travel: FastTravel.Read(),
             SiteName: Site.ActiveSite?.Name,
             Calendar: _time.Calendar,
             Effects: ReadActiveEffects(),
             CinematicSource: Cinematics?.ActiveSource,
-            Map: _mapOpen ? ReadMapPresentation() : null, Legal: Law.View, CreateItem: CreateItemChoice.View, Teleport: TeleportChoice.View, Dispel: DispelChoice.View, Identify: IdentifyChoice.View, Spells: ReadSpells(), Detectors: Detectors.Read())
+            Map: LocalMap.ReadOpen(), Legal: Law.View, CreateItem: CreateItemChoice.View, Teleport: TeleportChoice.View, Dispel: DispelChoice.View, Identify: IdentifyChoice.View, Spells: ReadSpells(), Detectors: Detectors.Read())
         {
             ActionDrivenTime = ActionDrivenPlay, TimeHeld = PlayerTimeHeld,
             Weapon = new DaggerfallWeaponView(State.WeaponDrawn,
@@ -991,7 +1016,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             Loading = _loading,
             Screens = DaggerfallUiArt.Screens.ToDictionary(screen => screen, screen => DrawnArt?.Drawn(screen) ?? screen, StringComparer.Ordinal),
             TutorialOffer = _tutorial.Offer,
-            Radial = RadialCommands(ActivationView.Mode),
+            Radial = Radial.Read(ActivationView.Mode),
             TutorialRunning = _tutorial.Running,
             Tutorial = _tutorial.View,
         });

@@ -291,7 +291,7 @@ public sealed class PropertySessionTests
         using var restored = f.Restore(saved);
         Assert.Equal("2", Assert.Single(restored.ReadPropertyPresentation().Storage!.Items).Quantity);
         restored.Update(new ProductUpdate(OuterUpdate(98), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
-        Assert.Equal(3600, restored.RestView.ElapsedSeconds);
+        Assert.Equal(3600, restored.RestPanel.View.ElapsedSeconds);
         Assert.True(f.Session.TryTransitionTo(f.Land.ProfileKey)); f.OpenBank();
         f.Submit(new { action = "property-sell", key = offer.Key });
         Assert.False(f.Session.State.Property.OwnsHouse(f.HouseIdentity));

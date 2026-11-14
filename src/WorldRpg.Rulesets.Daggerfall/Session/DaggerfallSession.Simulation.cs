@@ -234,7 +234,7 @@ internal sealed partial class DaggerfallSession
     /// <summary>Readies or sheathes the weapon: its key on a step, or the radial's command, which a held world never steps.</summary>
     private void ToggleWeapon()
     {
-        if (WeaponHandsFree) State.WeaponDrawn = !State.WeaponDrawn;
+        if (State.Transport.WeaponHandsFree) State.WeaponDrawn = !State.WeaponDrawn;
     }
 
     private void ApplyPlayerActs(DaggerfallPlayerActs acts)

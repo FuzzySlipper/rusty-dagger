@@ -32,7 +32,7 @@ public sealed class DaggerfallMapPresentationTests
         Assert.Equal(player.X, note.Position.X, 3);
         Assert.Equal(player.Z, note.Position.Z, 3);
         Assert.Equal("Note added to the map.", session.Presentation.LastOutcome);
-        Assert.Contains(session.ReadMapPresentation()!.Labels, label => label.Id == "note-1" && label.Note);
+        Assert.Contains(session.LocalMap.Read()!.Labels, label => label.Id == "note-1" && label.Note);
 
         session.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"map-note-add","text":"Second"}""")]));
         Assert.Equal(["note-1", "note-2"], discovery.NoteMarkers.Select(value => value.Id));
@@ -128,7 +128,7 @@ public sealed class DaggerfallMapPresentationTests
             Profiles = new([profile]),
         };
         using var session = DaggerfallSession.StartNew(engine.Context, composition);
-        var before = session.ReadMapPresentation()!;
+        var before = session.LocalMap.Read()!;
         WorldPoint canonicalProfilePose = WorldPoint.From(session.Exterior.LocalToProfile(
             session.State.PlayerControl.Position!.Value.ToVector()));
         Assert.Equal(canonicalProfilePose, before.Player);
@@ -140,15 +140,15 @@ public sealed class DaggerfallMapPresentationTests
         Assert.Empty(before.Labels);
         var known = session.Site.BuildingsAt(session.Site.Active!.Value).First(building => building.Source.BuildingType == 23);
         session.Site.DiscoverBuilding(session.Site.Active.Value, known.Id);
-        var label = Assert.Single(session.ReadMapPresentation()!.Labels);
+        var label = Assert.Single(session.LocalMap.Read()!.Labels);
         session.Update(new ProductUpdate(OuterUpdate(1), [Ui(JsonSerializer.Serialize(new {
             action = "map-building", region = before.Region, destination = before.Location, item = label.Id }))]));
-        var after = session.ReadMapPresentation()!;
+        var after = session.LocalMap.Read()!;
         Assert.Equal(label.Id, Assert.Single(after.Labels, label => label.Selected).Id);
         Assert.Contains(label.Name, session.Presentation.LastOutcome);
         // A read follows the canonical current pose, rather than an independently stored map marker.
         session.State.PlayerControl.MoveTo(new(31, 2, -25));
-        Assert.Equal(session.Exterior.ExteriorSitePosition(new(31, 2, -25)), session.ReadMapPresentation()!.Player);
+        Assert.Equal(session.Exterior.ExteriorSitePosition(new(31, 2, -25)), session.LocalMap.Read()!.Player);
         var saved = DaggerfallSavePayload.Read(session.CaptureSave());
         Assert.Equal(session.Site.Active, saved.Site.Active.Require());
         Assert.Equal(session.State.PlayerControl.Position, new WorldPoint(saved.Player.X, saved.Player.Y, saved.Player.Z));

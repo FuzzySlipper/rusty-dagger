@@ -73,7 +73,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
             Assert.True(equipped.Outcome == EquipmentMoveOutcome.Applied, equipped.Detail);
 
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
-            Assert.Equal(3600, session.RestView.ElapsedSeconds);
+            Assert.Equal(3600, session.RestPanel.View.ElapsedSeconds);
             afterFirstHour = session.State.ItemInstances.RequireUnique(durableId).CurrentCondition;
             Assert.Equal(initial - 15, afterFirstHour);
             Assert.Contains(session.State.Equipment.Read().Assignments,
@@ -99,7 +99,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
             assignment => restored.State.Equipment.GetDurableItemId(new EntityId(assignment.Item.EntityId)).Value == durableId);
 
         restored.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
-        Assert.Equal(3600, restored.RestView.ElapsedSeconds);
+        Assert.Equal(3600, restored.RestPanel.View.ElapsedSeconds);
         Assert.Equal(afterFirstHour - 15, restored.State.ItemInstances.RequireUnique(durableId).CurrentCondition);
     }
 

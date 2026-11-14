@@ -25,7 +25,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// call one of its fixed steps makes; <see cref="ResolveExhaustion"/> is what a collapse does across domains;
 /// <see cref="RemoveCarriedQuestItems"/> is what a quest's end does to the items it lent; <see cref="Arrest"/>, <see cref="ChooseLegal"/>,
 /// <see cref="BeginCourt"/>, <see cref="ApplyCourtSentence"/> and <see cref="ServePrison"/> are what the law's steps do; <see cref="ReconcileSummoningFoes"/>
-/// is how a summoning's hostiles arrive; and <see cref="ExpireConjuredItems"/> is what a conjured item's last minute does. Each line says the domain it belongs to. Order is behaviour: a call
+/// is how a summoning's hostiles arrive; <see cref="ApplyDeathMode"/> is what death does to the Dead screen, the camera and the player's sprite; and <see cref="ExpireConjuredItems"/> is what a conjured item's last minute does. Each line says the domain it belongs to. Order is behaviour: a call
 /// moves only with a reason that names what it changes.
 /// </summary>
 internal sealed partial class DaggerfallSession
@@ -527,6 +527,28 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
+    /// What a change of mode does to the Dead screen. Entering death closes the conversation, so the next snapshot carries
+    /// the canonical null dialogue beside the death projection, and the first entry lowers the existing Engine camera to the
+    /// floor (a one-shot presentation pose that keeps the authoritative player pose; a replacement session restores its
+    /// ordinary camera) and plays the player's death. Play or the title clears the screen.
+    /// </summary>
+    private void ApplyDeathMode(ProductMode mode)
+    {
+        if (mode == ProductMode.Dead)
+        {
+            _dialogue?.Close();                                                                   // Dialogue
+            if (_deathScreen.Enter())                                                             // UiProjection
+            {
+                if (State.PlayerControl.Position is not null)
+                    _camera.Update(State.PlayerControl, -_tuning.Camera.EyeHeight);               // Character
+                _appearance.PlayPlayerDeath(_latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);   // Scene
+            }
+        }
+        else if (mode is ProductMode.Playing or ProductMode.Title)
+            _deathScreen.Clear();                                                                 // UiProjection
+    }
+
+    /// <summary>
     /// The collapse's list: what an emptied Fatigue pool does, in order, once every fatigue sink of the admitted
     /// update has settled. Condition decides whether the player collapses and how the collapse ends; the other
     /// lines are its consequences in their own domains. Out of water with no enemy near, the player drops for one
@@ -1018,7 +1040,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallRestResult result = _rest.Apply(request, eligibility, State.Actors.Player.Stats, this, advanceTime,
             rapidHealing, noRegeneration, () => _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind));   // Time
         if (result.Accepted && result.ElapsedSeconds > 0) CompleteTimeIncrease();                // Session: the increase's end
-        _restPresentation.Publish(result);                                                        // UiProjection
+        RestPanel.Publish(result);                                                                // UiProjection
         Presentation.SetOutcome(result.Message ?? (result.Accepted ? "Rest complete." : "Rest refused."));   // UiProjection
         return result;
     }

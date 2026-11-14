@@ -118,11 +118,11 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.TeleportSelect: TeleportChoice.Choose(action.Revision!, action.Key!); break;
             case DaggerfallUiActionKind.DispelSelect: DispelChoice.Choose(action.Revision!, action.Key); break;
             case DaggerfallUiActionKind.DispelCancel: DispelChoice.Choose(action.Revision!, null); break;
-            case DaggerfallUiActionKind.MapOpen: _mapOpen = action.Open; break;
-            case DaggerfallUiActionKind.MapBuilding: SelectMapBuilding(action); break;
+            case DaggerfallUiActionKind.MapOpen: LocalMap.SetOpen(action.Open); break;
+            case DaggerfallUiActionKind.MapBuilding: LocalMap.SelectBuilding(action); break;
             case DaggerfallUiActionKind.MapNoteAdd:
             case DaggerfallUiActionKind.MapNoteEdit:
-            case DaggerfallUiActionKind.MapNoteRemove: ChangeMapNote(action); break;
+            case DaggerfallUiActionKind.MapNoteRemove: LocalMap.ChangeNote(action); break;
             case DaggerfallUiActionKind.Menu: _interactions.SetMenuOpen(action.Open); break;
             case DaggerfallUiActionKind.CinematicSkip:
                 if (_openingCinematics.IsActive) _openingCinematics.Skip();
@@ -209,7 +209,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.LodgingQuote:
             case DaggerfallUiActionKind.LodgingBook: ChangeLodging(action); break;
             case DaggerfallUiActionKind.Rest:
-                if (!elapsedSubmitted) { ChangeRest(action); elapsedSubmitted = true; }
+                if (!elapsedSubmitted) { RestPanel.Change(action); elapsedSubmitted = true; }
                 break;
             case DaggerfallUiActionKind.WagonPut:
             case DaggerfallUiActionKind.WagonTake: ChangeWagon(action); break;
@@ -223,7 +223,7 @@ internal sealed partial class DaggerfallSession
                 _ = State.Quests.DismissRewardMessage(action.QuestInstance!, action.QuestDelivery!);
                 break;
             case DaggerfallUiActionKind.DungeonTextAnswer:
-            case DaggerfallUiActionKind.DungeonTextClose: ApplyDungeonTextInput(action); break;
+            case DaggerfallUiActionKind.DungeonTextClose: _textActions.ApplyDungeonText(action); break;
             case DaggerfallUiActionKind.InventoryMove: _inventoryUi.Move(action); break;
             case DaggerfallUiActionKind.InventoryInspect: _inventoryUi.Inspect(action); break;
             case DaggerfallUiActionKind.InventoryUse: _inventoryUi.Use(action); break;
@@ -233,7 +233,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.NotebookAdd:
             case DaggerfallUiActionKind.NotebookEdit:
             case DaggerfallUiActionKind.NotebookRemove:
-            case DaggerfallUiActionKind.NotebookMove: ApplyNotebookAction(action); break;
+            case DaggerfallUiActionKind.NotebookMove: _textActions.ApplyNotebook(action); break;
             case DaggerfallUiActionKind.CurrencyDepositGold:
             case DaggerfallUiActionKind.CurrencyWithdrawGold:
             case DaggerfallUiActionKind.CurrencyDepositLetters:
@@ -257,7 +257,7 @@ internal sealed partial class DaggerfallSession
             case DaggerfallUiActionKind.DeleteSlot: _saveSlotRequest = new(SaveSlotOperation.Delete, action.Key, Confirm: action.Confirm); break;
             case DaggerfallUiActionKind.DeathNewGame:
             case DaggerfallUiActionKind.DeathLoadGame:
-            case DaggerfallUiActionKind.DeathQuit: HandleDeathAction(action); break;
+            case DaggerfallUiActionKind.DeathQuit: _deathScreen.Choose(action); break;
             default: throw new InvalidOperationException($"Admitted UI action '{action.Kind}' has no dispatch.");
         }
     }

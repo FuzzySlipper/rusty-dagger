@@ -223,6 +223,8 @@ internal sealed class DaggerfallTransportPolicy : IDaggerfallRide
     bool IDaggerfallRide.IsOnFoot => IsOnFoot;
     double IDaggerfallRide.MovementSpeed(double liveSpeed, double classicToEngineRatio) => MovementSpeed(liveSpeed, classicToEngineRatio);
     internal bool CanRun => IsOnFoot;
+    /// <summary>The reins take the hands while riding, so the weapon is readied or sheathed only on foot or aboard ship.</summary>
+    internal bool WeaponHandsFree => IsOnFoot || _onShip;
 
     internal bool HasHorse(InventoryView inventory) => ContainsUnique(inventory, HorseItemId);
     internal bool HasCart(InventoryView inventory) => ContainsUnique(inventory, CartItemId);
