@@ -12,9 +12,12 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// Where a quest's items physically go: a bound item placed again (out of an unloaded site's actors and corpses, an unloaded
 /// pile or a live owner) into one ground pile, an item given to a foe or a person, and the reward set on the ground.
 /// </summary>
+/// <remarks>The unloaded sites' deltas (the site crossing's) and the corpses (Items' corpse loot) are read and changed through
+/// plain inputs.</remarks>
 internal sealed class DaggerfallQuestItemPlacement(DaggerfallQuestInstances quests, DaggerfallQuestItems questItems, DaggerfallItemInstances itemInstances,
-    ActorsState actors, PlayerControlState playerControl, DaggerfallSiteCrossing sites, DaggerfallGroundContainers groundContainers,
-    DaggerfallCorpseLootModule corpseLoot, DaggerfallUniqueItemAllocator uniqueItems)
+    ActorsState actors, PlayerControlState playerControl, DaggerfallGroundContainers groundContainers, DaggerfallUniqueItemAllocator uniqueItems,
+    Func<IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta>> deltas,
+    Action<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> replaceDelta, Func<long, bool> hasCorpse, Action<long, Action> receiveIntoCorpse)
 {
     private sealed record RetainedQuestItem(DaggerfallItemOwner Owner, DaggerfallUniqueSave? Unique, DaggerfallStackSave? Stack)
     {
@@ -43,7 +46,7 @@ internal sealed class DaggerfallQuestItemPlacement(DaggerfallQuestInstances ques
         foreach (ulong id in binding.UniqueItemIds)
         {
             if (itemInstances.ContainsUnique(id)) { owners.Add(itemInstances.RequireUnique(id).Owner); continue; }
-            var matches = sites.Deltas.Values.SelectMany(delta => delta.ActorInventories.SelectMany(value => value.Inventory.UniqueItems)
+            var matches = deltas().Values.SelectMany(delta => delta.ActorInventories.SelectMany(value => value.Inventory.UniqueItems)
                 .Concat(delta.Corpses.SelectMany(value => value.UniqueItems)))
                 .Concat(groundContainers.Unloaded.SelectMany(value => value.Inventory.UniqueItems)).Where(value => value.EntityId == id).ToArray();
             if (matches.Length != 1) throw new NotSupportedException($"Quest item {id} requires one retained physical owner, found {matches.Length}.");
@@ -57,7 +60,7 @@ internal sealed class DaggerfallQuestItemPlacement(DaggerfallQuestInstances ques
             owners.Add(owner);
             var id = InventoryStackId.Parse(value.StackId);
             if (itemInstances.ContainsStack(owner, id)) continue;
-            var matches = sites.Deltas.Values.SelectMany(delta => owner.Scope == "actor"
+            var matches = deltas().Values.SelectMany(delta => owner.Scope == "actor"
                 ? delta.ActorInventories.Where(section => section.EntityId == owner.Id).SelectMany(section => section.Inventory.Stacks)
                 : delta.Corpses.Where(corpse => owner.Scope == "corpse" && corpse.ActorId == owner.Id).SelectMany(corpse => corpse.Stacks))
                 .Concat(groundContainers.Unloaded.Where(pile => owner.Scope == "ground" && pile.Id == owner.Id).SelectMany(pile => pile.Inventory.Stacks))
@@ -75,7 +78,7 @@ internal sealed class DaggerfallQuestItemPlacement(DaggerfallQuestInstances ques
         var uniqueIds = retained.Where(value => value.Unique is not null).Select(value => value.Unique!.EntityId).ToHashSet();
         var stackIds = retained.Where(value => value.Stack is not null).Select(value => (value.Owner, value.Stack!.StackId)).ToHashSet();
         var movedUniqueIds = binding.UniqueItemIds.ToHashSet();
-        var deltas = sites.Deltas.Where(entry => entry.Value.Effects.Any(effect => effect.ItemId is ulong id && movedUniqueIds.Contains(id))
+        var changed = deltas().Where(entry => entry.Value.Effects.Any(effect => effect.ItemId is ulong id && movedUniqueIds.Contains(id))
             || entry.Value.ActorInventories.Any(value => value.Inventory.UniqueItems.Any(item => uniqueIds.Contains(item.EntityId))
                 || value.Inventory.Stacks.Any(item => stackIds.Contains((DaggerfallItemOwner.Actor(value.EntityId), item.StackId))))
             || entry.Value.Corpses.Any(value => value.UniqueItems.Any(item => uniqueIds.Contains(item.EntityId))
@@ -110,7 +113,7 @@ internal sealed class DaggerfallQuestItemPlacement(DaggerfallQuestInstances ques
                 if (item.Unique is { } unique) itemInstances.AdmitRetainedUnique(unique.EntityId, item.Metadata, destination);
                 else itemInstances.AdmitRetainedStack(item.Owner, destination, InventoryStackId.Parse(item.Stack!.StackId), item.Metadata);
             }
-            foreach (var delta in deltas) sites.ReplaceDelta(delta.Key, delta.Value);
+            foreach (var delta in changed) replaceDelta(delta.Key, delta.Value);
             groundContainers.RemoveRetainedContents(uniqueIds, stackIds);
         });
     }
@@ -135,12 +138,12 @@ internal sealed class DaggerfallQuestItemPlacement(DaggerfallQuestInstances ques
             // The durable accepted queue also serves later spawn groups. Each admitted copy is
             // recorded before another can be issued; no live entity or inventory is duplicated.
             long? actorId = target.Binding.ActorIds.Where(id => !queued.Recipients.Contains(id) && !target.RemovedFoeIds.Contains(id)
-                && actors.TryGet(id, out _) && (corpseLoot.Corpses.ContainsKey(id) || !actors.Get(id).IsDefeated)).Select(id => (long?)id).FirstOrDefault();
+                && actors.TryGet(id, out _) && (hasCorpse(id) || !actors.Get(id).IsDefeated)).Select(id => (long?)id).FirstOrDefault();
             if (actorId is { } id)
             {
-                var owner = corpseLoot.Corpses.ContainsKey(id) ? DaggerfallItemOwner.Corpse(id) : DaggerfallItemOwner.Actor(id);
+                var owner = hasCorpse(id) ? DaggerfallItemOwner.Corpse(id) : DaggerfallItemOwner.Actor(id);
                 void Admit() => questItems.AdmitItem(queued.Prototype!, owner, $"daggerfall.quest.gift.{Uri.EscapeDataString(instance.InstanceId)}.{Uri.EscapeDataString(operation)}.{id}");
-                if (owner.Scope == "corpse") corpseLoot.ReceiveItems(id, Admit);
+                if (owner.Scope == "corpse") receiveIntoCorpse(id, Admit);
                 else Admit();
                 queued = queued with { Recipients = [.. queued.Recipients, id] };
             }
@@ -153,8 +156,8 @@ internal sealed class DaggerfallQuestItemPlacement(DaggerfallQuestInstances ques
                 throw new NotSupportedException($"Give item recipient '{recipient}' is a noncombat projection without an inventory owner.");
             return null;
         }
-        if (actor.IsDefeated && !corpseLoot.Corpses.ContainsKey(targetId)) return null;
-        var destination = corpseLoot.Corpses.ContainsKey(targetId) ? DaggerfallItemOwner.Corpse(targetId) : DaggerfallItemOwner.Actor(targetId);
+        if (actor.IsDefeated && !hasCorpse(targetId)) return null;
+        var destination = hasCorpse(targetId) ? DaggerfallItemOwner.Corpse(targetId) : DaggerfallItemOwner.Actor(targetId);
         if (questItems.Have(instance, symbol) && questItems.Take(instance, symbol) == DaggerfallQuestItemResult.Unavailable) return null;
         item = instance.Resources.Single(resource => resource.Symbol == symbol);
         DaggerfallQuestResourceBinding binding = item.Binding;
@@ -166,7 +169,7 @@ internal sealed class DaggerfallQuestItemPlacement(DaggerfallQuestInstances ques
                 return item.Binding.UniqueItemIds.Length > 0 ? item.Binding : item.Binding with
                 { Stacks = item.Binding.Stacks.Select(stack => stack with { Owner = new(destination.Scope, destination.Id) }).Distinct().ToArray() };
             });
-        if (destination.Scope == "corpse") corpseLoot.ReceiveItems(targetId, Transfer);
+        if (destination.Scope == "corpse") receiveIntoCorpse(targetId, Transfer);
         else Transfer();
         quests.SetResource(instance.InstanceId, item with { Binding = binding });
         return new(symbol, recipient, null, [targetId]);

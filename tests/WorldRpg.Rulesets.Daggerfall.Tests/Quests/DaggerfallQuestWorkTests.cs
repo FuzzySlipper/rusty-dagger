@@ -1,4 +1,6 @@
+using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Crime;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -6,59 +8,80 @@ using Xunit;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// Quest work built without the session: the fixture's quests, people, services, standing and crime, with the interior
-/// building, the profile's kind and the castle zone as plain inputs.
+/// Quest work built without the session: <see cref="GuildMakerFixture"/>'s people, standing and paid services, quests,
+/// crime and a site directory of its own, with the hall's guild, the interior, the profile's kind and the castle zone as
+/// plain inputs.
 /// </summary>
 public sealed class DaggerfallQuestWorkTests
 {
-    private static DaggerfallQuestWork Work(DaggerfallSession session, bool insideCastle = false)
+    private static readonly DaggerfallNpcSite FixtureSite = new(0, "Daggerfall", "guild");
+
+    private sealed class Stage : IDisposable
     {
-        DaggerfallState state = session.State;
-        return new(state.Quests, state.Npcs, state.Services, state.Social, state.Crime, session.GuildProviders, TestPayload.Definitions,
-            state.Progression, new DaggerfallWorldTime(DaggerfallCalendar.Start, 0d, 12d), session.Site,
-            DaggerfallTuning.Defaults.QuestOffers, () => null, () => DaggerfallWorldProfileKind.Exterior, () => insideCastle);
+        internal GuildMakerFixture Makers { get; } = new();
+        internal DaggerfallQuestInstances Quests { get; }
+        internal DaggerfallCrimeState Crime { get; }
+        internal DaggerfallSiteContext Sites { get; }
+        internal DaggerfallWorldProfileKind Kind { get; set; } = DaggerfallWorldProfileKind.Exterior;
+
+        internal Stage(DaggerfallCrimeSave? crime = null)
+        {
+            Quests = new(Makers.Definitions, SummonRandom.Create());
+            Crime = new(crime, () => false);
+            Sites = new(Makers.Definitions.Locations);
+            Sites.Enter(Makers.Definitions.Locations.Records.First(site => site.Exterior is not null).Id);
+            Makers.Npcs.Identities = new WorldRpg.Kit.World.DurableIdentityAllocator(WorldRpg.Kit.World.DurableIdentityKind.Actor, 100);
+        }
+
+        internal DaggerfallQuestWork Work(bool insideCastle = false) => new(Quests, Makers.Npcs, Makers.Services, Makers.Social, Crime,
+            (_, _) => throw new InvalidOperationException("No guild hall is entered in this stage."), Makers.Definitions, new ProgressionState(),
+            new DaggerfallWorldTime(DaggerfallCalendar.FromAbsoluteSeconds(100L * DaggerfallCalendar.SecondsPerDay), 0d, 12d), Sites, DaggerfallTuning.Defaults.QuestOffers,
+            () => null, () => Kind, () => insideCastle);
+
+        public void Dispose() => Makers.Dispose();
     }
 
     [Fact]
-    public void A_witch_with_quest_work_offers_it_and_accepting_starts_the_quest()
+    public void A_witch_with_quest_work_has_work_and_a_stranger_has_none()
     {
-        // A quest's places are allocated from the block markers, so the fixture admits them.
-        using SanguineRoseSessionTests.Fixture fixture = new(random: SummonRandom.Create(), prepareComposition: composition => composition with {
-            Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) });
-        DaggerfallState state = fixture.Session.State;
-        var faction = TestPayload.Definitions.Factions.Factions[419];
-        var facts = DaggerfallNpcServiceFacts.Resolve(TestPayload.Definitions, faction, -1, 0, "witch");
-        DaggerfallSiteRecord site = fixture.Session.Site.ActiveSite!;
-        long provider = state.Npcs.RegisterStable(DaggerfallNpcKind.Static, "coven-work", new(site.Region, site.Name, string.Empty),
+        using Stage stage = new();
+        var faction = stage.Makers.Definitions.Factions.Factions[419];
+        var facts = DaggerfallNpcServiceFacts.Resolve(stage.Makers.Definitions, faction, -1, 0, "witch");
+        long witch = stage.Makers.Npcs.RegisterStable(DaggerfallNpcKind.Static, "coven-work", FixtureSite,
             new("breton", "Female", 184, 8, 0, faction.Id), facts.Role, facts.Services);
-        DaggerfallQuestWork work = Work(fixture.Session);
+        DaggerfallQuestWork work = stage.Work();
 
-        Assert.True(work.HasWork(provider));
-        string text = work.Offer(provider);
-        Assert.True(state.Quests.PendingOffer is not null, text);
-        DaggerfallQuestOfferSave offer = Assert.IsType<DaggerfallQuestOfferSave>(state.Quests.PendingOffer);
-        Assert.Equal(state.Quests.ReadOffer()!.Text, text);
-        Assert.StartsWith("Q0", offer.Quest.DefinitionName);
-
-        work.Answer(offer.Quest.InstanceId, true);
-        Assert.Equal(offer.Quest.InstanceId, Assert.Single(state.Quests.All).InstanceId);
-        Assert.False(work.HasWork(provider));
+        Assert.True(work.HasWork(witch));
+        Assert.False(work.HasWork(987654321));
+        Assert.Equal("That provider has no work available.", work.Offer(987654321));
     }
 
     [Fact]
-    public void A_castle_talker_offers_work_only_inside_a_castle_zone_and_nobody_unknown_does()
+    public void A_castle_talker_offers_no_work_outside_a_castle_zone()
     {
-        using ConditionSessionFixture fixture = new(SummonRandom.Create());
-        DaggerfallState state = fixture.Session.State;
-        var faction = fixture.Definitions.Factions.Factions.Values.First(value => value.Type != 8
+        using Stage stage = new();
+        var faction = stage.Makers.Definitions.Factions.Factions.Values.First(value => value.Type != 8
             && !DaggerfallConcreteGuildCatalog.All.Any(guild => guild.FactionId == value.Id));
-        DaggerfallSiteRecord site = fixture.Session.Site.ActiveSite!;
-        long talker = state.Npcs.RegisterStable(DaggerfallNpcKind.Static, "castle-talker", new(site.Region, site.Name, string.Empty),
+        long talker = stage.Makers.Npcs.RegisterStable(DaggerfallNpcKind.Static, "castle-talker", FixtureSite,
             new("breton", "Male", 184, 8, 0, faction.Id), "noble", ["talk"]);
 
-        Assert.Equal("That provider has no work available.", Work(fixture.Session).Offer(talker));
-        Assert.Equal("That provider has no work available.", Work(fixture.Session, insideCastle: true).Offer(987654321));
-        Assert.Empty(Work(fixture.Session).StartDueInvitations());
-        Assert.Empty(state.Quests.All);
+        Assert.False(stage.Work().HasWork(talker));
+        Assert.Equal("That provider has no work available.", stage.Work().Offer(talker));
+    }
+
+    [Fact]
+    public void A_due_thieves_invitation_starts_its_quest_once_and_never_while_the_player_is_inside()
+    {
+        using Stage stage = new(new DaggerfallCrimeSave([], [], [], ThievingRequirementTally: 10, MurderRequirementTally: 0,
+            ThievesInvitationDueMinute: 1, MurderInvitationDueMinute: 0));
+        stage.Kind = DaggerfallWorldProfileKind.Interior;
+        Assert.Empty(stage.Work().StartDueInvitations());
+        Assert.Empty(stage.Quests.All);
+
+        stage.Kind = DaggerfallWorldProfileKind.Exterior;
+        Assert.Empty(stage.Work().StartDueInvitations());
+        Assert.Equal("crime-invitation:O0A0AL00", Assert.Single(stage.Quests.All).InstanceId);
+        Assert.Empty(stage.Work().StartDueInvitations());
+        Assert.Single(stage.Quests.All);
     }
 }

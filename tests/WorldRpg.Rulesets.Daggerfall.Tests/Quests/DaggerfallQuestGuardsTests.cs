@@ -1,39 +1,64 @@
 using System.Numerics;
-using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-/// <summary>The city guards a quest calls, built without the session over the guard fixture's actors, people, crime and law.</summary>
+/// <summary>
+/// The city guards a quest calls, built without the session over <see cref="SocietyStage"/>'s actors, people, crime and
+/// law (whose perception sees no one); where the player is, the active profile and the civilians' retirement are plain
+/// inputs.
+/// </summary>
 public sealed class DaggerfallQuestGuardsTests
 {
-    private static DaggerfallQuestGuards Guards(DaggerfallSession session) => new(session.State.Actors, session.State.Npcs, session.State.PlayerControl,
-        session.State.Crime, session.DefinitionsByActor, session.Sites, new DaggerfallWorldTime(DaggerfallCalendar.Start, 0d, 12d),
-        session.Crimes, session.Law, session.Civilians, DaggerfallTuning.Defaults.QuestSpawning, new(5, 5, 2, 2, 12.8f, 51.2f, 3.2));
-
-    [Fact]
-    public void An_immediate_call_converts_a_watchman_standing_by_and_completes()
+    private static DaggerfallQuestGuards Guards(SocietyStage stage, bool town = true, List<long>? retired = null)
     {
-        using QuestGuardSpawnTests.Fixture fixture = new(true);
-        long watchman = fixture.Civilian("guard");
-        DaggerfallQuestGuardSpawnState? state = Guards(fixture.Session).Spawn("guards/owner", immediate: true, 0, null);
-
-        Assert.Equal(DaggerfallQuestGuardSpawnOutcome.Complete, state?.Outcome);
-        Assert.Equal(1, state!.SpawnedCount);
-        Assert.False(fixture.Session.State.Actors.TryGet(watchman, out _));
-        Assert.Single(fixture.Session.DefinitionsByActor, pair => pair.Value.MobileId == 146);
+        DaggerfallSiteProfile profile = TestSessions.MediaInputs();
+        return new(stage.Actors, stage.Npcs, stage.Player, stage.Crime, stage.ActorDefinitions, new DaggerfallWorldTime(DaggerfallCalendar.Start, 0d, 12d),
+            stage.Crimes, stage.Law, DaggerfallTuning.Defaults.QuestSpawning, DaggerfallTuning.Defaults.Law,
+            () => new DaggerfallQuestLocationRead(profile, town ? stage.Site : null, null), () => stage.Active, () => profile,
+            id => (retired ?? []).Add(id));
     }
 
     [Fact]
-    public void A_report_nobody_saw_brings_no_guards_and_the_wilderness_has_none_to_call()
+    public void A_report_nobody_saw_brings_no_guards()
     {
-        using QuestGuardSpawnTests.Fixture fixture = new(false);
-        Assert.Equal(DaggerfallQuestGuardSpawnOutcome.NoWitness, Guards(fixture.Session).Spawn("guards/unseen", immediate: false, 0, null)?.Outcome);
+        using SocietyStage stage = new();
+        stage.Player.MoveTo(new Vector3(0, 0, 0));
+        stage.Civilian();
 
-        fixture.Session.State.PlayerControl.MoveTo(new Vector3(10000, 2, 10000));
+        DaggerfallQuestGuardSpawnState? state = Guards(stage).Spawn("guards/unseen", immediate: false, 0, null);
+
+        Assert.Equal(DaggerfallQuestGuardSpawnOutcome.NoWitness, state?.Outcome);
+        Assert.Equal(stage.Site.Id, state!.Location);
+    }
+
+    [Fact]
+    public void A_full_watch_brings_no_more_and_a_call_left_behind_ends()
+    {
+        using SocietyStage stage = new();
+        stage.Player.MoveTo(new Vector3(0, 0, 0));
+        for (int watch = 0; watch <= DaggerfallTuning.Defaults.QuestSpawning.MaximumActiveGuards; watch++) stage.CityWatch();
+
+        Assert.Equal(DaggerfallQuestGuardSpawnOutcome.ActiveLimit, Guards(stage).Spawn("guards/full", immediate: true, 0, null)?.Outcome);
+
+        DaggerfallQuestGuardSpawnState pending = new(DaggerfallWorldProfileIds.Dungeon(stage.Site.Id), stage.Site.Id, 3, 2, 0, [], DaggerfallQuestGuardSpawnOutcome.Pending);
+        DaggerfallQuestGuardSpawnState? left = Guards(stage).Spawn("guards/left", immediate: false, 1, pending);
+        Assert.Equal(DaggerfallQuestGuardSpawnOutcome.LeftLocation, left?.Outcome);
+        Assert.Equal(0, left!.Remaining);
+    }
+
+    [Fact]
+    public void Neither_a_dungeon_nor_the_wilderness_has_a_watch_to_call()
+    {
+        using SocietyStage stage = new();
+        stage.Player.MoveTo(new Vector3(0, 0, 0));
         Assert.Contains("wilderness", Assert.Throws<NotSupportedException>(() =>
-            Guards(fixture.Session).Spawn("guards/wilderness", immediate: true, 0, null)).Message);
-        Assert.DoesNotContain(fixture.Session.DefinitionsByActor, pair => pair.Value.MobileId == 146);
+            Guards(stage, town: false).Spawn("guards/wilderness", immediate: true, 0, null)).Message);
+
+        stage.Active = DaggerfallWorldProfileIds.Dungeon(stage.Site.Id);
+        Assert.Contains("dungeon", Assert.Throws<NotSupportedException>(() =>
+            Guards(stage).Spawn("guards/dungeon", immediate: true, 0, null)).Message);
     }
 }

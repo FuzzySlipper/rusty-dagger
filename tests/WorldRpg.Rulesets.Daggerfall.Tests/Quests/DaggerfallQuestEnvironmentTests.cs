@@ -5,8 +5,8 @@ using Xunit;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// The quest environment built without the session: the weather, the climate and the site's audio are plain inputs, and
-/// no music, cinematics or videos are composed.
+/// The quest environment built without the session, over the quest diseases' stage: the weather, the climate and the site's
+/// audio are plain inputs, and no music, cinematics or videos are composed.
 /// </summary>
 public sealed class DaggerfallQuestEnvironmentTests
 {
@@ -22,17 +22,16 @@ public sealed class DaggerfallQuestEnvironmentTests
     internal static DaggerfallQuestTaskOperation Operation(DaggerfallQuestTaskOperationKind kind, params string[] targets) =>
         new(kind, 1, kind + " " + string.Join(' ', targets), targets, [], null);
 
-    private static DaggerfallQuestEnvironment Environment(ConditionSessionFixture fixture, DaggerfallWeatherKind weather, int climate) =>
-        new(fixture.Definitions, new DaggerfallWorldTime(new(405, 0, 0, 0, 0, 0), 0d, 12d),
-            new DaggerfallQuestDiseases(fixture.Definitions, fixture.Session.Diseases, fixture.Session.State.Effects, fixture.Session.State.Actors.Player.DurableId),
+    private static DaggerfallQuestEnvironment Environment(DaggerfallQuestDiseasesTests.Stage stage, DaggerfallWeatherKind weather, int climate) =>
+        new(stage.Definitions, new DaggerfallWorldTime(new(405, 0, 0, 0, 0, 0), 0d, 12d), stage.Diseases,
             music: null, musicBundle: null, videosEnabled: false, cinematics: null, audio: () => [], weather: () => weather, currentClimate: () => climate,
             playSound: (_, _, _, _) => throw new InvalidOperationException("No quest sound is admitted."));
 
     [Fact]
     public void Season_weather_and_climate_are_read_as_they_are_asked()
     {
-        using ConditionSessionFixture fixture = new();
-        DaggerfallQuestEnvironment environment = Environment(fixture, DaggerfallWeatherKind.Rain, 225);
+        using DaggerfallQuestDiseasesTests.Stage stage = new();
+        DaggerfallQuestEnvironment environment = Environment(stage, DaggerfallWeatherKind.Rain, 225);
 
         Assert.True(environment.Condition(Operation(DaggerfallQuestTaskOperationKind.Season, "winter"), new(405, 0, 0, 0, 0, 0)));
         Assert.False(environment.Condition(Operation(DaggerfallQuestTaskOperationKind.Season, "winter"), new(405, 5, 0, 0, 0, 0)));
@@ -47,10 +46,10 @@ public sealed class DaggerfallQuestEnvironmentTests
     [Fact]
     public void Media_with_no_admitted_asset_is_not_offered_and_a_disabled_video_counts_as_played()
     {
-        using ConditionSessionFixture fixture = new();
-        DaggerfallQuestEnvironment environment = Environment(fixture, DaggerfallWeatherKind.Sunny, 231);
+        using DaggerfallQuestDiseasesTests.Stage stage = new();
+        DaggerfallQuestEnvironment environment = Environment(stage, DaggerfallWeatherKind.Sunny, 231);
         DaggerfallQuestRuntimeInstance instance = Instance();
-        string disease = fixture.Definitions.QuestSources.Tables.Diseases.Lookup.First(pair => pair.Value == 0).Key;
+        string disease = stage.Pox;
 
         Assert.False(environment.OfferCapability(Operation(DaggerfallQuestTaskOperationKind.PlayVideo, "1")));
         Assert.False(environment.OfferCapability(Operation(DaggerfallQuestTaskOperationKind.PlaySong, "song_00")));

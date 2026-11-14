@@ -706,8 +706,8 @@ internal sealed partial class DaggerfallSession
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
             quests.BindNotebook(_notebook.AddQuestNote);
             quests.BindItemCleanup(RemoveCarriedQuestItems);
-            State.QuestItems = new(State.Quests, State.Actors, State.InventoryStore, State.Containers, State.Equipment, State.ItemInstances,
-                State.Currency, State.HeldEnchantments, _actorIdentities, _uniqueItems, _itemOwnership.Entity, _itemLifetime.DestroyUnique, _itemLifetime.ConsumeStack, _equipmentMoves);
+            State.QuestItems = new(State.Quests, State.Actors.Entities, State.InventoryStore, State.Containers, State.Equipment, State.ItemInstances,
+                State.Currency.ReceiveGold, State.HeldEnchantments.Refresh, _actorIdentities, _uniqueItems, _itemOwnership.Entity, _itemLifetime.DestroyUnique, _itemLifetime.ConsumeStack, _equipmentMoves);
             State.Quests.BindItems(State.QuestItems);
             State.Quests.BindPlacementNpcs(State.Npcs);
             State.Npcs.BindQuestPresence(State.Quests.IsNpcUnavailable);
@@ -885,12 +885,16 @@ internal sealed partial class DaggerfallSession
             // The quests' foes, placements and items reach the roster, the site crossing and the persistence boundary; the
             // foes answer the teams the actor owners composed above ask of them from here on.
             _questItemPlacement = new DaggerfallQuestItemPlacement(State.Quests, State.QuestItems, State.ItemInstances, State.Actors, State.PlayerControl,
-                _sites, _groundContainers, _corpseLoot, _uniqueItems);
-            QuestPlacement = new DaggerfallQuestPlacement(State.Actors, State.Npcs, _roster, _grounding, NpcProjection, _site, _sites, _groundContainers,
-                _uniqueItems, _questItemPlacement, _persistence.RestoreSiteDelta);
-            QuestFoes = new DaggerfallQuestFoes(State.Quests, State.Actors, State.PlayerControl, State.Travel, _roster, _placement, _enemyBehavior, _vitality,
-                _sites, tuning.QuestSpawning, tuning.EnemyBehavior, result => AppendDamage(result, DaggerfallDamageCause.Quest, 0), DeliverFacts,
-                id => RetireDetachedActor(id), _persistence.RestoreSiteDelta, (id, definition) => _persistence.CaptureDynamicActorDelta(id, definition));
+                _groundContainers, _uniqueItems, () => _sites.Deltas, _sites.ReplaceDelta, id => _corpseLoot.Corpses.ContainsKey(id), _corpseLoot.ReceiveItems);
+            QuestPlacement = new DaggerfallQuestPlacement(State.Actors, State.Npcs, _site, point => _exterior.ProfileToLocal(point),
+                point => _exterior.LocalToProfile(point), (point, distance) => _grounding.GroundPosition(point, distance),
+                (definition, pose) => _roster.Spawn(definition, pose),
+                (item, position) => _groundContainers.CreateQuestItem(item, position, _uniqueItems), _questItemPlacement.PlaceBound,
+                NpcProjection.Project, BringOutRetainedQuestActor);
+            QuestFoes = new DaggerfallQuestFoes(State.Quests, State.Actors, State.PlayerControl, State.Travel, _roster.Definitions, _placement, _vitality,
+                tuning.QuestSpawning, tuning.EnemyBehavior, () => _sites.ReadQuestLocation(), (definition, pose) => _roster.Spawn(definition, pose),
+                _roster.RemoveQuestActor, (id, allies) => _enemyBehavior.MakeHostile(id, includePlayerAllies: allies), _enemyBehavior.IsPacified,
+                result => AppendDamage(result, DaggerfallDamageCause.Quest, 0), id => RetireDetachedActor(id), KillRetainedQuestFoe);
             TeleportChoice = new DaggerfallTeleport(this, State.PlayerControl, State.Transport, () => State.Property.OwnedShip,
                 Presentation, saved?.PendingTeleport, saved?.TeleportAnchor);
             _grounding.FloorPending = () => _exterior.CollisionPending;
@@ -945,10 +949,14 @@ internal sealed partial class DaggerfallSession
                 providerAvailable: State.Services.ProviderAvailable,
                 openTeleport: OpenGuildTeleport,
                 knightlyHouse: Holdings.AwardKnightlyHouse);
-            _questWorldActions = new DaggerfallQuestWorldActions(_site, _sites, definitions, _notebook);
-            _questGuards = new DaggerfallQuestGuards(State.Actors, State.Npcs, State.PlayerControl, State.Crime, _roster.Definitions, _sites, _time,
-                Crimes, Law, Civilians, tuning.QuestSpawning, tuning.Law);
-            QuestWork = new DaggerfallQuestWork(State.Quests, State.Npcs, State.Services, State.Social, State.Crime, GuildProviders, definitions,
+            _questWorldActions = new DaggerfallQuestWorldActions(_site, definitions, _notebook, () => _sites.Profiles, () => _sites.Projection.Inputs,
+                _sites.TryRelocatePlayer, _sites.ClearReturnDestination);
+            _questGuards = new DaggerfallQuestGuards(State.Actors, State.Npcs, State.PlayerControl, State.Crime, _roster.Definitions, _time,
+                Crimes, Law, tuning.QuestSpawning, tuning.Law, () => _sites.ReadQuestLocation(), () => _activeProfileKey,
+                () => _sites.Projection.Inputs, Civilians.Retire);
+            QuestWork = new DaggerfallQuestWork(State.Quests, State.Npcs, State.Services, State.Social, State.Crime,
+                (npc, building) => GuildProviders.TryResolve(npc, building, DaggerfallConcreteGuildService.Quests, out var guild, out _, out _) ? guild : null,
+                definitions,
                 State.Progression, _time, _site, tuning.QuestOffers, CurrentInteriorBuilding, () => _sites.ActiveProfile.Kind, InsideCastleZone);
             _vitality.PoisonDamageApplied += result=>AppendEffectDamage(new(result));
             _vitality.ConditionTrackLost += AppendSpellTrackLoss;

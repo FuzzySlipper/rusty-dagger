@@ -18,14 +18,15 @@ internal sealed record DaggerfallQuestOfferTuning(int SocialProviderChancePercen
 /// the criminal guilds' invitations once they are due.
 /// </summary>
 /// <remarks>The interior building, the active profile's kind and whether the player stands in a castle zone change with
-/// the site, so they are read as they are asked.</remarks>
+/// the site, so they are read as they are asked. Which guild of a hall gives a person's quests is Society's answer
+/// (<c>DaggerfallGuildProviders.TryResolve</c> for the quests service), handed in.</remarks>
 internal sealed class DaggerfallQuestWork(
     DaggerfallQuestInstances quests,
     DaggerfallNpcRegistry npcs,
     DaggerfallServiceTransactions services,
     DaggerfallSocialState social,
     DaggerfallCrimeState crime,
-    DaggerfallGuildProviders guildProviders,
+    Func<DaggerfallNpc, DaggerfallInteriorBuilding, DaggerfallConcreteGuildDefinition?> questGuild,
     DaggerfallDefinitions definitions,
     ProgressionState progression,
     DaggerfallWorldTime time,
@@ -51,8 +52,9 @@ internal sealed class DaggerfallQuestWork(
         DaggerfallConcreteGuildDefinition? guild = null;
         if (service == "quests" && interiorBuilding() is { BuildingType: 11 or 14 or 18 } building)
         {
-            if (!guildProviders.TryResolve(npc, building, DaggerfallConcreteGuildService.Quests, out guild, out _, out _)) return null;
-            faction = guild!.Kind is DaggerfallConcreteGuildKind.Temple or DaggerfallConcreteGuildKind.KnightlyOrder ? building.FactionId : guild.FactionId;
+            if (questGuild(npc, building) is not { } served) return null;
+            guild = served;
+            faction = guild.Kind is DaggerfallConcreteGuildKind.Temple or DaggerfallConcreteGuildKind.KnightlyOrder ? building.FactionId : guild.FactionId;
         }
         if (service == "quests" && guild is null) return null;
         if (!definitions.Factions.Factions.TryGetValue(faction, out var definition)) return null;

@@ -109,12 +109,14 @@ internal sealed class SocietyStage : IDisposable
     }
 
     /// <summary>A live city watchman the roster's definitions name as mobile 146.</summary>
-    internal long CityWatch()
+    internal long CityWatch() => Actor(Definitions.Actors.Values.Single(definition => definition.MobileId == 146));
+
+    /// <summary>A live actor of <paramref name="definition"/> at the origin, which the roster's definitions name.</summary>
+    internal long Actor(DaggerfallActorDefinition definition)
     {
         long id = _nextWatch++;
-        DaggerfallActorDefinition watch = Definitions.Actors.Values.Single(definition => definition.MobileId == 146);
-        DaggerActorFactory.CreateNonPlayerActor(Actors, id, watch, _mechanics.CreateStats(watch, DaggerActorFactory.InitialVitals(Random.Service, watch, id)), default);
-        ActorDefinitions[id] = watch;
+        DaggerActorFactory.CreateNonPlayerActor(Actors, id, definition, _mechanics.CreateStats(definition, DaggerActorFactory.InitialVitals(Random.Service, definition, id)), default);
+        ActorDefinitions[id] = definition;
         return id;
     }
 

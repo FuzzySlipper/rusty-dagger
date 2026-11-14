@@ -1,3 +1,4 @@
+using System.Numerics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -10,16 +11,19 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// Where a quest's resources stand once their site is loaded: foes spawned at their marker or moved there, items created
 /// or placed again, people moved, turned or projected there, and a retained quest actor brought out of an unloaded site.
 /// </summary>
-/// <remarks>Restoring a site delta's inventories, corpses and effects onto a brought-out actor is the session's, handed in.</remarks>
-internal sealed class DaggerfallQuestPlacement(ActorsState actors, DaggerfallNpcRegistry npcs, DaggerfallActorRoster roster, DaggerfallActorGrounding grounding,
-    DaggerfallNpcProjection projection, DaggerfallSiteContext directory, DaggerfallSiteCrossing sites, DaggerfallGroundContainers groundContainers,
-    DaggerfallUniqueItemAllocator uniqueItems, DaggerfallQuestItemPlacement items, Action<DaggerfallSiteRuntimeDelta> restoreSiteDelta) : IDaggerfallQuestWorldAdmission
+/// <remarks>The exterior's frame, the floor under a point, the roster's spawning, the ground piles, the questor projection and
+/// bringing an actor out of an unloaded site (the list BringOutRetainedQuestActor) are handed in.</remarks>
+internal sealed class DaggerfallQuestPlacement(ActorsState actors, DaggerfallNpcRegistry npcs, DaggerfallSiteContext directory,
+    Func<WorldPoint, WorldPoint> profileToLocal, Func<Vector3, Vector3> localToProfile, Func<WorldPoint, double, WorldPoint> groundPosition,
+    Func<string, ActorPose, long> spawn, Func<DaggerfallCreatedItem, WorldPoint, DaggerfallPlacedItem> createItem,
+    Func<DaggerfallQuestResourceBinding, WorldPoint, DaggerfallQuestResourceBinding> placeBoundItem,
+    Action<DaggerfallNpc, DaggerfallSiteProfile, WorldPoint> project, Action<long, WorldPoint> bringOutRetained) : IDaggerfallQuestWorldAdmission
 {
     /// <summary>Places a quest resource at a marker: its foes spawned or moved there, its item created or placed, its person placed.</summary>
     public DaggerfallQuestResourceBinding? Place(string instanceId, DaggerfallQuestResourceState resource,
         DaggerfallSiteProfile profile, DaggerfallSiteMarker marker)
     {
-        var position = sites.Exterior.ProfileToLocal(marker.Position);
+        var position = profileToLocal(marker.Position);
         if (resource.SelectedFoe is { } foe)
         {
             if (resource.IsHidden || resource.Binding.ActorIds.Length > 0 && resource.Binding.ActorIds.All(resource.RemovedFoeIds.Contains)) return null;
@@ -33,16 +37,16 @@ internal sealed class DaggerfallQuestPlacement(ActorsState actors, DaggerfallNpc
             }
             long[] actors = new long[foe.Count];
             for (int index = 0; index < actors.Length; index++)
-                actors[index] = roster.Spawn(foe.Definition, new(position, 0));
+                actors[index] = spawn(foe.Definition, new(position, 0));
             return DaggerfallQuestResourceBinding.Actors(actors);
         }
         if (resource.SelectedItem is { } item)
         {
             if (resource.Binding.Kind == DaggerfallQuestResourceBindingKind.Item)
             {
-                return items.PlaceBound(resource.Binding, position);
+                return placeBoundItem(resource.Binding, position);
             }
-            return DaggerfallQuestResourceBinding.Placed(groundContainers.CreateQuestItem(item, position, uniqueItems));
+            return DaggerfallQuestResourceBinding.Placed(createItem(item, position));
         }
         if (resource.SelectedPerson is not null)
         {
@@ -51,7 +55,7 @@ internal sealed class DaggerfallQuestPlacement(ActorsState actors, DaggerfallNpc
         }
         throw new ArgumentException($"Quest resource '{resource.Symbol}' has no selected physical meaning.");
     }
-    /// <summary>Transfers an unloaded actor's retained values between the existing site and roster owners.</summary>
+    /// <summary>Moves a quest actor to a position: a live one is posed there, one an unloaded site keeps is brought out.</summary>
     private void RelocateQuestActor(long id, WorldPoint position)
     {
         if (actors.TryGet(id, out var live))
@@ -59,28 +63,7 @@ internal sealed class DaggerfallQuestPlacement(ActorsState actors, DaggerfallNpc
             live.ApplyPose(new(position, live.HeadingYawRadians));
             return;
         }
-        var owners = sites.Deltas.Where(entry => entry.Value.DynamicActors.Any(actor => actor.EntityId == id)).ToArray();
-        if (owners.Length != 1)
-            throw new InvalidOperationException($"Quest actor {id} requires one retained site owner, found {owners.Length}.");
-        var source = owners[0];
-        var saved = source.Value.DynamicActors.Single(actor => actor.EntityId == id);
-        var incoming = new DaggerfallSiteRuntimeDelta([], [saved with { X = position.X, Y = position.Y, Z = position.Z }],
-            source.Value.ActorInventories.Where(value => value.EntityId == id).ToArray(),
-            source.Value.Corpses.Where(value => value.ActorId == id).ToArray(), [],
-            source.Value.Effects.Where(value => value.TargetId == id).ToArray());
-        try
-        {
-            roster.MaterializeRetainedActor(incoming.DynamicActors.Single());
-            restoreSiteDelta(incoming);
-        }
-        catch { roster.UnloadActor(id); throw; }
-        sites.ReplaceDelta(source.Key, source.Value with
-        {
-            DynamicActors = source.Value.DynamicActors.Where(value => value.EntityId != id).ToArray(),
-            ActorInventories = source.Value.ActorInventories.Where(value => value.EntityId != id).ToArray(),
-            Corpses = source.Value.Corpses.Where(value => value.ActorId != id).ToArray(),
-            Effects = source.Value.Effects.Where(value => value.TargetId != id).ToArray(),
-        });
+        bringOutRetained(id, position);
     }
 
     /// <summary>Places a quest person: a civilian actor moves, a live actor turns in place, anyone else is projected.</summary>
@@ -100,16 +83,16 @@ internal sealed class DaggerfallQuestPlacement(ActorsState actors, DaggerfallNpc
         var probe = position;
         if (profile.ProfileKind != DaggerfallWorldProfileKind.Dungeon)
             probe = WorldPoint.From(position.ToVector() + System.Numerics.Vector3.UnitY * (sprite.Size.Y / 2));
-        var floor = grounding.GroundPosition(probe, 4);
+        var floor = groundPosition(probe, 4);
         bool projected = npc.Kind != DaggerfallNpcKind.Civilian && !actors.TryGet(id, out _);
         position = projected ? WorldPoint.From(floor.ToVector() + System.Numerics.Vector3.UnitY * (sprite.Size.Y * sprite.Pivot.Y)) : floor;
         if (npc.Kind == DaggerfallNpcKind.Civilian) RelocateQuestActor(id, position);
         else if (actors.TryGet(id, out var actor)) actor.ApplyPose(new(position, actor.HeadingYawRadians));
-        else projection.Project(npc, profile, position);
+        else project(npc, profile, position);
         npcs.SetDisplayName(id, person.DisplayName);
         // A live actor owns its own pose; only a projected questor keeps a detached registry placement.
         if (actors.TryGet(id, out _)) npcs.Bind(id, profile.ProfileKey);
-        else npcs.Place(id, profile.ProfileKey, WorldPoint.From(sites.Exterior.LocalToProfile(position.ToVector())));
+        else npcs.Place(id, profile.ProfileKey, WorldPoint.From(localToProfile(position.ToVector())));
         return DaggerfallQuestResourceBinding.Actors(id);
     }
 }

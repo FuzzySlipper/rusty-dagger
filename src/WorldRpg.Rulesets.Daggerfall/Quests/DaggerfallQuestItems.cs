@@ -1,6 +1,5 @@
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
-using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.World;
 
@@ -11,9 +10,9 @@ internal sealed record DaggerfallQuestCustodySave(string InstanceId, long Id, Da
 internal sealed record DaggerfallQuestCustody(string InstanceId, long Id, EntityId Owner);
 
 /// <summary>Retains taken quest items in actual Engine inventories for identity-preserving reoffers.</summary>
-internal sealed class DaggerfallQuestItems(DaggerfallQuestInstances quests, ActorsState actors, InventoryStore inventoryStore,
+internal sealed class DaggerfallQuestItems(DaggerfallQuestInstances quests, EntityDirectory entities, InventoryStore inventoryStore,
     MechanicsInventoryContainerCoordinator containers, MechanicsEquipmentCoordinator equipmentCoordinator, DaggerfallItemInstances itemInstances,
-    DaggerfallCurrencyService currency, DaggerfallHeldEnchantments heldEnchantments, DurableIdentityAllocator identities,
+    Func<ulong, bool> receiveGold, Action refreshHeldPowers, DurableIdentityAllocator identities,
     DaggerfallUniqueItemAllocator uniqueItems, Func<DaggerfallItemOwner, EntityId> ownerEntity, Action<ulong> destroyUnique, Action<DaggerfallItemOwner, InventoryStackId> consumeStack, DaggerfallEquipmentMoves equipmentMoves)
 {
     private readonly Dictionary<string, DaggerfallQuestCustody> _custody = new(StringComparer.Ordinal);
@@ -81,7 +80,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallQuestInstances quests, Acto
             created = resource.SelectedItem!;
         }
         if (created.TemplateIndex == 276)
-            return currency.ReceiveGold(created.Quantity) ? DaggerfallQuestItemResult.Changed : DaggerfallQuestItemResult.Unavailable;
+            return receiveGold(created.Quantity) ? DaggerfallQuestItemResult.Changed : DaggerfallQuestItemResult.Unavailable;
         // An already-carried canonical item needs no removal/recreation to be handed back.
         // Reoffers never reroll definitions or replace a live item's current meaning.
         if (resource.Binding.UniqueItemIds is [var id] && itemInstances.ContainsUnique(id))
@@ -219,7 +218,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallQuestInstances quests, Acto
         var equipmentBefore = equipmentCoordinator.Read();
         var removed = equipmentBefore.Assignments.Select(value => value.Item).DistinctBy(value => value.EntityId)
             .Where(value => unique.Concat(discardedUnique).Any(item => item.Value.Owner == DaggerfallItemOwner.Player
-                && actors.Entities.Resolve(new(DurableIdentityKind.Item, item.Key)).Value == value.EntityId)).ToArray();
+                && entities.Resolve(new(DurableIdentityKind.Item, item.Key)).Value == value.EntityId)).ToArray();
         var quantities = stacks.Select(value => containers.Read(ownerEntity(value.Owner)).Stacks.Single(stack => stack.Id == value.Stack).Quantity).ToArray();
         foreach (var stack in stacks) itemInstances.EnsureTransferCompatible(stack.Owner, destination, stack.Stack, stack.Stack);
         // Equipment removal and every selected copy transfer publish together. A failure
@@ -228,7 +227,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallQuestInstances quests, Acto
         {
             foreach (var item in unique)
             {
-                EntityId entity = actors.Entities.Resolve(new(DurableIdentityKind.Item, item.Key));
+                EntityId entity = entities.Resolve(new(DurableIdentityKind.Item, item.Key));
                 EntityId source = ownerEntity(item.Value.Owner);
                 if (inventoryStore.TryGetEquipment(source, out var equipment) && equipment!.Assignments.Any(value => value.Item == entity))
                     edit.Unequip(source, entity);
@@ -238,7 +237,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallQuestInstances quests, Acto
                 edit.TransferFungible(ownerEntity(stacks[index].Owner), target, stacks[index].Stack, stacks[index].Stack, quantities[index]);
             foreach (var item in discardedUnique)
             {
-                var entity = actors.Entities.Resolve(new(DurableIdentityKind.Item, item.Key));
+                var entity = entities.Resolve(new(DurableIdentityKind.Item, item.Key));
                 var source = ownerEntity(item.Value.Owner);
                 if (inventoryStore.TryGetEquipment(source, out var equipment) && equipment!.Assignments.Any(value => value.Item == entity)) edit.Unequip(source, entity);
                 edit.DestroyUnique(entity);
@@ -259,12 +258,12 @@ internal sealed class DaggerfallQuestItems(DaggerfallQuestInstances quests, Acto
         {
             itemInstances.RemoveUnique(item.Key);
             var identity = new DurableIdentityReference(DurableIdentityKind.Item, item.Key);
-            actors.Entities.Destroy(identity);
+            entities.Destroy(identity);
             uniqueItems.Remove(identity);
         }
         foreach (var stack in discardedStacks) itemInstances.RemoveStack(stack.Owner, stack.Stack);
         equipmentMoves.NotifyRemoved(equipmentBefore, removed);
-        heldEnchantments.Refresh();
+        refreshHeldPowers();
     }
 
     internal void RemoveCustody(string instanceId)
@@ -304,7 +303,7 @@ internal sealed class DaggerfallQuestItems(DaggerfallQuestInstances quests, Acto
         }
         _custody.Remove(custody.InstanceId);
         var identity = new DurableIdentityReference(DurableIdentityKind.Container, checked((ulong)custody.Id));
-        actors.Entities.Destroy(identity);
+        entities.Destroy(identity);
         identities.Remove(identity);
     }
 

@@ -1097,14 +1097,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The session's durable identity ledger for generated unique loot.</summary>
     internal DaggerfallUniqueItemAllocator UniqueItemAllocator => _uniqueItems;
 
-    // The parts the quests' foes, placements and items are built from, so their tests can build them apart from the session.
-    internal DaggerfallActorRoster Roster => _roster;
-    internal DaggerfallActorGrounding Grounding => _grounding;
-    internal DaggerfallActorPlacement ActorPlacement => _placement;
-    internal DaggerfallVitalityConsequences Vitality => _vitality;
-    internal DaggerfallGroundContainers GroundContainers => _groundContainers;
-    internal DaggerfallCorpseLootModule CorpseLoot => _corpseLoot;
-
     /// <summary>
     /// Records that one generated unique item no longer exists, so its identity is
     /// tombstoned. Authored content identities are refused — they are reserved rather

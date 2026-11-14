@@ -90,15 +90,18 @@ internal sealed partial class DaggerfallQuestInstances
 /// What a quest does to the world: a location's variant (a world update), revealing a place on the map with its note, and
 /// sending the player to a quest place's spawn marker.
 /// </summary>
-internal sealed class DaggerfallQuestWorldActions(DaggerfallSiteContext directory, DaggerfallSiteCrossing sites, DaggerfallDefinitions definitions,
-    DaggerfallBookNotebook notebook)
+/// <remarks>The admitted site catalog and the profile the player stands in change with the site, so they are read as they
+/// are asked; moving the player and dropping the return destination are the site crossing's (Interiors), handed in.</remarks>
+internal sealed class DaggerfallQuestWorldActions(DaggerfallSiteContext directory, DaggerfallDefinitions definitions, DaggerfallBookNotebook notebook,
+    Func<DaggerfallSiteProfiles?> profiles, Func<DaggerfallSiteProfile> currentProfile,
+    Func<DaggerfallWorldProfileKey, DaggerfallSiteAnchor, bool> relocatePlayer, Action clearReturnDestination)
 {
     internal bool Apply(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation)
     {
         if (operation.Kind == DaggerfallQuestTaskOperationKind.WorldUpdate)
         {
             var update = operation.WorldUpdate!;
-            var worldProfiles = sites.Profiles ?? throw new NotSupportedException("WorldUpdate requires an admitted site catalog.");
+            var worldProfiles = profiles() ?? throw new NotSupportedException("WorldUpdate requires an admitted site catalog.");
             DaggerfallSiteId site;
             if (update.Kind == "locationnew")
             {
@@ -134,16 +137,16 @@ internal sealed class DaggerfallQuestWorldActions(DaggerfallSiteContext director
         DaggerfallSiteId place = binding.Places[0].Require();
         DaggerfallWorldProfileKey? key = DaggerfallQuestPlacements.ProfileKey(binding);
         DaggerfallSiteProfile? destination = key is not { } id ? null
-            : sites.Profiles is { } profiles ? (profiles.TryGet(id, out DaggerfallSiteProfile resolved) ? resolved : null)
-            : sites.Projection.Inputs.ProfileKey == id ? sites.Projection.Inputs : null;
+            : profiles() is { } admitted ? (admitted.TryGet(id, out DaggerfallSiteProfile resolved) ? resolved : null)
+            : currentProfile().ProfileKey == id ? currentProfile() : null;
         if (destination is null || !DaggerfallQuestPlacements.Matches(binding, destination))
             throw new NotSupportedException($"Quest teleport Place '{operation.Targets[0]}' has no admitted world profile.");
         var markers = DaggerfallQuestPlacements.SourceOrder(destination, directory.Require(place), DaggerfallSiteMarkerKind.QuestSpawn);
         if (markers.Length == 0) throw new NotSupportedException($"Quest teleport Place '{operation.Targets[0]}' has no admitted spawn marker.");
         int index = operation.MarkerIndex is { } requested && requested < markers.Length ? requested : 0;
         var marker = markers[index];
-        if (!sites.TryRelocatePlayer(destination.ProfileKey, new("quest-teleport", marker.Position, 0, 0))) return false;
-        sites.ClearReturnDestination();
+        if (!relocatePlayer(destination.ProfileKey, new("quest-teleport", marker.Position, 0, 0))) return false;
+        clearReturnDestination();
         return true;
     }
 }

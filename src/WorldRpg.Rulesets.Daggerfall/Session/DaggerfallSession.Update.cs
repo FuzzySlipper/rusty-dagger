@@ -997,6 +997,73 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
+    /// A quest's kill of a foe an unloaded site keeps: the foe is brought back as an actor (Actors) with its retained
+    /// inventory, corpse and effects (the save boundary), the quest kills it unless it is already dead, the death's facts are
+    /// delivered (its consequences complete before the capture), and its site's delta takes the dead foe back; the actor is
+    /// unloaded again either way. False while no site keeps the foe: a selected foe not yet placed keeps its command.
+    /// </summary>
+    private bool KillRetainedQuestFoe(long id)
+    {
+        var owners = _sites.Deltas.Where(entry => entry.Value.DynamicActors.Any(value => value.EntityId == id)).ToArray(); // Interiors
+        if (owners.Length == 0) return false;
+        if (owners.Length != 1) throw new InvalidOperationException($"Quest foe {id} has more than one retained site owner.");
+        var source = owners[0];
+        var saved = source.Value.DynamicActors.Single(value => value.EntityId == id);
+        var incoming = new DaggerfallSiteRuntimeDelta([], [saved],
+            source.Value.ActorInventories.Where(value => value.EntityId == id).ToArray(),
+            source.Value.Corpses.Where(value => value.ActorId == id).ToArray(), [],
+            source.Value.Effects.Where(value => value.TargetId == id).ToArray());
+        try
+        {
+            var materialized = _roster.MaterializeRetainedActor(saved, projectAppearance: false);  // Actors
+            _persistence.RestoreSiteDelta(incoming);                                              // Session: the save boundary
+            if (!materialized.IsDefeated)
+                AppendDamage(_vitality.ResolveQuestDeath(materialized.Actor), DaggerfallDamageCause.Quest, 0); // Quests, its harm Condition's
+            DeliverFacts();                                                                       // Session: the facts' reactions
+            var updated = _persistence.CaptureDynamicActorDelta(id, saved.Definition);            // Session: the save boundary
+            _sites.ReplaceDelta(source.Key, source.Value with                                     // Interiors
+            {
+                DynamicActors = source.Value.DynamicActors.Select(value => value.EntityId == id ? updated.DynamicActors.Single() : value).ToArray(),
+                ActorInventories = [.. source.Value.ActorInventories.Where(value => value.EntityId != id), .. updated.ActorInventories],
+                Corpses = [.. source.Value.Corpses.Where(value => value.ActorId != id), .. updated.Corpses],
+                Effects = [.. source.Value.Effects.Where(value => value.TargetId != id), .. updated.Effects],
+            });
+            return true;
+        }
+        finally { _roster.UnloadActor(id); }                                                      // Actors
+    }
+
+    /// <summary>
+    /// A quest actor an unloaded site keeps, brought out at a position: it becomes an actor there (Actors) with its retained
+    /// inventory, corpse and effects (the save boundary), and its site's delta lets it go.
+    /// </summary>
+    private void BringOutRetainedQuestActor(long id, WorldPoint position)
+    {
+        var owners = _sites.Deltas.Where(entry => entry.Value.DynamicActors.Any(actor => actor.EntityId == id)).ToArray(); // Interiors
+        if (owners.Length != 1)
+            throw new InvalidOperationException($"Quest actor {id} requires one retained site owner, found {owners.Length}.");
+        var source = owners[0];
+        var saved = source.Value.DynamicActors.Single(actor => actor.EntityId == id);
+        var incoming = new DaggerfallSiteRuntimeDelta([], [saved with { X = position.X, Y = position.Y, Z = position.Z }],
+            source.Value.ActorInventories.Where(value => value.EntityId == id).ToArray(),
+            source.Value.Corpses.Where(value => value.ActorId == id).ToArray(), [],
+            source.Value.Effects.Where(value => value.TargetId == id).ToArray());
+        try
+        {
+            _roster.MaterializeRetainedActor(incoming.DynamicActors.Single());                    // Actors
+            _persistence.RestoreSiteDelta(incoming);                                              // Session: the save boundary
+        }
+        catch { _roster.UnloadActor(id); throw; }                                                 // Actors
+        _sites.ReplaceDelta(source.Key, source.Value with                                         // Interiors
+        {
+            DynamicActors = source.Value.DynamicActors.Where(value => value.EntityId != id).ToArray(),
+            ActorInventories = source.Value.ActorInventories.Where(value => value.EntityId != id).ToArray(),
+            Corpses = source.Value.Corpses.Where(value => value.ActorId != id).ToArray(),
+            Effects = source.Value.Effects.Where(value => value.TargetId != id).ToArray(),
+        });
+    }
+
+    /// <summary>
     /// The answer to a quest offer: the quest accepts or declines it while its giver still offers it, its line is shown,
     /// and the open conversation reads again whether its people still have work.
     /// </summary>

@@ -41,19 +41,22 @@ internal sealed partial class DaggerfallQuestInstances
 /// The city guards a quest calls: how many come and from where (watchmen converted from civilians who saw the player, or
 /// arrivals after the report travels), each admitted to the watch and joined to a legal response already under way.
 /// </summary>
+/// <remarks>Where the player is, the active profile and its interior change with the site, so they are read as they are
+/// asked; a converted guard civilian is retired through Actors' civilians, handed in.</remarks>
 internal sealed class DaggerfallQuestGuards(ActorsState actors, DaggerfallNpcRegistry npcs, PlayerControlState playerControl, DaggerfallCrimeState crime,
-    IReadOnlyDictionary<long, DaggerfallActorDefinition> actorDefinitions, DaggerfallSiteCrossing sites, DaggerfallWorldTime time,
-    DaggerfallCrimes crimes, DaggerfallLaw law, DaggerfallCivilians civilians, DaggerfallQuestSpawningTuning spawning, DaggerfallLawTuning lawTuning)
+    IReadOnlyDictionary<long, DaggerfallActorDefinition> actorDefinitions, DaggerfallWorldTime time, DaggerfallCrimes crimes, DaggerfallLaw law,
+    DaggerfallQuestSpawningTuning spawning, DaggerfallLawTuning lawTuning, Func<DaggerfallQuestLocationRead> questLocation,
+    Func<DaggerfallWorldProfileKey> activeProfile, Func<DaggerfallSiteProfile> profile, Action<long> retireCivilian)
 {
     internal DaggerfallQuestGuardSpawnState? Spawn(string operation, bool immediate, double elapsedSeconds,
         DaggerfallQuestGuardSpawnState? state)
     {
         if (!double.IsFinite(elapsedSeconds) || elapsedSeconds < 0) throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
         if (state is { Outcome: not DaggerfallQuestGuardSpawnOutcome.Pending }) return state;
-        var location = sites.ReadQuestLocation();
-        if (state is not null && (state.Profile != sites.ActiveProfile || state.Location != location.ExteriorLocation?.Id))
+        var location = questLocation();
+        if (state is not null && (state.Profile != activeProfile() || state.Location != location.ExteriorLocation?.Id))
             return state with { Remaining = 0, CandidateNpcs = [], Outcome = DaggerfallQuestGuardSpawnOutcome.LeftLocation };
-        if (sites.ActiveProfile.Kind == DaggerfallWorldProfileKind.Dungeon)
+        if (activeProfile().Kind == DaggerfallWorldProfileKind.Dungeon)
             throw new NotSupportedException("City guards cannot be requested inside a dungeon; the request awaits an admitted settlement.");
         if (playerControl.Position is not WorldPoint player || actors.Player.IsDefeated) return state;
         if (location.ExteriorLocation is not { } town)
@@ -61,13 +64,13 @@ internal sealed class DaggerfallQuestGuards(ActorsState actors, DaggerfallNpcReg
         if (state is null)
         {
             DaggerfallQuestGuardSpawnState Result(DaggerfallQuestGuardSpawnOutcome outcome, int count = 0, double delay = 0, long[]? candidates = null) =>
-                new(sites.ActiveProfile, town.Id, delay, count, 0, candidates ?? [], outcome);
+                new(activeProfile(), town.Id, delay, count, 0, candidates ?? [], outcome);
             if (actors.All.Count(actor => !actor.IsDefeated && actorDefinitions.GetValueOrDefault(actor.DurableId)?.MobileId == 146)
                 > spawning.MaximumActiveGuards) return Result(DaggerfallQuestGuardSpawnOutcome.ActiveLimit);
             int count = crimes.Roll(operation, "quest-guard-count", lawTuning.MinimumGuards, lawTuning.MaximumGuards);
-            if (sites.ActiveProfile.Kind == DaggerfallWorldProfileKind.Interior)
+            if (activeProfile().Kind == DaggerfallWorldProfileKind.Interior)
             {
-                int building = sites.Projection.Inputs.InteriorBuilding?.BuildingType ?? -1;
+                int building = profile().InteriorBuilding?.BuildingType ?? -1;
                 if (!(building == 15 || building is >= 17 and <= 20
                     || DaggerfallNpcServiceFacts.IsShop(building) && DaggerfallBuildingEntryPolicy.IsOpenHour(building, time.Calendar.Hour)))
                     throw new NotSupportedException("This building is not an open shop, tavern, or residence for city guard arrival.");
@@ -120,10 +123,10 @@ internal sealed class DaggerfallQuestGuards(ActorsState actors, DaggerfallNpcReg
         }
         else if (!law.TryGuardArrivalPose(operation + "/quest/" + state.SpawnedCount, player, out pose)) return state;
         long guard = law.AdmitCityWatch(pose);
-        if (candidate is { } converted && npcs.Require(converted).Role == "guard") civilians.Retire(converted);
+        if (candidate is { } converted && npcs.Require(converted).Role == "guard") retireCivilian(converted);
         // The law owner receives actual watchmen only when a current case already exists.
         // Spawning never invents an accusation or a second legal response.
-        if (law.Current is { Modal: false } response && response.Profile.Require() == sites.ActiveProfile)
+        if (law.Current is { Modal: false } response && response.Profile.Require() == activeProfile())
             crime.SetResponse(response with { Guards = [.. response.Guards, guard] });
         int remaining = state.Remaining - 1;
         return state with { Remaining = remaining, SpawnedCount = state.SpawnedCount + 1,
