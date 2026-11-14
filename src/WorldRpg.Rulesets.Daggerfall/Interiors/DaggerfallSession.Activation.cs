@@ -104,6 +104,23 @@ internal sealed partial class DaggerfallSession
     private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode) =>
         EnterExteriorBuilding(door, forceMode, skipGreeting: false);
 
+    private bool PresentBuildingGreeting(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode, bool closed, bool owned)
+    {
+        if (!TryExteriorBuilding(door, out _, out var building)
+            || _buildingGreeting.Present(door, forceMode, building, closed, owned, _activeProfileKey.LogicalId, CurrentTextContext) is not { } greeting)
+            return false;
+        _dungeonTextProjection = greeting;
+        return true;
+    }
+
+    private void ContinueBuildingEntry()
+    {
+        var held = _buildingGreeting.TakeHeldEntry();
+        _dungeonTextProjection = null;
+        if (held is { } entry && EnterExteriorBuilding(entry.Door, entry.ForceMode, skipGreeting: true) is { } result)
+            Presentation.SetOutcome(result.Message);
+    }
+
     private DaggerfallActivationOutcome? EnterExteriorBuilding(DaggerfallRdbDoorId door, DaggerfallActivationMode? forceMode, bool skipGreeting)
     {
         if (_doors.ExteriorBuildingOf(door) is not { } building) return null;

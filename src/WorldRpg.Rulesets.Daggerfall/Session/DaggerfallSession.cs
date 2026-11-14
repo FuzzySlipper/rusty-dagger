@@ -1041,9 +1041,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The guilds' providers: what a guild's NPC answers to its topics, its welcome and its free passage.</summary>
     internal DaggerfallGuildProviders GuildProviders { get; } = null!;
 
+    /// <summary>The greeting a building gives as the player walks in, holding the entry until it is read.</summary>
+    private readonly DaggerfallBuildingGreeting _buildingGreeting;
+
     /// <summary>The conversation with the person the player talks to; activation rebuilds it with each site.</summary>
     private DaggerfallDialogueService? _dialogue;
     internal DaggerfallDialogueService Dialogue => _dialogue ?? throw new InvalidOperationException("The session has no dialogue owner.");
+
+    /// <summary>The "Where is" directory and what a direction's answer discloses.</summary>
+    internal DaggerfallDialogueDirections DialogueDirections { get; } = null!;
 
     /// <summary>The bank counter: the open bank, its region, loans and their daily reminders and defaults.</summary>
     internal DaggerfallBanking Banking { get; } = null!;

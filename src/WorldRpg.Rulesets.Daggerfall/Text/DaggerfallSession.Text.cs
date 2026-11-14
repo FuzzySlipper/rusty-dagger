@@ -122,7 +122,7 @@ internal sealed partial class DaggerfallSession
 
     private void CancelDungeonTextOnUnload()
     {
-        _pendingBuildingEntry = null;
+        _buildingGreeting.Release();
         _dungeonText.CancelPendingOnUnload();
         _dungeonTextProjection = null;
         _coveredDungeonText.Clear();

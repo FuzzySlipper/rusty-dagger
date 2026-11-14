@@ -98,7 +98,7 @@ public sealed class TownStartBundleTests
 
         // The town's "Where is" directory lists its shops, guilds, temples and taverns under their kinds, as the
         // donor's does, and leaves out its walls and houses: Charing has many wall segments, none of them a topic.
-        IReadOnlyList<DaggerfallDialogueTopicOption> directory = game.DialogueDirectory();
+        IReadOnlyList<DaggerfallDialogueTopicOption> directory = game.DialogueDirections.Directory();
         DaggerfallDialogueTopicOption[] buildings = [.. directory.Where(topic => topic.Id.StartsWith("direction:building:", StringComparison.Ordinal))];
         Assert.NotEmpty(buildings);
         Assert.DoesNotContain(buildings, topic => topic.Label.Contains("City Wall", StringComparison.Ordinal));
@@ -127,8 +127,8 @@ public sealed class TownStartBundleTests
         Assert.Empty(game.State.Crime.Incidents);
 
         // Inside the store the directory still answers, pointing from the store's door to each building.
-        DaggerfallDialogueTopicOption armorer = game.DialogueDirectory().First(topic => topic.Category == "Armorers");
-        DaggerfallDialogueDestination answer = Assert.IsType<DaggerfallDialogueDestination>(game.ResolveDialogueDirection(armorer.Id));
+        DaggerfallDialogueTopicOption armorer = game.DialogueDirections.Directory().First(topic => topic.Category == "Armorers");
+        DaggerfallDialogueDestination answer = Assert.IsType<DaggerfallDialogueDestination>(game.DialogueDirections.Resolve(armorer.Id));
         Assert.Contains(answer.Hint, new[] { "north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west" });
 
         DaggerfallNpc merchant = Assert.Single(game.State.Npcs.All,

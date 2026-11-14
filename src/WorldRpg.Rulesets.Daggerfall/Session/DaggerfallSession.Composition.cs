@@ -119,6 +119,7 @@ internal sealed partial class DaggerfallSession
             _random = engine.Random;
             tuning = tuning.Validate();
             _definitions = definitions;
+            _buildingGreeting = new DaggerfallBuildingGreeting(definitions, _random);
             _dungeonText = new DaggerfallDungeonTextActions(new DaggerfallTextResolver(definitions.Text));
             _encounters = new DaggerfallEncounterRuntime(definitions, _random);
             Cinematics = composition.Data is null ? null : new DaggerfallCinematicPresentation(engine, composition.Data, definitions.Cinematics);
@@ -932,6 +933,13 @@ internal sealed partial class DaggerfallSession
             _vitality.SpellTrackRestored += (target, track, requested, restored) =>
                 _facts.Append(new SpellTrackRestoredFact(checked((long)actors.Entities.IdentityOf(target.Entity).Value),
                     track.Value, requested, restored));
+            DialogueDirections = new DaggerfallDialogueDirections(_site, State.Npcs, definitions, State.PlayerControl,
+                dialogue: () => _dialogue,
+                activeProfile: () => _activeProfileKey,
+                exteriorSitePosition: point => _exterior.ExteriorSitePosition(point),
+                questSubjects: State.Quests.DialogueSubjects,
+                questClaimsBuilding: State.Quests.ClaimsBuilding,
+                questContacts: State.Quests.QuestContacts);
             InitializeActivation(engine, tuning.LootInteraction);
             _characterUi = new DaggerfallCharacterPresentation(definitions, State.Character, playerDefinition, equipmentCoordinator, State.LevelUps, State.Social, State.SkillUses);
             _characterUi.UseGuildMembership(State.GuildMembership, () => checked((int)_time.Calendar.DayNumber));
@@ -1022,9 +1030,9 @@ internal sealed partial class DaggerfallSession
             () => _site.ActiveSite,
             () => State.Character.Identity,
             view => _activationPresentation.SetDialogue(view),
-            message => Presentation.SetOutcome(message), MapDirections, State.Quests.IsNpcMuted, State.Quests.QuestContacts,
-            resolveDirection: ResolveDialogueDirection,
-            directionDirectory: DialogueDirectory,
+            message => Presentation.SetOutcome(message), DialogueDirections.SelectedBuilding, State.Quests.IsNpcMuted, State.Quests.QuestContacts,
+            resolveDirection: DialogueDirections.Resolve,
+            directionDirectory: DialogueDirections.Directory,
             questTopics: npcId => [.. State.Quests.DialogueTopics(npcId).Select(topic => new DaggerfallDialogueTopicOption(topic.Id, topic.Label))],
             questRumorCount: () => State.Quests.DialogueRumors().Count,
             resolveQuestRumor: index => State.Quests.ResolveDialogueRumor(State.Quests.DialogueRumors()[index]),
@@ -1042,7 +1050,7 @@ internal sealed partial class DaggerfallSession
             guildWelcome: npc => GuildProviders.Benefits(npc, CurrentInteriorBuilding()),
             currentText: CurrentTextContext,
             activeProfile: () => _sites.ActiveProfile,
-            discloseDirection: DiscloseDialogueDirection,
+            discloseDirection: DialogueDirections.Disclose,
             dialogueWorld: State.DialogueWorld, suppressTalk: () => State.RacialOverrides.Current?.SuppressTalk == true);
         _dialogue.SynchronizeWorldState();
         return new DaggerfallPersonActivationOwner(_dialogue, State.Actors, Crimes.IsPickpocketTarget, Crimes.Pickpocket, Law.IsGuard, SurrenderToGuard, id => State.Npcs.IsGameplayActive(id) && State.Quests.IsClickableActor(id),

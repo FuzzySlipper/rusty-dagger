@@ -83,6 +83,22 @@ internal sealed partial class DaggerfallQuestInstances
         }
     }
 
+    /// <summary>
+    /// What the dialogue's "Where is" directory can point to for each dialogue resource: its name, the people it is
+    /// when it is a person, and the one site and building its place (or the person's home) names.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallDialogueQuestSubject> DialogueSubjects() => [.. DialogueResources().Select(value =>
+    {
+        DaggerfallQuestResourceState resource = value.Resource;
+        DaggerfallQuestResourceBinding binding = resource.SelectedPerson?.Home?.Binding ?? resource.Binding;
+        DaggerfallSiteId? site = binding.Kind == DaggerfallQuestResourceBindingKind.Place && binding.Places is [var place]
+            && place.Region is int region && place.Index is int index ? new DaggerfallSiteId(region, index) : null;
+        return new DaggerfallDialogueQuestSubject(value.Instance.InstanceId, resource.Symbol,
+            resource.Text?.Name ?? resource.SelectedPerson?.DisplayName ?? resource.Symbol,
+            resource.SelectedPerson is null ? [] : resource.Binding.ActorIds,
+            site, binding.Building is { } building ? new DaggerfallSiteBuildingId(building.BlockX, building.BlockY, building.Index) : null);
+    })];
+
     internal IEnumerable<(DaggerfallQuestRuntimeInstance Instance, DaggerfallQuestResourceState Resource)> DialogueResources() =>
         _instances.Values.Where(instance => instance.Lifecycle == DaggerfallQuestLifecycle.Active).OrderBy(instance => instance.InstanceId, StringComparer.Ordinal)
             .SelectMany(instance => instance.Resources.Where(resource => resource.DialogueVisible && !resource.IsHidden && !resource.IsNpcDestroyed
