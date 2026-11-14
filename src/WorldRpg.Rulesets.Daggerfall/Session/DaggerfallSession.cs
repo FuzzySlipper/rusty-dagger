@@ -36,7 +36,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
 internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytestWorldInspectionSession, ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession, IGameBundleChoiceSession,
-    IDaggerfallSiteTransitionHost, IDaggerfallQuestWorldAdmission, IDaggerfallRestSurroundings, IDaggerfallTeleportSites, IDaggerfallTransformationConsumer,
+    IDaggerfallSiteTransitionHost, IDaggerfallRestSurroundings, IDaggerfallTeleportSites, IDaggerfallTransformationConsumer,
     IDaggerfallAfflictionQuests
 {
     private readonly IRandomService _random;
@@ -825,6 +825,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     private void React(IProductFact fact)
     {
+        // The quests' foes hear harm and death first, before a death's consequences (ReactToDeath) run.
         State.Quests.ObserveFoeFact(fact);
         ObservePlaytestCombatFact(fact);
         if (fact is ActorDamagedFact { ActorId: DaggerfallActorIdentity.PlayerEntityId, ActualHealthLost: > 0 } hurt)
@@ -841,23 +842,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             if(hit.AttackerId==DaggerfallActorIdentity.PlayerEntityId && hit.TargetId!=hit.AttackerId)
                 ReactToAttack(hit.AttackerId,hit.TargetId);
         }
-        if (fact is ActorDiedFact died)
-        {
-            ItemSouls.CaptureHeldSoul(died);
-            if (died.ActorId==DaggerfallActorIdentity.PlayerEntityId) { IdentifyChoice.Clear(); CreateItemChoice.Clear(); }
-            DaggerfallMolagBalEffects.EndOnDeath(State.Effects, died.ActorId);
-            DaggerfallItemSoulEffects.EndOnDeath(State.Effects, died.ActorId);
-            DaggerfallParalysisEffects.EndOnDeath(State.Effects, died.ActorId);
-            DaggerfallContinuousDestructionEffects.EndOnDeath(State.Effects, died.ActorId);
-            DaggerfallConcealmentEffects.End(State.Effects, died.ActorId);
-            foreach (var light in State.Effects.Active.Where(effect => effect.Definition.Key == DaggerfallIllusionEffects.LightKey
-                && effect.Context.Target.Value == (ulong)died.ActorId).ToArray()) State.Effects.Cancel(light.Context.Instance);
-            // A corpse rests on the floor: a flyer killed in the air, or a walker on a marker above the floor, falls to it.
-            if (died.ActorId != DaggerfallActorIdentity.PlayerEntityId && State.Actors.TryGet(died.ActorId, out ActorState fallen))
-                fallen.ApplyPose(new ActorPose(_grounding.RestingPosition(fallen.Position), fallen.HeadingYawRadians));
-            _corpseLoot.Create(died);
-            _rewards.React(died, _facts);
-        }
+        if (fact is ActorDiedFact died) ReactToDeath(died);
         if (fact is MagicEffectFact magic)
             _appearance.ReactEffectOutcome(magic.Outcome, State.Actors, State.PlayerControl.Position,
                 _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);
@@ -1050,6 +1035,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The city guards a quest calls.</summary>
     private readonly DaggerfallQuestGuards _questGuards = null!;
 
+    /// <summary>Where a quest's items physically go: placed again, given, or set down as the reward.</summary>
+    private readonly DaggerfallQuestItemPlacement _questItemPlacement = null!;
+
+    /// <summary>Where a quest's resources stand once their site is loaded.</summary>
+    internal DaggerfallQuestPlacement QuestPlacement { get; } = null!;
+
+    /// <summary>A quest's foes as actors: their team and target, the commands over them, and spawning.</summary>
+    internal DaggerfallQuestFoes QuestFoes { get; } = null!;
+
     /// <summary>The greeting a building gives as the player walks in, holding the entry until it is read.</summary>
     private readonly DaggerfallBuildingGreeting _buildingGreeting;
 
@@ -1102,6 +1096,14 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>The session's durable identity ledger for generated unique loot.</summary>
     internal DaggerfallUniqueItemAllocator UniqueItemAllocator => _uniqueItems;
+
+    // The parts the quests' foes, placements and items are built from, so their tests can build them apart from the session.
+    internal DaggerfallActorRoster Roster => _roster;
+    internal DaggerfallActorGrounding Grounding => _grounding;
+    internal DaggerfallActorPlacement ActorPlacement => _placement;
+    internal DaggerfallVitalityConsequences Vitality => _vitality;
+    internal DaggerfallGroundContainers GroundContainers => _groundContainers;
+    internal DaggerfallCorpseLootModule CorpseLoot => _corpseLoot;
 
     /// <summary>
     /// Records that one generated unique item no longer exists, so its identity is

@@ -348,11 +348,11 @@ internal sealed partial class DaggerfallSession
             _itemCondition = new DaggerfallItemConditionService(definitions, itemInstances, _equipmentMoves);
             _itemEnchanting = new DaggerfallItemEnchanting(definitions, itemInstances, _equipmentMoves, _itemCondition, inventory, () => ItemSouls.Gems);
             _itemCondition.Broken += item => ItemSouls.ReleaseBoundSoul(item);
-            _placement = new DaggerfallActorPlacement(actors, assembled.PlayerControl, npcs.IsGameplayActive, authored, EffectiveFoeTeam,
+            _placement = new DaggerfallActorPlacement(actors, assembled.PlayerControl, npcs.IsGameplayActive, authored, id => QuestFoes.Team(id),
                 id => _enemyBehavior!.IsPacified(id), id => quests.AllowsFoeInfighting(id), _spatial, engine.Perception, _random,
                 () => _exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.EnemyBehavior.DetectionDistance,
                 (float)_tuning.Camera.FieldOfViewYDegrees);
-            _senses = new DaggerfallEnemySenses(actors, assembled.PlayerControl, definitions, authored, EffectiveFoeTeam,
+            _senses = new DaggerfallEnemySenses(actors, assembled.PlayerControl, definitions, authored, id => QuestFoes.Team(id),
                 id => _enemyBehavior!.IsPacified(id), () => _enemyBehavior!.LastPerception, effects, _locomotion,
                 () => State!.WeaponDrawn, () => _combat!.PlayerHoldsBow(), () => _time.Calendar.MinuteNumber, _random,
                 () => _activeProfileKey, _encounters);
@@ -369,7 +369,7 @@ internal sealed partial class DaggerfallSession
                 () => assembled.PlayerControl.Position, () => DaggerfallActorRoster.NearbyCreatures(actors, authored, npcs.IsGameplayActive), InSunlight, _itemCondition, InHolyPlace,
                 amount => AppendEffectDamage(new(_vitality.ResolveHeldEnchantmentDamage(actors.Player.Actor, amount))), social, () => DaggerfallHeldEnchantments.DrainNearby(assembled.PlayerControl.Position, _tuning.StrikeEnchantments.VampiricRange,
                     (center, radius) => SpellTargets.Area(actors.Player.DurableId, center.ToVector(), excludeCaster: true, radius: radius),
-                    id => actors.TryGet(id, out var actor) && !actor.IsDefeated && DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null, EffectiveFoeTeam,
+                    id => actors.TryGet(id, out var actor) && !actor.IsDefeated && DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null, id => QuestFoes.Team(id),
                     id => AppendSpellTransfer(_vitality.ResolveSpellTransfer(actors.Player.Actor, actors.Get(id).Actor, 1, fatigue: false, permitsFatigueLoss: true))));
             effects.UseHeldDefense(actors.Player.DurableId, _heldEnchantments);
             _passives = new DaggerfallCareerPassives(character, definitions, authored, actors.Player.DurableId);
@@ -417,14 +417,14 @@ internal sealed partial class DaggerfallSession
                 (attacker, target) => Casting.TriggerMonsterParalysis(attacker, target), () => _activeProfileKey.Site.Region);
             StrikeAim = new DaggerfallStrikeAim(actors, () => assembled.PlayerControl.Position, () => _input.ResolveCurrentLook(assembled.PlayerControl).Forward,
                 _tuning.Camera.EyeHeight, _contact, () => _sites?.Exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.Attacks.AimRange,
-                actor => EffectiveFoeTeam(actor) == "player-ally",
+                actor => QuestFoes.Team(actor) == "player-ally",
                 actor => DefinitionsByActor.TryGetValue(actor, out DaggerfallActorDefinition? definition) && definition.Kind == DaggerfallActorKinds.Civilian);
             StrikeFeel = new DaggerfallStrikeFeel(_tuning.Attacks.Strike, _camera, () => _engine.GameplayTime.Read().Rate);
             _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 actorInventories.EquipmentFor, _itemCondition, combatRules,
                 () => assembled.PlayerControl.Position, () => character, (target, coating) => _poisoning!.DeliverWeaponPoison(target, coating), () => _heldEnchantments.AttackChanceModifier, _artifacts.TransformWithWabbajack, effects.MagicDefenseFor,
                 actorId => effects.ControlsFor(actorId).PhysicalAttacks, _artifacts.TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), _monsterHits.Deliver,
-                npcs.IsGameplayActive, EffectiveFoeTeam,
+                npcs.IsGameplayActive, id => QuestFoes.Team(id),
                 new DaggerfallContactMitigation(contactInputs, _tuning.Contact, _guard),
                 _tuning.Contact,
                 _tuning.Attacks,
@@ -450,7 +450,7 @@ internal sealed partial class DaggerfallSession
                 contextProvider: _senses.PerceptionContext,
                 recordSkillUse: use => skillUses.Record(use),
                 random: _random, motorContext: _senses.MotorContext,
-                isPlayerAllied: id => EffectiveFoeTeam(id) == "player-ally",
+                isPlayerAllied: id => QuestFoes.Team(id) == "player-ally",
                 selectAllyTarget: _placement.SelectAllyTarget, controlRestrictions: effects.ControlsFor, reactions: _reactions,
                 movementPolicy: id => DaggerfallEnemyBehaviorModule.PolicyFor(
                     id,
@@ -460,7 +460,7 @@ internal sealed partial class DaggerfallSession
                     effects.GrantsWaterWalking(id),
                     effects.GrantsLevitation(id)),
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),
-                openBlockedDoor: actor => _doors.TryOpenForEnemy(actor.Position), selectTarget: SelectQuestAwareEnemyTarget, questRestrained: QuestFoeRestrained, attackAtDistance: _combat.EnemyAttackAtDistance,
+                openBlockedDoor: actor => _doors.TryOpenForEnemy(actor.Position), selectTarget: observer => QuestFoes.SelectTarget(observer), questRestrained: id => QuestFoes.Restrained(id), attackAtDistance: _combat.EnemyAttackAtDistance,
                 engagement: new DaggerfallContactEngagement(_tuning.Contact));
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
@@ -711,7 +711,8 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindItems(State.QuestItems);
             State.Quests.BindPlacementNpcs(State.Npcs);
             State.Npcs.BindQuestPresence(State.Quests.IsNpcUnavailable);
-            State.Quests.BindItemInteractions((amount, goldOnly) => goldOnly ? State.Currency.TrySpendGold(amount, []) : State.Currency.TrySpendCarried(amount), GiveQuestItem);
+            State.Quests.BindItemInteractions((amount, goldOnly) => goldOnly ? State.Currency.TrySpendGold(amount, []) : State.Currency.TrySpendCarried(amount),
+                (instance, symbol, recipient, operation, queued) => _questItemPlacement.Give(instance, symbol, recipient, operation, queued));
             _equipmentMoves.Changed += change =>
             {
                 if (change.Equipped is { } item)
@@ -722,11 +723,11 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindWorldRead(() => _sites.ReadQuestLocation());
             State.Quests.BindWorldActions((instance, operation) => _questWorldActions.Apply(instance, operation));
             _inventoryUi.BindQuestDrops(State.Quests.CanDropItem, State.Quests.ItemDropped);
-            State.Quests.BindFoeCommands(ApplyQuestFoeCommand);
-            State.Quests.BindFoeSpawning(SpawnQuestFoe);
-            State.Quests.BindEnemyRelations(ApplyAllEnemyCommand, id => actors.TryGet(id, out var actor) && !actor.IsDefeated);
+            State.Quests.BindFoeCommands((id, remove) => QuestFoes.Command(id, remove));
+            State.Quests.BindFoeSpawning((operation, foe, send) => QuestFoes.Spawn(operation, foe, send));
+            State.Quests.BindEnemyRelations(clear => QuestFoes.CommandAllEnemies(clear), id => actors.TryGet(id, out var actor) && !actor.IsDefeated);
             State.Quests.BindGuardSpawning((operation, immediate, elapsed, state) => _questGuards.Spawn(operation, immediate, elapsed, state));
-            State.Quests.BindRewards(OfferQuestReward, PresentQuestReward, tuning.QuestRewards);
+            State.Quests.BindRewards((instance, symbol) => _questItemPlacement.OfferReward(instance, symbol), PresentQuestReward, tuning.QuestRewards);
             _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, FastTravel.RevealFromMap, _itemCondition, _notebook,
                 useDrug: template => _poisoning.UseDrug(template) == DaggerfallPoisonAdmission.Admitted,
                 useOghma: () =>
@@ -881,6 +882,15 @@ internal sealed partial class DaggerfallSession
                 _roster, _persistence, _groundContainers, _enemyBehavior, interiors, this,
                 projection, profiles, activeProfile, saved?.Site.ReturnProfile?.Require(),
                 composition.StartSite.ClassicPresentation);
+            // The quests' foes, placements and items reach the roster, the site crossing and the persistence boundary; the
+            // foes answer the teams the actor owners composed above ask of them from here on.
+            _questItemPlacement = new DaggerfallQuestItemPlacement(State.Quests, State.QuestItems, State.ItemInstances, State.Actors, State.PlayerControl,
+                _sites, _groundContainers, _corpseLoot, _uniqueItems);
+            QuestPlacement = new DaggerfallQuestPlacement(State.Actors, State.Npcs, _roster, _grounding, NpcProjection, _site, _sites, _groundContainers,
+                _uniqueItems, _questItemPlacement, _persistence.RestoreSiteDelta);
+            QuestFoes = new DaggerfallQuestFoes(State.Quests, State.Actors, State.PlayerControl, State.Travel, _roster, _placement, _enemyBehavior, _vitality,
+                _sites, tuning.QuestSpawning, tuning.EnemyBehavior, result => AppendDamage(result, DaggerfallDamageCause.Quest, 0), DeliverFacts,
+                id => RetireDetachedActor(id), _persistence.RestoreSiteDelta, (id, definition) => _persistence.CaptureDynamicActorDelta(id, definition));
             TeleportChoice = new DaggerfallTeleport(this, State.PlayerControl, State.Transport, () => State.Property.OwnedShip,
                 Presentation, saved?.PendingTeleport, saved?.TeleportAnchor);
             _grounding.FloorPending = () => _exterior.CollisionPending;

@@ -238,7 +238,7 @@ public sealed class QuestFoeLifecycleTests
         var profiles = new DaggerfallSiteProfiles([f.Inputs, f.Castle]); f.Session.AdmitSiteProfiles(profiles);
         Start(f, definitions);
         f.Session.State.Quests.RequestPlacement("foes", "initial", "enemy", "location");
-        f.Session.State.Quests.AdmitPlacements(f.Inputs, f.Session);
+        f.Session.State.Quests.AdmitPlacements(f.Inputs, f.Session.QuestPlacement);
         long id = Resource(f.Session).Binding.ActorIds.Single();
         if (offSite) Assert.True(f.Session.TryTransitionTo(f.Castle.ProfileKey));
         f.Update();

@@ -36,21 +36,21 @@ public sealed class QuestFoeRelationTests
         Start(f, definitions); Advance(f.Session);
         long id = Foe(f.Session);
         string? original = f.Session.DefinitionsByActor[id].Team;
-        Assert.Equal("player-ally", f.Session.EffectiveFoeTeam(id));
+        Assert.Equal("player-ally", f.Session.QuestFoes.Team(id));
         Assert.True(f.Session.State.Quests.IsFoeRestrained(id));
         Assert.False(f.Session.State.Quests.IsFoeRestrained(f.Enemy));
         f.Update();
         Assert.Equal(EnemyBehaviorState.Idle, f.Session.LastEnemyBehavior[id].State);
         Assert.True(f.Session.State.Actors.Get(id).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
         using var restored = f.Restore();
-        Assert.Equal("player-ally", restored.EffectiveFoeTeam(id));
+        Assert.Equal("player-ally", restored.QuestFoes.Team(id));
         Assert.True(restored.State.Quests.AllowsFoeInfighting(id));
         Assert.True(restored.State.Quests.IsFoeRestrained(id));
         Assert.True(restored.State.Quests.ActorClicked(id));
         Advance(restored);
         Assert.False(restored.State.Quests.IsFoeRestrained(id));
         restored.State.Quests.Complete("relations", "success");
-        Assert.Equal(original, restored.EffectiveFoeTeam(id));
+        Assert.Equal(original, restored.QuestFoes.Team(id));
         Assert.Equal(original, restored.DefinitionsByActor[id].Team);
         Assert.True(restored.State.Actors.Get(id).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
     }
@@ -114,14 +114,14 @@ public sealed class QuestFoeRelationTests
         long first = Foe(f.Session);
         Advance(f.Session);
         long second = f.Session.State.Quests.Capture().Instances.Single().Resources.Single(r => r.SelectedFoe is not null).Binding.ActorIds.Single(id => id != first);
-        Assert.Equal("player-ally", f.Session.EffectiveFoeTeam(first));
+        Assert.Equal("player-ally", f.Session.QuestFoes.Team(first));
         Assert.True(f.Session.State.Quests.AllowsFoeInfighting(first));
-        Assert.Equal(f.Session.DefinitionsByActor[second].Team, f.Session.EffectiveFoeTeam(second));
+        Assert.Equal(f.Session.DefinitionsByActor[second].Team, f.Session.QuestFoes.Team(second));
         Assert.False(f.Session.State.Quests.AllowsFoeInfighting(second));
         Assert.True(f.Session.State.Quests.IsFoeRestrained(second));
         using var restored = f.Restore();
-        Assert.Equal("player-ally", restored.EffectiveFoeTeam(first));
-        Assert.Equal(restored.DefinitionsByActor[second].Team, restored.EffectiveFoeTeam(second));
+        Assert.Equal("player-ally", restored.QuestFoes.Team(first));
+        Assert.Equal(restored.DefinitionsByActor[second].Team, restored.QuestFoes.Team(second));
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class QuestFoeRelationTests
         Assert.True(f.Session.State.Actors.Get(id).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
         using var restored = f.Restore();
         restored.State.Quests.Complete("relations", "done");
-        Assert.NotEqual("player-ally", restored.EffectiveFoeTeam(id));
+        Assert.NotEqual("player-ally", restored.QuestFoes.Team(id));
         Assert.True(restored.State.Actors.Get(id).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
     }
 

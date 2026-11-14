@@ -91,7 +91,7 @@ public sealed class QuestNpcLifecycleTests
         restored.ReconcileNpcProjection();
         Assert.False(restored.State.Actors.Entities.TryResolve(ActorsState.Identity(id), out _));
         restored.State.Quests.Start(new("new-person", "npc.txt", "npc", DaggerfallQuestLifecycle.Active, null, [], []));
-        restored.State.Quests.AdmitPlacements(f.Inputs, restored); restored.ReconcileNpcProjection();
+        restored.State.Quests.AdmitPlacements(f.Inputs, restored.QuestPlacement); restored.ReconcileNpcProjection();
         long replacement = restored.State.Quests.Capture().Instances.Single(value => value.InstanceId == "new-person").Resources.Single().Binding.ActorIds.Single();
         Assert.NotEqual(id, replacement);
         Assert.True(restored.State.Actors.Entities.TryResolve(ActorsState.Identity(replacement), out _));

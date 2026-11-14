@@ -2,17 +2,22 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Facts;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// #10748's first scenario, harm to its consequences, as far as it runs without the session: a coated blade's poison
-/// reaches a site actor (Afflictions), its minutes act through the effect lifecycle (Magic) and the vitality owner
-/// (Condition), that owner reports the death, and Actors' damage facts turn it into <c>ActorDiedFact</c>. What reacts to
-/// the death (effects ended, the corpse, the rewards, the quests' foes, reputation) is still the session's fact
-/// reaction, until Quests and Society are owners.
+/// #10748's first scenario, harm to its consequences, without the session: a coated blade's poison reaches a site actor
+/// (Afflictions), its minutes act through the effect lifecycle (Magic) and the vitality owner (Condition), that owner
+/// reports the death, and Actors' damage facts turn it into <c>ActorDiedFact</c>. The death then reaches its owners in
+/// the session's order (React, then the list ReactToDeath in Session/DaggerfallSession.Update.cs): the quests' foes hear
+/// it first (Quests), the effects that end on death end (Magic) and the kill's rewards are weighed (Character); the next
+/// quest advance sets the task that waited on the foe's death. The held soul's capture and the player's open choices
+/// (Magic), the corpse's resting pose (Actors' grounding) and its loot container (Items) need the item souls, the spatial
+/// service and the inventory containers this fixture does not build; their owners are tested on their own. A poisoner's reputation for the death is a behaviour question, not this scenario's.
 /// </summary>
 public sealed class PoisonDeathScenarioTests
 {
@@ -45,5 +50,61 @@ public sealed class PoisonDeathScenarioTests
         Assert.Equal((7UL, 3UL), (died.OriginatingGeneration, died.OriginatingSequence));
         Assert.IsType<DamageAppliedFact>(delivered[0]);
         Assert.True(Assert.IsType<ActorDamagedFact>(delivered[1]).TargetDefeated);
+    }
+
+    [Fact]
+    public void The_poison_death_reaches_the_quest_whose_foe_died_through_the_owners_the_session_composes()
+    {
+        using PoisoningFixture fixture = new(siteActorLevel: 5);
+        DaggerfallDefinitions definitions = QuestWorldAdmissionTests.Definitions(taskBlocks: [["_dead_ task:", "killed _enemy_"]]);
+        DaggerfallQuestInstances quests = new(definitions, RandomMaximum.Create());
+        DaggerfallSiteRecord town = definitions.Locations.Records.First();
+        quests.Start(new("poison", "world-test.txt", "world-test", DaggerfallQuestLifecycle.Active, null,
+        [
+            new("location", DaggerfallQuestResourceBinding.Place(new(town.Id.Region, town.Id.Index))),
+            new("enemy", DaggerfallQuestResourceBinding.Actors(PoisoningFixture.SiteActor)) { SelectedFoe = new("nymph", 1, true) },
+        ], []));
+        Track health = fixture.Site.Get<StatsComponent>().GetTrack(TrackId.Parse("health"));
+        health.SetCurrent(3);
+        List<DamageResult> applied = [];
+        fixture.Vitality.PoisonDamageApplied += applied.Add;
+        fixture.Poisoning.DeliverWeaponPoison(PoisoningFixture.SiteActor, fixture.CoatedWeapon(128));
+        for (int minute = 0; minute < 20 && !(health.Current <= 0); minute++) fixture.Effects.AdvanceOrdinaryRound();
+        FactBuffer<IProductFact> facts = new();
+        DaggerfallDamageFacts.Append(facts, Assert.Single(applied, result => result.Defeated), DaggerfallDamageCause.Effect, 0, 7, 3);
+        List<IProductFact> delivered = [];
+        facts.Deliver(delivered.Add);
+        ActorDied(delivered, out ActorDiedFact died);
+
+        // React: the quests' foes hear the harm and the death first.
+        foreach (IProductFact fact in delivered) quests.ObserveFoeFact(fact);
+        // ReactToDeath, in its order, as far as this fixture builds the owners.
+        DaggerfallMolagBalEffects.EndOnDeath(fixture.Effects, died.ActorId);                   // Magic
+        DaggerfallItemSoulEffects.EndOnDeath(fixture.Effects, died.ActorId);                   // Magic
+        DaggerfallParalysisEffects.EndOnDeath(fixture.Effects, died.ActorId);                  // Magic
+        DaggerfallContinuousDestructionEffects.EndOnDeath(fixture.Effects, died.ActorId);      // Magic
+        DaggerfallConcealmentEffects.End(fixture.Effects, died.ActorId);                       // Magic
+        DaggerfallRewardReactions rewards = new(fixture.Actors.Player.Progression, fixture.Actors.Player.Stats, fixture.Player.Entity,
+            () => TestPayload.Definitions.Catalogs.RequireCareer("class00"), RandomMaximum.Create(),
+            new Dictionary<long, DaggerfallActorDefinition> { [PoisoningFixture.SiteActor] = TestPayload.Definitions.RequireActor(new DaggerfallActorId("nymph")) },
+            DaggerfallTuning.Defaults.Progression);
+        FactBuffer<IProductFact> rewarded = new();
+        rewards.React(died, rewarded);                                                          // Character
+        List<IProductFact> rewardFacts = [];
+        rewarded.Deliver(rewardFacts.Add);
+        Assert.Empty(rewardFacts); // Kill experience is an experiment, off by default.
+
+        DaggerfallQuestResourceState foe = Assert.Single(quests.Capture().Instances).Resources.Single(value => value.Symbol == "enemy");
+        Assert.Equal([PoisoningFixture.SiteActor], foe.DefeatedFoeIds);
+        Assert.False(foe.FoeInjured);
+        Assert.False(quests.Capture().Instances.Single().Tasks.Single(task => task.Symbol == "dead").IsSet);
+        quests.Advance(new DaggerfallVariableStore(definitions.QuestSources.Tables.Globals.Lookup), DaggerfallCalendar.Start);
+        Assert.True(quests.Capture().Instances.Single().Tasks.Single(task => task.Symbol == "dead").IsSet);
+    }
+
+    private static void ActorDied(IReadOnlyList<IProductFact> delivered, out ActorDiedFact died)
+    {
+        died = Assert.Single(delivered.OfType<ActorDiedFact>());
+        Assert.Equal(PoisoningFixture.SiteActor, died.ActorId);
     }
 }

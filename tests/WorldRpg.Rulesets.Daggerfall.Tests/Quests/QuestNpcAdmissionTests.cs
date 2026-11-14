@@ -72,7 +72,7 @@ public sealed class QuestNpcAdmissionTests
             { Resources = explicitGiver.Quests.Instances.Single().Resources.Select(value => value with
                 { SelectedPerson = value.SelectedPerson! with { QuestorId = id + 1 } }).ToArray() }] } };
         Assert.Contains("selected Person meaning", Assert.Throws<ArgumentException>(() => changedGiver.ResolveRestore(definitions, fixture.Inputs, null, DaggerfallTuning.Defaults)).Message);
-        session.State.Quests.AdmitPlacements(fixture.Inputs, session);
+        session.State.Quests.AdmitPlacements(fixture.Inputs, session.QuestPlacement);
         session.ReconcileNpcProjection();
         Assert.Single(session.State.Npcs.All, value => value.Kind == DaggerfallNpcKind.Questor);
         Assert.Equal(entity, session.State.Actors.Entities.Resolve(ActorsState.Identity(id)));
@@ -164,8 +164,8 @@ public sealed class QuestNpcAdmissionTests
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
         Assert.False(state.Actors.TryGet(id, out _));
         using var restored = fixture.Restore(profiles);
-        restored.State.Quests.AdmitPlacements(castle, restored);
-        restored.State.Quests.AdmitPlacements(castle, restored);
+        restored.State.Quests.AdmitPlacements(castle, restored.QuestPlacement);
+        restored.State.Quests.AdmitPlacements(castle, restored.QuestPlacement);
         Assert.Equal(health, restored.State.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);
         Assert.Equal(castle.ProfileKey, restored.State.Npcs.Require(id).Profile);
         Assert.Equal(state.Npcs.Require(id).Site, restored.State.Npcs.Require(id).Site); // stable social origin

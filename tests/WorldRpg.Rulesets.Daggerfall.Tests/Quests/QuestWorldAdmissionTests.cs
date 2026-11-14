@@ -35,12 +35,12 @@ public sealed class QuestWorldAdmissionTests
         using (var pending = fixture.Restore())
         {
             Assert.All(pending.State.Quests.Capture().Instances.Single().Placements, operation => Assert.Null(operation.Applied));
-            pending.State.Quests.AdmitPlacements(inputs, pending);
-            pending.State.Quests.AdmitPlacements(inputs, pending);
+            pending.State.Quests.AdmitPlacements(inputs, pending.QuestPlacement);
+            pending.State.Quests.AdmitPlacements(inputs, pending.QuestPlacement);
             Assert.Equal(actorCount + 1, pending.State.Actors.All.Count());
             Assert.All(pending.State.Quests.Capture().Instances.Single().Placements, operation => Assert.NotNull(operation.Applied));
         }
-        session.State.Quests.AdmitPlacements(inputs, session);
+        session.State.Quests.AdmitPlacements(inputs, session.QuestPlacement);
         Assert.True(session.State.Quests.TryGet(instance.InstanceId, out var placed));
         var foeBinding = placed!.Resources.Single(value => value.Symbol == foe).Binding;
         var itemBinding = placed.Resources.Single(value => value.Symbol == item).Binding;
@@ -51,12 +51,12 @@ public sealed class QuestWorldAdmissionTests
         if (stackable) Assert.Equal("ground", itemBinding.Stacks.Single().Owner.Scope);
         else Assert.Equal("ground", session.State.ItemInstances.RequireUnique(itemBinding.UniqueItemIds.Single()).Owner.Scope);
         Assert.All(placed.Placements, operation => Assert.Equal(inputs.QuestMarkers.Single().Id, operation.Applied!.MarkerId));
-        session.State.Quests.AdmitPlacements(inputs, session);
+        session.State.Quests.AdmitPlacements(inputs, session.QuestPlacement);
         Assert.Equal(actorCount + 1, session.State.Actors.All.Count());
         Assert.Equal(itemCount + (stackable ? 0 : 1), session.State.ItemInstances.UniqueItems.Count());
         Assert.Equal(stackCount + (stackable ? 1 : 0), session.State.ItemInstances.StackItems.Count());
         using var restored = fixture.Restore();
-        restored.State.Quests.AdmitPlacements(inputs, restored);
+        restored.State.Quests.AdmitPlacements(inputs, restored.QuestPlacement);
         Assert.Equal(actorCount + 1, restored.State.Actors.All.Count());
         Assert.Equal(itemCount + (stackable ? 0 : 1), restored.State.ItemInstances.UniqueItems.Count());
         Assert.Equal(stackCount + (stackable ? 1 : 0), restored.State.ItemInstances.StackItems.Count());
@@ -85,7 +85,7 @@ public sealed class QuestWorldAdmissionTests
             quests.RequestPlacement(instance.InstanceId, "operation", foe, "location")).Message);
         Assert.Empty(quests.Complete(instance.InstanceId, "done").Placements);
         int actorCount = fixture.Session.State.Actors.All.Count();
-        quests.AdmitPlacements(inputs, fixture.Session);
+        quests.AdmitPlacements(inputs, fixture.Session.QuestPlacement);
         Assert.Equal(actorCount, fixture.Session.State.Actors.All.Count());
     }
 
@@ -109,7 +109,7 @@ public sealed class QuestWorldAdmissionTests
         var forgedReceipt = pending with { Placements = [pending.Placements.Single() with
             { Applied = new(fixture.Inputs.ProfileKey, fixture.Inputs.QuestMarkers.Single().Id) }] };
         Assert.Contains("world binding", Assert.Throws<ArgumentException>(() => forgedReceipt.ValidateShape()).Message);
-        quests.AdmitPlacements(fixture.Inputs, fixture.Session);
+        quests.AdmitPlacements(fixture.Inputs, fixture.Session.QuestPlacement);
         quests.Capture().Instances.Single().ValidateShape();
     }
 
@@ -124,7 +124,7 @@ public sealed class QuestWorldAdmissionTests
         string item = instance.Resources.Single(value => value.SelectedItem is not null).Symbol;
         Assert.Equal(DaggerfallSiteMarkerKind.QuestSpawn, fixture.Inputs.QuestMarkers.Single().Kind);
         fixture.Session.State.Quests.RequestPlacement(instance.InstanceId, "item", item, "location", markerIndex: 99, preference: (DaggerfallQuestMarkerPreference)preferenceValue);
-        fixture.Session.State.Quests.AdmitPlacements(fixture.Inputs, fixture.Session);
+        fixture.Session.State.Quests.AdmitPlacements(fixture.Inputs, fixture.Session.QuestPlacement);
         Assert.Equal(fixture.Inputs.QuestMarkers.Single().Id,
             fixture.Session.State.Quests.Capture().Instances.Single().Placements.Single().Applied!.MarkerId);
     }
@@ -175,7 +175,7 @@ public sealed class QuestWorldAdmissionTests
         var started = Start(fixture, definitions);
         var selected = started.Resources.Single(value => value.SelectedItem is not null);
         session.State.Quests.RequestPlacement(started.InstanceId, "item", selected.Symbol, "location");
-        session.State.Quests.AdmitPlacements(fixture.Inputs, session);
+        session.State.Quests.AdmitPlacements(fixture.Inputs, session.QuestPlacement);
         DaggerfallQuestResourceBinding Binding() => state.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == selected.Symbol).Binding;
         var sourceBinding = Binding().Stacks.Single();
         var groundOwner = new DaggerfallItemOwner(sourceBinding.Owner.Scope, sourceBinding.Owner.Id);
@@ -205,7 +205,7 @@ public sealed class QuestWorldAdmissionTests
         Assert.Equal(DaggerfallQuestResourceBindingKind.Item, Binding().Kind);
         Assert.Empty(Binding().Stacks);
         using var consumed = fixture.Restore();
-        consumed.State.Quests.AdmitPlacements(fixture.Inputs, consumed);
+        consumed.State.Quests.AdmitPlacements(fixture.Inputs, consumed.QuestPlacement);
         var resource = consumed.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == selected.Symbol);
         Assert.Empty(resource.Binding.Stacks);
         Assert.NotNull(resource.Text); // Actual selected meaning remains available to ending text.
@@ -222,7 +222,7 @@ public sealed class QuestWorldAdmissionTests
         var started = Start(fixture, definitions);
         var resource = started.Resources.Single(value => value.SelectedItem is not null);
         state.Quests.RequestPlacement(started.InstanceId, "item", resource.Symbol, "location");
-        state.Quests.AdmitPlacements(fixture.Inputs, session);
+        state.Quests.AdmitPlacements(fixture.Inputs, session.QuestPlacement);
         ulong id = state.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == resource.Symbol).Binding.UniqueItemIds.Single();
         var metadata = state.ItemInstances.RequireUnique(id);
         var ground = state.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)metadata.Owner.Id)));
@@ -239,7 +239,7 @@ public sealed class QuestWorldAdmissionTests
         state.Actors.Entities.Destroy(new(WorldRpg.Kit.World.DurableIdentityKind.Item, id));
         session.RemoveUniqueItemIdentity(id);
         using var consumed = fixture.Restore();
-        consumed.State.Quests.AdmitPlacements(fixture.Inputs, consumed);
+        consumed.State.Quests.AdmitPlacements(fixture.Inputs, consumed.QuestPlacement);
         var bound = consumed.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == resource.Symbol);
         Assert.Equal(id, bound.Binding.UniqueItemIds.Single());
         Assert.False(consumed.State.ItemInstances.ContainsUnique(id));
@@ -263,7 +263,7 @@ public sealed class QuestWorldAdmissionTests
         var started = Start(fixture, definitions);
         var resource = started.Resources.Single(value => value.SelectedItem is not null);
         state.Quests.RequestPlacement(started.InstanceId, "item", resource.Symbol, "location");
-        state.Quests.AdmitPlacements(fixture.Inputs, session);
+        state.Quests.AdmitPlacements(fixture.Inputs, session.QuestPlacement);
         var bound = state.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == resource.Symbol).Binding.Stacks.Single();
         var sourceOwner = new DaggerfallItemOwner(bound.Owner.Scope, bound.Owner.Id);
         var groundEntity = state.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)sourceOwner.Id)));
@@ -313,7 +313,7 @@ public sealed class QuestWorldAdmissionTests
         var item = started.Resources.Single(value => value.SelectedItem is not null);
         state.Quests.RequestPlacement(started.InstanceId, "foe", foe.Symbol, "location");
         state.Quests.RequestPlacement(started.InstanceId, "item", item.Symbol, "location");
-        state.Quests.AdmitPlacements(fixture.Inputs, session);
+        state.Quests.AdmitPlacements(fixture.Inputs, session.QuestPlacement);
         var admitted = state.Quests.Capture().Instances.Single();
         long id = admitted.Resources.Single(value => value.Symbol == foe.Symbol).Binding.ActorIds.Single();
         var actor = state.Actors.Get(id);
@@ -333,8 +333,8 @@ public sealed class QuestWorldAdmissionTests
         using var restored = fixture.Restore(profiles);
         var pending = restored.State.Quests.Capture().Instances.Single().Placements.Single(value => value.Id == "relocate");
         Assert.Null(pending.Applied);
-        restored.State.Quests.AdmitPlacements(castle, restored);
-        restored.State.Quests.AdmitPlacements(castle, restored);
+        restored.State.Quests.AdmitPlacements(castle, restored.QuestPlacement);
+        restored.State.Quests.AdmitPlacements(castle, restored.QuestPlacement);
         var moved = restored.State.Actors.Get(id);
         Assert.Equal(health, moved.Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);
         Assert.Equal(castle.QuestMarkers.Single().Position, moved.Position);
@@ -346,7 +346,7 @@ public sealed class QuestWorldAdmissionTests
         Assert.False(restored.State.Actors.TryGet(id, out _));
         using var inactive = DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition with { Profiles = profiles }, restored.CaptureSave());
         Assert.True(inactive.TryTransitionTo(castle.ProfileKey));
-        inactive.State.Quests.AdmitPlacements(castle, inactive);
+        inactive.State.Quests.AdmitPlacements(castle, inactive.QuestPlacement);
         Assert.Equal(health, inactive.State.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);
         Assert.Equal(quantity, inactive.State.ActorInventories.InventoryFor(id)!.Read().Stacks.Single(value => value.Id == carried).Quantity);
         Assert.Single(DaggerfallSavePayload.Read(inactive.CaptureSave()).DynamicActors, value => value.EntityId == id);
@@ -372,7 +372,7 @@ public sealed class QuestWorldAdmissionTests
                 { PlaceSelection = new(castle.ProfileKind, destination.MapId, null, 0) })], []));
         var item = started.Resources.Single(value => value.SelectedItem is not null);
         session.State.Quests.RequestPlacement(started.InstanceId, "item", item.Symbol, "location");
-        session.State.Quests.AdmitPlacements(fixture.Inputs, session);
+        session.State.Quests.AdmitPlacements(fixture.Inputs, session.QuestPlacement);
         var before = DaggerfallSavePayload.Read(session.CaptureSave()).GroundContainers.Single();
         var identity = new WorldRpg.Kit.World.DurableIdentityReference(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)before.Id));
         var oldEntity = session.State.Actors.Entities.Resolve(identity);
@@ -383,7 +383,7 @@ public sealed class QuestWorldAdmissionTests
             session.State.Actors.Entities.Classify(identity, session.State.Npcs.Identities!));
         using var restored = fixture.Restore(profiles);
         Assert.False(restored.State.Actors.Entities.TryResolve(identity, out _));
-        restored.State.Quests.AdmitPlacements(castle, restored);
+        restored.State.Quests.AdmitPlacements(castle, restored.QuestPlacement);
         var after = DaggerfallSavePayload.Read(restored.CaptureSave()).GroundContainers.Single();
         Assert.Equal(castle.ProfileKey, after.Profile.Require());
         Assert.Equal(WorldRpg.Kit.World.DurableIdentityClassification.Removed, restored.State.Npcs.Identities!.Classify(identity));
@@ -393,7 +393,7 @@ public sealed class QuestWorldAdmissionTests
         var inventory = restored.State.Containers.Read(owner);
         Assert.Equal(stackable ? 1 : 0, inventory.Stacks.Count);
         Assert.Equal(stackable ? 0 : 1, inventory.UniqueItems.Count);
-        restored.State.Quests.AdmitPlacements(castle, restored);
+        restored.State.Quests.AdmitPlacements(castle, restored.QuestPlacement);
         Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).GroundContainers);
         Assert.True(restored.TryTransitionTo(fixture.Inputs.ProfileKey));
         Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).GroundContainers);
@@ -417,7 +417,7 @@ public sealed class QuestWorldAdmissionTests
         var foe = started.Resources.Single(value => value.SelectedFoe is not null);
         state.Quests.RequestPlacement(started.InstanceId, "item", item.Symbol, "location");
         state.Quests.RequestPlacement(started.InstanceId, "foe", foe.Symbol, "location");
-        state.Quests.AdmitPlacements(fixture.Inputs, session);
+        state.Quests.AdmitPlacements(fixture.Inputs, session.QuestPlacement);
         var admitted = state.Quests.Capture().Instances.Single();
         long actorId = admitted.Resources.Single(value => value.Symbol == foe.Symbol).Binding.ActorIds.Single();
         var physical = admitted.Resources.Single(value => value.Symbol == item.Symbol).Binding;
@@ -485,7 +485,7 @@ public sealed class QuestWorldAdmissionTests
                 state.Npcs.Identities!.Classify(new(WorldRpg.Kit.World.DurableIdentityKind.Item, carriedUnique)));
         }
         using var restored = fixture.Restore();
-        restored.State.Quests.AdmitPlacements(fixture.Inputs, restored);
+        restored.State.Quests.AdmitPlacements(fixture.Inputs, restored.QuestPlacement);
         restored.State.Quests.Advance(restored.State.Variables, DaggerfallCalendar.Start);
         Assert.Empty(restored.State.Quests.Capture().Instances.Single().Placements);
         Assert.False(restored.State.ItemInstances.ContainsUnique(fixture.Source));
@@ -504,7 +504,7 @@ public sealed class QuestWorldAdmissionTests
         var resources = started.Resources.Where(value => value.SelectedItem is not null).ToArray();
         Assert.Equal(2, resources.Length);
         foreach (var resource in resources) state.Quests.RequestPlacement(started.InstanceId, resource.Symbol, resource.Symbol, "location");
-        state.Quests.AdmitPlacements(fixture.Inputs, session);
+        state.Quests.AdmitPlacements(fixture.Inputs, session.QuestPlacement);
         var placed = state.Quests.Capture().Instances.Single();
         var first = placed.Resources.Single(value => value.Symbol == resources[0].Symbol);
         ulong carried = first.Binding.UniqueItemIds.Single();
@@ -541,7 +541,7 @@ public sealed class QuestWorldAdmissionTests
         var child = state.Quests.Start(Instance("a-child", "z-parent"));
         var resource = child.Resources.Single(value => value.SelectedItem is not null);
         state.Quests.RequestPlacement(child.InstanceId, "child-item", resource.Symbol, "location");
-        state.Quests.AdmitPlacements(fixture.Inputs, fixture.Session);
+        state.Quests.AdmitPlacements(fixture.Inputs, fixture.Session.QuestPlacement);
         ulong id = state.Quests.Capture().Instances.Single(value => value.InstanceId == child.InstanceId)
             .Resources.Single(value => value.Symbol == resource.Symbol).Binding.UniqueItemIds.Single();
         var owner = state.ItemInstances.RequireUnique(id).Owner;

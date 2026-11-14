@@ -66,7 +66,7 @@ public sealed class StoryQuestSessionTests
             Tasks = saved.Instances.Single().Tasks.Select(task => task.Kind == DaggerfallQuestTaskKind.Headless ? task with { IsDropped = true } : task).ToArray(),
         }] });
         var woodborne = game.State.Quests.All.Single().Resources.Single(resource => resource.Symbol == "woodborne");
-        var binding = ((IDaggerfallQuestWorldAdmission)game).Place("revenge", woodborne, fixture.StartProfile,
+        var binding = game.QuestPlacement.Place("revenge", woodborne, fixture.StartProfile,
             fixture.StartProfile.QuestMarkers.First(marker => marker.Kind == DaggerfallSiteMarkerKind.QuestSpawn));
         game.State.Quests.SetResource("revenge", woodborne with { Binding = binding! });
         ((IDaggerfallQuestTaskLifecycle)game.State.Quests).FoeCommand(
@@ -177,7 +177,7 @@ public sealed class StoryQuestSessionTests
         if (source == "$CUREVAM")
         {
             var father = game.State.Quests.All.Single().Resources.Single(resource => resource.Symbol == "bloodfather");
-            var binding = ((IDaggerfallQuestWorldAdmission)game).Place("cure", father, fixture.StartProfile,
+            var binding = game.QuestPlacement.Place("cure", father, fixture.StartProfile,
                 fixture.StartProfile.QuestMarkers.First(marker => marker.Kind == DaggerfallSiteMarkerKind.QuestSpawn));
             game.State.Quests.SetResource("cure", father with { Binding = binding! });
             ((IDaggerfallQuestTaskLifecycle)game.State.Quests).FoeCommand(

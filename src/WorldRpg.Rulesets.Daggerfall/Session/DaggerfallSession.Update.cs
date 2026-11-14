@@ -503,7 +503,7 @@ internal sealed partial class DaggerfallSession
         // quest clock state; elapsed duration is still consumed by the calendar owner.
         State.Quests.Advance(State.Variables, _time.Calendar, update.DeltaSeconds);               // Quests
         _dialogue?.SynchronizeWorldState();                                                       // Dialogue
-        if (_exterior.ActiveLocationLoaded) State.Quests.AdmitPlacements(_sites.Projection.Inputs, this);   // Quests
+        if (_exterior.ActiveLocationLoaded) State.Quests.AdmitPlacements(_sites.Projection.Inputs, QuestPlacement);   // Quests
         State.Quests.ReconcileFoeCommands();                                                      // Quests
         ReconcileNpcProjection();                                                                 // Actors
         Population.Step(simulationStep, update.DeltaSeconds);                                     // Actors
@@ -971,6 +971,29 @@ internal sealed partial class DaggerfallSession
         _itemLifetime.RemoveCarriedQuestItems(instanceId);                                        // Items
         State.QuestItems.RemoveCustody(instanceId);                                               // Quests
         State.HeldEnchantments.Refresh();                                                         // Magic
+    }
+
+    /// <summary>
+    /// A death's consequences, after the quests' foes heard it (React): the held soul is captured, a dead player's open
+    /// identify and item-making choices close, the effects that end on death end, a corpse rests on the floor and becomes
+    /// its loot container, and the kill's rewards are paid.
+    /// </summary>
+    private void ReactToDeath(ActorDiedFact died)
+    {
+        ItemSouls.CaptureHeldSoul(died);                                                          // Magic
+        if (died.ActorId == DaggerfallActorIdentity.PlayerEntityId) { IdentifyChoice.Clear(); CreateItemChoice.Clear(); } // Magic
+        DaggerfallMolagBalEffects.EndOnDeath(State.Effects, died.ActorId);                        // Magic
+        DaggerfallItemSoulEffects.EndOnDeath(State.Effects, died.ActorId);                        // Magic
+        DaggerfallParalysisEffects.EndOnDeath(State.Effects, died.ActorId);                       // Magic
+        DaggerfallContinuousDestructionEffects.EndOnDeath(State.Effects, died.ActorId);           // Magic
+        DaggerfallConcealmentEffects.End(State.Effects, died.ActorId);                            // Magic
+        foreach (var light in State.Effects.Active.Where(effect => effect.Definition.Key == DaggerfallIllusionEffects.LightKey
+            && effect.Context.Target.Value == (ulong)died.ActorId).ToArray()) State.Effects.Cancel(light.Context.Instance); // Magic
+        // A corpse rests on the floor: a flyer killed in the air, or a walker on a marker above the floor, falls to it.
+        if (died.ActorId != DaggerfallActorIdentity.PlayerEntityId && State.Actors.TryGet(died.ActorId, out ActorState fallen))
+            fallen.ApplyPose(new ActorPose(_grounding.RestingPosition(fallen.Position), fallen.HeadingYawRadians)); // Actors
+        _corpseLoot.Create(died);                                                                 // Items
+        _rewards.React(died, _facts);                                                             // Character
     }
 
     /// <summary>

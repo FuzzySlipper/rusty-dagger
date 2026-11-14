@@ -51,8 +51,8 @@ public sealed class QuestPlacementActionTests
         int actors = state.Actors.All.Count();
         using (var pending = f.Restore())
         {
-            pending.State.Quests.AdmitPlacements(f.Inputs, pending);
-            pending.State.Quests.AdmitPlacements(f.Inputs, pending);
+            pending.State.Quests.AdmitPlacements(f.Inputs, pending.QuestPlacement);
+            pending.State.Quests.AdmitPlacements(f.Inputs, pending.QuestPlacement);
             Assert.Equal(actors + 1, pending.State.Actors.All.Count());
         }
         f.Update();
@@ -73,7 +73,7 @@ public sealed class QuestPlacementActionTests
             Assert.Equal("ground", state.ItemInstances.RequireUnique(item.UniqueItemIds.Single()).Owner.Scope);
         }
         using var restored = f.Restore();
-        restored.State.Quests.AdmitPlacements(f.Inputs, restored);
+        restored.State.Quests.AdmitPlacements(f.Inputs, restored.QuestPlacement);
         Assert.Equal(actors + 1, restored.State.Actors.All.Count());
         restored.State.Quests.Complete(started.InstanceId, "done");
         Assert.Empty(restored.State.Quests.Capture().Instances.Single().Placements);

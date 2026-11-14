@@ -61,7 +61,7 @@ public sealed class QuestMagicTests
         Assert.False(pending.Tasks[0].OperationCompleted[0]);
         Assert.Single(pending.Placements);
         using var restored = f.Restore();
-        restored.State.Quests.AdmitPlacements(f.Inputs, restored);
+        restored.State.Quests.AdmitPlacements(f.Inputs, restored.QuestPlacement);
         Advance(restored); Advance(restored);
         var quest = Assert.Single(restored.State.Quests.All);
         var foe = quest.Resources.Single(value => value.Symbol == "enemy");
