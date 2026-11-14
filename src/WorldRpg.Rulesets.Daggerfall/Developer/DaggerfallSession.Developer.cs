@@ -178,15 +178,15 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
 
     public DebugCommandResult GroundWeather(double wet, double snow)
     {
-        _weather.Force((float)wet, (float)snow);
-        return DebugCommandResult.Success($"The ground here is {CurrentConditions.Wet:0.##} wet and {CurrentConditions.Snow:0.##} snowed.");
+        LocalWeather.State.Force((float)wet, (float)snow);
+        return DebugCommandResult.Success($"The ground here is {LocalWeather.Conditions.Wet:0.##} wet and {LocalWeather.Conditions.Snow:0.##} snowed.");
     }
 
     public DebugCommandResult Weather(string kind)
     {
         if (!Enum.TryParse(kind, ignoreCase: true, out DaggerfallWeatherKind weather) || !Enum.IsDefined(weather))
             return Refused($"The weather is one of {string.Join(", ", Enum.GetNames<DaggerfallWeatherKind>())}.");
-        _weather.Force(weather);
+        LocalWeather.State.Force(weather);
         return DebugCommandResult.Success($"The weather is {weather}.");
     }
 

@@ -159,7 +159,7 @@ public sealed class DaggerfallGroundContainersTests
         var oldOwner = ground.All[99].Owner;
         var oldItem = entities.Resolve(new(DurableIdentityKind.Item, 200));
         var origin = DaggerfallExteriorWorldOrigin.At(new(10, 10));
-        ground.ReconcileExteriorResidency([new(10, 10)], origin);
+        ground.ReconcileExteriorResidency(DaggerfallExteriorSessionOrigin.ResidentAt([new(10, 10)], origin));
         Assert.Empty(ground.All);
         Assert.False(store.TryGetInventory(oldOwner, out _));
         Assert.False(entities.Store.IsAlive(oldOwner));
@@ -182,16 +182,16 @@ public sealed class DaggerfallGroundContainersTests
         restoredEntities.Store.Add(restoredPlayer, new InventoryComponent(restoredStore, restoredPlayer));
         var restoredLedger = DurableIdentityAllocator.Restore(ledger.CaptureState());
         DaggerfallGroundContainers restored = new(new(restoredStore, restoredEntities, definitions), new(), restoredPlayer, restoredLedger, profile);
-        restored.ReconcileExteriorResidency([new(10, 10)], origin with { Compensation = delta });
+        restored.ReconcileExteriorResidency(DaggerfallExteriorSessionOrigin.ResidentAt([new(10, 10)], origin with { Compensation = delta }));
         restored.Restore([captured]);
         Assert.Equal(DurableEntityResolution.Unloaded, restoredEntities.Classify(new(DurableIdentityKind.Container, 99), restoredLedger));
-        restored.ReconcileExteriorResidency([new(11, 10)], origin with { Compensation = delta });
+        restored.ReconcileExteriorResidency(DaggerfallExteriorSessionOrigin.ResidentAt([new(11, 10)], origin with { Compensation = delta }));
         Assert.Equal(3UL, restored.Read(99)!.Stacks.Single().Quantity);
         Assert.Single(restored.Read(99)!.UniqueItems);
         Assert.Equal(DurableEntityResolution.Materialized, restoredEntities.Classify(new(DurableIdentityKind.Item, 200), restoredLedger));
         Assert.Equal(100UL, restoredLedger.NextIdentity(DurableIdentityKind.Container));
         Assert.Equal(201UL, restoredLedger.NextIdentity(DurableIdentityKind.Item));
-        restored.ReconcileExteriorResidency([new(11, 10)], origin with { Compensation = delta });
+        restored.ReconcileExteriorResidency(DaggerfallExteriorSessionOrigin.ResidentAt([new(11, 10)], origin with { Compensation = delta }));
         Assert.Single(restored.All);
         Assert.Equal(2, restoredStore.InventoryOwners.Count());
     }

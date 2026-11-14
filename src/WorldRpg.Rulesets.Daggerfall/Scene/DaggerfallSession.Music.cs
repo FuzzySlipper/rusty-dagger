@@ -148,7 +148,7 @@ internal sealed partial class DaggerfallSession
             or DaggerfallSiteKind.DungeonRuin or DaggerfallSiteKind.Coven or DaggerfallSiteKind.HomePoor
             or DaggerfallSiteKind.Graveyard) return DaggerfallMusicContext.Night;
         if (!_time.Calendar.IsDay) return DaggerfallMusicContext.Night;
-        return CurrentWeather switch
+        return LocalWeather.Current switch
         {
             DaggerfallWeatherKind.Cloudy => DaggerfallMusicContext.Cloudy,
             DaggerfallWeatherKind.Overcast or DaggerfallWeatherKind.Fog => DaggerfallMusicContext.Overcast,

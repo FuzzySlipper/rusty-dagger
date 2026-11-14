@@ -102,7 +102,7 @@ internal sealed class DaggerfallExteriorWorld
     private readonly PlayerControlState _player;
     private readonly DaggerfallEffectLifecycle _effects;
     private readonly DaggerfallDefinitions _definitions;
-    private readonly DaggerfallTuning _tuning;
+    private readonly DaggerfallSiteTuning _tuning;
     private readonly IRandomService _random;
     private readonly DaggerfallWorldTime _time;
     private readonly DaggerfallSiteContext _site;
@@ -165,7 +165,7 @@ internal sealed class DaggerfallExteriorWorld
 
     internal DaggerfallExteriorWorld(IEngineContext engine, ActorsState actors, DaggerfallNpcRegistry npcs, PlayerControlState player,
         DaggerfallEffectLifecycle effects, DaggerfallDefinitions definitions,
-        DaggerfallTuning tuning, DaggerfallWorldTime time, DaggerfallSiteContext site, SpatialMovementSystem spatial,
+        DaggerfallSiteTuning tuning, DaggerfallWorldTime time, DaggerfallSiteContext site, SpatialMovementSystem spatial,
         FirstPersonCameraSystem camera, DaggerfallSiteAudioBundles? audioBundles, DaggerfallActorRoster roster,
         IDaggerfallSiteDeltas siteDeltas, DaggerfallGroundContainers groundContainers, IDaggerfallExteriorSite active,
         IDaggerfallExteriorHost host, Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> deltas,
@@ -924,7 +924,7 @@ internal sealed class DaggerfallExteriorWorld
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(center, origin);
         // A first window has no ground under it yet, which is sampled and installed over the updates to come.
         if (_groundCollider is null) _groundAwaited = true;
-        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
+        _groundContainers.ReconcileExteriorResidency(DaggerfallExteriorSessionOrigin.ResidentAt(residency.ResidentCells, ActiveOrigin(residency)));
         ReconcileExteriorTerrainAppearance(residency);
         UpdateExteriorLocation(center);
         return update;
@@ -1360,7 +1360,7 @@ internal sealed class DaggerfallExteriorWorld
         DaggerfallExteriorCellResidency residency = EnsureExteriorResidency();
         DaggerfallExteriorCellResidencyUpdate update = residency.Restore(save);
         if (_groundCollider is null) _groundAwaited = true;
-        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
+        _groundContainers.ReconcileExteriorResidency(DaggerfallExteriorSessionOrigin.ResidentAt(residency.ResidentCells, ActiveOrigin(residency)));
         ReconcileExteriorTerrainAppearance(residency);
         return update;
     }
@@ -1569,7 +1569,7 @@ internal sealed class DaggerfallExteriorWorld
         // snapshot.
         _camera.Update(_player);
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(CurrentExteriorCell(), ActiveOrigin(residency));
-        _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
+        _groundContainers.ReconcileExteriorResidency(DaggerfallExteriorSessionOrigin.ResidentAt(residency.ResidentCells, ActiveOrigin(residency)));
         ReconcileExteriorTerrainAppearance(residency);
         ReconcileResidentExteriorLocations(residency);
         return update;

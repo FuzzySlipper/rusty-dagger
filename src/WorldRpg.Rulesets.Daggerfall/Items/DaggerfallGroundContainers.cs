@@ -27,8 +27,7 @@ internal sealed class DaggerfallGroundContainers
     private readonly Dictionary<long, DaggerfallGroundContainer> _ground = [];
     private readonly Dictionary<long, DaggerfallGroundContainerSave> _unloaded = [];
     private DaggerfallWorldProfileKey _activeProfile;
-    private HashSet<DaggerfallExteriorCellId>? _residentCells;
-    private DaggerfallExteriorWorldOrigin _origin;
+    private Func<WorldPoint, bool>? _resident;
 
     internal DaggerfallGroundContainers(MechanicsInventoryContainerCoordinator containers, DaggerfallItemInstances instances,
         EntityId player, DurableIdentityAllocator identities, DaggerfallWorldProfileKey activeProfile)
@@ -87,26 +86,27 @@ internal sealed class DaggerfallGroundContainers
         if (profile == _activeProfile) return;
         foreach (var container in _ground.Values.Where(value => value.Profile != profile).ToArray()) Unload(container);
         _activeProfile = profile;
-        _residentCells = null;
+        _resident = null;
         Reconcile();
     }
 
-    /// <summary>Loose piles share the existing terrain window and the Engine's current origin.</summary>
-    internal void ReconcileExteriorResidency(IReadOnlyCollection<DaggerfallExteriorCellId> cells, DaggerfallExteriorWorldOrigin origin)
+    /// <summary>
+    /// Loose piles share the existing terrain window and the Engine's current origin: <paramref name="resident"/>
+    /// answers whether a session-local position lies in a resident exterior cell, as the exterior judges it now.
+    /// </summary>
+    internal void ReconcileExteriorResidency(Func<WorldPoint, bool> resident)
     {
+        ArgumentNullException.ThrowIfNull(resident);
         if (_activeProfile.Kind != DaggerfallWorldProfileKind.Exterior)
             throw new InvalidOperationException("Only an exterior profile has cell-owned ground piles.");
-        _residentCells = cells.ToHashSet();
-        _origin = origin;
+        _resident = resident;
         Reconcile();
     }
 
     private bool ShouldMaterialize(DaggerfallWorldProfileKey profile, WorldPoint position)
     {
         if (profile != _activeProfile) return false;
-        if (_residentCells is null) return true;
-        return _residentCells.Contains(DaggerfallExteriorSessionOrigin.CellForLocalPosition(
-            position, _origin, DaggerfallExteriorWorldBounds.Daggerfall));
+        return _resident?.Invoke(position) ?? true;
     }
 
     private void Reconcile()

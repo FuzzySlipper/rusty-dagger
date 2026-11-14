@@ -50,16 +50,19 @@ internal interface IDaggerfallSiteTransitionHost : IDaggerfallExteriorHost
 internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
 {
     private readonly IEngineContext _engine;
-    private readonly DaggerfallState _state;
+    private readonly ActorsState _actors;
+    private readonly PlayerControlState _player;
+    private readonly Action _footIndoors;
     private readonly DaggerfallDefinitions _definitions;
-    private readonly DaggerfallTuning _tuning;
+    private readonly DaggerfallSiteTuning _tuning;
     private readonly IRandomService _random;
     private readonly DaggerfallWorldTime _time;
     private readonly DaggerfallSiteContext _site;
     private readonly SpatialMovementSystem _spatial;
     private readonly DaggerfallSiteAudioBundles? _audioBundles;
     private readonly DaggerfallActorRoster _roster;
-    private readonly DaggerSessionPersistence _persistence;
+    private readonly IDaggerfallSiteDeltas _siteDeltas;
+    private readonly Func<long, string, Vector3, DaggerfallSiteRuntimeDelta> _captureActor;
     private readonly DaggerfallGroundContainers _groundContainers;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
     private readonly IDaggerfallSiteTransitionHost _host;
@@ -69,10 +72,14 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
     /// <summary>The session-wide classic presentation every site projection draws held items and effects from.</summary>
     private readonly NormalizedClassicPresentation? _sessionPresentation;
 
-    internal DaggerfallSiteCrossing(IEngineContext engine, DaggerfallState state, DaggerfallDefinitions definitions,
-        DaggerfallTuning tuning, DaggerfallWorldTime time, DaggerfallSiteContext site, SpatialMovementSystem spatial,
+    /// <param name="footIndoors">Puts the player on foot as an interior is entered (Travel's transport).</param>
+    /// <param name="captureActor">One dynamic actor's state as a delta (its id, definition and the frame offset it moves by).</param>
+    internal DaggerfallSiteCrossing(IEngineContext engine, ActorsState actors, DaggerfallNpcRegistry npcs, PlayerControlState player,
+        DaggerfallEffectLifecycle effects, Action footIndoors, DaggerfallDefinitions definitions,
+        DaggerfallSiteTuning tuning, DaggerfallWorldTime time, DaggerfallSiteContext site, SpatialMovementSystem spatial,
         FirstPersonCameraSystem camera, DaggerfallSiteAudioBundles? audioBundles, DaggerfallActorRoster roster,
-        DaggerSessionPersistence persistence, DaggerfallGroundContainers groundContainers, DaggerfallEnemyBehaviorModule enemyBehavior,
+        IDaggerfallSiteDeltas siteDeltas, Func<long, string, Vector3, DaggerfallSiteRuntimeDelta> captureActor,
+        DaggerfallGroundContainers groundContainers, DaggerfallEnemyBehaviorModule enemyBehavior,
         DaggerfallInteriors interiors, IDaggerfallSiteTransitionHost host,
         DaggerfallSiteProjection projection, DaggerfallSiteProfiles? profiles,
         DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile,
@@ -80,7 +87,9 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
     {
         _sessionPresentation = sessionPresentation;
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _state = state ?? throw new ArgumentNullException(nameof(state));
+        _actors = actors ?? throw new ArgumentNullException(nameof(actors));
+        _player = player ?? throw new ArgumentNullException(nameof(player));
+        _footIndoors = footIndoors ?? throw new ArgumentNullException(nameof(footIndoors));
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
         _random = engine.Random;
@@ -89,7 +98,8 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
         _audioBundles = audioBundles;
         _roster = roster ?? throw new ArgumentNullException(nameof(roster));
-        _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
+        _siteDeltas = siteDeltas ?? throw new ArgumentNullException(nameof(siteDeltas));
+        _captureActor = captureActor ?? throw new ArgumentNullException(nameof(captureActor));
         _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers));
         _enemyBehavior = enemyBehavior ?? throw new ArgumentNullException(nameof(enemyBehavior));
         _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -98,8 +108,8 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         Profiles = profiles;
         ActiveProfile = activeProfile;
         ReturnProfile = returnProfile;
-        _exterior = new DaggerfallExteriorWorld(engine, state.Actors, state.Npcs, state.PlayerControl, state.Effects, definitions, tuning, time, site,
-            spatial, camera, audioBundles, roster, persistence, groundContainers, this, host, _deltas, sessionPresentation);
+        _exterior = new DaggerfallExteriorWorld(engine, actors, npcs, player, effects, definitions, tuning, time, site,
+            spatial, camera, audioBundles, roster, siteDeltas, groundContainers, this, host, _deltas, sessionPresentation);
     }
 
     /// <summary>The cells streamed around the player and the towns placed on them.</summary>
@@ -126,7 +136,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
     void IDaggerfallExteriorSite.RebaseActionTriggers(Vector3 delta) => Interiors.ActionTriggers.RebaseActive(delta);
 
     void IDaggerfallExteriorSite.RebaseRestoredPlayerTriggers() =>
-        Interiors.ActionTriggers.RebaseRestoredPlayer(_state.PlayerControl, _state.Actors.Player.Actor.Entity);
+        Interiors.ActionTriggers.RebaseRestoredPlayer(_player, _actors.Player.Actor.Entity);
 
     /// <summary>All live appearance owners share the session's admitted animation and retirement boundaries.</summary>
     internal IEnumerable<DaggerfallSiteAppearance> Appearances
@@ -214,14 +224,14 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         DaggerfallSiteAnchor anchor = target.RequireAnchor(destination.AnchorId);
         if (destination.ActorId != DaggerfallActorIdentity.PlayerEntityId)
         {
-            if (!_state.Actors.TryGet(destination.ActorId, out _))
+            if (!_actors.TryGet(destination.ActorId, out _))
                 throw new InvalidOperationException($"Actor {destination.ActorId} is not live in the active profile.");
             // Moving an actor into a site the player is not in edits that site's delta; no caller
             // needs it yet, and a temporary round trip through the player's own transition is not
             // how it should be done, so it is refused rather than approximated.
             if (destination.Profile != ActiveProfile)
                 throw new InvalidOperationException($"Actor {destination.ActorId} cannot relocate to an inactive world profile.");
-            ActorState actor = _state.Actors.TryGet(destination.ActorId, out ActorState? live)
+            ActorState actor = _actors.TryGet(destination.ActorId, out ActorState? live)
                 ? live
                 : throw new InvalidOperationException($"Actor {destination.ActorId} is not live in the active profile.");
             actor.ApplyPose(new ActorPose(_exterior.ProfileToLocal(anchor.Position), anchor.YawRadians));
@@ -316,7 +326,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         bool walking = false)
     {
         DaggerfallSiteProfile target = RequireProfiles().Require(destination);
-        PlayerControlState player = _state.PlayerControl;
+        PlayerControlState player = _player;
         _ = player.Position ?? throw new InvalidOperationException("A site transition requires a player position.");
         // Detached site state and return poses use the profile's authored frame. Restore that
         // frame before capture and before replacing the native artifact (which retains its origin).
@@ -343,7 +353,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         DaggerfallSiteRuntimeDelta? sourceLiveActorDelta = null;
         if (sourceLocationLoaded)
         {
-            sourceDelta = _persistence.CaptureSiteDelta(source.Inputs, source.Doors, source.Motion, _roster.Dynamic,
+            sourceDelta = _siteDeltas.Capture(source.Inputs, source, _roster.Dynamic,
                 sourceDynamicActorIds, sourceFrameOffset);
         }
         else
@@ -392,7 +402,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
                 _exterior.RetireResidentExteriorLocation(destination, capture: false);
                 adjacentLocationsRetired = true;
             }
-            candidate = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
+            candidate = DaggerfallSiteProjection.Create(_engine, _actors.Entities, _random, _tuning, _time.Calendar,
                 target, AudioFor(target), _spatial, _host.ConfigureSiteAppearance, destinationDelta?.Doors, destinationDelta?.Motion,
                 deferMotionCollisionAdmission: true, sessionPresentation: _sessionPresentation, definitions: _definitions);
             if (target.ProfileKind == DaggerfallWorldProfileKind.Exterior)
@@ -490,7 +500,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
             if (returnDestination is null && !walking) _exterior.StandArrivingPlayer();
             if (destination.Kind == DaggerfallWorldProfileKind.Exterior) _host.ReconcileArrivalPopulation();
             if (destination.Kind != DaggerfallWorldProfileKind.Exterior)
-                _state.Transport.ForceFootOnInteriorTransition();
+                _footIndoors();
             ReturnProfile = !walking && returnDestination is null ? sourceProfile : null;
             _enemyBehavior.ClearPerceptionMemory();
             Interiors.Enter(destination, target);
@@ -608,8 +618,8 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         _roster.MaterializeSite(destination, delta?.Actors, delta?.DynamicActors, delta?.BanishedActors, restoreAuthoredAppearance);
         _roster.MaterializeStaticNpcs(destination);
         if (delta is null) return;
-        _persistence.RestoreSiteDelta(delta);
-        Projection.Appearance.SyncRestoredDefeat(_state.Actors);
+        _siteDeltas.Restore(delta);
+        Projection.Appearance.SyncRestoredDefeat(_actors);
     }
 
     /// <summary>Quest location facts read the accepted player position in the current world frame.</summary>
@@ -636,7 +646,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         foreach (long id in actorIds.Order())
         {
             if (!_roster.Dynamic.TryGetValue(id, out DaggerfallActorId definition)) continue;
-            captured.Add(_persistence.CaptureDynamicActorDelta(id, definition.Value, actorFrameOffset));
+            captured.Add(_captureActor(id, definition.Value, actorFrameOffset));
         }
         if (captured.Count == 0) return (detachedSource, null);
 
@@ -675,8 +685,8 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
     {
         foreach (DaggerfallDynamicActorSave actor in liveActors.DynamicActors.OrderBy(actor => actor.EntityId))
             _roster.MaterializeRetainedActor(actor, projectAppearance: true, siteProfile: source.Inputs, siteAppearance: source.Appearance);
-        _persistence.RestoreSiteDelta(liveActors);
-        source.Appearance.SyncRestoredDefeat(_state.Actors);
+        _siteDeltas.Restore(liveActors);
+        source.Appearance.SyncRestoredDefeat(_actors);
     }
 }
 

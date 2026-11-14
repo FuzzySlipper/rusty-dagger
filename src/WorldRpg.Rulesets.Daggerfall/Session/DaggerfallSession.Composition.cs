@@ -160,7 +160,7 @@ internal sealed partial class DaggerfallSession
                     : DaggerfallCalendar.Start with { Hour = definitions.NewGame.StartHour },
                 saved?.Calendar?.RemainderSeconds ?? 0d,
                 tuning.Time.GameSecondsPerRealSecond);
-            _weather = new DaggerfallWeatherState(_random, tuning.Weather, _time.Calendar, saved?.Weather);
+            DaggerfallWeatherState weather = new(_random, tuning.Weather, _time.Calendar, saved?.Weather);
             // New games use the bundle site; current saves carry their explicit site state.
             _site = saved?.Site is { } restoredSite
                 ? new World.DaggerfallSiteContext(
@@ -170,6 +170,9 @@ internal sealed partial class DaggerfallSession
                     ToSiteReturnPose(restoredSite.ReturnPose),
                     restoredSite.Discovered.Select(id => id.Require()), restoredSite.Buildings, restoredSite.FailedBuildingPicks)
                 : new World.DaggerfallSiteContext(definitions.Locations, inputs.Site, null, []);
+            LocalWeather = new DaggerfallWeather(weather, (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value,
+                () => _sites?.Exterior is { ExteriorResidencyInitialized: true } exterior ? exterior.CurrentExteriorCell() : null,
+                () => _site.ActiveSite is { } site ? new(site.MapPixelX, site.MapPixelY) : null);
             DaggerfallTravelPolicy travelPolicy = new(_site, definitions.Grids, tuning.Transport);
             DaggerfallWorldProfileKey activeProfile = saved?.Site.ActiveProfile?.Require() ?? inputs.ProfileKey;
             if (DaggerfallWorldProfileIds.TryParse(activeProfile.LogicalId, out _, out var arrivedBuilding) && arrivedBuilding is { } building)
@@ -214,7 +217,7 @@ internal sealed partial class DaggerfallSession
                 dungeonDiscoveries.Add(activeProfile, new DaggerfallDungeonDiscovery(activeProfile, initialMap));
             // The selected site's normalized RDB doors restore their Engine pose/collider projection
             // before activation can query them and before the first character step consumes them.
-            DaggerfallSiteProjection projection = DaggerfallSiteProjection.Create(engine, actors.Entities, _random, tuning, _time.Calendar,
+            DaggerfallSiteProjection projection = DaggerfallSiteProjection.Create(engine, actors.Entities, _random, tuning.Site, _time.Calendar,
                 inputs, audioBundles?.Require(inputs), _spatial, ConfigureSiteAppearance, saved?.Doors, saved?.DungeonMotion,
                 sessionPresentation: composition.StartSite.ClassicPresentation, definitions: _definitions);
             partiallyConstructed.Add(projection);
@@ -325,7 +328,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallConcreteGuildMembershipRuntime concreteGuildMembership = new(guildMembership);
             DaggerfallQuestDiseases questDiseases = new(definitions, _diseases, effects, actors.Player.DurableId);
             DaggerfallQuestEnvironment questEnvironment = new(definitions, _time, questDiseases, _music, _musicBundle, composition.VideosEnabled,
-                Cinematics, () => _sites.Projection.Inputs.Audio, () => CurrentWeather, () => CurrentClimate,
+                Cinematics, () => _sites.Projection.Inputs.Audio, () => LocalWeather.Current, () => LocalWeather.Climate,
                 (clip, quest, line, count) => _appearance.PlayQuestSound(clip, quest, line, count));
             quests.BindEnvironmentActions(questEnvironment.Condition, questEnvironment.Media);
             quests.BindOfferCapabilities(questEnvironment.OfferCapability);
@@ -857,11 +860,11 @@ internal sealed partial class DaggerfallSession
             State.Character.SpellForgotten+=key=>
             { if(Casting.ReadyFor(actors.Player.DurableId)?.SpellKey==key) Casting.Cancel(actors.Player.DurableId); };
             _persistence.Infections = Infections.Capture;
-            _persistence.Weather = _weather.Capture;
+            _persistence.Weather = LocalWeather.State.Capture;
             _persistence.WorldVariants = () => _sites.Profiles?.CaptureVariants() ?? [];
             Summoning = new(definitions, State.Npcs, State.ConcreteGuildServices, State.Services, State.Social, _random,
                 composition.DisabledQuestSelection ?? DaggerfallDisabledQuestSelection.None, () => _time.Calendar,
-                () => (IsRaining, IsStorming), () => _activeProfileKey,
+                () => (LocalWeather.IsRaining, LocalWeather.IsStorming), () => _activeProfileKey,
                 result => DaggerfallDaedricSummoning.PrepareQuest(definitions, State.Quests, result), saved?.Summoning);
             _persistence.Summoning = Summoning.Capture;
             _persistence.PoisonDraws = () => _poisoning.Draws;
@@ -878,8 +881,10 @@ internal sealed partial class DaggerfallSession
             DaggerfallInteriors interiors = new(actionTriggers, State.DungeonActions, State.DungeonDiscoveries,
                 (key, admitted) => new DaggerfallDungeonActionGraph(key.LogicalId, admitted.DungeonActions, State.Variables.Write,
                     executeFamilyAction: ExecuteDungeonFamilyAction), _site);
-            _sites = new DaggerfallSiteCrossing(engine, State, definitions, tuning, _time, _site, _spatial, _camera, audioBundles,
-                _roster, _persistence, _groundContainers, _enemyBehavior, interiors, this,
+            _sites = new DaggerfallSiteCrossing(engine, State.Actors, State.Npcs, State.PlayerControl, State.Effects, State.Transport.ForceFootOnInteriorTransition,
+                definitions, tuning.Site, _time, _site, _spatial, _camera, audioBundles,
+                _roster, _persistence, (id, definition, offset) => _persistence.CaptureDynamicActorDelta(id, definition, offset),
+                _groundContainers, _enemyBehavior, interiors, this,
                 projection, profiles, activeProfile, saved?.Site.ReturnProfile?.Require(),
                 composition.StartSite.ClassicPresentation);
             // The quests' foes, placements and items reach the roster, the site crossing and the persistence boundary; the
@@ -1093,6 +1098,13 @@ internal sealed partial class DaggerfallSession
             out string? text, out IReadOnlyList<string> diagnostics)
             ? (text!, diagnostics) : null;
     }
+
+    /// <summary>Who needs exterior ground beside the player: the living, past a town's people, who have its ground plane.</summary>
+    private IEnumerable<Vector3> GroundWalkers() => State.Actors.All
+        .Where(actor => actor.DurableId != DaggerfallActorIdentity.PlayerEntityId && !actor.IsDefeated
+            && _roster.Definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition)
+            && definition.Kind is not (DaggerfallActorKinds.Civilian or DaggerfallActorKinds.StaticNpc))
+        .Select(actor => actor.Position.ToVector());
 
     private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();
 

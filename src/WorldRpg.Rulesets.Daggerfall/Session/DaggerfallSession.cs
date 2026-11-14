@@ -120,6 +120,13 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     private DaggerfallWorldProfileKey _activeProfileKey => _sites.ActiveProfile;
     private DaggerfallSiteAppearance _appearance => _sites.Projection.Appearance;
     private DaggerfallDoorRuntime _doors => _sites.Projection.Doors;
+    /// <summary>The weather where the player is; rules read its conditions.</summary>
+    internal DaggerfallWeather LocalWeather { get; }
+    private readonly DaggerfallWeatherPresentation _weatherPresentation;
+    private readonly DaggerfallHorizon _horizon;
+
+    /// <summary>Whether river water about the player is still being built, a few map pixels an update.</summary>
+    internal bool RiverWaterBuilding => _horizon.RiversBuilding;
 
     /// <summary>The transport access where the player stands (Travel's rule), with whether an owned ship is reachable here (Economy's).</summary>
     private DaggerfallTransportAccessContext TransportAccess() => DaggerfallTransportAccessContext.At(_activeProfileKey.Kind,

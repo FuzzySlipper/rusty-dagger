@@ -9,6 +9,14 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
+/// <summary>The tuning a site's projection and the exterior world read: its sounds, flats and light, the origin's rebase and the ground.</summary>
+internal sealed record DaggerfallSiteTuning(
+    DaggerfallPresentationAudioTuning PresentationAudio,
+    DaggerfallFlatsTuning Flats,
+    DaggerfallSiteLightingTuning SiteLighting,
+    DaggerfallWorldOriginTuning WorldOrigin,
+    DaggerfallGroundTuning Ground);
+
 /// <summary>
 /// Resources whose lifetime is one admitted Daggerfall site projection.  A candidate owns its own
 /// door entities and render resources until the spatial service accepts its content artifact; it is
@@ -59,7 +67,7 @@ internal sealed class DaggerfallSiteProjection : IDisposable
         IEngineContext engine,
         EntityDirectory actors,
         IRandomService random,
-        DaggerfallTuning tuning,
+        DaggerfallSiteTuning tuning,
         DaggerfallCalendar calendar,
         DaggerfallSiteProfile inputs,
         DaggerfallAudioBundle? audioBundle,

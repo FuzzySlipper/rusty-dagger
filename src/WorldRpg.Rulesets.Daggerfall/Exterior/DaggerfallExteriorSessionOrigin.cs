@@ -39,6 +39,16 @@ internal static class DaggerfallExteriorSessionOrigin
     internal static Vector3 LocalDelta(WorldOriginCommitReceipt receipt) => receipt.LocalDelta;
 
     /// <summary>
+    /// Whether a session-local position lies in one of <paramref name="cells"/> under <paramref name="origin"/>, the cells
+    /// and origin taken as they are now; what a cell-owned pile asks before it is materialized.
+    /// </summary>
+    internal static Func<WorldPoint, bool> ResidentAt(IReadOnlyCollection<DaggerfallExteriorCellId> cells, DaggerfallExteriorWorldOrigin origin)
+    {
+        HashSet<DaggerfallExteriorCellId> resident = cells.ToHashSet();
+        return position => resident.Contains(CellForLocalPosition(position, origin, DaggerfallExteriorWorldBounds.Daggerfall));
+    }
+
+    /// <summary>
     /// Converts a product local pose back to the durable map-pixel cell that contains it. Daggerfall
     /// terrain's negative local Z points toward decreasing map-pixel Y, matching the surface builder's
     /// local translation and keeping boundary traversal deterministic on either side of zero. A pose

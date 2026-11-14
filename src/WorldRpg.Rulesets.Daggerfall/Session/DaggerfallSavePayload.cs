@@ -1281,16 +1281,6 @@ internal sealed record DaggerfallSavePayload(
     }
 }
 
-/// <summary>One placed actor's full Engine inventory meaning, including unique instances and equipment.</summary>
-internal sealed record DaggerfallActorInventorySave(long EntityId, DaggerfallInventorySave Inventory)
-{
-    internal void Validate()
-    {
-        ArgumentNullException.ThrowIfNull(Inventory);
-        Inventory.Validate();
-    }
-}
-
 internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
 
 internal sealed record DaggerfallCalendarSave(int Year, int Month, int Day, int Hour, int Minute, int Second, double RemainderSeconds);

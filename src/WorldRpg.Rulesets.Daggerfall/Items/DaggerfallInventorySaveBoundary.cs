@@ -103,3 +103,13 @@ internal sealed record DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySa
         Inventory.Validate();
     }
 }
+
+/// <summary>One placed actor's full Engine inventory meaning, including unique instances and equipment.</summary>
+internal sealed record DaggerfallActorInventorySave(long EntityId, DaggerfallInventorySave Inventory)
+{
+    internal void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Inventory);
+        Inventory.Validate();
+    }
+}

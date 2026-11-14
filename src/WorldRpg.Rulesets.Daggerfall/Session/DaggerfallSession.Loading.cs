@@ -25,6 +25,14 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
         if (!_inAdmittedUpdate && !_disposed) PublishPresentation();
     }
 
+    /// <inheritdoc/>
+    public LoadingProgress AwaitArrivalGround()
+    {
+        SyncWeatherContext();
+        LoadingProgress collider = _exterior.AwaitGroundCollider();
+        return collider.Done ? _horizon.GroundProgress() : collider;
+    }
+
     /// <summary>Whether slow work accepted now is staged on the loading screen rather than run at once.</summary>
     private bool StagesSlowWork => _loading is { IsLoading: false } && _inAdmittedUpdate;
 

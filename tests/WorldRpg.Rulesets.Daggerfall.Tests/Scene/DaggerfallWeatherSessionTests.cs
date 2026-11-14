@@ -224,7 +224,7 @@ public sealed class DaggerfallWeatherSessionTests
         {
             session.ApplyProductMode(ProductMode.Playing);
             session.PublishInitial();
-            Assert.True(session.IsRaining);
+            Assert.True(session.LocalWeather.IsRaining);
             session.Update(Update(1)); session.Update(Update(2));
             PrecipitationRequest rain = fixture.Engine.Precipitation.Last();
             Assert.Equal(PrecipitationShape.Streak, rain.Shape);
@@ -245,7 +245,7 @@ public sealed class DaggerfallWeatherSessionTests
             Assert.True(fixture.Engine.Precipitation.Last().Drops < rain.Drops, "Rain thins out over a shelter.");
             Assert.True(session.TryTransitionTo(interior.ProfileKey));
             Assert.Equal(tuning.Ambient.InteriorFogDensity, fixture.Engine.Fogs.Last().Density);
-            Assert.True(session.IsRaining);
+            Assert.True(session.LocalWeather.IsRaining);
             session.Update(Update(5));
             Assert.Equal(0, fixture.Engine.Wetness.Last().Wetness);
             Assert.Equal(0, fixture.Engine.Snow.Last().Amount);
@@ -265,7 +265,7 @@ public sealed class DaggerfallWeatherSessionTests
         using(var restored = DaggerfallSession.Restore(resumed.Engine.Context,composition,save))
         {
             restored.PublishInitial();
-            Assert.True(restored.IsRaining);
+            Assert.True(restored.LocalWeather.IsRaining);
             Assert.Equal(DaggerfallSavePayload.Read(save).Weather.Climates,DaggerfallSavePayload.Read(restored.CaptureSave()).Weather.Climates);
             Assert.Equal(DaggerfallSavePayload.Read(save).Weather.SkyVariants,DaggerfallSavePayload.Read(restored.CaptureSave()).Weather.SkyVariants);
             restored.ApplyProductMode(ProductMode.Playing); restored.Update(Update(7));

@@ -245,8 +245,8 @@ internal sealed partial class DaggerfallSession
         DaggerfallCalendar after = _time.Calendar;
         long minuteBefore = before.MinuteNumber, minuteAfter = after.MinuteNumber;
         State.RegionalPrices.AdvanceToDay(_time.Calendar.DayNumber);                              // Economy
-        _weather.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                     // Exterior
-        _sites.Projection.Lighting.UpdateAmbient(_time.Calendar, _tuning.Weather.Daylight(_time.Calendar, CurrentWeather));   // Scene
+        LocalWeather.State.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                // Exterior
+        _sites.Projection.Lighting.UpdateAmbient(_time.Calendar, _tuning.Weather.Daylight(_time.Calendar, LocalWeather.Current));   // Scene
         _exterior.UpdateResidentCityLights();                                                     // Exterior
         State.Quests.AdvanceClocks(State.Variables, before, _time.Calendar);                      // Quests
         // Daily conditions and ordinary source-order operations observe the same admitted calendar
@@ -450,7 +450,7 @@ internal sealed partial class DaggerfallSession
                 player.MotionBefore.Grounded, State.PlayerControl.Motion.Grounded, player.WasSwimming, player.Swimming.Swimming,
                 player.ActiveWater is not null && !player.Swimming.Swimming,
                 State.Transport.IsOnFoot && !player.Climb.Climbing && !player.Levitation.IsLevitating,
-                _time.Calendar.Season == DaggerfallSeason.Winter && CurrentClimate is not (224 or 225 or 227 or 229),
+                _time.Calendar.Season == DaggerfallSeason.Winter && LocalWeather.Climate is not (224 or 225 or 227 or 229),
                 State.Transport.Mode);                                                            // Scene
         if (player.Landing is { } landed && DaggerfallFormulaPolicy.IsHardLanding(landed.Distance) && !player.Swimming.Swimming && !player.SlowfallDescending)
             _appearance.PlayGameplaySound(92, "hard-landing");                                    // Scene
@@ -588,6 +588,34 @@ internal sealed partial class DaggerfallSession
         Presentation.SetOutcome(_definitions.TextPresentation.Resolve(
             new(DaggerfallTextKind.Resource, "401"), DungeonTextContext()).Text);                 // Text, UiProjection
         return new(true, null);
+    }
+
+    /// <summary>
+    /// The weather's list where the player stands: the exterior ground's season and wetness, the shelter overhead, how
+    /// far the camera draws, the horizon shown or hidden, then the weather's presentation. The update, a site's
+    /// activation, a client's first publication and an arrival's ground wait reach it.
+    /// </summary>
+    private void SyncWeatherContext(double seconds = 0, bool playing = false)
+    {
+        if (State.PlayerControl.Position is not { } position) return;
+        Vector3 player = position.ToVector();
+        bool outside = _sites.Projection.Inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior;
+        if (outside)
+            _exterior.SetExteriorSeason(_time.Calendar.Season == DaggerfallSeason.Winter
+                ? DaggerfallExteriorSeason.Winter : DaggerfallExteriorSeason.Summer,
+                climate => LocalWeather.State.ForClimate(climate) is DaggerfallWeatherKind.Rain or DaggerfallWeatherKind.Thunder);   // Exterior
+        bool sheltered = outside && _spatial.CastRay(player + Vector3.UnitY * _tuning.Camera.EyeHeight,
+            Vector3.UnitY, _tuning.Ambient.ShelterProbeHeight,
+            _exterior.CharacterEnvironment(State.PlayerControl.Motion)).Present;                  // Scene
+        _camera.DrawOutTo(outside ? _tuning.Horizon.DrawnMetres : null);                          // Scene
+        if (outside && _exterior.ActiveExteriorOrigin is { } origin)
+            _horizon.Show(_spatial.Session, origin, player, _time.Calendar.Season == DaggerfallSeason.Winter,
+                _sites.Projection.Lighting.SkyLight / _tuning.SiteLighting.ViewFull,
+                LocalWeather.Current is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast,
+                !_classicArt, _exterior.GroundLayers, _exterior.FloraLook);                        // Scene
+        else _horizon.Hide();                                                                     // Scene
+        _weatherPresentation.Update(_sites.Projection, _time.Calendar, LocalWeather.Climate, LocalWeather.Conditions,
+            LocalWeather.SkyVariant, player, sheltered, seconds, playing, _horizon.FogDensity);       // Scene
     }
 
     /// <summary>The arrest's list: the watch halts the player, who lets go of the controls and the open menu.</summary>

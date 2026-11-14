@@ -2,13 +2,6 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
-/// <summary>The two source surfaces that retain separate classic lockpicking formulas.</summary>
-internal enum DaggerfallLockInteractionSurface
-{
-    Interior,
-    Exterior,
-}
-
 /// <summary>One operation admitted or refused by the canonical door state.</summary>
 internal enum DaggerfallLockInteractionKind
 {
