@@ -239,7 +239,7 @@ internal sealed partial class DaggerfallSession
 
     private void ApplyPlayerActs(DaggerfallPlayerActs acts)
     {
-        foreach (string shortcut in acts.Shortcuts) ApplyShortcut(shortcut);
+        foreach (string shortcut in acts.Shortcuts) _dispatch.ApplyShortcut(shortcut);
         // A menu/mode shortcut consumes this slice's attack and activation, just like a UI request.
         if (acts.Shortcuts.Length != 0) acts = acts with { Attack = false, Kick = false, Interact = false };
         if (acts.ToggleWeapon) ToggleWeapon();

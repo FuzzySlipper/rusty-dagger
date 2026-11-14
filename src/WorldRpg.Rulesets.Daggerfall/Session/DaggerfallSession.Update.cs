@@ -25,7 +25,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// call one of its fixed steps makes; <see cref="ResolveExhaustion"/> is what a collapse does across domains;
 /// <see cref="RemoveCarriedQuestItems"/> is what a quest's end does to the items it lent; <see cref="Arrest"/>, <see cref="ChooseLegal"/>,
 /// <see cref="BeginCourt"/>, <see cref="ApplyCourtSentence"/> and <see cref="ServePrison"/> are what the law's steps do; <see cref="ReconcileSummoningFoes"/>
-/// is how a summoning's hostiles arrive; <see cref="ApplyDeathMode"/> is what death does to the Dead screen, the camera and the player's sprite; and <see cref="ExpireConjuredItems"/> is what a conjured item's last minute does. Each line says the domain it belongs to. Order is behaviour: a call
+/// is how a summoning's hostiles arrive; <see cref="PublishPresentation"/> is what the HUD and the world show of a moment; <see cref="ApplyDeathMode"/> is what death does to the Dead screen, the camera and the player's sprite; and <see cref="ExpireConjuredItems"/> is what a conjured item's last minute does. Each line says the domain it belongs to. Order is behaviour: a call
 /// moves only with a reason that names what it changes.
 /// </summary>
 internal sealed partial class DaggerfallSession
@@ -68,8 +68,7 @@ internal sealed partial class DaggerfallSession
             // not a modal; everything else - including the entry screen's own action, which the product
             // answers before this runs - is dropped and the presentation still publishes so the player
             // can see the mode they are in.
-            _lastInputDevice = InputDevice(input, Math.Min(_tuning.ControllerInput.MovementDeadzone,
-                _tuning.ControllerInput.LookDeadzone)) ?? _lastInputDevice;                     // UiProjection
+            HudFrames.ObserveInputDevice(input);                                                 // UiProjection
             Cinematics?.Poll();                                                                   // Scene
             _openingCinematics.Poll();                                                            // Scene
             // The donor ends a playing video on any key or button press (DaggerfallVidPlayerWindow,
@@ -91,16 +90,16 @@ internal sealed partial class DaggerfallSession
                 : playing ? DaggerfallUiPhases.Playing
                 : modal ? DaggerfallUiPhases.Modal
                 : DaggerfallUiPhases.Held;
-            DaggerfallUiInput ui = TakeUiInput(input);
+            DaggerfallUiInput ui = _dispatch.Take(input);                                         // UiProjection
             // The slice that opens an interaction admits no attack. Whichever order the Engine delivers
             // the keys in, swinging on the frame a container opens is an unintended attack.
-            bool opensInteraction = playing && OpensInteraction(ui);
+            bool opensInteraction = playing && DaggerfallUiDispatch.OpensInteraction(ui);
             bool elapsedSubmitted = false;
             for (int index = 0; index < input.Length; index++)
             {
                 firstStep.Add(input[index]);
                 if (ui.IsUiAction(index))
-                    AdmitUiAction(ui.ActionAt(index), phase, firstStep, opensInteraction, ref elapsedSubmitted);   // Session: each to its owner
+                    _dispatch.Admit(ui.ActionAt(index), phase, firstStep, opensInteraction, ref elapsedSubmitted);   // UiProjection: each to its owner
             }
 
             if (elapsedSubmitted || !playing || _interactions.HoldsWorldOpen)
@@ -124,7 +123,7 @@ internal sealed partial class DaggerfallSession
                 if (facts.AdmittedStepCount == 0)
                 {
                     _camera.Update(State.PlayerControl);                                          // Character
-                    ApplyIdleInterfaceActions();                                                  // UiProjection
+                    _dispatch.ApplyIdleInterfaceActions();                                        // UiProjection
                     DeliverFacts();                                                               // Session
                     PublishPresentation();                                                        // UiProjection
                 }
@@ -524,6 +523,44 @@ internal sealed partial class DaggerfallSession
         ResolveExhaustion();                                                                      // Condition
         PublishPresentation();                                                                    // UiProjection
         if (Music.Scored) Music.Advance(MusicContext(), _time.Calendar.DayNumber);                // Scene
+    }
+
+    /// <summary>
+    /// The publication's list: what the HUD and the world show of this moment, once per publication. The values that
+    /// follow the worn set and the light refresh first, the HUD frame reads every panel, then the world's presentation
+    /// follows the player's hand, light and the actors.
+    /// </summary>
+    private void PublishPresentation()
+    {
+        _heldEnchantments.Refresh();                                                              // Magic
+        RefreshPassiveMagery();                                                                   // Character
+        _lycanthropy.Refresh();                                                                   // Afflictions
+        _appearance.RefreshEnemyVoices(State.Actors);                                             // Scene
+        DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);   // Magic
+        DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);     // Magic
+        _appearance.RetireUnavailableMagic(State.Actors, State.ItemInstances.ContainsUnique);    // Scene
+        HudFrames.Publish(new DaggerfallHudSession(_mode, _newGameInitialized, LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _bundles));   // UiProjection
+        _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);         // Scene
+        Vector3 facing = ActorHeading.Forward(State.PlayerControl.YawRadians);
+        Vector3? candlePosition = !State.Actors.Player.IsDefeated && State.PlayerControl.Position is { } playerPosition
+            && State.Effects.Active.Any(effect => effect.Definition.Key == DaggerfallIllusionEffects.LightKey)
+            ? playerPosition.ToVector() + new Vector3(facing.X * _tuning.NormalLight.Distance,
+                _spatial.CurrentController.Shape.StandingHeight * _tuning.NormalLight.HeightFraction,
+                facing.Z * _tuning.NormalLight.Distance) : null;                                 // Magic: the Light spell's candle
+        _sites.Projection.Lighting.UpdateMobileLights(State.Actors.All, _roster.Definitions, _definitions.Mobiles);   // Scene
+        IReadOnlyList<DaggerfallDungeonSpellFlightView> spellFlights = SpellFlights.Views();     // Magic
+        _sites.Projection.Lighting.UpdateSpellLights(spellFlights);                              // Scene
+        _sites.Projection.Lighting.UpdateMagicCandle(candlePosition, _tuning.NormalLight);       // Scene
+        _appearance.UpdateMagicCandle(candlePosition);                                            // Scene
+        if (State.PlayerControl.Position is { } eyeFeet)
+            _viewLight.Update(() => _exterior.ViewLight(eyeFeet.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight));   // Scene, Exterior
+        foreach (var appearance in _sites.Appearances) appearance.UpdateDirections(State.Actors, _camera.Viewpoint);   // Scene
+        _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
+            _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
+                ? _combat.ReadRangedFlights(generation, simulationStep) : [],
+            State.Effects.PerceptionFor, NpcProjection.Views(), spellFlights, State.Npcs.IsGameplayActive,
+            id => _groundContainers.Read(id) is { } contents ? _inventoryUi.GroundLook(id, contents) : null);   // Scene
+        PublishDebugOverlays();                                                                   // Developer
     }
 
     /// <summary>

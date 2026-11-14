@@ -1034,7 +1034,7 @@ internal sealed partial class DaggerfallSession
                 () => { _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard(); });
             LocalMap = new DaggerfallLocalMap(State.PlayerControl, _site, State.DungeonDiscoveries, () => _sites.Projection.Inputs,
                 () => _sites.ActiveProfile, point => _exterior.ExteriorSitePosition(point), Presentation);
-            _characterActions = new DaggerfallCharacterActions(_creation, State.Character, State.LevelUps, _controls, definitions.NewGame.QuickEntry,
+            DaggerfallCharacterActions characterActions = new(_creation, State.Character, State.LevelUps, _controls, definitions.NewGame.QuickEntry,
                 () => _mode == ProductMode.Title && !_newGameInitialized, Presentation);
             _lootActions = new DaggerfallLootActions(_lootUi, _corpseLoot, _groundContainers, _facts, State.Encumbrance, definitions,
                 State.ItemInstances, State.Inventory, State.PlayerControl, _input, State.Quests.ItemClicked, PropertyLoot.Open, PropertyLoot.ObserveTake,
@@ -1042,17 +1042,31 @@ internal sealed partial class DaggerfallSession
             EconomyPanels = new DaggerfallEconomyPanels(Banking, State.Bank, MerchantTrade, RoomRental, State.Tavern, State.SkillTraining, Holdings,
                 State.Inventory, State.Wagon, _inventoryUi, definitions, () => _dialogue, CurrentInteriorBuilding, TransportAccess, RequestPanel,
                 destination => TryTransitionTo(destination), Presentation);
-            _travelPanel = new DaggerfallTravelPanel(FastTravel, State.Transport, State.Wagon, State.Inventory, _inventoryUi, _hud.RequestTravelPlaces,
+            DaggerfallTravelPanel travelPanel = new(FastTravel, State.Transport, State.Wagon, State.Inventory, _inventoryUi, _hud.RequestTravelPlaces,
                 TransportAccess, AcceptTravel, BoardPropertyShip, LeavePropertyShip, ApplyTransportChange, Presentation);
-            _counter = new DaggerfallServiceCounter(() => _dialogue, CurrentInteriorBuilding, _site, () => _sites.ActiveProfile, _activationPresentation);
-            _makers = new DaggerfallMakerPanels(_itemMaker, _potionMaker, definitions, _counter, Presentation);
-            SummoningPanel = new DaggerfallSummoningPanel(Summoning, State.Quests, Cinematics, composition.VideosEnabled, _counter,
+            DaggerfallServiceCounter counter = new(() => _dialogue, CurrentInteriorBuilding, _site, () => _sites.ActiveProfile, _activationPresentation);
+            DaggerfallMakerPanels makers = new(_itemMaker, _potionMaker, definitions, counter, Presentation);
+            SummoningPanel = new DaggerfallSummoningPanel(Summoning, State.Quests, Cinematics, composition.VideosEnabled, counter,
                 ReconcileSummoningFoes, Presentation);
             Spellbook = new DaggerfallSpellbookPanel(State.Character, State.Actors, Casting, SpellRelease, definitions, SpellSales, SpellMaker,
-                _counter, _makers, SummoningPanel, () => DrawnArt, Presentation);
+                counter, makers, SummoningPanel, () => DrawnArt, Presentation);
             ActivationPanel = new DaggerfallActivationPanel(_activationPresentation, Activation, () => _dialogue, Banking, State.Effects,
-                State.SkillTraining, State.Tavern, CurrentInteriorBuilding, EconomyPanels, Spellbook, _counter, Presentation);
-            _textActions = new DaggerfallTextActions(DungeonText, _notebook, DungeonActions.ContinueAcceptedAnswer, Presentation, ContinueBuildingEntry);
+                State.SkillTraining, State.Tavern, CurrentInteriorBuilding, EconomyPanels, Spellbook, counter, Presentation);
+            DaggerfallTextActions textActions = new(DungeonText, _notebook, DungeonActions.ContinueAcceptedAnswer, Presentation, ContinueBuildingEntry);
+            _dispatch = new DaggerfallUiDispatch(State.Character, definitions.NewGame.QuickEntry, State.RacialOverrides, Law, _playerTime,
+                CreateItemChoice, IdentifyChoice, TeleportChoice, DispelChoice, _openingCinematics, Cinematics, _tutorial, PlayerAttack, State.Quests,
+                State.Variables, _input, _hud, _inventoryUi, _lootUi, characterActions, LocalMap, ActivationPanel, Spellbook, makers, SummoningPanel,
+                EconomyPanels, travelPanel, RestPanel, textActions, _lootActions, _deathScreen,
+                new DaggerfallUiDispatch.SessionCalls(ChooseLegal, AnswerQuestOffer, ToggleWeapon, RequestPanel,
+                    request => _saveSlotRequest = request, ChooseBundle, open => _interactions.SetMenuOpen(open), () => _interactions.HoldsWorldOpen),
+                Presentation);
+            HudFrames = new DaggerfallHudFrames(_hud, State.Actors, Presentation, State.PlayerControl, Slots, _inventoryUi, EconomyPanels, _lootUi,
+                _characterUi, definitions, CurrentTextContext, _controls, ActivationPanel, State.Swimming, State.Effects, State.Quests, _questTexts, _time,
+                _notebook, State.Transport, State.Inventory, TransportAccess, State.Property, State.Wagon, DungeonText, _deathScreen, RestPanel,
+                RoomRental, FastTravel, _site, EffectItemName, Cinematics, LocalMap, Law, CreateItemChoice, TeleportChoice, DispelChoice,
+                IdentifyChoice, Spellbook, Detectors, _playerTime, _loading, _tutorial, Radial, Activation, _input, () => DrawnArt,
+                () => State.WeaponDrawn, () => _interactions.HoldsWorldOpen,
+                Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone));
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,
                     snapshot => DungeonText.Restore(snapshot, () => DungeonActions.ActiveActions, CurrentTextContext));

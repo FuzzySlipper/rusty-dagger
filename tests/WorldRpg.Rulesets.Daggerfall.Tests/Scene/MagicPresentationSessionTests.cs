@@ -24,16 +24,16 @@ public sealed class MagicPresentationSessionTests
         Assert.Equal(2, Pending(s).OfType<SpellCastFact>().Count());
         Assert.Single(Pending(s).OfType<MagicEffectFact>(), fact => fact.Outcome.Kind == DaggerfallEffectOutcomeKind.Started);
         f.Update();
-        Assert.Single(s.ReadActiveEffects());
+        Assert.Single(s.HudFrames.ReadActiveEffects());
         Assert.Equal(1, EffectCount(Visual(s)));
         Assert.Single(f.Engine.EmittedAudio, request => request.SignalId.Contains("spell-release"));
         f.Update(); Assert.Single(f.Engine.EmittedAudio, request => request.SignalId.Contains("spell-release"));
         var save = s.CaptureSave(); using var restored = f.Restore(save, out var engine);
         restored.PublishInitial();
-        Assert.Single(restored.ReadActiveEffects());
+        Assert.Single(restored.HudFrames.ReadActiveEffects());
         Assert.Equal(0, EffectCount(Visual(restored))); Assert.DoesNotContain(engine.EmittedAudio, request => request.SignalId.Contains("spell-release"));
         s.State.Effects.CancelActorReferences(1); f.Update();
-        Assert.Empty(s.ReadActiveEffects()); Assert.Equal(0, EffectCount(Visual(s)));
+        Assert.Empty(s.HudFrames.ReadActiveEffects()); Assert.Equal(0, EffectCount(Visual(s)));
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public sealed class MagicPresentationSessionTests
         var item = s.State.Inventory.Read().UniqueItems.First(); var id = s.State.Inventory.GetDurableItemId(item.Entity).Value;
         s.Casting.Ready(1,"spell.023",id); s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ); f.Update();
         // The effect row names the source item and the remaining game time, not ids or magic rounds.
-        var row = Assert.Single(s.ReadActiveEffects());
+        var row = Assert.Single(s.HudFrames.ReadActiveEffects());
         Assert.Contains($"From {s.EffectItemName(id)}.", row.Detail, StringComparison.Ordinal);
         Assert.DoesNotContain(id.ToString(System.Globalization.CultureInfo.InvariantCulture), row.Detail, StringComparison.Ordinal);
         Assert.DoesNotContain("magic rounds", row.Detail, StringComparison.Ordinal);
@@ -51,10 +51,10 @@ public sealed class MagicPresentationSessionTests
         Assert.NotNull(row.RemainingSeconds);
         Assert.Equal(1, EffectCount(Visual(s)));
         s.State.Effects.CancelItemReferences(id); f.Update(); Assert.Equal(0, EffectCount(Visual(s)));
-        Assert.Empty(s.ReadActiveEffects());
+        Assert.Empty(s.HudFrames.ReadActiveEffects());
         s.State.Character.LearnSpell("spell.023"); s.SpellRelease.ReadyPlayerSpell("spell.023"); s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ); f.Update();
         s.State.Effects.AdvanceElapsedRounds(100000); f.Update();
-        Assert.Empty(s.ReadActiveEffects()); Assert.Equal(0, EffectCount(Visual(s)));
+        Assert.Empty(s.HudFrames.ReadActiveEffects()); Assert.Equal(0, EffectCount(Visual(s)));
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public sealed class MagicPresentationSessionTests
         var fact = Assert.Single(Pending(s).OfType<SpellTrackRestoredFact>());
         Assert.Equal("health",fact.Track); Assert.Equal(1,fact.Restored); Assert.True(fact.Requested>=1);
         f.Update(); Assert.True(EffectCount(Visual(s))>0);
-        Assert.Empty(s.ReadActiveEffects());
+        Assert.Empty(s.HudFrames.ReadActiveEffects());
     }
 
     [Fact]
@@ -78,10 +78,10 @@ public sealed class MagicPresentationSessionTests
         s.State.Character.LearnSpell("spell.023"); s.SpellRelease.ReadyPlayerSpell("spell.023"); s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ);
         var effect = Assert.Single(s.State.Effects.Active);
         s.State.Effects.Cure(effect.Context.Instance); f.Update();
-        Assert.Equal(0,EffectCount(Visual(s))); Assert.Empty(s.ReadActiveEffects());
+        Assert.Equal(0,EffectCount(Visual(s))); Assert.Empty(s.HudFrames.ReadActiveEffects());
         s.SpellRelease.ReadyPlayerSpell("spell.023");s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ);f.Update();Assert.Equal(1,EffectCount(Visual(s)));
         s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0);s.PublishInitial();
-        Assert.Equal(0,EffectCount(Visual(s)));Assert.Empty(s.ReadActiveEffects());
+        Assert.Equal(0,EffectCount(Visual(s)));Assert.Empty(s.HudFrames.ReadActiveEffects());
     }
 
     [Fact]

@@ -708,17 +708,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The local map panel: the map it shows, its building selection and notes.</summary>
     internal DaggerfallLocalMap LocalMap { get; } = null!;
 
-    /// <summary>The character screen's and the controls screen's actions.</summary>
-    private readonly DaggerfallCharacterActions _characterActions = null!;
-
-    /// <summary>The loot window's actions, the windows a body or a pile opens, and a quest reward's pile.</summary>
-    private readonly DaggerfallLootActions _lootActions = null!;
-
     /// <summary>The service panels: bank and loans, property, merchant, tavern, rooms and training.</summary>
     internal DaggerfallEconomyPanels EconomyPanels { get; } = null!;
-
-    /// <summary>The travel panel's actions: fast travel, transport and the wagon.</summary>
-    private readonly DaggerfallTravelPanel _travelPanel = null!;
 
     /// <summary>The guild's spell sale (Economy).</summary>
     internal DaggerfallSpellSales SpellSales { get; private set; } = null!;
@@ -730,12 +721,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>The activation view's state: mode, outcome and the conversation's page.</summary>
     private readonly DaggerfallActivationPresentation _activationPresentation = new();
 
-    /// <summary>The person across the counter the spellbook's panes share.</summary>
-    private readonly DaggerfallServiceCounter _counter = null!;
-
-    /// <summary>The item maker's and the potion maker's panes and actions.</summary>
-    private readonly DaggerfallMakerPanels _makers = null!;
-
     /// <summary>The summoner's pane, the prince's answer and its cinematic.</summary>
     internal DaggerfallSummoningPanel SummoningPanel { get; } = null!;
 
@@ -745,8 +730,20 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
     /// <summary>Activation and the conversation as the HUD draws them, the mode action and the conversation's actions.</summary>
     internal DaggerfallActivationPanel ActivationPanel { get; } = null!;
 
-    /// <summary>The dungeon text modal's and the notebook's actions.</summary>
-    private readonly DaggerfallTextActions _textActions = null!;
+    /// <summary>
+    /// The loot window's actions; the quests' rewards and the corpse and ground activation owners, bound before it is built
+    /// and again with each site, open their windows through it.
+    /// </summary>
+    private readonly DaggerfallLootActions _lootActions = null!;
+
+    /// <summary>The HUD frame each publication sends, the active effects it lists, and the device the player last pressed on.</summary>
+    internal DaggerfallHudFrames HudFrames { get; } = null!;
+
+    /// <summary>The UI actions' admission and dispatch, the shortcut keys and the idle panel keys.</summary>
+    private readonly DaggerfallUiDispatch _dispatch = null!;
+
+    /// <summary>Whether this update's UI input asks to begin play from the entry screen.</summary>
+    public bool RequestsBegin(ReadOnlySpan<ProductInputEvent> input) => _dispatch.RequestsBegin(input);
 
     /// <summary>The Dead screen: its choices and the Host's defeat requests.</summary>
     private readonly DaggerfallDeathScreen _deathScreen;
@@ -847,11 +844,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         if (mode is ProductMode.Playing or ProductMode.Title) _condition.ClearExhaustionDeathLine();
         PublishPresentation();
     }
-
-    /// <summary>An escort's portrait in the art set drawn: a generic escort wears a race's head, which has refreshed art.</summary>
-    private DaggerfallQuestPresentation DrawnEscorts(DaggerfallQuestPresentation quests) => DrawnArt is { } art
-        ? quests with { EscortFaces = [.. quests.EscortFaces.Select(face => face with { MediaId = art.Drawn(face.MediaId) })] }
-        : quests;
 
     public void Dispose()
     {
@@ -974,27 +966,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         _outcomes.React(fact);
     }
 
-    /// <summary>The device the player last pressed something on, so the HUD names its bindings for it.</summary>
-    private string _lastInputDevice = "keyboard";
-
-    /// <summary>
-    /// The device this update's input came from, or null when it carries none: a pad button or a stick
-    /// moved past the controller deadzone (so idle drift never switches it), or a key, a mouse button or
-    /// mouse look. The latest such event wins.
-    /// </summary>
-    private static string? InputDevice(ReadOnlySpan<ProductInputEvent> input, float deadzone)
-    {
-        string? device = null;
-        foreach (ProductInputEvent value in input)
-        {
-            if (value.Kind == InputEventKind.ControllerButton && value.Edge == InputEdge.Pressed) device = "controller";
-            else if (value.Kind == InputEventKind.ControllerAxis && MathF.Abs(value.X) > deadzone) device = "controller";
-            else if (value.Kind is InputEventKind.Key or InputEventKind.PointerButton && value.Edge == InputEdge.Pressed) device = "keyboard";
-            else if (value.Kind == InputEventKind.PointerDelta && (value.X != 0 || value.Y != 0)) device = "keyboard";
-        }
-        return device;
-    }
-
     private static bool PressesAnyKey(ReadOnlySpan<ProductInputEvent> input)
     {
         foreach (ProductInputEvent value in input)
@@ -1004,88 +975,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         return false;
     }
 
-    private void PublishPresentation()
-    {
-        _heldEnchantments.Refresh();
-        RefreshPassiveMagery();
-        _lycanthropy.Refresh();
-        _appearance.RefreshEnemyVoices(State.Actors);
-        DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
-        DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);
-        _appearance.RetireUnavailableMagic(State.Actors, State.ItemInstances.ContainsUnique);
-        InventoryPresentation inventory = _inventoryUi.Read();
-        _hud.Publish(new DaggerfallHudFrame(State.Actors.Player, Presentation, _mode, State.PlayerControl, Slots,
-            Inventory: inventory,
-            Property: EconomyPanels.ReadPropertyPresentation(),
-            Loot: _lootUi.Read(),
-            Character: DaggerfallCharacterSheetText.Describe(_characterUi.Read(State.Actors.Player, State.Progression), _definitions, CurrentTextContext()),
-            CharacterCreationAvailable: !_newGameInitialized,
-            PanelRequest: LatestPanelRequest,
-            SaveSlots: _saveSlots,
-            Bundles: _mode == ProductMode.Title && !_newGameInitialized ? _bundles : null,
-            SaveSlotDiagnostic: _saveSlotDiagnostic,
-            ControlSettings: _controls.Settings,
-            ControlDiagnostic: _controls.Diagnostic,
-            Activation: ActivationPanel.View,
-            Breath: State.Swimming.ReadBreath(State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).ValueInt,
-                State.Effects.GrantsWaterBreathing(DaggerfallActorIdentity.PlayerEntityId)),
-            Quests: DrawnEscorts(State.Quests.ReadPresentation(_questTexts.For, _time.Calendar)),
-            Notebook: _notebook.Read(),
-            Transport: DaggerfallTransportProjection.Read(State.Transport, State.Inventory.Read(), TransportAccess(),
-                ownsShip: State.Property.OwnsShip, wagon: State.Wagon, itemLabel: (key, definition, quantity) => _inventoryUi.DescribeItem(key, definition, quantity,
-                    owner: DaggerfallItemOwner.Wagon(State.Wagon.Id!.Value)).Label),
-            DungeonText: DungeonText.Projection,
-            Death: _deathScreen.View,
-            Rest: RestPanel.View,
-            Lodging: RoomRental.View,
-            Travel: FastTravel.Read(),
-            SiteName: Site.ActiveSite?.Name,
-            Calendar: _time.Calendar,
-            Effects: ReadActiveEffects(),
-            CinematicSource: Cinematics?.ActiveSource,
-            Map: LocalMap.ReadOpen(), Legal: Law.View, CreateItem: CreateItemChoice.View, Teleport: TeleportChoice.View, Dispel: DispelChoice.View, Identify: IdentifyChoice.View, Spells: Spellbook.Read(), Detectors: Detectors.Read())
-        {
-            ActionDrivenTime = ActionDrivenPlay, TimeHeld = PlayerTimeHeld,
-            Weapon = new DaggerfallWeaponView(State.WeaponDrawn,
-                inventory.Items.FirstOrDefault(item => item.EquippedSlots.Contains("right-hand"))?.Label ?? "Bare hands"),
-            Prompt = ReadInteractionPrompt(),
-            InputDevice = _lastInputDevice,
-            Loading = _loading,
-            Screens = DaggerfallUiArt.Screens.ToDictionary(screen => screen, screen => DrawnArt?.Drawn(screen) ?? screen, StringComparer.Ordinal),
-            TutorialOffer = _tutorial.Offer,
-            Radial = Radial.Read(ActivationPanel.View.Mode),
-            TutorialRunning = _tutorial.Running,
-            Tutorial = _tutorial.View,
-        });
-        _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
-        Vector3 facing = ActorHeading.Forward(State.PlayerControl.YawRadians);
-        Vector3? candlePosition = !State.Actors.Player.IsDefeated && State.PlayerControl.Position is { } playerPosition
-            && State.Effects.Active.Any(effect => effect.Definition.Key == DaggerfallIllusionEffects.LightKey)
-            ? playerPosition.ToVector() + new Vector3(facing.X * _tuning.NormalLight.Distance,
-                _spatial.CurrentController.Shape.StandingHeight * _tuning.NormalLight.HeightFraction,
-                facing.Z * _tuning.NormalLight.Distance) : null;
-        _sites.Projection.Lighting.UpdateMobileLights(State.Actors.All, _roster.Definitions, _definitions.Mobiles);
-        IReadOnlyList<DaggerfallDungeonSpellFlightView> spellFlights = SpellFlights.Views();
-        _sites.Projection.Lighting.UpdateSpellLights(spellFlights);
-        _sites.Projection.Lighting.UpdateMagicCandle(candlePosition, _tuning.NormalLight);
-        _appearance.UpdateMagicCandle(candlePosition);
-        if (State.PlayerControl.Position is { } eyeFeet)
-            _viewLight.Update(() => _exterior.ViewLight(eyeFeet.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight));
-        foreach (var appearance in _sites.Appearances) appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
-        _appearance.Publish(State.Actors, _groundContainers.All.Where(pair => pair.Value.PropertyPlacement is null).ToDictionary(),
-            _latestUpdateGeneration is ulong generation && _latestSimulationStep is ulong simulationStep
-                ? _combat.ReadRangedFlights(generation, simulationStep) : [],
-            State.Effects.PerceptionFor, NpcProjection.Views(), spellFlights, State.Npcs.IsGameplayActive,
-            id => _groundContainers.Read(id) is { } contents ? _inventoryUi.GroundLook(id, contents) : null);
-        PublishDebugOverlays();
-    }
-
     /// <summary>The carried inventory as the HUD publishes it, eligibility included.</summary>
     internal InventoryPresentation ReadInventoryPresentation() => _inventoryUi.Read();
-
-    /// <summary>The player's active effects as the HUD lists them.</summary>
-    internal IReadOnlyList<DaggerfallActiveEffectView> ReadActiveEffects() =>
-        DaggerfallMagicPresentation.Read(State.Effects, State.Actors.Player, EffectItemName);
 
     /// <summary>The panel the player asked for through a device the DOM has no channel of its own for.</summary>
     internal DaggerfallPanelRequest? LatestPanelRequest => _interactions.LatestPanelRequest;
@@ -1236,21 +1127,6 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
         if (_authoredEntityIds.Contains(entityId))
             throw new InvalidOperationException($"Unique item identity {entityId} is authored content and cannot be removed.");
         _uniqueItems.Remove(new DurableIdentityReference(DurableIdentityKind.Item, entityId));
-    }
-
-    /// <summary>
-    /// What ordinary use would do to the target the player aims at, named for the HUD's prompt; null
-    /// outside play or when nothing usable is aimed at.
-    /// </summary>
-    private DaggerfallInteractionPromptView? ReadInteractionPrompt()
-    {
-        if (_mode != ProductMode.Playing || _interactions.HoldsWorldOpen || _activation is null) return null;
-        if (_activation.FocusedTarget(State.Actors.Player.Actor.Entity, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl))
-            is not { } target) return null;
-        // The owner of what is aimed at words what use would do from its own state; where use would do
-        // nothing (a door in Talk mode, a person in Bash), there is no prompt to promise it.
-        if (_activation.PromptAction(target) is not { } action) return null;
-        return new(action, string.IsNullOrWhiteSpace(target.Label) ? DaggerfallHudText.TargetName(target.Kind) : target.Label);
     }
 
     /// <summary>The name of the item a player effect comes from, for the active-effect status row.</summary>
