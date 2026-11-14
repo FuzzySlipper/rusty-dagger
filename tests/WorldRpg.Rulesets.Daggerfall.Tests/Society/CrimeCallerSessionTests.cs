@@ -184,7 +184,7 @@ public sealed class CrimeCallerSessionTests
             var site = s.Site.ActiveSite!;
             TargetId = s.State.Npcs.RegisterCivilian(new(site.Id.Region, site.Name, string.Empty),
                 new("breton", "Female", 0, 0, 0, 0), role, ["talk"]);
-            return s.MaterializeNpcActor(TargetId, new(s.State.Actors.Get(2000).Position, 0));
+            return s.Civilians.Materialize(TargetId, new(s.State.Actors.Get(2000).Position, 0));
         }
         private EngineContextFake Engine()
         {

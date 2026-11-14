@@ -498,7 +498,7 @@ internal sealed partial class DaggerfallSession
         if (_exterior.ActiveLocationLoaded) State.Quests.AdmitPlacements(_sites.Projection.Inputs, this);   // Quests
         State.Quests.ReconcileFoeCommands();                                                      // Quests
         ReconcileNpcProjection();                                                                 // Actors
-        UpdateCivilianPopulation(simulationStep, update.DeltaSeconds);                            // Actors
+        Population.Step(simulationStep, update.DeltaSeconds);                                     // Actors
         _dialogue?.RefreshEligibility();                                                          // Dialogue
     }
 
@@ -711,5 +711,12 @@ internal sealed partial class DaggerfallSession
         State.HeldEnchantments.Refresh();                                                         // Magic
         // Inactive deltas stay coherent while suspended. The site's existing materialization
         // restores their effects and stat sources before this same live sweep releases them.
+    }
+
+    /// <summary>Who stands in the active site after a change: projected questors, then the town's source population.</summary>
+    internal void ReconcileNpcProjection()
+    {
+        NpcProjection.Reconcile();                                                                // Actors
+        Population.Reconcile();                                                                   // Actors
     }
 }

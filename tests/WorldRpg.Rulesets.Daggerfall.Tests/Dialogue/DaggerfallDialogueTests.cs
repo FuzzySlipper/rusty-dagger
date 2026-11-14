@@ -193,7 +193,7 @@ public sealed class DaggerfallDialogueTests
             long id = session.State.Npcs.RegisterCivilian(
                 new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
                 new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, faction), role, ["talk"]);
-            session.MaterializeNpcActor(id, session.State.Actors.Get(2000).Pose);
+            session.Civilians.Materialize(id, session.State.Actors.Get(2000).Pose);
             session.State.Npcs.Bind(id, session.Sites.ActiveProfile);
             return id;
         }
@@ -331,7 +331,7 @@ public sealed class DaggerfallDialogueTests
             long id = session.State.Npcs.RegisterCivilian(
                 new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
                 new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, 0), "guard", services ?? ["talk"]);
-            session.MaterializeNpcActor(id, session.State.Actors.Get(2000).Pose);
+            session.Civilians.Materialize(id, session.State.Actors.Get(2000).Pose);
             session.State.Npcs.Bind(id, session.Sites.ActiveProfile);
             Npc = session.State.Npcs.Require(id);
             Actor = session.State.Actors.Get(id);

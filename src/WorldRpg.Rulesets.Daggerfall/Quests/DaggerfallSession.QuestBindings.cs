@@ -73,4 +73,33 @@ internal sealed partial class DaggerfallSession
         });
     }
 
+    /// <summary>Places a quest person: a civilian actor moves, a live actor turns in place, anyone else is projected.</summary>
+    private DaggerfallQuestResourceBinding PlaceQuestPerson(string instanceId, DaggerfallQuestResourceState resource,
+        DaggerfallSiteProfile profile, WorldPoint position)
+    {
+        var person = resource.SelectedPerson!;
+        var appearance = person.Appearance ?? throw new NotSupportedException($"Quest Person '{resource.Symbol}' has no selected billboard appearance.");
+        if (!profile.BillboardSprites.TryGetValue((appearance.BillboardArchive, appearance.BillboardRecord), out var sprite))
+            throw new NotSupportedException($"Quest Person '{resource.Symbol}' has no published billboard {appearance.BillboardArchive}/{appearance.BillboardRecord}.");
+        long id = resource.Binding.ActorIds.Length == 1 ? resource.Binding.ActorIds[0]
+            : person.QuestorId ?? State.Npcs.RegisterStable(DaggerfallNpcKind.Questor, instanceId + "/" + resource.Symbol,
+                new(profile.Site!.Value.Region, _site.Require(profile.Site.Value).Name, profile.ProfileKey.LogicalId), appearance, "quest person", ["talk"]);
+        var npc = State.Npcs.Require(id);
+        // GetSiteMarker/AlignBillboardToGround use the marker as a probe. A person stands at their pose; only a
+        // projected questor draws the centred billboard, which keeps its pivot above the floor.
+        var probe = position;
+        if (profile.ProfileKind != DaggerfallWorldProfileKind.Dungeon)
+            probe = WorldPoint.From(position.ToVector() + System.Numerics.Vector3.UnitY * (sprite.Size.Y / 2));
+        var floor = _grounding.GroundPosition(probe, 4);
+        bool projected = npc.Kind != DaggerfallNpcKind.Civilian && !State.Actors.TryGet(id, out _);
+        position = projected ? WorldPoint.From(floor.ToVector() + System.Numerics.Vector3.UnitY * (sprite.Size.Y * sprite.Pivot.Y)) : floor;
+        if (npc.Kind == DaggerfallNpcKind.Civilian) RelocateQuestActor(id, position);
+        else if (State.Actors.TryGet(id, out var actor)) actor.ApplyPose(new(position, actor.HeadingYawRadians));
+        else NpcProjection.Project(npc, profile, position);
+        State.Npcs.SetDisplayName(id, person.DisplayName);
+        // A live actor owns its own pose; only a projected questor keeps a detached registry placement.
+        if (State.Actors.TryGet(id, out _)) State.Npcs.Bind(id, profile.ProfileKey);
+        else State.Npcs.Place(id, profile.ProfileKey, WorldPoint.From(_exterior.LocalToProfile(position.ToVector())));
+        return DaggerfallQuestResourceBinding.Actors(id);
+    }
 }

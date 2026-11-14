@@ -109,7 +109,7 @@ internal sealed partial class DaggerfallSession
         {
             if (!State.Actors.TryGet(npc.DurableId, out var actor) || actor.IsDefeated) continue;
             long guard = AdmitCityWatch(actor.Pose);
-            RetireNpcActor(npc.DurableId);
+            Civilians.Retire(npc.DurableId);
             live.Add(guard);
         }
         // Nearby real watchmen join the response; dynamic arrivals use the same roster and safe

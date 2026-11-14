@@ -447,7 +447,7 @@ internal sealed partial class DaggerfallSession
                     effects.GrantsWaterWalking(id),
                     effects.GrantsLevitation(id)),
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),
-                openBlockedDoor: TryOpenDoorForEnemy, selectTarget: SelectQuestAwareEnemyTarget, questRestrained: QuestFoeRestrained, attackAtDistance: _combat.EnemyAttackAtDistance,
+                openBlockedDoor: actor => _doors.TryOpenForEnemy(actor.Position), selectTarget: SelectQuestAwareEnemyTarget, questRestrained: QuestFoeRestrained, attackAtDistance: _combat.EnemyAttackAtDistance,
                 engagement: new DaggerfallContactEngagement(_tuning.Contact));
             _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
@@ -742,6 +742,16 @@ internal sealed partial class DaggerfallSession
             _dungeonPopulation = new DaggerfallDungeonPopulation(definitions, _random, _uniqueItems, _groundContainers, _grounding.RestingPosition, _encounters,
                 (definition, pose, spawnDistance, passive) => _roster.Spawn(definition, pose, spawnDistance: spawnDistance, passive: passive),
                 State.Character, () => State.Progression.Level);
+            Civilians = new DaggerfallCivilians(State.Npcs, actors, () => _sites.Projection.Inputs, () => _appearance, _site.Require,
+                point => _exterior.ProfileToLocal(point), (npc, pose) => _roster.MaterializeCivilian(npc, pose), id => _roster.UnloadActor(id),
+                RetireActor, id => RetireDetachedActor(id, DaggerfallActorKinds.Civilian));
+            Population = new DaggerfallSourcePopulation(State.Npcs, actors, State.PlayerControl, definitions, _tuning.CivilianWander, Civilians,
+                () => _sites.Projection.Inputs, () => _sites.ActiveProfile, () => _appearance, () => _exterior.ActiveLocationLoaded,
+                () => _exterior.ExteriorResidencyInitialized, point => _exterior.ProfileToLocal(point), point => _exterior.LocalToProfile(point),
+                _site.Require, () => _time.Calendar.IsDay, () => State.RacialOverrides.Current?.SuppressPopulationSpawns == true,
+                id => _reactions.Holds(id), (actor, policy, step, deltaSeconds) => _ = _enemyBehavior.UpdateCivilian(actor, policy, step, deltaSeconds));
+            NpcProjection = new DaggerfallNpcProjection(State.Npcs, actors, () => _sites.Projection.Inputs, () => _appearance,
+                () => _exterior.ActiveLocationLoaded, point => _exterior.ProfileToLocal(point));
             if (saved is null) _roster.GrantInitialAuthoredEquipment();
             CreateItemChoice = new DaggerfallCreateItem(definitions, _random, State.Inventory, State.ItemInstances, State.Encumbrance,
                 _uniqueItems, State.Character, () => _time.Calendar, Presentation, saved?.PendingCreateItem);

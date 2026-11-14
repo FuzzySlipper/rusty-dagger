@@ -282,7 +282,7 @@ public sealed class DaggerfallPopulationSessionTests
         long id = civilian.DurableId;
         DaggerfallFactionDefinition sourceFaction = TestPayload.Definitions.Factions.Factions.Values.First(faction => faction.Id > 0
             && TestPayload.Definitions.Catalogs.Races.Any(race => race.DonorRaceId == faction.Race));
-        Assert.Equal(DaggerfallSession.PopulationRole(sourceFaction), civilian.Role);
+        Assert.Equal(DaggerfallSourcePopulation.Role(sourceFaction), civilian.Role);
         Assert.True(session.State.Actors.TryGet(id, out ActorState? actor));
         Assert.Equal(session.Exterior.ProfileToLocal(new WorldPoint(1F, 1F, 1F)), actor!.Position);
 

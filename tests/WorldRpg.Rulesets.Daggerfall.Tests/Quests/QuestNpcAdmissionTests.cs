@@ -136,7 +136,7 @@ public sealed class QuestNpcAdmissionTests
         var site = definitions.Locations.Records.Single(value => value.Id == fixture.Inputs.Site);
         long id = state.Npcs.RegisterCivilian(new(site.Region, site.Name, ""), new("breton", "Male", flat.Archive, flat.Record, 17, faction.Id), "quest giver", ["talk"]);
         state.Npcs.SetDisplayName(id, "Existing Giver");
-        session.MaterializeNpcActor(id, new(new(2, 3, 4), .25f));
+        session.Civilians.Materialize(id, new(new(2, 3, 4), .25f));
         state.Npcs.Bind(id, fixture.Inputs.ProfileKey);
         state.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).SetCurrent(2, clamp: true);
         double health = state.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current;
@@ -173,7 +173,7 @@ public sealed class QuestNpcAdmissionTests
         Assert.Equal(id, restored.State.Quests.Capture().Instances.Single().Resources.Single().Binding.ActorIds.Single());
         Assert.True(restored.TryTransitionTo(fixture.Inputs.ProfileKey));
         Assert.False(restored.State.Actors.TryGet(id, out _));
-        Assert.Empty(restored.MaterializeNpcActors(default));
+        Assert.Empty(restored.Civilians.MaterializeAll(default));
         using var inactive = DaggerfallSession.Restore(fixture.Engine.Context, fixture.Composition with { Profiles = profiles }, restored.CaptureSave());
         Assert.True(inactive.TryTransitionTo(castle.ProfileKey));
         Assert.Equal(health, inactive.State.Actors.Get(id).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current);

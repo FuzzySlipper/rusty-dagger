@@ -506,7 +506,7 @@ public sealed class PropertySessionTests
             WorldPoint position = Session.State.PlayerControl.Position!.Value;
             Session.State.Npcs.Place(BankerId, Session.Sites.ActiveProfile,
                 WorldPoint.From(Session.Exterior.LocalToProfile(position.ToVector())));
-            Session.MaterializeNpcActor(BankerId, new ActorPose(position, 0));
+            Session.Civilians.Materialize(BankerId, new ActorPose(position, 0));
             var target = Session.Dialogue.NpcTargets().Single(value => value.Identity.Value == (ulong)BankerId);
             Assert.True(Session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);
             return Session.ActivationView.Dialogue!.Revision;

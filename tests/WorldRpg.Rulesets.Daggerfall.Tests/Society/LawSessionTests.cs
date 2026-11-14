@@ -337,7 +337,7 @@ public sealed class LawSessionTests
         {
             var site = Session.Site.ActiveSite!;
             long id = Session.State.Npcs.RegisterCivilian(new(site.Id.Region, site.Name, string.Empty), new("breton", "Female", 0, 0, 0, 0), role, ["talk"]);
-            return Session.MaterializeNpcActor(id, new(Session.State.PlayerControl.Position!.Value, 0));
+            return Session.Civilians.Materialize(id, new(Session.State.PlayerControl.Position!.Value, 0));
         }
         internal void Charge(bool witnessed = true, string operation = "charge", DaggerfallCrimeKind crime = DaggerfallCrimeKind.Theft)
         {

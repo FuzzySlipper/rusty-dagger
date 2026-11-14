@@ -43,7 +43,7 @@ public sealed class HudSnapshotContractTests
         long guardId = session.State.Npcs.RegisterCivilian(
             new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
             new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, 0), "guard", ["talk"]);
-        session.MaterializeNpcActor(guardId, session.State.Actors.Get(2000).Pose);
+        session.Civilians.Materialize(guardId, session.State.Actors.Get(2000).Pose);
         session.State.Npcs.Bind(guardId, session.Sites.ActiveProfile);
         DaggerfallActivationTarget target = Assert.Single(session.Dialogue.NpcTargets());
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);

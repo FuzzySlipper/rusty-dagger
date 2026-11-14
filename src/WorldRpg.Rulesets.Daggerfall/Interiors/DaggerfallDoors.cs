@@ -361,6 +361,38 @@ internal sealed class DaggerfallDoorRuntime : IDisposable
     private DurableIdentityReference ReferenceFor(DaggerfallRdbDoorId id) =>
         new(DurableIdentityKind.Resource, StableHash.NonZeroFnv1a64($"daggerfall.door.v1|{_profileId}|{id}"));
 
+    /// <summary>
+    /// Routes a blocked enemy's donor door action through the active canonical door owner. The
+    /// behavior layer supplies the source CanOpenDoors fact; this method only selects a nearby
+    /// normalized door and opens or bashes it.
+    /// </summary>
+    internal bool TryOpenForEnemy(WorldPoint position)
+    {
+        const float reach = 1.75F;
+        DaggerfallDoorView[] nearby = [.. All
+            .Where(door => door.Kind == DaggerfallDoorKind.Normal && door.Motion == DaggerfallDoorMotion.Closed)
+            .Where(door => MathF.Abs(door.Pose.Translation.Y - position.Y) <= 2.5F)
+            .Where(door =>
+            {
+                float dx = door.Pose.Translation.X - position.X;
+                float dz = door.Pose.Translation.Z - position.Z;
+                return (dx * dx) + (dz * dz) <= reach * reach;
+            })
+            .OrderBy(door => door.Id.SourceKey, StringComparer.Ordinal)
+            .ThenBy(door => door.Id.BlockX)
+            .ThenBy(door => door.Id.BlockZ)
+            .ThenBy(door => door.Id.ModelIndex)];
+        foreach (DaggerfallDoorView door in nearby)
+        {
+            DaggerfallDoorOperationResult result = !door.IsLocked
+                ? Open(door.Id, DaggerfallDoorOperationSource.Player)
+                : door.IsMagicallyHeld ? DaggerfallDoorOperationResult.MagicallyHeld : Bash(door.Id);
+            if (result is DaggerfallDoorOperationResult.Started or DaggerfallDoorOperationResult.AlreadyOpen)
+                return true;
+        }
+        return false;
+    }
+
     internal DaggerfallDoorOperationResult Open(DaggerfallRdbDoorId id, DaggerfallDoorOperationSource source)
     {
         Door door = Require(id);

@@ -15,7 +15,7 @@ public sealed class DaggerfallPopulationPolicyTests
     {
         DaggerfallSiteRecord site = Site(blockCount);
 
-        Assert.Equal(expected, DaggerfallSession.PopulationCapacity(site, sourceCount));
+        Assert.Equal(expected, DaggerfallSourcePopulation.Capacity(site, sourceCount));
     }
 
     [Fact]
@@ -26,9 +26,9 @@ public sealed class DaggerfallPopulationPolicyTests
         // source policy with the same type/name facts without admitting a fake actor.
         DaggerfallFactionDefinition guard = commoner with { Type = 10, TypeName = "KnightlyGuard" };
 
-        Assert.Equal("guard", DaggerfallSession.PopulationRole(guard));
-        Assert.Equal("civilian", DaggerfallSession.PopulationRole(commoner));
-        Assert.Equal("civilian", DaggerfallSession.PopulationRole(null));
+        Assert.Equal("guard", DaggerfallSourcePopulation.Role(guard));
+        Assert.Equal("civilian", DaggerfallSourcePopulation.Role(commoner));
+        Assert.Equal("civilian", DaggerfallSourcePopulation.Role(null));
     }
 
     [Fact]

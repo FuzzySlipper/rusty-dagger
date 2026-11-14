@@ -197,7 +197,7 @@ public sealed class CivilianAimSessionTests
             Session.State.WeaponDrawn = true;
             DaggerfallSiteRecord site = Session.Site.ActiveSite!;
             Civilian = Session.State.Npcs.RegisterCivilian(new(site.Id.Region, site.Name, string.Empty), new("breton", "Female", 0, 0, 0, 0), "civilian", ["talk"]);
-            Session.MaterializeNpcActor(Civilian, Session.State.Actors.Get(Enemy).Pose);
+            Session.Civilians.Materialize(Civilian, Session.State.Actors.Get(Enemy).Pose);
             Session.State.Npcs.Bind(Civilian, Session.Sites.ActiveProfile);
             foreach (long actor in new[] { Civilian, Enemy })
             {

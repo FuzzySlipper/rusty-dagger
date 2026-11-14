@@ -115,7 +115,7 @@ public sealed class QuestGuardSpawnTests
         {
             var site = Session.Site.ActiveSite!;
             long id = Session.State.Npcs.RegisterCivilian(new(site.Id.Region, site.Name, ""), new("breton", "Female", 0, 0, 0, 0), role, ["talk"]);
-            return Session.MaterializeNpcActor(id, new(WorldPoint.From(Session.State.PlayerControl.Position!.Value.ToVector() + new Vector3(0, 0, -2)), 0));
+            return Session.Civilians.Materialize(id, new(WorldPoint.From(Session.State.PlayerControl.Position!.Value.ToVector() + new Vector3(0, 0, -2)), 0));
         }
         internal DaggerfallSession Restore(DaggerfallSession? from = null) => DaggerfallSession.Restore(Engine().Context, composition, (from ?? Session).CaptureSave());
         private EngineContextFake Engine()

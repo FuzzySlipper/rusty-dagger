@@ -84,7 +84,7 @@ internal sealed partial class DaggerfallSession
         }
         else if (!TryGuardArrivalPose(operation + "/quest/" + state.SpawnedCount, player, out pose)) return state;
         long guard = AdmitCityWatch(pose);
-        if (candidate is { } converted && State.Npcs.Require(converted).Role == "guard") RetireNpcActor(converted);
+        if (candidate is { } converted && State.Npcs.Require(converted).Role == "guard") Civilians.Retire(converted);
         // The law owner receives actual watchmen only when a current case already exists.
         // Spawning never invents an accusation or a second legal response.
         if (CurrentLegalResponse is { Modal: false } response && response.Profile.Require() == _activeProfileKey)
