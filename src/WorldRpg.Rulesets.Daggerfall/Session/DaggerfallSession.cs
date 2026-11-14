@@ -938,7 +938,7 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             DungeonText: _dungeonTextProjection,
             Death: _deathPresentation.View,
             Rest: RestView,
-            Lodging: LodgingView,
+            Lodging: RoomRental.View,
             Travel: FastTravel.Read(),
             SiteName: Site.ActiveSite?.Name,
             Calendar: _time.Calendar,
@@ -1040,6 +1040,15 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>The guilds' providers: what a guild's NPC answers to its topics, its welcome and its free passage.</summary>
     internal DaggerfallGuildProviders GuildProviders { get; } = null!;
+
+    /// <summary>The bank counter: the open bank, its region, loans and their daily reminders and defaults.</summary>
+    internal DaggerfallBanking Banking { get; } = null!;
+
+    /// <summary>Trading with the merchant the player is talking to.</summary>
+    internal DaggerfallMerchantTrade MerchantTrade { get; } = null!;
+
+    /// <summary>Renting a room at the tavern the player stands in.</summary>
+    internal DaggerfallRoomRental RoomRental { get; } = null!;
 
     /// <summary>The atlas the import drew and the tiles granted to the page, or null when the data container carries none and the travel map draws classic art.</summary>
     private readonly DaggerfallAtlasTiles? _atlasTiles;

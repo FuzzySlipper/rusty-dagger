@@ -201,6 +201,29 @@ public sealed class DaggerfallSkillTrainingServiceTests
         return TestPayload.Definitions;
     }
 
+    [Fact]
+    public void Dialogue_training_checks_the_request_the_trainer_and_the_price_then_trains_with_its_line()
+    {
+        DaggerfallSkillTrainingProviderPolicy provider = PickProvider(requiresMembership: true, out string skill, out DaggerfallCareerDefinition career);
+        using Fixture f = new(provider, skill, career, grantGold: true, start: new(405, 5, 0, 23, 0, 0), level: 3);
+        f.Social.JoinGuild(provider.MembershipFactionId, 0);
+        f.SetSkill(skill, 7);
+        Assert.True(f.Npcs.TryGet(501, out DaggerfallNpc? trainer));
+        DaggerfallNpc? Talking(string revision) => revision == "page" ? trainer : null;
+
+        Assert.Equal(300UL, Assert.IsType<DaggerfallSkillTrainingProviderView>(f.TrainingService.ReadProvider(trainer)).Price);
+        Assert.Null(f.TrainingService.ReadProvider((DaggerfallNpc?)null));
+        Assert.Equal(("Training request is incomplete.", false), f.TrainingService.Train("page", skill, null, true, Talking));
+        Assert.Equal(("Confirm the quoted training price before paying.", false), f.TrainingService.Train("page", skill, 300, false, Talking));
+        Assert.Equal(("That trainer is no longer available.", false), f.TrainingService.Train("gone", skill, 300, true, Talking));
+        Assert.Equal(("The training price changed. Review the current offer.", false), f.TrainingService.Train("page", skill, 299, true, Talking));
+
+        (string line, bool accepted) = f.TrainingService.Train("page", skill, 300, true, Talking);
+        Assert.True(accepted);
+        Assert.StartsWith($"Training complete: {skill} is now ", line);
+        Assert.False(f.TrainingService.Train("page", skill, 300, true, Talking).Accepted);
+    }
+
     private sealed class Fixture : IDisposable
     {
         private readonly EntityDirectory _entities = new();

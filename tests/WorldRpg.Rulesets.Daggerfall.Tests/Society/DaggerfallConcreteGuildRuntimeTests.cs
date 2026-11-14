@@ -62,7 +62,7 @@ public sealed class DaggerfallConcreteGuildRuntimeTests
             fixture.Social,
             _ => 0,
             DaggerfallConcreteGuildCatalog.StandaloneMembershipPolicies);
-        DaggerfallConcreteGuildServiceRuntime runtime = new(membership, fixture.Npcs, fixture.Services);
+        DaggerfallConcreteGuildServiceRuntime runtime = new(membership, fixture.Npcs, fixture.Services.ProviderAvailable);
         _ = fixture.Social.JoinGuild(41, currentDay: 0);
         DaggerfallNpcSite site = fixture.CurrentSite;
 
@@ -142,7 +142,7 @@ public sealed class DaggerfallConcreteGuildRuntimeTests
             fixture.Social,
             _ => 0,
             DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
-        DaggerfallConcreteGuildServiceRuntime services = new(membership, fixture.Npcs, fixture.Services);
+        DaggerfallConcreteGuildServiceRuntime services = new(membership, fixture.Npcs, fixture.Services.ProviderAvailable);
         DaggerfallKnightlyOrderClaimState claims = new();
         DaggerfallKnightlyOrderClaimRuntime runtime = new(services, claims, FixedRandom.Create(3).Service);
 
@@ -208,7 +208,7 @@ public sealed class DaggerfallConcreteGuildRuntimeTests
             fixture.Social,
             _ => 0,
             DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
-        DaggerfallConcreteGuildServiceRuntime services = new(membership, fixture.Npcs, fixture.Services);
+        DaggerfallConcreteGuildServiceRuntime services = new(membership, fixture.Npcs, fixture.Services.ProviderAvailable);
         DaggerfallKnightlyOrderClaimState claims = new();
         DaggerfallKnightlyOrderClaimRuntime runtime = new(services, claims, FixedRandom.Create(3).Service);
 
@@ -225,9 +225,8 @@ public sealed class DaggerfallConcreteGuildRuntimeTests
         DaggerfallKnightlyClaimTransactionResult rejected = runtime.CompleteHouse(
             offer,
             currentDay: 0,
-            _ => DaggerfallKnightlyHouseAllocationResult.FromPropertyTransaction(
-                new(false, DaggerfallPropertyTransactionKind.Purchase, DaggerfallPropertyKind.House,
-                    DaggerfallPropertyTransactionDenial.PaymentRejected, 0, new DaggerfallPropertyStorageKey("house/rejected"), "rejected")),
+            _ => new DaggerfallPropertyTransactionResult(false, DaggerfallPropertyTransactionKind.Purchase, DaggerfallPropertyKind.House,
+                DaggerfallPropertyTransactionDenial.PaymentRejected, 0, new DaggerfallPropertyStorageKey("house/rejected"), "rejected").AsKnightlyHouse(),
             input);
         Assert.False(rejected.Applied);
         Assert.Equal(DaggerfallKnightlyClaimTransactionDenial.AllocationRejected, rejected.Denial);
@@ -236,9 +235,8 @@ public sealed class DaggerfallConcreteGuildRuntimeTests
         DaggerfallKnightlyClaimTransactionResult accepted = runtime.CompleteHouse(
             offer,
             currentDay: 0,
-            _ => DaggerfallKnightlyHouseAllocationResult.FromPropertyTransaction(
-                new(true, DaggerfallPropertyTransactionKind.Purchase, DaggerfallPropertyKind.House,
-                    DaggerfallPropertyTransactionDenial.None, 0, new DaggerfallPropertyStorageKey("house/accepted"), "allocated")),
+            _ => new DaggerfallPropertyTransactionResult(true, DaggerfallPropertyTransactionKind.Purchase, DaggerfallPropertyKind.House,
+                DaggerfallPropertyTransactionDenial.None, 0, new DaggerfallPropertyStorageKey("house/accepted"), "allocated").AsKnightlyHouse(),
             input);
         Assert.True(accepted.Applied);
         Assert.Equal("house/accepted", accepted.HouseStorageKey);

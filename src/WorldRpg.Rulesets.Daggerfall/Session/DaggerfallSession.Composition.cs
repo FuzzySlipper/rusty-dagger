@@ -503,7 +503,7 @@ internal sealed partial class DaggerfallSession
                 currency, _uniqueItems, containers, playerEntity, () => _time.Calendar, () => _site.ActiveSite is { } active
                     ? new DaggerfallNpcSite(active.Id.Region, active.Name, string.Empty, _sites.ActiveProfile.LogicalId)
                     : null, saved?.Services);
-            DaggerfallConcreteGuildServiceRuntime concreteGuildServices = new(guildMembership, npcs, services);
+            DaggerfallConcreteGuildServiceRuntime concreteGuildServices = new(guildMembership, npcs, services.ProviderAvailable);
             DaggerfallTempleServiceRuntime templeServices = new(concreteGuildServices, services, npcs, social,
                 effects, poisons, actors, _random, () => _time);
             DaggerfallKnightlyOrderClaimState knightlyClaims = new(saved?.KnightlyClaims);
@@ -590,6 +590,21 @@ internal sealed partial class DaggerfallSession
                 },
                 classicArt: () => _classicArt,
                 yaw: () => State.PlayerControl.YawRadians);
+            Banking = new DaggerfallBanking(State.Bank, State.Currency, State.Loans, State.Services, State.Social, definitions.Factions,
+                State.Progression, definitions.BuildingNames.RegionName,
+                inventorySuppressed: () => State.RacialOverrides.Current?.SuppressInventory == true,
+                calendar: () => _time.Calendar,
+                provider: () => _sites.BankProvider,
+                open: provider => _sites.BankProvider = provider);
+            MerchantTrade = new DaggerfallMerchantTrade(State.Merchants, _site,
+                currentNpc: revision => _dialogue?.CurrentNpc(revision),
+                building: CurrentInteriorBuilding,
+                activeProfile: () => _activeProfileKey,
+                dialogueRevision: () => _activationPresentation.View.Dialogue?.Revision);
+            RoomRental = new DaggerfallRoomRental(State.Lodging, _site, State.GuildMembership, State.Actors.Player.Stats, State.Currency,
+                calendar: () => _time.Calendar,
+                activeProfile: () => _activeProfileKey,
+                building: CurrentInteriorBuilding);
             ItemSouls = new DaggerfallItemSouls(new(State.Inventory, State.ItemInstances, definitions.Magic, _uniqueItems), definitions,
                 State.ItemInstances, _heldEnchantments, State.Effects, _facts, Presentation,
                 id => DefinitionsByActor.TryGetValue(id, out var actor) ? actor : null,
@@ -661,7 +676,7 @@ internal sealed partial class DaggerfallSession
                     PermanentPlayerClanFactionId: State.RacialOverrides.Current?.State.Vampire?.Clan, CurrentProfile: _sites.ActiveProfile,
                     Interior: _sites.Projection.Inputs.InteriorBuilding),
                 State.Npcs.SetDisplayName, questPlaces));
-            _inventoryUi.UseBank(State.Bank, ActiveBankRegion, () => State.Bank.DepositableGold(State.Wagon, TransportAccess()));
+            _inventoryUi.UseBank(State.Bank, () => Banking.ActiveRegion, () => State.Bank.DepositableGold(State.Wagon, TransportAccess()));
             _inventoryUi.UseLoans(State.Loans, () => _time.Calendar, () => State.Progression.Level);
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
                 entity => State.Actors.Entities.IdentityOf(new Rusty.Engine.Entities.EntityId(entity)).Value);
@@ -710,7 +725,7 @@ internal sealed partial class DaggerfallSession
                 dialogueOpen: () => _activationPresentation.View.Dialogue is not null,
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
-                bankOpen: () => ActiveBankRegion() is not null, dispelOpen: () => DispelChoice.Pending is not null, identifyOpen: () => IdentifyChoice.Open, teleportOpen: () => TeleportChoice.Pending is not null, createItemOpen: () => CreateItemChoice.Pending is not null, legalOpen: () => Law.ModalOpen,
+                bankOpen: () => Banking.ActiveRegion is not null, dispelOpen: () => DispelChoice.Pending is not null, identifyOpen: () => IdentifyChoice.Open, teleportOpen: () => TeleportChoice.Pending is not null, createItemOpen: () => CreateItemChoice.Pending is not null, legalOpen: () => Law.ModalOpen,
                 tutorialOpen: () => _tutorial.Shown);
             itemInstances.StackChanged += State.Quests.ObserveStackChange;
             // Only a held bundle lives as long as its item is worn and whole. A used or striking item's

@@ -100,6 +100,60 @@ internal sealed class DaggerfallSkillTrainingService
     }
 
     /// <summary>Lists exactly the skills available from this current Daggerfall trainer.</summary>
+    /// <summary>The training this person offers, for the dialogue's training page; none when they do not train.</summary>
+    internal DaggerfallSkillTrainingProviderView? ReadProvider(DaggerfallNpc? npc) =>
+        npc is null || !npc.Services.Contains(DaggerfallSkillTrainingPolicy.ServiceName, StringComparer.Ordinal)
+            ? null : ReadProvider(new DaggerfallServiceProvider(npc.DurableId, npc.Site, DaggerfallSkillTrainingPolicy.ServiceName));
+
+    /// <summary>
+    /// Trains <paramref name="skill"/> with the person the player talks to on this dialogue revision, at the price the
+    /// player confirmed. Returns the player's line and whether the training was given.
+    /// </summary>
+    /// <param name="npcFor">The person the player is talking to on a dialogue revision.</param>
+    internal (string Line, bool Accepted) Train(string? revision, string? skill, ulong? quotedPrice, bool confirm,
+        Func<string, DaggerfallNpc?> npcFor)
+    {
+        if (revision is not { Length: > 0 } || skill is not { Length: > 0 } || quotedPrice is not ulong price)
+            return ("Training request is incomplete.", false);
+        if (!confirm) return ("Confirm the quoted training price before paying.", false);
+
+        DaggerfallNpc? npc = npcFor(revision);
+        if (npc is null || !npc.Services.Contains(DaggerfallSkillTrainingPolicy.ServiceName, StringComparer.Ordinal))
+            return ("That trainer is no longer available.", false);
+
+        DaggerfallServiceProvider provider = new(npc.DurableId, npc.Site, DaggerfallSkillTrainingPolicy.ServiceName);
+        DaggerfallSkillTrainingProviderView? view = ReadProvider(provider);
+        if (view is null) return ("That person does not offer skill training.", false);
+        if (view.Price != price) return ("The training price changed. Review the current offer.", false);
+
+        DaggerfallSkillTrainingQuoteResult quoted = Quote(new($"dialogue-training:{revision}:{skill}", provider), skill);
+        if (!quoted.IsQuoted) return (TrainingMessage(quoted.TrainingDenial, quoted.ServiceOutcome?.Denial), false);
+
+        DaggerfallSkillTrainingOutcome outcome = Commit(quoted.Quote!);
+        return outcome.Accepted
+            ? ($"Training complete: {skill} is now {outcome.PermanentValue}.", true)
+            : (TrainingMessage(outcome.TrainingDenial, outcome.ServiceOutcome?.Denial), false);
+    }
+
+    private static string TrainingMessage(DaggerfallSkillTrainingDenial denial, DaggerfallServiceDenial? serviceDenial) =>
+        denial switch
+        {
+            DaggerfallSkillTrainingDenial.SkillNotOffered => "That trainer does not teach this skill.",
+            DaggerfallSkillTrainingDenial.SkillAtLimit => "That skill has reached the trainer's limit.",
+            DaggerfallSkillTrainingDenial.TrainingTooSoon => "You have already trained during this period.",
+            DaggerfallSkillTrainingDenial.UnsupportedProvider => "That person does not offer skill training.",
+            DaggerfallSkillTrainingDenial.QuoteChanged => "The training offer changed. Review the current price.",
+            _ => serviceDenial switch
+            {
+                DaggerfallServiceDenial.NotMember => "You are not a member of the required guild.",
+                DaggerfallServiceDenial.InsufficientRank => "Your guild rank is too low for this service.",
+                DaggerfallServiceDenial.InsufficientFunds => "You do not have enough gold for training.",
+                DaggerfallServiceDenial.ProviderUnavailable or DaggerfallServiceDenial.SiteChanged
+                    or DaggerfallServiceDenial.ServiceUnavailable => "That trainer is no longer available.",
+                _ => "Training was refused.",
+            },
+        };
+
     internal DaggerfallSkillTrainingProviderView? ReadProvider(DaggerfallServiceProvider provider)
     {
         ArgumentNullException.ThrowIfNull(provider);

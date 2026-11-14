@@ -105,10 +105,10 @@ internal static class DaggerfallTempleBlessingEffects
     }
 
     internal static JsonElement Encode(DaggerfallTempleBlessingState state) =>
-        JsonSerializer.SerializeToElement(state.Validate(), DaggerfallSaveJsonContext.Default.DaggerfallTempleBlessingState);
+        JsonSerializer.SerializeToElement(state.Validate(), DaggerfallTempleBlessingJson.Default.DaggerfallTempleBlessingState);
 
     internal static DaggerfallTempleBlessingState Read(JsonElement state) =>
-        (state.Deserialize(DaggerfallSaveJsonContext.Default.DaggerfallTempleBlessingState)
+        (state.Deserialize(DaggerfallTempleBlessingJson.Default.DaggerfallTempleBlessingState)
             ?? throw new ArgumentException("Temple blessing effect has no state.")).Validate();
 
     private static IEnumerable<IActiveEffectContribution> Apply(

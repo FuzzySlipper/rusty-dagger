@@ -668,14 +668,14 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
     internal SourceProvider TavernProvider()
     {
         var published = _sites.SelectMany(profile => profile.StaticNpcs.Select(placement => new SourceProvider(profile, placement)))
-            .FirstOrDefault(value => value.Placement.Services.Contains(DaggerfallTavernService.ServiceName));
+            .FirstOrDefault(value => value.Placement.Services.Contains(DaggerfallNpcServiceFacts.TavernService));
         if (published is not null) return published;
         _guildWorld ??= new AssembledWorld();
         var site = _definitions.Locations.Records.Single(value => value.Id == CityProfile.ProfileKey.Site);
         foreach (var building in site.Exterior!.Buildings.Values.Where(value => value.Source.BuildingType == 15))
         {
             if (!_guildWorld.Profiles.TryGet(DaggerfallWorldProfileIds.Interior(site.Id, building.Id), out var profile)) continue;
-            var placement = profile.StaticNpcs.FirstOrDefault(value => value.Services.Contains(DaggerfallTavernService.ServiceName));
+            var placement = profile.StaticNpcs.FirstOrDefault(value => value.Services.Contains(DaggerfallNpcServiceFacts.TavernService));
             if (placement is null) continue;
             _guildInteriors.Add(profile); return new(profile, placement);
         }

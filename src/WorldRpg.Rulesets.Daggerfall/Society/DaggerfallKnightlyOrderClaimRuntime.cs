@@ -1,5 +1,4 @@
 using Rusty.Engine;
-using WorldRpg.Rulesets.Daggerfall.Property;
 
 namespace WorldRpg.Rulesets.Daggerfall.Guilds;
 
@@ -98,20 +97,11 @@ internal readonly record struct DaggerfallKnightlyArmorGrantResult(bool Applied,
 }
 
 /// <summary>
-/// Receipt returned by the property owner. The helper accepts only an applied house purchase/allocation
-/// result and retains its stable property storage identity for presentation and save diagnostics.
+/// Receipt returned by the property owner (<c>DaggerfallPropertyTransactionResult.AsKnightlyHouse</c>): an applied
+/// house allocation keeps its stable property storage identity for presentation and save diagnostics.
 /// </summary>
 internal readonly record struct DaggerfallKnightlyHouseAllocationResult(bool Applied, string? StorageKey)
 {
-    internal static DaggerfallKnightlyHouseAllocationResult FromPropertyTransaction(
-        DaggerfallPropertyTransactionResult transaction)
-    {
-        if (!transaction.Applied || transaction.Kind != DaggerfallPropertyTransactionKind.Purchase
-            || transaction.PropertyKind != DaggerfallPropertyKind.House)
-            return Rejected();
-        return new DaggerfallKnightlyHouseAllocationResult(true, transaction.StorageKey.Value).Validate();
-    }
-
     internal static DaggerfallKnightlyHouseAllocationResult Rejected() => new(false, null);
 
     internal DaggerfallKnightlyHouseAllocationResult Validate()

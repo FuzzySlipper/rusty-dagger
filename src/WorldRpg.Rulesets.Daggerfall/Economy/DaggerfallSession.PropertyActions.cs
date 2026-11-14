@@ -54,7 +54,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallHouseOffer house = houses[selected];
         DaggerfallKnightlyClaimTransactionResult claim = State.KnightlyClaimActions.CompleteHouse(
             offered.Offer!, currentDay,
-            _ => DaggerfallKnightlyHouseAllocationResult.FromPropertyTransaction(State.Property.AwardHouse(house)),
+            _ => State.Property.AwardHouse(house).AsKnightlyHouse(),
             input);
         if (!claim.Applied)
             return DaggerfallGuildProviders.KnightlyRefusal(claim.Denial, claim.ServiceDecision, claim);
@@ -124,7 +124,7 @@ internal sealed partial class DaggerfallSession
 
     internal DaggerfallPropertyView ReadPropertyPresentation()
     {
-        bool bank = ActiveBankRegion() is not null;
+        bool bank = Banking.ActiveRegion is not null;
         List<DaggerfallPropertyOfferView> offers = [];
         foreach (DaggerfallHouseOffer offer in bank || State.Property.OwnedHouses.Any(house => house.Site == _site.Active)
             ? CurrentHouseOffers(includeOwned: true) : [])
@@ -179,7 +179,7 @@ internal sealed partial class DaggerfallSession
             Presentation.SetOutcome(TryTransitionTo(HouseProfile(house.Identity)!.Value) ? "Entered your house." : "The house interior is unavailable.");
             return;
         }
-        if (ActiveBankRegion() is null) { Presentation.SetOutcome("A bank service is not available here."); return; }
+        if (Banking.ActiveRegion is null) { Presentation.SetOutcome("A bank service is not available here."); return; }
         DaggerfallShipOffer? ship = CurrentShipOffers().SingleOrDefault(offer => offer.StorageKey.Value == action.Key);
         DaggerfallPropertyTransactionResult? result = action.Kind switch
         {

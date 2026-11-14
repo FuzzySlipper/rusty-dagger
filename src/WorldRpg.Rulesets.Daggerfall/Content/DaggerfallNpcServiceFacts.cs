@@ -9,6 +9,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// </summary>
 internal static class DaggerfallNpcServiceFacts
 {
+    /// <summary>The service a tavern keeper offers: food and drink.</summary>
+    internal const string TavernService = "food-drink";
     private const int MerchantSocialGroup = 1;
     private const int KnightlyGuardFactionType = 10;
 
@@ -54,7 +56,7 @@ internal static class DaggerfallNpcServiceFacts
             services.Add("quest-candidate");
 
         if (sourceBuildingType == 15 && sourceFaction?.SocialGroup == MerchantSocialGroup)
-        { services.Add(DaggerfallTavernService.ServiceName); role = "tavern keeper"; }
+        { services.Add(TavernService); role = "tavern keeper"; }
 
         // Witches offer their source service even outdoors at a coven; no guild membership is required.
         if (sourceFaction?.Type == 8) { services.Add("daedra-summoning"); services.Add("quest"); role = "witch"; }

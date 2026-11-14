@@ -496,7 +496,7 @@ public sealed class PropertySessionTests
             var npcSite = new DaggerfallNpcSite(site.Region, site.Name, string.Empty);
             long id = session.State.Npcs.RegisterStable(DaggerfallNpcKind.Static, "property-test.banker", npcSite,
                 new("Breton", "Male", 0, 0, 0, 0), "banker", ["banking"]);
-            Assert.True(session.TryOpenBank(new(id, npcSite, "banking")));
+            Assert.True(session.Banking.TryOpen(new(id, npcSite, "banking")));
         }
         internal string OpenBankDialogue()
         {

@@ -1,4 +1,5 @@
 using Rusty.Engine.Mechanics;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -10,7 +11,6 @@ internal sealed record DaggerfallTavernView(bool Hungry, IReadOnlyList<Daggerfal
 internal sealed class DaggerfallTavernService(DaggerfallServiceTransactions services, StatsComponent player,
     Func<DaggerfallCalendar> calendar, long? lastMealMinute = null)
 {
-    internal const string ServiceName = "food-drink";
     internal long? LastMealMinute { get; private set; } = lastMealMinute is null or >= 0 ? lastMealMinute : throw new ArgumentOutOfRangeException(nameof(lastMealMinute));
     private static readonly (string Id, int Price)[] Menu = [("ale",1),("beer",1),("mead",2),("wine",3),
         ("bread",1),("broth",1),("cheese",2),("fowl",3),("gruel",2),("pie",2),("stew",3)];
@@ -25,6 +25,16 @@ internal sealed class DaggerfallTavernService(DaggerfallServiceTransactions serv
                     holiday == 1 ? 0UL : (ulong)price, 2 * price);
             }).ToArray());
     }
+    /// <summary>The tavern's menu when this person keeps the tavern the player stands in; none otherwise.</summary>
+    internal DaggerfallTavernView? ReadAt(DaggerfallNpc? npc, Func<DaggerfallInteriorBuilding?> building) =>
+        npc is not null && npc.Services.Contains(DaggerfallNpcServiceFacts.TavernService)
+        && building()?.BuildingType == DaggerfallLodgingState.TavernBuildingType ? Read() : null;
+
+    /// <summary>Buys a meal from this tavern keeper on this dialogue revision, at the price the player saw.</summary>
+    internal string BuyMeal(string revision, DaggerfallNpc npc, string item, ulong expectedPrice) =>
+        Buy(new($"tavern:{revision}:{item}:{calendar().ToAbsoluteSeconds() / 60}",
+            new(npc.DurableId, npc.Site, DaggerfallNpcServiceFacts.TavernService)), item, expectedPrice);
+
     internal string Buy(DaggerfallServiceRequest request, string item, ulong expectedPrice)
     {
         var view = Read();

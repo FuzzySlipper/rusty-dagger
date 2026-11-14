@@ -68,7 +68,7 @@ internal sealed class GuildMakerFixture : IDisposable
         Currency = new(Definitions, Inventory, Instances, new DaggerfallEncumbrancePolicy(Inventory, stats), UniqueItems);
         Services = new(Npcs, Social, Inventory, Instances, Currency, UniqueItems, () => Calendar, () => _site);
         GuildServices = new(new DaggerfallGuildMembershipPolicy(Social, _ => 100, DaggerfallConcreteGuildCatalog.AllMembershipPolicies),
-            Npcs, Services);
+            Npcs, Services.ProviderAvailable);
         DaggerfallEquipmentMoves moves = new(Inventory, Equipment, Definitions, itemInstances: Instances);
         Enchanting = new(Definitions, Instances, moves, new DaggerfallItemConditionService(Definitions, Instances, moves), Inventory, () => new DaggerfallSoulGems(Inventory, Instances, Definitions.Magic, UniqueItems));
     }
@@ -84,6 +84,20 @@ internal sealed class GuildMakerFixture : IDisposable
 
     internal DaggerfallSpellMaker SpellMaker(DaggerfallEffectCatalog effects) => new(Definitions, effects, Npcs, GuildServices,
         Services, Character, Inventory, Stats, () => Calendar);
+
+    /// <summary>The merchants' service over this fixture's pack, purse and service transactions, for people at its site.</summary>
+    internal DaggerfallMerchantService Merchants()
+    {
+        DaggerfallRegionalPriceState prices = new(Definitions.Factions, _random, Calendar.DayNumber);
+        DaggerfallEquipmentMoves moves = new(Inventory, Equipment, Definitions, itemInstances: Instances);
+        Kit.Progression.ProgressionState progression = new();
+        return new(Definitions, _random, Npcs, Social, Stats, Character, progression, Inventory, Containers, Instances, UniqueItems,
+            new DurableIdentityAllocator(DurableIdentityKind.Container, 100), Currency, Services, GuildServices,
+            new DaggerfallTradeQuoteService(Definitions, new DaggerfallItemValuation(Definitions), prices), prices,
+            new DaggerfallItemConditionService(Definitions, Instances, moves),
+            new DaggerfallSkillUseReactions(progression, Stats, Definitions, () => Character.Career),
+            new Crime.DaggerfallCrimeState(null, () => false), () => Calendar, () => _site);
+    }
 
     /// <summary>One item of <paramref name="template"/> in the pack: the spellbook is 132.</summary>
     internal void Carry(string group, int template, ulong quantity = 1)
@@ -103,6 +117,16 @@ internal sealed class GuildMakerFixture : IDisposable
             new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 0, providerFaction), "maker", ["talk", service],
             DaggerfallNpcPresence.Active, null, null, null)]);
         return new(501, _site, service);
+    }
+
+    /// <summary>A person at the fixture's site offering <paramref name="services"/>, outside any guild.</summary>
+    internal DaggerfallNpc Person(params string[] services)
+    {
+        DaggerfallNpc npc = new(501, DaggerfallNpcKind.Static, "person", _site,
+            new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 0, 0), "person", ["talk", .. services],
+            DaggerfallNpcPresence.Active, null, null, null);
+        Npcs.Restore([npc]);
+        return npc;
     }
 
     internal void GrantGold(ulong amount)

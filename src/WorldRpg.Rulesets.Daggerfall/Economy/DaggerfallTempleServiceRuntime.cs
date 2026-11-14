@@ -93,6 +93,26 @@ internal sealed class DaggerfallTempleServiceRuntime
         _time = time ?? throw new ArgumentNullException(nameof(time));
     }
 
+    /// <summary>
+    /// A temple service the person offers in this building: a donation of <paramref name="amount"/> gold, or the cure
+    /// of the player's diseases and poisons, quoted and committed at once.
+    /// </summary>
+    internal DaggerfallTempleServiceResult Resolve(DaggerfallNpc npc, DaggerfallInteriorBuilding? building, bool donation, ulong? amount)
+    {
+        if (building is null)
+            return DaggerfallTempleServiceResult.Refused(DaggerfallTempleServiceDenial.InvalidTemple,
+                "This temple interior is no longer available.");
+        DaggerfallServiceProvider provider = new(npc.DurableId, npc.Site, donation ? DonationService : CureService);
+        if (donation)
+        {
+            DaggerfallTempleDonationQuote? quote = QuoteDonation(provider, building, amount ?? 0, out DaggerfallTempleServiceResult refusal);
+            return quote is null ? refusal : CommitDonation(quote);
+        }
+
+        DaggerfallTempleCureQuote? cure = QuoteCure(provider, building, out DaggerfallTempleServiceResult cureRefusal);
+        return cure is null ? cureRefusal : CommitCure(cure);
+    }
+
     /// <summary>Quotes a positive source donation without charging gold or mutating reputation.</summary>
     internal DaggerfallTempleDonationQuote? QuoteDonation(
         DaggerfallServiceProvider provider,

@@ -584,7 +584,7 @@ public sealed class LootSessionTests
         DaggerfallNpcSite bankerSite = new(region, session.Site.ActiveSite!.Name, string.Empty);
         long bankerId = session.State.Npcs.RegisterStable(DaggerfallNpcKind.Static, "test.session.banker.limits",
             bankerSite, new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 0, 0), "banker", ["banking"]);
-        Assert.True(session.TryOpenBank(new DaggerfallServiceProvider(bankerId, bankerSite, "banking")));
+        Assert.True(session.Banking.TryOpen(new DaggerfallServiceProvider(bankerId, bankerSite, "banking")));
         InventoryStackId coins = InventoryStackId.Parse("test.bank.limits.coins");
         session.State.Inventory.Grant(new(new InventoryItemId("template-276"), coins, 200));
         session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player, session.State.Inventory.Read().Stacks.Single(stack => stack.Id == coins), definitions.RequireItem(new DaggerfallItemId("template-276")));
@@ -633,7 +633,7 @@ public sealed class LootSessionTests
             DaggerfallNpcSite bankerSite = new(bankRegion.Value, session.Site.ActiveSite!.Name, string.Empty);
             long bankerId = session.State.Npcs.RegisterStable(DaggerfallNpcKind.Static, "test.session.banker",
                 bankerSite, new DaggerfallNpcAppearance("Breton", "Male", 0, 0, 0, 0), "banker", ["banking"]);
-            Assert.True(session.TryOpenBank(new DaggerfallServiceProvider(bankerId, bankerSite, "banking")));
+            Assert.True(session.Banking.TryOpen(new DaggerfallServiceProvider(bankerId, bankerSite, "banking")));
             InventoryStackId coins = InventoryStackId.Parse("test.currency.session.coins");
             session.State.Inventory.Grant(new(new InventoryItemId("template-276"), coins, 200));
             session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player, session.State.Inventory.Read().Stacks.Single(stack => stack.Id == coins), definitions.RequireItem(new DaggerfallItemId("template-276")));

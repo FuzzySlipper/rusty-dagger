@@ -25,12 +25,6 @@ internal sealed record PaperDollLayerPresentation(string Kind, string MediaId, d
     PaperDollTint? Tint = null);
 
 /// <summary>
-/// A dye drawn over a neutral image: the image brightened by <paramref name="Brightness"/>, then the pixels of
-/// <paramref name="Mask"/> (an image the size and place of the layer) multiplied by <paramref name="Color"/>.
-/// </summary>
-internal sealed record PaperDollTint(string Color, double Brightness, string Mask);
-
-/// <summary>
 /// The player's paper doll: its size, the background, then every other layer in the order it is drawn.
 /// </summary>
 /// <param name="Width">The doll's width in source pixels.</param>

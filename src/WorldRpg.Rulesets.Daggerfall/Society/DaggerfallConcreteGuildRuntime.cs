@@ -98,16 +98,17 @@ internal sealed class DaggerfallConcreteGuildServiceRuntime
 {
     private readonly DaggerfallGuildMembershipPolicy _membership;
     private readonly DaggerfallNpcRegistry _npcs;
-    private readonly DaggerfallServiceTransactions _services;
+    private readonly Func<DaggerfallServiceProvider, DaggerfallServiceDenial> _providerAvailable;
 
+    /// <param name="providerAvailable">Whether the provider can serve now (the service transactions' admission).</param>
     internal DaggerfallConcreteGuildServiceRuntime(
         DaggerfallGuildMembershipPolicy membership,
         DaggerfallNpcRegistry npcs,
-        DaggerfallServiceTransactions services)
+        Func<DaggerfallServiceProvider, DaggerfallServiceDenial> providerAvailable)
     {
         _membership = membership ?? throw new ArgumentNullException(nameof(membership));
         _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
-        _services = services ?? throw new ArgumentNullException(nameof(services));
+        _providerAvailable = providerAvailable ?? throw new ArgumentNullException(nameof(providerAvailable));
     }
 
     internal DaggerfallConcreteGuildServiceRuntimeDecision Evaluate(
@@ -152,7 +153,7 @@ internal sealed class DaggerfallConcreteGuildServiceRuntime
             return new(definition, membership, policy, DaggerfallGuildProviderAvailability.Unavailable,
                 DaggerfallServiceDenial.ServiceUnavailable);
 
-        DaggerfallServiceDenial providerDenial = _services.ProviderAvailable(request.Provider);
+        DaggerfallServiceDenial providerDenial = _providerAvailable(request.Provider);
         return new(definition, membership, policy,
             providerDenial == DaggerfallServiceDenial.None
                 ? DaggerfallGuildProviderAvailability.Ready

@@ -1331,7 +1331,6 @@ internal sealed record DaggerfallVariablesSave(DaggerfallVariableSave[] Entries)
 [JsonSerializable(typeof(DaggerfallTeleportAnchor))]
 [JsonSerializable(typeof(DaggerfallIdentifyRequest))]
 [JsonSerializable(typeof(DaggerfallInfectionsSave))]
-[JsonSerializable(typeof(DaggerfallTempleBlessingState))]
 [JsonSerializable(typeof(DaggerfallSavePayload))]
 [JsonSerializable(typeof(DaggerfallStatsSave))]
 [JsonSerializable(typeof(DaggerfallNotebookSave))]

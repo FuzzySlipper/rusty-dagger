@@ -49,27 +49,27 @@ public sealed class DaggerfallLodgingTests
         Assert.Contains("room", session.RestView.Message);
         fixture.AddGold(1000);
         ulong gold = session.State.Currency.Read().Gold;
-        DaggerfallLodgingView quote = session.LodgingView!;
+        DaggerfallLodgingView quote = session.RoomRental.View!;
         Assert.True(quote.Price > 0);
         fixture.Book(quote);
         Assert.Equal(gold - quote.Price, session.State.Currency.Read().Gold);
-        Assert.Equal(24, session.LodgingView!.RemainingHours);
+        Assert.Equal(24, session.RoomRental.View!.RemainingHours);
         Track health = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health"));
         health.SetCurrent(health.MaximumValue - 10);
         fixture.Rest(1);
         Assert.Equal(3600, session.RestView.ElapsedSeconds);
         Assert.True(session.RestView.HealthRecovered > 0);
-        Assert.Equal(23, session.LodgingView!.RemainingHours);
+        Assert.Equal(23, session.RoomRental.View!.RemainingHours);
         fixture.Quote(2);
-        fixture.Book(session.LodgingView!);
-        Assert.Equal(71, session.LodgingView!.RemainingHours);
+        fixture.Book(session.RoomRental.View!);
+        Assert.Equal(71, session.RoomRental.View!.RemainingHours);
         var saved = DaggerfallSavePayload.Read(session.CaptureSave());
         Assert.Single(saved.Lodging.Rooms);
         using DaggerfallSession restored = fixture.Restore(DaggerfallSavePayload.Encode(saved));
-        Assert.Equal(71, restored.LodgingView!.RemainingHours);
+        Assert.Equal(71, restored.RoomRental.View!.RemainingHours);
         restored.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"rest\",\"mode\":\"timed\",\"hours\":1}")]));
         Assert.Equal(3600, restored.RestView.ElapsedSeconds);
-        Assert.Equal(70, restored.LodgingView!.RemainingHours);
+        Assert.Equal(70, restored.RoomRental.View!.RemainingHours);
     }
 
     [Fact]
@@ -78,12 +78,12 @@ public sealed class DaggerfallLodgingTests
         using Fixture fixture = new();
         DaggerfallSession session = fixture.Session;
         fixture.Quote(350);
-        fixture.Book(session.LodgingView!);
-        Assert.Equal(0, session.LodgingView!.RemainingHours);
+        fixture.Book(session.RoomRental.View!);
+        Assert.Equal(0, session.RoomRental.View!.RemainingHours);
         Assert.Contains("enough gold", session.Presentation.LastOutcome);
         fixture.AddGold(1000);
         ulong gold = session.State.Currency.Read().Gold;
-        DaggerfallLodgingView quote = session.LodgingView!;
+        DaggerfallLodgingView quote = session.RoomRental.View!;
         fixture.Submit(new { action = "lodging-book", key = quote.Key + "0", days = 1, amount = quote.Price });
         fixture.Submit(new { action = "lodging-book", key = quote.Key, days = 1, amount = 999 });
         Assert.Equal(gold, session.State.Currency.Read().Gold);
@@ -96,22 +96,22 @@ public sealed class DaggerfallLodgingTests
         using Fixture fixture = new();
         var session = fixture.Session;
         fixture.AddGold(1000);
-        var quote = session.LodgingView!;
+        var quote = session.RoomRental.View!;
         fixture.Book(quote);
         Assert.True(session.TryRelocate(new(fixture.Exterior.ProfileKey, "start")));
-        Assert.Null(session.LodgingView);
+        Assert.Null(session.RoomRental.View);
         fixture.Submit(new { action = "lodging-book", key = quote.Key, days = 1, amount = quote.Price });
         Assert.Contains("no longer", session.Presentation.LastOutcome);
         Assert.True(session.TryRelocate(new(fixture.Other.ProfileKey, "start")));
-        Assert.Equal(0, session.LodgingView!.RemainingHours);
+        Assert.Equal(0, session.RoomRental.View!.RemainingHours);
         fixture.Rest(1);
         Assert.Equal(0, session.RestView.ElapsedSeconds);
         Assert.True(session.TryRelocate(new(fixture.Interior.ProfileKey, "start")));
-        Assert.Equal(24, session.LodgingView!.RemainingHours);
+        Assert.Equal(24, session.RoomRental.View!.RemainingHours);
         fixture.Rest(1);
         Assert.Equal(3600, session.RestView.ElapsedSeconds);
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
-        Assert.Equal(23, restored.LodgingView!.RemainingHours);
+        Assert.Equal(23, restored.RoomRental.View!.RemainingHours);
     }
 
     [Fact]
@@ -119,11 +119,11 @@ public sealed class DaggerfallLodgingTests
     {
         using Fixture fixture = new();
         fixture.AddGold(1000);
-        fixture.Book(fixture.Session.LodgingView!);
+        fixture.Book(fixture.Session.RoomRental.View!);
         fixture.Rest(25);
         Assert.Equal(24 * 3600, fixture.Session.RestView.ElapsedSeconds);
         Assert.Equal(DaggerfallRestInterruption.Prevented, fixture.Session.RestView.Interruption);
-        Assert.Equal(0, fixture.Session.LodgingView!.RemainingHours);
+        Assert.Equal(0, fixture.Session.RoomRental.View!.RemainingHours);
         fixture.Rest(1);
         Assert.Equal(0, fixture.Session.RestView.ElapsedSeconds);
         var saved = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
@@ -138,14 +138,14 @@ public sealed class DaggerfallLodgingTests
     {
         using Fixture fixture = new();
         fixture.Session.AdvanceElapsedTime(30);
-        fixture.Book(fixture.Session.LodgingView!);
+        fixture.Book(fixture.Session.RoomRental.View!);
         fixture.Session.AdvanceElapsedTime(DaggerfallCalendar.SecondsPerDay - 15);
-        Assert.Equal(1, fixture.Session.LodgingView!.RemainingHours);
+        Assert.Equal(1, fixture.Session.RoomRental.View!.RemainingHours);
         fixture.Rest(1);
         Assert.Equal(15, fixture.Session.RestView.ElapsedSeconds);
         Assert.Equal(0, fixture.Session.RestView.RecoveryHours);
         Assert.Equal(DaggerfallRestInterruption.Prevented, fixture.Session.RestView.Interruption);
-        Assert.Equal(0, fixture.Session.LodgingView!.RemainingHours);
+        Assert.Equal(0, fixture.Session.RoomRental.View!.RemainingHours);
     }
 
     [Fact]
@@ -154,11 +154,11 @@ public sealed class DaggerfallLodgingTests
         using Fixture fixture = new();
         fixture.AddGold(10000);
         fixture.Quote(350);
-        fixture.Book(fixture.Session.LodgingView!);
+        fixture.Book(fixture.Session.RoomRental.View!);
         ulong gold = fixture.Session.State.Currency.Read().Gold;
         fixture.Quote(1);
-        Assert.False(fixture.Session.LodgingView!.CanBook);
-        fixture.Book(fixture.Session.LodgingView!);
+        Assert.False(fixture.Session.RoomRental.View!.CanBook);
+        fixture.Book(fixture.Session.RoomRental.View!);
         Assert.Equal(gold, fixture.Session.State.Currency.Read().Gold);
         var saved = DaggerfallSavePayload.Read(fixture.Session.CaptureSave());
         var room = Assert.Single(saved.Lodging.Rooms);
@@ -178,12 +178,12 @@ public sealed class DaggerfallLodgingTests
         for (int rank = 0; rank < 4; rank++) session.State.Social.PromoteGuild(guild.FactionId, day);
         Assert.True(session.State.Currency.TrySpendGold(session.State.Currency.Read().Gold, []));
         Assert.Equal(0UL, session.State.Currency.Read().Gold);
-        Assert.Equal(0UL, session.LodgingView!.Price);
-        fixture.Book(session.LodgingView!);
-        Assert.Equal(24, session.LodgingView!.RemainingHours);
+        Assert.Equal(0UL, session.RoomRental.View!.Price);
+        fixture.Book(session.RoomRental.View!);
+        Assert.Equal(24, session.RoomRental.View!.RemainingHours);
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
-        Assert.Equal(24, restored.LodgingView!.RemainingHours);
-        Assert.Equal(0UL, restored.LodgingView!.Price);
+        Assert.Equal(24, restored.RoomRental.View!.RemainingHours);
+        Assert.Equal(0UL, restored.RoomRental.View!.Price);
     }
 
     [Fact]
@@ -194,15 +194,15 @@ public sealed class DaggerfallLodgingTests
         Assert.True(session.State.Currency.TrySpendGold(session.State.Currency.Read().Gold, []));
         Assert.True(session.State.Currency.TryCreditAccount(101));
         Assert.True(session.State.Currency.WithdrawLetter(100));
-        var quote = session.LodgingView!;
+        var quote = session.RoomRental.View!;
         Assert.True(quote.Price > 0);
         fixture.Book(quote);
         Assert.Equal(0UL, session.State.Currency.Read().Gold);
         Assert.Equal(100UL - quote.Price, session.State.Currency.Read().LettersOfCredit);
-        Assert.Equal(24, session.LodgingView!.RemainingHours);
+        Assert.Equal(24, session.RoomRental.View!.RemainingHours);
         using DaggerfallSession restored = fixture.Restore(session.CaptureSave());
         Assert.Equal(100UL - quote.Price, restored.State.Currency.Read().LettersOfCredit);
-        Assert.Equal(24, restored.LodgingView!.RemainingHours);
+        Assert.Equal(24, restored.RoomRental.View!.RemainingHours);
     }
 
     [Fact]
@@ -265,7 +265,7 @@ public sealed class DaggerfallLodgingTests
         }
         internal DaggerfallSession Restore(RulesetSavePayload save) => Create(save);
         internal void Submit(object action) => Session.Update(new ProductUpdate(OuterUpdate(step++), [Ui(JsonSerializer.Serialize(action))]));
-        internal void Quote(int days) => Submit(new { action = "lodging-quote", key = Session.LodgingView!.Key, days });
+        internal void Quote(int days) => Submit(new { action = "lodging-quote", key = Session.RoomRental.View!.Key, days });
         internal void Book(DaggerfallLodgingView quote) => Submit(new { action = "lodging-book", key = quote.Key, days = quote.Days, amount = quote.Price });
         internal void Rest(int hours) => Submit(new { action = "rest", mode = "timed", hours });
         internal void AddGold(ulong quantity)

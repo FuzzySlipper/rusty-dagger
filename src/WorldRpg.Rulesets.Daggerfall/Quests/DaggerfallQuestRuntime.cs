@@ -7,27 +7,6 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>Meaningful current state of donor quest training; the calendar remains the time authority.</summary>
-internal sealed record DaggerfallQuestTrainingSave(long? LastSkillTrainingSecond)
-{
-    internal DaggerfallQuestTrainingSave Validate()
-    {
-        if (LastSkillTrainingSecond is < 0) throw new ArgumentOutOfRangeException(nameof(LastSkillTrainingSecond));
-        return this;
-    }
-}
-
-internal sealed class DaggerfallQuestTrainingState(DaggerfallQuestTrainingSave? saved = null)
-{
-    internal long? LastSkillTrainingSecond { get; private set; } = saved?.Validate().LastSkillTrainingSecond;
-    internal void Record(long second)
-    {
-        if (second < 0) throw new ArgumentOutOfRangeException(nameof(second));
-        LastSkillTrainingSecond = second;
-    }
-    internal DaggerfallQuestTrainingSave Capture() => new(LastSkillTrainingSecond);
-}
-
 /// <summary>Named session adapter from compiled quest operations to the current player, progression, and calendar owners.</summary>
 internal sealed class DaggerfallQuestRuntime(
     ProgressionState progression,

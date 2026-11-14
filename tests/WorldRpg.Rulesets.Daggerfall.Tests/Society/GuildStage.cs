@@ -33,7 +33,7 @@ internal sealed class GuildStage : IDisposable
             () => DaggerfallCalendar.Start, () => Society.NpcSite);
         DaggerfallGuildMembershipPolicy policy = new(Society.Social, Society.SkillUses.PermanentSkillValue, DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
         Membership = new(policy);
-        Services = new(policy, Society.Npcs, transactions);
+        Services = new(policy, Society.Npcs, transactions.ProviderAvailable);
         Admission = new(Membership, Society.Social, Society.SkillUses, Society.Crime, () => Revision);
         Providers = new(Services, Membership, new DaggerfallKnightlyOrderClaimRuntime(Services, new DaggerfallKnightlyOrderClaimState(null), Society.Random.Service),
             Admission, Society.Actors, Society.Effects, Society.Character, definitions, Society.Random.Service, _unique, Inventory, Society.ItemInstances,

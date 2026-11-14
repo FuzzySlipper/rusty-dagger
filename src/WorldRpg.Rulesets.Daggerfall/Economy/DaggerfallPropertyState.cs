@@ -1,4 +1,5 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Guilds;
 
 namespace WorldRpg.Rulesets.Daggerfall.Property;
 
@@ -91,6 +92,12 @@ internal sealed record DaggerfallPropertyTransactionResult(
         DaggerfallPropertyTransactionDenial denial,
         DaggerfallPropertyStorageKey storageKey,
         string message) => new(false, kind, propertyKind, denial, 0, storageKey, message);
+
+    /// <summary>A knightly order's house allocation receipt: only an applied house purchase or award counts.</summary>
+    internal DaggerfallKnightlyHouseAllocationResult AsKnightlyHouse() =>
+        !Applied || Kind != DaggerfallPropertyTransactionKind.Purchase || PropertyKind != DaggerfallPropertyKind.House
+            ? DaggerfallKnightlyHouseAllocationResult.Rejected()
+            : new DaggerfallKnightlyHouseAllocationResult(true, StorageKey.Value).Validate();
 }
 
 /// <summary>Flat current-schema placed house ownership identity for save/load wiring.</summary>

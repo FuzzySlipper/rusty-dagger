@@ -264,7 +264,7 @@ internal sealed partial class DaggerfallSession
             State.LevelUps.BeginIfEligible();                                                     // Character
         }
         State.Social.AdvanceElapsedMinutes(minuteBefore, minuteAfter);                            // Society
-        AdvanceLoans(before, after);                                                              // Economy
+        foreach (string line in Banking.AdvanceLoans(before, after)) Presentation.SetOutcome(line); // Economy, its lines UiProjection
         _vampirism.AdvanceQuestOpportunities(before, after);                                      // Afflictions
         _lycanthropy.AdvanceQuestOpportunities(before, after);                                    // Afflictions
         StartDueCriminalInvitations();                                                            // Quests
