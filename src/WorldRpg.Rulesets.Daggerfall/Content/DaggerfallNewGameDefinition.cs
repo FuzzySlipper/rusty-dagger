@@ -104,7 +104,7 @@ internal static partial class DaggerfallBaseContent
             JsonElement root = Object(document.RootElement, packId, diagnostics);
             diagnostics.ThrowIfAny();
             RejectDuplicateProperties(root, packId, diagnostics);
-            if (Text(root, "ruleset", diagnostics) != DaggerfallRuleset.Identity.Value) diagnostics.Add($"New-game start pack '{packId}' must identify ruleset 'daggerfall'.");
+            if (Text(root, "ruleset", diagnostics) != RulesetName) diagnostics.Add($"New-game start pack '{packId}' must identify ruleset 'daggerfall'.");
             string startSite = Text(root, "startSite", diagnostics);
             if (string.IsNullOrWhiteSpace(startSite)) diagnostics.Add($"New-game start pack '{packId}' names no start site content pack.");
             int gold = Integer(root, "gold", diagnostics);

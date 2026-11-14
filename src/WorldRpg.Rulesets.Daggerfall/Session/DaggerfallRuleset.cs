@@ -10,7 +10,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
 {
     private readonly ConditionalWeakTable<ResolvedGameComposition, DaggerfallAdmittedContent> _admittedContent = [];
     private readonly bool _videosEnabled;
-    public static readonly RulesetId Identity = new("daggerfall");
+    public static readonly RulesetId Identity = new(DaggerfallBaseContent.RulesetName);
 
     /// <summary>The one authored pack carrying the ruleset identity, vocabulary, actors, items, loot and encounters.</summary>
     internal static readonly ContentPackRoleId BaseRole = new("daggerfall.base");

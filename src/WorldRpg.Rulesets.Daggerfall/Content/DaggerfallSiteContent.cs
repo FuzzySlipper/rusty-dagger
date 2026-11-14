@@ -35,7 +35,7 @@ internal static partial class DaggerfallSiteContent
             using JsonDocument document = JsonDocument.Parse(payload);
             JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "root", diagnostics);
             DaggerfallBaseContent.RejectDuplicateProperties(root, "root", diagnostics);
-            if (DaggerfallBaseContent.Text(root, "ruleset", diagnostics) != DaggerfallRuleset.Identity.Value) diagnostics.Add("Site payload must identify ruleset 'daggerfall'.");
+            if (DaggerfallBaseContent.Text(root, "ruleset", diagnostics) != DaggerfallBaseContent.RulesetName) diagnostics.Add("Site payload must identify ruleset 'daggerfall'.");
             AdmittedFiles files = AdmittedFiles.From(content);
             ScenarioStart start = ReadStart(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "startingState", diagnostics), "startingState", diagnostics), diagnostics, ReadSourceArrival(files, root, diagnostics));
             // A starting site the published locations do not carry would leave the session standing at a

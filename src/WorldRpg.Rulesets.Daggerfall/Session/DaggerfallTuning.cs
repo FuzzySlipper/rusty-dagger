@@ -512,16 +512,6 @@ internal sealed record DaggerfallTimeTuning(double GameSecondsPerRealSecond)
     }
 }
 
-internal readonly record struct PlayerInitialLook(float YawRadians, float PitchRadians)
-{
-    internal PlayerInitialLook Validate()
-    {
-        if (!float.IsFinite(YawRadians)) throw new ArgumentOutOfRangeException(nameof(YawRadians));
-        if (!float.IsFinite(PitchRadians)) throw new ArgumentOutOfRangeException(nameof(PitchRadians));
-        return this;
-    }
-}
-
 /// <summary>Chooses the donor's standard or alternate playlists; JSON admission requires a Boolean.</summary>
 internal sealed record DaggerfallMusicTuning(bool AlternatePlaylists);
 

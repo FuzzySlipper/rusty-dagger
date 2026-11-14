@@ -112,7 +112,7 @@ internal sealed class DaggerfallSkyMedia
                 throw new InvalidOperationException($"Sky artifact '{resource.Id}' is absent or disagrees with its published digest/length.");
         DaggerfallSkyMoon[] moons = [.. root.GetProperty("moons").EnumerateArray().Select(moon => new DaggerfallSkyMoon(moon.GetProperty("id").GetString()!,
             moon.GetProperty("moon").GetString() == "masser", moon.GetProperty("columns").GetInt32(), moon.GetProperty("frameCount").GetInt32()))];
-        if (moons.Length != 2 || moons.Count(moon => moon.Masser) != 1 || moons.Any(moon => moon.FrameCount != DaggerfallMoons.CycleDays))
+        if (moons.Length != 2 || moons.Count(moon => moon.Masser) != 1 || moons.Any(moon => moon.FrameCount != DaggerfallSkyTime.CycleDays))
             throw new InvalidOperationException("Sky publication does not carry Masser and Secunda, each with a frame for every day of the lunar cycle.");
         return new(content, resources, frames, nights, cleared, curve, moons, starsId);
     }

@@ -13,10 +13,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// </summary>
 internal sealed class DaggerfallMoons : IDisposable
 {
-    internal const int CycleDays = 32;
     /// <summary>The calendar counts its cycle from the full moon, and the art from a waxing crescent eight frames before it.</summary>
     private const int FullFrame = 8;
-    private const int NewDay = CycleDays / 2;
+    private const int NewDay = DaggerfallSkyTime.CycleDays / 2;
     /// <summary>A moon gives all its light once it stands this many times above the horizon's sine, so it doesn't snap on as it rises.</summary>
     private const float RisingHeight = 4;
 
@@ -36,19 +35,19 @@ internal sealed class DaggerfallMoons : IDisposable
     }
 
     /// <summary>The frame of the art for a day of the cycle.</summary>
-    internal static int Frame(int cycleDay) => (cycleDay + FullFrame) % CycleDays;
+    internal static int Frame(int cycleDay) => (cycleDay + FullFrame) % DaggerfallSkyTime.CycleDays;
 
     /// <summary>The way to a moon at this time on this day of its cycle, its path leaning south by <paramref name="tiltDegrees"/>.</summary>
     internal static Vector3 Direction(DaggerfallSkyTime sky, int cycleDay, float tiltDegrees)
     {
         float sun = MathF.PI * ((sky.SecondOfDay / 3_600F) - DaggerfallSkyTime.DawnHour) / (DaggerfallSkyTime.DuskHour - DaggerfallSkyTime.DawnHour);
-        float along = sun - (2 * MathF.PI * (cycleDay + NewDay) / CycleDays);
+        float along = sun - (2 * MathF.PI * (cycleDay + NewDay) / DaggerfallSkyTime.CycleDays);
         float tilt = tiltDegrees * MathF.PI / 180;
         return new(-MathF.Cos(along), MathF.Sin(along) * MathF.Cos(tilt), MathF.Sin(along) * MathF.Sin(tilt));
     }
 
     /// <summary>How much of a moon's light reaches the ground on a day of its cycle: all of it full, none of it new. The calendar counts from the full moon.</summary>
-    internal static float Phase(int cycleDay) => (1 + MathF.Cos(2 * MathF.PI * cycleDay / CycleDays)) / 2;
+    internal static float Phase(int cycleDay) => (1 + MathF.Cos(2 * MathF.PI * cycleDay / DaggerfallSkyTime.CycleDays)) / 2;
 
     /// <summary>How much of a full night's moonlight falls now, from 0 to 1: each moon gives its share by its phase, while it stands above the horizon.</summary>
     internal float Moonlight(DaggerfallSkyTime sky)

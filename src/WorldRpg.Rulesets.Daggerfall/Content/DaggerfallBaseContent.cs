@@ -16,6 +16,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// </summary>
 internal static partial class DaggerfallBaseContent
 {
+    /// <summary>The ruleset every Daggerfall pack names, and the identity the ruleset reports.</summary>
+    internal const string RulesetName = "daggerfall";
+
     private const int MaximumAuthoredDamage = 100_000;
     private const int MaximumAuthoredArmor = 1_000;
     private const int MaximumAuthoredLootGold = 1_000_000;
@@ -148,7 +151,7 @@ internal static partial class DaggerfallBaseContent
         {
             JsonElement root = Object(document.RootElement, "root", diagnostics);
             RejectDuplicateProperties(root, "root", diagnostics);
-            if (Text(root, "ruleset", diagnostics) != DaggerfallRuleset.Identity.Value) diagnostics.Add("Base payload must identify ruleset 'daggerfall'.");
+            if (Text(root, "ruleset", diagnostics) != RulesetName) diagnostics.Add("Base payload must identify ruleset 'daggerfall'.");
             DaggerfallVocabulary vocabulary = ReadVocabulary(root, diagnostics);
             Dictionary<string, DaggerfallActionDefinition> actions = ReadActions(root, diagnostics);
             Dictionary<DaggerfallItemId, DaggerfallItemDefinition> items = ReadItems(root, diagnostics);
