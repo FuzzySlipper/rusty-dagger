@@ -6,18 +6,6 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>The exact Daggerfall service provider a request addresses.</summary>
-internal sealed record DaggerfallServiceProvider(long NpcId, DaggerfallNpcSite Site, string Service)
-{
-    internal void Validate()
-    {
-        if (NpcId <= 0 || string.IsNullOrWhiteSpace(Service))
-            throw new ArgumentException("A service provider requires an NPC and a named service.");
-        if (Site.Region is < 0 or > 61 || string.IsNullOrWhiteSpace(Site.Location))
-            throw new ArgumentException("A service provider requires a classic NPC site.");
-    }
-}
-
 /// <summary>A selected current item and its minimum usable condition, when a service acts on an item.</summary>
 internal sealed record DaggerfallServiceItemReference(ulong DurableItemId, string Definition, int MinimumCondition = 0,
     string? StackId = null, ulong Quantity = 1)
@@ -89,25 +77,6 @@ internal sealed record DaggerfallServiceRequest(string Id, DaggerfallServiceProv
         Provider.Validate();
         Item?.Validate();
     }
-}
-
-internal enum DaggerfallServiceDenial
-{
-    None,
-    UnknownProvider,
-    ProviderUnavailable,
-    ServiceUnavailable,
-    SiteChanged,
-    Closed,
-    NotMember,
-    InsufficientRank,
-    MissingItem,
-    ItemChanged,
-    InsufficientFunds,
-    GrantUnavailable,
-    AlreadySubmitted,
-    WorkNotReady,
-    WorkUnavailable,
 }
 
 /// <summary>The actual result of requesting, quoting, or committing one service.</summary>
