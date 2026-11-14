@@ -1,4 +1,5 @@
 using Rusty.Engine;
+using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -329,6 +330,15 @@ public sealed class DaggerfallMusicDirector : IDisposable
         voice?.Dispose();
         _retire?.Invoke(retired);
     }
+
+    /// <summary>Every track any playlist names, in either playlist set, ordered.</summary>
+    internal static IReadOnlyList<string> PlaylistTracks { get; } =
+        [.. Enum.GetValues<DaggerfallMusicContext>()
+            .SelectMany(context => PlaylistFor(context, alternatePlaylists: false).Concat(PlaylistFor(context, alternatePlaylists: true)))
+            .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
+
+    /// <summary>The tracks the playlists name that the music container carries no recording of, ordered.</summary>
+    internal static IReadOnlyList<string> MissingTracks(DaggerfallMusicBundle music) => [.. PlaylistTracks.Where(track => !music.CanPlay(track))];
 
     /// <summary>
     /// The donor tracks a context answers, in the donor's own list order.

@@ -128,7 +128,7 @@ public sealed class SpellMakerSessionTests
     [Fact]
     public void Standard_and_source_eligible_custom_sale_rows_use_one_catalog_payment_cast_and_encoded_restore()
     {
-        var definitions = TestPayload.Definitions.ForSession([]);
+        var definitions = TestPayload.Definitions.ForSession([], DaggerfallSpellConstruction.ValidateDefinition);
         var settings = new DaggerfallSpellEffectDefinition("free-action", 26, -1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
         var eligible = new DaggerfallSpellDefinition("authored.custom.freedom", -1, false, "Authored freedom", 4, 0, 0, 1, [settings])
             { IsCustom = true, SpellsForSale = true };

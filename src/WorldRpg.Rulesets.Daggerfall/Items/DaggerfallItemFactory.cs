@@ -297,6 +297,22 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         return material is null or "none" ? template.HitPoints : DaggerfallItemMaterials.Apply(template, material).MaximumCondition;
     }
 
+    /// <summary>
+    /// The condition units an authored item instance starts with, asked of <see cref="StartingCondition"/> so
+    /// an authored loadout and a created instance cannot disagree. An item with no native weapon, armor
+    /// or ammunition template — a gem, a book, a coin — carries one unit rather than an invented wear
+    /// budget, and the donor's arrow template carries none.
+    /// </summary>
+    internal static int AuthoredMaximumCondition(DaggerfallDefinitions definitions, DaggerfallItemDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definitions);
+        ArgumentNullException.ThrowIfNull(definition);
+        if (DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(definition.Id) is not int index
+            || !definitions.ItemTemplateCatalog.Templates.TryGetValue(index, out DaggerfallItemTemplateDefinition? template))
+            return 1;
+        return StartingCondition(template, definition.Weapon?.Material ?? definition.Armor?.Material);
+    }
+
     private static string MaterializedItemId(DaggerfallItemTemplateDefinition template, string material) =>
         material == "none" ? $"template-{template.Index}" : $"template-{template.Index}-{material}";
 

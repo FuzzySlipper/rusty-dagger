@@ -23,7 +23,7 @@ internal sealed class GuildMakerFixture : IDisposable
 
     internal EntityDirectory Entities { get; } = new();
     // A session catalog, so a spell the spellmaker records stays in this fixture.
-    internal DaggerfallDefinitions Definitions { get; } = TestPayload.Definitions.ForSession([]);
+    internal DaggerfallDefinitions Definitions { get; } = TestPayload.Definitions.ForSession([], DaggerfallSpellConstruction.ValidateDefinition);
     internal DaggerfallItemInstances Instances { get; } = new();
     internal DaggerfallUniqueItemAllocator UniqueItems { get; } = new(5_000);
     internal DaggerfallNpcRegistry Npcs { get; } = new();

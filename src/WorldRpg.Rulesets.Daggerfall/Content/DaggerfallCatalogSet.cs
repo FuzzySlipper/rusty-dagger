@@ -19,11 +19,6 @@ internal sealed record DaggerfallRaceDefinition(string Id, int DonorRaceId, Dagg
     internal int CriticalWeaknessFlags { get; init; }
     internal DaggerfallDiseaseCareerTolerance Tolerance(int effectFlag) => DaggerfallCareerTolerances.Tolerance(
         ResistanceFlags, ImmunityFlags, LowToleranceFlags, CriticalWeaknessFlags, effectFlag);
-    internal Policies.DaggerfallMagicRaceToleranceFlags MagicTolerances => new(
-        (Policies.DaggerfallMagicEffectFlags)ResistanceFlags,
-        (Policies.DaggerfallMagicEffectFlags)(ImmunityFlags & ~ResistanceFlags),
-        (Policies.DaggerfallMagicEffectFlags)(LowToleranceFlags & ~(ResistanceFlags | ImmunityFlags)),
-        (Policies.DaggerfallMagicEffectFlags)(CriticalWeaknessFlags & ~(ResistanceFlags | ImmunityFlags | LowToleranceFlags)));
 }
 
 /// <summary>

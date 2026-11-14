@@ -211,12 +211,15 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// </summary>
     internal DaggerfallMagicCatalogSet Magic { get; private set; } = magic;
 
-    /// <summary>Session-owned spell rows over immutable admitted content; every consumer keeps this same catalog.</summary>
-    internal DaggerfallDefinitions ForSession(IReadOnlyList<DaggerfallSpellDefinition> constructed)
+    /// <summary>
+    /// Session-owned spell rows over immutable admitted content; every consumer keeps this same catalog.
+    /// <paramref name="admitSpell"/> is the rule each session spell must pass (<see cref="DaggerfallMagicCatalogSet.ForSession"/>).
+    /// </summary>
+    internal DaggerfallDefinitions ForSession(IReadOnlyList<DaggerfallSpellDefinition> constructed, Action<DaggerfallMagicCatalogSet, DaggerfallSpellDefinition> admitSpell)
     {
         // Loaded catalogs remain immutable and shared. Only the current spell rows are session state.
         var session = (DaggerfallDefinitions)MemberwiseClone();
-        session.Magic = Magic.ForSession(constructed);
+        session.Magic = Magic.ForSession(constructed, admitSpell);
         return session;
     }
 
@@ -419,9 +422,6 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// </summary>
     internal DaggerfallTextSet Text { get; private set; } = text;
 
-    /// <summary>The Daggerfall presentation owner for normalized lookup, layout and global macro expansion.</summary>
-    internal DaggerfallTextResolver TextPresentation { get; private set; } = new(text);
-
     /// <summary>
     /// These definitions with other text, the sections whose keys resolve through it, and every other
     /// section shared. Only <see cref="DaggerfallBaseContent.ReadTextSections"/> calls it, after reading
@@ -431,7 +431,6 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     {
         var replaced = (DaggerfallDefinitions)MemberwiseClone();
         replaced.Text = text;
-        replaced.TextPresentation = new(text);
         replaced.Names = names;
         replaced.Rumors = rumors;
         replaced.dialogueWorldRules = dialogueWorldRules;
@@ -445,21 +444,6 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal DaggerfallItemTemplateDefinition? SourceTemplateFor(DaggerfallItemDefinition item) => item.Template
         ?? (DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(item.Id) is int index
             ? ItemTemplateCatalog.Templates.GetValueOrDefault(index) : null);
-
-    /// <summary>
-    /// The condition units an authored item instance starts with, asked of the one owner of that rule so
-    /// an authored loadout and a created instance cannot disagree. An item with no native weapon, armor
-    /// or ammunition template — a gem, a book, a coin — carries one unit rather than an invented wear
-    /// budget, and the donor's arrow template carries none.
-    /// </summary>
-    internal int AuthoredMaximumCondition(DaggerfallItemDefinition definition)
-    {
-        ArgumentNullException.ThrowIfNull(definition);
-        if (DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(definition.Id) is not int index
-            || !ItemTemplateCatalog.Templates.TryGetValue(index, out DaggerfallItemTemplateDefinition? template))
-            return 1;
-        return DaggerfallItemFactory.StartingCondition(template, definition.Weapon?.Material ?? definition.Armor?.Material);
-    }
 }
 
 /// <summary>The authored world appearance and navigation grid every location assembled from its blocks shares.</summary>

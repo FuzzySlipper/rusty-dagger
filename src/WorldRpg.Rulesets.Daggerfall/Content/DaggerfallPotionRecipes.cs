@@ -48,14 +48,6 @@ internal sealed record DaggerfallPotionRecipeDefinition(int Key, int ClassicInde
             throw new ArgumentException($"Potion recipe {Key} has invalid spell-point restoration.");
     }
 
-    internal void ValidateEffects(DaggerfallEffectCatalog catalog)
-    {
-        foreach (var effect in Effects)
-            if (!catalog.TryResolveSpell(effect, out var compiled) || compiled.Key != effect.Key)
-                throw new ArgumentException($"Potion recipe {Key} names unavailable compiled effect '{effect.Key}'.");
-        if (SpellPointRestore is { } restore) _ = catalog.Require(restore.Effect);
-    }
-
     internal static int RecipeKey(IEnumerable<int> ingredients)
     {
         int key = 17;

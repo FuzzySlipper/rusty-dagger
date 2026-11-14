@@ -114,6 +114,16 @@ internal sealed record DaggerfallMagicRaceToleranceFlags(
     DaggerfallMagicEffectFlags LowTolerance,
     DaggerfallMagicEffectFlags CriticalWeakness)
 {
+    /// <summary>
+    /// A race's career flags in the spell effect vocabulary. Each flag counts once, in the order resistance, immunity,
+    /// low tolerance, critical weakness: a flag the race resists is not also an immunity, and so on.
+    /// </summary>
+    internal static DaggerfallMagicRaceToleranceFlags For(DaggerfallRaceDefinition race) => new(
+        (DaggerfallMagicEffectFlags)race.ResistanceFlags,
+        (DaggerfallMagicEffectFlags)(race.ImmunityFlags & ~race.ResistanceFlags),
+        (DaggerfallMagicEffectFlags)(race.LowToleranceFlags & ~(race.ResistanceFlags | race.ImmunityFlags)),
+        (DaggerfallMagicEffectFlags)(race.CriticalWeaknessFlags & ~(race.ResistanceFlags | race.ImmunityFlags | race.LowToleranceFlags)));
+
     internal DaggerfallMagicRaceToleranceFlags Validate()
     {
         const DaggerfallMagicEffectFlags all = DaggerfallMagicEffectFlags.Paralysis
@@ -160,7 +170,7 @@ internal sealed record DaggerfallMagicTargetProfile(
     DaggerfallMagicResistanceModifiers ResistanceModifiers,
     DaggerfallMagicActiveResistance[] ActiveResistances)
 {
-    internal DaggerfallMagicRaceToleranceFlags? PlayerRaceTolerances => PlayerRace?.MagicTolerances;
+    internal DaggerfallMagicRaceToleranceFlags? PlayerRaceTolerances => PlayerRace is { } race ? DaggerfallMagicRaceToleranceFlags.For(race) : null;
 
     internal DaggerfallMagicTargetProfile Validate()
     {

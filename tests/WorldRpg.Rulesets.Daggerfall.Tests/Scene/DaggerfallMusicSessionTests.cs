@@ -43,7 +43,7 @@ public sealed class DaggerfallMusicSessionTests
         // A cue change is the one completed change a score has to report: nothing on screen names the track.
         Assert.Equal(["daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'."], Cues(engine));
         // The tracks the container carries no recording of are named once, at the start, and never again.
-        Assert.Equal(bundle.MissingTracks.Count == 0 ? 0 : 1, engine.PublishedDiagnostics.Count(value => value.StartsWith("daggerfall.music/tracks.missing:", StringComparison.Ordinal)));
+        Assert.Equal(DaggerfallMusicDirector.MissingTracks(bundle).Count == 0 ? 0 : 1, engine.PublishedDiagnostics.Count(value => value.StartsWith("daggerfall.music/tracks.missing:", StringComparison.Ordinal)));
         // The same world in the next admitted update keeps that one loop: no second voice, no release.
         session.Update(Update());
         Assert.Equal("song_dungeon", session.Music.Track);

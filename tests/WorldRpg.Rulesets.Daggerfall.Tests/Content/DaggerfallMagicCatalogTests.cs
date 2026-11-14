@@ -156,7 +156,7 @@ public sealed class DaggerfallMagicCatalogTests
         var privateRow = source.DeepClone(); privateRow["key"] = "authored.custom.private";
         privateRow.AsObject().Remove("spellsForSale"); spells.Add(privateRow);
         var definitions = DaggerfallBaseContent.Read(TestPayload.Splice(payload));
-        var session = definitions.ForSession([]);
+        var session = definitions.ForSession([], DaggerfallSpellConstruction.ValidateDefinition);
         Assert.True(session.Magic.Spells["authored.custom.freedom"].SpellsForSale);
         Assert.False(session.Magic.Spells["authored.custom.private"].SpellsForSale);
         Assert.False(session.Magic.Spells["authored.custom.freedom"].IsPlayerCreated);

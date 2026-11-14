@@ -30,8 +30,8 @@ public sealed class DaggerfallRaceExposureTests
         var race = TestPayload.Definitions.Catalogs.RequireRace("breton") with
             { ResistanceFlags = 4, ImmunityFlags = 4, LowToleranceFlags = 4, CriticalWeaknessFlags = 4 };
         Assert.Equal(DaggerfallDiseaseCareerTolerance.Resistant, race.Tolerance(4));
-        Assert.Equal(DaggerfallMagicEffectFlags.Poison, race.MagicTolerances.Resistance);
-        Assert.Equal(DaggerfallMagicEffectFlags.None, race.MagicTolerances.Immunity);
+        Assert.Equal(DaggerfallMagicEffectFlags.Poison, DaggerfallMagicRaceToleranceFlags.For(race).Resistance);
+        Assert.Equal(DaggerfallMagicEffectFlags.None, DaggerfallMagicRaceToleranceFlags.For(race).Immunity);
         Assert.Equal(DaggerfallDiseaseCareerTolerance.Immune, (race with { ResistanceFlags = 0 }).Tolerance(4));
         Assert.Equal(DaggerfallDiseaseCareerTolerance.LowTolerance, (race with { ResistanceFlags = 0, ImmunityFlags = 0 }).Tolerance(4));
         Assert.Equal(DaggerfallDiseaseCareerTolerance.CriticalWeakness, (race with { ResistanceFlags = 0, ImmunityFlags = 0, LowToleranceFlags = 0 }).Tolerance(4));

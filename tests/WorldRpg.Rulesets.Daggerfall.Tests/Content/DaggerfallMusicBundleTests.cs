@@ -26,15 +26,15 @@ public sealed class DaggerfallMusicBundleTests
     [Fact]
     public void The_tracks_no_recording_answers_are_named_once()
     {
-        DaggerfallMusicBundle music = DaggerfallMusicBundle.Read(Container("song_dungeon.ogg"));
+        IReadOnlyList<string> missing = DaggerfallMusicDirector.MissingTracks(DaggerfallMusicBundle.Read(Container("song_dungeon.ogg")));
 
-        Assert.Equal(DaggerfallMusicBundle.PlaylistTracks.Count - 1, music.MissingTracks.Count);
-        Assert.DoesNotContain("song_dungeon", music.MissingTracks);
-        Assert.Contains("song_tavern", music.MissingTracks);
-        Assert.Equal(music.MissingTracks.Order(StringComparer.Ordinal), music.MissingTracks);
+        Assert.Equal(DaggerfallMusicDirector.PlaylistTracks.Count - 1, missing.Count);
+        Assert.DoesNotContain("song_dungeon", missing);
+        Assert.Contains("song_tavern", missing);
+        Assert.Equal(missing.Order(StringComparer.Ordinal), missing);
         // Every playlist the director plays, in either set, names its tracks here.
         foreach (DaggerfallMusicContext context in Enum.GetValues<DaggerfallMusicContext>())
-            Assert.All(DaggerfallMusicDirector.PlaylistFor(context, alternatePlaylists: true), track => Assert.Contains(track, DaggerfallMusicBundle.PlaylistTracks));
+            Assert.All(DaggerfallMusicDirector.PlaylistFor(context, alternatePlaylists: true), track => Assert.Contains(track, DaggerfallMusicDirector.PlaylistTracks));
     }
 
     [Fact]

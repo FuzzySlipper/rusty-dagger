@@ -318,7 +318,7 @@ public sealed class LawSessionTests
             Other = SameContentAt(source, source.Site!.Value, DaggerfallWorldProfileKind.Interior, "law-other", empty);
             Outside = exteriorCourt ? ReadProfile(TestData.RepositoryRoot, content!, TestPayload.Definitions, "daggerfall.charing-exterior") : null;
             var settings = new DaggerfallSpellEffectDefinition("touch", 4, 0, 0, 0, 1, 100, 0, 1, 10, 10, 1, 1, 1);
-            var definitions = TestPayload.Definitions.ForSession([new DaggerfallSpellDefinition("custom-spell.1", -1, false, "Legal touch", 4, 1, 0, 0, multipleEffects ? [settings, settings with {Key = "second"}] : [settings]) {IsPlayerCreated = true, IsCustom = true, SpellsForSale = false}]);
+            var definitions = TestPayload.Definitions.ForSession([new DaggerfallSpellDefinition("custom-spell.1", -1, false, "Legal touch", 4, 1, 0, 0, multipleEffects ? [settings, settings with {Key = "second"}] : [settings]) {IsPlayerCreated = true, IsCustom = true, SpellsForSale = false}], DaggerfallSpellConstruction.ValidateDefinition);
             var tuning = DaggerfallTuning.Defaults with {Law = new(0, 0, 2, 5, 12.8f, 51.2f, 3.2)};
             composition = new(definitions, Inputs, tuning) {Profiles = new(Outside is null ? [Inputs, Other] : [Inputs, Other, Outside])};
             InitialEngine = Engine();

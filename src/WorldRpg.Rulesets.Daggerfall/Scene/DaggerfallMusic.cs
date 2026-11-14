@@ -169,13 +169,14 @@ internal sealed class DaggerfallMusic
     /// </summary>
     private void ReportMissingTracks(DaggerfallMusicBundle music)
     {
-        if (music.MissingTracks.Count == 0) return;
+        IReadOnlyList<string> missing = DaggerfallMusicDirector.MissingTracks(music);
+        if (missing.Count == 0) return;
         _engine.Diagnostics.Publish(new DiagnosticsPublishRequest(
             DiagnosticsSeverity.Warning,
             DiagnosticsDisposition.Accepted,
             "daggerfall.music",
             "tracks.missing",
-            $"{DaggerfallMusicBundle.ContainerName} carries no recording of {music.MissingTracks.Count} of the {DaggerfallMusicBundle.PlaylistTracks.Count} tracks the playlists name: {string.Join(", ", music.MissingTracks)}.",
+            $"{DaggerfallMusicBundle.ContainerName} carries no recording of {missing.Count} of the {DaggerfallMusicDirector.PlaylistTracks.Count} tracks the playlists name: {string.Join(", ", missing)}.",
             string.Empty));
     }
 

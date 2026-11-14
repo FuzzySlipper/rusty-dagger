@@ -236,11 +236,11 @@ public sealed partial class DaggerfallEquipmentWearTests
         using WearFixture fixture = new();
         DaggerfallDefinitions definitions = fixture.Definitions;
 
-        int longsword = definitions.AuthoredMaximumCondition(definitions.RequireItem(new DaggerfallItemId("iron-longsword")));
-        int dagger = definitions.AuthoredMaximumCondition(definitions.RequireItem(new DaggerfallItemId("iron-dagger")));
-        int cuirass = definitions.AuthoredMaximumCondition(definitions.RequireItem(new DaggerfallItemId("iron-cuirass")));
-        int shield = definitions.AuthoredMaximumCondition(definitions.RequireItem(new DaggerfallItemId("buckler")));
-        int coin = definitions.AuthoredMaximumCondition(definitions.RequireItem(new DaggerfallItemId("gold-piece")));
+        int longsword = DaggerfallItemFactory.AuthoredMaximumCondition(definitions, definitions.RequireItem(new DaggerfallItemId("iron-longsword")));
+        int dagger = DaggerfallItemFactory.AuthoredMaximumCondition(definitions, definitions.RequireItem(new DaggerfallItemId("iron-dagger")));
+        int cuirass = DaggerfallItemFactory.AuthoredMaximumCondition(definitions, definitions.RequireItem(new DaggerfallItemId("iron-cuirass")));
+        int shield = DaggerfallItemFactory.AuthoredMaximumCondition(definitions, definitions.RequireItem(new DaggerfallItemId("buckler")));
+        int coin = DaggerfallItemFactory.AuthoredMaximumCondition(definitions, definitions.RequireItem(new DaggerfallItemId("gold-piece")));
 
         // The authored condition is the factory's own material adjustment of the same native template,
         // so a starting item and a created item of one template and material cannot disagree.
@@ -346,7 +346,7 @@ public sealed partial class DaggerfallEquipmentWearTests
             foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => entry.UniqueEntityId is not null))
             {
                 DaggerfallItemDefinition definition = Definitions.RequireItem(entry.ItemId);
-                int condition = Definitions.AuthoredMaximumCondition(definition);
+                int condition = DaggerfallItemFactory.AuthoredMaximumCondition(Definitions, definition);
                 _itemInstances.RegisterUnique(entry.UniqueEntityId!.Value,
                     DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player) with
                     {
@@ -417,7 +417,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         private void Equip(MechanicsEquipmentCoordinator equipment, DaggerfallItemOwner owner, string itemId, ulong uniqueId, string slot)
         {
             DaggerfallItemDefinition definition = Definitions.RequireItem(new DaggerfallItemId(itemId));
-            int condition = Definitions.AuthoredMaximumCondition(definition);
+            int condition = DaggerfallItemFactory.AuthoredMaximumCondition(Definitions, definition);
             _itemInstances.RegisterUnique(uniqueId, DaggerfallItemInstanceMetadata.Default(definition, owner) with
             {
                 CurrentCondition = condition,

@@ -198,13 +198,20 @@ internal sealed record DaggerfallMagicCatalogSet(
         return keys[draw(0, keys.Length - 1)];
     }
     private Dictionary<string, DaggerfallSpellDefinition>? _sessionSpells;
+    private Action<DaggerfallMagicCatalogSet, DaggerfallSpellDefinition>? _admitSpell;
 
-    internal DaggerfallMagicCatalogSet ForSession(IReadOnlyList<DaggerfallSpellDefinition> constructed)
+    /// <summary>
+    /// A session catalog: these spell rows, to which constructed spells are added. <paramref name="admitSpell"/> is the
+    /// rule a session spell must pass, which the session binds to Magic's construction rule; it checks every custom
+    /// row here and each spell added later, and throws to refuse one.
+    /// </summary>
+    internal DaggerfallMagicCatalogSet ForSession(IReadOnlyList<DaggerfallSpellDefinition> constructed, Action<DaggerfallMagicCatalogSet, DaggerfallSpellDefinition> admitSpell)
     {
         ArgumentNullException.ThrowIfNull(constructed);
+        ArgumentNullException.ThrowIfNull(admitSpell);
         var rows = Spells.ToDictionary(row => row.Key, row => row.Value, StringComparer.Ordinal);
-        var session = this with { Spells = rows, _sessionSpells = rows };
-        foreach (var spell in rows.Values.Where(spell => spell.IsCustom)) DaggerfallSpellConstruction.ValidateDefinition(session, spell);
+        var session = this with { Spells = rows, _sessionSpells = rows, _admitSpell = admitSpell };
+        foreach (var spell in rows.Values.Where(spell => spell.IsCustom)) admitSpell(session, spell);
         foreach (var spell in constructed) session.AddConstructedSpell(spell);
         return session;
     }
@@ -212,27 +219,8 @@ internal sealed record DaggerfallMagicCatalogSet(
     internal void AddConstructedSpell(DaggerfallSpellDefinition spell)
     {
         if (_sessionSpells is null) throw new InvalidOperationException("Only a session catalog admits constructed spells.");
-        DaggerfallSpellConstruction.ValidateDefinition(this, spell);
+        _admitSpell!(this, spell);
         if (!_sessionSpells.TryAdd(spell.Key, spell with { Effects = Array.AsReadOnly(spell.Effects.ToArray()) })) throw new ArgumentException($"Constructed spell identity '{spell.Key}' collides with a current definition.");
-    }
-
-    /// <summary>The loaded payloads owned by one item key, including maker-authored settings.</summary>
-    internal bool TryEnchantments(DaggerfallItemInstanceMetadata item, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)
-        => TryEnchantments(item.Enchantment, item.MadeEnchantment, out enchantments);
-
-    internal bool TryEnchantments(DaggerfallItemMetadataSave item, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)
-        => TryEnchantments(item.Enchantment, item.MadeEnchantment, out enchantments);
-
-    private bool TryEnchantments(string? key, DaggerfallMadeEnchantment? made, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)
-    {
-        if (made is not null)
-        {
-            enchantments = made.Settings.Select((value, index) => DaggerfallEnchantmentSettings.ToEffect(EnchantmentSettings[value.Key]) with { Key = $"{value.Key}.made.{index}" }).ToArray();
-            return true;
-        }
-        if (key is not null) return TryEnchantments(key, out enchantments);
-        enchantments = [];
-        return false;
     }
 
     internal bool TryEnchantments(string key, out IReadOnlyList<DaggerfallMagicEnchantmentDefinition> enchantments)

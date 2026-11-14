@@ -929,7 +929,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         internal void EquipEnchanted(string itemId, ulong uniqueId, string? enchantment, bool equip = false)
         {
             DaggerfallItemDefinition definition = Definitions.RequireItem(new DaggerfallItemId(itemId));
-            int condition = Definitions.AuthoredMaximumCondition(definition);
+            int condition = DaggerfallItemFactory.AuthoredMaximumCondition(Definitions, definition);
             // An item-maker setting is held as a made enchantment, the one form the item maker writes;
             // a published magic item is named by its key.
             bool setting = enchantment is not null && Definitions.Magic.EnchantmentSettings.ContainsKey(enchantment);
@@ -973,7 +973,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         internal void EnchantAndWear(string itemId, ulong uniqueId, int type, int param)
         {
             DaggerfallItemDefinition definition = Definitions.RequireItem(new DaggerfallItemId(itemId));
-            int condition = Definitions.AuthoredMaximumCondition(definition);
+            int condition = DaggerfallItemFactory.AuthoredMaximumCondition(Definitions, definition);
             _instances.RegisterUnique(uniqueId, DaggerfallItemInstanceMetadata.Default(definition, DaggerfallItemOwner.Player) with
             {
                 CurrentCondition = condition,

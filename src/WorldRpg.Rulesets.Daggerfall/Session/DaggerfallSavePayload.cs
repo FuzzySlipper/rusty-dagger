@@ -230,7 +230,7 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(CustomSpells);
         if (CustomSpells.Any(spell => spell is null || !spell.IsPlayerCreated))
             throw new ArgumentException("Saved custom spells must be actual player-created definitions.");
-        definitions = definitions.ForSession(CustomSpells);
+        definitions = definitions.ForSession(CustomSpells, DaggerfallSpellConstruction.ValidateDefinition);
         TeleportAnchor?.Resolve(definitions, inputs, profiles,
             ship => DaggerfallPropertyPolicy.ShipArrival(ship, (tuning ?? DaggerfallTuning.Defaults).Property) is var arrival ? (arrival.MapPixelX, arrival.MapPixelY) : default);
         Notebook.Validate(definitions, definitions.TextPresentation);

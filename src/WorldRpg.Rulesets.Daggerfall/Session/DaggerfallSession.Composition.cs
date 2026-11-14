@@ -84,7 +84,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallResolvedRestore? restore)
     {
         DaggerfallSavePayload? saved = restore?.Payload;
-        DaggerfallDefinitions definitions = restore?.Definitions ?? composition.Definitions.ForSession([]);
+        DaggerfallDefinitions definitions = restore?.Definitions ?? composition.Definitions.ForSession([], DaggerfallSpellConstruction.ValidateDefinition);
         DaggerfallTuning tuning = composition.Tuning;
         DaggerfallSiteAudioBundles? audioBundles = composition.Audio;
         DaggerfallMusicBundle? music = composition.Music;

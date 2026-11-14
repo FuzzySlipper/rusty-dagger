@@ -124,7 +124,7 @@ internal static class DaggerActorFactory
                 // template and material author. Anything else would put a one-unit wear budget on gear
                 // that the first landed physical hit takes to nothing.
                 DaggerfallItemDefinition loadoutDefinition = definitions.RequireItem(entry.ItemId);
-                int condition = definitions.AuthoredMaximumCondition(loadoutDefinition);
+                int condition = DaggerfallItemFactory.AuthoredMaximumCondition(definitions, loadoutDefinition);
                 itemInstances.RegisterUnique(entry.UniqueEntityId.Value,
                     DaggerfallItemInstanceMetadata.Default(loadoutDefinition, DaggerfallItemOwner.Player) with
                     {
