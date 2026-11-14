@@ -24,22 +24,22 @@ class Job:
 
 class Workers:
     """The Resources state the router reads, and den-tool build run against it: a job on a worker the router would
-    refuse is refused, and an admitted one is checked in a moment after it starts. A stale row is what an earlier
-    run left behind when its check-out failed. A held job runs until the test ends it, as a verify outlasts its
-    admission: a job that ended first would free its worker before route.py had seen it checked in, and whether the
-    next send saw that worker busy would depend on which thread ran first."""
+    refuse is refused, and a job takes a slot until it ends. A stale row is what an earlier run left behind when its
+    check-out failed. A held job runs until the test ends it, as a verify outlasts its admission."""
 
     ids = itertools.count()
 
-    def __init__(self, building=(), gpu_busy=(), stale=(), held=False):
+    def __init__(self, building=(), gpu_busy=(), stale=(), held=False, hosts=HOSTS):
         self.lock, self.started, self.ended = threading.Lock(), [], threading.Event()
+        self.config, self.launched = hosts, []
         if not held:
             self.ended.set()
         self.work = [self.entry(host) for host in building] + [self.entry(host, 'verify', stale=True) for host in stale]
-        self.hosts = [{'id': host['id'], 'status': 'quiet', 'stale': False, 'error': None,
+        self.hosts = [{'id': host['id'], 'status': 'working' if host['id'] in gpu_busy else 'quiet',
+                       'stale': False, 'error': None,
                        'telemetry': {'gpus': [{'utilization_percent': 0}]},
                        'apps': [{'name': 'ComfyUI', 'online': True, 'stale': False,
-                                 'running': 1 if host['id'] in gpu_busy else 0, 'queued': 0}]} for host in HOSTS]
+                                 'running': 1 if host['id'] in gpu_busy else 0, 'queued': 0}]} for host in hosts]
 
     @classmethod
     def entry(cls, host, lane='x', stale=False):
@@ -51,19 +51,24 @@ class Workers:
             return {'hosts': self.hosts, 'work': list(self.work)}
 
     def launch(self, argv, output):
-        host, lane = argv[argv.index('--host') + 1], argv[argv.index('--lane') + 1]
-        if route.workers_now(HOSTS, self.state())[host][0]:
-            output.write('den-tool: no eligible host\n')
-            return Job(lambda: 1, lambda: 1)
+        explicit = argv[argv.index('--host') + 1] if '--host' in argv else None
+        lane = argv[argv.index('--lane') + 1]
         with self.lock:
+            self.launched.append(explicit)
+            state = {'hosts': self.hosts, 'work': list(self.work)}
+            usable = route.workers_now(self.config, state)
+            order = sorted(self.hosts, key=lambda sample: sample['status'] != 'quiet')
+            host = next((sample['id'] for sample in order
+                         if explicit in (None, sample['id']) and not usable[sample['id']][0]), None)
+            if host is None:
+                output.write('den-tool: no eligible host\n')
+                return Job(lambda: 1, lambda: 1)
             self.started.append((lane, host))
-        output.write(f'den-build: checkout at {COMMIT}\n')
-        job = self.entry(host, lane)
-
-        def check_in():
-            with self.lock:
-                self.work.append(job)
-        threading.Timer(0.3, check_in).start()
+            job = self.entry(host, lane)
+            self.work.append(job)
+        output.write(f'den-tool build: rusty-dagger/{lane} at {COMMIT} on {host} (8 jobs)\n')
+        output.write(f'den-build: /checkout at {COMMIT}\n')
+        output.flush()
         done = time.monotonic() + 0.6
 
         def wait():
@@ -84,9 +89,9 @@ class AdmissionTest(unittest.TestCase):
         self.config.write_text(json.dumps({'hosts': HOSTS, 'repositories': {
             'rusty-dagger': {'lanes': {lane: {} for lane in LANES}}}}))
 
-    def send(self, workers, lane, host=None, take_last=False):
+    def send(self, workers, lane, host=None, take_last=False, wait=0):
         route.resources, route.launch = workers.state, workers.launch
-        options = types.SimpleNamespace(config=str(self.config), whole=False, host=host, wait=0, take_last=take_last)
+        options = types.SimpleNamespace(config=str(self.config), whole=False, host=host, wait=wait, take_last=take_last)
         run = pathlib.Path(tempfile.mkdtemp(dir=self.scratch))
         return route.route(lane, COMMIT, options, run)[0]
 
@@ -138,8 +143,22 @@ class AdmissionTest(unittest.TestCase):
 
     def test_a_split_run_takes_the_last_worker(self):
         workers = Workers(building=['den-k8'], gpu_busy=['den-nimo'])
-        self.send(workers, 'ruleset')
+        self.send(workers, 'ruleset', host='den-m5', wait=None)
         self.assertEqual(sorted(workers.started), [('ruleset-1', 'den-m5'), ('ruleset-2', 'den-m5'), ('ruleset-3', 'den-m5')])
+
+    def test_unpinned_data_uses_the_router_order_with_comfy_as_a_fallback(self):
+        hosts = [{key: value for key, value in host.items() if key != 'max_gpu_percent'} for host in HOSTS]
+        config = json.loads(self.config.read_text())
+        config['hosts'] = hosts
+        self.config.write_text(json.dumps(config))
+        building = ['den-k8']
+        for expected in ('den-m5', 'den-nimo'):
+            with self.subTest(expected=expected):
+                workers = Workers(building=building, gpu_busy=['den-nimo'], hosts=hosts)
+                self.assertTrue(self.send(workers, 'data'))
+                self.assertEqual(workers.launched, [None])
+                self.assertEqual(workers.started, [('data', expected)])
+            building.append('den-m5')
 
 
 

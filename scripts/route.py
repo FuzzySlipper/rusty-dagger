@@ -15,9 +15,9 @@
 REF defaults to HEAD and may be any commit in den-agents' repository, pushed or not; uncommitted changes are not
 in it. The lanes are scripts/lane.sh; the router's config (--config, DEN_BUILD_CONFIG_PATH, else the installed one)
 names them. The test lanes take the data of the commit's importer revision from the store and refuse when it has
-none: route `data` for that commit first. It first says what each worker is doing. A part waits until a worker frees
-(--wait MINUTES gives up), and a long lane (verify, --whole, import-suite) leaves the last worker the router can use
-to split runs unless --take-last; long lanes sent from den-agents are admitted one at a time, so together they leave
+none: route `data` for that commit first. It first says what each worker is doing. The router prefers quiet workers.
+A part waits until a worker frees (--wait MINUTES gives up). A long lane (verify, --whole, import-suite) leaves
+the last worker the router can use to split runs unless --take-last. Long lanes wait for each other's admission so they leave
 it too. `data` is not a long lane: the commit's suites wait on it. Stopping the command stops
 its lanes. Each lane's log is written under local/build/route/, and the command exits 0 only when every part passed.
 
@@ -44,6 +44,7 @@ routes = root / 'local/build/route'
 SUMMARY = re.compile(r'\s*(Passed!|Failed!|Failed [A-Z]\w*\.|FAIL: |play-smoke .* passed:|Verified Engine pair|skipped )'
                      r'|lane: (run |refusing|the import rebaked|the store already|.* took |.* failed \(|.* stopped:)'
                      r'|data-sync: (published|refusing|the store already)')
+WORKER_LINE = re.compile(r'^den-tool build: \S+ at [0-9a-f]{40} on (\S+) \(\d+ jobs\)$', re.MULTILINE)
 # A round of main waits at most this long for a worker, so that the wait and a verify (35 to 45 minutes, with the
 # lane's setup) fit the timer unit's two-hour TimeoutStartSec; the next round, half an hour later, waits again.
 ROUND_WAIT_MINUTES = 60
@@ -102,8 +103,8 @@ def workers_now(hosts, state):
 
 
 def admission():
-    """Long lanes on this machine are admitted one at a time, each holding this lock until the router has checked its
-    job in, so two of them never count each other's worker as the one left free."""
+    """Long lanes on this machine hold this lock until the lane starts, so two long lanes cannot count each
+    other's worker as the one left free."""
     common = git('rev-parse', '--path-format=absolute', '--git-common-dir')
     gate = (pathlib.Path(common) / 'route-admission.lock').open('a')
     fcntl.flock(gate, fcntl.LOCK_EX)
@@ -135,98 +136,91 @@ def route(lane, commit, options, run):
     long = parts == [lane] and lane != 'data' and not re.fullmatch(r'ruleset-\d+', lane)
 
     print(f'route: {", ".join(parts)} at {commit} over {", ".join(hosts)}; logs in {run}', flush=True)
-    for host, (reason, doing) in workers_now(enabled, resources()).items():
-        print(f'route: {host}: {f"busy, {reason}" if reason else "free"}{": " if doing else ""}{"; ".join(doing)}', flush=True)
+    state = resources()
+    activity = {sample['id']: sample.get('status') for sample in state.get('hosts', [])}
+    for host, (reason, doing) in workers_now(enabled, state).items():
+        status = f'busy, {reason}' if reason else f'build slot free, {activity.get(host, "unknown")}'
+        print(f'route: {host}: {status}{": " if doing else ""}{"; ".join(doing)}', flush=True)
     pending = queue.Queue()
     for part in parts:
         pending.put(part)
     results, lock = {}, threading.Lock()
     began = time.monotonic()
+    checkout = re.compile(rf'^den-build: /.* at {commit}$', re.MULTILINE)
 
-    def worker(host):
-        held = [None]
-        try:
-            serve(host, held)
-        except Exception as error:
-            # The part this worker held gets a result, or every other worker would wait for it forever.
-            with lock:
-                if held[0] and held[0] not in results:
-                    results[held[0]] = (host, 1, 0.0, run / f'{held[0]}.log', f'lane: route.py stopped: {error!r}')
-            raise
-
-    def attempt(host, part, log, gate):
-        """Sends one lane to one worker; returns its exit code and log. A long lane's admission ends only once the
-        router has checked this job in on that worker (a live ledger row that was not there before it was sent), or
-        den-tool has exited: an older or stale row says nothing about this job."""
-        before = {entry.get('id') for entry in resources().get('work', [])} if gate else set()
-
-        def checked_in(entry):
-            return (entry.get('id') not in before and not entry.get('stale') and entry.get('state') == 'running'
-                    and entry.get('host') == host and entry.get('source') == 'build'
-                    and entry.get('title') == f'{REPO} / {part}' and commit in entry.get('note', ''))
+    def attempt(part, log, gate):
         # The installed config may be updated while a split run waits.
         current_config = json.loads(pathlib.Path(options.config).read_text())
         flags = ['--no-wait'] if current_config.get('wait_for_worker') else []
+        if options.host:
+            flags += ['--host', options.host]
         with log.open('w') as output:
             child = launch(['den-tool', 'build', 'run', '--repo', REPO, '--lane', part, '--ref', commit,
-                            '--host', host, '--config', options.config, *flags], output)
+                            '--config', options.config, *flags], output)
             children.add(child)
-            if gate:
-                while child.poll() is None and not any(map(checked_in, resources().get('work', []))):
-                    time.sleep(1)
-                gate.close()
-            code = child.wait()
-            children.discard(child)
+            try:
+                if gate:
+                    # The checkout line confirms this child got its worker lock.
+                    while child.poll() is None and not checkout.search(log.read_text(errors='replace')):
+                        time.sleep(1)
+                    gate.close()
+                code = child.wait()
+            finally:
+                children.discard(child)
         return code, log.read_text(errors='replace')
 
-    def serve(host, held):
+    def worker():
         waited_since, said = None, None
-        # Until every part has a result: a part another worker had to give back may still come here.
         while len(results) < len(parts):
             try:
-                part = held[0] = pending.get(timeout=5)
+                part = pending.get(timeout=1)
             except queue.Empty:
                 continue
             log = run / f'{part}.log'
-            start, text, code, reason, gate = time.monotonic(), '', None, None, None
+            start, reason, gate = time.monotonic(), None, None
             try:
                 if long and not options.take_last:
                     gate = admission()
                     usable = workers_now(enabled, resources())
-                    if not any(usable[other][0] is None for other in workers if other != host):
-                        reason = 'it is the last worker the router can use, which a split run needs (--take-last takes it)'
+                    if sum(unavailable is None for unavailable, _ in usable.values()) < 2:
+                        reason = 'a split run needs the last worker (--take-last takes it)'
                 if not reason:
-                    code, text = attempt(host, part, log, gate)
-                    # Without the worker's checkout line the router refused the host.
-                    if f' at {commit}\n' not in text or 'den-build: ' not in text:
+                    code, text = attempt(part, log, gate)
+                    started = checkout.search(text)
+                    if not started:
                         reason = text.strip().splitlines()[-1] if text.strip() else f'exit {code}'
+            except Exception as error:
+                # Record a result for the part this dispatcher took from the queue.
+                with lock:
+                    results[part] = ('worker unknown', 1, 0.0, log, f'lane: route.py stopped: {error!r}')
+                raise
             finally:
                 if gate:
                     gate.close()
             if reason:
                 pending.put(part)
-                held[0] = None
                 waited_since = waited_since or time.monotonic()
                 if options.wait is not None and time.monotonic() - waited_since >= options.wait * 60:
                     with lock:
-                        print(f'route: {host} gave up waiting: {reason}', flush=True)
+                        print(f'route: {part} gave up waiting: {reason}', flush=True)
                     return
                 if reason != said:
-                    said = reason
                     with lock:
-                        print(f'route: {host} cannot take {part} yet ({reason}); trying again', flush=True)
-                # A part tries every 20 seconds and a long lane every minute, so a waiting part takes a freed worker first.
+                        print(f'route: {part} is waiting ({reason}); trying again', flush=True)
+                # Split runs get the first chance at a freed worker.
                 time.sleep(60 if long else 20)
                 continue
-            waited_since, said = None, None
+            # The log can include a candidate that lost its worker lock at launch.
+            selected = WORKER_LINE.findall(text, 0, started.start())
+            host = selected[-1] if selected else options.host or 'worker unknown'
             minutes = (time.monotonic() - start) / 60
+            waited_since, said = None, None
             with lock:
                 results[part] = (host, code, minutes, log, text)
-                held[0] = None
-                print(f'route: {part} {"passed" if code == 0 else f"FAILED ({code})"} on {host} in {minutes:.1f} min: {log}',
+                print(f'route: {part} {"passed" if code == 0 else "FAILED"} on {host} in {minutes:.1f} min: {log}',
                       flush=True)
 
-    threads = [threading.Thread(target=worker, args=(host,), daemon=True) for host in hosts]
+    threads = [threading.Thread(target=worker, daemon=True) for _ in range(min(len(parts), len(hosts)))]
     for thread in threads:
         thread.start()
     for thread in threads:
