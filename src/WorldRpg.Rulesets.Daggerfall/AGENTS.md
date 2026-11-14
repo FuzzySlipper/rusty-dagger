@@ -31,6 +31,8 @@ On top of the root `AGENTS.md`.
 
 - Keep no second actor dictionary; enumerate the store.
 - Remove an actor through `DaggerfallActorRoster`, which ends its effects and destroys its items; the directory alone doesn't.
+- Place a new actor around the player with `DaggerfallActorPlacement.TrySpawnPose` and find foes with its `QueryEnemies`; don't cast placement rays or perception queries of your own.
+- Harm becomes facts through `DaggerfallDamageFacts`, whatever dealt it; a death is its `ActorDiedFact`.
 - A facade property needs its component attached; use Engine `TryGet<T>` for an optional one.
 - An effect definition that applies contributions supplies a resume callback, so a load never applies them twice.
 - New spell families bind in `DaggerfallEffectCatalog`; an unmapped effect refuses before payment or skill use.

@@ -816,21 +816,8 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
             : new SpellPointsAppliedFact(source, target, result.CalculatedLoss, result.ActualLoss, generation, step));
     }
 
-    private void AppendDamage(DamageResult result, DaggerfallDamageCause cause, int struckBody)
-    {
-        long source = checked((long)result.Source.Get<DurableEntityIdentity>().Identity.Value);
-        long target = checked((long)result.Target.Get<DurableEntityIdentity>().Identity.Value);
-        ulong generation = _latestUpdateGeneration ?? 1UL;
-        ulong step = _latestSimulationStep ?? 1UL;
-        _facts.Append(new DamageAppliedFact(source, target, cause,
-            result.CalculatedDamage, result.ActualHealthLost, struckBody, generation, step));
-        if (result.ActualHealthLost > 0)
-            _facts.Append(new ActorDamagedFact(target, source, cause,
-                result.CalculatedDamage, result.ActualHealthLost) { TargetDefeated = result.Defeated });
-        if (result.Defeated)
-            _facts.Append(new ActorDiedFact(target, source, cause,
-                result.CalculatedDamage, result.ActualHealthLost, generation, step));
-    }
+    private void AppendDamage(DamageResult result, DaggerfallDamageCause cause, int struckBody) =>
+        DaggerfallDamageFacts.Append(_facts, result, cause, struckBody, _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);
 
     private void React(IProductFact fact)
     {
