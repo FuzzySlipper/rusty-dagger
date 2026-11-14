@@ -23,6 +23,10 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </summary>
 internal sealed class DaggerfallState(
     DaggerActorAssembly assembled,
+    DaggerfallVariableStore variables,
+    DaggerfallSocialState social,
+    DaggerfallQuestInstances quests,
+    DaggerfallQuestTrainingState questTraining,
     GameplayServices<IProductFact> kit,
     DaggerfallEffectLifecycle effects,
     DaggerfallRacialOverrides racialOverrides,
@@ -65,7 +69,7 @@ internal sealed class DaggerfallState(
     /// <summary>One durable, staged classic level-up allocation opened by ordinary rest eligibility.</summary>
     internal DaggerfallLevelUpState LevelUps { get; } = levelUps;
     /// <summary>Current donor quest-training timestamp, separate from the calendar that advances it.</summary>
-    internal DaggerfallQuestTrainingState QuestTraining { get; } = assembled.QuestTraining;
+    internal DaggerfallQuestTrainingState QuestTraining { get; } = questTraining;
     internal PlayerControlState PlayerControl { get; } = assembled.PlayerControl;
     /// <summary>
     /// Whether the player holds the weapon drawn. It gates the player's attacks and is what a sheathed
@@ -88,11 +92,11 @@ internal sealed class DaggerfallState(
     /// <summary>Inventory and equipment coordinators over any live actor, against the admitted item catalog.</summary>
     internal DaggerfallActorInventories ActorInventories { get; } = assembled.ActorInventories;
     /// <summary>The session's scoped quest and world variables, handed explicitly to readers.</summary>
-    internal DaggerfallVariableStore Variables { get; } = assembled.Variables;
+    internal DaggerfallVariableStore Variables { get; } = variables;
     /// <summary>The session's NPC identities, handed explicitly to talk, damage and quest readers.</summary>
     internal DaggerfallNpcRegistry Npcs { get; } = assembled.Npcs;
     /// <summary>Persistent Daggerfall reputation, reaction, and guild-membership policy for talk, services, and quests.</summary>
-    internal DaggerfallSocialState Social { get; } = assembled.Social;
+    internal DaggerfallSocialState Social { get; } = social;
     internal DaggerfallCrimeState Crime { get; } = crime;
     /// <summary>Guild admission and rank policy over the canonical social membership records.</summary>
     internal DaggerfallGuildMembershipPolicy GuildMembership { get; } = guildMembership;
@@ -109,7 +113,7 @@ internal sealed class DaggerfallState(
     /// <summary>The race a curse imposes on the player, over the birth race the character keeps.</summary>
     internal DaggerfallRacialOverrides RacialOverrides { get; } = racialOverrides;
     /// <summary>Current Daggerfall quest instances over admitted definitions and durable product bindings.</summary>
-    internal DaggerfallQuestInstances Quests { get; } = assembled.Quests;
+    internal DaggerfallQuestInstances Quests { get; } = quests;
     internal DaggerfallQuestItems QuestItems { get; set; } = null!;
     /// <summary>Live carried-weight policy over the player's canonical Engine inventory.</summary>
     internal DaggerfallEncumbrancePolicy Encumbrance { get; } = encumbrance;

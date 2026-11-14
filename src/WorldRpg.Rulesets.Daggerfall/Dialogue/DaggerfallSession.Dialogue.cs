@@ -385,7 +385,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     internal void Rebase(System.Numerics.Vector3 delta)
     {
         if (_current is { } current)
-            current.Position = DaggerfallExteriorSessionOrigin.Shift(current.Position, delta);
+            current.Position = DaggerfallSceneOrigin.Shift(current.Position, delta);
     }
 
     internal void RefreshEligibility()

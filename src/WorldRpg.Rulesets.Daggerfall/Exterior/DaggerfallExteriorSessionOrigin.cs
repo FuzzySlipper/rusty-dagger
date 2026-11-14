@@ -38,14 +38,6 @@ internal static class DaggerfallExteriorSessionOrigin
     /// </summary>
     internal static Vector3 LocalDelta(WorldOriginCommitReceipt receipt) => receipt.LocalDelta;
 
-    internal static WorldPoint Shift(WorldPoint position, Vector3 localDelta)
-    {
-        Vector3 shifted = position.ToVector() + localDelta;
-        if (!float.IsFinite(shifted.X) || !float.IsFinite(shifted.Y) || !float.IsFinite(shifted.Z))
-            throw new InvalidOperationException("WorldOrigin rebase produced a non-finite product position.");
-        return WorldPoint.From(shifted);
-    }
-
     /// <summary>
     /// Converts a product local pose back to the durable map-pixel cell that contains it. Daggerfall
     /// terrain's negative local Z points toward decreasing map-pixel Y, matching the surface builder's

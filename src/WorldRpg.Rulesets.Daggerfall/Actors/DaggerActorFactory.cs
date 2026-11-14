@@ -27,7 +27,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
 /// The actors, inventories and registries the factory constructs from admitted definitions or a current
-/// save's actor sections, before any session service exists; <see cref="DaggerfallState"/> names them.
+/// save's actor sections, before any session service exists.
 /// </summary>
 internal sealed record DaggerActorAssembly(
     PlayerControlState PlayerControl,
@@ -38,15 +38,18 @@ internal sealed record DaggerActorAssembly(
     MechanicsInventoryContainerCoordinator Containers,
     DaggerfallActorInventories ActorInventories,
     DaggerfallItemInstances ItemInstances,
-    DaggerfallVariableStore Variables,
     DaggerfallNpcRegistry Npcs,
-    DaggerfallSocialState Social,
     DaggerfallCharacterState Character,
-    DaggerfallQuestInstances Quests,
-    DaggerfallQuestTrainingState QuestTraining,
     Dictionary<long, DaggerfallActorDefinition> Definitions,
     DaggerfallActorDefinition PlayerDefinition,
     DaggerfallMechanicsState Mechanics);
+
+/// <summary>
+/// The save's actor sections the factory restores from: the player, the placed actors it keeps and those banished, the
+/// spawned actors, the people and the character. A new game has none.
+/// </summary>
+internal sealed record DaggerActorSaves(DaggerfallPlayerSave Player, DaggerfallActorSave[] Actors, long[] BanishedActors,
+    DaggerfallDynamicActorSave[] DynamicActors, DaggerfallNpcSave Npcs, DaggerfallCharacterSave? Character);
 
 /// <summary>
 /// The atlas gender a spawned enemy took when it entered the world. DaggerfallMobileUnit.GetTextureArchive
@@ -67,8 +70,7 @@ internal static class DaggerActorFactory
     /// <summary>Every Daggerfall actor targets and attacks; only the player levels.</summary>
     internal const ActorCapabilities PlayerCapabilities = ActorCapabilities.Targeting | ActorCapabilities.Attacks | ActorCapabilities.Progression;
     internal const ActorCapabilities NonPlayerCapabilities = ActorCapabilities.Targeting | ActorCapabilities.Attacks;
-    internal static DaggerActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallSavePayload? saved,
-        DaggerfallQuestRuntimeAdmission? questAdmission = null, DaggerfallDisabledQuestSelection? disabledQuestSelection = null,
+    internal static DaggerActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerActorSaves? saved,
         bool materializeActiveSite = true)
     {
         ActorsState actors = new();
@@ -183,13 +185,7 @@ internal static class DaggerActorFactory
                     }
                 }
             }
-            DaggerfallVariableStore variables = new(definitions.QuestSources.Tables.Globals.Lookup);
             DaggerfallNpcRegistry npcs = new();
-            if (saved?.Variables is { } restoredVariables)
-            {
-                variables.Restore(restoredVariables.Entries.Select(entry => (entry.Require(), entry.Value)));
-            }
-
             if (saved?.Npcs is { } restoredNpcs)
             {
                 npcs.Restore(restoredNpcs.Entries.Select(entry => new DaggerfallNpc(
@@ -204,16 +200,9 @@ internal static class DaggerActorFactory
                     entry.X, entry.Y, entry.Z) { Profile = entry.Profile?.Require(), DisplayName = entry.DisplayName }));
             }
 
-            DaggerfallSocialState social = new(definitions.Factions);
-            if (saved?.Social is { } restoredSocial)
-            {
-                social.Restore(restoredSocial);
-            }
-
             DaggerfallCharacterState character = new(definitions, player.Stats, playerDefinition, saved?.Character);
-            DaggerfallQuestInstances quests = new(definitions, random, questAdmission, disabledQuestSelection);
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
-            if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved, authored, inventoryStore);
+            if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved.DynamicActors, authored, inventoryStore);
             // A restored player stands where the save left them from construction on: the active profile may
             // have no authored start (a location without start markers), and the camera is built from this pose.
             PlayerControlState control = saved?.Player is { } pose
@@ -223,9 +212,7 @@ internal static class DaggerActorFactory
                 control,
                 actors, inventoryStore, inventory, equipmentCoordinator, containers,
                 new DaggerfallActorInventories(actors, itemDefinitions, equipmentSlots),
-                itemInstances, variables, npcs, social, character,
-                quests,
-                new DaggerfallQuestTrainingState(saved?.QuestTraining),
+                itemInstances, npcs, character,
                 authored, playerDefinition, mechanics);
         }
         catch { actors.Dispose(); throw; }
@@ -376,7 +363,7 @@ internal static class DaggerActorFactory
         ActorsState actors,
         DaggerfallMechanicsState mechanics,
         DaggerfallDefinitions definitions,
-        DaggerfallSavePayload saved,
+        IEnumerable<DaggerfallDynamicActorSave> saved,
         Dictionary<long, DaggerfallActorDefinition> definitionsByActor,
         InventoryStore inventoryStore)
     {
@@ -387,7 +374,7 @@ internal static class DaggerActorFactory
         ArgumentNullException.ThrowIfNull(saved);
         ArgumentNullException.ThrowIfNull(definitionsByActor);
         ArgumentNullException.ThrowIfNull(inventoryStore);
-        foreach (DaggerfallDynamicActorSave spawned in saved.DynamicActors.OrderBy(value => value.EntityId))
+        foreach (DaggerfallDynamicActorSave spawned in saved.OrderBy(value => value.EntityId))
             CreateDynamicActor(random, mechanics, definitions, actors, inventoryStore, definitionsByActor, spawned);
     }
 

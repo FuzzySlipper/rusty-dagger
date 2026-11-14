@@ -33,6 +33,20 @@ internal interface IDaggerfallExteriorSite
 }
 
 /// <summary>
+/// The session's save boundary for one site: what its actors, inventories, corpses, doors and effects become as it
+/// leaves, and what they were as it returns. The session's persistence implements it.
+/// </summary>
+internal interface IDaggerfallSiteDeltas
+{
+    /// <summary>Captures a site's live state, its actors limited to <paramref name="actorFilter"/> and moved into its profile frame.</summary>
+    DaggerfallSiteRuntimeDelta Capture(DaggerfallSiteProfile inputs, DaggerfallSiteProjection projection,
+        IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, IReadOnlySet<long>? actorFilter, Vector3 actorFrameOffset);
+
+    /// <summary>Reapplies a returning site's inventories, corpses, doors and effects onto its materialized actors.</summary>
+    void Restore(DaggerfallSiteRuntimeDelta delta);
+}
+
+/// <summary>
 /// The session consequences the exterior reaches that it does not own. The exterior calls each at one fixed point; the
 /// session answers.
 /// </summary>
@@ -83,7 +97,10 @@ internal interface IDaggerfallExteriorHost
 internal sealed class DaggerfallExteriorWorld
 {
     private readonly IEngineContext _engine;
-    private readonly DaggerfallState _state;
+    private readonly ActorsState _actors;
+    private readonly DaggerfallNpcRegistry _npcs;
+    private readonly PlayerControlState _player;
+    private readonly DaggerfallEffectLifecycle _effects;
     private readonly DaggerfallDefinitions _definitions;
     private readonly DaggerfallTuning _tuning;
     private readonly IRandomService _random;
@@ -93,7 +110,7 @@ internal sealed class DaggerfallExteriorWorld
     private readonly FirstPersonCameraSystem _camera;
     private readonly DaggerfallSiteAudioBundles? _audioBundles;
     private readonly DaggerfallActorRoster _roster;
-    private readonly DaggerSessionPersistence _persistence;
+    private readonly IDaggerfallSiteDeltas _siteDeltas;
     private readonly DaggerfallGroundContainers _groundContainers;
     private readonly IDaggerfallExteriorSite _active;
     private readonly IDaggerfallExteriorHost _host;
@@ -146,17 +163,21 @@ internal sealed class DaggerfallExteriorWorld
     // commits the saved origin before placing anything, so placements are expressed against this.
     private Vector3? _artifactFrameCompensation;
 
-    internal DaggerfallExteriorWorld(IEngineContext engine, DaggerfallState state, DaggerfallDefinitions definitions,
+    internal DaggerfallExteriorWorld(IEngineContext engine, ActorsState actors, DaggerfallNpcRegistry npcs, PlayerControlState player,
+        DaggerfallEffectLifecycle effects, DaggerfallDefinitions definitions,
         DaggerfallTuning tuning, DaggerfallWorldTime time, DaggerfallSiteContext site, SpatialMovementSystem spatial,
         FirstPersonCameraSystem camera, DaggerfallSiteAudioBundles? audioBundles, DaggerfallActorRoster roster,
-        DaggerSessionPersistence persistence, DaggerfallGroundContainers groundContainers, IDaggerfallExteriorSite active,
+        IDaggerfallSiteDeltas siteDeltas, DaggerfallGroundContainers groundContainers, IDaggerfallExteriorSite active,
         IDaggerfallExteriorHost host, Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> deltas,
         NormalizedClassicPresentation? sessionPresentation = null)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _state = state ?? throw new ArgumentNullException(nameof(state));
-        if (!_state.Actors.Store.Diagnostics(0).Components.Any(component => component.Key == GlobalPositions.Key))
-            _state.Actors.Store.Register(GlobalPositions);
+        _actors = actors ?? throw new ArgumentNullException(nameof(actors));
+        _npcs = npcs ?? throw new ArgumentNullException(nameof(npcs));
+        _player = player ?? throw new ArgumentNullException(nameof(player));
+        _effects = effects ?? throw new ArgumentNullException(nameof(effects));
+        if (!_actors.Store.Diagnostics(0).Components.Any(component => component.Key == GlobalPositions.Key))
+            _actors.Store.Register(GlobalPositions);
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
         _groundBlend = tuning.Ground.Blend;
@@ -167,7 +188,7 @@ internal sealed class DaggerfallExteriorWorld
         _camera = camera ?? throw new ArgumentNullException(nameof(camera));
         _audioBundles = audioBundles;
         _roster = roster ?? throw new ArgumentNullException(nameof(roster));
-        _persistence = persistence ?? throw new ArgumentNullException(nameof(persistence));
+        _siteDeltas = siteDeltas ?? throw new ArgumentNullException(nameof(siteDeltas));
         _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers));
         _active = active ?? throw new ArgumentNullException(nameof(active));
         _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -446,7 +467,7 @@ internal sealed class DaggerfallExteriorWorld
             _arrivalStandPending = true;
             return;
         }
-        PlayerControlState player = _state.PlayerControl;
+        PlayerControlState player = _player;
         WorldPoint arrival = player.Position ?? throw new InvalidOperationException("An arrival requires a player position.");
         WorldPoint start = arrival;
         float settle = 0F;
@@ -553,7 +574,7 @@ internal sealed class DaggerfallExteriorWorld
     {
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
             || _exteriorResidency is not { IsInitialized: true } residency
-            || _state.PlayerControl.Position is not WorldPoint player) return;
+            || _player.Position is not WorldPoint player) return;
         DaggerfallExteriorWorldOrigin origin = ActiveOrigin(residency);
         if (_groundCollider is { } standing && standing.MapPixel != (origin.MapPixelX, origin.MapPixelY))
         {
@@ -641,7 +662,7 @@ internal sealed class DaggerfallExteriorWorld
     /// </summary>
     internal bool RecoverPlayerBelowTerrain()
     {
-        PlayerControlState player = _state.PlayerControl;
+        PlayerControlState player = _player;
         if (player.Position is not WorldPoint position || player.Motion.Grounded
             || !TryExteriorTerrainHeight(position, out float terrain)) return false;
         if (position.Y + (_spatial.CurrentController.Shape.StandingHeight * .5F) >= terrain) return false;
@@ -701,9 +722,9 @@ internal sealed class DaggerfallExteriorWorld
                 // which lies across the map pixel from the profile's origin.
                 DaggerfallExteriorWorldOrigin origin = DaggerfallExteriorWorldOrigin.At(ActiveExteriorCell());
                 _ = EnsureExteriorResidency();
-                DaggerfallExteriorCellId center = _state.PlayerControl.Position is WorldPoint start
+                DaggerfallExteriorCellId center = _player.Position is WorldPoint start
                     ? DaggerfallExteriorSessionOrigin.CellForLocalPosition(
-                        DaggerfallExteriorSessionOrigin.Shift(start, ExteriorProfileTranslation(Projection.Inputs, origin)),
+                        DaggerfallSceneOrigin.Shift(start, ExteriorProfileTranslation(Projection.Inputs, origin)),
                         origin, new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height))
                     : ActiveExteriorCell();
                 AdmitExteriorWindow(center, origin);
@@ -720,7 +741,7 @@ internal sealed class DaggerfallExteriorWorld
         Projection.Rebase(locationFrameOffset);
         if (restoringSavedFrame)
         {
-            HashSet<long> staticActorIds = _state.Npcs.All
+            HashSet<long> staticActorIds = _npcs.All
                 .Where(npc => npc.Profile == Projection.Inputs.ProfileKey && npc.Kind == DaggerfallNpcKind.Static)
                 .Select(npc => npc.DurableId).ToHashSet();
             RebaseActors(staticActorIds, locationFrameOffset);
@@ -784,7 +805,7 @@ internal sealed class DaggerfallExteriorWorld
     internal DaggerfallSiteRecord? LocationAtPlayer()
     {
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
-            || _state.PlayerControl.Position is not WorldPoint position) return null;
+            || _player.Position is not WorldPoint position) return null;
         // Location artifacts use their normalized RMB frame, not the source terrain-tile origin.
         // Check the actual admitted profiles, including neighbors in the shared exterior window.
         var profiles = (_locationLoaded ? new[] { Projection.Inputs } : [])
@@ -814,7 +835,7 @@ internal sealed class DaggerfallExteriorWorld
         DaggerfallExteriorWorldOrigin origin = _exteriorResidency is { IsInitialized: true } residency
             ? ActiveOrigin(residency)
             : DaggerfallExteriorWorldOrigin.At(site);
-        return _state.PlayerControl.Position is WorldPoint position
+        return _player.Position is WorldPoint position
             ? DaggerfallExteriorSessionOrigin.CellForLocalPosition(
                 position,
                 origin,
@@ -828,7 +849,7 @@ internal sealed class DaggerfallExteriorWorld
     /// </summary>
     internal void HoldPlayerInsideWorldEdge()
     {
-        if (_state.PlayerControl.Position is not WorldPoint position
+        if (_player.Position is not WorldPoint position
             || _exteriorResidency is not { IsInitialized: true } residency) return;
         WorldPoint held = DaggerfallExteriorSessionOrigin.InsideWorldEdge(position, ActiveOrigin(residency),
             new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height));
@@ -887,7 +908,7 @@ internal sealed class DaggerfallExteriorWorld
         DaggerfallExteriorWorldOrigin origin)
     {
         RequireExteriorProfile();
-        DaggerfallExteriorCellId center = _state.PlayerControl.Position is WorldPoint position
+        DaggerfallExteriorCellId center = _player.Position is WorldPoint position
             ? DaggerfallExteriorSessionOrigin.CellForLocalPosition(
                 position,
                 origin,
@@ -1063,7 +1084,7 @@ internal sealed class DaggerfallExteriorWorld
     internal HashSet<long> ProfileActorIds(DaggerfallSiteProfile profile, DaggerfallSiteRuntimeDelta? delta = null)
     {
         HashSet<long> actorIds = profile.Project.Actors.Keys.ToHashSet();
-        foreach (DaggerfallNpc npc in _state.Npcs.All.Where(npc => npc.Profile == profile.ProfileKey))
+        foreach (DaggerfallNpc npc in _npcs.All.Where(npc => npc.Profile == profile.ProfileKey))
             actorIds.Add(npc.DurableId);
         if (delta is not null)
             foreach (DaggerfallDynamicActorSave actor in delta.DynamicActors)
@@ -1094,7 +1115,7 @@ internal sealed class DaggerfallExteriorWorld
             if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId cell))
                 throw new InvalidOperationException($"Exterior profile '{key.LogicalId}' has no normalized map-pixel identity.");
             Vector3 translation = ExteriorProfileTranslation(profile, origin);
-            projection = DaggerfallSiteProjection.Create(_engine, _state.Actors.Entities, _random, _tuning, _time.Calendar,
+            projection = DaggerfallSiteProjection.Create(_engine, _actors.Entities, _random, _tuning, _time.Calendar,
                 profile, AudioFor(profile), _spatial, _host.ConfigureSiteAppearance, delta?.Doors, delta?.Motion, deferMotionCollisionAdmission: true,
                 sessionPresentation: _sessionPresentation, definitions: _definitions, carriesSky: false, prepareLocationOffUpdate: _onTheRoad);
             projection.Appearance.DrawThroughActiveSnapshot();
@@ -1105,17 +1126,18 @@ internal sealed class DaggerfallExteriorWorld
             AdmitLocationArtifact(profile, origin);
             artifactAdmitted = true;
             projection.ActivateMotionCollisionResidency();
-            _roster.MaterializeSite(profile, delta, restoreAuthoredAppearance: true, projection: projection);
+            _roster.MaterializeSite(profile, delta?.Actors, delta?.DynamicActors, delta?.BanishedActors, restoreAuthoredAppearance: true,
+                siteProfile: projection.Inputs, siteAppearance: projection.Appearance);
             _host.AdmitResidentCivilianAppearances(projection);
-            _roster.MaterializeStaticNpcs(profile, projection);
+            _roster.MaterializeStaticNpcs(profile, projection.Appearance);
             HashSet<long> actorIds = profile.Project.Actors.Keys.ToHashSet();
-            foreach (DaggerfallNpc npc in _state.Npcs.All.Where(npc => npc.Profile == key))
+            foreach (DaggerfallNpc npc in _npcs.All.Where(npc => npc.Profile == key))
                 actorIds.Add(npc.DurableId);
             if (delta is not null) foreach (DaggerfallDynamicActorSave actor in delta.DynamicActors) actorIds.Add(actor.EntityId);
             if (delta is not null)
             {
-                _persistence.RestoreSiteDelta(delta);
-                projection.Appearance.SyncRestoredDefeat(_state.Actors);
+                _siteDeltas.Restore(delta);
+                projection.Appearance.SyncRestoredDefeat(_actors);
                 _deltas.Remove(key);
             }
             RebaseActors(actorIds, translation);
@@ -1125,7 +1147,7 @@ internal sealed class DaggerfallExteriorWorld
         {
             if (projection is not null)
             {
-                try { _roster.UnloadSite(profile, delta, projection); }
+                try { _roster.UnloadSite(profile, delta?.DynamicActors, projection.Appearance); }
                 catch { /* preserve the admission failure */ }
                 try { projection.Dispose(); }
                 catch { /* preserve the admission failure */ }
@@ -1143,9 +1165,9 @@ internal sealed class DaggerfallExteriorWorld
     {
         foreach (long actorId in actorIds)
         {
-            if (!_state.Actors.TryGet(actorId, out ActorState? actor)) continue;
+            if (!_actors.TryGet(actorId, out ActorState? actor)) continue;
             ActorPose pose = actor.Pose;
-            actor.ApplyPose(new ActorPose(DaggerfallExteriorSessionOrigin.Shift(pose.Position, translation), pose.HeadingYawRadians));
+            actor.ApplyPose(new ActorPose(DaggerfallSceneOrigin.Shift(pose.Position, translation), pose.HeadingYawRadians));
         }
     }
 
@@ -1159,12 +1181,12 @@ internal sealed class DaggerfallExteriorWorld
             if (capture)
             {
                 Vector3 profileFrameOffset = ExteriorProfileTranslation(resident.Profile);
-                delta = _persistence.CaptureSiteDelta(resident.Profile, resident.Projection.Doors,
-                    resident.Projection.Motion, _roster.Dynamic, resident.ActorIds, profileFrameOffset);
+                delta = _siteDeltas.Capture(resident.Profile, resident.Projection,
+                    _roster.Dynamic, resident.ActorIds, profileFrameOffset);
                 _deltas[key] = delta;
             }
             resident.Projection.Suspend();
-            _roster.UnloadSite(resident.Profile, delta, resident.Projection, resident.ActorIds);
+            _roster.UnloadSite(resident.Profile, delta?.DynamicActors, resident.Projection.Appearance, resident.ActorIds);
             RemoveLocationArtifact(resident.Profile);
         }
         finally
@@ -1195,8 +1217,8 @@ internal sealed class DaggerfallExteriorWorld
         foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values.OrderBy(value => value.Slot))
         {
             resident.Projection.Appearance.AppendLocationFacts(facts, resident.Slot);
-            resident.Projection.Appearance.AppendActorFacts(facts, _state.Actors, resident.Slot,
-                _state.Effects.PerceptionFor, _state.Npcs.IsGameplayActive);
+            resident.Projection.Appearance.AppendActorFacts(facts, _actors, resident.Slot,
+                _effects.PerceptionFor, _npcs.IsGameplayActive);
         }
         _exteriorTerrainAppearance?.AppendFacts(facts);
         _seaFacts?.Invoke(facts);
@@ -1272,10 +1294,10 @@ internal sealed class DaggerfallExteriorWorld
         if (!_locationLoaded) return;
         DaggerfallSiteProfile profile = Projection.Inputs;
         IReadOnlySet<long> dynamicActorIds = ActiveDynamicActorIds();
-        DaggerfallSiteRuntimeDelta delta = _persistence.CaptureSiteDelta(profile, Projection.Doors,
-            Projection.Motion, _roster.Dynamic, dynamicActorIds, ExteriorProfileTranslation(profile));
+        DaggerfallSiteRuntimeDelta delta = _siteDeltas.Capture(profile, Projection,
+            _roster.Dynamic, dynamicActorIds, ExteriorProfileTranslation(profile));
         _deltas[ActiveProfile] = delta;
-        _roster.UnloadSite(profile, delta);
+        _roster.UnloadSite(profile, delta.DynamicActors);
         Projection.Suspend(keepSky: true);
         RemoveLocationArtifact(profile);
         _locationLoaded = false;
@@ -1290,12 +1312,12 @@ internal sealed class DaggerfallExteriorWorld
         AdmitLocationArtifact(profile);
         Projection.Resume(offUpdate: _onTheRoad);
         _deltas.TryGetValue(ActiveProfile, out DaggerfallSiteRuntimeDelta? delta);
-        _roster.MaterializeSite(profile, delta, restoreAuthoredAppearance: true);
+        _roster.MaterializeSite(profile, delta?.Actors, delta?.DynamicActors, delta?.BanishedActors, restoreAuthoredAppearance: true);
         RebaseActors(ProfileActorIds(profile, delta), ExteriorProfileTranslation(profile));
         if (delta is not null)
         {
-            _persistence.RestoreSiteDelta(delta);
-            Projection.Appearance.SyncRestoredDefeat(_state.Actors);
+            _siteDeltas.Restore(delta);
+            Projection.Appearance.SyncRestoredDefeat(_actors);
             _deltas.Remove(ActiveProfile);
         }
         _locationLoaded = true;
@@ -1369,7 +1391,7 @@ internal sealed class DaggerfallExteriorWorld
             : Vector3.Zero;
 
     internal WorldPoint ProfileToLocal(WorldPoint position) =>
-        DaggerfallExteriorSessionOrigin.Shift(position, LocalCompensation + ActiveExteriorFrameOffset());
+        DaggerfallSceneOrigin.Shift(position, LocalCompensation + ActiveExteriorFrameOffset());
 
     internal Vector3 LocalToProfile(Vector3 position) =>
         position - LocalCompensation - ActiveExteriorFrameOffset();
@@ -1378,7 +1400,7 @@ internal sealed class DaggerfallExteriorWorld
     internal bool RebaseExteriorIfNeeded()
     {
         if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior
-            || _state.PlayerControl.Position is not WorldPoint position) return false;
+            || _player.Position is not WorldPoint position) return false;
         float cellSize = DaggerfallExteriorCellResidency.CellSize;
         bool horizontal = MathF.Abs(position.X) >= cellSize || MathF.Abs(position.Z) >= cellSize;
         bool vertical = MathF.Abs(position.Y) > _tuning.WorldOrigin.VerticalRebaseDistance;
@@ -1419,15 +1441,15 @@ internal sealed class DaggerfallExteriorWorld
     private void CommitExteriorOrigin(WorldOriginReadout current, long x, long y, long z, bool excludeOutsideEnvelope = false)
     {
         RequireExteriorProfile();
-        if (_state.PlayerControl.Position is not WorldPoint position)
+        if (_player.Position is not WorldPoint position)
             throw new InvalidOperationException("An origin commit requires a player pose; otherwise world positions would be lost.");
-        _ = DaggerfallExteriorSessionOrigin.Shift(position, Vector3.Zero);
+        _ = DaggerfallSceneOrigin.Shift(position, Vector3.Zero);
         if (_exteriorResidency is not { IsInitialized: true })
             throw new InvalidOperationException("An origin commit requires admitted exterior residency; otherwise world coordinates would detach from their cell.");
         // The commit installs pending batches and moves them with the rest; a held one would miss the move.
         ReleaseHeldPlacements();
-        EntityStore store = _state.Actors.Store;
-        EntityId[] roots = [.. _state.Actors.All.Select(actor => actor.Actor.Entity),
+        EntityStore store = _actors.Store;
+        EntityId[] roots = [.. _actors.All.Select(actor => actor.Actor.Entity),
             .. store.Query<DaggerfallNpcBody>().Select(entry => entry.Entity)];
         (WorldOriginCommitReceipt receipt, EntityId[] excluded) = CommitThroughRebaser(store, roots, current, x, y, z, excludeOutsideEnvelope);
         try
@@ -1472,7 +1494,7 @@ internal sealed class DaggerfallExteriorWorld
         foreach (EntityId root in roots)
         {
             Transform transform = store.Get(root, EngineComponentTypes.Transform);
-            Vector3 shifted = DaggerfallExteriorSessionOrigin.Shift(WorldPoint.From(transform.Translation), delta).ToVector();
+            Vector3 shifted = DaggerfallSceneOrigin.Shift(WorldPoint.From(transform.Translation), delta).ToVector();
             store.Set(root, EngineComponentTypes.Transform, transform with { Translation = shifted });
         }
     }
@@ -1545,7 +1567,7 @@ internal sealed class DaggerfallExteriorWorld
         // The camera is Engine-owned but its descriptor is derived from the product player pose.
         // Refresh it after shifting that pose, before the caller publishes the next presentation
         // snapshot.
-        _camera.Update(_state.PlayerControl);
+        _camera.Update(_player);
         DaggerfallExteriorCellResidencyUpdate update = residency.Update(CurrentExteriorCell(), ActiveOrigin(residency));
         _groundContainers.ReconcileExteriorResidency(residency.ResidentCells, ActiveOrigin(residency));
         ReconcileExteriorTerrainAppearance(residency);
@@ -1776,14 +1798,14 @@ internal sealed class DaggerfallExteriorWorld
 
     private void ShiftPlayer(Vector3 localDelta)
     {
-        if (_state.PlayerControl.Position is WorldPoint position)
+        if (_player.Position is WorldPoint position)
         {
-            _state.PlayerControl.MoveTo(
-                DaggerfallExteriorSessionOrigin.Shift(position, localDelta).ToVector());
+            _player.MoveTo(
+                DaggerfallSceneOrigin.Shift(position, localDelta).ToVector());
         }
         // The support anchor, tether anchor and fall/peak heights are local-frame
         // values too; left alone, the next step on a support snaps the player back.
-        _state.PlayerControl.Motion = _state.PlayerControl.Motion.Rebased(localDelta);
+        _player.Motion = _player.Motion.Rebased(localDelta);
     }
 
     /// <summary>The map pixel the active town was last admitted or let go at; null once the player is indoors.</summary>
@@ -1815,8 +1837,8 @@ internal sealed class DaggerfallExteriorWorld
     {
         if (!_residentExteriorLocations.TryGetValue(key, out ResidentExteriorLocation? resident)) return null;
         Vector3 residentFrameOffset = ExteriorProfileTranslation(resident.Profile);
-        DaggerfallSiteRuntimeDelta delta = _persistence.CaptureSiteDelta(resident.Profile, resident.Projection.Doors,
-            resident.Projection.Motion, _roster.Dynamic, resident.ActorIds, residentFrameOffset);
+        DaggerfallSiteRuntimeDelta delta = _siteDeltas.Capture(resident.Profile, resident.Projection,
+            _roster.Dynamic, resident.ActorIds, residentFrameOffset);
         _deltas[key] = delta;
         return delta;
     }

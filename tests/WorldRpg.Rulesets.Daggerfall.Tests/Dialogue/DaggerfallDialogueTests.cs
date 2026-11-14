@@ -52,7 +52,7 @@ public sealed class DaggerfallDialogueTests
         Assert.True(talk.Service.ActivateNpc(new(DaggerfallActivationMode.Talk, talk.Target)).Applied);
         string revision = Assert.IsType<DaggerfallDialogueView>(talk.View).Revision;
         var delta = new System.Numerics.Vector3(-1000, 0, -1000);
-        talk.Actor.ApplyPose(new ActorPose(DaggerfallExteriorSessionOrigin.Shift(talk.Actor.Position, delta), talk.Actor.HeadingYawRadians));
+        talk.Actor.ApplyPose(new ActorPose(DaggerfallSceneOrigin.Shift(talk.Actor.Position, delta), talk.Actor.HeadingYawRadians));
         talk.Service.Rebase(delta);
         Assert.True(talk.Service.ApplyAction(new("dialogue-topic", Revision: revision, Topic: "directions")).Applied);
         talk.Actor.ApplyPose(new ActorPose(new WorldPoint(talk.Actor.Position.X + 1, talk.Actor.Position.Y, talk.Actor.Position.Z), talk.Actor.HeadingYawRadians));

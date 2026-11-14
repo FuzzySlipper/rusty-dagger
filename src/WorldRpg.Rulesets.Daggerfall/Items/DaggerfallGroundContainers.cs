@@ -46,7 +46,7 @@ internal sealed class DaggerfallGroundContainers
     internal void RebaseActive(System.Numerics.Vector3 delta)
     {
         foreach (DaggerfallGroundContainer container in All.Values)
-            _ground[container.Id] = container with { Position = DaggerfallExteriorSessionOrigin.Shift(container.Position, delta) };
+            _ground[container.Id] = container with { Position = DaggerfallSceneOrigin.Shift(container.Position, delta) };
         foreach (var value in _unloaded.Values.Where(value => value.Profile.Require() == _activeProfile).ToArray())
             _unloaded[value.Id] = value with { X = value.X + delta.X, Y = value.Y + delta.Y, Z = value.Z + delta.Z };
     }

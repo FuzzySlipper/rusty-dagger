@@ -28,7 +28,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Explicit current-state capture and restoration; native presentation and input are reconstructed by composition.</summary>
-internal sealed class DaggerSessionPersistence
+internal sealed class DaggerSessionPersistence : IDaggerfallSiteDeltas
 {
     private readonly DaggerfallState State;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
@@ -212,6 +212,12 @@ internal sealed class DaggerSessionPersistence
             GroundContainers = _groundContainers.Capture(),
         });
     }
+
+    DaggerfallSiteRuntimeDelta IDaggerfallSiteDeltas.Capture(DaggerfallSiteProfile inputs, DaggerfallSiteProjection projection,
+        IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, IReadOnlySet<long>? actorFilter, Vector3 actorFrameOffset) =>
+        CaptureSiteDelta(inputs, projection.Doors, projection.Motion, dynamicActors, actorFilter, actorFrameOffset);
+
+    void IDaggerfallSiteDeltas.Restore(DaggerfallSiteRuntimeDelta delta) => RestoreSiteDelta(delta);
 
     /// <summary>Captures one unloading site's actor-owned state without retaining runtime entities.</summary>
     internal DaggerfallSiteRuntimeDelta CaptureSiteDelta(DaggerfallSiteProfile inputs, DaggerfallDoorRuntime doors, DaggerfallDungeonMotionProjection motion,

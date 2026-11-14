@@ -221,7 +221,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             Transform = worldAppearance.Transform with { Translation = worldAppearance.Transform.Translation + delta },
         };
         foreach (EffectVisual effect in effects)
-            effect.Position = DaggerfallExteriorSessionOrigin.Shift(effect.Position, delta);
+            effect.Position = DaggerfallSceneOrigin.Shift(effect.Position, delta);
     }
 
     /// <param name="sessionPresentation">

@@ -126,12 +126,19 @@ internal sealed partial class DaggerfallSession
             // Owners are built in dependency order, each from the owners it reads; the named state is
             // constructed once every service it names exists, so nothing reads a service before it is built.
             bool materializeActiveSite = saved?.ExteriorLocationResidency?.Loaded != false;
-            DaggerActorAssembly assembled = DaggerActorFactory.Create(_random, definitions, inputs, saved,
-                composition.QuestAdmission, composition.DisabledQuestSelection, materializeActiveSite);
+            DaggerActorAssembly assembled = DaggerActorFactory.Create(_random, definitions, inputs,
+                saved is null ? null : new DaggerActorSaves(saved.Player, saved.Actors, saved.BanishedActors, saved.DynamicActors, saved.Npcs, saved.Character),
+                materializeActiveSite);
             ActorsState actors = assembled.Actors;
             partiallyConstructed.Add(actors);
             DaggerfallCharacterState character = assembled.Character;
-            DaggerfallSocialState social = assembled.Social;
+            DaggerfallVariableStore variables = new(definitions.QuestSources.Tables.Globals.Lookup);
+            if (saved?.Variables is { } restoredVariables)
+                variables.Restore(restoredVariables.Entries.Select(entry => (entry.Require(), entry.Value)));
+            DaggerfallSocialState social = new(definitions.Factions);
+            if (saved?.Social is { } restoredSocial) social.Restore(restoredSocial);
+            DaggerfallQuestInstances quests = new(definitions, _random, composition.QuestAdmission, composition.DisabledQuestSelection);
+            DaggerfallQuestTrainingState questTraining = new(saved?.QuestTraining);
             DaggerfallItemInstances itemInstances = assembled.ItemInstances;
             DaggerfallNpcRegistry npcs = assembled.Npcs;
             social.SetBiographyReactionModifier(character.Background?.Modifiers.Reaction ?? 0);
@@ -190,7 +197,7 @@ internal sealed partial class DaggerfallSession
                 dungeonActions.Add(key, new DaggerfallDungeonActionGraph(
                     key.LogicalId,
                     admitted.DungeonActions,
-                    assembled.Variables,
+                    variables,
                     snapshot,
                     ExecuteDungeonFamilyAction));
             }
@@ -314,16 +321,16 @@ internal sealed partial class DaggerfallSession
             DaggerfallGuildMembershipPolicy guildMembership = new(social,
                 skillUses.PermanentSkillValue, DaggerfallConcreteGuildCatalog.AllMembershipPolicies);
             DaggerfallConcreteGuildMembershipRuntime concreteGuildMembership = new(guildMembership);
-            assembled.Quests.BindEnvironmentActions(QuestEnvironmentCondition, QuestMediaAction);
-            assembled.Quests.BindOfferCapabilities(QuestOfferCapability);
-            assembled.Quests.BindDiseaseActions(QuestDiseaseAction);
-            assembled.Quests.BindLycanthropyCure(() => _lycanthropy!.Cure(fromQuest: true));
-            assembled.Quests.BindVampirismCure(() => _vampirism!.Cure(fromQuest: true));
-            assembled.Quests.BindRuntime(new DaggerfallQuestRuntime(progression, playerStats, definitions,
-                assembled.QuestTraining, tuning.Locomotion, _random, () => _time.Calendar,
+            quests.BindEnvironmentActions(QuestEnvironmentCondition, QuestMediaAction);
+            quests.BindOfferCapabilities(QuestOfferCapability);
+            quests.BindDiseaseActions(QuestDiseaseAction);
+            quests.BindLycanthropyCure(() => _lycanthropy!.Cure(fromQuest: true));
+            quests.BindVampirismCure(() => _vampirism!.Cure(fromQuest: true));
+            quests.BindRuntime(new DaggerfallQuestRuntime(progression, playerStats, definitions,
+                questTraining, tuning.Locomotion, _random, () => _time.Calendar,
                 // Training spends its own source fatigue cost, so its minutes charge no idle loss.
                 seconds => AdvanceQuestTime(seconds, idleFatigue: false)));
-            assembled.Quests.BindTravelMinutes(site => _travelPolicy.CautiousQuestLegMinutes(QuestTravelOrigin(), site));
+            quests.BindTravelMinutes(site => _travelPolicy.CautiousQuestLegMinutes(QuestTravelOrigin(), site));
             character.BindCareerCommitted(skillUses.RebaseForCareerSelection);
             DaggerfallLevelUpState levelUps = new(progression, skillUses, playerStats,
                 definitions, () => character.Career, _random, _rewards);
@@ -336,7 +343,7 @@ internal sealed partial class DaggerfallSession
             _itemEnchanting = new DaggerfallItemEnchanting(definitions, itemInstances, _equipmentMoves, _itemCondition, inventory, () => ItemSouls.Gems);
             _itemCondition.Broken += item => ItemSouls.ReleaseBoundSoul(item);
             _placement = new DaggerfallActorPlacement(actors, assembled.PlayerControl, npcs.IsGameplayActive, authored, EffectiveFoeTeam,
-                id => _enemyBehavior!.IsPacified(id), id => assembled.Quests.AllowsFoeInfighting(id), _spatial, engine.Perception, _random,
+                id => _enemyBehavior!.IsPacified(id), id => quests.AllowsFoeInfighting(id), _spatial, engine.Perception, _random,
                 () => _exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.EnemyBehavior.DetectionDistance,
                 (float)_tuning.Camera.FieldOfViewYDegrees);
             _senses = new DaggerfallEnemySenses(actors, assembled.PlayerControl, definitions, authored, EffectiveFoeTeam,
@@ -378,7 +385,7 @@ internal sealed partial class DaggerfallSession
                 mobile => _sites.Projection.Inputs.MobileSprites.ContainsKey(mobile),
                 (operation, scope, origin, minimum, maximum) => _placement.TrySpawnPose(operation, scope, origin, minimum, maximum, out var pose) ? pose : null,
                 (definition, pose, allied) => _roster!.Spawn(definition, pose, playerAllied: allied),
-                id => assembled.Quests.ProtectsActor(id), (id, mobile) => _roster!.Transform(id, mobile));
+                id => quests.ProtectsActor(id), (id, mobile) => _roster!.Transform(id, mobile));
             DaggerfallContactInputs contactInputs = new(definitions, () => character, _random,
                 id => id == actors.Player.DurableId ? equipmentCoordinator.Read() : actorInventories.EquipmentFor(id).Read(),
                 id => id == actors.Player.DurableId ? actors.Player.Stats : actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
@@ -502,7 +509,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallKnightlyOrderClaimState knightlyClaims = new(saved?.KnightlyClaims);
             DaggerfallKnightlyOrderClaimRuntime knightlyClaimActions = new(concreteGuildServices, knightlyClaims, _random);
             DaggerfallSkillTrainingService skillTraining = new(services, npcs, social,
-                progression, skillUses, assembled.QuestTraining, playerStats,
+                progression, skillUses, questTraining, playerStats,
                 tuning.Locomotion, () => _time.Calendar.ToAbsoluteSeconds(), seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); });
             DaggerfallRegionalPriceState regionalPrices = new(definitions.Factions, _random,
                 _time.Calendar.DayNumber, saved?.RegionalPrices);
@@ -519,6 +526,10 @@ internal sealed partial class DaggerfallSession
             DaggerfallSwimmingPolicy swimming = new(tuning.Swimming);
             State = new DaggerfallState(
                 assembled,
+                variables: variables,
+                social: social,
+                quests: quests,
+                questTraining: questTraining,
                 kit: kit,
                 effects: effects,
                 racialOverrides: racialOverrides,
@@ -632,8 +643,8 @@ internal sealed partial class DaggerfallSession
             // A dropped pile rests on the floor under the player, not at the body centre the player's position names.
             _inventoryUi.UseGroundDrops(_groundContainers, () => State.PlayerControl.Position is WorldPoint at ? _grounding.RestingPosition(at) : null);
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
-            assembled.Quests.BindNotebook(_notebook.AddQuestNote);
-            assembled.Quests.BindItemCleanup(RemoveCarriedQuestItems);
+            quests.BindNotebook(_notebook.AddQuestNote);
+            quests.BindItemCleanup(RemoveCarriedQuestItems);
             State.QuestItems = new(State, _actorIdentities, _uniqueItems, _itemOwnership.Entity, _itemLifetime.DestroyUnique, _itemLifetime.ConsumeStack, _equipmentMoves);
             State.Quests.BindItems(State.QuestItems);
             State.Quests.BindPlacementNpcs(State.Npcs);
@@ -736,8 +747,10 @@ internal sealed partial class DaggerfallSession
             _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, _dungeonText, CapturePropertyStorage, QuestTravelOrigin, authored, () => Casting.NextSequence);
             _persistence.EquipCountdown = () => _combat.EquipCountdown;
             if (saved is not null) _combat.EquipCountdown = saved.EquipCountdown;
-            _roster = new DaggerfallActorRoster(State, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
-                _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection, _lootUi, _corpseLoot);
+            _roster = new DaggerfallActorRoster(actors, State.ActorInventories, State.Character, State.Containers, State.Effects, State.InventoryStore,
+                State.ItemInstances, State.Npcs, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
+                _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection.Inputs, () => _sites.Projection.Appearance,
+                _lootUi.CloseActor, _corpseLoot);
             _roster.ActorRetired += State.Quests.ObserveFoeRemoval;
             _dungeonPopulation = new DaggerfallDungeonPopulation(definitions, _random, _uniqueItems, _groundContainers, _grounding.RestingPosition, _encounters,
                 (definition, pose, spawnDistance, passive) => _roster.Spawn(definition, pose, spawnDistance: spawnDistance, passive: passive),

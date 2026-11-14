@@ -415,7 +415,7 @@ internal sealed class DaggerfallSitePortalRuntime : IDisposable
         foreach (string id in _portals.Keys.ToArray())
         {
             var value = _portals[id];
-            _portals[id] = (value.Portal with { Position = DaggerfallExteriorSessionOrigin.Shift(value.Portal.Position, delta) }, value.Identity, value.Entity);
+            _portals[id] = (value.Portal with { Position = DaggerfallSceneOrigin.Shift(value.Portal.Position, delta) }, value.Identity, value.Entity);
         }
     }
 

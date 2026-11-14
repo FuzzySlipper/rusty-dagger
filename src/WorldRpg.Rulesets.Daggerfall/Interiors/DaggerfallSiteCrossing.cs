@@ -95,8 +95,8 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         Profiles = profiles;
         ActiveProfile = activeProfile;
         ReturnProfile = returnProfile;
-        _exterior = new DaggerfallExteriorWorld(engine, state, definitions, tuning, time, site, spatial, camera, audioBundles,
-            roster, persistence, groundContainers, this, host, _deltas, sessionPresentation);
+        _exterior = new DaggerfallExteriorWorld(engine, state.Actors, state.Npcs, state.PlayerControl, state.Effects, definitions, tuning, time, site,
+            spatial, camera, audioBundles, roster, persistence, groundContainers, this, host, _deltas, sessionPresentation);
     }
 
     /// <summary>The cells streamed around the player and the towns placed on them.</summary>
@@ -421,7 +421,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
             // source site is inactive and can be mistaken for a destination actor on re-entry.
             if (sourceLocationLoaded || sourceLiveActorDelta is not null)
             {
-                _roster.UnloadSite(source.Inputs, sourceDelta);
+                _roster.UnloadSite(source.Inputs, sourceDelta.DynamicActors);
                 sourceActorsUnloaded = true;
             }
             Projection = candidate;
@@ -446,23 +446,23 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
                 playerRelocated = true;
                 // The player entered facing the doorway; as the donor's exit leaves them outside it, still
                 // facing the way they walked out, they stand where they entered turned away from the door.
-                _host.RelocatePlayer(DaggerfallExteriorSessionOrigin.Shift(returned.Pose.Position, destinationFrameOffset),
+                _host.RelocatePlayer(DaggerfallSceneOrigin.Shift(returned.Pose.Position, destinationFrameOffset),
                     MathF.IEEERemainder(returned.Pose.YawRadians + MathF.PI, MathF.Tau), returned.Pose.PitchRadians);
             }
             else
             {
                 // A return belongs to the departed profile, independent of which town anchored
                 // the terrain window before the player walked here.
-                _site.Enter(destination.Site, DaggerfallExteriorSessionOrigin.Shift(sourcePosition, -sourceFrameOffset),
+                _site.Enter(destination.Site, DaggerfallSceneOrigin.Shift(sourcePosition, -sourceFrameOffset),
                     player.YawRadians, player.PitchRadians);
                 playerRelocated = true;
                 if (arrival is { } selected)
                     _host.RelocatePlayer(destination.Kind == DaggerfallWorldProfileKind.Exterior
-                        ? DaggerfallExteriorSessionOrigin.Shift(selected.Position, destinationFrameOffset)
+                        ? DaggerfallSceneOrigin.Shift(selected.Position, destinationFrameOffset)
                         : selected.Position, selected.YawRadians, selected.PitchRadians);
                 else
                     _host.RelocatePlayer(destination.Kind == DaggerfallWorldProfileKind.Exterior
-                        ? DaggerfallExteriorSessionOrigin.Shift(target.Project.PlayerPosition ?? sourcePosition, destinationFrameOffset)
+                        ? DaggerfallSceneOrigin.Shift(target.Project.PlayerPosition ?? sourcePosition, destinationFrameOffset)
                         : target.Project.PlayerPosition ?? sourcePosition, player.YawRadians, player.PitchRadians);
             }
             _deltas[sourceProfile] = sourceDelta;
@@ -508,7 +508,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
             }
             if (sourceActorsUnloaded)
             {
-                try { _roster.UnloadSite(target, destinationDelta); }
+                try { _roster.UnloadSite(target, destinationDelta?.DynamicActors); }
                 catch (Exception teardownFailure) { failures.Add(teardownFailure); }
                 try
                 {
@@ -602,7 +602,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
     private void MaterializeSiteActors(DaggerfallSiteProfile destination, DaggerfallSiteRuntimeDelta? delta,
         bool restoreAuthoredAppearance = false)
     {
-        _roster.MaterializeSite(destination, delta, restoreAuthoredAppearance);
+        _roster.MaterializeSite(destination, delta?.Actors, delta?.DynamicActors, delta?.BanishedActors, restoreAuthoredAppearance);
         _roster.MaterializeStaticNpcs(destination);
         if (delta is null) return;
         _persistence.RestoreSiteDelta(delta);
@@ -671,7 +671,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
     private void RestoreDetachedLiveActors(DaggerfallSiteRuntimeDelta liveActors, DaggerfallSiteProjection source)
     {
         foreach (DaggerfallDynamicActorSave actor in liveActors.DynamicActors.OrderBy(actor => actor.EntityId))
-            _roster.MaterializeRetainedActor(actor, projectAppearance: true, projection: source);
+            _roster.MaterializeRetainedActor(actor, projectAppearance: true, siteProfile: source.Inputs, siteAppearance: source.Appearance);
         _persistence.RestoreSiteDelta(liveActors);
         source.Appearance.SyncRestoredDefeat(_state.Actors);
     }

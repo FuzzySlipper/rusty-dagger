@@ -52,14 +52,14 @@ public sealed class DaggerfallSessionExteriorTests
 
         Assert.Equal(
             new WorldPoint(6F, 1F, -10F),
-            DaggerfallExteriorSessionOrigin.Shift(new WorldPoint(8F, 5F, -5F), delta));
+            DaggerfallSceneOrigin.Shift(new WorldPoint(8F, 5F, -5F), delta));
     }
 
     [Fact]
     public void WorldOrigin_commit_rejects_a_position_that_overflows_product_coordinates()
     {
         Assert.Throws<InvalidOperationException>(() =>
-            DaggerfallExteriorSessionOrigin.Shift(
+            DaggerfallSceneOrigin.Shift(
                 new WorldPoint(float.MaxValue, 0F, 0F),
                 new Vector3(float.MaxValue, 0F, 0F)));
     }

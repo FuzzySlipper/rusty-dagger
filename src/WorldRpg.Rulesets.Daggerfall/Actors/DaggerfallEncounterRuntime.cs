@@ -106,7 +106,7 @@ internal sealed class DaggerfallEncounterRuntime(DaggerfallDefinitions definitio
             if (current.SpawnedActorId is not null || current.ActorDefinition is null
                 || !StringComparer.Ordinal.Equals(current.ProfileId, activeProfileId)) continue;
             _resolved[index] = current with { Pose = new ActorPose(
-                DaggerfallExteriorSessionOrigin.Shift(current.Pose.Position, delta), current.Pose.HeadingYawRadians) };
+                DaggerfallSceneOrigin.Shift(current.Pose.Position, delta), current.Pose.HeadingYawRadians) };
         }
     }
 
