@@ -107,6 +107,19 @@ internal sealed class RmbBlockContent
     /// <summary>The source automap is one 64-by-64 grid per block.</summary>
     public const int AutomapSide = 64;
 
+    /// <summary>The automap byte a flat paints: scenery, signs and the editor's markers alike.</summary>
+    private const byte AutomapFlat = 251;
+
+    private const float AutomapCellMetres = 64F * Arena2SourceTransform.SourceUnitMetres;
+
+    /// <summary>The automap byte a flat at this block-frame point paints, at its nearest grid corner; null off the grid.</summary>
+    private static int? AutomapIndex(Arena2ImportPoint point)
+    {
+        int x = (int)MathF.Round(point.XMetres / AutomapCellMetres, MidpointRounding.AwayFromZero);
+        int y = AutomapSide - (int)MathF.Round(point.ZMetres / AutomapCellMetres, MidpointRounding.AwayFromZero);
+        return x is >= 0 and < AutomapSide && y is >= 0 and < AutomapSide ? (y * AutomapSide) + x : null;
+    }
+
     private RmbBlockContent(string sourceKey, RmbBlockSummary summary, RmbBlockPlacements placements)
     {
         SourceKey = sourceKey;
@@ -146,11 +159,19 @@ internal sealed class RmbBlockContent
 
         if (summary.GroundTiles.Count != 256 || summary.AutoMapData.Count != AutomapSide * AutomapSide)
             throw new InvalidOperationException($"RMB block '{sourceKey}' has no complete FLD ground and automap data.");
+        // The automap marks every flat at its nearest grid corner, the editor's invisible markers too. A marker is
+        // no obstacle: travel stands the player on a start marker, so the ground under one stays walkable.
+        HashSet<int> markers = [.. flats.Where(flat => flat.TextureArchive == RdbSourceClassification.EditorFlatArchive)
+            .Select(flat => AutomapIndex(flat.Point)).OfType<int>()];
         List<(int X, int Z)> clear = [];
         for (int sourceY = 0; sourceY < AutomapSide; sourceY++)
         for (int sourceX = 0; sourceX < AutomapSide; sourceX++)
-            if (summary.AutoMapData[(sourceY * AutomapSide) + sourceX] == 0)
+        {
+            int index = (sourceY * AutomapSide) + sourceX;
+            byte painted = summary.AutoMapData[index];
+            if (painted == 0 || (painted == AutomapFlat && markers.Contains(index)))
                 clear.Add((sourceX, AutomapSide - 1 - sourceY));
+        }
         ClearOutdoorCells = clear;
         Ground = [.. summary.GroundTiles.Select(GroundTile)];
         // RMBLayout stands a plant on its cell's corner nearest the block's far edge, with the source rows reversed.
@@ -181,7 +202,8 @@ internal sealed class RmbBlockContent
 
     /// <summary>
     /// The block's clear automap cells: (x, z) on the 64-by-64 grid with z counted from the block's near
-    /// edge as the normalized frame's Z flip places it. CityNavigation's mask, never a hole in the ground.
+    /// edge as the normalized frame's Z flip places it. CityNavigation's mask, never a hole in the ground,
+    /// except that the flat pixel an editor marker paints stays clear.
     /// </summary>
     public IReadOnlyList<(int X, int Z)> ClearOutdoorCells { get; }
 
@@ -344,9 +366,8 @@ internal sealed class RmbBlockContent
     public static bool IsClearOutdoorGroundCell(NormalizedNavigationCell cell, float cellSize, IReadOnlySet<(int X, int Z)> clearCells)
     {
         if (MathF.Abs(cell.SupportHeight) > 0.0001F) return false;
-        const float sourceAutomapCellMetres = 64F * Arena2SourceTransform.SourceUnitMetres;
-        int x = checked((int)MathF.Floor(((cell.Column + 0.5F) * cellSize) / sourceAutomapCellMetres));
-        int z = checked((int)MathF.Floor((-((cell.Row + 0.5F) * cellSize)) / sourceAutomapCellMetres));
+        int x = checked((int)MathF.Floor(((cell.Column + 0.5F) * cellSize) / AutomapCellMetres));
+        int z = checked((int)MathF.Floor((-((cell.Row + 0.5F) * cellSize)) / AutomapCellMetres));
         return clearCells.Contains((x, z));
     }
 

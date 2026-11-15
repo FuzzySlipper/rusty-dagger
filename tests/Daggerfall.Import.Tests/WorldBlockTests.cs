@@ -153,6 +153,27 @@ public sealed class WorldBlockTests
         Assert.Equal((368, 69, 26), (count, passive, genderFlags));
     }
 
+    /// <summary>
+    /// Travel lands a traveller on a city's start marker. The automap paints the marker's pixel as it paints every
+    /// flat, and the outdoor navigation mask dropped the ground under it: arriving at Charing's east gate stood the
+    /// player on no navigation. Each of Charing's gate markers now stands on a walkable ground cell.
+    /// </summary>
+    [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK", "FACTION.TXT")]
+    public void Charing_s_navigation_holds_ground_under_every_gate_start_marker()
+    {
+        DungeonLogicalSourceSet sources = Sources();
+        RmbExteriorNormalizationResult site = RmbExteriorNormalizer.Normalize(new(sources, 17, "Charing", RmbWorldProfileKind.Exterior) { LocationIndex = 4 });
+        float cellSize = NavigationDerivationConfig.ClassicDefault.CellSize;
+        HashSet<(int Column, int Row)> walkable = [.. site.SpatialPublication.Navigation.Cells
+            .Where(cell => cell.Walkable && cell.SupportHeight == 0F).Select(cell => (cell.Column, cell.Row))];
+        WorldBlockNormalizer normalizer = new(sources);
+        NormalizedVector3[] markers = [.. site.Layout.Blocks.SelectMany(placed => normalizer.RmbExterior(placed.SourceName).Block.StartMarkers
+            .Select(marker => Add(marker.Position, new(placed.X * RmbBlockSide, 0F, -(placed.Y * RmbBlockSide)))))];
+
+        Assert.Equal(4, markers.Length);
+        Assert.All(markers, marker => Assert.Contains(((int)MathF.Floor(marker.X / cellSize), (int)MathF.Floor(marker.Z / cellSize)), walkable));
+    }
+
     [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK", "FACTION.TXT")]
     public void Charing_assembled_from_its_block_facts_carries_the_site_closures_doors_markers_and_buildings()
     {
