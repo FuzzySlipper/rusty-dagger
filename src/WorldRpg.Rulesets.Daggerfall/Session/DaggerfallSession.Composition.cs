@@ -1067,6 +1067,11 @@ internal sealed partial class DaggerfallSession
                 IdentifyChoice, Spellbook, Detectors, _playerTime, _loading, _tutorial, Radial, Activation, _input, () => DrawnArt,
                 () => State.WeaponDrawn, () => _interactions.HoldsWorldOpen,
                 Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone));
+            _heldWorkbench = new DaggerfallHeldWorkbench(composition.HeldArt, tuning.Attacks, tuning.Viewmodel.Style, () => _appearance, () =>
+            {
+                if (!_inAdmittedUpdate && !_disposed) PublishPresentation();
+            });                                                                                   // Developer
+            _peopleRigs = new DaggerfallPeopleRigSwitch(composition.ArtReplacements?.PeopleRig, () => _engine.PartsRigs, State.Actors);   // Developer
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,
                     snapshot => DungeonText.Restore(snapshot, () => DungeonActions.ActiveActions, CurrentTextContext));
@@ -1194,7 +1199,7 @@ internal sealed partial class DaggerfallSession
         appearance.UsePlayerRide(() => (State.Transport.Mode, new Vector2(State.PlayerControl.Motion.ControlledVelocity.X, State.PlayerControl.Motion.ControlledVelocity.Z).Length(), State.PlayerControl.PitchRadians, State.Transport.Ride.TurnFrom(State.PlayerControl.YawRadians)));
         appearance.UseViewLight(_engine.Tween, _viewLight);
         appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
-        appearance.UsePeopleRigs(() => _peopleRigs);
+        appearance.UsePeopleRigs(() => _peopleRigs?.Crowd);
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
             appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem, HeldShield, equipment => HeldArms(art, equipment));
         if (_composition.ArtReplacements is { } refreshed)
