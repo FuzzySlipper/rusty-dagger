@@ -34,9 +34,9 @@ public sealed class ContactRulesAcceptanceTests
         (EngineContextFake engine, CapturingDaggerfallRuleset ruleset) = Product(persistence);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
         product.Start();
-        NewGameSessionTests.Commit(ruleset.RequireSession());
+        NewGameSessionTests.Commit(RunningSession(product));
         product.Begin();
-        DaggerfallSession game = ruleset.RequireSession();
+        DaggerfallSession game = RunningSession(product);
         // The contact owners are live: a held block raises the guard.
         game.State.WeaponDrawn = true;
         product.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "block")]));
@@ -48,7 +48,7 @@ public sealed class ContactRulesAcceptanceTests
         Assert.Contains("Saved 'Contact run'", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
         product.Update(new ProductUpdate(OuterUpdate(4), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-1\"}")]));
         FinishLoading(product, 4);
-        DaggerfallSession loaded = ruleset.RequireSession();
+        DaggerfallSession loaded = RunningSession(product);
         Assert.NotSame(game, loaded);
         Assert.Equal(11, loaded.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
     }

@@ -42,7 +42,7 @@ public sealed class ProductModeSessionTests
             // The product a launcher starts shows its entry screen, and a client that has read it asks to
             // begin; the admitted update under test is the first one that reaches the world.
             Assert.Equal(ProductMode.Title, product.Mode);
-            NewGameSessionTests.Commit(ruleset.RequireSession());
+            NewGameSessionTests.Commit(RunningSession(product));
             product.Begin();
             Assert.Equal(ProductMode.Playing, product.Mode);
             ProductUpdateFacts facts = new(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
@@ -71,7 +71,7 @@ public sealed class ProductModeSessionTests
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
 
         product.Start();
-        DaggerfallSession title = ruleset.RequireSession();
+        DaggerfallSession title = RunningSession(product);
         ProductModeChange opened = product.Begin();
         Assert.Equal(ProductMode.Title, product.Mode);
         Assert.Equal(ProductModeChangeOutcome.AlreadyInMode, opened.Outcome);
@@ -83,7 +83,7 @@ public sealed class ProductModeSessionTests
         NewGameSessionTests.Commit(title);
         product.Begin();
         Assert.Equal(ProductMode.Playing, product.Mode);
-        Assert.NotSame(title, ruleset.RequireSession());
+        Assert.NotSame(title, RunningSession(product));
     }
 
     [CinematicsContentFact]
@@ -103,7 +103,7 @@ public sealed class ProductModeSessionTests
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContentWithout(root, DaggerfallCinematicPresentation.Root), input), ruleset, new GameBundleId("daggerfall.classic"));
 
         product.Start();
-        NewGameSessionTests.Commit(ruleset.RequireSession());
+        NewGameSessionTests.Commit(RunningSession(product));
         ProductModeChange result = product.Begin();
 
         Assert.Equal(ProductMode.Title, product.Mode);

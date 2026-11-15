@@ -48,6 +48,8 @@
   <ItemGroup>
     <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
     <ProjectReference Include="../WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj" />
+    <!-- The ruleset's tests drive the Host and read the session it runs (WorldRpgProduct.Session). -->
+    <InternalsVisibleTo Include="WorldRpg.Rulesets.Daggerfall.Tests" />
     <RustyEngineProductTool Include="../Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj" />
     <PackageReference Include="Rusty.Engine" Version="[$(RustyEnginePackageVersion)]">
       <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>

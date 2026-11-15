@@ -125,21 +125,21 @@ public sealed class ActionDrivenTimeSessionTests
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(TestData.RepositoryRoot), input),
             ruleset, new GameBundleId("daggerfall.classic"));
         product.Start();
-        NewGameSessionTests.Commit(ruleset.RequireSession());
+        NewGameSessionTests.Commit(RunningSession(product));
         product.Begin();
         product.Update(new ProductUpdate(OuterUpdate(1), []));
         ProductUpdateFacts held = new(ProductLifecycleState.Running, 1, 1, 1, 2, 60, 0, 0, 1d / 60d, true, 0, 0, .02);
         product.Update(new ProductUpdate(held, [Ui("""{"action":"action-driven-time","enabled":true}""")]));
-        Assert.True(ruleset.RequireSession().ActionDrivenPlay);
+        Assert.True(RunningSession(product).ActionDrivenPlay);
         product.Update(new ProductUpdate(held, [Ui("""{"action":"save-game"}""")]));
-        DaggerfallSession saved = ruleset.RequireSession();
+        DaggerfallSession saved = RunningSession(product);
         product.Update(new ProductUpdate(held, [Ui("""{"action":"load-game"}""")]));
         FinishLoading(product, held);
-        Assert.NotSame(saved, ruleset.RequireSession());
-        Assert.True(ruleset.RequireSession().ActionDrivenPlay);
+        Assert.NotSame(saved, RunningSession(product));
+        Assert.True(RunningSession(product).ActionDrivenPlay);
         product.Update(new ProductUpdate(held, []));
         product.Update(new ProductUpdate(OuterUpdate(2), [])); // Re-establish the loaded controller's grounding.
-        Assert.True(ruleset.RequireSession().PlayerTimeHeld);
+        Assert.True(RunningSession(product).PlayerTimeHeld);
     }
 
     [Theory]

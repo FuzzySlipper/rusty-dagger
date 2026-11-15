@@ -306,6 +306,12 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// </summary>
     public IReadOnlyList<ProductModeChange> ModeHistory => _modeHistory;
 
+    /// <summary>
+    /// The session the product runs now, for the ruleset's tests that drive the Host and then read the game it
+    /// runs: a new game is made by the title's session, not the ruleset, so only the Host knows it.
+    /// </summary>
+    internal IGameSession Session => _session;
+
     /// <summary>The remembered bundle's composition, or null when none is remembered or it no longer composes.</summary>
     private (ResolvedGameComposition, IGameRuleset)? RememberedSelection()
     {

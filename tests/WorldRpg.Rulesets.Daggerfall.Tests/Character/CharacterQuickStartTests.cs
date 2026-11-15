@@ -28,7 +28,7 @@ public sealed class CharacterQuickStartTests
         CapturingDaggerfallRuleset ruleset = new();
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
         product.Start();
-        DaggerfallSession title = ruleset.RequireSession();
+        DaggerfallSession title = RunningSession(product);
         if (draftOpen)
         {
             product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"character-begin"}""")]));
@@ -36,9 +36,13 @@ public sealed class CharacterQuickStartTests
         }
 
         product.Update(new ProductUpdate(OuterUpdate(2), [Ui(QuickStart)]));
+        // The new game is built on the updates after this one, while no session updates: the title's session
+        // publishes the loading screen the Host put up, so the client is not left on the title meanwhile.
+        Dictionary<string, object?> loading = Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(engine.Published())["loading"]);
+        Assert.Equal(("Starting a new game", "Building the world"), (loading["title"], loading["label"]));
         FinishLoading(product, 2);
 
-        DaggerfallSession game = ruleset.RequireSession();
+        DaggerfallSession game = RunningSession(product);
         Assert.NotSame(title, game);
         Assert.NotEqual(ProductMode.Title, product.Mode);
         Assert.Null(game.State.Character.Pending);

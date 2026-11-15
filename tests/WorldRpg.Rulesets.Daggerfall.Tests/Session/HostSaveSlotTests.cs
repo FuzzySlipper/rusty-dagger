@@ -41,17 +41,17 @@ public sealed class HostSaveSlotTests
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset,
             new GameBundleId("daggerfall.classic"));
         product.Start();
-        var title = ruleset.RequireSession();
+        var title = RunningSession(product);
         Assert.Equal(ProductMode.Title, product.Mode);
 
         product.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"load-slot\",\"key\":\"missing\"}")]));
-        Assert.Same(title, ruleset.RequireSession());
+        Assert.Same(title, RunningSession(product));
         Assert.Equal(ProductMode.Title, product.Mode);
         Assert.Contains("No save is indexed under 'missing'.", engine.PublishedField("lastOutcome"));
 
         product.Update(new ProductUpdate(OuterUpdate(2), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-archer\"}")]));
         FinishLoading(product, 2);
-        var restored = ruleset.RequireSession();
+        var restored = RunningSession(product);
         Assert.NotSame(title, restored);
         Assert.Equal(ProductMode.Playing, product.Mode);
         Assert.Equal("class13", restored.State.Character.Identity.CareerId);
@@ -87,7 +87,7 @@ public sealed class HostSaveSlotTests
         using (WorldRpgProduct sourceProduct = new(new ProductCreateContext(sourceEngine.Context, FullContent(root), input), sourceRuleset, new GameBundleId("daggerfall.classic")))
         {
             sourceProduct.Begin();
-            sourceSession = sourceRuleset.RequireSession();
+            sourceSession = RunningSession(sourceProduct);
             PlayerActorState player = sourceSession.State.Actors.Player;
             Stat maximum = player.Stats.GetStat(StatId.Parse("health-maximum"));
             Track health = player.Stats.GetTrack(TrackId.Parse("health"));
@@ -133,7 +133,7 @@ public sealed class HostSaveSlotTests
         Assert.Null(diagnostic);
         ResolvedGameComposition composition = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition();
         using IGameSession resumed = resumedRuleset.CreateSession(new GameSessionContext(resumedEngine.Context, composition), payload!);
-        DaggerfallSession restoredSession = resumedRuleset.RequireSession();
+        DaggerfallSession restoredSession = Assert.IsType<DaggerfallSession>(resumed);
         PlayerActorState restoredPlayer = restoredSession.State.Actors.Player;
         Stat restoredMaximum = restoredPlayer.Stats.GetStat(StatId.Parse("health-maximum"));
         Track restoredHealth = restoredPlayer.Stats.GetTrack(TrackId.Parse("health"));
@@ -188,9 +188,9 @@ public sealed class HostSaveSlotTests
         CapturingDaggerfallRuleset ruleset = new();
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
         product.Start();
-        NewGameSessionTests.Commit(ruleset.RequireSession());
+        NewGameSessionTests.Commit(RunningSession(product));
         product.Begin();
-        DaggerfallSession session = ruleset.RequireSession();
+        DaggerfallSession session = RunningSession(product);
         TrackId fatigueId = TrackId.Parse("fatigue");
 
         // Loading an empty named slot is an honest outcome, not a session replacement.
@@ -214,6 +214,11 @@ public sealed class HostSaveSlotTests
         WorldPoint firstPosition = PlayerPos(session);
         product.Update(new ProductUpdate(OuterUpdate(5), []));
         Assert.Contains("Saved 'Before the dungeon' (revision 1).", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+        // The Host asks the game to describe itself for the slot, and the list shows that beside the label.
+        Dictionary<string, object?> saveSlots = Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(engine.Published())["saveSlots"]);
+        Dictionary<string, object?> described = Assert.IsType<Dictionary<string, object?>>(Assert.Single(Assert.IsType<object?[]>(saveSlots["entries"])));
+        Assert.Equal(("Before the dungeon", "New adventurer", 1d), (described["label"], described["character"], described["level"]));
+        Assert.NotNull(described["location"]);
 
         // More ordinary input produces a distinct second slot state.
         product.Update(new ProductUpdate(
@@ -241,7 +246,7 @@ public sealed class HostSaveSlotTests
         spatial.KeepPosition = true;
         product.Update(new ProductUpdate(OuterUpdate(11), [Ui("{\"action\":\"load-slot\",\"key\":\"slot-2\"}")]));
         FinishLoading(product, 11);
-        DaggerfallSession restored = ruleset.RequireSession();
+        DaggerfallSession restored = RunningSession(product);
         Assert.NotSame(session, restored);
         Assert.Equal(secondPosition, PlayerPos(restored));
         Assert.NotEqual(overwrittenPosition, PlayerPos(restored));
@@ -305,7 +310,6 @@ public sealed class HostSaveSlotTests
             ArgumentException rejection = Assert.Throws<ArgumentException>(() =>
                 ruleset.CreateSession(new GameSessionContext(engine.Context, composition), payload));
             Assert.Contains(classification, rejection.Message, StringComparison.Ordinal);
-            Assert.Null(ruleset.Session);
             Assert.Equal(0, spatial.StepCalls);
         }
     }
@@ -327,7 +331,7 @@ public sealed class HostSaveSlotTests
         using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), scopedRuleset, new GameBundleId("daggerfall.classic")))
         {
             product.Start();
-            NewGameSessionTests.Commit(scopedRuleset.RequireSession());
+            NewGameSessionTests.Commit(RunningSession(product));
             product.Begin();
             // A control rebind is a player preference and a named save is a slot: the ordinary actions
             // that write each of the two Host stores.

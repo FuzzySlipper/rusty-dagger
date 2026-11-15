@@ -323,9 +323,9 @@ public sealed class LootSessionTests
         using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic")))
         {
             product.Start();
-            NewGameSessionTests.Commit(ruleset.RequireSession());
+            NewGameSessionTests.Commit(RunningSession(product));
             product.Begin();
-            DaggerfallSession session = ruleset.RequireSession();
+            DaggerfallSession session = RunningSession(product);
 
             // One lootable corpse within reach, mirroring the session-level loot fixture.
             session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);

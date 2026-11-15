@@ -41,7 +41,7 @@ public sealed class TownStartBundleTests
         FinishLoading(product, 1);
 
         Assert.Equal(ProductMode.Playing, product.Mode);
-        DaggerfallSession game = ruleset.RequireSession();
+        DaggerfallSession game = RunningSession(product);
         Assert.Equal(exterior.ProfileKey, game.Sites.ActiveProfile);
         Assert.False(string.IsNullOrWhiteSpace(game.State.Character.Capture().Name));
         Assert.True(game.State.Currency.Read().Gold >= 5000UL);
@@ -76,7 +76,7 @@ public sealed class TownStartBundleTests
 
         product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"character-quick-start","name":"","race":"breton","gender":"male","faceIndex":0,"reflexes":2,"career":"class16"}""")]));
         FinishLoading(product, 1);
-        DaggerfallSession game = ruleset.RequireSession();
+        DaggerfallSession game = RunningSession(product);
         Assert.NotEqual(ProductMode.Title, product.Mode);
         Assert.Equal(exterior.ProfileKey, game.Sites.ActiveProfile);
         Assert.Equal(new DaggerfallSiteId(17, 4), game.Site.ActiveSite!.Id);
@@ -162,7 +162,7 @@ public sealed class TownStartBundleTests
         FinishLoading(product, 1);
 
         Assert.Equal(ProductMode.Playing, product.Mode);
-        DaggerfallSession game = ruleset.RequireSession();
+        DaggerfallSession game = RunningSession(product);
         Assert.Equal(exterior.ProfileKey, game.Sites.ActiveProfile);
         Assert.Empty(game.State.Quests.All);
         Assert.Equal(12, DaggerfallSavePayload.Read(game.CaptureSave()).Calendar.Hour);

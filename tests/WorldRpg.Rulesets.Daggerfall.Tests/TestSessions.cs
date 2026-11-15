@@ -687,6 +687,9 @@ internal static class TestSessions
 
     internal static void FinishLoading(WorldRpgProduct product, ulong step) => FinishLoading(product, OuterUpdate(step));
 
+    /// <summary>The Daggerfall session the Host runs now: the title's, a new game's or a loaded one's.</summary>
+    internal static DaggerfallSession RunningSession(WorldRpgProduct product) => Assert.IsType<DaggerfallSession>(product.Session);
+
     /// <summary>One advanced sprite frame whose authored damage frame was crossed.</summary>
     /// <summary>A playback receipt that completes without crossing a marker, which is what clears a swing.</summary>
     /// <summary>

@@ -64,13 +64,13 @@ public sealed class CommittedBundleCompositionTests
         using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId(bundleId)))
         {
             product.Start();
-            NewGameSessionTests.Commit(ruleset.RequireSession());
+            NewGameSessionTests.Commit(RunningSession(product));
             product.Begin();
             Assert.Equal(ProductMode.Playing, product.Mode);
             ProductUpdateFacts facts = new(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
             Assert.Equal(ProductUpdateResult.None, product.Update(new ProductUpdate(facts, ReadOnlySpan<ProductInputEvent>.Empty)));
             Assert.Equal(1, spatial.StepCalls);
-            DaggerfallSession session = ruleset.RequireSession();
+            DaggerfallSession session = RunningSession(product);
             Assert.Equal(start.Site, session.Site.Active);
             product.Shutdown();
         }

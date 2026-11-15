@@ -26,7 +26,7 @@ public sealed class BundleChoiceSessionTests
         CapturingDaggerfallRuleset ruleset = new();
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, WithSecondGame(root), input), ruleset, new GameBundleId("daggerfall.classic"));
         product.Start();
-        DaggerfallSession classic = ruleset.RequireSession();
+        DaggerfallSession classic = RunningSession(product);
 
         // The entry screen offers every committed game by its authored title.
         Assert.Equal("daggerfall.classic", engine.PublishedNested("bundles", "current"));
@@ -38,14 +38,14 @@ public sealed class BundleChoiceSessionTests
         product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"test.second"}""")]));
         FinishLoading(product, 1);
 
-        DaggerfallSession second = ruleset.RequireSession();
+        DaggerfallSession second = RunningSession(product);
         Assert.NotSame(classic, second);
         Assert.Equal(ProductMode.Title, product.Mode);
         Assert.Equal("test.second", engine.PublishedNested("bundles", "current"));
 
         product.Update(new ProductUpdate(OuterUpdate(2), [Ui("""{"action":"character-quick-start","name":"","race":"breton","gender":"male","faceIndex":0,"reflexes":2,"career":"class16"}""")]));
         FinishLoading(product, 2);
-        DaggerfallSession game = ruleset.RequireSession();
+        DaggerfallSession game = RunningSession(product);
         Assert.NotEqual(ProductMode.Title, product.Mode);
         // A game begun from the title no longer offers a choice of game.
         Assert.Null(engine.PublishedNested("bundles", "current"));
