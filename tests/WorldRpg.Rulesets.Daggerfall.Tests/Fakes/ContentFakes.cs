@@ -155,12 +155,18 @@ internal sealed class BundleContentFake : IContentService
     {
         internal byte[] Read() => bytes ?? read?.Invoke() ?? TestContentFiles.ReadUncached(diskPath!);
 
-        private (ContentSha256 Digest, ulong Length)? measured = known;
+        /// <summary>
+        /// Measured once by whichever thread asks first. The fake is shared across parallel test classes, and a cached
+        /// identity written without a guard is a struct wider than one store: another thread could see it present
+        /// before its digest was written, and refuse a correct reference as having another digest.
+        /// </summary>
+        private readonly Lazy<(ContentSha256 Digest, ulong Length)> identity = new(() => known
+            ?? (bytes is not null ? (Digest(bytes), checked((ulong)bytes.Length)) : Measure(diskPath!)));
 
-        internal (ContentSha256 Digest, ulong Length) Identity() => measured is { } identity ? identity
-            : bytes is not null
-            ? (measured = (Digest(bytes), checked((ulong)bytes.Length))).Value
-            : DiskDigests.GetOrAdd(diskPath!, path =>
+        internal (ContentSha256 Digest, ulong Length) Identity() => identity.Value;
+
+        private static (ContentSha256 Digest, ulong Length) Measure(string diskPath) =>
+            DiskDigests.GetOrAdd(diskPath, path =>
             {
                 // A derived file is not on disk: its bytes are the data container's.
                 using Stream stream = File.Exists(path) ? File.OpenRead(path) : new MemoryStream(TestContentFiles.Read(path), writable: false);
@@ -185,7 +191,8 @@ internal sealed class BundleContentFake : IContentService
     private ulong nextHandle = 1;
     /// <summary>
     /// Guards the handles and the read records. <c>TestPayload.Data</c> shares one of these fakes across parallel
-    /// test classes, so handles are allocated, released and read from several threads at once.
+    /// test classes, so handles are allocated, released and read from several threads at once. The declared files and
+    /// roots need no guard: they are all declared before the fake is shared, and only read after.
     /// </summary>
     private readonly Lock gate = new();
 
