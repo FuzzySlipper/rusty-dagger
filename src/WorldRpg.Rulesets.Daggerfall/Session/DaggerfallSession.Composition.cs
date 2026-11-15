@@ -1108,6 +1108,7 @@ internal sealed partial class DaggerfallSession
                 State.Encumbrance, State.ItemInstances, _uniqueItems, State.RacialOverrides, _lycanthropy, _time, TransportAccess,
                 ApplyTransportChange);                                                                // Developer
             _peopleRigs = new DaggerfallPeopleRigSwitch(composition.ArtReplacements?.PeopleRig, () => _engine.PartsRigs, State.Actors);   // Developer
+            // One object per module type: the Engine's catalogue binds an instance to the first type it matches.
             DebugCommands =
             [
                 new PlaytestDebugModule(_playtest.ReadObservation, _playtest.InspectAction, _playtest.Actions, _playtest.InspectLook),

@@ -273,12 +273,24 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         OfferDebugCommands();
     }
 
-    /// <summary>Registers what the current session offers on the debug catalogue, once the Engine has handed one over.</summary>
+    /// <summary>
+    /// Registers what the current session offers on the debug catalogue, once the Engine has handed one over. A later
+    /// registration replaces the instance of its type, and nothing unregisters, so each session offers every module type:
+    /// the one session that offers none, the unavailable screen's, is installed only before the catalogue exists or in
+    /// place of another unavailable session, never after a game. A module the catalogue does not take is a warning
+    /// naming it, since its commands are then missing.
+    /// </summary>
     private void OfferDebugCommands()
     {
         if (_debugCommands is null) return;
         foreach (IDebugCommandModule module in _session.DebugCommands)
-            _debugCommands.Register(module);
+        {
+            DebugCommandRegistrationResult registered = _debugCommands.Register(module);
+            if (!registered.Succeeded)
+                _context.Engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
+                    "worldrpg.host", "debug.module.refused",
+                    $"The debug catalogue did not take {module.GetType().Name}, so its commands are unavailable: {registered.Message}", string.Empty));
+        }
     }
 
     /// <summary>The mode the product runs its session under.</summary>

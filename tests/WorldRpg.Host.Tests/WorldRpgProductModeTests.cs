@@ -23,10 +23,13 @@ public sealed class WorldRpgProductModeTests
     public void Registered_playtest_commands_follow_session_replacement()
     {
         ModeRecordingRuleset ruleset = new();
-        using WorldRpgProduct product = Product(ruleset);
+        DiagnosticsRecorder diagnostics = new();
+        using WorldRpgProduct product = new(new ProductCreateContext(diagnostics.Engine, Content(), EmptyInput()), ruleset, new GameBundleId("test.bundle"));
         DebugRegistrar registrar = new();
         Assert.IsAssignableFrom<IDebugCommandModuleSource>(product).RegisterDebugCommands(registrar);
         Assert.Equal("1", registrar.Current<PlaytestDebugModule>().Observe().Message);
+        // A module the catalogue does not take is named, not dropped without a word.
+        Assert.Contains(nameof(UncataloguedModule), Assert.Single(diagnostics.Warnings));
         Assert.Equal("1", registrar.Current<SpatialInspectionDebugModule>().Probe(1).Message);
         using (var readout = JsonDocument.Parse(registrar.Current<InteractionDebugModule>().Inspect().Message))
             Assert.Equal("1", readout.RootElement.GetProperty("stamp").GetString());
@@ -37,6 +40,45 @@ public sealed class WorldRpgProductModeTests
         using (var readout = JsonDocument.Parse(registrar.Current<InteractionDebugModule>().Inspect().Message))
             Assert.Equal("2", readout.RootElement.GetProperty("stamp").GetString());
         Assert.True(ruleset.Replaced!.Disposed);
+        Assert.Equal(2, diagnostics.Warnings.Count);
+    }
+
+    /// <summary>A module with no generated commands, which the catalogue refuses.</summary>
+    private sealed class UncataloguedModule : IDebugCommandModule;
+
+    /// <summary>An Engine whose only service is diagnostics, recording the warnings published to it.</summary>
+    private sealed class DiagnosticsRecorder
+    {
+        internal List<string> Warnings { get; } = [];
+        internal IEngineContext Engine { get; }
+
+        internal DiagnosticsRecorder()
+        {
+            Engine = DispatchProxy.Create<IEngineContext, EngineWithDiagnostics>();
+            IDiagnosticsService service = DispatchProxy.Create<IDiagnosticsService, RecordingDiagnostics>();
+            ((EngineWithDiagnostics)(object)Engine).Diagnostics = service;
+            ((RecordingDiagnostics)(object)service).Warnings = Warnings;
+        }
+
+        private class EngineWithDiagnostics : DispatchProxy
+        {
+            internal IDiagnosticsService Diagnostics { get; set; } = null!;
+            protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => targetMethod?.Name == "get_Diagnostics"
+                ? Diagnostics
+                : throw new NotSupportedException($"Unexpected Engine service member '{targetMethod?.Name}'.");
+        }
+
+        private class RecordingDiagnostics : DispatchProxy
+        {
+            internal List<string> Warnings { get; set; } = null!;
+            protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+            {
+                if (targetMethod?.Name != nameof(IDiagnosticsService.Publish)) throw new NotSupportedException(targetMethod?.Name);
+                DiagnosticsPublishRequest request = (DiagnosticsPublishRequest)args![0]!;
+                if (request.Severity == DiagnosticsSeverity.Warning) Warnings.Add(request.Message);
+                return null;
+            }
+        }
     }
 
     /// <summary>Keeps the last module registered of each type, as the Engine's generated catalogue does.</summary>
@@ -46,6 +88,7 @@ public sealed class WorldRpgProductModeTests
         internal T Current<T>() where T : IDebugCommandModule => (T)_modules[typeof(T)];
         public DebugCommandRegistrationResult Register<TModule>(TModule module) where TModule : class, IDebugCommandModule
         {
+            if (module is UncataloguedModule) return new(DebugCommandRegistrationStatus.UnsupportedModule, "No generated debug commands exist for the supplied module type.");
             _modules[module.GetType()] = module;
             return new(DebugCommandRegistrationStatus.Registered, "registered");
         }
@@ -614,6 +657,7 @@ public sealed class WorldRpgProductModeTests
             new PlaytestDebugModule(Stamp, id => new(id, "KeyQ", 100, false), ["attack"], (_, _) => Stamp()),
             new InteractionDebugModule(new WorldInteraction(this, targetedUseEnabled: false)),
             new SpatialInspectionDebugModule((_, _, _) => Stamp(), _ => Stamp(), (_, _, _) => Stamp()),
+            new UncataloguedModule(),
         ];
         public InteractionSceneSnapshot ReadInteraction() => new(
             new InteractionQuery(Vector3.Zero, Vector3.UnitZ, 1, 1, 2, 2, 1, 1),
