@@ -278,8 +278,8 @@ public sealed class DaggerfallItemConditionServiceTests
         internal Fixture(DaggerfallDefinitions? definitions = null)
         {
             Definitions = definitions ?? TestPayload.Definitions;
-            var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
-            var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
+            var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
             InventoryStore world = new();
             EntityId owner = Entities.Create(new(DurableIdentityKind.Actor, 1), new("test.player"));
             world.RegisterInventory(new InventoryState(owner));

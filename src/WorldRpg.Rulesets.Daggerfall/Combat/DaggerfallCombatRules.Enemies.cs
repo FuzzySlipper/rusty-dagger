@@ -5,7 +5,7 @@ using KitItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
-internal sealed partial class DaggerCombatRules
+internal sealed partial class DaggerfallCombatRules
 {
     /// <summary>The attack this enemy would use at <paramref name="distance"/>: its reach and whether it is a ranged shot.</summary>
     internal (double Reach, bool Ranged)? EnemyAttackAtDistance(long actorId, long targetId, double distance)

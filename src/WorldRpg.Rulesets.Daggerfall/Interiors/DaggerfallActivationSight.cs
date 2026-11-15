@@ -9,7 +9,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>
 /// Where a body or a person is sighted for use, from the sprite sizes the active site's inputs carry. A visibility ray
 /// to where an actor stands or lies can end on, or under, the ground there and read as occluded from every side, as
-/// DaggerTargetingPolicy.AimPoint notes for grounded actors, so each is sighted at the middle of its sprite.
+/// DaggerfallTargetingPolicy.AimPoint notes for grounded actors, so each is sighted at the middle of its sprite.
 /// </summary>
 /// <param name="inputs">The active site's inputs: its placed and mobile sprites and its people's billboards.</param>
 /// <param name="definitions">The roster's definition of each live actor, which names its mobile.</param>

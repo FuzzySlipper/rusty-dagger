@@ -123,7 +123,7 @@ public sealed class LootSessionTests
         EquipmentComponent equipmentComponent = new(world, playerOwner);
         actors.Player.Actor.Add(equipmentComponent);
         MechanicsEquipmentCoordinator equipment = new(inventory, equipmentComponent, actors.Entities, items,
-            definitions.EquipmentSlots.Values.ToDictionary(slot => new WorldRpg.Kit.Inventory.EquipmentSlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot));
+            definitions.EquipmentSlots.Values.ToDictionary(slot => new WorldRpg.Kit.Inventory.EquipmentSlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot));
         DaggerfallEquipmentMoves inventoryMoves = new(new MechanicsInventoryCoordinator(inventory, actors.Entities, items), equipment, definitions);
         DaggerfallInventoryPresentation inventoryUi = new(inventoryMoves, definitions,
             new Dictionary<string, string>());

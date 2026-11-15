@@ -879,7 +879,7 @@ public sealed class DaggerfallHeldEnchantmentTests
         {
             DaggerfallActorDefinition playerDefinition = Definitions.RequireActor(new DaggerfallActorId("player"));
             PlayerActorState player = _actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(playerDefinition.Id.Value),
-                new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
+                new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerfallActorFactory.PlayerCapabilities);
             PlayerEntity = player.Actor.Entity;
             InventoryStore world = new();
             world.RegisterInventory(new InventoryState(PlayerEntity, [new InventoryCapacityLimit(DaggerfallEncumbrancePolicy.ClassicWeightMetric, ulong.MaxValue)]));
@@ -890,9 +890,9 @@ public sealed class DaggerfallHeldEnchantmentTests
             player.Actor.Add(inventory);
             player.Actor.Add(equipment);
             Dictionary<InventoryItemId, ItemDefinition> items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values)
-                .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+                .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
             Dictionary<WorldRpg.Kit.Inventory.EquipmentSlotId, EquipmentSlotDefinition> slots = Definitions.EquipmentSlots.Values
-                .ToDictionary(slot => new WorldRpg.Kit.Inventory.EquipmentSlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+                .ToDictionary(slot => new WorldRpg.Kit.Inventory.EquipmentSlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
             MechanicsInventoryCoordinator coordinator = new(inventory, _actors.Entities, items);
             _equipment = new MechanicsEquipmentCoordinator(inventory, equipment, _actors.Entities, items, slots);
             DaggerfallEquipmentMoves moves = new(coordinator, _equipment, Definitions, itemInstances: _instances);

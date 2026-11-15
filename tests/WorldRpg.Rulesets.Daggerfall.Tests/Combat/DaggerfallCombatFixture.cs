@@ -25,16 +25,16 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// reach other session owners (skill uses, monster hit consequences, weapon poison) record what combat
 /// asked of them, so a fact can assert on the request without composing the owner.
 /// </remarks>
-internal sealed class DaggerCombatFixture : IDisposable
+internal sealed class DaggerfallCombatFixture : IDisposable
 {
     private readonly SpatialMovementSystem _spatial;
 
-    internal DaggerCombatFixture(string sourceId, double playerHealth = 100d, double playerFatigue = 600d)
+    internal DaggerfallCombatFixture(string sourceId, double playerHealth = 100d, double playerFatigue = 600d)
     {
         Definitions = TestPayload.Definitions;
         Actors = new ActorsState();
-        PlayerActorState player = Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(playerHealth, playerFatigue), "health", DaggerActorFactory.PlayerCapabilities);
-        ActorState source = Actors.CreateActor(2, new EntityTypeId(sourceId), Stats(100d, 600d), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+        PlayerActorState player = Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(playerHealth, playerFatigue), "health", DaggerfallActorFactory.PlayerCapabilities);
+        ActorState source = Actors.CreateActor(2, new EntityTypeId(sourceId), Stats(100d, 600d), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
         Random = RandomMinimum.Create();
         Dictionary<long, DaggerfallActorDefinition> authored = new()
         {
@@ -48,7 +48,7 @@ internal sealed class DaggerCombatFixture : IDisposable
             new DaggerfallEquipmentMoves(playerInventory, playerEquipment, Definitions, itemInstances: itemInstances));
         DaggerfallContactInputs contactInputs = new(Definitions, () => null, Random,
             id => (id == 2 ? sourceEquipment : playerEquipment).Read(), id => Actors.TryGet(id, out ActorState actor) ? actor.Stats : null, () => 0);
-        Rules = new DaggerCombatRules(
+        Rules = new DaggerfallCombatRules(
             Random, Actors, playerEquipment, id => id == 2 ? sourceInventory : playerInventory,
             itemInstances, Definitions, authored,
             CombatCollaborators.Targeting(Actors, authored, out _spatial),
@@ -80,7 +80,7 @@ internal sealed class DaggerCombatFixture : IDisposable
     /// <summary>The fixture's random service, which answers the minimum of every keyed window.</summary>
     internal IRandomService Random { get; }
 
-    internal DaggerCombatRules Rules { get; }
+    internal DaggerfallCombatRules Rules { get; }
 
     internal FactBuffer<IProductFact> Facts { get; } = new();
 
@@ -89,7 +89,7 @@ internal sealed class DaggerCombatFixture : IDisposable
     internal double Fatigue => Track(DaggerfallMechanicsIds.Fatigue.Value);
 
     /// <summary>Applies a blow that already connected with the request's target, through the application every delivery shares.</summary>
-    internal void ApplyConnected(AttackRequest request, DaggerCombatRules.DaggerfallPreparedAttack attack) =>
+    internal void ApplyConnected(AttackRequest request, DaggerfallCombatRules.DaggerfallPreparedAttack attack) =>
         ((IDaggerfallPhysicalHarmOperations)Rules).ApplyConnectedHarm(request, request.TargetId!.Value, attack, Facts);
 
     internal List<IProductFact> Deliver()

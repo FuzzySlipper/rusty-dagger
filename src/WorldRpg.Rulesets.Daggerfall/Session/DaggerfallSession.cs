@@ -52,7 +52,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>Harm and spell delivery's physical contact over the admitted scene and canonical actor bodies.</summary>
     private readonly ActorContact _contact;
     private readonly FirstPersonCameraSystem _camera;
-    private readonly DaggerCombatRules _combat;
+    private readonly DaggerfallCombatRules _combat;
     // The player's weapon swing gesture, read from the look turns each admitted update commits and
     // consumed by the weapon attack it admits.
     private readonly DaggerfallVitalityConsequences _vitality;
@@ -83,7 +83,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallNpcProjection NpcProjection { get; }
     internal DaggerfallWorldEncounters WorldEncounters { get; }
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
-    private readonly DaggerSessionPersistence _persistence;
+    private readonly DaggerfallSessionPersistence _persistence;
     private readonly HashSet<ulong> _authoredEntityIds;
     /// <summary>
     /// Dynamic actors share one numeric base with generated unique items; durable kinds keep

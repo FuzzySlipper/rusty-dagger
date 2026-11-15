@@ -25,9 +25,9 @@ internal sealed class PoisoningFixture : IDisposable
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
         DaggerfallCareerDefinition career = definitions.Catalogs.RequireCareer("class00");
         StatsComponent playerStats = Attributed(definitions, player);
-        Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), playerStats, "health", DaggerActorFactory.PlayerCapabilities);
+        Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), playerStats, "health", DaggerfallActorFactory.PlayerCapabilities);
         Actors.CreateActor(SiteActor, new EntityTypeId("nymph"), Attributed(definitions, player),
-            new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+            new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
         Character = new DaggerfallCharacterState(definitions, playerStats, player);
         Dictionary<long, DaggerfallActorDefinition> actorDefinitions = [];
         if (siteActorLevel is int level)

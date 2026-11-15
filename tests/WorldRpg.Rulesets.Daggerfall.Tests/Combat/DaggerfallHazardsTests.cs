@@ -25,8 +25,8 @@ public sealed class DaggerfallHazardsTests
         internal Stage(Vector3 player, Vector3 body)
         {
             DaggerfallSiteProfile inputs = CombatCollaborators.Profile.Value;
-            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health", DaggerActorFactory.PlayerCapabilities);
-            Actors.CreateActor(Thrown, new EntityTypeId("test"), TestSessions.HealthyMechanics(), new ActorPose(WorldPoint.From(body), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health", DaggerfallActorFactory.PlayerCapabilities);
+            Actors.CreateActor(Thrown, new EntityTypeId("test"), TestSessions.HealthyMechanics(), new ActorPose(WorldPoint.From(body), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
             _ = CombatCollaborators.Targeting(Actors, new Dictionary<long, DaggerfallActorDefinition>(), out SpatialMovementSystem spatial, out SpatialFake fake);
             Reactions = new ActorReactions(new ActorNavigationCoordinator(fake.Service, spatial.Session));
             Hazards = new DaggerfallHazards(DaggerfallHazardTuning.Default, Actors, Reactions, () => WorldPoint.From(player), point => point, () => inputs,

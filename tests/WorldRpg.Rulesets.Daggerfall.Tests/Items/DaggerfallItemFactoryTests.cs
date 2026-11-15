@@ -268,7 +268,7 @@ public sealed class DaggerfallItemFactoryTests
         InventoryComponent component = new(store, owner);
         MechanicsInventoryCoordinator inventory = new(component, entities, definitions.Items.Values
             .Concat(definitions.TemplateItems.Values)
-            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem));
+            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem));
         DaggerfallItemInstances instances = new();
         DaggerfallCreatedItem arrows = factory.Create(new DaggerfallItemCreateRequest("Weapons", "arrows", DaggerfallItemOwner.Player, TemplateIndex: 131));
         DaggerfallCreatedItem sword = factory.Create(new DaggerfallItemCreateRequest("Weapons", "sword", DaggerfallItemOwner.Player, TemplateIndex: 113));

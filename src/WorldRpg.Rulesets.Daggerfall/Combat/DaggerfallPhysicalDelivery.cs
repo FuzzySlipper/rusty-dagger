@@ -10,8 +10,8 @@ using EquipmentAssignment = WorldRpg.Kit.Inventory.EquipmentAssignment;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Policies;
-using Combatant = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerCombatRules.Combatant;
-using PreparedPhysicalAttack = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerCombatRules.DaggerfallPreparedAttack;
+using Combatant = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerfallCombatRules.Combatant;
+using PreparedPhysicalAttack = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerfallCombatRules.DaggerfallPreparedAttack;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 

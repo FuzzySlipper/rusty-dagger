@@ -53,7 +53,7 @@ public sealed class DaggerfallExteriorWorldTests
         SpatialFake spatialFake = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatialFake.Service, new AppearanceFake(releases));
         IRandomService random = RandomMinimum.Create();
-        DaggerActorAssembly assembled = DaggerActorFactory.Create(random, definitions, inputs, saved: null);
+        DaggerfallActorAssembly assembled = DaggerfallActorFactory.Create(random, definitions, inputs, saved: null);
         using ActorsState actors = assembled.Actors;
         using SpatialMovementSystem spatial = new(spatialFake.Service, content, null, tuning.Spatial);
         DaggerfallEffectLifecycle effects = new(actors, new DaggerfallEffectCatalog([]));
@@ -65,7 +65,7 @@ public sealed class DaggerfallExteriorWorldTests
         Site site = new(inputs.ProfileKey);
         DaggerfallActorRoster roster = new(actors, assembled.ActorInventories, assembled.Character, assembled.Containers, effects,
             assembled.InventoryStore, assembled.ItemInstances, assembled.Npcs, definitions, random, assembled.Mechanics, identities, uniqueItems,
-            DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, assembled.PlayerDefinition.Loadout), assembled.Definitions, [],
+            DaggerfallActorFactory.AdmittedAuthoredEntityIds(inputs, assembled.PlayerDefinition.Loadout), assembled.Definitions, [],
             new DaggerfallActorGrounding(spatialFake.Service, spatial, tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance),
             () => inputs, () => throw new InvalidOperationException("No appearance is read here."), _ => { }, corpses);
         DaggerfallGroundContainers ground = new(assembled.Containers, assembled.ItemInstances, actors.Player.Actor.Entity,

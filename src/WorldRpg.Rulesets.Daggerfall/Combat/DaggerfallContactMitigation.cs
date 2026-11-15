@@ -76,13 +76,13 @@ internal sealed class DaggerfallContactMitigation(DaggerfallContactInputs sessio
     internal int Absorption(DaggerfallPhysicalHarm harm, HarmChannelId channel)
     {
         double points = 0d;
-        string slot = DaggerCombatRules.BodySlot(harm.BodyPart);
+        string slot = DaggerfallCombatRules.BodySlot(harm.BodyPart);
         foreach (EquipmentAssignment assignment in session.EquipmentOf(harm.TargetId).Assignments)
         {
             DaggerfallItemDefinition item = session.Definitions.RequireItem(new DaggerfallItemId(assignment.Item.Definition.Value));
             if (item.Armor is { } worn && assignment.Slot.Value == slot)
                 points += session.Definitions.ArmorValuesByMaterial[worn.Material] * tuning.AbsorptionPerArmorPoint;
-            else if (item.Shield is { } shield && assignment.Slot.Value == "left-hand" && DaggerCombatRules.ShieldCovers(item, harm.BodyPart))
+            else if (item.Shield is { } shield && assignment.Slot.Value == "left-hand" && DaggerfallCombatRules.ShieldCovers(item, harm.BodyPart))
                 points += shield.Armor * tuning.AbsorptionPerShieldPoint;
         }
         // The player's worn armor enchantments shift its whole armor value once, not any one piece; the

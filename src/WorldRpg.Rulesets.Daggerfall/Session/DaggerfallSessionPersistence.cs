@@ -28,7 +28,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Explicit current-state capture and restoration; native presentation and input are reconstructed by composition.</summary>
-internal sealed class DaggerSessionPersistence : IDaggerfallSiteDeltas
+internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
 {
     private readonly DaggerfallState State;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
@@ -63,7 +63,7 @@ internal sealed class DaggerSessionPersistence : IDaggerfallSiteDeltas
     internal Func<double> PlaySeconds { get; set; } = () => 0;
     internal Func<DaggerfallTeleportAnchor?> TeleportAnchor { get; set; } = () => null;
     internal Func<IReadOnlySet<long>> BanishedActors { get; set; } = () => new HashSet<long>();
-    internal DaggerSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
+    internal DaggerfallSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
         DaggerfallEffectLifecycle effects, Func<DaggerfallDoorRuntime> doors, DaggerfallLocomotionPolicy locomotion,
         DaggerfallClimbingPolicy climbing, DaggerfallSwimmingPolicy swimming, DaggerfallDungeonText dungeonText,
@@ -309,7 +309,7 @@ internal sealed class DaggerSessionPersistence : IDaggerfallSiteDeltas
     /// Applies a resolved save's relational sections to a freshly composed session, mirroring
     /// <see cref="Capture"/>. Composition has already built each owner from its own section: actor,
     /// player and dynamic-actor stats, variables, NPCs, social standing, character and quest training
-    /// (<see cref="DaggerActorFactory"/>); then the calendar, site context, action graphs, dungeon
+    /// (<see cref="DaggerfallActorFactory"/>); then the calendar, site context, action graphs, dungeon
     /// discovery, doors and motion, the identity ledger, currency, bank, loans, property, crime,
     /// services, knightly claims and regional prices, and the roster's spawned actors. This applies the
     /// rest, in this order:

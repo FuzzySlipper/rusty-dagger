@@ -26,7 +26,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// reflex-gated slots, backstab rolls only above level one — survived into the product rather than
 /// being approximated by a flat roll.
 /// </summary>
-public sealed class DaggerCombatDamagePolicyTests
+public sealed class DaggerfallCombatDamagePolicyTests
 {
     [Fact]
     public void An_armed_class_enemy_strikes_with_its_equipped_weapon_even_when_its_fists_would_hit_harder()
@@ -785,7 +785,7 @@ public sealed class DaggerCombatDamagePolicyTests
         private readonly MechanicsEquipmentCoordinator _playerEquipment;
         private readonly ScriptedRandom _scripted = (ScriptedRandom)(object)DispatchProxy.Create<IRandomService, ScriptedRandom>();
         private readonly IRandomService _random;
-        private readonly DaggerCombatRules _combat;
+        private readonly DaggerfallCombatRules _combat;
         private WorldPoint? _playerPosition;
 
         private DaggerfallCharacterState? _character;
@@ -798,7 +798,7 @@ public sealed class DaggerCombatDamagePolicyTests
             _random = random ?? (IRandomService)(object)_scripted;
             _actors = new ActorsState();
             PlayerActorState player = _actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(playerDefinition.Id.Value),
-                new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
+                new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, definitions.Catalogs.RequireCareer("class00"))), "health", DaggerfallActorFactory.PlayerCapabilities);
             new DaggerfallPlayerStamina(DaggerfallStaminaTuning.Default).Refresh(player.Stats);
             _playerEquipment = BuildEquipment(player.Actor.Entity, DaggerfallActorIdentity.PlayerEntityId, player.Actor);
             foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => entry.UniqueEntityId is not null))
@@ -814,13 +814,13 @@ public sealed class DaggerCombatDamagePolicyTests
             // the equipped-enemy action and nothing worn until a test hands it a weapon.
             DaggerfallActorDefinition brigand = definitions.RequireActor(new DaggerfallActorId("thief")) with { ActionId = "enemy-class-equipped-melee" };
             ActorState enemy = _actors.CreateActor(2, new EntityTypeId("brigand"),
-                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
             _authored[DaggerfallActorIdentity.PlayerEntityId] = playerDefinition;
             _authored[2] = brigand;
             _actorEquipment[2] = BuildEquipment(enemy.Actor.Entity, 2, enemy.Actor);
             _itemCondition = new DaggerfallItemConditionService(definitions, _itemInstances,
                 new DaggerfallEquipmentMoves(_actorInventories[DaggerfallActorIdentity.PlayerEntityId], _playerEquipment, definitions, itemInstances: _itemInstances));
-            _combat = new DaggerCombatRules(_random, _actors, _playerEquipment,
+            _combat = new DaggerfallCombatRules(_random, _actors, _playerEquipment,
                 id => _actorInventories.TryGetValue(id, out MechanicsInventoryCoordinator? quiver) ? quiver : null,
                 _itemInstances, definitions, _authored, CombatCollaborators.Targeting(_actors, _authored, out _spatial, out SpatialFake spatialFake),
                 skillUses: SkillUses.Add,
@@ -993,7 +993,7 @@ public sealed class DaggerCombatDamagePolicyTests
             DaggerfallActorDefinition brigand = Definitions.RequireActor(new DaggerfallActorId("thief")) with { ActionId = "enemy-class-equipped-melee" };
             _authored[id] = brigand;
             ActorState spawned = _actors.CreateActor(id, new EntityTypeId("brigand"),
-                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(at, 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(at, 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
             _actorEquipment[id] = BuildEquipment(spawned.Actor.Entity, id, spawned.Actor);
             return spawned;
         }
@@ -1104,8 +1104,8 @@ public sealed class DaggerCombatDamagePolicyTests
             EquipmentComponent equipment = new(world, owner);
             actor.Add(inventory);
             actor.Add(equipment);
-            var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
-            var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
+            var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
             // Ranged attacks draw from the same coordinator the actor's inventory component owns.
             _actorInventories[durableId] = new MechanicsInventoryCoordinator(inventory, _actors.Entities, items);
             return new MechanicsEquipmentCoordinator(inventory, equipment, _actors.Entities, items, slots);

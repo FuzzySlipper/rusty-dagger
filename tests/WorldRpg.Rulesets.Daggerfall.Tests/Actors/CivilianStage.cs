@@ -23,7 +23,7 @@ internal sealed class CivilianStage : IDisposable
         content.Add("sprite/population.png", TestSessions.Hash);
         Appearance = new DaggerfallSiteAppearance(content, new AppearanceFake(_releases), Profile);
         Npcs.Identities = new DurableIdentityAllocator(DurableIdentityKind.Actor, 100);
-        Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health", DaggerActorFactory.PlayerCapabilities);
+        Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health", DaggerfallActorFactory.PlayerCapabilities);
         Civilians = new DaggerfallCivilians(Npcs, Actors, () => Profile, () => Appearance, id => id == Site.Id ? Site : throw new KeyNotFoundException(),
             point => WorldPoint.From(point.ToVector() + Offset), Materialize, id => Unloaded.Add(id), id => Retired.Add(id), id => Retained.Remove(id));
     }
@@ -63,7 +63,7 @@ internal sealed class CivilianStage : IDisposable
 
     private long Materialize(DaggerfallNpc npc, ActorPose pose)
     {
-        DaggerActorFactory.CreateCivilianActor(_mechanics, Actors, _inventories, npc, pose);
+        DaggerfallActorFactory.CreateCivilianActor(_mechanics, Actors, _inventories, npc, pose);
         Materialized.Add((npc.DurableId, pose));
         return npc.DurableId;
     }

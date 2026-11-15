@@ -19,10 +19,10 @@ public sealed class DaggerfallActorPlacementTests
         internal Stage(long[]? active = null)
         {
             DaggerfallActorDefinition monster = TestPayload.Definitions.Actors.Values.First(actor => actor.Kind == DaggerfallActorKinds.Monster);
-            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health", DaggerActorFactory.PlayerCapabilities);
+            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health", DaggerfallActorFactory.PlayerCapabilities);
             foreach (long actor in new[] { Foe, Ally, Hidden, Pacified, Protected, Fallen })
             {
-                Actors.CreateActor(actor, new EntityTypeId("test"), TestSessions.HealthyMechanics(), new ActorPose(new WorldPoint(actor, 0f, 4f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+                Actors.CreateActor(actor, new EntityTypeId("test"), TestSessions.HealthyMechanics(), new ActorPose(new WorldPoint(actor, 0f, 4f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
                 Definitions[actor] = monster;
             }
             Actors.Get(Fallen).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).SetCurrent(0);

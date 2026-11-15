@@ -49,7 +49,7 @@ public sealed class DaggerfallDoorSpellsTests
         {
             DaggerfallActorDefinition player = TestPayload.Definitions.RequireActor(new("player"));
             _actors.CreatePlayer(1, new EntityTypeId("player"), new DaggerfallMechanicsState().CreateStats(player,
-                DaggerfallPlayerVitals.Initial(player.Stats, TestPayload.Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
+                DaggerfallPlayerVitals.Initial(player.Stats, TestPayload.Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerfallActorFactory.PlayerCapabilities);
             Effects = new(_actors, new DaggerfallEffectCatalog(DaggerfallDoorMagicEffects.Definitions()));
             Doors = new(_store, RandomMinimum.Create(), [new(Door, new Vector3(2, 0, -4), new Vector3(0, 90, 0),
                 new Vector3(-.5F, 0, -.1F), new Vector3(.5F, 2, .1F), DaggerfallDoorKind.Normal, 0)], "test");

@@ -22,7 +22,7 @@ internal sealed class QuestItemStage : IDisposable
         DaggerfallActorDefinition player = Definitions.RequireActor(new DaggerfallActorId("player"));
         PlayerActorState actor = Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(player.Id.Value),
             new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, Definitions.Catalogs.RequireCareer("class00"))),
-            "health", DaggerActorFactory.PlayerCapabilities);
+            "health", DaggerfallActorFactory.PlayerCapabilities);
         PlayerEntity = actor.Actor.Entity;
         Store.RegisterInventory(new InventoryState(PlayerEntity, [new InventoryCapacityLimit(DaggerfallEncumbrancePolicy.ClassicWeightMetric, ulong.MaxValue)]));
         Store.RegisterEquipment(new EquipmentState(PlayerEntity));
@@ -31,9 +31,9 @@ internal sealed class QuestItemStage : IDisposable
         actor.Actor.Add(pack);
         actor.Actor.Add(worn);
         Dictionary<InventoryItemId, ItemDefinition> items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values)
-            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
         Dictionary<WorldRpg.Kit.Inventory.EquipmentSlotId, EquipmentSlotDefinition> slots = Definitions.EquipmentSlots.Values
-            .ToDictionary(slot => new WorldRpg.Kit.Inventory.EquipmentSlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            .ToDictionary(slot => new WorldRpg.Kit.Inventory.EquipmentSlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
         MechanicsInventoryCoordinator inventory = new(pack, Actors.Entities, items);
         MechanicsEquipmentCoordinator equipment = new(pack, worn, Actors.Entities, items, slots);
         Containers = new(Store, Actors.Entities, items);

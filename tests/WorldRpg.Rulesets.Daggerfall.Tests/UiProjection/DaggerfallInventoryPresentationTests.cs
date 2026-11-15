@@ -517,8 +517,8 @@ public sealed class DaggerfallInventoryPresentationTests
             bool resolveItemValues = false)
         {
             var definitions = TestPayload.Definitions;
-            var items = definitions.Items.Values.Concat(definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
-            var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            var items = definitions.Items.Values.Concat(definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
+            var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
             InventoryStore world = new();
             EntityId owner = Entities.Create(new(DurableIdentityKind.Actor, 1), new("test.player"));
             world.RegisterInventory(new InventoryState(owner));

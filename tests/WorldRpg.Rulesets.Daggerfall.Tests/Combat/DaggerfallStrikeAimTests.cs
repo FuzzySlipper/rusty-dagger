@@ -21,9 +21,9 @@ public sealed class DaggerfallStrikeAimTests
     {
         internal Stage()
         {
-            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health", DaggerActorFactory.PlayerCapabilities);
+            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health", DaggerfallActorFactory.PlayerCapabilities);
             foreach (long actor in new[] { Ally, Civilian, Enemy })
-                Actors.CreateActor(actor, new EntityTypeId("test"), TestSessions.HealthyMechanics(), new ActorPose(new WorldPoint(40f + actor, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+                Actors.CreateActor(actor, new EntityTypeId("test"), TestSessions.HealthyMechanics(), new ActorPose(new WorldPoint(40f + actor, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
             _ = CombatCollaborators.Targeting(Actors, new Dictionary<long, DaggerfallActorDefinition>(), out _spatial);
             Aim = new DaggerfallStrikeAim(Actors, () => Player, () => Vector3.UnitZ, 1.5f,
                 CombatCollaborators.Contact(Actors, _spatial, () => Player), () => null, 2d, actor => actor == Ally, actor => actor == Civilian);

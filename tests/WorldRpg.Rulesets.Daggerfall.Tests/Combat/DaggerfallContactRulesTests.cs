@@ -14,8 +14,8 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
-using Fixture = WorldRpg.Rulesets.Daggerfall.Tests.DaggerCombatDamagePolicyTests.DamagePolicyFixture;
-using PreparedPhysicalAttack = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerCombatRules.DaggerfallPreparedAttack;
+using Fixture = WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallCombatDamagePolicyTests.DamagePolicyFixture;
+using PreparedPhysicalAttack = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerfallCombatRules.DaggerfallPreparedAttack;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 

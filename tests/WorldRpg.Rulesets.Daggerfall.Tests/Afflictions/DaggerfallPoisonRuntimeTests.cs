@@ -28,7 +28,7 @@ public sealed class DaggerfallPoisonRuntimeTests
     /// archetype minimum; the onset and duration rolls are the caller's, and the top of the window keeps
     /// each course long enough for its whole window to be spent.
     /// </summary>
-    private static (DaggerfallPoisonRuntime Poison, DaggerfallEffectLifecycle Effects) Runtime(DaggerCombatFixture fixture)
+    private static (DaggerfallPoisonRuntime Poison, DaggerfallEffectLifecycle Effects) Runtime(DaggerfallCombatFixture fixture)
     {
         DaggerfallCareerDefinition career = fixture.Definitions.Catalogs.RequireCareer("class00");
         DaggerfallEffectLifecycle effects = new(fixture.Actors, new DaggerfallEffectCatalog(
@@ -55,20 +55,20 @@ public sealed class DaggerfallPoisonRuntimeTests
     /// A second actor that carries the attributes, which a poison's attribute arm needs: the shared combat
     /// fixture's player has the two vital tracks and no attributes, because combat never reads them there.
     /// </summary>
-    private static Actor AttributedActor(DaggerCombatFixture fixture)
+    private static Actor AttributedActor(DaggerfallCombatFixture fixture)
     {
         DaggerfallActorDefinition player = fixture.Definitions.RequireActor(new DaggerfallActorId("player"));
         DaggerfallMechanicsState mechanics = new();
         StatsComponent stats = mechanics.CreateStats(
             player,
             DaggerfallPlayerVitals.Initial(player.Stats, fixture.Definitions.Catalogs.RequireCareer("class00")));
-        return fixture.Actors.CreateActor(3, new EntityTypeId("nymph"), stats, new ActorPose(new WorldPoint(0f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities).Actor;
+        return fixture.Actors.CreateActor(3, new EntityTypeId("nymph"), stats, new ActorPose(new WorldPoint(0f, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities).Actor;
     }
 
     [Fact]
     public void A_poison_waits_its_onset_and_then_takes_health_every_minute()
     {
-        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        using DaggerfallCombatFixture fixture = new("nymph", playerHealth: 200d);
         Actor player = fixture.Actors.Player.Actor;
         (DaggerfallPoisonRuntime poison, DaggerfallEffectLifecycle effects) = Runtime(fixture);
         double before = Track(player, DaggerfallMechanicsIds.Health);
@@ -114,7 +114,7 @@ public sealed class DaggerfallPoisonRuntimeTests
     {
         // The donor says it plainly: attribute damage persists until the victim heals or is cured. So a
         // completed poison is still active, holding the sources a cure has to take off.
-        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        using DaggerfallCombatFixture fixture = new("nymph", playerHealth: 200d);
         Actor victim = AttributedActor(fixture);
         (DaggerfallPoisonRuntime poison, DaggerfallEffectLifecycle effects) = Runtime(fixture);
         double strength = Stat(victim, DaggerfallMechanicsIds.Strength);
@@ -142,7 +142,7 @@ public sealed class DaggerfallPoisonRuntimeTests
     {
         // The other half of the donor's line: a drug's helping arms are removed when the poison completes,
         // while the harm it did stands.
-        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        using DaggerfallCombatFixture fixture = new("nymph", playerHealth: 200d);
         Actor victim = AttributedActor(fixture);
         (DaggerfallPoisonRuntime poison, DaggerfallEffectLifecycle effects) = Runtime(fixture);
         double luck = Stat(victim, DaggerfallMechanicsIds.Luck);
@@ -166,7 +166,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // The damage a completed poison did persists, so taking a second poison must not quietly give it
         // back. The older poison stops running and keeps its own arms, which a cure then takes off with
         // everything else.
-        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        using DaggerfallCombatFixture fixture = new("nymph", playerHealth: 200d);
         Actor victim = AttributedActor(fixture);
         (DaggerfallPoisonRuntime poison, DaggerfallEffectLifecycle effects) = Runtime(fixture);
         double strength = Stat(victim, DaggerfallMechanicsIds.Strength);
@@ -223,7 +223,7 @@ public sealed class DaggerfallPoisonRuntimeTests
     {
         // Sursum is the archetype that separates the two halves on the same attribute kind: it helps
         // strength and harms intelligence, so a completion that withdrew both would be visible here.
-        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        using DaggerfallCombatFixture fixture = new("nymph", playerHealth: 200d);
         Actor victim = AttributedActor(fixture);
         (DaggerfallPoisonRuntime poison, DaggerfallEffectLifecycle effects) = Runtime(fixture);
         double strength = Stat(victim, DaggerfallMechanicsIds.Strength);
@@ -301,7 +301,7 @@ public sealed class DaggerfallPoisonRuntimeTests
     public void Forms_six_infliction_starts_the_archetype_it_admits_and_leaves_nothing_when_it_resists()
     {
         // The throw is the caller's, so the two outcomes are decided here rather than by the fixture's RNG.
-        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        using DaggerfallCombatFixture fixture = new("nymph", playerHealth: 200d);
         Actor player = fixture.Actors.Player.Actor;
         (DaggerfallPoisonRuntime poison, _) = Runtime(fixture);
         DaggerfallPoisonExposure exposure = new(
@@ -333,7 +333,7 @@ public sealed class DaggerfallPoisonRuntimeTests
 
         // The same attempt without the bypass is left to the throw: the donor's amount is non-zero for a
         // roll that fails to resist, and zero for one that throws the poison off, which starts nothing.
-        using DaggerCombatFixture second = new("nymph", playerHealth: 200d);
+        using DaggerfallCombatFixture second = new("nymph", playerHealth: 200d);
         Actor other = second.Actors.Player.Actor;
         (DaggerfallPoisonRuntime none, _) = Runtime(second);
         DaggerfallPoisonExposure thrown = exposure with { BypassResistance = false };
@@ -541,7 +541,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // The table the coverage asks for: every delivered variant starts its own archetype, and each is
         // cured off again, so delivery and cure are exercised across the whole classic range rather than on
         // one sampled poison.
-        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        using DaggerfallCombatFixture fixture = new("nymph", playerHealth: 200d);
         Actor victim = AttributedActor(fixture);
         (DaggerfallPoisonRuntime poison, _) = Runtime(fixture);
         DaggerfallPoisonExposure delivery = new(
@@ -631,7 +631,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // Nux Vomica's whole window is fourteen minutes and Moonseed's is four, so a whole-window comparison
         // would refuse Moonseed forever. Once Nux Vomica has burned down to two minutes left, Moonseed's four
         // have more left to give and must take over — the incumbent's own remaining time is what it is judged by.
-        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        using DaggerfallCombatFixture fixture = new("nymph", playerHealth: 200d);
         Actor player = fixture.Actors.Player.Actor;
         (DaggerfallPoisonRuntime poison, DaggerfallEffectLifecycle effects) = Runtime(fixture);
 
@@ -682,7 +682,7 @@ public sealed class DaggerfallPoisonRuntimeTests
         // survive a cure, and a total beyond the archetype's own window would apply a live mutation and then
         // overflow part-way through the next tick. Each is refused where it is read, and the instance is one
         // no live effect holds so the refusal is the only reason either restore can fail.
-        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        using DaggerfallCombatFixture fixture = new("nymph", playerHealth: 200d);
         Actor victim = AttributedActor(fixture);
         (DaggerfallPoisonRuntime poison, DaggerfallEffectLifecycle effects) = Runtime(fixture);
         Assert.True(poison.Afflict(victim, 129));
@@ -719,7 +719,7 @@ public sealed class DaggerfallPoisonRuntimeTests
     }
 
     /// <summary>Restores one crafted poison entry into a fresh lifecycle over the same actors.</summary>
-    private static void RestoreInto(DaggerCombatFixture fixture, DaggerfallActiveEffectSave entry)
+    private static void RestoreInto(DaggerfallCombatFixture fixture, DaggerfallActiveEffectSave entry)
     {
         (_, DaggerfallEffectLifecycle effects) = Runtime(fixture);
         effects.Restore([entry]);
@@ -746,7 +746,7 @@ public sealed class DaggerfallPoisonRuntimeTests
     [Fact]
     public void A_second_poison_only_takes_over_when_it_has_more_left_to_give()
     {
-        using DaggerCombatFixture fixture = new("nymph", playerHealth: 200d);
+        using DaggerfallCombatFixture fixture = new("nymph", playerHealth: 200d);
         Actor player = fixture.Actors.Player.Actor;
         (DaggerfallPoisonRuntime poison, _) = Runtime(fixture);
 

@@ -6,8 +6,8 @@ using WorldRpg.Kit.Facts;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Policies;
-using Combatant = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerCombatRules.Combatant;
-using PreparedPhysicalAttack = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerCombatRules.DaggerfallPreparedAttack;
+using Combatant = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerfallCombatRules.Combatant;
+using PreparedPhysicalAttack = WorldRpg.Rulesets.Daggerfall.Modules.Combat.DaggerfallCombatRules.DaggerfallPreparedAttack;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
@@ -306,8 +306,8 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
     /// attack-chance shift its held enchantments give.
     /// </summary>
     private double CriticalChance(Combatant attacker) =>
-        DaggerCombatRules.ReadStat(attacker, new DaggerfallStatId("critical-strike")) * tuning.CriticalChancePerSkillPoint
-        + (DaggerCombatRules.ReadStat(attacker, DaggerfallMechanicsIds.Luck) - 50) * tuning.CriticalPerLuckAbove50
+        DaggerfallCombatRules.ReadStat(attacker, new DaggerfallStatId("critical-strike")) * tuning.CriticalChancePerSkillPoint
+        + (DaggerfallCombatRules.ReadStat(attacker, DaggerfallMechanicsIds.Luck) - 50) * tuning.CriticalPerLuckAbove50
         + (attacker.Id == PlayerId ? ops.AttackChanceModifier() * tuning.CriticalChancePerAttackChancePoint : 0d);
 
     /// <summary>
@@ -319,7 +319,7 @@ internal sealed class DaggerfallContactDelivery(IDaggerfallPhysicalHarmOperation
     {
         if (!ops.TryResolve(PlayerId, out Combatant player))
             throw new InvalidOperationException("A monster's natural attacks measure the player's reflexes, and no player combatant is available to measure.");
-        int reflexChance = DaggerfallFormulaPolicy.MonsterAttackReflexChance(DaggerCombatRules.ReadStat(player, DaggerfallMechanicsIds.Reflexes));
+        int reflexChance = DaggerfallFormulaPolicy.MonsterAttackReflexChance(DaggerfallCombatRules.ReadStat(player, DaggerfallMechanicsIds.Reflexes));
         int enemyType = ops.EnemyTypeBonus(attacker, target);
         List<DaggerfallMonsterHit> landed = [];
         int total = 0;

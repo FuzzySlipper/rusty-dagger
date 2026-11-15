@@ -41,7 +41,7 @@ public sealed class DaggerfallArtifactPowersTests
 
         internal Fixture()
         {
-            _actors.CreatePlayer(1, new EntityTypeId("player"), _items.Stats, "health", DaggerActorFactory.PlayerCapabilities);
+            _actors.CreatePlayer(1, new EntityTypeId("player"), _items.Stats, "health", DaggerfallActorFactory.PlayerCapabilities);
             DaggerfallEquipmentMoves moves = new(_items.Inventory, _items.Equipment, _items.Definitions, itemInstances: _items.Instances);
             Powers = new(_items.Definitions, _items.Instances, _items.Inventory, new DaggerfallItemConditionService(_items.Definitions, _items.Instances, moves),
                 new DaggerfallEffectLifecycle(_actors, DaggerfallEffectCatalog.Empty), _actors, RandomMinimum.Create(), () => DaggerfallCalendar.Start,

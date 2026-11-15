@@ -558,7 +558,7 @@ internal static class TestSessions
     internal static ActorsState EmptyActors()
     {
         ActorsState actors = new();
-        actors.CreatePlayer(99, new EntityTypeId("player"), new StatsComponent(), "health", DaggerActorFactory.PlayerCapabilities);
+        actors.CreatePlayer(99, new EntityTypeId("player"), new StatsComponent(), "health", DaggerfallActorFactory.PlayerCapabilities);
         return actors;
     }
     internal static WorldRpg.Kit.Inventory.EquipmentRead RightHand(string itemId) => new([new WorldRpg.Kit.Inventory.EquipmentAssignment(new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand"), new WorldRpg.Kit.Inventory.UniqueInventoryItem(1, new WorldRpg.Kit.Inventory.InventoryItemId(itemId)))], 1, 1);
@@ -567,8 +567,8 @@ internal static class TestSessions
     internal static ActorsState ActorsWithNpc(long durableId, StatsComponent stats, WorldPoint point)
     {
         ActorsState actors = new();
-        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), new StatsComponent(), "health", DaggerActorFactory.PlayerCapabilities);
-        actors.CreateActor(durableId, new EntityTypeId("test"), stats, new ActorPose(point, 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), new StatsComponent(), "health", DaggerfallActorFactory.PlayerCapabilities);
+        actors.CreateActor(durableId, new EntityTypeId("test"), stats, new ActorPose(point, 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
         return actors;
     }
 
@@ -626,7 +626,7 @@ internal static class TestSessions
 
     /// <summary>Records that the player's sweep met <paramref name="actor"/>, for a fact that fires a timed swing's impact by hand.</summary>
     internal static void SweptInto(this DaggerfallSession session, long actor) =>
-        ((DaggerCombatRules)typeof(DaggerfallSession).GetField("_combat", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(session)!).SetSweptTarget(actor);
+        ((DaggerfallCombatRules)typeof(DaggerfallSession).GetField("_combat", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(session)!).SetSweptTarget(actor);
 
     /// <summary>Resolves an explicit strike whose swing volume touches its target, as standing in reach of it would.</summary>
     internal static void Strike(this DaggerfallSession session, ExplicitMeleeRequest request)

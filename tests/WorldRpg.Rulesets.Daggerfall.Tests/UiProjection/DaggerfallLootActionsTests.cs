@@ -44,9 +44,9 @@ public sealed class DaggerfallLootActionsTests : IDisposable
         _entities.Store.Add(player, inventoryComponent);
         _entities.Store.Add(player, equipmentComponent);
         Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.Concat(definitions.TemplateItems.Values)
-            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
         Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition> slots = definitions.EquipmentSlots.Values
-            .ToDictionary(slot => new KitEquipmentSlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            .ToDictionary(slot => new KitEquipmentSlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
         _inventory = new(inventoryComponent, _entities, items);
         MechanicsEquipmentCoordinator equipment = new(inventoryComponent, equipmentComponent, _entities, items, slots);
         DaggerfallItemInstances instances = new();

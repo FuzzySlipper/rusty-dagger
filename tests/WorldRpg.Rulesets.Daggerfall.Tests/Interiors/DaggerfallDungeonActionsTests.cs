@@ -141,7 +141,7 @@ public sealed class DaggerfallDungeonActionsTests
             DaggerfallActorDefinition player = TestPayload.Definitions.RequireActor(new DaggerfallActorId("player"));
             Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"),
                 new DaggerfallMechanicsState().CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, TestPayload.Definitions.Catalogs.RequireCareer("class00"))),
-                "health", DaggerActorFactory.PlayerCapabilities);
+                "health", DaggerfallActorFactory.PlayerCapabilities);
             DaggerfallDungeonActionTriggerRuntimeTests.TriggerSpatialDouble spatial = DaggerfallDungeonActionTriggerRuntimeTests.TriggerSpatialDouble.Create();
             _movement = new(spatial.Service, ReferenceResolvingContentFake.Create().Service,
                 new SpatialContentArtifact("spatial/action-triggers", new ContentSha256(1, 2, 3, 4), 1), new SpatialTuning(.5d, 8, 8, 1));

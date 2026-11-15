@@ -18,7 +18,7 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// The real collaborators a directly built <see cref="DaggerCombatRules"/> needs and a combat fixture
+/// The real collaborators a directly built <see cref="DaggerfallCombatRules"/> needs and a combat fixture
 /// does not otherwise compose: targeting over the Engine fakes and an actor's own inventory and
 /// equipment. Fixtures that build the rules without a session take them from here rather than
 /// passing null for a dependency the rules may later start to use.
@@ -44,7 +44,7 @@ internal static class CombatCollaborators
         spatial = new SpatialMovementSystem(fake.Service, new ContentFake(releases),
             null, DaggerfallTuning.Defaults.Spatial);
         return new TargetingService(PerceptionFake.Create().Service, spatial, actors,
-            new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+            new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
     }
 
     /// <summary>An actor's inventory and equipment over its own Engine inventory store, as the actor factory attaches them.</summary>
@@ -60,8 +60,8 @@ internal static class CombatCollaborators
         actor.Add(inventoryComponent);
         actor.Add(equipment);
         var items = definitions.Items.Values.Concat(definitions.TemplateItems.Values)
-            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
-        var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new WorldRpg.Kit.Inventory.EquipmentSlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
+        var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new WorldRpg.Kit.Inventory.EquipmentSlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
         inventory = new MechanicsInventoryCoordinator(inventoryComponent, actors.Entities, items);
         return new MechanicsEquipmentCoordinator(inventoryComponent, equipment, actors.Entities, items, slots);
     }
@@ -78,7 +78,7 @@ internal static class CombatCollaborators
     /// <summary>Lands the enemy blows a session's delivery holds for their wind-up, as the admitted steps after the frame would.</summary>
     internal static void LandWindUps(DaggerfallSession session, ulong generation, ulong frameStep)
     {
-        DaggerCombatRules combat = (DaggerCombatRules)typeof(DaggerfallSession).GetField("_combat", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(session)!;
+        DaggerfallCombatRules combat = (DaggerfallCombatRules)typeof(DaggerfallSession).GetField("_combat", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(session)!;
         FactBuffer<IProductFact> facts = (FactBuffer<IProductFact>)typeof(DaggerfallSession).GetField("_facts", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(session)!;
         // Past any tuned wind-up at the eighth-second steps these facts admit their attacks with.
         combat.LandDueImpacts(generation, checked(frameStep + 16), facts);
@@ -89,7 +89,7 @@ internal static class CombatCollaborators
     /// for a fact that drives one combat path directly with the session's default draws, its own
     /// targeting, and the spatial system whose fake answers its contact queries.
     /// </summary>
-    internal static DaggerCombatRules SessionRules(DaggerfallSession session, DaggerfallDefinitions definitions,
+    internal static DaggerfallCombatRules SessionRules(DaggerfallSession session, DaggerfallDefinitions definitions,
         IReadOnlyDictionary<long, DaggerfallActorDefinition> authored, TargetingService targeting, SpatialMovementSystem spatial,
         Func<long, bool>? physicalAttacksBlocked = null, Func<long, bool>? actorGameplayActive = null,
         IRandomService? random = null, Action<DaggerfallSkillUse>? skillUses = null, Func<WorldPoint?>? playerPosition = null,

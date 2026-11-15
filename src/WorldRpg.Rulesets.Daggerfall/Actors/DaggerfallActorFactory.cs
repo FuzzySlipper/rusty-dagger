@@ -29,7 +29,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// The actors, inventories and registries the factory constructs from admitted definitions or a current
 /// save's actor sections, before any session service exists.
 /// </summary>
-internal sealed record DaggerActorAssembly(
+internal sealed record DaggerfallActorAssembly(
     PlayerControlState PlayerControl,
     ActorsState Actors,
     InventoryStore InventoryStore,
@@ -48,7 +48,7 @@ internal sealed record DaggerActorAssembly(
 /// The save's actor sections the factory restores from: the player, the placed actors it keeps and those banished, the
 /// spawned actors, the people and the character. A new game has none.
 /// </summary>
-internal sealed record DaggerActorSaves(DaggerfallPlayerSave Player, DaggerfallActorSave[] Actors, long[] BanishedActors,
+internal sealed record DaggerfallActorSaves(DaggerfallPlayerSave Player, DaggerfallActorSave[] Actors, long[] BanishedActors,
     DaggerfallDynamicActorSave[] DynamicActors, DaggerfallNpcSave Npcs, DaggerfallCharacterSave? Character);
 
 /// <summary>
@@ -64,13 +64,13 @@ internal sealed record DaggerfallActorGender(string Value)
 }
 
 /// <summary>Explicit entity/component construction from admitted Dagger definitions or current saves.</summary>
-internal static class DaggerActorFactory
+internal static class DaggerfallActorFactory
 {
     private const ulong PlayerMechanicsEntityId = (ulong)DaggerfallActorIdentity.PlayerEntityId;
     /// <summary>Every Daggerfall actor targets and attacks; only the player levels.</summary>
     internal const ActorCapabilities PlayerCapabilities = ActorCapabilities.Targeting | ActorCapabilities.Attacks | ActorCapabilities.Progression;
     internal const ActorCapabilities NonPlayerCapabilities = ActorCapabilities.Targeting | ActorCapabilities.Attacks;
-    internal static DaggerActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerActorSaves? saved,
+    internal static DaggerfallActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallActorSaves? saved,
         bool materializeActiveSite = true)
     {
         ActorsState actors = new();

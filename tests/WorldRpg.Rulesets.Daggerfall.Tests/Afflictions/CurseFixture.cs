@@ -20,7 +20,7 @@ internal sealed class CurseFixture : IDisposable
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
         StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player,
             DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00")));
-        Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
+        Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerfallActorFactory.PlayerCapabilities);
         Character = new DaggerfallCharacterState(definitions, stats, player);
         Random = KeyedRandomFake.Create(roll);
         Time = new DaggerfallWorldTime(DaggerfallCalendar.FromAbsoluteSeconds(startMinute * 60), 0d, 12d);

@@ -503,11 +503,11 @@ public sealed class DaggerfallCharacterPresentationTests
         {
             Definitions = TestPayload.Definitions;
             PlayerDefinition = Definitions.RequireActor(new DaggerfallActorId("player"));
-            var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
-            var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
+            var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
             Actors = new ActorsState();
             Player = Actors.CreatePlayer(1, new EntityTypeId(PlayerDefinition.Id.Value),
-                new DaggerfallMechanicsState().CreateStats(PlayerDefinition, DaggerfallPlayerVitals.Initial(PlayerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
+                new DaggerfallMechanicsState().CreateStats(PlayerDefinition, DaggerfallPlayerVitals.Initial(PlayerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerfallActorFactory.PlayerCapabilities);
             EntityId owner = Player.Actor.Entity;
             InventoryStore world = new();
             world.RegisterInventory(new InventoryState(owner));

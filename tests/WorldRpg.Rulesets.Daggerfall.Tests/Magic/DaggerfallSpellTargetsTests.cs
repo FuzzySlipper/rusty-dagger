@@ -14,12 +14,12 @@ public sealed class DaggerfallSpellTargetsTests
     {
         using GuildMakerFixture items = new();
         using ActorsState actors = new();
-        actors.CreatePlayer(1, new EntityTypeId("player"), items.Stats, "health", DaggerActorFactory.PlayerCapabilities);
+        actors.CreatePlayer(1, new EntityTypeId("player"), items.Stats, "health", DaggerfallActorFactory.PlayerCapabilities);
         foreach (long id in new long[] { 2, 3, 4 })
             actors.CreateActor(id, new EntityTypeId("actor"), new DaggerfallMechanicsState().CreateStats(
                     items.Definitions.RequireActor(new("player")), DaggerfallPlayerVitals.Initial(items.Definitions.RequireActor(new("player")).Stats,
                         items.Definitions.Catalogs.RequireCareer("class00"))),
-                new ActorPose(new WorldPoint(id, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+                new ActorPose(new WorldPoint(id, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
         DaggerfallActorDefinition npc = items.Definitions.RequireActor(new("player")) with { Kind = DaggerfallActorKinds.StaticNpc };
         HashSet<long> active = [1, 2, 3];
         DaggerfallSpellTargets targets = new(items.Definitions, actors, items.Character, new DaggerfallEffectLifecycle(actors, DaggerfallEffectCatalog.Empty),

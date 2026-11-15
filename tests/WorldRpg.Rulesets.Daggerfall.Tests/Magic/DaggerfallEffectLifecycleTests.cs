@@ -285,10 +285,10 @@ public sealed class DaggerfallEffectLifecycleTests
     private static ActorsState Actors(bool includeSecondTarget = false)
     {
         ActorsState actors = new();
-        actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health", DaggerActorFactory.PlayerCapabilities);
-        actors.CreateActor(2, new EntityTypeId("target"), Stats(), new ActorPose(new WorldPoint(0, 0, 0), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+        actors.CreatePlayer(1, new EntityTypeId("player"), Stats(), "health", DaggerfallActorFactory.PlayerCapabilities);
+        actors.CreateActor(2, new EntityTypeId("target"), Stats(), new ActorPose(new WorldPoint(0, 0, 0), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
         if (includeSecondTarget)
-            actors.CreateActor(3, new EntityTypeId("target-two"), Stats(), new ActorPose(new WorldPoint(1, 0, 0), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+            actors.CreateActor(3, new EntityTypeId("target-two"), Stats(), new ActorPose(new WorldPoint(1, 0, 0), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
         return actors;
     }
 

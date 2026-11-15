@@ -17,7 +17,7 @@ using WorldRpg.Rulesets.Daggerfall.Presentation;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// The session's live non-player actor roster beside <see cref="DaggerActorFactory"/>: which
+/// The session's live non-player actor roster beside <see cref="DaggerfallActorFactory"/>: which
 /// definition every live actor was registered from, which of them were spawned rather than placed,
 /// and the lifetime policy for spawning, retiring and unloading them.
 /// </summary>
@@ -129,8 +129,8 @@ internal sealed class DaggerfallActorRoster
         _corpseLoot.Retire(durableId);
         Appearance.RetireActor(durableId);
         _actors.Entities.Destroy(ActorsState.Identity(durableId));
-        ActorState replacement = DaggerActorFactory.CreateNonPlayerActor(_actors, durableId, definition, stats, pose);
-        DaggerActorFactory.RegisterActorInventory(replacement, _inventoryStore);
+        ActorState replacement = DaggerfallActorFactory.CreateNonPlayerActor(_actors, durableId, definition, stats, pose);
+        DaggerfallActorFactory.RegisterActorInventory(replacement, _inventoryStore);
         DaggerfallWabbajack.Restore(replacement.Actor, definition.Id.Value);
         if (origin is not null) replacement.Actor.Add(origin);
         GrantSpawnLoadout(replacement, definition);
@@ -167,12 +167,12 @@ internal sealed class DaggerfallActorRoster
         bool registered = false;
         try
         {
-            ActorState actor = DaggerActorFactory.CreateNonPlayerActor(_actors, durableId, spawnedDefinition,
+            ActorState actor = DaggerfallActorFactory.CreateNonPlayerActor(_actors, durableId, spawnedDefinition,
                 _mechanics.CreateStats(spawnedDefinition, SpawnVitals(spawnedDefinition, spawnLevel, durableId)),
                 pose);
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SpawnDistance = spawnDistance;
             actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().Passive = passive;
-            DaggerActorFactory.RegisterActorInventory(actor, _inventoryStore);
+            DaggerfallActorFactory.RegisterActorInventory(actor, _inventoryStore);
             GrantSpawnLoadout(actor, spawnedDefinition);
             GrantStartingEquipment(actor, spawnedDefinition);
             if (spawnedDefinition.MobileId is int mobileId)
@@ -283,8 +283,8 @@ internal sealed class DaggerfallActorRoster
         if (_identities.Classify(identity) != DurableIdentityClassification.Live)
             throw new InvalidOperationException($"NPC {npcId} does not own a live actor identity.");
 
-        DaggerfallActorDefinition definition = DaggerActorFactory.CivilianDefinition(npcId, npc.Kind == DaggerfallNpcKind.Static);
-        ActorState actor = DaggerActorFactory.CreateCivilianActor(_mechanics, _actors, _inventoryStore, npc, pose);
+        DaggerfallActorDefinition definition = DaggerfallActorFactory.CivilianDefinition(npcId, npc.Kind == DaggerfallNpcKind.Static);
+        ActorState actor = DaggerfallActorFactory.CreateCivilianActor(_mechanics, _actors, _inventoryStore, npc, pose);
         try
         {
             if (!_definitionsByActor.TryAdd(npcId, definition))
@@ -415,7 +415,7 @@ internal sealed class DaggerfallActorRoster
             saved.TryGetValue(placement.EntityId, out DaggerfallActorSave? prior);
             DaggerfallActorDefinition definition = prior?.WabbajackDefinition is { } transformed
                 ? DaggerfallWabbajack.RequireDefinition(_definitions, transformed) : _definitions.RequireActor(placement.ActorId);
-            ActorState actor = DaggerActorFactory.CreateAuthoredActor(_random, _mechanics, _definitions, _actors, _inventoryStore,
+            ActorState actor = DaggerfallActorFactory.CreateAuthoredActor(_random, _mechanics, _definitions, _actors, _inventoryStore,
                 _actorInventories.ItemDefinitions, _itemInstances, placement, prior);
             if (prior is not null) actor.ApplyPose(new ActorPose(new WorldPoint(prior.X, prior.Y, prior.Z), prior.HeadingRadians));
             else if (definition.GroundOnSpawn) _grounding.Ground(actor);
@@ -444,7 +444,7 @@ internal sealed class DaggerfallActorRoster
     {
         try
         {
-            var actor = DaggerActorFactory.CreateDynamicActor(_random, _mechanics, _definitions, _actors, _inventoryStore,
+            var actor = DaggerfallActorFactory.CreateDynamicActor(_random, _mechanics, _definitions, _actors, _inventoryStore,
                 _definitionsByActor, saved);
             _dynamicActors.Add(saved.EntityId, new DaggerfallActorId(saved.Definition));
             if (projectAppearance && _definitionsByActor[saved.EntityId].MobileId is int mobileId)
@@ -523,7 +523,7 @@ internal sealed class DaggerfallActorRoster
             return new DaggerfallVitalValues(health, 0, 0);
         }
 
-        return DaggerActorFactory.InitialVitals(_random, definition, durableId);
+        return DaggerfallActorFactory.InitialVitals(_random, definition, durableId);
     }
 
     /// <summary>Initial site construction uses the same starting items as later actor admission.</summary>

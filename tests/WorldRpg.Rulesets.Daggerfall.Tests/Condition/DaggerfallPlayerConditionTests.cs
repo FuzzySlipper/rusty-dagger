@@ -62,7 +62,7 @@ public sealed class DaggerfallPlayerConditionTests
     {
         using ActorsState actors = new();
         StatsComponent stats = Stats(health: 40d, fatigue: 0d, swimming: 0);
-        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
+        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerfallActorFactory.PlayerCapabilities);
         DaggerfallPlayerCondition condition = Condition(FixedRandom.Create(1));
 
         (DamageResult death, string line) = condition.CollapseFatally(player.Actor,
@@ -81,7 +81,7 @@ public sealed class DaggerfallPlayerConditionTests
     {
         using ActorsState actors = new();
         PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"),
-            Stats(health: 40d, fatigue: 0d, swimming: 0), "health", DaggerActorFactory.PlayerCapabilities);
+            Stats(health: 40d, fatigue: 0d, swimming: 0), "health", DaggerfallActorFactory.PlayerCapabilities);
         DaggerfallPlayerCondition condition = Condition(FixedRandom.Create(1));
 
         Assert.Equal("You drop to the ground, completely exhausted.", condition.CollapseFatally(player.Actor, inWater: true, Text()).Line);

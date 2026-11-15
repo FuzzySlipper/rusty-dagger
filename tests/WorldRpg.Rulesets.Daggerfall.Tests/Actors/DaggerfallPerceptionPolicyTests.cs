@@ -321,7 +321,7 @@ public sealed class DaggerfallPerceptionPolicyTests
     public void Typed_effect_projection_supplies_perception_meaning_until_effect_end()
     {
         using ActorsState actors = new();
-        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(), "health", DaggerActorFactory.PlayerCapabilities);
+        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(), "health", DaggerfallActorFactory.PlayerCapabilities);
         DaggerfallEffectCatalog catalog = new(
         [
             new DaggerfallEffectDefinition(

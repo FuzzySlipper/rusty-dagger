@@ -32,7 +32,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="step">The latest admitted simulation step, or null before one.</param>
 /// <param name="lootReach">The reach a target without its own is used at.</param>
 internal sealed class DaggerfallPlaytestState(DaggerfallPlayerControls controls, Func<ProductMode> mode, ActorsState actors,
-    DaggerfallEffectLifecycle effects, DaggerCombatRules combat, Func<bool> weaponDrawn, DaggerfallPlayerAttack playerAttack,
+    DaggerfallEffectLifecycle effects, DaggerfallCombatRules combat, Func<bool> weaponDrawn, DaggerfallPlayerAttack playerAttack,
     AttackExecution<IProductFact> attackExecution, TargetingService targeting, Func<ulong?> generation, Func<ulong?> step,
     DaggerfallEncumbrancePolicy encumbrance, PlayerControlState player, PlayerInputSystem input, FirstPersonCameraSystem camera,
     PresentationState presentation, DaggerfallActivation activation, DaggerfallActivationPanel activationPanel, DaggerfallLootPresentation loot,

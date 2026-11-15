@@ -319,7 +319,7 @@ public sealed partial class DaggerfallEquipmentWearTests
         private readonly Dictionary<long, MechanicsEquipmentCoordinator> _actorEquipment = [];
         private readonly ScriptedRandom _scripted = (ScriptedRandom)(object)DispatchProxy.Create<IRandomService, ScriptedRandom>();
         private readonly IRandomService _random;
-        private readonly DaggerCombatRules _combat;
+        private readonly DaggerfallCombatRules _combat;
         private readonly DaggerfallEquipmentMoves _playerMoves;
         private readonly DaggerfallItemConditionService _itemCondition;
         private readonly SpatialMovementSystem _spatial;
@@ -339,7 +339,7 @@ public sealed partial class DaggerfallEquipmentWearTests
             _random = (IRandomService)(object)_scripted;
             _actors = new ActorsState();
             PlayerActorState player = _actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId(playerDefinition.Id.Value),
-                new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerActorFactory.PlayerCapabilities);
+                new DaggerfallMechanicsState().CreateStats(playerDefinition, DaggerfallPlayerVitals.Initial(playerDefinition.Stats, Definitions.Catalogs.RequireCareer("class00"))), "health", DaggerfallActorFactory.PlayerCapabilities);
             PlayerEquipment = BuildEquipment(player.Actor.Entity, player.Actor, out MechanicsInventoryCoordinator playerInventory);
             _playerMoves = new DaggerfallEquipmentMoves(playerInventory, PlayerEquipment, Definitions, itemInstances: _itemInstances);
             _itemCondition = new DaggerfallItemConditionService(Definitions, _itemInstances, _playerMoves);
@@ -361,7 +361,7 @@ public sealed partial class DaggerfallEquipmentWearTests
 
             DaggerfallActorDefinition brigand = Definitions.RequireActor(new DaggerfallActorId("thief")) with { ActionId = "enemy-class-equipped-melee" };
             ActorState enemy = _actors.CreateActor(Enemy, new EntityTypeId("brigand"),
-                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+                new DaggerfallMechanicsState().CreateStats(brigand, new DaggerfallVitalValues(200, 100, 0)), new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
             _authored[DaggerfallActorIdentity.PlayerEntityId] = playerDefinition;
             _authored[Enemy] = brigand;
             _actorEquipment[Enemy] = BuildEquipment(enemy.Actor.Entity, enemy.Actor, out _);
@@ -369,7 +369,7 @@ public sealed partial class DaggerfallEquipmentWearTests
                 id => id == DaggerfallActorIdentity.PlayerEntityId ? PlayerEquipment.Read() : _actorEquipment[id].Read(),
                 id => id == DaggerfallActorIdentity.PlayerEntityId ? _actors.Player.Stats : _actors.TryGet(id, out ActorState actor) ? actor.Stats : null,
                 () => 0);
-            _combat = new DaggerCombatRules(_random, _actors, PlayerEquipment, _ => null, _itemInstances, Definitions, _authored,
+            _combat = new DaggerfallCombatRules(_random, _actors, PlayerEquipment, _ => null, _itemInstances, Definitions, _authored,
                 CombatCollaborators.Targeting(_actors, _authored, out _spatial, out _contact),
                 skillUses: _ => { },
                 actorEquipment: id => _actorEquipment.TryGetValue(id, out MechanicsEquipmentCoordinator? coordinator) ? coordinator : PlayerEquipment,
@@ -461,7 +461,7 @@ public sealed partial class DaggerfallEquipmentWearTests
             UniqueItem item = PlayerItem(id);
             PlayerEquipment.Unequip(item);
             var inventory = new MechanicsInventoryCoordinator(PlayerEquipment.Inventory, _actors.Entities,
-                Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(value => new InventoryItemId(value.Id.Value), DaggerActorFactory.ToManagedItem));
+                Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(value => new InventoryItemId(value.Id.Value), DaggerfallActorFactory.ToManagedItem));
             inventory.Destroy(item);
             _actors.Entities.Destroy(new DurableIdentityReference(DurableIdentityKind.Item, id));
             _itemInstances.RemoveUnique(id);
@@ -528,8 +528,8 @@ public sealed partial class DaggerfallEquipmentWearTests
             EquipmentComponent equipment = new(world, owner);
             actor.Add(inventoryComponent);
             actor.Add(equipment);
-            var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
-            var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            var items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
+            var slots = Definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
             inventory = new MechanicsInventoryCoordinator(inventoryComponent, _actors.Entities, items);
             return new MechanicsEquipmentCoordinator(inventoryComponent, equipment, _actors.Entities, items, slots);
         }

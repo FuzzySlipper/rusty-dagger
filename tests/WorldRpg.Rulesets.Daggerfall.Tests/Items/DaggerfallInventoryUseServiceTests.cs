@@ -24,7 +24,7 @@ public sealed class DaggerfallInventoryUseServiceTests
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId("template-277"));
         MechanicsInventoryCoordinator inventory = new(component, entities, new Dictionary<InventoryItemId, ItemDefinition>
         {
-            [new(definition.Id.Value)] = DaggerActorFactory.ToManagedItem(definition),
+            [new(definition.Id.Value)] = DaggerfallActorFactory.ToManagedItem(definition),
         });
         InventoryStackId stack = InventoryStackId.Parse("retained-book");
         inventory.Grant(new(new InventoryItemId(definition.Id.Value), stack, 1));
@@ -61,7 +61,7 @@ public sealed class DaggerfallInventoryUseServiceTests
         entities.Store.Add(player, component);
         entities.Store.Add(player, equipmentComponent);
         DaggerfallItemDefinition map = definitions.RequireItem(new DaggerfallItemId("template-287"));
-        ItemDefinition sourceMap = DaggerActorFactory.ToManagedItem(map);
+        ItemDefinition sourceMap = DaggerfallActorFactory.ToManagedItem(map);
         ItemDefinition managedMap = new(sourceMap.Id, ItemKind.Unique, 1);
         Dictionary<InventoryItemId, ItemDefinition> items = new()
         {

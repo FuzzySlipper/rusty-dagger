@@ -7,7 +7,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
-internal sealed class DaggerTargetingPolicy(IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions,
+internal sealed class DaggerfallTargetingPolicy(IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions,
     DaggerfallMeleeTargetingTuning tuning, Func<DaggerfallSiteProfile> currentInputs,
     Func<long, bool>? actorGameplayActive = null, Func<long, double?>? personSightHeight = null) : ITargetingPolicy
 {

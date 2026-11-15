@@ -27,9 +27,9 @@ public sealed class DaggerfallGroundLootPresentationTests
         entities.Store.Add(player, inventoryComponent);
         entities.Store.Add(player, equipmentComponent);
         Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.Concat(definitions.TemplateItems.Values)
-            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
         Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition> slots = definitions.EquipmentSlots.Values
-            .ToDictionary(slot => new KitEquipmentSlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            .ToDictionary(slot => new KitEquipmentSlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
         MechanicsInventoryCoordinator inventory = new(inventoryComponent, entities, items);
         MechanicsEquipmentCoordinator equipment = new(inventoryComponent, equipmentComponent, entities, items, slots);
         DaggerfallItemInstances instances = new();

@@ -19,7 +19,7 @@ public sealed class DaggerfallSpellChoicesTests
         var player = TestPayload.Definitions.RequireActor(new("player"));
         actors.CreatePlayer(1, new EntityTypeId("player"), new DaggerfallMechanicsState().CreateStats(player,
             DaggerfallPlayerVitals.Initial(player.Stats, TestPayload.Definitions.Catalogs.RequireCareer("class00"))),
-            "health", DaggerActorFactory.PlayerCapabilities);
+            "health", DaggerfallActorFactory.PlayerCapabilities);
         PresentationState presentation = new("", 5d);
         DaggerfallDispel dispel = new(new DaggerfallEffectLifecycle(actors, DaggerfallEffectCatalog.Empty), RandomMinimum.Create(),
             presentation, new DaggerfallDispelRequest("cast.7.1", 40));

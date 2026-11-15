@@ -60,8 +60,8 @@ public sealed class ClassEnemyEquipmentTests
             _entities.Store.Add(owner, inventory);
             _entities.Store.Add(owner, equipment);
             var items = definitions.Items.Values.Concat(definitions.TemplateItems.Values)
-                .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
-            var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+                .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
+            var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
             Inventory = new(inventory, _entities, items);
             Equipment = new(inventory, equipment, _entities, items, slots);
         }

@@ -78,7 +78,7 @@ internal sealed partial class DaggerfallSession
     /// <summary>
     /// Composes one session. A new game passes no restore; a resolved restore supplies the saved
     /// sections owners are constructed from and then the relational sections
-    /// <see cref="DaggerSessionPersistence.Restore"/> applies in its one order.
+    /// <see cref="DaggerfallSessionPersistence.Restore"/> applies in its one order.
     /// </summary>
     private DaggerfallSession(IEngineContext engine, DaggerfallSessionComposition composition, DaggerfallSiteProfile inputs,
         DaggerfallResolvedRestore? restore)
@@ -121,8 +121,8 @@ internal sealed partial class DaggerfallSession
             // Owners are built in dependency order, each from the owners it reads; the named state is
             // constructed once every service it names exists, so nothing reads a service before it is built.
             bool materializeActiveSite = saved?.ExteriorLocationResidency?.Loaded != false;
-            DaggerActorAssembly assembled = DaggerActorFactory.Create(_random, definitions, inputs,
-                saved is null ? null : new DaggerActorSaves(saved.Player, saved.Actors, saved.BanishedActors, saved.DynamicActors, saved.Npcs, saved.Character),
+            DaggerfallActorAssembly assembled = DaggerfallActorFactory.Create(_random, definitions, inputs,
+                saved is null ? null : new DaggerfallActorSaves(saved.Player, saved.Actors, saved.BanishedActors, saved.DynamicActors, saved.Npcs, saved.Character),
                 materializeActiveSite);
             ActorsState actors = assembled.Actors;
             partiallyConstructed.Add(actors);
@@ -238,7 +238,7 @@ internal sealed partial class DaggerfallSession
             _camera = new FirstPersonCameraSystem(engine.CameraView, assembled.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
             TargetingService targeting = new(engine.Perception, _spatial, actors,
-                new DaggerTargetingPolicy(authored, tuning.MeleeTargeting, () => _sites.Projection.Inputs, npcs.IsGameplayActive, id => _sight.PersonHeight(id)));
+                new DaggerfallTargetingPolicy(authored, tuning.MeleeTargeting, () => _sites.Projection.Inputs, npcs.IsGameplayActive, id => _sight.PersonHeight(id)));
             CombatResolution combatRules = new();
             _combatResolution = combatRules;
             _vitality = new DaggerfallVitalityConsequences(combatRules);
@@ -417,7 +417,7 @@ internal sealed partial class DaggerfallSession
                 actor => QuestFoes.Team(actor) == "player-ally",
                 actor => DefinitionsByActor.TryGetValue(actor, out DaggerfallActorDefinition? definition) && definition.Kind == DaggerfallActorKinds.Civilian);
             StrikeFeel = new DaggerfallStrikeFeel(_tuning.Attacks.Strike, _camera, () => _engine.GameplayTime.Read().Rate);
-            _combat = new DaggerCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
+            _combat = new DaggerfallCombatRules(_random, actors, equipmentCoordinator, actorInventories.InventoryFor, itemInstances, definitions, authored, targeting, use => skillUses.Record(use),
                 actorInventories.EquipmentFor, _itemCondition, combatRules,
                 () => assembled.PlayerControl.Position, () => character, (target, coating) => _poisoning!.DeliverWeaponPoison(target, coating), () => _heldEnchantments.AttackChanceModifier, _artifacts.TransformWithWabbajack, effects.MagicDefenseFor,
                 actorId => effects.ControlsFor(actorId).PhysicalAttacks, _artifacts.TransferMolagBal, (caster, target, item, damage) => _itemCastTriggers.Strike(caster, target, item, damage), _monsterHits.Deliver,
@@ -459,7 +459,7 @@ internal sealed partial class DaggerfallSession
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),
                 openBlockedDoor: actor => _doors.TryOpenForEnemy(actor.Position), selectTarget: observer => QuestFoes.SelectTarget(observer), questRestrained: id => QuestFoes.Restrained(id), attackAtDistance: _combat.EnemyAttackAtDistance,
                 engagement: new DaggerfallContactEngagement(_tuning.Contact));
-            _authoredEntityIds = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
+            _authoredEntityIds = DaggerfallActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {
                 ulong[] actorReservations = [DaggerfallActorIdentity.PlayerEntityId, .. inputs.Project.Actors.Values.Select(placement => checked((ulong)placement.EntityId))];

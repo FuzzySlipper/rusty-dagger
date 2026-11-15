@@ -92,8 +92,8 @@ internal sealed class ItemHoldersFixture : IDisposable
     internal ItemHoldersFixture()
     {
         var items = _definitions.Items.Values.Concat(_definitions.TemplateItems.Values)
-            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
-        var slots = _definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
+        var slots = _definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
         DaggerfallActorDefinition actor = _definitions.RequireActor(new DaggerfallActorId("player"));
         StatsComponent stats = new DaggerfallMechanicsState().CreateStats(actor,
             DaggerfallPlayerVitals.Initial(actor.Stats, _definitions.Catalogs.RequireCareer("class00")));

@@ -278,7 +278,7 @@ public sealed class DaggerfallSkillTrainingServiceTests
                 [DaggerfallSkillTrainingPolicy.ServiceName], DaggerfallNpcPresence.Active, null, null, null)]);
 
             Dictionary<InventoryItemId, ItemDefinition> items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values)
-                .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+                .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
             InventoryStore store = new();
             EntityId owner = _entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 1), new EntityTypeId("test.player"));
             store.RegisterInventory(new InventoryState(owner, [new InventoryCapacityLimit(DaggerfallEncumbrancePolicy.ClassicWeightMetric, ulong.MaxValue)]));

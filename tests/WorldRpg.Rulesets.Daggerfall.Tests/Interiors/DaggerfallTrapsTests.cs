@@ -25,8 +25,8 @@ public sealed class DaggerfallTrapsTests
     {
         internal Stage(float away, params DaggerfallDungeonActionDefinition[] actions)
         {
-            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health", DaggerActorFactory.PlayerCapabilities);
-            Actors.CreateActor(Body, new EntityTypeId("test"), TestSessions.HealthyMechanics(), new ActorPose(new WorldPoint(away, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health", DaggerfallActorFactory.PlayerCapabilities);
+            Actors.CreateActor(Body, new EntityTypeId("test"), TestSessions.HealthyMechanics(), new ActorPose(new WorldPoint(away, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
             _ = CombatCollaborators.Targeting(Actors, new Dictionary<long, DaggerfallActorDefinition>(), out SpatialMovementSystem spatial, out SpatialFake fake);
             Reactions = new ActorReactions(new ActorNavigationCoordinator(fake.Service, spatial.Session));
             Traps = new DaggerfallTraps(DaggerfallHazardTuning.Default, Actors, Reactions, () => new WorldPoint(0f, 0f, 0f), () => actions,

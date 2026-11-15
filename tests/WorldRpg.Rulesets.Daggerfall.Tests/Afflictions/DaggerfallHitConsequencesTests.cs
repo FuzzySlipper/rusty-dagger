@@ -136,7 +136,7 @@ public sealed class DaggerfallHitConsequencesTests
         s.State.Actors.Get(target).Actor.Get<CombatContributions>().Rules.Add(shield);
         s.Touches(target);
         Assert.True(s.State.Kit.AttackExecution.Start(new(1, target, 7, 13, .125, true), Facts(s)));
-        var prepared = Assert.IsType<DaggerCombatRules.DaggerfallPreparedAttack>(s.State.Actors.Player.Actor.Get<AttackState>().Pending!.Value.Attack);
+        var prepared = Assert.IsType<DaggerfallCombatRules.DaggerfallPreparedAttack>(s.State.Actors.Player.Actor.Get<AttackState>().Pending!.Value.Attack);
         Assert.Equal(id, prepared.Admission!.WeaponPoison!.ItemId);
         equipment.Unequip(weapon);
         var spare = equipment.Materialize(new(DurableIdentityKind.Item, 9001), new InventoryItemId("iron-longsword"));
@@ -172,9 +172,9 @@ public sealed class DaggerfallHitConsequencesTests
     [Fact]
     public void Each_natural_slot_uses_raw_damage_for_fatigue_before_a_lethal_aggregate_hit()
     {
-        using DaggerCombatFixture f = new("nymph", playerHealth: 1, playerFatigue: 1000);
+        using DaggerfallCombatFixture f = new("nymph", playerHealth: 1, playerFatigue: 1000);
         var request = new AttackRequest(2, 1, 7, 13, .125, true);
-        var prepared = new DaggerCombatRules.DaggerfallPreparedAttack(.5,
+        var prepared = new DaggerfallCombatRules.DaggerfallPreparedAttack(.5,
             new(true, true, 5), DaggerfallStrikeFeedback.Unarmed,
             MonsterHits: [new(0, 2, DaggerfallMonsterHitConsequence.Fatigue), new(1, 3, DaggerfallMonsterHitConsequence.Fatigue)]);
         f.ApplyConnected(request, prepared);
@@ -216,7 +216,7 @@ public sealed class DaggerfallHitConsequencesTests
         {
             restored.Touches(1);
             Assert.True(restored.State.Kit.AttackExecution.Start(new(actor, 1, 7, 13, .125, true), Facts(restored)));
-            var prepared = Assert.IsType<DaggerCombatRules.DaggerfallPreparedAttack>(restored.State.Actors.Get(actor).Actor.Get<AttackState>().Pending!.Value.Attack);
+            var prepared = Assert.IsType<DaggerfallCombatRules.DaggerfallPreparedAttack>(restored.State.Actors.Get(actor).Actor.Get<AttackState>().Pending!.Value.Attack);
             Assert.Equal(new DaggerfallWeaponPoisonSource(id, 135), prepared.Admission!.WeaponPoison);
             Impact(restored, actor);
             Assert.Null(restored.State.ItemInstances.RequireUnique(id).PoisonVariant);
@@ -290,7 +290,7 @@ public sealed class DaggerfallHitConsequencesTests
         s.State.Actors.Player.Actor.Get<CombatContributions>().Rules.Add(new AbsorbHealth());
         s.Touches(1);
         Assert.True(s.State.Kit.AttackExecution.Start(new(orc, 1, 7, 13, .125, true), Facts(s)));
-        var attack = Assert.IsType<DaggerCombatRules.DaggerfallPreparedAttack>(s.State.Actors.Get(orc).Actor.Get<AttackState>().Pending!.Value.Attack);
+        var attack = Assert.IsType<DaggerfallCombatRules.DaggerfallPreparedAttack>(s.State.Actors.Get(orc).Actor.Get<AttackState>().Pending!.Value.Attack);
         Assert.Equal(new DaggerfallWeaponPoisonSource(id, 135), attack.Admission!.WeaponPoison);
         Impact(s, orc);
         Assert.Null(s.State.ItemInstances.RequireUnique(id).PoisonVariant);

@@ -17,7 +17,7 @@ using WorldRpg.Rulesets.Daggerfall;
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 /// <summary>Direct Daggerfall attack policy over Engine-authoritative Mechanics state.</summary>
-internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, IDaggerfallPhysicalHarmOperations
+internal sealed partial class DaggerfallCombatRules : IAttackRules<IProductFact>, IDaggerfallPhysicalHarmOperations
 {
     private const long PlayerId = DaggerfallActorIdentity.PlayerEntityId;
     private const string HealthTrack = "health";
@@ -87,7 +87,7 @@ internal sealed partial class DaggerCombatRules : IAttackRules<IProductFact>, ID
     private readonly Func<long, string?> _actorTeam;
     private readonly Func<long, long, DaggerfallItemStrikeSource, int, int> _itemStrike;
     private readonly Action<DaggerfallMonsterHitExposure> _monsterHit;
-    internal DaggerCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
+    internal DaggerfallCombatRules(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment,
         Func<long, MechanicsInventoryCoordinator?> actorInventories, DaggerfallItemInstances itemInstances,
         DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity,
         TargetingService targeting, Action<DaggerfallSkillUse> skillUses,

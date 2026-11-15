@@ -25,7 +25,7 @@ internal sealed class SocietyStage : IDisposable
         DaggerfallActorDefinition player = Definitions.RequireActor(new DaggerfallActorId("player"));
         StatsComponent stats = _mechanics.CreateStats(player,
             DaggerfallPlayerVitals.Initial(player.Stats, Definitions.Catalogs.RequireCareer("class00")));
-        Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
+        Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerfallActorFactory.PlayerCapabilities);
         Character = new DaggerfallCharacterState(Definitions, stats, player);
         DaggerfallTuning tuning = DaggerfallTuning.Defaults;
         Effects = new(Actors, new DaggerfallEffectCatalog([DaggerfallRacialOverrides.Definition(Character, tuning.Lycanthropy, tuning.Vampirism)]));
@@ -104,7 +104,7 @@ internal sealed class SocietyStage : IDisposable
     internal long Civilian(string role = "civilian", params string[] services)
     {
         long id = Npcs.RegisterCivilian(NpcSite, new DaggerfallNpcAppearance("breton", "Male", 210, 4, 7, 0), role, services);
-        DaggerActorFactory.CreateCivilianActor(_mechanics, Actors, _inventories, Npcs.Require(id), default);
+        DaggerfallActorFactory.CreateCivilianActor(_mechanics, Actors, _inventories, Npcs.Require(id), default);
         return id;
     }
 
@@ -115,7 +115,7 @@ internal sealed class SocietyStage : IDisposable
     internal long Actor(DaggerfallActorDefinition definition)
     {
         long id = _nextWatch++;
-        DaggerActorFactory.CreateNonPlayerActor(Actors, id, definition, _mechanics.CreateStats(definition, DaggerActorFactory.InitialVitals(Random.Service, definition, id)), default);
+        DaggerfallActorFactory.CreateNonPlayerActor(Actors, id, definition, _mechanics.CreateStats(definition, DaggerfallActorFactory.InitialVitals(Random.Service, definition, id)), default);
         ActorDefinitions[id] = definition;
         return id;
     }

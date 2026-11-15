@@ -22,7 +22,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// member exists from the start and none is ever replaced.
 /// </summary>
 internal sealed class DaggerfallState(
-    DaggerActorAssembly assembled,
+    DaggerfallActorAssembly assembled,
     DaggerfallVariableStore variables,
     DaggerfallSocialState social,
     DaggerfallQuestInstances quests,

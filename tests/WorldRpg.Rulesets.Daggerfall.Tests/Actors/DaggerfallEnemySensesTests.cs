@@ -23,10 +23,10 @@ public sealed class DaggerfallEnemySensesTests
             DaggerfallMechanicsState mechanics = new();
             Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"),
                 mechanics.CreateStats(player, DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00"))), "health",
-                DaggerActorFactory.PlayerCapabilities);
+                DaggerfallActorFactory.PlayerCapabilities);
             foreach ((long id, float z) in new[] { (Foe, 5f), (Ally, 5f), (Pacified, 5f), (Far, 40f) })
             {
-                DaggerActorFactory.CreateNonPlayerActor(Actors, id, Monster, mechanics.CreateStats(Monster, DaggerActorFactory.InitialVitals(Random.Service, Monster, id)),
+                DaggerfallActorFactory.CreateNonPlayerActor(Actors, id, Monster, mechanics.CreateStats(Monster, DaggerfallActorFactory.InitialVitals(Random.Service, Monster, id)),
                     new ActorPose(new WorldPoint(0f, 0f, z), 0f));
                 Definitions[id] = Monster;
             }

@@ -281,7 +281,7 @@ public sealed class DaggerfallConcreteGuildRuntimeTests
             stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value), new Stat(100, 0, 100, quantum: 1,
                 rounding: MidpointRounding.ToZero, integerRounding: MidpointRounding.ToZero));
             Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.Concat(definitions.TemplateItems.Values)
-                .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+                .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
             InventoryStore store = new();
             EntityId owner = _entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 1), new EntityTypeId("test.player"));
             store.RegisterInventory(new InventoryState(owner, [new InventoryCapacityLimit(DaggerfallEncumbrancePolicy.ClassicWeightMetric, ulong.MaxValue)]));

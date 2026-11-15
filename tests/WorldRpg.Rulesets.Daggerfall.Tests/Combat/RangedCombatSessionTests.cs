@@ -345,8 +345,8 @@ public sealed class RangedCombatSessionTests
             placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors,
-            new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
+            new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+        DaggerfallCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
             physicalAttacksBlocked: id => session.State.Effects.ControlsFor(id).PhysicalAttacks, actorGameplayActive: _ => true);
         const long archer = 2004;
         const ulong generation = 77;
@@ -397,9 +397,9 @@ public sealed class RangedCombatSessionTests
             placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors,
-            new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+            new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
         bool gameplayActive = true;
-        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
+        DaggerfallCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
             physicalAttacksBlocked: _ => false, actorGameplayActive: _ => gameplayActive);
         const long archer = 2004;
         const ulong generation = 77;
@@ -510,8 +510,8 @@ public sealed class RangedCombatSessionTests
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
+        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+        DaggerfallCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
             physicalAttacksBlocked: _ => false, actorGameplayActive: _ => true);
         FactBuffer<IProductFact> facts = new();
         long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
@@ -549,8 +549,8 @@ public sealed class RangedCombatSessionTests
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
-        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
-        DaggerCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
+        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+        DaggerfallCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
             physicalAttacksBlocked: _ => false, actorGameplayActive: _ => true);
         FactBuffer<IProductFact> facts = new();
         long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;

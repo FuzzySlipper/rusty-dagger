@@ -26,7 +26,7 @@ public sealed class DaggerfallCivilianActorTests
             DaggerfallNpcPresence.Active,
             null, null, null);
 
-        ActorState actor = DaggerActorFactory.CreateCivilianActor(
+        ActorState actor = DaggerfallActorFactory.CreateCivilianActor(
             mechanics,
             actors,
             inventoryStore,
@@ -34,7 +34,7 @@ public sealed class DaggerfallCivilianActorTests
             new ActorPose(new WorldPoint(2f, 0f, -3f), 0.25f));
 
         Assert.Equal(npc.DurableId, actor.DurableId);
-        Assert.Equal(DaggerfallActorKinds.Civilian, DaggerActorFactory.CivilianDefinition(npc.DurableId).Kind);
+        Assert.Equal(DaggerfallActorKinds.Civilian, DaggerfallActorFactory.CivilianDefinition(npc.DurableId).Kind);
         Assert.False(actor.IsDefeated);
         Assert.Empty(actor.Inventory.View().Stacks);
         Assert.Empty(actor.Inventory.View().UniqueItems);

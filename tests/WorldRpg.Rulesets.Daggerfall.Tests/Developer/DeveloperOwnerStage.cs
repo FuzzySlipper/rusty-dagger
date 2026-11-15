@@ -18,8 +18,8 @@ internal static class DeveloperOwnerStage
     internal static ActorsState Actors(double health)
     {
         ActorsState actors = new();
-        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), DaggerCombatFixture.Stats(health, 600d), "health",
-            DaggerActorFactory.PlayerCapabilities);
+        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), DaggerfallCombatFixture.Stats(health, 600d), "health",
+            DaggerfallActorFactory.PlayerCapabilities);
         return actors;
     }
 

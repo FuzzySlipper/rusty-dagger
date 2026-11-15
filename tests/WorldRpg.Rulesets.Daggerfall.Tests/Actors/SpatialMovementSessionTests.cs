@@ -554,7 +554,7 @@ public sealed class SpatialMovementSessionTests
         DaggerfallSiteProfile inputs = ReadInputs(root);
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
 
-        HashSet<ulong> admitted = DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, player.Loadout);
+        HashSet<ulong> admitted = DaggerfallActorFactory.AdmittedAuthoredEntityIds(inputs, player.Loadout);
         Assert.Contains((ulong)DaggerfallActorIdentity.PlayerEntityId, admitted);
         Assert.Equal(
             1 + inputs.Project.Actors.Values.Count() + player.Loadout.Count(entry => entry.UniqueEntityId is not null),
@@ -562,7 +562,7 @@ public sealed class SpatialMovementSessionTests
 
         DaggerfallLoadoutEntry duplicated = player.Loadout.First(entry => entry.UniqueEntityId is not null);
         InvalidOperationException rejected = Assert.Throws<InvalidOperationException>(() =>
-            DaggerActorFactory.AdmittedAuthoredEntityIds(inputs, [.. player.Loadout, duplicated]));
+            DaggerfallActorFactory.AdmittedAuthoredEntityIds(inputs, [.. player.Loadout, duplicated]));
         Assert.Contains("collides", rejected.Message, StringComparison.Ordinal);
     }
 

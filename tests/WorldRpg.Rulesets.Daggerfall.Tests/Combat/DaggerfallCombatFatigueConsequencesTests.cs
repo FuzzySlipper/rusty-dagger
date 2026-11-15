@@ -11,14 +11,14 @@ using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-public sealed class DaggerCombatFatigueConsequencesTests
+public sealed class DaggerfallCombatFatigueConsequencesTests
 {
     [Theory]
     [InlineData("nymph")]
     [InlineData("lamia")]
     public void Retained_monster_fatigue_callers_apply_the_donor_formula_after_an_accepted_hit(string sourceId)
     {
-        using DaggerCombatFixture fixture = new(sourceId);
+        using DaggerfallCombatFixture fixture = new(sourceId);
 
         fixture.ApplyConnected(Attack(), Prepared());
 
@@ -39,7 +39,7 @@ public sealed class DaggerCombatFatigueConsequencesTests
     [Fact]
     public void Fatigue_loss_reports_the_bounded_live_loss_when_the_target_is_nearly_exhausted()
     {
-        using DaggerCombatFixture fixture = new("nymph", playerFatigue: 20d);
+        using DaggerfallCombatFixture fixture = new("nymph", playerFatigue: 20d);
 
         fixture.ApplyConnected(Attack(), Prepared());
 
@@ -51,8 +51,8 @@ public sealed class DaggerCombatFatigueConsequencesTests
     private static AttackRequest Attack() =>
         new(2, DaggerfallActorIdentity.PlayerEntityId, 7, 13, .125d, Delayed: true);
 
-    private static DaggerCombatRules.DaggerfallPreparedAttack Prepared() =>
-        new DaggerCombatRules.DaggerfallPreparedAttack(.5d,
+    private static DaggerfallCombatRules.DaggerfallPreparedAttack Prepared() =>
+        new DaggerfallCombatRules.DaggerfallPreparedAttack(.5d,
             new AttackOutcome(Hit: true, Allowed: true, Damage: 2),
             DaggerfallStrikeFeedback.Unarmed, MonsterHits: [new(0, 2, DaggerfallMonsterHitConsequence.Fatigue)]);
 }

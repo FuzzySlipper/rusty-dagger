@@ -21,7 +21,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="environment">The world environment contact queries run against now.</param>
 /// <param name="reportCast">How a cast outcome is told to the player.</param>
 /// <param name="strikeWorld">A swing admitted along a look meets the world: the environment's actions and doors.</param>
-internal sealed class DaggerfallPlayerAttack(DaggerfallAttackTuning tuning, DaggerCombatRules combat, ActorsState actors,
+internal sealed class DaggerfallPlayerAttack(DaggerfallAttackTuning tuning, DaggerfallCombatRules combat, ActorsState actors,
     PlayerControlState control, Func<LookReceipt> look, Func<bool> weaponDrawn, DaggerfallEffectLifecycle effects,
     IAttackCapabilities<IProductFact> attacks, DaggerfallContactGuard guard, DaggerfallStrikeAim aim, ActorContact contact,
     Func<CharacterStepEnvironment?> environment, DaggerfallCasting casting, DaggerfallSpellRelease spellRelease,

@@ -73,9 +73,9 @@ product defaults stay in the Host. Keep compact structural constants local.
 
 ## Gameplay composition
 
-Compose Engine `Actor` in Kit/Dagger facades with named properties (`Stats`,
+Compose Engine `Actor` in Kit/Daggerfall facades with named properties (`Stats`,
 `Inventory`, `Equipment`, `Targeting`) over the attached components.
-`DaggerActorFactory` assembles actors and `DaggerfallState.Kit` provides the
+`DaggerfallActorFactory` assembles actors and `DaggerfallState.Kit` provides the
 session services. Factories create components; wrapping an entity never does.
 Keep runtime EntityId, kind/origin TypeId and durable product identity distinct.
 

@@ -290,7 +290,7 @@ public sealed class DaggerfallTransportTests
         {
             Definitions = TestPayload.Definitions;
             _items = Definitions.Items.Values.Concat(Definitions.TemplateItems.Values)
-                .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+                .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
             Player = Entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 1), new EntityTypeId("test.player"));
             Store.RegisterInventory(new InventoryState(Player));
             InventoryComponent component = new(Store, Player);

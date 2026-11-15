@@ -8,7 +8,7 @@ using WorldRpg.Rulesets.Daggerfall.Facts;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
-internal sealed partial class DaggerCombatRules
+internal sealed partial class DaggerfallCombatRules
 {
     private const int SpecialArtifactEffect = 26;
     private const int NamiraArtifact = 7;

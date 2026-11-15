@@ -191,8 +191,8 @@ public sealed class SpellEffectPresentationTests
         stats.AddStat(Rusty.Engine.Mechanics.StatId.Parse("health-maximum"), maximum);
         stats.AddTrack(Rusty.Engine.Mechanics.TrackId.Parse("health"), new Rusty.Engine.Mechanics.Track(maximum, 0));
         ActorsState actors = new();
-        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), new Rusty.Engine.Mechanics.StatsComponent(), "health", DaggerActorFactory.PlayerCapabilities);
-        actors.CreateActor(11, new EntityTypeId("test"), stats, new ActorPose(new WorldPoint(2, 0, 3), MathF.PI / 2), "health", DaggerActorFactory.NonPlayerCapabilities);
+        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), new Rusty.Engine.Mechanics.StatsComponent(), "health", DaggerfallActorFactory.PlayerCapabilities);
+        actors.CreateActor(11, new EntityTypeId("test"), stats, new ActorPose(new WorldPoint(2, 0, 3), MathF.PI / 2), "health", DaggerfallActorFactory.NonPlayerCapabilities);
         return actors;
     }
 

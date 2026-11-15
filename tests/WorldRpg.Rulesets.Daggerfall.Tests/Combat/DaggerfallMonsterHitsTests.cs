@@ -27,9 +27,9 @@ public sealed class DaggerfallMonsterHitsTests
             DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
             StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player,
                 DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00")));
-            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
-            Actors.CreateActor(Monster, new EntityTypeId("rat"), DaggerCombatFixture.Stats(100d, 600d),
-                new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerfallActorFactory.PlayerCapabilities);
+            Actors.CreateActor(Monster, new EntityTypeId("rat"), DaggerfallCombatFixture.Stats(100d, 600d),
+                new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
             Actors.Player.Progression.AdvanceTo(500, 2);
             DaggerfallCharacterState character = new(definitions, stats, player);
             IRandomService random = RandomMaximum.Create();

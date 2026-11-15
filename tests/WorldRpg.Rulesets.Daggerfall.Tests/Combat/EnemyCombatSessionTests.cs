@@ -246,7 +246,7 @@ public sealed class EnemyCombatSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
-        DaggerTargetingPolicy policy = new(authored, DaggerfallTuning.Defaults.MeleeTargeting,
+        DaggerfallTargetingPolicy policy = new(authored, DaggerfallTuning.Defaults.MeleeTargeting,
             () => inputs);
         List<string> releases = [];
         ContentFake content = new(releases);

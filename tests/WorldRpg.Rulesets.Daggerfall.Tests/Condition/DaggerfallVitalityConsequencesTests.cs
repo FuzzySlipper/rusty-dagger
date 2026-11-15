@@ -16,7 +16,7 @@ public sealed class DaggerfallVitalityConsequencesTests
     {
         using ActorsState actors = new();
         StatsComponent stats = Stats(health: 3.75d, fatigue: 100d);
-        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
+        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerfallActorFactory.PlayerCapabilities);
         DaggerfallVitalityConsequences consequences = new(new CombatResolution());
 
         DamageResult? lethal = consequences.ResolveLanding(player.Actor, new DaggerfallLanding(7f), preventsFallDamage: false);
@@ -31,8 +31,8 @@ public sealed class DaggerfallVitalityConsequencesTests
     public void A_thrown_body_takes_the_players_fall_rule_and_the_fall_is_the_players_doing()
     {
         using ActorsState actors = new();
-        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(health: 20d, fatigue: 100d), "health", DaggerActorFactory.PlayerCapabilities);
-        ActorState thrown = actors.CreateActor(2, new EntityTypeId("orc"), Stats(health: 20d, fatigue: 0d), new ActorPose(new WorldPoint(0f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), Stats(health: 20d, fatigue: 100d), "health", DaggerfallActorFactory.PlayerCapabilities);
+        ActorState thrown = actors.CreateActor(2, new EntityTypeId("orc"), Stats(health: 20d, fatigue: 0d), new ActorPose(new WorldPoint(0f, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
         DaggerfallVitalityConsequences consequences = new(new CombatResolution());
 
         Assert.Null(consequences.ResolveThrownLanding(player.Actor, thrown.Actor, 5f));
@@ -48,7 +48,7 @@ public sealed class DaggerfallVitalityConsequencesTests
     {
         using ActorsState actors = new();
         StatsComponent stats = Stats(health: 20d, fatigue: 100d);
-        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
+        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerfallActorFactory.PlayerCapabilities);
 
         DamageResult? result = new DaggerfallVitalityConsequences(new CombatResolution())
             .ResolveLanding(player.Actor, new DaggerfallLanding(5f), preventsFallDamage: false);
@@ -62,7 +62,7 @@ public sealed class DaggerfallVitalityConsequencesTests
     {
         using ActorsState actors = new();
         StatsComponent stats = Stats(health: 20d, fatigue: 100d);
-        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
+        PlayerActorState player = actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerfallActorFactory.PlayerCapabilities);
 
         DamageResult? result = new DaggerfallVitalityConsequences(new CombatResolution())
             .ResolveLanding(player.Actor, new DaggerfallLanding(7f), preventsFallDamage: true);

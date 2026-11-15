@@ -28,11 +28,11 @@ internal sealed class MagicCastFixture : IDisposable
     {
         DaggerfallDefinitions definitions = Items.Definitions;
         MonsterDefinition = definitions.Actors.Values.First(actor => actor.Kind == DaggerfallActorKinds.Monster && actor.MobileId is not null);
-        Actors.CreatePlayer(1, new EntityTypeId("player"), Items.Stats, "health", DaggerActorFactory.PlayerCapabilities);
+        Actors.CreatePlayer(1, new EntityTypeId("player"), Items.Stats, "health", DaggerfallActorFactory.PlayerCapabilities);
         DaggerfallActorDefinition player = definitions.RequireActor(new("player"));
         Actors.CreateActor(Monster, new EntityTypeId("monster"), new DaggerfallMechanicsState().CreateStats(player,
                 DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00"))),
-            new ActorPose(new WorldPoint(3f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+            new ActorPose(new WorldPoint(3f, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
         // The actor factory attaches spell readiness to every actor it makes.
         Actors.Player.Actor.Add(new DaggerfallSpellReadiness());
         Actors.Get(Monster).Actor.Add(new DaggerfallSpellReadiness());

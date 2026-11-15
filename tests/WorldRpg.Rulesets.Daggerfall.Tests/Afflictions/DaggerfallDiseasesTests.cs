@@ -23,9 +23,9 @@ public sealed class DaggerfallDiseasesTests
             DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
             StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player,
                 DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00")));
-            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerActorFactory.PlayerCapabilities);
-            Actors.CreateActor(2, new EntityTypeId("nymph"), DaggerCombatFixture.Stats(100d, 600d),
-                new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerActorFactory.NonPlayerCapabilities);
+            Actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), stats, "health", DaggerfallActorFactory.PlayerCapabilities);
+            Actors.CreateActor(2, new EntityTypeId("nymph"), DaggerfallCombatFixture.Stats(100d, 600d),
+                new ActorPose(new WorldPoint(1f, 0f, 0f), 0f), "health", DaggerfallActorFactory.NonPlayerCapabilities);
             DaggerfallCharacterState character = new(definitions, stats, player);
             IRandomService random = RandomMaximum.Create();
             DaggerfallWorldTime time = new(DaggerfallCalendar.FromAbsoluteSeconds(100L * DaggerfallCalendar.SecondsPerDay), 0d, 12d);

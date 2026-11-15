@@ -30,7 +30,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="lootReach">The reach a target without its own is used at.</param>
 internal sealed class DaggerfallDebugOverlays(IEngineContext engine, PlayerControlState player, FirstPersonCameraSystem camera,
     PlayerInputSystem input, ActorsState actors, DaggerfallNpcRegistry npcs, TargetingService targeting, DaggerfallActorRoster roster,
-    DaggerfallEnemySenses senses, DaggerfallEnemyBehaviorModule enemyBehavior, DaggerCombatRules combat, DaggerfallPlayerAttack playerAttack,
+    DaggerfallEnemySenses senses, DaggerfallEnemyBehaviorModule enemyBehavior, DaggerfallCombatRules combat, DaggerfallPlayerAttack playerAttack,
     SpatialMovementSystem spatial, DaggerfallSiteCrossing sites, DaggerfallActivation activation, DaggerfallBuildingEntrance entrance,
     Func<DaggerfallDialogueService?> dialogue, double lootReach)
 {

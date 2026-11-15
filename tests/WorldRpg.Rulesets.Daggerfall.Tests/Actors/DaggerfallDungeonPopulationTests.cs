@@ -28,7 +28,7 @@ public sealed class DaggerfallDungeonPopulationTests
         EntityId playerEntity = entities.Create(new DurableIdentityReference(DurableIdentityKind.Actor, 1), new EntityTypeId("player"));
         store.RegisterInventory(new InventoryState(playerEntity));
         Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.Concat(definitions.TemplateItems.Values)
-            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
+            .ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
         DaggerfallGroundContainers ground = new(new MechanicsInventoryContainerCoordinator(store, entities, items), new DaggerfallItemInstances(),
             playerEntity, new DurableIdentityAllocator(DurableIdentityKind.Container, 100), dungeon.ProfileKey);
 

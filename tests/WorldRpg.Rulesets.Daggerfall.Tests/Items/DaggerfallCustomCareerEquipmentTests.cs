@@ -27,8 +27,8 @@ public sealed class DaggerfallCustomCareerEquipmentTests
         EquipmentComponent equipmentComponent = new(store, owner);
         entities.Store.Add(owner, inventoryComponent);
         entities.Store.Add(owner, equipmentComponent);
-        var items = definitions.Items.Values.Concat(definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerActorFactory.ToManagedItem);
-        var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerActorFactory.ToManagedSlot);
+        var items = definitions.Items.Values.Concat(definitions.TemplateItems.Values).ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallActorFactory.ToManagedItem);
+        var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallActorFactory.ToManagedSlot);
         MechanicsInventoryCoordinator inventory = new(inventoryComponent, entities, items);
         MechanicsEquipmentCoordinator equipment = new(inventoryComponent, equipmentComponent, entities, items, slots);
         DaggerfallItemInstances instances = new();
