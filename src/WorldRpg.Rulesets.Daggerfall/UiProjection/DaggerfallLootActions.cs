@@ -43,8 +43,8 @@ internal sealed class DaggerfallLootActions(DaggerfallLootPresentation loot, Dag
         {
             LootPresentation? current = loot.Read();
             if (current?.Items.SingleOrDefault(item => item.Key == key) is not { } row) continue;
-            Take(new DaggerfallPlayerUiAction("loot-take", current.Revision, key, Container: current.Container,
-                Amount: ulong.Parse(row.Quantity, CultureInfo.InvariantCulture)), report: false);
+            Take(new DaggerfallPlayerUiAction(DaggerfallUiAction.RuleFor(DaggerfallUiActionKind.LootTake).Wire, current.Revision, key,
+                Container: current.Container, Amount: ulong.Parse(row.Quantity, CultureInfo.InvariantCulture)), report: false);
             if (loot.Read()?.Items.Any(item => item.Key == key) ?? false) break;
             taken++;
         }

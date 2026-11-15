@@ -304,7 +304,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
     {
         if (id.StartsWith("activation.", StringComparison.Ordinal))
         {
-            activation.ChangeMode(new("activation-mode", Mode: id["activation.".Length..]));
+            activation.ChangeMode(new(DaggerfallUiAction.RuleFor(DaggerfallUiActionKind.ActivationMode).Wire, Mode: id["activation.".Length..]));
             return;
         }
         switch (id)
@@ -320,7 +320,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             case "travel-map": travel.OpenMap(); session.RequestPanel(DaggerfallPanel.Travel); break;
             case "use-magic-item": session.RequestPanel("magic-items"); break;
             case "radial": session.RequestPanel(DaggerfallPanel.Radial); break;
-            case "abort-spell": spellbook.ChangeSpell(new("spell-unready")); break;
+            case "abort-spell": spellbook.ChangeSpell(new(DaggerfallUiAction.RuleFor(DaggerfallUiActionKind.SpellUnready).Wire)); break;
             case "recast":
                 attack.Clock.PressCast();
                 break;
