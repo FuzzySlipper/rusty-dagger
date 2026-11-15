@@ -1071,6 +1071,9 @@ internal sealed partial class DaggerfallSession
             {
                 if (!_inAdmittedUpdate && !_disposed) PublishPresentation();
             });                                                                                   // Developer
+            _overlays = new DaggerfallDebugOverlays(engine, State.PlayerControl, _camera, _input, State.Actors, State.Npcs, State.Kit.Targeting,
+                _roster, _senses, _enemyBehavior, _combat, PlayerAttack, _spatial, _sites, Activation, Entrance, () => _dialogue,
+                tuning.LootInteraction.MaximumDistance);                                          // Developer
             _peopleRigs = new DaggerfallPeopleRigSwitch(composition.ArtReplacements?.PeopleRig, () => _engine.PartsRigs, State.Actors);   // Developer
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,

@@ -8,22 +8,31 @@ using Rusty.Engine.Interaction;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Targeting;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// Dagger's debug overlay sets (<see cref="IDeveloperInspectionSession"/>): what the interaction query sees, the people
-/// and their services, doors and portals, creatures and their senses, the site's markers, and the player's body. Each
-/// set is built from the owners' live facts at presentation, only while it is on, and drawn by the Engine's inspection
-/// overlays; nothing here changes play. The transient <see cref="ProbeOverlaySet"/> draws the last spatial probe or
-/// clearance query run from the console.
+/// Dagger's debug overlay sets (world.overlays, world.overlay-on/off, inspect.targets): what the interaction query sees,
+/// the people and their services, doors and portals, creatures and their senses, the site's markers, and the player's
+/// body. Each set is built from the owners' live facts at presentation (<see cref="Publish"/>, the last line of the
+/// session's presentation), only while it is on, and drawn by the Engine's inspection overlays; nothing here changes
+/// play. The transient <see cref="ProbeOverlaySet"/> draws the last spatial probe or clearance query run from the console.
 /// </summary>
-internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
+/// <param name="engine">The Engine, whose graphics publish the sets.</param>
+/// <param name="dialogue">The conversation over the active site, rebuilt with each site.</param>
+/// <param name="lootReach">The reach a target without its own is used at.</param>
+internal sealed class DaggerfallDebugOverlays(IEngineContext engine, PlayerControlState player, FirstPersonCameraSystem camera,
+    PlayerInputSystem input, ActorsState actors, DaggerfallNpcRegistry npcs, TargetingService targeting, DaggerfallActorRoster roster,
+    DaggerfallEnemySenses senses, DaggerfallEnemyBehaviorModule enemyBehavior, DaggerCombatRules combat, DaggerfallPlayerAttack playerAttack,
+    SpatialMovementSystem spatial, DaggerfallSiteCrossing sites, DaggerfallActivation activation, DaggerfallBuildingEntrance entrance,
+    Func<DaggerfallDialogueService?> dialogue, double lootReach)
 {
     internal const string InteractionOverlaySet = "interaction";
     internal const string PeopleOverlaySet = "people";
@@ -38,39 +47,39 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
 
     private static readonly IReadOnlyList<string> DaggerOverlaySets =
         [InteractionOverlaySet, PeopleOverlaySet, DoorsOverlaySet, ActorsOverlaySet, MarkersOverlaySet, PlayerOverlaySet, SwingOverlaySet];
-    private readonly HashSet<string> _debugOverlays = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _on = new(StringComparer.Ordinal);
 
-    public IReadOnlyList<string> DebugOverlaySets => DaggerOverlaySets;
+    internal IReadOnlyList<string> Sets => DaggerOverlaySets;
 
-    public bool IsDebugOverlayOn(string name) => _debugOverlays.Contains(name);
+    internal bool IsOn(string name) => _on.Contains(name);
 
-    public bool SetDebugOverlay(string name, bool on)
+    internal bool Set(string name, bool on)
     {
         if (!DaggerOverlaySets.Contains(name, StringComparer.Ordinal)) return false;
-        if (on) _debugOverlays.Add(name);
-        else if (_debugOverlays.Remove(name)) _engine.Graphics.PublishOverlaySet(new(name, []));
+        if (on) _on.Add(name);
+        else if (_on.Remove(name)) engine.Graphics.PublishOverlaySet(new(name, []));
         return true;
     }
 
-    public IReadOnlyList<InspectionTarget> InspectionTargets()
+    internal IReadOnlyList<InspectionTarget> InspectionTargets()
     {
         List<InspectionTarget> targets = [];
-        if (State.PlayerControl.Position is not WorldPoint position) return targets;
-        targets.Add(new("player", OverlayPlace.World, _camera.Viewpoint.ToVector())
-            { Rotation = Quaternion.CreateFromYawPitchRoll(-State.PlayerControl.YawRadians, 0, 0), Radius = 1.5F, Framing = "front" });
-        if (_dialogue?.CurrentNpc() is { } npc && State.Actors.TryGet(npc.DurableId, out ActorState? spoken))
+        if (player.Position is not WorldPoint position) return targets;
+        targets.Add(new("player", OverlayPlace.World, camera.Viewpoint.ToVector())
+            { Rotation = Quaternion.CreateFromYawPitchRoll(-player.YawRadians, 0, 0), Radius = 1.5F, Framing = "front" });
+        if (dialogue()?.CurrentNpc() is { } npc && actors.TryGet(npc.DurableId, out ActorState? spoken))
             targets.Add(new("dialogue", OverlayPlace.World, spoken.Position.ToVector() + Vector3.UnitY) { Radius = 1.5F, Framing = "front" });
-        if ((_activation?.InspectTargets() ?? []).Where(target => target.Kind is DaggerfallActivationTargetKind.Door or DaggerfallActivationTargetKind.Portal)
+        if ((activation.Module?.InspectTargets() ?? []).Where(target => target.Kind is DaggerfallActivationTargetKind.Door or DaggerfallActivationTargetKind.Portal)
             .OrderBy(target => position.HorizontalDistanceTo(target.Position)).Select(target => (DaggerfallActivationTarget?)target).FirstOrDefault() is { } door)
             targets.Add(new("door", OverlayPlace.World, door.Position.ToVector()) { Radius = 2F, Framing = "front" });
         return targets;
     }
 
     /// <summary>Republishes every set that is on from the owners' facts at this presentation.</summary>
-    private void PublishDebugOverlays()
+    internal void Publish()
     {
-        if (_debugOverlays.Count == 0 || State.PlayerControl.Position is not WorldPoint position) return;
-        foreach (string name in DaggerOverlaySets.Where(_debugOverlays.Contains))
+        if (_on.Count == 0 || player.Position is not WorldPoint position) return;
+        foreach (string name in DaggerOverlaySets.Where(_on.Contains))
         {
             List<OverlayItem> items = [];
             switch (name)
@@ -83,9 +92,12 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
                 case PlayerOverlaySet: PlayerOverlay(items, position); break;
                 case SwingOverlaySet: SwingOverlay(items); break;
             }
-            _engine.Graphics.PublishOverlaySet(new(name, items.ToArray()));
+            engine.Graphics.PublishOverlaySet(new(name, items.ToArray()));
         }
     }
+
+    /// <summary>The collision movement meets now: the admitted scene plus the live doors and supports.</summary>
+    private CharacterStepEnvironment LiveCollision() => sites.Exterior.CharacterEnvironment(player.Motion);
 
     /// <summary>
     /// The last swing's arc: its rays' ends joined in order, since a ray from the eye is a point seen from the eye, with a
@@ -93,7 +105,7 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
     /// </summary>
     private void SwingOverlay(List<OverlayItem> items)
     {
-        IReadOnlyList<SwingRay> rays = PlayerAttack.LastSwing?.Rays ?? [];
+        IReadOnlyList<SwingRay> rays = playerAttack.LastSwing?.Rays ?? [];
         for (int ray = 0; ray < rays.Count; ray++)
         {
             Color color = rays[ray].Kind == ContactKind.Actor ? Ink.Hostile : rays[ray].Kind == ContactKind.World ? Ink.Refused : Ink.Query;
@@ -106,12 +118,13 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
     /// <summary>The activation query's ray, and each target's point, reach and focus reason in its colour.</summary>
     private void InteractionOverlay(List<OverlayItem> items)
     {
-        if (_activation?.Inspect(State.Actors.Player.Actor.Entity, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl)) is not { } readout) return;
+        DaggerfallActivationModule? module = activation.Module;
+        if (module?.Inspect(actors.Player.Actor.Entity, player, input.ResolveCurrentLook(player)) is not { } readout) return;
         var query = readout.Scene.Query;
         items.Add(OverlayItem.Segment(OverlayPlace.World, query.Origin, query.Origin + query.Direction * query.MaximumDistance, Ink.Query, onTop: true));
         items.Add(OverlayItem.Marker(OverlayPlace.World, query.Origin, .1F, Ink.Query, onTop: true));
         Dictionary<ulong, InteractionObservation> rows = readout.Focus.Candidates.ToArray().ToDictionary(row => row.Candidate.Target.Id);
-        foreach (DaggerfallActivationTarget target in _activation.InspectTargets())
+        foreach (DaggerfallActivationTarget target in module.InspectTargets())
         {
             Vector3 point = target.Position.ToVector();
             if (Vector3.Distance(point, query.Origin) > OverlayRadius) continue;
@@ -120,19 +133,19 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
             Color color = reason == "Ready" ? Ink.Ready : reason is "Occluded" or "OutOfReach" or "Unavailable" ? Ink.Refused : Ink.Unfocused;
             items.Add(OverlayItem.Marker(OverlayPlace.World, point, .25F, color, onTop: true));
             if (observed && row.WithinRelease)
-                items.Add(OverlayItem.WireSphere(OverlayPlace.World, point, (float)(target.ReachDistance ?? _tuning.LootInteraction.MaximumDistance), color));
+                items.Add(OverlayItem.WireSphere(OverlayPlace.World, point, (float)(target.ReachDistance ?? lootReach), color));
             items.Add(OverlayItem.Label(OverlayPlace.World, point + Vector3.UnitY * .3F, $"{target.Label ?? target.Kind.ToString()} · {reason}", color, onTop: true));
         }
     }
 
     /// <summary>Each loaded person: where they stand, which way they face, and their role and services.</summary>
-    private void PeopleOverlay(List<OverlayItem> items, WorldPoint player)
+    private void PeopleOverlay(List<OverlayItem> items, WorldPoint at)
     {
-        Dictionary<long, string> labels = (_activation?.InspectTargets() ?? []).Where(target => target.Kind == DaggerfallActivationTargetKind.Npc)
+        Dictionary<long, string> labels = (activation.Module?.InspectTargets() ?? []).Where(target => target.Kind == DaggerfallActivationTargetKind.Npc)
             .GroupBy(target => (long)target.Identity.Value).ToDictionary(group => group.Key, group => group.First().Label ?? "person");
-        foreach (DaggerfallNpc npc in State.Npcs.All.Where(npc => npc.Presence == DaggerfallNpcPresence.Active))
+        foreach (DaggerfallNpc npc in npcs.All.Where(npc => npc.Presence == DaggerfallNpcPresence.Active))
         {
-            if (!State.Actors.TryGet(npc.DurableId, out ActorState? actor) || player.HorizontalDistanceTo(actor.Position) > OverlayRadius) continue;
+            if (!actors.TryGet(npc.DurableId, out ActorState? actor) || at.HorizontalDistanceTo(actor.Position) > OverlayRadius) continue;
             Vector3 feet = actor.Position.ToVector();
             items.Add(OverlayItem.Segment(OverlayPlace.World, feet, feet + Vector3.UnitY * 1.8F, Ink.People));
             items.Add(OverlayItem.Segment(OverlayPlace.World, feet + Vector3.UnitY, feet + Vector3.UnitY + ActorHeading.Forward(actor.HeadingYawRadians) * .6F, Ink.People));
@@ -143,20 +156,21 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
     }
 
     /// <summary>Doors and portals: their point, outward normal, lock and, for a building's door, whether its entry rule opens it now.</summary>
-    private void DoorsOverlay(List<OverlayItem> items, WorldPoint player)
+    private void DoorsOverlay(List<OverlayItem> items, WorldPoint at)
     {
-        Dictionary<EntityId, DaggerfallDoorView> doors = _doors.All.ToDictionary(door => door.Entity);
-        foreach (DaggerfallActivationTarget target in (_activation?.InspectTargets() ?? [])
+        DaggerfallDoorRuntime runtime = sites.Projection.Doors;
+        Dictionary<EntityId, DaggerfallDoorView> doors = runtime.All.ToDictionary(door => door.Entity);
+        foreach (DaggerfallActivationTarget target in (activation.Module?.InspectTargets() ?? [])
             .Where(target => target.Kind is DaggerfallActivationTargetKind.Door or DaggerfallActivationTargetKind.Portal))
         {
-            if (player.HorizontalDistanceTo(target.Position) > OverlayRadius) continue;
+            if (at.HorizontalDistanceTo(target.Position) > OverlayRadius) continue;
             Vector3 point = target.Position.ToVector();
             string state = target.Kind == DaggerfallActivationTargetKind.Portal ? "portal" : "door";
             Color color = Ink.Ready;
             if (doors.TryGetValue(target.Entity, out DaggerfallDoorView door))
             {
                 if (door.IsLocked) { state = $"locked {door.LockValue}"; color = Ink.Refused; }
-                if (Entrance.Door(_doors, door.Id, _activeProfileKey.Site) is { } building) state += building.Entry.Unlocked ? " · open now" : " · closed now";
+                if (entrance.Door(runtime, door.Id, sites.ActiveProfile.Site) is { } building) state += building.Entry.Unlocked ? " · open now" : " · closed now";
             }
             items.Add(OverlayItem.Marker(OverlayPlace.World, point, .4F, color, onTop: true));
             if (target.SurfaceNormal is { } normal) items.Add(OverlayItem.Segment(OverlayPlace.World, point, point + normal, color, onTop: true));
@@ -170,54 +184,55 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
     /// target they pursued, red when the policy detected it, orange when only seen or heard, grey otherwise; and where
     /// navigation sends them next.
     /// </summary>
-    private void ActorsOverlay(List<OverlayItem> items, WorldPoint player)
+    private void ActorsOverlay(List<OverlayItem> items, WorldPoint at)
     {
-        HashSet<long> people = [.. State.Npcs.All.Select(npc => npc.DurableId)];
-        foreach (ActorState actor in State.Actors.All)
+        HashSet<long> people = [.. npcs.All.Select(npc => npc.DurableId)];
+        foreach (ActorState actor in actors.All)
         {
-            if (actor.DurableId == State.Actors.Player.DurableId || people.Contains(actor.DurableId) || actor.IsDefeated
-                || player.HorizontalDistanceTo(actor.Position) > OverlayRadius) continue;
-            Vector3 centre = State.Kit.Targeting.AimPoint(actor);
-            string label = _roster.Definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition) ? definition.Id.Value : "actor";
-            Color color = definition is not null && _senses.IsHostile(actor.DurableId, definition) ? Ink.Hostile : Ink.People;
-            items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre, (float)(_combat.ReachOf(actor.DurableId) ?? 0), color));
-            if (_enemyBehavior.LastSenses.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionSource? senses))
+            if (actor.DurableId == actors.Player.DurableId || people.Contains(actor.DurableId) || actor.IsDefeated
+                || at.HorizontalDistanceTo(actor.Position) > OverlayRadius) continue;
+            Vector3 centre = targeting.AimPoint(actor);
+            string label = roster.Definitions.TryGetValue(actor.DurableId, out DaggerfallActorDefinition? definition) ? definition.Id.Value : "actor";
+            Color color = definition is not null && senses.IsHostile(actor.DurableId, definition) ? Ink.Hostile : Ink.People;
+            items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre, (float)(combat.ReachOf(actor.DurableId) ?? 0), color));
+            if (enemyBehavior.LastSenses.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionSource? sensed))
             {
                 items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre,
-                    (float)Math.Min(senses.SightRadius + senses.SightModifier, _enemyBehavior.DetectionDistance), Ink.Senses));
-                items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre, (float)(senses.HearingRadius + senses.HearingModifier), Ink.Senses));
+                    (float)Math.Min(sensed.SightRadius + sensed.SightModifier, enemyBehavior.DetectionDistance), Ink.Senses));
+                items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre, (float)(sensed.HearingRadius + sensed.HearingModifier), Ink.Senses));
             }
-            if (!_enemyBehavior.LastEvidence.TryGetValue(actor.DurableId, out EnemyBehaviorEvidence? behavior))
+            if (!enemyBehavior.LastEvidence.TryGetValue(actor.DurableId, out EnemyBehaviorEvidence? behavior))
             {
                 items.Add(OverlayItem.Label(OverlayPlace.World, centre + Vector3.UnitY, $"{label} · no decision", color, onTop: true));
                 continue;
             }
-            string sensed = "";
+            string noticed = "";
             if (behavior.Target is { } target)
             {
-                DaggerfallEnemyPerceptionDecision? perception = _enemyBehavior.LastPerception.GetValueOrDefault(actor.DurableId);
+                DaggerfallEnemyPerceptionDecision? perception = enemyBehavior.LastPerception.GetValueOrDefault(actor.DurableId);
                 Color line = perception is { Detected: true } ? Ink.Hostile : perception is { InSight: true } or { InEarshot: true } ? Ink.Senses with { A = 1F } : Ink.Unfocused;
                 // The player's body is the movement owner's, so a line to the player ends at its centre.
-                Vector3 at = target.DurableId == State.Actors.Player.DurableId ? State.PlayerControl.Position!.Value.ToVector()
-                    : State.Actors.TryGet(target.DurableId, out ActorState? pursued) ? State.Kit.Targeting.AimPoint(pursued) : target.Position.ToVector();
-                items.Add(OverlayItem.Segment(OverlayPlace.World, centre, at, line, onTop: true));
-                sensed = perception is null ? $" → {target.DurableId}"
+                Vector3 end = target.DurableId == actors.Player.DurableId ? player.Position!.Value.ToVector()
+                    : actors.TryGet(target.DurableId, out ActorState? pursued) ? targeting.AimPoint(pursued) : target.Position.ToVector();
+                items.Add(OverlayItem.Segment(OverlayPlace.World, centre, end, line, onTop: true));
+                noticed = perception is null ? $" → {target.DurableId}"
                     : $" → {target.DurableId}{(perception.InSight ? " seen" : "")}{(perception.InEarshot ? " heard" : "")}{(perception.Detected ? " detected" : "")}";
             }
             if (behavior.Navigation is { NextWaypoint: Vector3 next })
                 items.Add(OverlayItem.Segment(OverlayPlace.World, actor.Position.ToVector(), next, color));
-            items.Add(OverlayItem.Label(OverlayPlace.World, centre + Vector3.UnitY, $"{label} · {behavior.State}{sensed}", color, onTop: true));
+            items.Add(OverlayItem.Label(OverlayPlace.World, centre + Vector3.UnitY, $"{label} · {behavior.State}{noticed}", color, onTop: true));
         }
     }
 
     /// <summary>The active profile's markers: dungeon enemies and treasure, quest markers, arrival anchors and street population.</summary>
-    private void MarkersOverlay(List<OverlayItem> items, WorldPoint player)
+    private void MarkersOverlay(List<OverlayItem> items, WorldPoint at)
     {
-        DaggerfallSiteProfile profile = _sites.Projection.Inputs;
-        void Add(WorldPoint at, string label, Color color)
+        DaggerfallSiteProfile profile = sites.Projection.Inputs;
+        DaggerfallExteriorWorld exterior = sites.Exterior;
+        void Add(WorldPoint marker, string label, Color color)
         {
-            WorldPoint local = _exterior.ProfileToLocal(at);
-            if (player.HorizontalDistanceTo(local) > OverlayRadius) return;
+            WorldPoint local = exterior.ProfileToLocal(marker);
+            if (at.HorizontalDistanceTo(local) > OverlayRadius) return;
             items.Add(OverlayItem.Marker(OverlayPlace.World, local.ToVector(), .5F, color, onTop: true));
             items.Add(OverlayItem.Label(OverlayPlace.World, local.ToVector() + Vector3.UnitY * .4F, label, color, onTop: true));
         }
@@ -231,18 +246,18 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
     /// <summary>The player's standing capsule, the height a step clears, and the floor below.</summary>
     private void PlayerOverlay(List<OverlayItem> items, WorldPoint position)
     {
-        var shape = _spatial.CurrentController.Shape;
+        var shape = spatial.CurrentController.Shape;
         Vector3 centre = position.ToVector();
-        float height = State.PlayerControl.Motion.Stance == CharacterStance.Crouched ? shape.CrouchedHeight : shape.StandingHeight;
+        float height = player.Motion.Stance == CharacterStance.Crouched ? shape.CrouchedHeight : shape.StandingHeight;
         float reach = height * .5F - shape.Radius;
         items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre + Vector3.UnitY * reach, shape.Radius, Ink.Body));
         items.Add(OverlayItem.WireSphere(OverlayPlace.World, centre - Vector3.UnitY * reach, shape.Radius, Ink.Body));
         foreach (Vector3 side in new[] { Vector3.UnitX, -Vector3.UnitX, Vector3.UnitZ, -Vector3.UnitZ })
             items.Add(OverlayItem.Segment(OverlayPlace.World, centre + side * shape.Radius + Vector3.UnitY * reach, centre + side * shape.Radius - Vector3.UnitY * reach, Ink.Body));
         Vector3 feet = centre - Vector3.UnitY * (height * .5F);
-        Vector3 step = feet + Vector3.UnitY * _spatial.CurrentController.Surface.MaximumStepHeight;
+        Vector3 step = feet + Vector3.UnitY * spatial.CurrentController.Surface.MaximumStepHeight;
         items.Add(OverlayItem.WireBox(OverlayPlace.World, step, new(shape.Radius, 0, shape.Radius), Quaternion.Identity, Ink.Query));
-        SpatialHit floor = _spatial.CastRay(centre, -Vector3.UnitY, height * 2F, LiveCollision());
+        SpatialHit floor = spatial.CastRay(centre, -Vector3.UnitY, height * 2F, LiveCollision());
         if (floor.Present)
         {
             items.Add(OverlayItem.Segment(OverlayPlace.World, centre, floor.Point, Ink.Ready, onTop: true));
@@ -250,14 +265,14 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
         }
         else items.Add(OverlayItem.Segment(OverlayPlace.World, centre, centre - Vector3.UnitY * height * 2F, Ink.Refused, onTop: true));
         items.Add(OverlayItem.Label(OverlayPlace.World, centre + Vector3.UnitY * height * .6F,
-            $"{State.PlayerControl.Motion.Stance} · {(State.PlayerControl.Motion.Grounded ? "grounded" : "airborne")}", Ink.Body, onTop: true));
+            $"{player.Motion.Stance} · {(player.Motion.Grounded ? "grounded" : "airborne")}", Ink.Body, onTop: true));
     }
 
     /// <summary>
     /// Draws a spatial probe's or clearance query's answer as the transient <see cref="ProbeOverlaySet"/>: each ray to
     /// its hit (red) or its full range (green), and a clearance query's body at its target and its contacts.
     /// </summary>
-    private void PublishProbeOverlay(string json)
+    internal void PublishProbe(string json)
     {
         List<OverlayItem> items = [];
         using JsonDocument document = JsonDocument.Parse(json);
@@ -274,7 +289,7 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
             }
         if (root.TryGetProperty("targetFeet", out JsonElement targetFeet))
         {
-            var shape = _spatial.CurrentController.Shape;
+            var shape = spatial.CurrentController.Shape;
             Vector3 centre = V(root.GetProperty("center")), target = V(targetFeet) + Vector3.UnitY * (root.GetProperty("bodyHeight").GetSingle() * .5F);
             bool overlapping = root.GetProperty("targetStatus").GetString() == "overlapping";
             float reach = root.GetProperty("bodyHeight").GetSingle() * .5F - shape.Radius;
@@ -289,7 +304,7 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession
                     items.Add(OverlayItem.Label(OverlayPlace.World, point + Vector3.UnitY * .2F, contact, contact == "supportBelowTarget" ? Ink.Ready : Ink.Refused, onTop: true));
                 }
         }
-        _engine.Graphics.PublishOverlaySet(new(ProbeOverlaySet, items.ToArray()));
+        engine.Graphics.PublishOverlaySet(new(ProbeOverlaySet, items.ToArray()));
     }
 }
 

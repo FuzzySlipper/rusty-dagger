@@ -560,7 +560,7 @@ internal sealed partial class DaggerfallSession
                 ? _combat.ReadRangedFlights(generation, simulationStep) : [],
             State.Effects.PerceptionFor, NpcProjection.Views(), spellFlights, State.Npcs.IsGameplayActive,
             id => _groundContainers.Read(id) is { } contents ? _inventoryUi.GroundLook(id, contents) : null);   // Scene
-        PublishDebugOverlays();                                                                   // Developer
+        _overlays.Publish();                                                                      // Developer
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using Rusty.Engine;
 using Rusty.Engine.Debugging;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -8,13 +9,21 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// The Kit's developer interfaces the Host registers its live-debug modules by, each member a one-line call to the
 /// Developer owner that answers it. The owners are built at the end of the session's composition.
 /// </summary>
-internal sealed partial class DaggerfallSession : IDeveloperHeldSession, IDeveloperPeopleSession
+internal sealed partial class DaggerfallSession : IDeveloperInspectionSession, IDeveloperHeldSession, IDeveloperPeopleSession
 {
+    /// <summary>The debug overlay sets, built each presentation while on.</summary>
+    private readonly DaggerfallDebugOverlays _overlays = null!;
+
     /// <summary>The first-person workbench over the 3D first-person art.</summary>
     private readonly DaggerfallHeldWorkbench _heldWorkbench = null!;
 
     /// <summary>The switch that draws walking people as the parts-rig test figure.</summary>
     private readonly DaggerfallPeopleRigSwitch _peopleRigs = null!;
+
+    public IReadOnlyList<string> DebugOverlaySets => _overlays.Sets;
+    public bool IsDebugOverlayOn(string name) => _overlays.IsOn(name);
+    public bool SetDebugOverlay(string name, bool on) => _overlays.Set(name, on);
+    public IReadOnlyList<InspectionTarget> InspectionTargets() => _overlays.InspectionTargets();
 
     public DebugCommandResult ShowHeld(string look, string action) => _heldWorkbench.Show(look, action);
     public DebugCommandResult HoldHeldKey(int key) => _heldWorkbench.Key(key);

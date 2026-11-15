@@ -119,7 +119,7 @@ internal sealed partial class DaggerfallSession
         Vector3 feet = (State.PlayerControl.Position ?? throw new InvalidOperationException("Spatial inspection requires a player position.")).ToVector() - Vector3.UnitY * (height * .5f);
         string probe = PlaytestTraversal.Probe(_engine.Spatial, _spatial.Session,
             feet, height, config.Surface.MaximumStepHeight, (float)distance, SpatialMovementSystem.SpatialColliders(LiveCollision()));
-        PublishProbeOverlay(probe);
+        _overlays.PublishProbe(probe);
         return DebugCommandResult.Success(probe);
     }
 
@@ -132,7 +132,7 @@ internal sealed partial class DaggerfallSession
         float height = State.PlayerControl.Motion.Stance == CharacterStance.Crouched ? config.Shape.CrouchedHeight : config.Shape.StandingHeight;
         string clearance = SpatialClearanceSnapshot.Capture(_engine.Spatial, _spatial.Session, center, new((float)x, (float)y, (float)z),
             height, config, SpatialMovementSystem.SpatialColliders(LiveCollision()));
-        PublishProbeOverlay(clearance);
+        _overlays.PublishProbe(clearance);
         return DebugCommandResult.Success(clearance);
     }
 

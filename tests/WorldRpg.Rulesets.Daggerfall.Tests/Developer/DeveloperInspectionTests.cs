@@ -41,30 +41,30 @@ public sealed class DeveloperInspectionTests
         string[] Labels(string set) => [.. drawn[set].Where(item => item.Shape == OverlayShape.Label).Select(item => item.Text)];
 
         // interaction: the query ray, and each target with its focus reason.
-        Assert.Contains(drawn[DaggerfallSession.InteractionOverlaySet], item => item.Shape == OverlayShape.Segment);
-        Assert.Contains(Labels(DaggerfallSession.InteractionOverlaySet), label => label.Contains(" · ", StringComparison.Ordinal));
+        Assert.Contains(drawn[DaggerfallDebugOverlays.InteractionOverlaySet], item => item.Shape == OverlayShape.Segment);
+        Assert.Contains(Labels(DaggerfallDebugOverlays.InteractionOverlaySet), label => label.Contains(" · ", StringComparison.Ordinal));
         // people: the trainer with their role and service.
-        Assert.Contains(Labels(DaggerfallSession.PeopleOverlaySet), label => label.Contains("trainer", StringComparison.Ordinal) && label.Contains("training", StringComparison.Ordinal));
+        Assert.Contains(Labels(DaggerfallDebugOverlays.PeopleOverlaySet), label => label.Contains("trainer", StringComparison.Ordinal) && label.Contains("training", StringComparison.Ordinal));
         // doors: the temple's way out.
-        Assert.NotEmpty(Labels(DaggerfallSession.DoorsOverlaySet));
+        Assert.NotEmpty(Labels(DaggerfallDebugOverlays.DoorsOverlaySet));
         // markers: the interior's anchors at least.
-        Assert.Contains(Labels(DaggerfallSession.MarkersOverlaySet), label => label.StartsWith("anchor ", StringComparison.Ordinal));
+        Assert.Contains(Labels(DaggerfallDebugOverlays.MarkersOverlaySet), label => label.StartsWith("anchor ", StringComparison.Ordinal));
         // player: the capsule's two spheres and the floor probe.
-        Assert.Equal(2, drawn[DaggerfallSession.PlayerOverlaySet].Count(item => item.Shape == OverlayShape.WireSphere));
-        Assert.Contains(drawn[DaggerfallSession.PlayerOverlaySet], item => item.Shape == OverlayShape.Label);
+        Assert.Equal(2, drawn[DaggerfallDebugOverlays.PlayerOverlaySet].Count(item => item.Shape == OverlayShape.WireSphere));
+        Assert.Contains(drawn[DaggerfallDebugOverlays.PlayerOverlaySet], item => item.Shape == OverlayShape.Label);
         // actors: a temple has no creatures, so the set is published empty rather than left stale.
-        Assert.Empty(drawn[DaggerfallSession.ActorsOverlaySet]);
+        Assert.Empty(drawn[DaggerfallDebugOverlays.ActorsOverlaySet]);
 
         // Turning a set off removes it at once and stops building it.
         run.Appearance.OverlaySets.Clear();
-        Assert.True(session.SetDebugOverlay(DaggerfallSession.PeopleOverlaySet, on: false));
+        Assert.True(session.SetDebugOverlay(DaggerfallDebugOverlays.PeopleOverlaySet, on: false));
         OverlaySetRequest removed = Assert.Single(run.Appearance.OverlaySets);
-        Assert.Equal(DaggerfallSession.PeopleOverlaySet, removed.Name);
+        Assert.Equal(DaggerfallDebugOverlays.PeopleOverlaySet, removed.Name);
         Assert.True(removed.Items.IsEmpty);
         run.Step();
-        Assert.DoesNotContain(run.Appearance.OverlaySets.Skip(1), request => request.Name == DaggerfallSession.PeopleOverlaySet);
-        Assert.False(session.IsDebugOverlayOn(DaggerfallSession.PeopleOverlaySet));
-        Assert.True(session.IsDebugOverlayOn(DaggerfallSession.PlayerOverlaySet));
+        Assert.DoesNotContain(run.Appearance.OverlaySets.Skip(1), request => request.Name == DaggerfallDebugOverlays.PeopleOverlaySet);
+        Assert.False(session.IsDebugOverlayOn(DaggerfallDebugOverlays.PeopleOverlaySet));
+        Assert.True(session.IsDebugOverlayOn(DaggerfallDebugOverlays.PlayerOverlaySet));
     }
 
     [Fact]
@@ -74,10 +74,10 @@ public sealed class DeveloperInspectionTests
         Vector3 here = session.State.PlayerControl.Position!.Value.ToVector();
         long rat = session.SpawnActor("rat", new(new WorldRpg.Kit.Controls.WorldPoint(here.X + 2, here.Y, here.Z), 0));
         for (int step = 0; step < 3; step++) run.Step();
-        Assert.True(session.SetDebugOverlay(DaggerfallSession.ActorsOverlaySet, on: true));
+        Assert.True(session.SetDebugOverlay(DaggerfallDebugOverlays.ActorsOverlaySet, on: true));
         run.Appearance.OverlaySets.Clear();
         run.Step();
-        OverlayItem[] items = run.Appearance.OverlaySets.Last(request => request.Name == DaggerfallSession.ActorsOverlaySet).Items.ToArray();
+        OverlayItem[] items = run.Appearance.OverlaySets.Last(request => request.Name == DaggerfallDebugOverlays.ActorsOverlaySet).Items.ToArray();
 
         // The senses the perception policy judged the rat with: sight within the query's reach, and hearing.
         var senses = session.EnemyBehavior.LastSenses[rat];
@@ -98,13 +98,13 @@ public sealed class DeveloperInspectionTests
         run.Appearance.OverlaySets.Clear();
 
         Assert.True(session.ReadSpatialProbe(2).Succeeded);
-        OverlaySetRequest probe = Assert.Single(run.Appearance.OverlaySets, request => request.Name == DaggerfallSession.ProbeOverlaySet);
+        OverlaySetRequest probe = Assert.Single(run.Appearance.OverlaySets, request => request.Name == DaggerfallDebugOverlays.ProbeOverlaySet);
         Assert.Equal(32, probe.Items.ToArray().Count(item => item.Shape == OverlayShape.Segment));
 
         Vector3 here = session.State.PlayerControl.Position!.Value.ToVector();
         Assert.True(session.ReadSpatialClearance(here.X + 1, here.Y - 1, here.Z).Succeeded);
         OverlaySetRequest clearance = run.Appearance.OverlaySets.Last();
-        Assert.Equal(DaggerfallSession.ProbeOverlaySet, clearance.Name);
+        Assert.Equal(DaggerfallDebugOverlays.ProbeOverlaySet, clearance.Name);
         Assert.Equal(2, clearance.Items.ToArray().Count(item => item.Shape == OverlayShape.WireSphere));
 
         Assert.Equal(["player", "door"], session.InspectionTargets().Select(target => target.Name));
