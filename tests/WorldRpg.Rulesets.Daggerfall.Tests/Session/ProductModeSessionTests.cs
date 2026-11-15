@@ -34,7 +34,7 @@ public sealed class ProductModeSessionTests
         // This lifecycle seam is about one admitted realtime step and owner release ordering. Keep
         // the opening-media policy explicit so a cinematic waiting for terminal Engine facts cannot
         // make the first world-step assertion depend on playback timing.
-        CapturingDaggerfallRuleset ruleset = new(videosEnabled: false);
+        TestDaggerfallRuleset ruleset = new(videosEnabled: false);
 
         using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic")))
         {
@@ -67,7 +67,7 @@ public sealed class ProductModeSessionTests
         PopulateContent(content, inputs);
         EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        CapturingDaggerfallRuleset ruleset = new(videosEnabled: false);
+        TestDaggerfallRuleset ruleset = new(videosEnabled: false);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
 
         product.Start();
@@ -99,7 +99,7 @@ public sealed class ProductModeSessionTests
         EngineContextFake engine = EngineContextFake.Create(engineContent,
             SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        CapturingDaggerfallRuleset ruleset = new(videosEnabled: true);
+        TestDaggerfallRuleset ruleset = new(videosEnabled: true);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContentWithout(root, DaggerfallCinematicPresentation.Root), input), ruleset, new GameBundleId("daggerfall.classic"));
 
         product.Start();

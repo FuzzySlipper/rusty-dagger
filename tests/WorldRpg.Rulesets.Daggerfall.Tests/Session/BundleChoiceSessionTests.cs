@@ -23,7 +23,7 @@ public sealed class BundleChoiceSessionTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        CapturingDaggerfallRuleset ruleset = new();
+        TestDaggerfallRuleset ruleset = new();
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, WithSecondGame(root), input), ruleset, new GameBundleId("daggerfall.classic"));
         product.Start();
         DaggerfallSession classic = RunningSession(product);
@@ -71,7 +71,7 @@ public sealed class BundleChoiceSessionTests
         }
 
         EngineContextFake first = Engine();
-        using (WorldRpgProduct product = new(new ProductCreateContext(first.Context, WithSecondGame(root), input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.classic")))
+        using (WorldRpgProduct product = new(new ProductCreateContext(first.Context, WithSecondGame(root), input), new TestDaggerfallRuleset(), new GameBundleId("daggerfall.classic")))
         {
             product.Start();
             product.Update(new ProductUpdate(OuterUpdate(1), [Ui("""{"action":"bundle-select","key":"test.second"}""")]));
@@ -82,7 +82,7 @@ public sealed class BundleChoiceSessionTests
         // A build whose bundle now names a pack nothing carries cannot start the remembered game.
         ProductContent withdrawn = WithSecondGame(root, missingPack: "test.withdrawn");
         EngineContextFake second = Engine();
-        using WorldRpgProduct restarted = new(new ProductCreateContext(second.Context, withdrawn, input), new CapturingDaggerfallRuleset(), new GameBundleId("daggerfall.classic"));
+        using WorldRpgProduct restarted = new(new ProductCreateContext(second.Context, withdrawn, input), new TestDaggerfallRuleset(), new GameBundleId("daggerfall.classic"));
         restarted.Start();
         Assert.Equal(ProductMode.Title, restarted.Mode);
         Assert.Equal("daggerfall.classic", second.PublishedNested("bundles", "current"));

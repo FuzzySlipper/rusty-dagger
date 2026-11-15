@@ -31,7 +31,7 @@ public sealed class ContactRulesAcceptanceTests
         InMemoryPersistenceService persistence = new();
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
 
-        (EngineContextFake engine, CapturingDaggerfallRuleset ruleset) = Product(persistence);
+        (EngineContextFake engine, TestDaggerfallRuleset ruleset) = Product(persistence);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
         product.Start();
         NewGameSessionTests.Commit(RunningSession(product));
@@ -211,7 +211,7 @@ public sealed class ContactRulesAcceptanceTests
         Assert.True(Health(f.Game, NewGameBowSessionTests.Fixture.Target) < health, f.Game.Commands<PlaytestDebugModule>().Observe().Message);
     }
 
-    private static (EngineContextFake Engine, CapturingDaggerfallRuleset Ruleset) Product(InMemoryPersistenceService persistence)
+    private static (EngineContextFake Engine, TestDaggerfallRuleset Ruleset) Product(InMemoryPersistenceService persistence)
     {
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         List<string> releases = [];
@@ -219,7 +219,7 @@ public sealed class ContactRulesAcceptanceTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service, persistence: persistence);
-        return (engine, new CapturingDaggerfallRuleset());
+        return (engine, new TestDaggerfallRuleset());
     }
 
     /// <summary>Teaches the first stock spell of a delivery this ruleset can ready, and leaves it unready for the UI to ready.</summary>

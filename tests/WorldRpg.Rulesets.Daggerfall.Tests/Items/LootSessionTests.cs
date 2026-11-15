@@ -311,7 +311,7 @@ public sealed class LootSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service,
             random: QuestPlaceRandomMinimum.Create());
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        CapturingDaggerfallRuleset ruleset = new();
+        TestDaggerfallRuleset ruleset = new();
 
         static ProductInputEvent UiAction(string json) => Input(InputEventKind.DirectDigital) with
         {

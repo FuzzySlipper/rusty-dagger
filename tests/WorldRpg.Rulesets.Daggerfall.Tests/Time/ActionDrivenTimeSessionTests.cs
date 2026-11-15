@@ -120,7 +120,7 @@ public sealed class ActionDrivenTimeSessionTests
         ContentFake content = new(releases); PopulateContent(content, inputs);
         var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        CapturingDaggerfallRuleset ruleset = new(videosEnabled: false);
+        TestDaggerfallRuleset ruleset = new(videosEnabled: false);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(TestData.RepositoryRoot), input),
             ruleset, new GameBundleId("daggerfall.classic"));

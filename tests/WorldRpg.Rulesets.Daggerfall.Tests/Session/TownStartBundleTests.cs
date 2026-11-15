@@ -33,7 +33,7 @@ public sealed class TownStartBundleTests
         spatial.KeepPosition = true;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        CapturingDaggerfallRuleset ruleset = new(videosEnabled: true);
+        TestDaggerfallRuleset ruleset = new(videosEnabled: true);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, full, input), ruleset, new GameBundleId(Bundle));
         product.Start();
 
@@ -69,7 +69,7 @@ public sealed class TownStartBundleTests
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        CapturingDaggerfallRuleset ruleset = new(videosEnabled: false);
+        TestDaggerfallRuleset ruleset = new(videosEnabled: false);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, full, input), ruleset, new GameBundleId(Bundle));
         product.Start();
         Assert.Equal(Bundle, engine.PublishedNested("bundles", "current"));
@@ -154,7 +154,7 @@ public sealed class TownStartBundleTests
         spatial.KeepPosition = true;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        CapturingDaggerfallRuleset ruleset = new(videosEnabled: true);
+        TestDaggerfallRuleset ruleset = new(videosEnabled: true);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, full, input), ruleset, new GameBundleId("daggerfall.wild-start"));
         product.Start();
 

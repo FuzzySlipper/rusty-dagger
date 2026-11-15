@@ -59,7 +59,7 @@ public sealed class CommittedBundleCompositionTests
         spatial.KeepPosition = true;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
-        CapturingDaggerfallRuleset ruleset = new(videosEnabled: false);
+        TestDaggerfallRuleset ruleset = new(videosEnabled: false);
 
         using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId(bundleId)))
         {
