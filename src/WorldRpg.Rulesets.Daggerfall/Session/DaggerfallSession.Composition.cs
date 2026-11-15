@@ -149,6 +149,7 @@ internal sealed partial class DaggerfallSession
                 DaggerfallOutcomePresentation.MaximumMessages, DaggerfallOutcomePresentation.SubsequentMessageLifetimeSeconds);
             _deathScreen = new DaggerfallDeathScreen(Presentation, ReportPlayerDefeatOutcome);
             _bundleChoice = new DaggerfallBundleChoice(Presentation);
+            _modeLine = new DaggerfallModeLine(Presentation);
             _time = new DaggerfallWorldTime(
                 saved?.Calendar is { } restored
                     ? new DaggerfallCalendar(restored.Year, restored.Month, restored.Day, restored.Hour, restored.Minute, restored.Second)

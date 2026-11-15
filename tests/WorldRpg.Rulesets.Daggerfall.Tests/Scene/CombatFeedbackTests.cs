@@ -324,7 +324,54 @@ public sealed class CombatFeedbackTests
         Assert.Equal(0, EffectCount(presentation));
     }
 
-    private static DaggerfallSiteProfile FeedbackInputs(int mobile, bool parry = false) => MediaInputs(
+    [Fact]
+    public void An_enemy_attack_start_is_heard_where_the_attacker_is_drawn_and_any_other_fact_by_the_active_site_first()
+    {
+        List<string> releases = [];
+        AudioRecorder activeAudio = AudioRecorder.Create(), residentAudio = AudioRecorder.Create();
+        using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
+        // The resident site draws actor 11; the active one draws only its own actor 13.
+        using DaggerfallSiteAppearance active = new(MediaContent(releases), new AppearanceFake(releases), FeedbackInputs(0, actor: 13),
+            activeAudio.Service, random: KeyedRandomFake.Create(100).Service);
+        using DaggerfallSiteAppearance resident = new(MediaContent(releases), new AppearanceFake(releases), FeedbackInputs(0),
+            residentAudio.Service, random: KeyedRandomFake.Create(100).Service);
+        Assert.True(resident.HasActor(11));
+        Assert.False(active.HasActor(11));
+
+        EnemyAttackStartedFact started = new(11, DaggerfallActorIdentity.PlayerEntityId, true, 1, 2) { Feedback = new(true, "sound.3") };
+        DaggerfallSiteAppearance.ReactAcross([active, resident], active, started, actors);
+        static int Heard(AudioRecorder audio) => audio.Emits.Count + audio.Voices.Count;
+        Assert.Equal(0, Heard(activeAudio));
+        Assert.Equal(1, Heard(residentAudio));
+
+        // Where no appearance draws the attacker, its attack start is the active site's.
+        DaggerfallSiteAppearance.ReactAcross([active], active, started with { OriginatingSimulationStep = 3 }, actors);
+        Assert.Equal(1, Heard(activeAudio));
+
+        AttackWhiffedFact whiff = new(12, DaggerfallActorIdentity.PlayerEntityId, true, 1, 4) { Feedback = new(true, "sound.347") };
+        DaggerfallSiteAppearance.ReactAcross([active, resident], active, whiff, actors);
+        Assert.Equal(2, Heard(activeAudio));
+        Assert.Equal(1, Heard(residentAudio));
+    }
+
+    [Fact]
+    public void The_players_fall_is_heard_by_its_own_sound_beside_the_pain_clip()
+    {
+        List<string> releases = [];
+        AudioRecorder audio = AudioRecorder.Create();
+        DaggerfallSiteProfile inputs = MediaInputs(audio: [new("swing", "audio/swing.wav", Hash), new("hit1", "audio/hit.wav", Hash),
+            new("sound.91", "audio/swing.wav", Hash, SourceRecordOrdinal: 91)]);
+        // A draw of 100 is past the pain clip's chance, so only the fall's own sound is heard.
+        using DaggerfallSiteAppearance presentation = new(MediaContent(releases), new AppearanceFake(releases), inputs,
+            audio.Service, random: KeyedRandomFake.Create(100).Service);
+
+        presentation.ReactPlayerHurt(new(DaggerfallActorIdentity.PlayerEntityId, 0, DaggerfallDamageCause.Effect, 4, 4), "breton", false, 40);
+        Assert.Empty(audio.Emits);
+        presentation.ReactPlayerHurt(new(DaggerfallActorIdentity.PlayerEntityId, 0, DaggerfallDamageCause.Fall, 4, 4), "breton", false, 40);
+        Assert.EndsWith(".sound.91", Assert.Single(audio.Emits).SignalId, StringComparison.Ordinal);
+    }
+
+    private static DaggerfallSiteProfile FeedbackInputs(int mobile, bool parry = false, long actor = 11) => MediaInputs(spriteActorId: actor,
         feedback: new(mobile, "sound.10", "sound.11", "sound.12", parry, 0), audio: [
             new("swing", "audio/swing.wav", Hash), new("hit1", "audio/hit.wav", Hash), new("hit2", "audio/hit2.wav", Hash), new("hit3", "audio/hit3.wav", Hash), new("hit4", "audio/hit4.wav", Hash),
             new("sound.10", "audio/swing.wav", Hash), new("sound.11", "audio/swing.wav", Hash), new("sound.12", "audio/swing.wav", Hash),

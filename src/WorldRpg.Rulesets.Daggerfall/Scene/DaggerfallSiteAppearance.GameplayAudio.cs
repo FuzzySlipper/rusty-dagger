@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using System.Numerics;
 using WorldRpg.Kit.Controls;
@@ -84,6 +85,13 @@ internal sealed partial class DaggerfallSiteAppearance
         footstepDistance = 0;
         alternateFootstep = !alternateFootstep;
         PlayGameplaySound(ride == DaggerfallTransportMode.Cart ? 104 : alternateFootstep ? 97 : 298, "hoof", volume: audioTuning.FootstepVolumeScale);
+    }
+
+    /// <summary>The player's hurt heard: a pain clip by race, gender and the share of health lost, and a fall's own sound.</summary>
+    internal void ReactPlayerHurt(ActorDamagedFact hurt, string race, bool female, double maximumHealth)
+    {
+        PlayPlayerPain(race, female, hurt.ActualHealthLost, maximumHealth);
+        if (hurt.Cause == DaggerfallDamageCause.Fall) PlayGameplaySound(91, "fall-damage");
     }
 
     internal void PlayPlayerPain(string race, bool female, double loss, double maximum)

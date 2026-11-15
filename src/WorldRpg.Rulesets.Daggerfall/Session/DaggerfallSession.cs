@@ -46,8 +46,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallViewLight _viewLight;
     private PlayerInputSystem _input;
     private ProductMode _mode = ProductMode.Playing;
-    // The line the last mode change set for its mode, so returning to play can tell it from a result.
-    private string? _modeLine = string.Empty;
+    // The line a mode change says.
+    private readonly DaggerfallModeLine _modeLine;
     private readonly SpatialMovementSystem _spatial;
     /// <summary>Whether static geometry covers a sound from the listener.</summary>
     private readonly DaggerfallSoundCover _soundCover;
@@ -259,39 +259,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     void IDaggerfallExteriorHost.ConfigureSiteAppearance(DaggerfallSiteAppearance appearance) =>
         ConfigureSiteAppearance(appearance);
 
-    void IDaggerfallExteriorHost.RebuildActivation()
-    {
-        ReconcileNpcProjection();
-        ReconcilePropertyContainers();
-        ComposeActivation(_engine, _tuning.LootInteraction);
-        SyncWeatherContext();
-    }
-
-    void IDaggerfallExteriorHost.RebaseTransientWorld(Vector3 delta)
-    {
-        _combat.RebaseRangedFlight(delta);
-        Casting.Rebase(delta);
-        _encounters.RebasePending(_activeProfileKey.LogicalId, delta);
-        _dialogue?.Rebase(delta);
-        // Projected quest people keep their placement in the Engine Transform, which the origin
-        // commit's EntityOriginRebaser already moved.
-        // Ship return pose is detached in the land profile; active-world origin moves do not own it.
-    }
-
     void IDaggerfallSiteTransitionHost.ReconcileArrivalPopulation() => Population.Reconcile();
 
     void IDaggerfallExteriorHost.GroundArrivedActors() => _grounding.GroundAwaiting(actor =>
         State.Actors.TryGet(actor.DurableId, out ActorState live) && live.Actor.Entity == actor.Actor.Entity);
-
-    void IDaggerfallSiteTransitionHost.EnteredSite()
-    {
-        Casting.ClearTransient();
-        _enemyMagic.Clear();
-        _enemyBehavior.ClearEnemyMagic();
-        Music.ChangeSite();                                                                      // Scene
-        if (_site.ActiveSite is { } offerSite) State.Quests.EnterOfferSite(offerSite.Id, _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon);
-        Law.ReconcileSite();
-    }
 
     void IDaggerfallExteriorHost.AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection) =>
         Civilians.AdmitResidentAppearances(projection.Inputs, projection.Appearance);
@@ -340,22 +311,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         transition.Kind == DaggerfallInfectionKind.Vampire ? BecomeVampire(transition) : _lycanthropy.Become(transition);
 
     /// <summary>
-    /// A swing the departing projection was still timing ends with it: retire and hand its
-    /// impact back to the shared state here, inside the generation that admitted it, so the
-    /// player is not left charged against an animation that no longer exists.
-    /// </summary>
-    void IDaggerfallSiteTransitionHost.RetireDepartingProjection(DaggerfallSiteProjection source)
-    {
-        source.DeactivateWaterTriggers(_latestSimulationStep ?? 0UL);
-        RetireDepartingSwing(source);
-        _combat.ClearRangedFlight();
-        _buildingGreeting.Release();
-        DungeonText.CancelOnUnload();
-        // The destination is committed; restored item lifetimes settle before any presentation.
-        ExpireConjuredItems();
-    }
-
-    /// <summary>
     /// Whether the player stands in sunlight. The donor reads daytime while not inside any structure,
     /// so a shop, home or guild counts as darkness by day exactly as a dungeon does. The donor also
     /// exempts prison; no product state reaches prison yet, so that input is false until one does.
@@ -399,41 +354,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private DaggerfallInteriorBuilding? CurrentInteriorBuilding() =>
         _site.InteriorBuilding(_activeProfileKey.Site, _sites.Projection.Inputs.InteriorBuilding);
 
-    /// <summary>
-    /// Retires the departing projection's unfinished swing. The notice it publishes belongs to the
-    /// generation that admitted the swing, so it is applied with that generation rather than the
-    /// destination's, and the caller's normal fact boundary publishes any consequence.
-    /// </summary>
-    private void RetireDepartingSwing(DaggerfallSiteProjection source)
-    {
-        if (_latestUpdateGeneration is ulong swinging) PlayerAttack.Retire(swinging);
-        IReadOnlyList<AttackImpactNotice> impacts = source.Appearance.TakeAttackImpacts();
-        if (impacts.Count == 0) return;
-        if (_latestUpdateGeneration is not ulong generation) return;
-        State.Kit.AttackExecution.ApplyImpacts(impacts, generation, _facts);
-    }
-
-    /// <summary>
-    /// Clears retained input and open interaction state before installing a landing pose. The Kit
-    /// starts the next Engine proposal with detached motion, so stale floor support, jump state,
-    /// and velocity cannot carry across a teleport or admitted content replacement.
-    /// </summary>
-    private void ApplyRelocation(WorldPoint position, float yawRadians, float pitchRadians)
-    {
-        if (!float.IsFinite(yawRadians)) throw new ArgumentOutOfRangeException(nameof(yawRadians));
-        if (!float.IsFinite(pitchRadians)) throw new ArgumentOutOfRangeException(nameof(pitchRadians));
-        _input.Neutralize();
-        _locomotion.Neutralize(); NeutralizeGuard();
-        _appearance.ResetFootsteps();
-        _climbing.Detach();
-        _lootUi.CloseAll();
-        State.PlayerControl.YawRadians = yawRadians;
-        State.PlayerControl.PitchRadians = pitchRadians;
-        State.Transport.Ride.Reset();
-        _spatial.Relocate(State.PlayerControl, position);
-        _camera.Update(State.PlayerControl);
-    }
-
     /// <summary>Every actor definition by durable identity: authored placements and spawned actors alike.</summary>
     internal IReadOnlyDictionary<long, DaggerfallActorDefinition> DefinitionsByActor => _roster.Definitions;
 
@@ -454,100 +374,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         _roster.Retire(durableId);
-    }
-
-    /// <summary>
-    /// Removes a dynamic actor retained by an inactive site delta. The
-    /// detached representation has no Engine entities left to destroy, so retirement
-    /// removes every durable relationship directly and keeps the allocator tombstones:
-    /// the items it and its corpse hold (Items, with Magic's references to them), its
-    /// effects (Magic), its corpse container and identity (Items, Actors), the deltas
-    /// that held it (the site crossing's), and the quests that named it (Quests).
-    /// </summary>
-    private bool RetireDetachedActor(long npcId, string? requiredDefinition = null)
-    {
-        DaggerfallWorldProfileKey? owner = null;
-        DaggerfallSiteRuntimeDelta? retained = null;
-        foreach ((DaggerfallWorldProfileKey profile, DaggerfallSiteRuntimeDelta delta) in _sites.Deltas)
-        {
-            if (!delta.DynamicActors.Any(actor => actor.EntityId == npcId)) continue;
-            if (owner is not null)
-                throw new InvalidOperationException($"Actor {npcId} is retained by more than one site delta.");
-            owner = profile;
-            retained = delta;
-        }
-
-        if (retained is null || owner is not DaggerfallWorldProfileKey profileKey) return false;
-        DaggerfallDynamicActorSave actor = retained.DynamicActors.Single(value => value.EntityId == npcId);
-        if (requiredDefinition is not null && !StringComparer.Ordinal.Equals(actor.Definition, requiredDefinition))
-            throw new InvalidOperationException($"Detached NPC actor {npcId} does not carry the required runtime definition.");
-
-        foreach (ulong itemId in retained.ActorInventories
-            .Where(inventory => inventory.EntityId == npcId)
-            .SelectMany(inventory => inventory.Inventory.UniqueItems.Select(item => item.EntityId))
-            .Concat(retained.Corpses.Where(corpse => corpse.ActorId == npcId)
-                .SelectMany(corpse => corpse.UniqueItems.Select(item => item.EntityId)))
-            .Distinct())
-        {
-            State.ItemInstances.RemoveUnique(itemId);
-            State.Effects.CancelItemReferences(itemId);
-            Casting.CancelItemReferences(itemId);
-            DurableIdentityReference identity = new(DurableIdentityKind.Item, itemId);
-            if (_actorIdentities.Classify(identity) == DurableIdentityClassification.Live)
-                _uniqueItems.Remove(identity);
-        }
-
-        foreach (var inventory in retained.ActorInventories.Where(value => value.EntityId == npcId))
-            foreach (var stack in inventory.Inventory.Stacks)
-                State.ItemInstances.RetireRetainedStack(DaggerfallItemOwner.Actor(npcId), Rusty.Engine.Mechanics.InventoryStackId.Parse(stack.StackId));
-        foreach (var corpse in retained.Corpses.Where(value => value.ActorId == npcId))
-            foreach (var stack in corpse.Stacks)
-                State.ItemInstances.RetireRetainedStack(DaggerfallItemOwner.Corpse(npcId), Rusty.Engine.Mechanics.InventoryStackId.Parse(stack.StackId));
-        State.Effects.CancelActorReferences(npcId);
-
-        DaggerfallCorpseSave? corpseSave = retained.Corpses.SingleOrDefault(value => value.ActorId == npcId);
-        if (corpseSave is not null)
-        {
-            DurableIdentityReference persisted = new(DurableIdentityKind.Container, corpseSave.ContainerId);
-            if (_corpseLoot.TryGetContainerIdentity(npcId, out DurableIdentityReference mapped)
-                && mapped != persisted)
-                throw new InvalidOperationException($"Detached actor {npcId} has changed its corpse container identity.");
-            if (!_corpseLoot.Retire(npcId)
-                && _actorIdentities.Classify(persisted) == DurableIdentityClassification.Live)
-                _actorIdentities.Remove(persisted);
-        }
-
-        DurableIdentityReference actorIdentity = ActorsState.Identity(npcId);
-        if (_actorIdentities.Classify(actorIdentity) == DurableIdentityClassification.Live)
-            _actorIdentities.Remove(actorIdentity);
-
-        var retiredEffectIds = retained.Effects.Where(value => value.TargetId == npcId || value.CasterId == npcId)
-            .Select(value => value.Instance).ToHashSet(StringComparer.Ordinal);
-        _sites.ReplaceDelta(profileKey, retained with
-        {
-            Actors = retained.Actors.Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, retiredEffectIds) }).ToArray(),
-            DynamicActors = retained.DynamicActors.Where(value => value.EntityId != npcId)
-                .Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, retiredEffectIds) }).ToArray(),
-            ActorInventories = retained.ActorInventories.Where(value => value.EntityId != npcId).ToArray(),
-            Corpses = retained.Corpses.Where(value => value.ActorId != npcId).ToArray(),
-            Effects = retained.Effects.Where(value => value.TargetId != npcId && value.CasterId != npcId).ToArray(),
-        });
-        State.ItemInstances.RemoveOwner(DaggerfallItemOwner.Actor(npcId));
-        State.ItemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(npcId));
-        foreach (var entry in _sites.Deltas.Where(value => value.Key != profileKey).ToArray())
-        {
-            var ended = entry.Value.Effects.Where(value => value.TargetId == npcId || value.CasterId == npcId)
-                .Select(value => value.Instance).ToHashSet(StringComparer.Ordinal);
-            if (ended.Count == 0) continue;
-            _sites.ReplaceDelta(entry.Key, entry.Value with
-            {
-                Effects = entry.Value.Effects.Where(value => !ended.Contains(value.Instance)).ToArray(),
-                Actors = entry.Value.Actors.Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, ended) }).ToArray(),
-                DynamicActors = entry.Value.DynamicActors.Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, ended) }).ToArray(),
-            });
-        }
-        State.Quests.ObserveFoeRemoval(npcId);
-        return true;
     }
 
     public void PublishInitial()
@@ -707,37 +533,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         PublishPresentation();
     }
 
-    /// <summary>
-    /// Applies the mode the product decided. A mode change is a focus change, so held movement is
-    /// dropped: a key held when play paused, a modal opened or the player died must not keep moving
-    /// the character, and a release this interpreter never sees would leave it held forever.
-    /// </summary>
-    public void ApplyProductMode(ProductMode mode)
-    {
-        if (mode == _mode) return;
-        _mode = mode;
-        // Travel is offered in play and modal interaction; the entry screen and death leave it. A host
-        // pause keeps the map, since resuming returns to the same workflow.
-        if (mode is ProductMode.Title or ProductMode.Dead) FastTravel.CloseMap();
-        _input.Neutralize();
-        _locomotion.Neutralize(); NeutralizeGuard();
-        _appearance.ResetFootsteps();
-        ApplyDeathMode(mode);
-        // A death from exhaustion keeps the donor's collapse text rather than the generic death line.
-        // Returning to play clears the line a mode set for itself, but not a result reported while that
-        // mode was up: a journey or rest that ends by closing the menu keeps its line for the player.
-        // A screen that says what it is itself adds no line, and leaves the recent messages where they are.
-        string line = mode == ProductMode.Dead && _condition.ExhaustionDeathLine is { } exhausted ? exhausted : _interactions.ModeMessage(_mode);
-        if (line.Length == 0 && mode == ProductMode.Modal) _modeLine = null;
-        else
-        {
-            if (mode != ProductMode.Playing || Presentation.LastOutcome == _modeLine) Presentation.SetOutcome(line);
-            _modeLine = Presentation.LastOutcome;
-        }
-        if (mode is ProductMode.Playing or ProductMode.Title) _condition.ClearExhaustionDeathLine();
-        PublishPresentation();
-    }
-
     public void Dispose()
     {
         if (_disposed) return;
@@ -784,22 +579,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         AppendDamage(effect.Result, DaggerfallDamageCause.Effect, 0);
     }
 
-    private void ReactToSpellAttack(long caster, long target, string bundle)
-    {
-        bool killed = State.Actors.TryGet(target, out var actor) && actor.IsDefeated;
-        Crimes.ObserveAttack(caster, target, $"spell-attack:{bundle}:{caster}:{target}:{(killed ? "death" : "attack")}");
-        ReactToAttack(caster, target);
-    }
-
-    private void ReactToAttack(long caster, long target)
-    {
-        DaggerfallConcealmentEffects.BreakNormal(State.Effects, caster);
-        if (caster != DaggerfallActorIdentity.PlayerEntityId || target == caster) return;
-        if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();
-        State.Quests.ReleaseFoeRestraint(target);
-        _enemyBehavior.MakeHostile(target);
-    }
-
     private void AppendSpellTransfer(DaggerfallSpellTransferResult result)
     {
         if (result.HealthDamage is { } health) AppendEffectDamage(new(health));
@@ -822,43 +601,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private void AppendDamage(DamageResult result, DaggerfallDamageCause cause, int struckBody) =>
         DaggerfallDamageFacts.Append(_facts, result, cause, struckBody, _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);
 
-    private void React(IProductFact fact)
-    {
-        // The quests' foes hear harm and death first, before a death's consequences (ReactToDeath) run.
-        State.Quests.ObserveFoeFact(fact);
-        _playtest.ObserveFact(fact);                                                              // Developer
-        if (fact is ActorDamagedFact { ActorId: DaggerfallActorIdentity.PlayerEntityId, ActualHealthLost: > 0 } hurt)
-        {
-            _appearance.PlayPlayerPain(State.Character.Race.Id, State.Character.Identity.Gender == DaggerfallCharacterGender.Female,
-                hurt.ActualHealthLost, State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Maximum.Value);
-            if (hurt.Cause == DaggerfallDamageCause.Fall) _appearance.PlayGameplaySound(91, "fall-damage");
-        }
-        if (fact is ActorStruckFact struck) StrikeFeel.Feel(struck);
-        if (fact is AttackHitFact hit)
-        {
-            Crimes.ObserveHit(hit);
-            DaggerfallConcealmentEffects.AfterPhysicalHit(State.Effects, hit);
-            if(hit.AttackerId==DaggerfallActorIdentity.PlayerEntityId && hit.TargetId!=hit.AttackerId)
-                ReactToAttack(hit.AttackerId,hit.TargetId);
-        }
-        if (fact is ActorDiedFact died) ReactToDeath(died);
-        if (fact is MagicEffectFact magic)
-            _appearance.ReactEffectOutcome(magic.Outcome, State.Actors, State.PlayerControl.Position,
-                _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);
-        if (fact is SpellCastFact cast)
-            _appearance.ReactSpellCast(cast, State.Actors, State.PlayerControl.Position);
-        _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);
-        if (fact is EnemyAttackStartedFact enemy)
-            (_sites.Appearances.FirstOrDefault(appearance => appearance.HasActor(enemy.AttackerId)) ?? _appearance).React(fact, State.Actors);
-        else
-        {
-            _appearance.React(fact, State.Actors);
-            foreach (var appearance in _sites.Appearances)
-                if (appearance != _appearance) appearance.ReactResidentActor(fact, State.Actors);
-        }
-        _outcomes.React(fact);
-    }
-
     private static bool PressesAnyKey(ReadOnlySpan<ProductInputEvent> input)
     {
         foreach (ProductInputEvent value in input)
@@ -880,10 +622,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
             Presentation.SetOutcome(refusal);
     }
 
-    private void DeliverFacts()
-    {
-        _facts.Deliver(React);
-    }
     internal DaggerfallEnemyBehaviorModule EnemyBehavior => _enemyBehavior;
     internal IReadOnlyDictionary<long, DaggerfallEnemySpellEvidence> LastEnemySpell => _enemyMagic.LastEvidence;
     internal LootPresentation? OpenLoot => _lootUi.Read();

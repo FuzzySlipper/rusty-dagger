@@ -385,6 +385,71 @@ internal sealed class DaggerfallActorRoster
         foreach (long id in ids) UnloadActor(id, siteAppearance);
     }
 
+    /// <summary>
+    /// Retires a dynamic actor an inactive site keeps, from what its site's delta holds of it. The detached representation
+    /// has no Engine entities left to destroy, so retirement removes every durable relationship directly and keeps the
+    /// allocator tombstones: the items it and its corpse hold (with Magic's references to them), their stacks, its
+    /// effects, its corpse container and its identity. The deltas that held it are the site crossing's to let go, and
+    /// the item owners go after the delta that kept it (<see cref="ReleaseDetachedOwners"/>).
+    /// </summary>
+    /// <param name="inventories">The delta's actor inventories; this actor's are read from them.</param>
+    /// <param name="corpses">The delta's corpses; this actor's is read from them.</param>
+    /// <param name="requiredDefinition">The definition the caller expects the actor to carry, or null for any.</param>
+    /// <param name="cancelCastingItemReferences">Magic's casting lets go of a retired item (it is composed after the roster).</param>
+    internal void RetireDetached(DaggerfallDynamicActorSave actor, IReadOnlyList<DaggerfallActorInventorySave> inventories,
+        IReadOnlyList<DaggerfallCorpseSave> corpses, string? requiredDefinition, Action<ulong> cancelCastingItemReferences)
+    {
+        long npcId = actor.EntityId;
+        if (requiredDefinition is not null && !StringComparer.Ordinal.Equals(actor.Definition, requiredDefinition))
+            throw new InvalidOperationException($"Detached NPC actor {npcId} does not carry the required runtime definition.");
+
+        foreach (ulong itemId in inventories
+            .Where(inventory => inventory.EntityId == npcId)
+            .SelectMany(inventory => inventory.Inventory.UniqueItems.Select(item => item.EntityId))
+            .Concat(corpses.Where(corpse => corpse.ActorId == npcId)
+                .SelectMany(corpse => corpse.UniqueItems.Select(item => item.EntityId)))
+            .Distinct())
+        {
+            _itemInstances.RemoveUnique(itemId);
+            _effects.CancelItemReferences(itemId);
+            cancelCastingItemReferences(itemId);
+            DurableIdentityReference identity = new(DurableIdentityKind.Item, itemId);
+            if (_identities.Classify(identity) == DurableIdentityClassification.Live)
+                _uniqueItems.Remove(identity);
+        }
+
+        foreach (var inventory in inventories.Where(value => value.EntityId == npcId))
+            foreach (var stack in inventory.Inventory.Stacks)
+                _itemInstances.RetireRetainedStack(DaggerfallItemOwner.Actor(npcId), InventoryStackId.Parse(stack.StackId));
+        foreach (var corpse in corpses.Where(value => value.ActorId == npcId))
+            foreach (var stack in corpse.Stacks)
+                _itemInstances.RetireRetainedStack(DaggerfallItemOwner.Corpse(npcId), InventoryStackId.Parse(stack.StackId));
+        _effects.CancelActorReferences(npcId);
+
+        DaggerfallCorpseSave? corpseSave = corpses.SingleOrDefault(value => value.ActorId == npcId);
+        if (corpseSave is not null)
+        {
+            DurableIdentityReference persisted = new(DurableIdentityKind.Container, corpseSave.ContainerId);
+            if (_corpseLoot.TryGetContainerIdentity(npcId, out DurableIdentityReference mapped)
+                && mapped != persisted)
+                throw new InvalidOperationException($"Detached actor {npcId} has changed its corpse container identity.");
+            if (!_corpseLoot.Retire(npcId)
+                && _identities.Classify(persisted) == DurableIdentityClassification.Live)
+                _identities.Remove(persisted);
+        }
+
+        DurableIdentityReference actorIdentity = ActorsState.Identity(npcId);
+        if (_identities.Classify(actorIdentity) == DurableIdentityClassification.Live)
+            _identities.Remove(actorIdentity);
+    }
+
+    /// <summary>A retired detached actor's item owners, its own and its corpse's, let go.</summary>
+    internal void ReleaseDetachedOwners(long actorId)
+    {
+        _itemInstances.RemoveOwner(DaggerfallItemOwner.Actor(actorId));
+        _itemInstances.RemoveOwner(DaggerfallItemOwner.Corpse(actorId));
+    }
+
     /// <summary>Detaches one canonical actor while its values and identities remain in a site delta.</summary>
     internal void UnloadActor(long id, DaggerfallSiteAppearance? siteAppearance = null)
     {

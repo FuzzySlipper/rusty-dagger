@@ -3,6 +3,7 @@ using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Crime;
@@ -1302,5 +1303,194 @@ internal sealed partial class DaggerfallSession
     {
         NpcProjection.Reconcile();                                                                // Actors
         Population.Reconcile();                                                                   // Actors
+    }
+
+    /// <summary>
+    /// A fact's list: who hears a delivered fact, in this order. The quests' foes hear harm and death first, before a
+    /// death's consequences (<see cref="ReactToDeath"/>) run; presentation hears last.
+    /// </summary>
+    private void React(IProductFact fact)
+    {
+        State.Quests.ObserveFoeFact(fact);                                                        // Quests
+        _playtest.ObserveFact(fact);                                                              // Developer
+        if (fact is ActorDamagedFact { ActorId: DaggerfallActorIdentity.PlayerEntityId, ActualHealthLost: > 0 } hurt)
+            _appearance.ReactPlayerHurt(hurt, State.Character.Race.Id, State.Character.Identity.Gender == DaggerfallCharacterGender.Female,
+                State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Maximum.Value);   // Scene
+        if (fact is ActorStruckFact struck) StrikeFeel.Feel(struck);                              // Combat
+        if (fact is AttackHitFact hit)
+        {
+            Crimes.ObserveHit(hit);                                                               // Society
+            DaggerfallConcealmentEffects.AfterPhysicalHit(State.Effects, hit);                    // Magic
+            if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && hit.TargetId != hit.AttackerId)
+                ReactToAttack(hit.AttackerId, hit.TargetId);                                      // Session: the attack's list, below
+        }
+        if (fact is ActorDiedFact died) ReactToDeath(died);                                       // Session: the death's list, below
+        if (fact is MagicEffectFact magic)
+            _appearance.ReactEffectOutcome(magic.Outcome, State.Actors, State.PlayerControl.Position,
+                _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);                    // Scene
+        if (fact is SpellCastFact cast)
+            _appearance.ReactSpellCast(cast, State.Actors, State.PlayerControl.Position);        // Scene
+        _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);         // Scene
+        DaggerfallSiteAppearance.ReactAcross(_sites.Appearances, _appearance, fact, State.Actors);   // Scene
+        _outcomes.React(fact);                                                                    // UiProjection
+    }
+
+    /// <summary>Delivers the facts appended so far, each to <see cref="React"/>; reentrant appends wait for the next delivery.</summary>
+    private void DeliverFacts()
+    {
+        _facts.Deliver(React);                                                                    // Session
+    }
+
+    /// <summary>A spell's attack: Society's crime first, then the attack's list.</summary>
+    private void ReactToSpellAttack(long caster, long target, string bundle)
+    {
+        bool killed = State.Actors.TryGet(target, out var actor) && actor.IsDefeated;
+        Crimes.ObserveAttack(caster, target, $"spell-attack:{bundle}:{caster}:{target}:{(killed ? "death" : "attack")}");   // Society
+        ReactToAttack(caster, target);                                                            // Session: the attack's list, below
+    }
+
+    /// <summary>
+    /// An attack's list: the attacker's concealment breaks; a player's attack on another turns every enemy hostile when
+    /// the target was pacified, frees a quest foe from its restraint and makes the target hostile.
+    /// </summary>
+    private void ReactToAttack(long caster, long target)
+    {
+        DaggerfallConcealmentEffects.BreakNormal(State.Effects, caster);                          // Magic
+        if (caster != DaggerfallActorIdentity.PlayerEntityId || target == caster) return;
+        if (_enemyBehavior.IsPacified(target)) _enemyBehavior.MakeActiveEnemiesHostile();         // Actors
+        State.Quests.ReleaseFoeRestraint(target);                                                 // Quests
+        _enemyBehavior.MakeHostile(target);                                                       // Actors
+    }
+
+    /// <summary>
+    /// The impacts' list: Combat's held enemy impacts that have reached their frame land and their facts are delivered,
+    /// then the player's and the appearances' finished swings apply at the update's generation.
+    /// </summary>
+    private void ApplyAttackImpacts()
+    {
+        if (_latestUpdateGeneration is ulong held && _latestSimulationStep is ulong step)
+        {
+            _combat.LandDueImpacts(held, step, _facts);                                           // Combat
+            DeliverFacts();                                                                       // Session
+        }
+        AttackImpactNotice[] impacts = [.. PlayerAttack.TakeImpacts(), .. _sites.Appearances.SelectMany(appearance => appearance.TakeAttackImpacts())];   // Combat, Scene
+        if (impacts.Length == 0) return;
+        if (_latestUpdateGeneration is not ulong generation) return;
+        State.Kit.AttackExecution.ApplyImpacts(impacts, generation, _facts);                      // Combat
+        DeliverFacts();                                                                           // Session
+    }
+
+    /// <summary>
+    /// A relocation's list: retained input and open interaction state clear before the landing pose is installed. The
+    /// Kit starts the next Engine proposal with detached motion, so stale floor support, jump state, and velocity
+    /// cannot carry across a teleport or admitted content replacement.
+    /// </summary>
+    private void ApplyRelocation(WorldPoint position, float yawRadians, float pitchRadians)
+    {
+        if (!float.IsFinite(yawRadians)) throw new ArgumentOutOfRangeException(nameof(yawRadians));
+        if (!float.IsFinite(pitchRadians)) throw new ArgumentOutOfRangeException(nameof(pitchRadians));
+        _input.Neutralize();                                                                      // Character
+        _locomotion.Neutralize();                                                                 // Character
+        NeutralizeGuard();                                                                        // Combat
+        _appearance.ResetFootsteps();                                                             // Scene
+        _climbing.Detach();                                                                       // Character
+        _lootUi.CloseAll();                                                                       // UiProjection
+        State.PlayerControl.YawRadians = yawRadians;                                              // Character
+        State.PlayerControl.PitchRadians = pitchRadians;                                          // Character
+        State.Transport.Ride.Reset();                                                             // Travel
+        _spatial.Relocate(State.PlayerControl, position);                                         // Character
+        _camera.Update(State.PlayerControl);                                                      // Character
+    }
+
+    /// <summary>
+    /// The mode's list: applies the mode the product decided. A mode change is a focus change, so held movement is
+    /// dropped: a key held when play paused, a modal opened or the player died must not keep moving the character,
+    /// and a release this interpreter never sees would leave it held forever.
+    /// </summary>
+    public void ApplyProductMode(ProductMode mode)
+    {
+        if (mode == _mode) return;
+        _mode = mode;                                                                             // Session
+        // Travel is offered in play and modal interaction; the entry screen and death leave it. A host
+        // pause keeps the map, since resuming returns to the same workflow.
+        if (mode is ProductMode.Title or ProductMode.Dead) FastTravel.CloseMap();                 // Travel
+        _input.Neutralize();                                                                      // Character
+        _locomotion.Neutralize();                                                                 // Character
+        NeutralizeGuard();                                                                        // Combat
+        _appearance.ResetFootsteps();                                                             // Scene
+        ApplyDeathMode(mode);                                                                     // Session: death's list, above
+        // A death from exhaustion keeps the donor's collapse text rather than the generic death line.
+        _modeLine.Say(mode, mode == ProductMode.Dead && _condition.ExhaustionDeathLine is { } exhausted
+            ? exhausted : _interactions.ModeMessage(_mode));                                      // UiProjection, its exhaustion line Condition's
+        if (mode is ProductMode.Playing or ProductMode.Title) _condition.ClearExhaustionDeathLine();   // Condition
+        PublishPresentation();                                                                    // UiProjection
+    }
+
+    /// <summary>The activation's list for a site the exterior has just admitted.</summary>
+    void IDaggerfallExteriorHost.RebuildActivation()
+    {
+        ReconcileNpcProjection();                                                                 // Actors
+        ReconcilePropertyContainers();                                                            // Session: the property containers' list
+        ComposeActivation(_engine, _tuning.LootInteraction);                                      // Session: composition
+        SyncWeatherContext();                                                                     // Exterior
+    }
+
+    /// <summary>What moves with the world's origin: the transient positions each owner keeps.</summary>
+    void IDaggerfallExteriorHost.RebaseTransientWorld(Vector3 delta)
+    {
+        _combat.RebaseRangedFlight(delta);                                                        // Combat
+        Casting.Rebase(delta);                                                                    // Magic
+        _encounters.RebasePending(_activeProfileKey.LogicalId, delta);                            // Actors
+        _dialogue?.Rebase(delta);                                                                 // Dialogue
+        // Projected quest people keep their placement in the Engine Transform, which the origin
+        // commit's EntityOriginRebaser already moved.
+        // Ship return pose is detached in the land profile; active-world origin moves do not own it.
+    }
+
+    /// <summary>What entering a site resets and tells its owners.</summary>
+    void IDaggerfallSiteTransitionHost.EnteredSite()
+    {
+        Casting.ClearTransient();                                                                 // Magic
+        _enemyMagic.Clear();                                                                      // Actors
+        _enemyBehavior.ClearEnemyMagic();                                                         // Actors
+        Music.ChangeSite();                                                                       // Scene
+        if (_site.ActiveSite is { } offerSite) State.Quests.EnterOfferSite(offerSite.Id, _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon);   // Quests
+        Law.ReconcileSite();                                                                      // Society
+    }
+
+    /// <summary>
+    /// What the departing projection takes with it. A swing it was still timing ends with it: it is retired and its
+    /// impact handed back to the shared state inside the generation that admitted it (not the destination's), so the
+    /// player is not left charged against an animation that no longer exists; the caller's normal fact boundary
+    /// publishes any consequence.
+    /// </summary>
+    void IDaggerfallSiteTransitionHost.RetireDepartingProjection(DaggerfallSiteProjection source)
+    {
+        source.DeactivateWaterTriggers(_latestSimulationStep ?? 0UL);                             // Exterior
+        if (_latestUpdateGeneration is ulong swinging) PlayerAttack.Retire(swinging);            // Combat
+        IReadOnlyList<AttackImpactNotice> departing = source.Appearance.TakeAttackImpacts();      // Scene
+        if (departing.Count != 0 && _latestUpdateGeneration is ulong generation)
+            State.Kit.AttackExecution.ApplyImpacts(departing, generation, _facts);                // Combat
+        _combat.ClearRangedFlight();                                                              // Combat
+        _buildingGreeting.Release();                                                              // Interiors
+        DungeonText.CancelOnUnload();                                                             // Text
+        // The destination is committed; restored item lifetimes settle before any presentation.
+        ExpireConjuredItems();                                                                    // Session: the conjured items' list, below
+    }
+
+    /// <summary>
+    /// A detached actor's retirement: a dynamic actor an inactive site's delta keeps is found there, retired with
+    /// everything it owns, let go from the deltas and forgotten by the quests that named it. False when no delta keeps it.
+    /// </summary>
+    private bool RetireDetachedActor(long npcId, string? requiredDefinition = null)
+    {
+        if (_sites.RetainedActor(npcId) is not { } retained) return false;                       // Interiors
+        _roster.RetireDetached(retained.Actor, retained.Delta.ActorInventories, retained.Delta.Corpses,
+            requiredDefinition, Casting.CancelItemReferences);                                    // Actors, with Items' and Magic's parts
+        _sites.ReplaceDelta(retained.Profile, retained.Delta.WithoutActor(npcId));                // Interiors: the delta that kept it
+        _roster.ReleaseDetachedOwners(npcId);                                                     // Actors, Items' owners
+        _sites.ForgetRetainedActorEffects(retained.Profile, npcId);                               // Interiors: the other deltas
+        State.Quests.ObserveFoeRemoval(npcId);                                                    // Quests
+        return true;
     }
 }

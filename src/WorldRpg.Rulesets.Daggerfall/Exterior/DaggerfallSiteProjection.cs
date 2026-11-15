@@ -458,4 +458,52 @@ internal sealed record DaggerfallSiteRuntimeDelta(
     DaggerfallDungeonMotionSnapshot? Motion = null)
 {
     internal long[] BanishedActors { get; init; } = [];
+
+    /// <summary>The one delta among <paramref name="deltas"/> that keeps a dynamic actor, or null when none does; two is a broken save.</summary>
+    internal static (DaggerfallWorldProfileKey Profile, DaggerfallSiteRuntimeDelta Delta, DaggerfallDynamicActorSave Actor)? Retaining(
+        IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallSiteRuntimeDelta> deltas, long actorId)
+    {
+        DaggerfallWorldProfileKey? owner = null;
+        DaggerfallSiteRuntimeDelta? retained = null;
+        foreach ((DaggerfallWorldProfileKey profile, DaggerfallSiteRuntimeDelta delta) in deltas)
+        {
+            if (!delta.DynamicActors.Any(actor => actor.EntityId == actorId)) continue;
+            if (owner is not null)
+                throw new InvalidOperationException($"Actor {actorId} is retained by more than one site delta.");
+            owner = profile;
+            retained = delta;
+        }
+        if (retained is null || owner is not DaggerfallWorldProfileKey profileKey) return null;
+        return (profileKey, retained, retained.DynamicActors.Single(value => value.EntityId == actorId));
+    }
+
+    /// <summary>This delta without a dynamic actor it kept: its inventories, corpse and the effects it cast or bore, with their stat entries.</summary>
+    internal DaggerfallSiteRuntimeDelta WithoutActor(long actorId)
+    {
+        var retiredEffectIds = Effects.Where(value => value.TargetId == actorId || value.CasterId == actorId)
+            .Select(value => value.Instance).ToHashSet(StringComparer.Ordinal);
+        return this with
+        {
+            Actors = Actors.Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, retiredEffectIds) }).ToArray(),
+            DynamicActors = DynamicActors.Where(value => value.EntityId != actorId)
+                .Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, retiredEffectIds) }).ToArray(),
+            ActorInventories = ActorInventories.Where(value => value.EntityId != actorId).ToArray(),
+            Corpses = Corpses.Where(value => value.ActorId != actorId).ToArray(),
+            Effects = Effects.Where(value => value.TargetId != actorId && value.CasterId != actorId).ToArray(),
+        };
+    }
+
+    /// <summary>This delta without the effects an actor it does not keep cast or bore here, with their stat entries; null when there are none.</summary>
+    internal DaggerfallSiteRuntimeDelta? WithoutEffectsOf(long actorId)
+    {
+        var ended = Effects.Where(value => value.TargetId == actorId || value.CasterId == actorId)
+            .Select(value => value.Instance).ToHashSet(StringComparer.Ordinal);
+        if (ended.Count == 0) return null;
+        return this with
+        {
+            Effects = Effects.Where(value => !ended.Contains(value.Instance)).ToArray(),
+            Actors = Actors.Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, ended) }).ToArray(),
+            DynamicActors = DynamicActors.Select(value => value with { Stats = DaggerfallStatsSaveBoundary.WithoutEffects(value.Stats, ended) }).ToArray(),
+        };
+    }
 }

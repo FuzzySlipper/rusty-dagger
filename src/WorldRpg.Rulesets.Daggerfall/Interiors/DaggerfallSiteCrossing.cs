@@ -177,6 +177,17 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         })];
 
     /// <summary>Replaces one inactive site's delta after an owner edited its detached state.</summary>
+    /// <summary>The one inactive site delta that keeps a dynamic actor, or null when none does.</summary>
+    internal (DaggerfallWorldProfileKey Profile, DaggerfallSiteRuntimeDelta Delta, DaggerfallDynamicActorSave Actor)? RetainedActor(long actorId) =>
+        DaggerfallSiteRuntimeDelta.Retaining(_deltas, actorId);
+
+    /// <summary>Every delta but the one that kept a retired detached actor drops the effects it cast or bore there.</summary>
+    internal void ForgetRetainedActorEffects(DaggerfallWorldProfileKey profileKey, long actorId)
+    {
+        foreach (var entry in _deltas.Where(value => value.Key != profileKey).ToArray())
+            if (entry.Value.WithoutEffectsOf(actorId) is { } kept) ReplaceDelta(entry.Key, kept);
+    }
+
     internal void ReplaceDelta(DaggerfallWorldProfileKey profile, DaggerfallSiteRuntimeDelta delta)
     {
         if (!_deltas.ContainsKey(profile))

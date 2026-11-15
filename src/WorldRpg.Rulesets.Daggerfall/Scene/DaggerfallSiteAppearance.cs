@@ -602,6 +602,23 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         priorRetired.AddRange(nextRetired);
         nextRetired.Clear();
     }
+    /// <summary>
+    /// A fact heard by the site appearances: an enemy's attack start by the appearance that draws the attacker, or the
+    /// active one when none does; anything else by the active appearance, then by each resident one for its own actors.
+    /// </summary>
+    internal static void ReactAcross(IEnumerable<DaggerfallSiteAppearance> appearances, DaggerfallSiteAppearance active,
+        IProductFact fact, ActorsState actors)
+    {
+        if (fact is EnemyAttackStartedFact enemy)
+            (appearances.FirstOrDefault(appearance => appearance.HasActor(enemy.AttackerId)) ?? active).React(fact, actors);
+        else
+        {
+            active.React(fact, actors);
+            foreach (var appearance in appearances)
+                if (appearance != active) appearance.ReactResidentActor(fact, actors);
+        }
+    }
+
     /// <summary>Interprets Daggerfall combat facts while Engine owns playback timing and frame staging.</summary>
     internal void React(IProductFact fact) => React(fact, null);
 

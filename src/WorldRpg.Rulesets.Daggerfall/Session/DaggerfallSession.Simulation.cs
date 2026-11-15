@@ -309,20 +309,6 @@ internal sealed partial class DaggerfallSession
             _ = DungeonActions.Report(_sites.Interiors.ActionTriggers.Dispatch(actionGraph, reconciliation.Facts.Span, player));
     }
 
-    private void ApplyAttackImpacts()
-    {
-        if (_latestUpdateGeneration is ulong held && _latestSimulationStep is ulong step)
-        {
-            _combat.LandDueImpacts(held, step, _facts);
-            DeliverFacts();
-        }
-        AttackImpactNotice[] impacts = [.. PlayerAttack.TakeImpacts(), .. _sites.Appearances.SelectMany(appearance => appearance.TakeAttackImpacts())];
-        if (impacts.Length == 0) return;
-        if (_latestUpdateGeneration is not ulong generation) return;
-        State.Kit.AttackExecution.ApplyImpacts(impacts, generation, _facts);
-        DeliverFacts();
-    }
-
     internal void ResolveExplicitMelee(ExplicitMeleeRequest request)
     {
         _latestUpdateGeneration = request.Generation;
