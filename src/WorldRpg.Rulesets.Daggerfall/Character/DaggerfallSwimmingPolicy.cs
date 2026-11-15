@@ -28,13 +28,13 @@ internal sealed record DaggerfallSwimmingTuning(
         return this;
     }
 
-    internal static DaggerfallSwimmingTuning Read(JsonElement section) => new(
+    internal static DaggerfallSwimmingTuning Read(JsonElement section) => new DaggerfallSwimmingTuning(
         section.GetProperty("speed").GetSingle(),
         section.GetProperty("acceleration").GetSingle(),
         section.GetProperty("drag").GetSingle(),
         section.GetProperty("gravityScale").GetSingle(),
         section.GetProperty("buoyancy").GetSingle(),
-        section.GetProperty("breathSecondsPerPoint").GetSingle());
+        section.GetProperty("breathSecondsPerPoint").GetSingle()).Validate();
 }
 
 /// <summary>Current swimming continuation, including the timer that may be saved mid-submersion.</summary>

@@ -137,11 +137,11 @@ internal sealed record DaggerfallLycanthropyTuning(int AttributeBonus, int Skill
         && HungerPeriodMinutes > 0 && double.IsFinite(HealthLossPerMinute) && HealthLossPerMinute > 0 && MinimumHealth > 0
         ? this : throw new ArgumentException("Lycanthropy tuning contains invalid bonuses, time periods or hunger limits.");
 
-    internal static DaggerfallLycanthropyTuning Read(JsonElement section) => new(
+    internal static DaggerfallLycanthropyTuning Read(JsonElement section) => new DaggerfallLycanthropyTuning(
         section.GetProperty("attributeBonus").GetInt32(),
         section.GetProperty("skillBonus").GetInt32(),
         section.GetProperty("morphCooldownMinutes").GetInt32(),
         section.GetProperty("hungerPeriodMinutes").GetInt32(),
         section.GetProperty("healthLossPerMinute").GetDouble(),
-        section.GetProperty("minimumHealth").GetInt32());
+        section.GetProperty("minimumHealth").GetInt32()).Validate();
 }

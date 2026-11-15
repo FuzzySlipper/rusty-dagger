@@ -12,9 +12,9 @@ internal sealed record DaggerfallQuestOfferTuning(int SocialProviderChancePercen
     internal DaggerfallQuestOfferTuning Validate() => SocialProviderChancePercent is >= 0 and <= 100 && CastleProviderChancePercent is >= 0 and <= 100
         ? this : throw new ArgumentException("Quest provider chances must be percentages.");
 
-    internal static DaggerfallQuestOfferTuning Read(JsonElement section) => new(
+    internal static DaggerfallQuestOfferTuning Read(JsonElement section) => new DaggerfallQuestOfferTuning(
         section.GetProperty("socialProviderChancePercent").GetInt32(),
-        section.GetProperty("castleProviderChancePercent").GetInt32());
+        section.GetProperty("castleProviderChancePercent").GetInt32()).Validate();
 }
 
 /// <summary>

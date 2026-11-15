@@ -55,7 +55,7 @@ internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, do
         return this;
     }
 
-    internal static DaggerfallMeleeTargetingTuning Read(JsonElement section) => new(
+    internal static DaggerfallMeleeTargetingTuning Read(JsonElement section) => new DaggerfallMeleeTargetingTuning(
         section.GetProperty("maximumDistance").GetDouble(),
-        section.GetProperty("minimumFacingCosine").GetDouble());
+        section.GetProperty("minimumFacingCosine").GetDouble()).Validate();
 }

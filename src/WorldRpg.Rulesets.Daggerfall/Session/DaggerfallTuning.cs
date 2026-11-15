@@ -108,44 +108,11 @@ internal sealed record DaggerfallTuning(
                 StandingTurnDegrees: 60f, FullTurnDegrees: 40f, LookRangeDegrees: 50f, UphillDrag: .8f, WaterShare: .4f),
             GallopFatigueReserve: .1d));
 
-    internal DaggerfallTuning Validate() => this with
-    {
-        PlayerControl = PlayerControl.Validate(),
-        ControllerInput = ControllerInput.Validate(),
-        Spatial = Spatial.Validate(),
-        Locomotion = Locomotion.Validate(),
-        Camera = Camera.Validate(),
-        MeleeTargeting = MeleeTargeting.Validate(),
-        EnemyBehavior = EnemyBehavior.Validate(),
-        LootInteraction = LootInteraction.Validate(),
-        Time = Time.Validate(),
-        PresentationAudio = PresentationAudio.Validate(),
-        Progression = Progression.Validate(),
-        SiteLighting = SiteLighting.Validate(),
-        Climbing = Climbing.Validate(),
-        Property = Property.Validate(),
-        Transport = Transport.Validate(),
-        Detection = Detection.Validate(),
-        StrikeEnchantments = StrikeEnchantments.Validate(),
-        WorldOrigin = WorldOrigin.Validate(),
-        CivilianWander = CivilianWander.Validate(),
-        Swimming = Swimming.Validate(),
-        Weather = Weather.Validate(),
-        Ambient = Ambient.Validate(),
-        Horizon = Horizon.Validate(),
-        Water = Water.Validate(),
-        Flats = Flats.Validate(),
-        Flora = Flora.Validate(),
-        GroundCover = GroundCover.Validate(),
-        Lycanthropy = Lycanthropy.Validate(),
-        Vampirism = Vampirism.Validate(),
-        NormalLight = NormalLight.Validate(),
-        Law = Law.Validate(),
-        QuestSpawning = QuestSpawning.Validate(),
-        QuestOffers = QuestOffers.Validate(),
-        QuestRewards = QuestRewards.Validate(),
-    };
-
+    /// <summary>
+    /// Reads a tuning profile. Each section's reader returns it validated, so reading a section is checking it. A new
+    /// section is its record, with a Read that ends in its Validate, and its line here; no second list of sections to
+    /// validate is kept beside this one, where it could leave a section out.
+    /// </summary>
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
     {
         using JsonDocument document = JsonDocument.Parse(payload.ToArray());
@@ -195,25 +162,25 @@ internal sealed record DaggerfallTuning(
             Attacks = DaggerfallAttackTuning.Read(root.GetProperty("attacks")),
             Hazards = DaggerfallHazardTuning.Read(root.GetProperty("hazards")),
             Rest = DaggerfallRestTuning.Read(root.GetProperty("rest")),
-        }.Validate();
+        };
     }
 
     // The Kit's records don't know this payload, so their readers sit here.
-    private static PlayerControlTuning ReadPlayerControl(JsonElement controls) => new(
+    private static PlayerControlTuning ReadPlayerControl(JsonElement controls) => new PlayerControlTuning(
         controls.GetProperty("lookSensitivity").GetSingle(),
         controls.GetProperty("pitchMinimumRadians").GetSingle(),
         controls.GetProperty("pitchMaximumRadians").GetSingle(),
         controls.GetProperty("maximumLookDeltaRadians").GetSingle(),
         controls.GetProperty("invertHorizontal").GetBoolean(),
         controls.GetProperty("invertVertical").GetBoolean(),
-        controls.GetProperty("wrapYaw").GetBoolean());
+        controls.GetProperty("wrapYaw").GetBoolean()).Validate();
 
-    private static SpatialTuning ReadSpatial(JsonElement spatial) => new(
+    private static SpatialTuning ReadSpatial(JsonElement spatial) => new SpatialTuning(
         spatial.GetProperty("collisionVoxelSize").GetDouble(),
         checked((uint)spatial.GetProperty("collisionChunkSize").GetInt32()),
         checked((uint)spatial.GetProperty("navigationChunkSize").GetInt32()),
         checked((uint)spatial.GetProperty("navigationMaximumStepCells").GetInt32()),
-        ReadCharacterController(spatial.GetProperty("characterController")));
+        ReadCharacterController(spatial.GetProperty("characterController"))).Validate();
 
     private static CharacterControllerTuning ReadCharacterController(JsonElement controller) => new(
         StandingHeight: controller.GetProperty("standingHeight").GetSingle(),
@@ -230,11 +197,11 @@ internal sealed record DaggerfallTuning(
         RecoveryMaximumDistance: controller.GetProperty("recoveryMaximumDistance").GetSingle(),
         MaximumStepHeight: controller.GetProperty("maximumStepHeight").GetSingle());
 
-    private static FirstPersonCameraTuning ReadCamera(JsonElement camera) => new(
+    private static FirstPersonCameraTuning ReadCamera(JsonElement camera) => new FirstPersonCameraTuning(
         camera.GetProperty("eyeHeight").GetSingle(),
         camera.GetProperty("fieldOfViewYDegrees").GetDouble(),
         camera.GetProperty("nearPlane").GetDouble(),
-        camera.GetProperty("farPlane").GetDouble());
+        camera.GetProperty("farPlane").GetDouble()).Validate();
 
     /// <summary>
     /// Reads the pad's positional mapping. The Engine numbers controller axes and buttons rather than
@@ -318,7 +285,7 @@ internal sealed record DaggerfallTimeTuning(double GameSecondsPerRealSecond)
         return this;
     }
 
-    internal static DaggerfallTimeTuning Read(JsonElement section) => new(section.GetProperty("gameSecondsPerRealSecond").GetDouble());
+    internal static DaggerfallTimeTuning Read(JsonElement section) => new DaggerfallTimeTuning(section.GetProperty("gameSecondsPerRealSecond").GetDouble()).Validate();
 }
 
 /// <summary>Chooses the donor's standard or alternate playlists; JSON admission requires a Boolean.</summary>

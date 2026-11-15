@@ -12,7 +12,7 @@ internal sealed record DaggerfallStrikeEnchantmentTuning(int DamageAdjustment, d
         return this;
     }
 
-    internal static DaggerfallStrikeEnchantmentTuning Read(JsonElement section) => new(
+    internal static DaggerfallStrikeEnchantmentTuning Read(JsonElement section) => new DaggerfallStrikeEnchantmentTuning(
         section.GetProperty("damageAdjustment").GetInt32(),
-        section.GetProperty("vampiricRange").GetDouble());
+        section.GetProperty("vampiricRange").GetDouble()).Validate();
 }

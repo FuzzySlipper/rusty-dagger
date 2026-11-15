@@ -70,13 +70,13 @@ internal sealed record DaggerfallPropertyTuning(
         return this;
     }
 
-    internal static DaggerfallPropertyTuning Read(JsonElement section) => new(
+    internal static DaggerfallPropertyTuning Read(JsonElement section) => new DaggerfallPropertyTuning(
         section.GetProperty("housePricePerModelRadius").GetInt32(),
         section.GetProperty("smallShipPrice").GetUInt64(),
         section.GetProperty("largeShipPrice").GetUInt64(),
         section.GetProperty("salePercent").GetInt32(),
         ReadShipArrival(section.GetProperty("smallShipArrival")),
-        ReadShipArrival(section.GetProperty("largeShipArrival")));
+        ReadShipArrival(section.GetProperty("largeShipArrival"))).Validate();
 
     private static DaggerfallShipArrivalAnchor ReadShipArrival(JsonElement anchor) => new(
         anchor.GetProperty("mapPixelX").GetInt32(),

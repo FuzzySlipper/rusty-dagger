@@ -21,10 +21,10 @@ internal sealed record DaggerfallCivilianWanderTuning(float MovementSpeedUnitsPe
         return this;
     }
 
-    internal static DaggerfallCivilianWanderTuning Read(JsonElement section) => new(
+    internal static DaggerfallCivilianWanderTuning Read(JsonElement section) => new DaggerfallCivilianWanderTuning(
         section.GetProperty("movementSpeedUnitsPerSecond").GetSingle(),
         section.GetProperty("waypointDistance").GetSingle(),
         section.GetProperty("idleDurationSeconds").GetSingle(),
         section.GetProperty("navigationMaximumVisited").GetUInt32(),
-        section.GetProperty("recycleDistanceMeters").GetSingle());
+        section.GetProperty("recycleDistanceMeters").GetSingle()).Validate();
 }

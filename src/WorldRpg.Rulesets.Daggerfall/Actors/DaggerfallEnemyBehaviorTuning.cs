@@ -40,7 +40,7 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
         if (section.TryGetProperty("attackReach", out _))
             throw new InvalidOperationException("Tuning profile enemyBehavior.attackReach is obsolete: how far an attack carries is authored on the action, not on the enemy behaviour tuning. Remove the key and set reach on the actions that need it.");
         JsonElement maneuvers = section.GetProperty("maneuvers");
-        return new(
+        return new DaggerfallEnemyBehaviorTuning(
             section.GetProperty("detectionDistance").GetDouble(),
             section.GetProperty("chaseSpeedUnitsPerSecond").GetSingle(),
             checked((uint)section.GetProperty("navigationMaximumVisited").GetInt32()),
@@ -56,7 +56,7 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
                 maneuvers.GetProperty("advanceDistanceMultiplier").GetSingle(),
                 maneuvers.GetProperty("searchDistance").GetSingle(),
                 maneuvers.GetProperty("searchStep").GetSingle()),
-        };
+        }.Validate();
     }
 }
 

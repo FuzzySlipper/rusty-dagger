@@ -23,9 +23,9 @@ internal sealed record DaggerfallProgressionTuning(bool EnableExperimentalKillEx
         return this;
     }
 
-    internal static DaggerfallProgressionTuning Read(JsonElement section) => new(
+    internal static DaggerfallProgressionTuning Read(JsonElement section) => new DaggerfallProgressionTuning(
         section.GetProperty("enableExperimentalKillExperience").GetBoolean(),
-        section.GetProperty("experiencePerLevel").GetInt32());
+        section.GetProperty("experiencePerLevel").GetInt32()).Validate();
 }
 
 /// <summary>Daggerfall-owned reward policy for defeated registered actors.</summary>

@@ -45,8 +45,8 @@ internal sealed record DaggerfallVampirismTuning(int AttributeBonus, int SkillBo
     internal DaggerfallVampirismTuning Validate() => AttributeBonus >= 0 && SkillBonus >= 0 && SatiationMinutes > 0
         ? this : throw new ArgumentException("Vampirism tuning contains invalid bonuses or satiation duration.");
 
-    internal static DaggerfallVampirismTuning Read(JsonElement section) => new(
+    internal static DaggerfallVampirismTuning Read(JsonElement section) => new DaggerfallVampirismTuning(
         section.GetProperty("attributeBonus").GetInt32(),
         section.GetProperty("skillBonus").GetInt32(),
-        section.GetProperty("satiationMinutes").GetInt32());
+        section.GetProperty("satiationMinutes").GetInt32()).Validate();
 }

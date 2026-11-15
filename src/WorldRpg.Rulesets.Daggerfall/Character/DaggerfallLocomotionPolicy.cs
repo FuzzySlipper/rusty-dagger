@@ -299,7 +299,7 @@ internal sealed record DaggerfallLocomotionTuning(
         return this;
     }
 
-    internal static DaggerfallLocomotionTuning Read(JsonElement section) => new(
+    internal static DaggerfallLocomotionTuning Read(JsonElement section) => new DaggerfallLocomotionTuning(
         section.GetProperty("classicToEngineSpeedRatio").GetSingle(),
         section.GetProperty("walkBase").GetSingle(),
         section.GetProperty("crouchBase").GetSingle(),
@@ -319,7 +319,7 @@ internal sealed record DaggerfallLocomotionTuning(
         section.GetProperty("athleticJumpBonus").GetSingle(),
         section.GetProperty("improvedAthleticJumpBonus").GetSingle(),
         section.GetProperty("enhancedJumpBonus").GetSingle(),
-        section.GetProperty("slowfallDescentSpeed").GetSingle());
+        section.GetProperty("slowfallDescentSpeed").GetSingle()).Validate();
 }
 
 /// <summary>Durable movement work awaiting the next calendar-minute fatigue charge; physical held input is deliberately not saved.</summary>

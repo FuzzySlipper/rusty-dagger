@@ -32,7 +32,7 @@ internal sealed record DaggerfallAmbientTuning(float ClearFogEnd, float RainFogD
         return this;
     }
 
-    internal static DaggerfallAmbientTuning Read(JsonElement e) => new(
+    internal static DaggerfallAmbientTuning Read(JsonElement e) => new DaggerfallAmbientTuning(
         e.GetProperty("clearFogEnd").GetSingle(), e.GetProperty("rainFogDensity").GetSingle(),
         e.GetProperty("snowFogDensity").GetSingle(), e.GetProperty("heavyFogDensity").GetSingle(),
         e.GetProperty("interiorFogDensity").GetSingle(), e.GetProperty("dungeonFogDensity").GetSingle(),
@@ -48,5 +48,5 @@ internal sealed record DaggerfallAmbientTuning(float ClearFogEnd, float RainFogD
         e.GetProperty("fallEaseSeconds").GetSingle(),
         e.GetProperty("nightFall").GetSingle(), e.GetProperty("windDrift").GetSingle(),
         e.GetProperty("snowTexelsPerMetre").GetSingle(), e.GetProperty("puddleShare").GetSingle(),
-        e.GetProperty("wetLook").GetSingle(), e.GetProperty("snowLook").GetSingle());
+        e.GetProperty("wetLook").GetSingle(), e.GetProperty("snowLook").GetSingle()).Validate();
 }

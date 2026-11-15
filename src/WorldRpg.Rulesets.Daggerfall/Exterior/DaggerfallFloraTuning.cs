@@ -65,12 +65,12 @@ internal sealed record DaggerfallFloraTuning(float Density, IReadOnlyDictionary<
     /// <summary>How far a record this tall is drawn.</summary>
     internal float ReachOf(float height) => Math.Clamp(height * ReachPerMetre, Fade, Reach);
 
-    internal static DaggerfallFloraTuning Read(JsonElement e) => new(
+    internal static DaggerfallFloraTuning Read(JsonElement e) => new DaggerfallFloraTuning(
         e.GetProperty("density").GetSingle(),
         e.GetProperty("climateDensity").EnumerateObject().ToDictionary(climate => climate.Name, climate => climate.Value.GetSingle(), StringComparer.Ordinal),
         e.GetProperty("grassChance").GetSingle(), e.GetProperty("dirtChance").GetSingle(),
         e.GetProperty("stoneChance").GetSingle(), e.GetProperty("desertShare").GetSingle(), e.GetProperty("reachPerMetre").GetSingle(),
         e.GetProperty("reach").GetSingle(), e.GetProperty("fade").GetSingle(), e.GetProperty("slopeLimitDegrees").GetSingle(),
         e.GetProperty("farReach").GetSingle(), e.GetProperty("farShare").GetSingle(), e.GetProperty("farScale").GetSingle(), e.GetProperty("farTreeMetres").GetSingle(),
-        e.GetProperty("treeMeshes").GetBoolean(), e.GetProperty("treeImpostorHeights").GetSingle());
+        e.GetProperty("treeMeshes").GetBoolean(), e.GetProperty("treeImpostorHeights").GetSingle()).Validate();
 }

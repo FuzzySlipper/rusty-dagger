@@ -30,9 +30,9 @@ internal sealed record DaggerfallFlatsTuning(BillboardMode Nature, BillboardMode
     internal SpriteMaterialDescriptor Flora(SpriteMaterialDescriptor material) =>
         material with { WindBend = FloraWindBend, WindWholeTexels = FloraWindWholeTexels };
 
-    internal static DaggerfallFlatsTuning Read(JsonElement e) => new(
+    internal static DaggerfallFlatsTuning Read(JsonElement e) => new DaggerfallFlatsTuning(
         Facing(e, "nature"), Facing(e, "decorations"), Facing(e, "actors"), Facing(e, "items"),
-        e.GetProperty("floraWindBend").GetSingle(), e.GetProperty("floraWindWholeTexels").GetBoolean());
+        e.GetProperty("floraWindBend").GetSingle(), e.GetProperty("floraWindWholeTexels").GetBoolean()).Validate();
 
     private static BillboardMode Facing(JsonElement e, string kind) => e.GetProperty(kind).GetString() switch
     {

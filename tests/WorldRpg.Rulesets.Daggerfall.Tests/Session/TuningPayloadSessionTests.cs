@@ -72,6 +72,24 @@ public sealed class TuningPayloadSessionTests
         Assert.Throws<InvalidOperationException>(() => tuning.Arc(DaggerfallAttackIds.PowerHold, "long-blade", null));
     }
 
+    /// <summary>
+    /// Ground was the one section the profile read and never checked, because validation was a hand list beside the
+    /// reading and the list left it out: a contrast below 1 or a fade running backwards loaded and drew. Each section's
+    /// reader now returns it validated, so the refusal comes from reading the ground and names the value.
+    /// </summary>
+    [Theory]
+    [InlineData("contrast", .5f, nameof(DaggerfallGroundTuning.Contrast))]
+    [InlineData("snowFromMetres", 3_000f, nameof(DaggerfallGroundTuning.SnowFromMetres))]
+    public void A_ground_value_out_of_range_is_refused_at_load_naming_the_value(string key, float value, string field)
+    {
+        ArgumentOutOfRangeException refusal = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            DaggerfallTuning.Read(MutatedTuning(TestData.RepositoryRoot, tuning => tuning["ground"]![key] = value)));
+
+        Assert.Equal(field, refusal.ParamName);
+        Assert.Equal(value, refusal.ActualValue);
+        Assert.Contains(value.ToString(CultureInfo.CurrentCulture), refusal.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Music_playlist_tuning_defaults_to_standard_and_requires_a_boolean()
     {

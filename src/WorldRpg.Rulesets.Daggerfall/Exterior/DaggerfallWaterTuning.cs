@@ -37,11 +37,11 @@ internal sealed record DaggerfallWaterTuning(Color Shallow, Color Deep, float De
         return this;
     }
 
-    internal static DaggerfallWaterTuning Read(JsonElement e) => new(
+    internal static DaggerfallWaterTuning Read(JsonElement e) => new DaggerfallWaterTuning(
         ReadColor(e.GetProperty("shallow")), ReadColor(e.GetProperty("deep")),
         e.GetProperty("depthMetres").GetSingle(), e.GetProperty("shoreMetres").GetSingle(), e.GetProperty("foamThreshold").GetSingle(),
         e.GetProperty("waveMetres").GetSingle(), e.GetProperty("ripple").GetSingle(), e.GetProperty("roughness").GetSingle(), e.GetProperty("opacity").GetSingle(),
-        new(e.GetProperty("drift")[0].GetSingle(), e.GetProperty("drift")[1].GetSingle()));
+        new(e.GetProperty("drift")[0].GetSingle(), e.GetProperty("drift")[1].GetSingle())).Validate();
 
     private static Color ReadColor(JsonElement e) => Color.FromSrgb(e[0].GetSingle(), e[1].GetSingle(), e[2].GetSingle());
 }

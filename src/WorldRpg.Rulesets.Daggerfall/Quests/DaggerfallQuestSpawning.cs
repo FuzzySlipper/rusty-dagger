@@ -17,7 +17,7 @@ internal sealed record DaggerfallQuestSpawningTuning(float MinimumFoeDistance, f
         && float.IsFinite(GuardConversionAngleDegrees) && GuardConversionAngleDegrees is >= 0 and <= 180
         && GuardConversionChance is >= 0 and <= 100 ? this : throw new ArgumentException("Quest spawn tuning has invalid ranges, angles, count, or chance.");
 
-    internal static DaggerfallQuestSpawningTuning Read(JsonElement section) => new(
+    internal static DaggerfallQuestSpawningTuning Read(JsonElement section) => new DaggerfallQuestSpawningTuning(
         section.GetProperty("minimumFoeDistance").GetSingle(),
         section.GetProperty("maximumFoeDistance").GetSingle(),
         section.GetProperty("minimumWildernessDistance").GetSingle(),
@@ -26,7 +26,7 @@ internal sealed record DaggerfallQuestSpawningTuning(float MinimumFoeDistance, f
         section.GetProperty("guardWitnessDistance").GetSingle(),
         section.GetProperty("guardWitnessAngleDegrees").GetSingle(),
         section.GetProperty("guardConversionAngleDegrees").GetSingle(),
-        section.GetProperty("guardConversionChance").GetInt32());
+        section.GetProperty("guardConversionChance").GetInt32()).Validate();
 }
 
 internal sealed record DaggerfallQuestFoeSpawn(int IntervalSeconds, int? MaximumGroups, int Chance, bool Send);

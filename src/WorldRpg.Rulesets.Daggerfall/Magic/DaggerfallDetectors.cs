@@ -91,5 +91,5 @@ internal sealed record DaggerfallDetectionTuning(double MaximumDistance)
         return this;
     }
 
-    internal static DaggerfallDetectionTuning Read(JsonElement section) => new(section.GetProperty("maximumDistance").GetDouble());
+    internal static DaggerfallDetectionTuning Read(JsonElement section) => new DaggerfallDetectionTuning(section.GetProperty("maximumDistance").GetDouble()).Validate();
 }

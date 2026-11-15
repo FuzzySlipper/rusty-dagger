@@ -41,11 +41,11 @@ internal sealed record DaggerfallGroundCoverTuning(int ShellLayers, float ShellG
         return this;
     }
 
-    internal static DaggerfallGroundCoverTuning Read(JsonElement e) => new(
+    internal static DaggerfallGroundCoverTuning Read(JsonElement e) => new DaggerfallGroundCoverTuning(
         e.GetProperty("shellLayers").GetInt32(), e.GetProperty("shellGap").GetSingle(), e.GetProperty("shellLift").GetSingle(),
         e.GetProperty("shellReach").GetSingle(), e.GetProperty("shellFade").GetSingle(), e.GetProperty("shellSway").GetSingle(),
         e.GetProperty("shellRagged").GetSingle(), e.GetProperty("townShare").GetSingle(), e.GetProperty("townRamp").GetSingle(),
         e.GetProperty("tuftDensity").GetSingle(), e.GetProperty("tuftReach").GetSingle(), e.GetProperty("tuftFade").GetSingle(),
         e.GetProperty("tuftWidth").GetSingle(), e.GetProperty("tuftHeight").GetSingle(), e.GetProperty("tuftScaleMin").GetSingle(),
-        e.GetProperty("tuftScaleMax").GetSingle());
+        e.GetProperty("tuftScaleMax").GetSingle()).Validate();
 }

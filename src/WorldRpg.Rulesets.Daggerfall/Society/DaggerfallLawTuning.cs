@@ -12,12 +12,12 @@ internal sealed record DaggerfallLawTuning(int MinimumResponseSeconds, int Maxim
         && MaximumArrivalDistance >= MinimumArrivalDistance && double.IsFinite(ArrestReach) && ArrestReach > 0
         ? this : throw new ArgumentException("Law tuning requires ordered finite response delays, guard counts and arrival distances.");
 
-    internal static DaggerfallLawTuning Read(JsonElement section) => new(
+    internal static DaggerfallLawTuning Read(JsonElement section) => new DaggerfallLawTuning(
         section.GetProperty("minimumResponseSeconds").GetInt32(),
         section.GetProperty("maximumResponseSeconds").GetInt32(),
         section.GetProperty("minimumGuards").GetInt32(),
         section.GetProperty("maximumGuards").GetInt32(),
         section.GetProperty("minimumArrivalDistance").GetSingle(),
         section.GetProperty("maximumArrivalDistance").GetSingle(),
-        section.GetProperty("arrestReach").GetDouble());
+        section.GetProperty("arrestReach").GetDouble()).Validate();
 }

@@ -49,7 +49,7 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
         return this;
     }
 
-    internal static DaggerfallPresentationAudioTuning Read(JsonElement section) => new(
+    internal static DaggerfallPresentationAudioTuning Read(JsonElement section) => new DaggerfallPresentationAudioTuning(
         section.GetProperty("volume").GetSingle(),
         section.GetProperty("pitch").GetSingle(),
         section.GetProperty("spatialBlend").GetSingle(),
@@ -74,7 +74,7 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
         CartDistance = section.GetProperty("cartDistance").GetSingle(),
         FootstepVolumeScale = section.GetProperty("footstepVolumeScale").GetSingle(),
         PlayerPainChancePercent = section.GetProperty("playerPainChancePercent").GetInt32(),
-    };
+    }.Validate();
 }
 
 /// <summary>
@@ -169,7 +169,7 @@ internal sealed record DaggerfallSiteLightingTuning(
         return this;
     }
 
-    internal static DaggerfallSiteLightingTuning Read(JsonElement section) => new(
+    internal static DaggerfallSiteLightingTuning Read(JsonElement section) => new DaggerfallSiteLightingTuning(
         section.GetProperty("interiorDay").GetSingle(),
         section.GetProperty("interiorNight").GetSingle(),
         section.GetProperty("dungeon").GetSingle(),
@@ -197,7 +197,7 @@ internal sealed record DaggerfallSiteLightingTuning(
         CreatureGlow = section.GetProperty("creatureGlow").GetSingle(),
         SpellGlow = section.GetProperty("spellGlow").GetSingle(),
         Bloom = section.GetProperty("bloom").GetSingle(),
-    };
+    }.Validate();
 
     private static Vector3 ReadColor(JsonElement rgb) => new(rgb[0].GetSingle(), rgb[1].GetSingle(), rgb[2].GetSingle());
 }
@@ -208,9 +208,9 @@ internal sealed record DaggerfallNormalLightTuning(float Distance, float HeightF
         && float.IsFinite(HeightFraction) && HeightFraction is >= 0 and <= 1 && float.IsFinite(Range) && Range > 0
         && float.IsFinite(Intensity) && Intensity > 0 ? this : throw new ArgumentException("Normal light tuning requires a finite pose, range and intensity.");
 
-    internal static DaggerfallNormalLightTuning Read(JsonElement section) => new(
+    internal static DaggerfallNormalLightTuning Read(JsonElement section) => new DaggerfallNormalLightTuning(
         section.GetProperty("distance").GetSingle(),
         section.GetProperty("heightFraction").GetSingle(),
         section.GetProperty("range").GetSingle(),
-        section.GetProperty("intensity").GetSingle());
+        section.GetProperty("intensity").GetSingle()).Validate();
 }

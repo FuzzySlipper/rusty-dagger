@@ -27,21 +27,29 @@ internal sealed record DaggerfallGroundTuning(float Contrast, float RepeatMetres
 
     internal DaggerfallGroundTuning Validate()
     {
-        if (!float.IsFinite(Contrast) || Contrast < 1) throw new ArgumentException("Ground layers meet at a contrast of 1 or more.");
+        if (!float.IsFinite(Contrast) || Contrast < 1)
+            throw new ArgumentOutOfRangeException(nameof(Contrast), Contrast, "Ground layers meet at a contrast of 1 or more.");
         if (!DaggerfallGroundBlend.FillsCell(RepeatMetres))
-            throw new ArgumentException($"A ground texture repeating every {RepeatMetres} metres would break at every cell's edge.");
-        if (!float.IsFinite(TriplanarSharpness) || TriplanarSharpness < 0) throw new ArgumentException("A ground's triplanar sharpness is 0 or more.");
-        if (DirtToGrassFrom >= DirtToGrassFull || StoneFrom >= StoneFull || RockFromSlope < 0 || RockFromSlope >= RockFullSlope
-            || SnowFromMetres < 0 || SnowFromMetres >= SnowFullMetres)
-            throw new ArgumentException("A ground's fades must rise from a start to a finish.");
-        if (RockHoldsSnow is < 0 or > 1) throw new ArgumentException("A rock face holds from none to all of its snow.");
+            throw new ArgumentOutOfRangeException(nameof(RepeatMetres), RepeatMetres, "A ground texture repeating this often would break at every cell's edge.");
+        if (!float.IsFinite(TriplanarSharpness) || TriplanarSharpness < 0)
+            throw new ArgumentOutOfRangeException(nameof(TriplanarSharpness), TriplanarSharpness, "A ground's triplanar sharpness is 0 or more.");
+        if (DirtToGrassFrom >= DirtToGrassFull)
+            throw new ArgumentOutOfRangeException(nameof(DirtToGrassFrom), DirtToGrassFrom, $"Dirt turns to grass from below where it is all grass, {DirtToGrassFull}.");
+        if (StoneFrom >= StoneFull)
+            throw new ArgumentOutOfRangeException(nameof(StoneFrom), StoneFrom, $"Stone shows from below where it is all stone, {StoneFull}.");
+        if (RockFromSlope < 0 || RockFromSlope >= RockFullSlope)
+            throw new ArgumentOutOfRangeException(nameof(RockFromSlope), RockFromSlope, $"Ground turns to rock from a slope of 0 or more, below the bare-rock slope {RockFullSlope}.");
+        if (SnowFromMetres < 0 || SnowFromMetres >= SnowFullMetres)
+            throw new ArgumentOutOfRangeException(nameof(SnowFromMetres), SnowFromMetres, $"Snow starts at 0 metres or more, below the height where high ground is white, {SnowFullMetres}.");
+        if (RockHoldsSnow is < 0 or > 1)
+            throw new ArgumentOutOfRangeException(nameof(RockHoldsSnow), RockHoldsSnow, "A rock face holds from none to all of its snow.");
         return this;
     }
 
-    internal static DaggerfallGroundTuning Read(JsonElement e) => new(
+    internal static DaggerfallGroundTuning Read(JsonElement e) => new DaggerfallGroundTuning(
         e.GetProperty("contrast").GetSingle(), e.GetProperty("repeatMetres").GetSingle(), e.GetProperty("triplanarSharpness").GetSingle(),
         e.GetProperty("dirtToGrassFrom").GetSingle(), e.GetProperty("dirtToGrassFull").GetSingle(),
         e.GetProperty("stoneFrom").GetSingle(), e.GetProperty("stoneFull").GetSingle(),
         e.GetProperty("rockFromSlope").GetSingle(), e.GetProperty("rockFullSlope").GetSingle(),
-        e.GetProperty("snowFromMetres").GetSingle(), e.GetProperty("snowFullMetres").GetSingle(), e.GetProperty("rockHoldsSnow").GetSingle());
+        e.GetProperty("snowFromMetres").GetSingle(), e.GetProperty("snowFullMetres").GetSingle(), e.GetProperty("rockHoldsSnow").GetSingle()).Validate();
 }

@@ -194,7 +194,7 @@ internal sealed record DaggerfallClimbingTuning(float StartCheckSeconds, float C
         return this;
     }
 
-    internal static DaggerfallClimbingTuning Read(JsonElement section) => new(
+    internal static DaggerfallClimbingTuning Read(JsonElement section) => new DaggerfallClimbingTuning(
         section.GetProperty("startCheckSeconds").GetSingle(),
         section.GetProperty("continueCheckSeconds").GetSingle(),
         section.GetProperty("regainCheckSeconds").GetSingle(),
@@ -203,5 +203,5 @@ internal sealed record DaggerfallClimbingTuning(float StartCheckSeconds, float C
         section.GetProperty("continueBaseChance").GetInt32(),
         section.GetProperty("regainBaseChance").GetInt32(),
         section.GetProperty("speedDivisor").GetSingle(),
-        section.GetProperty("enhancedSpeedMultiplier").GetSingle());
+        section.GetProperty("enhancedSpeedMultiplier").GetSingle()).Validate();
 }

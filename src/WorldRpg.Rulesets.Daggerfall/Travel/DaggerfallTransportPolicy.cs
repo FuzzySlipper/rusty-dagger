@@ -182,7 +182,7 @@ internal sealed record DaggerfallTransportTuning(
         return this;
     }
 
-    internal static DaggerfallTransportTuning Read(JsonElement section) => new(
+    internal static DaggerfallTransportTuning Read(JsonElement section) => new DaggerfallTransportTuning(
         section.GetProperty("footTravelModifier").GetInt32(),
         section.GetProperty("horseTravelModifier").GetInt32(),
         section.GetProperty("cartTravelModifier").GetInt32(),
@@ -195,7 +195,7 @@ internal sealed record DaggerfallTransportTuning(
         section.GetProperty("wagonAccessRange").GetSingle(),
         ReadRide(section.GetProperty("horseRide")),
         ReadRide(section.GetProperty("cartRide")),
-        section.GetProperty("gallopFatigueReserve").GetDouble());
+        section.GetProperty("gallopFatigueReserve").GetDouble()).Validate();
 
     private static RideTuning ReadRide(JsonElement ride) => new(
         ride.GetProperty("walkShare").GetSingle(),

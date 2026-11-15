@@ -22,7 +22,7 @@ internal sealed record DaggerfallWorldOriginTuning(float VerticalRebaseDistance)
         return this;
     }
 
-    internal static DaggerfallWorldOriginTuning Read(JsonElement section) => new(section.GetProperty("verticalRebaseDistance").GetSingle());
+    internal static DaggerfallWorldOriginTuning Read(JsonElement section) => new DaggerfallWorldOriginTuning(section.GetProperty("verticalRebaseDistance").GetSingle()).Validate();
 }
 
 /// <summary>Pure product-side interpretation of the Engine WorldOrigin commit receipt.</summary>

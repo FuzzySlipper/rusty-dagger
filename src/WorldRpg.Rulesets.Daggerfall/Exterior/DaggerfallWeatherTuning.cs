@@ -113,7 +113,7 @@ internal sealed record DaggerfallWeatherTuning(int[][] Odds, float WinterScale, 
         return 0;
     }
 
-    internal static DaggerfallWeatherTuning Read(JsonElement weather) => new(
+    internal static DaggerfallWeatherTuning Read(JsonElement weather) => new DaggerfallWeatherTuning(
         weather.GetProperty("odds").EnumerateArray().Select(row => row.EnumerateArray().Select(value => value.GetInt32()).ToArray()).ToArray(),
         weather.GetProperty("winterScale").GetSingle(), weather.GetProperty("overcastScale").GetSingle(),
         weather.GetProperty("rainScale").GetSingle(), weather.GetProperty("stormScale").GetSingle(), weather.GetProperty("snowScale").GetSingle(),
@@ -125,5 +125,5 @@ internal sealed record DaggerfallWeatherTuning(int[][] Odds, float WinterScale, 
         DryHours = weather.GetProperty("dryHours").GetSingle(),
         SnowHours = weather.GetProperty("snowHours").GetSingle(),
         MeltHours = weather.GetProperty("meltHours").GetSingle(),
-    };
+    }.Validate();
 }

@@ -108,7 +108,7 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         return this;
     }
 
-    internal static DaggerfallHorizonTuning Read(JsonElement e) => new(
+    internal static DaggerfallHorizonTuning Read(JsonElement e) => new DaggerfallHorizonTuning(
         e.GetProperty("lift").GetSingle(), e.GetProperty("liftFromMetres").GetSingle(), e.GetProperty("liftFullMetres").GetSingle(),
         e.GetProperty("fogDensity").GetSingle(), e.GetProperty("sinkMetres").GetSingle(), e.GetProperty("sinkFromMetres").GetSingle(),
         e.GetProperty("sinkGoneMetres").GetSingle(), e.GetProperty("followMetres").GetSingle(),
@@ -140,7 +140,7 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         MasserTiltDegrees = e.GetProperty("masserTiltDegrees").GetSingle(),
         SecundaTiltDegrees = e.GetProperty("secundaTiltDegrees").GetSingle(),
         MoonDayBrightness = e.GetProperty("moonDayBrightness").GetSingle(),
-    };
+    }.Validate();
 
     /// <summary>A colour as content writes it, sRGB from 0 to 1; a heightfield takes linear.</summary>
     private static Color ReadColor(JsonElement e)

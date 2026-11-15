@@ -112,7 +112,6 @@ internal sealed partial class DaggerfallSession
                     $"viewmodel.style is {tuning.Viewmodel.Style} but {DaggerfallHeldArt.ContainerName} is not installed, so the classic weapon sprites are drawn.",
                     string.Empty));
             _random = engine.Random;
-            tuning = tuning.Validate();
             _definitions = definitions;
             _buildingGreeting = new DaggerfallBuildingGreeting(definitions, _random);
             DungeonText = new DaggerfallDungeonText(new DaggerfallTextResolver(definitions.Text));

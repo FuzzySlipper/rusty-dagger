@@ -12,7 +12,7 @@ internal sealed record DaggerfallLootInteractionTuning(double MaximumDistance, d
         return this;
     }
 
-    internal static DaggerfallLootInteractionTuning Read(JsonElement section) => new(
+    internal static DaggerfallLootInteractionTuning Read(JsonElement section) => new DaggerfallLootInteractionTuning(
         section.GetProperty("maximumDistance").GetDouble(),
-        section.GetProperty("minimumFacingCosine").GetDouble());
+        section.GetProperty("minimumFacingCosine").GetDouble()).Validate();
 }
