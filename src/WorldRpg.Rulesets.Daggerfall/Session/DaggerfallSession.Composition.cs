@@ -1080,6 +1080,19 @@ internal sealed partial class DaggerfallSession
                 tuning.LootInteraction.MaximumDistance);                                          // Developer
             _spatialInspection = new DaggerfallSpatialInspection(engine, _spatial, _sites, State.PlayerControl, _input, State.Actors, Activation,
                 _controls, () => _latestUpdateGeneration, () => _latestSimulationStep, _overlays);    // Developer
+            DaggerfallDeveloperHold hold = new(() => _mode, State.Actors, State.PlayerControl,
+                () => Enum.GetValues<DaggerfallInteractionScreen>().Where(screen => screen != DaggerfallInteractionScreen.Menu && _interactions.IsOpen(screen))
+                    .Select(screen => screen.ToString()),
+                Summoning, State.Quests, Law, DispelChoice, IdentifyChoice, CreateItemChoice, _openingCinematics, Cinematics);   // Developer
+            _developerPlacement = new DaggerfallDeveloperPlacement(hold, engine, _spatial, _sites, _site, State.PlayerControl, State.Actors, State.Npcs,
+                definitions, FastTravel, Activation, Entrance, _horizon, _time, () => _mode, Presentation, (actor, pose) => SpawnActor(actor, pose),
+                ProfilePosition, BuildingLanding);                                                    // Developer
+            _developerScene = new DaggerfallDeveloperScene(_time, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); }, _horizon, _sites,
+                LocalWeather, State.PlayerControl, definitions, classic => _classicArt = classic);   // Developer
+            _developerGrants = new DaggerfallDeveloperGrants(hold, definitions, _random, State.Actors, State.PlayerControl, EquipmentMoves,
+                () => State.WeaponDrawn = true, State.Currency, State.SkillUses, State.LevelUps, State.Character, State.Transport, State.Inventory,
+                State.Encumbrance, State.ItemInstances, _uniqueItems, State.RacialOverrides, _lycanthropy, _time, TransportAccess,
+                ApplyTransportChange);                                                                // Developer
             _peopleRigs = new DaggerfallPeopleRigSwitch(composition.ArtReplacements?.PeopleRig, () => _engine.PartsRigs, State.Actors);   // Developer
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,

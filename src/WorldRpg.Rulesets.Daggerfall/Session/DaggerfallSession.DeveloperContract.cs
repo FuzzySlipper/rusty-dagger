@@ -10,8 +10,17 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// The Kit's developer interfaces the Host registers its live-debug modules by, each member a one-line call to the
 /// Developer owner that answers it. The owners are built at the end of the session's composition.
 /// </summary>
-internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytestWorldInspectionSession, IDeveloperInspectionSession, IDeveloperHeldSession, IDeveloperPeopleSession
+internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytestWorldInspectionSession, IDeveloperWorldSession, IDeveloperPlayerSession, IDeveloperInspectionSession, IDeveloperHeldSession, IDeveloperPeopleSession
 {
+    /// <summary>Developer movement: teleport, travel, entry, goto, where, stand, scout, find and spawn.</summary>
+    private readonly DaggerfallDeveloperPlacement _developerPlacement = null!;
+
+    /// <summary>Developer settings of the world around the player: time, weather, ground, horizon and art.</summary>
+    private readonly DaggerfallDeveloperScene _developerScene = null!;
+
+    /// <summary>Developer grants to the player: items, gold, skills, a level, vitals, spells, mounts and beast form.</summary>
+    private readonly DaggerfallDeveloperGrants _developerGrants = null!;
+
     /// <summary>The playtest state writer: the gameplay facts, the last combat event and the last use.</summary>
     private readonly DaggerfallPlaytestState _playtest = null!;
 
@@ -26,6 +35,47 @@ internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytes
 
     /// <summary>The switch that draws walking people as the parts-rig test figure.</summary>
     private readonly DaggerfallPeopleRigSwitch _peopleRigs = null!;
+
+    public DebugCommandResult Teleport(double x, double y, double z, bool force) => _developerPlacement.Teleport(x, y, z, force);
+    public DebugCommandResult Move(double dx, double dy, double dz) => _developerPlacement.Move(dx, dy, dz);
+    public DebugCommandResult Forward(double metres) => _developerPlacement.Forward(metres);
+    public DebugCommandResult Travel(string place) => _developerPlacement.Travel(place);
+    public DebugCommandResult Enter(string place, string building) => _developerPlacement.Enter(place, building);
+    public DebugCommandResult GoTo(string target) => _developerPlacement.GoTo(target);
+    public DebugCommandResult Where() => _developerPlacement.Where();
+    public DebugCommandResult Spawn(string actor, double metres) => _developerPlacement.Spawn(actor, metres);
+    public DebugCommandResult Find(string service) => _developerPlacement.Find(service);
+    public DebugCommandResult Stand(double east, double south) => _developerPlacement.Stand(east, south);
+    public DebugCommandResult Scout(string kind, double kilometres) => _developerPlacement.Scout(kind, kilometres);
+    public DebugCommandResult Hour(int hour) => _developerScene.Hour(hour);
+    public DebugCommandResult Season(string season) => _developerScene.Season(season);
+    public DebugCommandResult Weather(string kind) => _developerScene.Weather(kind);
+    public DebugCommandResult GroundWeather(double wet, double snow) => _developerScene.GroundWeather(wet, snow);
+    public DebugCommandResult GroundBlend(double contrast, double repeatMetres, double triplanarSharpness) =>
+        _developerScene.GroundBlend(contrast, repeatMetres, triplanarSharpness);
+    public DebugCommandResult GroundSurvey() => _developerScene.GroundSurvey();
+    public DebugCommandResult NearestRiver() => _developerScene.NearestRiver();
+    public DebugCommandResult Horizon() => _developerScene.Horizon();
+    public DebugCommandResult HorizonSet(double lift, double fogDensity) => _developerScene.HorizonSet(lift, fogDensity);
+    public DebugCommandResult Flora(double density) => _developerScene.Flora(density);
+    public DebugCommandResult GroundCover(string kinds) => _developerScene.GroundCover(kinds);
+    public DebugCommandResult Trees(string kind) => _developerScene.Trees(kind);
+    public DebugCommandResult FarForest(string state) => _developerScene.FarForest(state);
+    public DebugCommandResult ClassicArt(string state) => _developerScene.ClassicArt(state);
+
+    public DebugCommandResult Give(string item, int count) => _developerGrants.Give(item, count);
+    public DebugCommandResult Hold(string item) => _developerGrants.Hold(item);
+    public DebugCommandResult HoldMagic() => _developerGrants.HoldMagic();
+    public DebugCommandResult Equip(string item) => _developerGrants.Equip(item);
+    public DebugCommandResult Money(long amount) => _developerGrants.Money(amount);
+    public DebugCommandResult Skill(string skill, int value) => _developerGrants.Skill(skill, value);
+    public DebugCommandResult LevelUp() => _developerGrants.LevelUp();
+    public DebugCommandResult Heal() => _developerGrants.Heal();
+    public DebugCommandResult Spell(string spell) => _developerGrants.Spell(spell);
+    public DebugCommandResult Ride(string mount) => _developerGrants.Ride(mount);
+    public DebugCommandResult RideState() => _developerGrants.RideState();
+    public DebugCommandResult Morph(string form) => _developerGrants.Morph(form);
+    public DebugCommandResult Items(string filter) => _developerGrants.Items(filter);
 
     public IReadOnlyList<string> PlaytestActions => _playtest.Actions;
     public DebugCommandResult ReadPlaytestObservation() => _playtest.ReadObservation();
