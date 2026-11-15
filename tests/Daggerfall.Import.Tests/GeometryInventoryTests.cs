@@ -51,12 +51,15 @@ public sealed class GeometryInventoryTests
     public void Publishes_every_identity_whether_or_not_a_block_names_it()
     {
         // The clause the task states: a mesh nothing references keeps its identity, because whether the
-        // corpus is closed is a decision someone has to be able to make from the inventory.
+        // corpus is closed is a decision someone has to be able to make from the inventory. Dungeon blocks
+        // name 1,043 of the referenced models; the rest only town blocks place, outside or inside, and 89 of
+        // those are named only by town blocks no location places. The unused ones no block names at all.
         DaggerfallGeometry geometry = Corpus.Value;
 
         Assert.Equal(10237, geometry.Records.Select(record => record.RecordId).Distinct().Count());
-        Assert.Equal(1043, geometry.Records.Count(record => record.Disposition == DaggerfallGeometryDisposition.Referenced));
-        Assert.Equal(9194, geometry.Records.Count(record => record.Disposition == DaggerfallGeometryDisposition.Unused));
+        Assert.Equal(2474, geometry.Records.Count(record => record.Disposition == DaggerfallGeometryDisposition.Referenced));
+        Assert.Equal(1043, geometry.Records.Count(record => record.UseSites.Any(block => block.EndsWith(".RDB", StringComparison.Ordinal))));
+        Assert.Equal(7763, geometry.Records.Count(record => record.Disposition == DaggerfallGeometryDisposition.Unused));
         Assert.Equal(14, geometry.Records.Count(record => record.Disposition == DaggerfallGeometryDisposition.Duplicate));
         Assert.Equal(10251, geometry.Records.Count);
         Assert.Empty(geometry.UnresolvedUseSites);
@@ -143,6 +146,49 @@ public sealed class GeometryInventoryTests
         Assert.Equal(DaggerfallGeometryDisposition.Referenced, fourth.Disposition);
         Assert.Equal(["B0000000.RDB"], fourth.UseSites);
         Assert.Equal(DaggerfallGeometryDisposition.Referenced, geometry.Records.Single(record => record.RecordId == 9005).Disposition);
+    }
+
+    [Fact]
+    public void Marks_every_model_a_town_block_places_referenced()
+    {
+        // A dungeon block lists its models beside its objects, while a town block states them under its
+        // placements: each building's outside and inside halves, and the block's own misc models. A model
+        // only a town places is as referenced as one a dungeon places, and a model both name lists both.
+        // The town block spells a number unpadded where the dungeon block pads it, and they are one number.
+        static DaggerfallBlockRmbModel Model(string id) => new(id, 0, 0, 0, 0, 0);
+        static DaggerfallBlockHalfPlacements Half(string id) => new([Model(id)], [], [], [], []);
+        DaggerfallBlockObjectCounts one = new(1, 0, 0, 0, 0);
+        int building = (DaggerfallBlocks.RmbBuildingHeaderBytes * 2) + (2 * RmbObjectCounts.ModelRecordBytes);
+        int town = DaggerfallBlocks.RmbHeaderBytes + (2 * RmbObjectCounts.ModelRecordBytes) + building;
+        DaggerfallBlocks blocks = new(
+            [new DaggerfallBlockSource("CNT-005", "arena2/BLOCKS.BSA", Arena2FormatConstants.BsaHeaderBytes + town, 2, 2)],
+            [
+                new DaggerfallBlockRecord(0, "B0000000.RDB", "arena2/BLOCKS.BSA", DaggerfallBlockKind.Rdb, DaggerfallBlockDisposition.Summarized,
+                    Arena2FormatConstants.BsaHeaderBytes, 0, DaggerfallBlockState.Read, "", null, new DaggerfallBlockRdbName("B", "0000000", 0, DaggerfallBlockRdbType.Border), null,
+                    new DaggerfallBlockObjects(1, 0, 0, 0, 0, 0, 0, 0, ["09004"], [],
+                        [new DaggerfallBlockModelPlacement(0, "09004", 0, 0, 0, 0, "", null, null, null, null, null)], [], [], [])),
+                new DaggerfallBlockRecord(1, "TOWN.RMB", "arena2/BLOCKS.BSA", DaggerfallBlockKind.Rmb, DaggerfallBlockDisposition.Summarized,
+                    Arena2FormatConstants.BsaHeaderBytes, town, DaggerfallBlockState.Read, "", null, null,
+                    new DaggerfallBlockRmbHeader("TOWN.RMB", 0, 1, 2, 0, [new DaggerfallBlockBuilding(0, building, 0, 0, 0, 0, 0, one, one, Half("9005"), Half("9006"))], 0),
+                    null,
+                    new DaggerfallBlockRmbPlacements([new DaggerfallBlockBuildingPlacements(Half("9005"), Half("9006"))], [Model("9007"), Model("9004")], [])),
+            ]);
+        blocks.Validate();
+
+        DaggerfallGeometry geometry = DaggerfallGeometryBuilder.Build(
+            NumericArchive((9004, Mesh()), (9005, Mesh()), (9006, Mesh()), (9007, Mesh()), (9008, Mesh())),
+            "arena2/ARCH3D.BSA",
+            Inventory(),
+            DaggerfallGeometryBuilder.UseSites(blocks));
+
+        Assert.Empty(geometry.UnresolvedUseSites);
+        Assert.Equal(["B0000000.RDB", "TOWN.RMB"], geometry.Records.Single(record => record.RecordId == 9004).UseSites);
+        Assert.All(geometry.Records.Where(record => record.RecordId is 9005 or 9006 or 9007), record =>
+        {
+            Assert.Equal(DaggerfallGeometryDisposition.Referenced, record.Disposition);
+            Assert.Equal(["TOWN.RMB"], record.UseSites);
+        });
+        Assert.Equal(DaggerfallGeometryDisposition.Unused, geometry.Records.Single(record => record.RecordId == 9008).Disposition);
     }
 
     [Fact]
@@ -411,26 +457,8 @@ public sealed class GeometryInventoryTests
     /// The mesh numbers the published block document names, read from it exactly as the tool reads them,
     /// so this test answers the same question the product does.
     /// </summary>
-    private static IReadOnlyList<DaggerfallGeometryUseSite> BlockUseSites()
-    {
-        List<DaggerfallGeometryUseSite> useSites = [];
-        using System.Text.Json.JsonDocument document = System.Text.Json.JsonDocument.Parse(
-            ImportedContent.Record("daggerfall.blocks.json"));
-        foreach (System.Text.Json.JsonElement block in document.RootElement.GetProperty("records").EnumerateArray())
-        {
-            if (!block.TryGetProperty("objects", out System.Text.Json.JsonElement objects) || objects.ValueKind != System.Text.Json.JsonValueKind.Object)
-            {
-                continue;
-            }
-
-            foreach (System.Text.Json.JsonElement model in objects.GetProperty("modelIds").EnumerateArray())
-            {
-                useSites.Add(new DaggerfallGeometryUseSite(model.GetString()!, block.GetProperty("sourceKey").GetString()!));
-            }
-        }
-
-        return useSites;
-    }
+    private static IReadOnlyList<DaggerfallGeometryUseSite> BlockUseSites() => DaggerfallGeometryBuilder.UseSites(
+        System.Text.Json.JsonSerializer.Deserialize<DaggerfallBlocks>(ImportedContent.Record("daggerfall.blocks.json"), PublishedJson.SectionRead)!);
 
     private static IReadOnlyList<DaggerfallGeometryRecord> Replaced(DaggerfallGeometry geometry, int ordinal, DaggerfallGeometryRecord record) =>
         [.. geometry.Records.Select(value => value.Ordinal == ordinal ? record : value)];

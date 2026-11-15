@@ -34,14 +34,11 @@ internal static class GeometryCommand
         DaggerfallBlocks publishedBlocks = JsonSerializer.Deserialize<DaggerfallBlocks>(File.ReadAllBytes(blocksPayload), PublishedJson.SectionRead)
             ?? throw new ArgumentException($"the block document '{blocksPayload}' could not be read");
         publishedBlocks.Validate();
-        DaggerfallGeometryUseSite[] useSites = [.. publishedBlocks.Records
-            .SelectMany(block => (block.Objects?.ModelIds ?? []).Select(model => new DaggerfallGeometryUseSite(model, block.SourceKey)))];
-
         DaggerfallGeometry geometry = DaggerfallGeometryBuilder.Build(
             File.ReadAllBytes(Path.Combine(args["--arena2"], Arch3dInventoryReader.FileName)),
             Options.Arena2Label(Arch3dInventoryReader.FileName),
             Options.ReadInventory(args),
-            useSites);
+            DaggerfallGeometryBuilder.UseSites(publishedBlocks));
 
         DaggerfallGeometrySource publishedSource = geometry.Sources[0];
         Console.WriteLine($"geometry: {geometry.Records.Count} records from {publishedSource.Path}, declared {publishedSource.DeclaredLength}, {geometry.Records.Count(record => record.State == DaggerfallGeometryState.Malformed)} malformed, {geometry.Records.Sum(record => record.Facts?.Planes ?? 0)} planes");

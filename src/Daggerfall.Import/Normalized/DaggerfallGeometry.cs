@@ -342,6 +342,23 @@ public static class DaggerfallGeometryBuilder
     /// <summary>The inventory family the mesh archive is documented under.</summary>
     public const string GeometryFamily = "CNT-006";
 
+    /// <summary>Every mesh number the published block document names, with the block that names it.</summary>
+    /// <remarks>
+    /// A dungeon block lists its models beside its objects. A town block states them only under its
+    /// placements: each building's outside and inside halves, and the block's own misc models. Reading the
+    /// dungeon list alone would leave every model only towns place unused.
+    /// </remarks>
+    public static IReadOnlyList<DaggerfallGeometryUseSite> UseSites(DaggerfallBlocks blocks)
+    {
+        ArgumentNullException.ThrowIfNull(blocks);
+        return [.. blocks.Records.SelectMany(block => Models(block).Select(model => new DaggerfallGeometryUseSite(model, block.SourceKey)))];
+    }
+
+    private static IEnumerable<string> Models(DaggerfallBlockRecord block) =>
+        (block.Objects?.ModelIds ?? []).Concat(block.RmbPlacements is { } town
+            ? town.Buildings.SelectMany(building => building.Exterior.Models.Concat(building.Interior.Models)).Concat(town.MiscModels).Select(model => model.ModelId)
+            : []);
+
     /// <summary>Reads the supplied archive and publishes every record it declares.</summary>
     public static DaggerfallGeometry Build(
         byte[] bytes,

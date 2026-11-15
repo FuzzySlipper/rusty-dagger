@@ -172,8 +172,7 @@ internal sealed partial class ImportToolFixture : IDisposable
                 result.Add(At("buildings.json"), Encoding.UTF8.GetBytes(JsonSerializer.Serialize(DaggerfallBlockBuildingSet.From(blocks), PublishedJson.SectionCompact) + "\n")); break;
             case "geometry":
                 var blockInputs = JsonSerializer.Deserialize<DaggerfallBlocks>(File.ReadAllBytes(At("blocks.json")), PublishedJson.SectionRead)!;
-                var geometry = DaggerfallGeometryBuilder.Build(Source("ARCH3D.BSA"), Label("ARCH3D.BSA"), Rows,
-                    blockInputs.Records.SelectMany(block => (block.Objects?.ModelIds ?? []).Select(id => new DaggerfallGeometryUseSite(id, block.SourceKey))).ToArray());
+                var geometry = DaggerfallGeometryBuilder.Build(Source("ARCH3D.BSA"), Label("ARCH3D.BSA"), Rows, DaggerfallGeometryBuilder.UseSites(blockInputs));
                 recordSections.Add("geometry", JsonSerializer.Serialize(geometry, PublishedJson.Section)); break;
             case "catalogs":
                 var catalogs = DaggerfallCatalogBuilder.Build(Rows,
