@@ -421,330 +421,340 @@ internal static class DaggerfallUiAction
                     default: return null;
                 }
             }
-            if (amount == 0 && action is not ("lodging-book" or "travel-accept" or "spell-buy" or "itemmaker-buy")) return null;
-            if (action == "daedra-summon")
-                return fields.SetEquals(["action","revision","key","amount","confirm"]) && !string.IsNullOrWhiteSpace(revision)
-                    && !string.IsNullOrWhiteSpace(key) && amount is not null ? new(action, Revision:revision, Key:key, Amount:amount, Confirm:confirm) : null;
-            if (action == "daedra-answer")
-                return fields.SetEquals(["action","revision","confirm"]) && !string.IsNullOrWhiteSpace(revision)
-                    ? new(action,Revision:revision,Confirm:confirm) : null;
-            if (action == "travel-accept")
-                return fields.SetEquals(["action", "key", "amount"]) && !string.IsNullOrWhiteSpace(key) && amount is not null
-                    ? new(action, Key: key, Amount: amount) : null;
-            if (action == "lodging-quote")
-                return fields.SetEquals(["action", "key", "days"]) && !string.IsNullOrWhiteSpace(key) && days is >= 1 and <= 350
-                    ? new(action, Key: key, Days: days) : null;
-            if (action == "lodging-book")
-                return fields.SetEquals(["action", "key", "days", "amount"]) && !string.IsNullOrWhiteSpace(key) && days is >= 1 and <= 350 && amount is not null
-                    ? new(action, Key: key, Days: days, Amount: amount) : null;
-            if (action == "inventory-move")
+            // The wire is named once, by its rule: a payload no rule names is no action, and the dispatch
+            // reports it as unrecognized.
+            if (action is null || !ByWire.TryGetValue(action, out DaggerfallUiActionRule? rule)) return null;
+            if (amount == 0 && rule.Kind is not (DaggerfallUiActionKind.LodgingBook or DaggerfallUiActionKind.TravelAccept
+                or DaggerfallUiActionKind.SpellBuy or DaggerfallUiActionKind.ItemMakerBuy)) return null;
+            switch (rule.Kind)
             {
-                if (string.IsNullOrWhiteSpace(revision) || string.IsNullOrWhiteSpace(item)
-                    || (targetGrid is null) == (targetEquipment is null) || fields.Count != 4) return null;
-                return new(action, revision, item, targetGrid, targetEquipment);
+                case DaggerfallUiActionKind.DaedraSummon:
+                    return fields.SetEquals(["action","revision","key","amount","confirm"]) && !string.IsNullOrWhiteSpace(revision)
+                        && !string.IsNullOrWhiteSpace(key) && amount is not null ? new(action, Revision:revision, Key:key, Amount:amount, Confirm:confirm) : null;
+                case DaggerfallUiActionKind.DaedraAnswer:
+                    return fields.SetEquals(["action","revision","confirm"]) && !string.IsNullOrWhiteSpace(revision)
+                        ? new(action,Revision:revision,Confirm:confirm) : null;
+                case DaggerfallUiActionKind.TravelAccept:
+                    return fields.SetEquals(["action", "key", "amount"]) && !string.IsNullOrWhiteSpace(key) && amount is not null
+                        ? new(action, Key: key, Amount: amount) : null;
+                case DaggerfallUiActionKind.LodgingQuote:
+                    return fields.SetEquals(["action", "key", "days"]) && !string.IsNullOrWhiteSpace(key) && days is >= 1 and <= 350
+                        ? new(action, Key: key, Days: days) : null;
+                case DaggerfallUiActionKind.LodgingBook:
+                    return fields.SetEquals(["action", "key", "days", "amount"]) && !string.IsNullOrWhiteSpace(key) && days is >= 1 and <= 350 && amount is not null
+                        ? new(action, Key: key, Days: days, Amount: amount) : null;
+                case DaggerfallUiActionKind.InventoryMove:
+                {
+                    if (string.IsNullOrWhiteSpace(revision) || string.IsNullOrWhiteSpace(item)
+                        || (targetGrid is null) == (targetEquipment is null) || fields.Count != 4) return null;
+                    return new(action, revision, item, targetGrid, targetEquipment);
+                }
+                case DaggerfallUiActionKind.InventoryInspect:
+                    return fields.SetEquals(["action", "revision", "item"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                        ? new(action, revision, item) : null;
+                case DaggerfallUiActionKind.InventoryUse:
+                    return fields.SetEquals(["action", "revision", "item"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                        ? new(action, revision, item) : null;
+                case DaggerfallUiActionKind.NotebookPage:
+                    return fields.SetEquals(["action", "revision", "page"]) && !string.IsNullOrWhiteSpace(revision) && page is >= 0
+                        ? new(action, Revision: revision, Page: page) : null;
+                case DaggerfallUiActionKind.NotebookAdd:
+                    return fields.SetEquals(["action", "revision", "text"]) && !string.IsNullOrWhiteSpace(revision) && ValidNotebookText(text)
+                        ? new(action, Revision: revision, Text: text) : null;
+                case DaggerfallUiActionKind.NotebookEdit:
+                    return fields.SetEquals(["action", "revision", "note", "text"]) && !string.IsNullOrWhiteSpace(revision)
+                        && !string.IsNullOrWhiteSpace(note) && ValidNotebookText(text)
+                        ? new(action, Revision: revision, Note: note, Text: text) : null;
+                case DaggerfallUiActionKind.NotebookRemove:
+                    return fields.SetEquals(["action", "revision", "note"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(note)
+                        ? new(action, Revision: revision, Note: note) : null;
+                case DaggerfallUiActionKind.NotebookMove:
+                    return fields.SetEquals(["action", "revision", "note", "destination"]) && !string.IsNullOrWhiteSpace(revision)
+                        && !string.IsNullOrWhiteSpace(note) && destination is >= 0
+                        ? new(action, Revision: revision, Note: note, Destination: destination) : null;
+                case DaggerfallUiActionKind.SpellMakerDraft or DaggerfallUiActionKind.PotionMix or DaggerfallUiActionKind.ItemMakerDraft:
+                    return fields.SetEquals(["action", "revision", "text"]) && !string.IsNullOrWhiteSpace(revision)
+                        && text is { Length: > 0 and <= 3000 }
+                        ? new(action, Revision: revision, Text: text) : null;
+                case DaggerfallUiActionKind.SpellBuy or DaggerfallUiActionKind.SpellMakerBuy or DaggerfallUiActionKind.ItemMakerBuy:
+                    return fields.SetEquals(["action", "key", "revision", "amount", "confirm"]) && !string.IsNullOrWhiteSpace(key)
+                        && !string.IsNullOrWhiteSpace(revision) && amount is not null
+                        ? new(action, Key: key, Revision: revision, Amount: amount, Confirm: confirm) : null;
+                case DaggerfallUiActionKind.SpellDelete:
+                    return fields.SetEquals(["action", "key", "confirm"]) && !string.IsNullOrWhiteSpace(key)
+                        ? new(action, Key: key, Confirm: confirm) : null;
+                case DaggerfallUiActionKind.InventorySort: return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.SpellSort: return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.SpellSwap:
+                    return fields.SetEquals(["action", "key", "item"]) && !string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(item)
+                        ? new(action, Key: key, Item: item) : null;
+                case DaggerfallUiActionKind.SpellInfo:
+                    return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key) ? new(action, Key: key) : null;
+                case DaggerfallUiActionKind.SpellReady:
+                    return fields.SetEquals(["action","key"]) && !string.IsNullOrWhiteSpace(key) ? new(action,Key:key) : null;
+                case DaggerfallUiActionKind.SpellUnready or DaggerfallUiActionKind.SpellCast:
+                    return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.InventoryDrop:
+                    return fields.SetEquals(["action", "revision", "item", "amount"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && amount is not null
+                        ? new(action, revision, item, Amount: amount) : null;
+                case DaggerfallUiActionKind.LootTakeAll:
+                    return fields.SetEquals(["action", "revision", "container"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(container)
+                        ? new(action, revision, Container: container) : null;
+                case DaggerfallUiActionKind.LootTake:
+                {
+                    bool shape = fields.SetEquals(["action", "revision", "item", "container"])
+                        || fields.SetEquals(["action", "revision", "item", "container", "amount"]);
+                    return shape && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(container)
+                        ? new(action, revision, item, Container: container, Amount: amount) : null;
+                }
+                case DaggerfallUiActionKind.CurrencyDepositGold or DaggerfallUiActionKind.CurrencyWithdrawGold or DaggerfallUiActionKind.CurrencyWithdrawLetter:
+                    return fields.SetEquals(["action", "amount"]) && amount is not null ? new(action, Amount: amount) : null;
+                case DaggerfallUiActionKind.CurrencyDepositLetters:
+                    return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.BankTransfer:
+                    return fields.SetEquals(["action", "amount", "destination"]) && amount is not null && destination is >= 0
+                        ? new(action, Amount: amount, Destination: destination) : null;
+                case DaggerfallUiActionKind.BankLoanIssue or DaggerfallUiActionKind.BankLoanRepayAccount or DaggerfallUiActionKind.BankLoanRepayCarried:
+                    return fields.SetEquals(["action", "amount"]) && amount is not null
+                        ? new(action, Amount: amount) : null;
+                case DaggerfallUiActionKind.TravelSearch:
+                    return fields.SetEquals(["action", "text"]) && text is { Length: <= 80 }
+                        ? new(action, Text: text) : null;
+                case DaggerfallUiActionKind.TravelPreview:
+                    return fields.SetEquals(["action", "region", "destination", "cautious", "inn", "ship"])
+                        && region is >= 0 && destination is >= 0
+                        ? new(action, Region: region, Destination: destination, Cautious: cautious, Inn: inn, Ship: ship) : null;
+                case DaggerfallUiActionKind.AtlasTiles: return fields.SetEquals(["action", "tiles"]) && tiles is not null ? new(action, Tiles: tiles) : null;
+                case DaggerfallUiActionKind.TravelMap: return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
+                case DaggerfallUiActionKind.DungeonTextAnswer:
+                    return fields.SetEquals(["action", "revision", "item", "text"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                        && text is { Length: <= 256 }
+                        ? new(action, Revision: revision, Item: item, Text: text) : null;
+                case DaggerfallUiActionKind.DungeonTextClose:
+                    return fields.SetEquals(["action", "revision", "item"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                        ? new(action, Revision: revision, Item: item) : null;
+                case DaggerfallUiActionKind.ArtRequest:
+                    return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
+                        ? new(action, revision) : null;
+                case DaggerfallUiActionKind.LootClose:
+                    return fields.SetEquals(["action", "container"]) && !string.IsNullOrWhiteSpace(container)
+                        ? new(action, Container: container) : null;
+                case DaggerfallUiActionKind.ControlsClutterDistance: return fields.SetEquals(["action", "scale"]) && scale.HasValue ? new(action, Scale: scale) : null;
+                case DaggerfallUiActionKind.ActionDrivenTime or DaggerfallUiActionKind.ControlsGroundCover: return fields.SetEquals(["action", "enabled"])
+                    && enabled.HasValue ? new(action, Enabled: enabled) : null;
+                case DaggerfallUiActionKind.ControlsLook: return fields.SetEquals(["action", "sensitivity", "invert"])
+                    && sensitivity.HasValue && invert.HasValue ? new(action, Sensitivity: sensitivity, Invert: invert) : null;
+                // No scale is the player choosing automatic: the DOM follows the window.
+                case DaggerfallUiActionKind.ControlsUiScale: return fields.IsSubsetOf(["action", "scale"]) ? new(action, Scale: scale) : null;
+                case DaggerfallUiActionKind.ControlsRebind:
+                    return fields.IsSubsetOf(["action", "item", "key", "confirm"])
+                        && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(key)
+                        ? new(action, Item: item, Key: key, Confirm: confirm) : null;
+                case DaggerfallUiActionKind.ControlsVolume:
+                    return fields.SetEquals(["action", "item", "scale"]) && !string.IsNullOrWhiteSpace(item) && scale.HasValue
+                        ? new(action, Item: item, Scale: scale) : null;
+                case DaggerfallUiActionKind.ControlsRebindButton:
+                    return fields.IsSubsetOf(["action", "item", "amount", "confirm"]) && fields.IsSupersetOf(["action", "item", "amount"])
+                        && !string.IsNullOrWhiteSpace(item) && amount is >= 0
+                        ? new(action, Item: item, Amount: amount, Confirm: confirm) : null;
+                case DaggerfallUiActionKind.ControlsReset: return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.MapOpen: return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
+                case DaggerfallUiActionKind.MapBuilding: return fields.SetEquals(["action", "region", "destination", "item"])
+                    && region is >= 0 && destination is >= 0 && !string.IsNullOrWhiteSpace(item)
+                    ? new(action, Region: region, Destination: destination, Item: item) : null;
+                case DaggerfallUiActionKind.MapNoteAdd:
+                    return fields.SetEquals(["action", "text"]) && ValidMapNoteText(text) ? new(action, Text: text) : null;
+                case DaggerfallUiActionKind.MapNoteEdit:
+                    return fields.SetEquals(["action", "note", "text"]) && !string.IsNullOrWhiteSpace(note) && ValidMapNoteText(text)
+                        ? new(action, Note: note, Text: text) : null;
+                case DaggerfallUiActionKind.MapNoteRemove:
+                    return fields.SetEquals(["action", "note"]) && !string.IsNullOrWhiteSpace(note) ? new(action, Note: note) : null;
+                case DaggerfallUiActionKind.Menu: return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
+                case DaggerfallUiActionKind.WeaponToggle: return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.TutorialStart or DaggerfallUiActionKind.TutorialEnd: return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.TutorialContinue: return fields.SetEquals(["action", "page"]) && page is >= 0 ? new(action, Page: page) : null;
+                case DaggerfallUiActionKind.SaveSlots: return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.ContentImport or DaggerfallUiActionKind.ContentImportCancel: return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.SaveSlot:
+                    return fields.IsSubsetOf(["action", "key", "label", "confirm"])
+                        && !string.IsNullOrWhiteSpace(label)
+                        && (key is null || !string.IsNullOrWhiteSpace(key))
+                        ? new(action, Key: key, Label: label, Confirm: confirm) : null;
+                case DaggerfallUiActionKind.BundleSelect:
+                    return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key)
+                        ? new(action, Key: key) : null;
+                case DaggerfallUiActionKind.LoadSlot:
+                    return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key)
+                        ? new(action, Key: key) : null;
+                case DaggerfallUiActionKind.DeleteSlot:
+                    return fields.IsSubsetOf(["action", "key", "confirm"])
+                        && !string.IsNullOrWhiteSpace(key)
+                        ? new(action, Key: key, Confirm: confirm) : null;
+                case DaggerfallUiActionKind.DeathNewGame or DaggerfallUiActionKind.DeathQuit:
+                    return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.DeathLoadGame:
+                    return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key)
+                        ? new(action, Key: key) : null;
+                case DaggerfallUiActionKind.CharacterBegin or DaggerfallUiActionKind.CharacterCancel:
+                    return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.CharacterLevelAllocate:
+                    return fields.SetEquals(["action", "attribute"]) && !string.IsNullOrWhiteSpace(attribute)
+                        ? new(action, Attribute: attribute) : null;
+                case DaggerfallUiActionKind.CharacterLevelCommit:
+                    return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.CharacterUpdate or DaggerfallUiActionKind.CharacterCommit or DaggerfallUiActionKind.CharacterBackgroundReroll or DaggerfallUiActionKind.CharacterClassQuestions:
+                {
+                    HashSet<string> required = career == DaggerfallCustomCareerPolicy.CareerId
+                        ? ["action", "name", "race", "gender", "faceIndex", "reflexes", "career", "primarySkills", "majorSkills", "minorSkills", "hitPointsPerLevel", "advantages", "disadvantages"]
+                        : ["action", "name", "race", "gender", "faceIndex", "reflexes", "career"];
+                    bool background = fields.Contains("backgroundAnswers") || fields.Contains("attributeAllocations") || fields.Contains("skillAllocations");
+                    if (background) required.UnionWith(["backgroundAnswers", "attributeAllocations", "skillAllocations"]);
+                    // A draft may hold an empty name while the player is typing one; only the commit needs it.
+                    bool named = rule.Kind == DaggerfallUiActionKind.CharacterCommit ? !string.IsNullOrWhiteSpace(name) : name is not null;
+                    return fields.SetEquals(required)
+                        && named && !string.IsNullOrWhiteSpace(race)
+                        && !string.IsNullOrWhiteSpace(gender) && !string.IsNullOrWhiteSpace(career)
+                        && faceIndex is not null && reflexes is not null
+                        ? new(action, Name: name, Race: race, Gender: gender, FaceIndex: faceIndex, Reflexes: reflexes, Career: career,
+                            PrimarySkills: primarySkills, MajorSkills: majorSkills, MinorSkills: minorSkills, Advantages: advantages, Disadvantages: disadvantages, HitPointsPerLevel: hitPointsPerLevel,
+                            BackgroundAnswers: backgroundAnswers, AttributeAllocations: attributeAllocations, SkillAllocations: skillAllocations) : null;
+                }
+                case DaggerfallUiActionKind.CharacterQuickStart:
+                {
+                    // The draft's identity and career, with no background: quick start completes it. A blank name is allowed.
+                    HashSet<string> required = career == DaggerfallCustomCareerPolicy.CareerId
+                        ? ["action", "name", "race", "gender", "faceIndex", "reflexes", "career", "primarySkills", "majorSkills", "minorSkills", "hitPointsPerLevel", "advantages", "disadvantages"]
+                        : ["action", "name", "race", "gender", "faceIndex", "reflexes", "career"];
+                    return fields.SetEquals(required) && name is not null
+                        && !string.IsNullOrWhiteSpace(race) && !string.IsNullOrWhiteSpace(gender) && !string.IsNullOrWhiteSpace(career)
+                        && faceIndex is not null && reflexes is not null
+                        ? new(action, Name: name, Race: race, Gender: gender, FaceIndex: faceIndex, Reflexes: reflexes, Career: career,
+                            PrimarySkills: primarySkills, MajorSkills: majorSkills, MinorSkills: minorSkills, Advantages: advantages, Disadvantages: disadvantages, HitPointsPerLevel: hitPointsPerLevel) : null;
+                }
+                case DaggerfallUiActionKind.CharacterClassBack: return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.CharacterClassAnswer:
+                    return fields.SetEquals(["action", "question", "answer"]) && classQuestion is >= 1 and <= 40 && classAnswer is >= 0 and <= 2
+                        ? new(action, Question: classQuestion, Answer: classAnswer) : null;
+                case DaggerfallUiActionKind.ActivationMode:
+                    return fields.SetEquals(["action", "mode"])
+                        && mode is "grab" or "info" or "talk" or "steal" or "lockpick" or "bash"
+                        ? new(action, Mode: mode) : null;
+                case DaggerfallUiActionKind.TransportSelect:
+                    return fields.SetEquals(["action", "mode"])
+                        && mode is "foot" or "horse" or "cart"
+                        ? new(action, Mode: mode) : null;
+                case DaggerfallUiActionKind.TransportLeaveShip or DaggerfallUiActionKind.TransportBoardShip:
+                    return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.Rest:
+                {
+                    bool timedOrLoiter = mode is "timed" or "loiter";
+                    bool untilHealed = mode == "until-healed";
+                    bool shape = timedOrLoiter
+                        ? fields.SetEquals(["action", "mode", "hours"]) && hours is >= 0
+                        : untilHealed && fields.SetEquals(["action", "mode"]);
+                    return shape ? new(action, Mode: mode, Hours: hours) : null;
+                }
+                case DaggerfallUiActionKind.PropertyBuy or DaggerfallUiActionKind.PropertySell or DaggerfallUiActionKind.PropertyEnter:
+                    return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key) ? new(action, Key: key) : null;
+                case DaggerfallUiActionKind.PropertyPut or DaggerfallUiActionKind.PropertyTake:
+                    return fields.IsSubsetOf(["action", "key", "item", "amount", "revision"])
+                        && !string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(revision)
+                        && amount is null or > 0 ? new(action, Key: key, Item: item, Amount: amount, Revision: revision) : null;
+                case DaggerfallUiActionKind.WagonPut or DaggerfallUiActionKind.WagonTake:
+                    return (fields.SetEquals(["action", "revision", "item"])
+                        || fields.SetEquals(["action", "revision", "item", "amount"]))
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                        ? new(action, Revision: revision, Item: item, Amount: amount) : null;
+                case DaggerfallUiActionKind.TeleportSelect:
+                    return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && key is "anchor" or "recall" or "cancel" ? new(action, Revision: revision, Key: key) : null;
+                case DaggerfallUiActionKind.LegalChoice:
+                    return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && key is "yield" or "resist" or "escape" or "guilty" or "etiquette" or "streetwise" or "accept" or "continue" ? new(action, Revision: revision, Key: key) : null;
+                case DaggerfallUiActionKind.DispelSelect or DaggerfallUiActionKind.IdentifySelect or DaggerfallUiActionKind.CreateItemSelect:
+                    return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) ? new(action, Revision: revision, Key: key) : null;
+                case DaggerfallUiActionKind.DispelCancel or DaggerfallUiActionKind.IdentifyCancel or DaggerfallUiActionKind.CreateItemCancel:
+                    return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision) ? new(action, Revision: revision) : null;
+                case DaggerfallUiActionKind.BankOpen:
+                    return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision) ? new(action, Revision: revision) : null;
+                case DaggerfallUiActionKind.DialogueTone:
+                    return fields.SetEquals(["action", "revision", "tone"])
+                        && !string.IsNullOrWhiteSpace(revision)
+                        && tone is "polite" or "normal" or "blunt"
+                        ? new(action, Revision: revision, Tone: tone) : null;
+                case DaggerfallUiActionKind.DialogueTopic:
+                {
+                    if (topic == "donate")
+                        return fields.SetEquals(["action", "revision", "topic", "amount"])
+                            && !string.IsNullOrWhiteSpace(revision) && amount is > 0
+                            ? new(action, Revision: revision, Topic: topic, Amount: amount) : null;
+                    if (topic is "armor" or "join" or "restore-attributes" && fields.SetEquals(["action", "revision", "topic", "key"]))
+                        return !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) && (topic == "armor" || key is "yes" or "no")
+                            ? new(action, Revision: revision, Topic: topic, Key: key) : null;
+                    return fields.SetEquals(["action", "revision", "topic"])
+                        && !string.IsNullOrWhiteSpace(revision)
+                        && (ValidDialogueTopic(topic) || topic is "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster")
+                        ? new(action, Revision: revision, Topic: topic) : null;
+                }
+                case DaggerfallUiActionKind.DialogueClose:
+                    return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
+                        ? new(action, Revision: revision) : null;
+                case DaggerfallUiActionKind.TavernBuy:
+                    return fields.SetEquals(["action", "revision", "key", "amount"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) && amount is not null
+                        ? new(action, Revision: revision, Key: key, Amount: amount) : null;
+                case DaggerfallUiActionKind.TrainingCommit:
+                    return fields.SetEquals(["action", "revision", "key", "amount", "confirm"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) && amount is > 0
+                        ? new(action, Revision: revision, Key: key, Amount: amount, Confirm: confirm) : null;
+                case DaggerfallUiActionKind.MerchantBuy or DaggerfallUiActionKind.MerchantSell or DaggerfallUiActionKind.MerchantShoplift:
+                {
+                    // Buying and selling may carry the player's confirmation of a large trade.
+                    bool confirmable = rule.Kind != DaggerfallUiActionKind.MerchantShoplift;
+                    bool shape = fields.SetEquals(["action", "revision", "item"])
+                        || fields.SetEquals(["action", "revision", "item", "amount"])
+                        || confirmable && (fields.SetEquals(["action", "revision", "item", "confirm"])
+                            || fields.SetEquals(["action", "revision", "item", "amount", "confirm"]));
+                    return shape && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                        && (amount is null or > 0)
+                        && (!item.StartsWith("unique:", StringComparison.Ordinal) || (amount is null or 1))
+                        ? new(action, Revision: revision, Item: item, Amount: amount, Confirm: confirm) : null;
+                }
+                case DaggerfallUiActionKind.MerchantQuote:
+                    return fields.SetEquals(["action", "revision", "item", "key", "amount"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && key is "buy" or "sell" && amount is > 0
+                        ? new(action, Revision: revision, Item: item, Key: key, Amount: amount) : null;
+                case DaggerfallUiActionKind.MerchantRepair or DaggerfallUiActionKind.MerchantIdentify:
+                    return fields.SetEquals(["action", "revision", "item"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
+                        ? new(action, Revision: revision, Item: item) : null;
+                case DaggerfallUiActionKind.MerchantCollectRepair:
+                    return fields.SetEquals(["action", "revision", "key"])
+                        && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key)
+                        ? new(action, Revision: revision, Key: key) : null;
+                case DaggerfallUiActionKind.QuestChoice:
+                    return fields.SetEquals(["action", "questInstance", "questMessage", "questPrompt", "questChoice"])
+                        && !string.IsNullOrWhiteSpace(questInstance) && !string.IsNullOrWhiteSpace(questPrompt) && questMessage is > 0 && questChoice is not null
+                        ? new(action, QuestInstance: questInstance, QuestMessage: questMessage, QuestChoice: questChoice, QuestPrompt: questPrompt) : null;
+                case DaggerfallUiActionKind.QuestOfferAnswer:
+                    return fields.SetEquals(["action", "questInstance", "confirm"]) && !string.IsNullOrWhiteSpace(questInstance)
+                        ? new(action, QuestInstance: questInstance, Confirm: confirm) : null;
+                case DaggerfallUiActionKind.QuestDismiss:
+                    return fields.SetEquals(["action", "questInstance", "questDelivery"])
+                        && !string.IsNullOrWhiteSpace(questInstance) && !string.IsNullOrWhiteSpace(questDelivery)
+                        ? new(action, QuestInstance: questInstance, QuestDelivery: questDelivery) : null;
+                // "begin" is the entry screen's own action, which the product answers: the session accepts the
+                // shape so a slice carrying it is a known action it does not act on, rather than an
+                // unrecognized one it reports over the screen that asked.
+                case DaggerfallUiActionKind.Attack or DaggerfallUiActionKind.Loot or DaggerfallUiActionKind.Begin
+                    or DaggerfallUiActionKind.CinematicSkip or DaggerfallUiActionKind.SaveGame or DaggerfallUiActionKind.LoadGame:
+                    return fields.Count == 1 ? new(action) : null;
             }
-            if (action == "inventory-inspect")
-                return fields.SetEquals(["action", "revision", "item"])
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
-                    ? new(action, revision, item) : null;
-            if (action == "inventory-use")
-                return fields.SetEquals(["action", "revision", "item"])
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
-                    ? new(action, revision, item) : null;
-            if (action == "notebook-page")
-                return fields.SetEquals(["action", "revision", "page"]) && !string.IsNullOrWhiteSpace(revision) && page is >= 0
-                    ? new(action, Revision: revision, Page: page) : null;
-            if (action == "notebook-add")
-                return fields.SetEquals(["action", "revision", "text"]) && !string.IsNullOrWhiteSpace(revision) && ValidNotebookText(text)
-                    ? new(action, Revision: revision, Text: text) : null;
-            if (action == "notebook-edit")
-                return fields.SetEquals(["action", "revision", "note", "text"]) && !string.IsNullOrWhiteSpace(revision)
-                    && !string.IsNullOrWhiteSpace(note) && ValidNotebookText(text)
-                    ? new(action, Revision: revision, Note: note, Text: text) : null;
-            if (action == "notebook-remove")
-                return fields.SetEquals(["action", "revision", "note"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(note)
-                    ? new(action, Revision: revision, Note: note) : null;
-            if (action == "notebook-move")
-                return fields.SetEquals(["action", "revision", "note", "destination"]) && !string.IsNullOrWhiteSpace(revision)
-                    && !string.IsNullOrWhiteSpace(note) && destination is >= 0
-                    ? new(action, Revision: revision, Note: note, Destination: destination) : null;
-            if (action is "spellmaker-draft" or "potion-mix" or "itemmaker-draft")
-                return fields.SetEquals(["action", "revision", "text"]) && !string.IsNullOrWhiteSpace(revision)
-                    && text is { Length: > 0 and <= 3000 }
-                    ? new(action, Revision: revision, Text: text) : null;
-            if (action is "spell-buy" or "spellmaker-buy" or "itemmaker-buy")
-                return fields.SetEquals(["action", "key", "revision", "amount", "confirm"]) && !string.IsNullOrWhiteSpace(key)
-                    && !string.IsNullOrWhiteSpace(revision) && amount is not null
-                    ? new(action, Key: key, Revision: revision, Amount: amount, Confirm: confirm) : null;
-            if (action == "spell-delete")
-                return fields.SetEquals(["action", "key", "confirm"]) && !string.IsNullOrWhiteSpace(key)
-                    ? new(action, Key: key, Confirm: confirm) : null;
-            if (action == "inventory-sort") return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action == "spell-sort") return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action == "spell-swap")
-                return fields.SetEquals(["action", "key", "item"]) && !string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(item)
-                    ? new(action, Key: key, Item: item) : null;
-            if (action == "spell-info")
-                return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key) ? new(action, Key: key) : null;
-            if (action=="spell-ready")
-                return fields.SetEquals(["action","key"]) && !string.IsNullOrWhiteSpace(key) ? new(action,Key:key) : null;
-            if (action is "spell-unready" or "spell-cast")
-                return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action == "inventory-drop")
-                return fields.SetEquals(["action", "revision", "item", "amount"])
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && amount is not null
-                    ? new(action, revision, item, Amount: amount) : null;
-            if (action == "loot-take-all")
-                return fields.SetEquals(["action", "revision", "container"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(container)
-                    ? new(action, revision, Container: container) : null;
-            if (action == "loot-take")
-            {
-                bool shape = fields.SetEquals(["action", "revision", "item", "container"])
-                    || fields.SetEquals(["action", "revision", "item", "container", "amount"]);
-                return shape && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(container)
-                    ? new(action, revision, item, Container: container, Amount: amount) : null;
-            }
-            if (action is "currency-deposit-gold" or "currency-withdraw-gold" or "currency-withdraw-letter")
-                return fields.SetEquals(["action", "amount"]) && amount is not null ? new(action, Amount: amount) : null;
-            if (action == "currency-deposit-letters")
-                return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action == "bank-transfer")
-                return fields.SetEquals(["action", "amount", "destination"]) && amount is not null && destination is >= 0
-                    ? new(action, Amount: amount, Destination: destination) : null;
-            if (action is "bank-loan-issue" or "bank-loan-repay-account" or "bank-loan-repay-carried")
-                return fields.SetEquals(["action", "amount"]) && amount is not null
-                    ? new(action, Amount: amount) : null;
-            if (action == "travel-search")
-                return fields.SetEquals(["action", "text"]) && text is { Length: <= 80 }
-                    ? new(action, Text: text) : null;
-            if (action == "travel-preview")
-                return fields.SetEquals(["action", "region", "destination", "cautious", "inn", "ship"])
-                    && region is >= 0 && destination is >= 0
-                    ? new(action, Region: region, Destination: destination, Cautious: cautious, Inn: inn, Ship: ship) : null;
-            if (action == "atlas-tiles") return fields.SetEquals(["action", "tiles"]) && tiles is not null ? new(action, Tiles: tiles) : null;
-            if (action == "travel-map") return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
-            if (action == "dungeon-text-answer")
-                return fields.SetEquals(["action", "revision", "item", "text"])
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
-                    && text is { Length: <= 256 }
-                    ? new(action, Revision: revision, Item: item, Text: text) : null;
-            if (action == "dungeon-text-close")
-                return fields.SetEquals(["action", "revision", "item"])
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
-                    ? new(action, Revision: revision, Item: item) : null;
-            if (action == "art-request")
-                return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
-                    ? new(action, revision) : null;
-            if (action == "loot-close")
-                return fields.SetEquals(["action", "container"]) && !string.IsNullOrWhiteSpace(container)
-                    ? new(action, Container: container) : null;
-            if (action == "controls-clutter-distance") return fields.SetEquals(["action", "scale"]) && scale.HasValue ? new(action, Scale: scale) : null;
-            if (action is "action-driven-time" or "controls-ground-cover") return fields.SetEquals(["action", "enabled"])
-                && enabled.HasValue ? new(action, Enabled: enabled) : null;
-            if (action == "controls-look") return fields.SetEquals(["action", "sensitivity", "invert"])
-                && sensitivity.HasValue && invert.HasValue ? new(action, Sensitivity: sensitivity, Invert: invert) : null;
-            // No scale is the player choosing automatic: the DOM follows the window.
-            if (action == "controls-ui-scale") return fields.IsSubsetOf(["action", "scale"]) ? new(action, Scale: scale) : null;
-            if (action == "controls-rebind")
-                return fields.IsSubsetOf(["action", "item", "key", "confirm"])
-                    && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(key)
-                    ? new(action, Item: item, Key: key, Confirm: confirm) : null;
-            if (action == "controls-volume")
-                return fields.SetEquals(["action", "item", "scale"]) && !string.IsNullOrWhiteSpace(item) && scale.HasValue
-                    ? new(action, Item: item, Scale: scale) : null;
-            if (action == "controls-rebind-button")
-                return fields.IsSubsetOf(["action", "item", "amount", "confirm"]) && fields.IsSupersetOf(["action", "item", "amount"])
-                    && !string.IsNullOrWhiteSpace(item) && amount is >= 0
-                    ? new(action, Item: item, Amount: amount, Confirm: confirm) : null;
-            if (action == "controls-reset") return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action == "map-open") return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
-            if (action == "map-building") return fields.SetEquals(["action", "region", "destination", "item"])
-                && region is >= 0 && destination is >= 0 && !string.IsNullOrWhiteSpace(item)
-                ? new(action, Region: region, Destination: destination, Item: item) : null;
-            if (action == "map-note-add")
-                return fields.SetEquals(["action", "text"]) && ValidMapNoteText(text) ? new(action, Text: text) : null;
-            if (action == "map-note-edit")
-                return fields.SetEquals(["action", "note", "text"]) && !string.IsNullOrWhiteSpace(note) && ValidMapNoteText(text)
-                    ? new(action, Note: note, Text: text) : null;
-            if (action == "map-note-remove")
-                return fields.SetEquals(["action", "note"]) && !string.IsNullOrWhiteSpace(note) ? new(action, Note: note) : null;
-            if (action == "menu") return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
-            if (action == "weapon-toggle") return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action is "tutorial-start" or "tutorial-end") return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action == "tutorial-continue") return fields.SetEquals(["action", "page"]) && page is >= 0 ? new(action, Page: page) : null;
-            if (action == "save-slots") return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action is "content-import" or "content-import-cancel") return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action == "save-slot")
-                return fields.IsSubsetOf(["action", "key", "label", "confirm"])
-                    && !string.IsNullOrWhiteSpace(label)
-                    && (key is null || !string.IsNullOrWhiteSpace(key))
-                    ? new(action, Key: key, Label: label, Confirm: confirm) : null;
-            if (action == "bundle-select")
-                return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key)
-                    ? new(action, Key: key) : null;
-            if (action == "load-slot")
-                return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key)
-                    ? new(action, Key: key) : null;
-            if (action == "delete-slot")
-                return fields.IsSubsetOf(["action", "key", "confirm"])
-                    && !string.IsNullOrWhiteSpace(key)
-                    ? new(action, Key: key, Confirm: confirm) : null;
-            if (action is "death-new-game" or "death-quit")
-                return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action == "death-load-game")
-                return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key)
-                    ? new(action, Key: key) : null;
-            if (action is "character-begin" or "character-cancel")
-                return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action == "character-level-allocate")
-                return fields.SetEquals(["action", "attribute"]) && !string.IsNullOrWhiteSpace(attribute)
-                    ? new(action, Attribute: attribute) : null;
-            if (action == "character-level-commit")
-                return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action is "character-update" or "character-commit" or "character-background-reroll" or "character-class-questions")
-            {
-                HashSet<string> required = career == DaggerfallCustomCareerPolicy.CareerId
-                    ? ["action", "name", "race", "gender", "faceIndex", "reflexes", "career", "primarySkills", "majorSkills", "minorSkills", "hitPointsPerLevel", "advantages", "disadvantages"]
-                    : ["action", "name", "race", "gender", "faceIndex", "reflexes", "career"];
-                bool background = fields.Contains("backgroundAnswers") || fields.Contains("attributeAllocations") || fields.Contains("skillAllocations");
-                if (background) required.UnionWith(["backgroundAnswers", "attributeAllocations", "skillAllocations"]);
-                // A draft may hold an empty name while the player is typing one; only the commit needs it.
-                bool named = action == "character-commit" ? !string.IsNullOrWhiteSpace(name) : name is not null;
-                return fields.SetEquals(required)
-                    && named && !string.IsNullOrWhiteSpace(race)
-                    && !string.IsNullOrWhiteSpace(gender) && !string.IsNullOrWhiteSpace(career)
-                    && faceIndex is not null && reflexes is not null
-                    ? new(action, Name: name, Race: race, Gender: gender, FaceIndex: faceIndex, Reflexes: reflexes, Career: career,
-                        PrimarySkills: primarySkills, MajorSkills: majorSkills, MinorSkills: minorSkills, Advantages: advantages, Disadvantages: disadvantages, HitPointsPerLevel: hitPointsPerLevel,
-                        BackgroundAnswers: backgroundAnswers, AttributeAllocations: attributeAllocations, SkillAllocations: skillAllocations) : null;
-            }
-            if (action == "character-quick-start")
-            {
-                // The draft's identity and career, with no background: quick start completes it. A blank name is allowed.
-                HashSet<string> required = career == DaggerfallCustomCareerPolicy.CareerId
-                    ? ["action", "name", "race", "gender", "faceIndex", "reflexes", "career", "primarySkills", "majorSkills", "minorSkills", "hitPointsPerLevel", "advantages", "disadvantages"]
-                    : ["action", "name", "race", "gender", "faceIndex", "reflexes", "career"];
-                return fields.SetEquals(required) && name is not null
-                    && !string.IsNullOrWhiteSpace(race) && !string.IsNullOrWhiteSpace(gender) && !string.IsNullOrWhiteSpace(career)
-                    && faceIndex is not null && reflexes is not null
-                    ? new(action, Name: name, Race: race, Gender: gender, FaceIndex: faceIndex, Reflexes: reflexes, Career: career,
-                        PrimarySkills: primarySkills, MajorSkills: majorSkills, MinorSkills: minorSkills, Advantages: advantages, Disadvantages: disadvantages, HitPointsPerLevel: hitPointsPerLevel) : null;
-            }
-            if (action == "character-class-back") return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action == "character-class-answer")
-                return fields.SetEquals(["action", "question", "answer"]) && classQuestion is >= 1 and <= 40 && classAnswer is >= 0 and <= 2
-                    ? new(action, Question: classQuestion, Answer: classAnswer) : null;
-            if (action == "activation-mode")
-                return fields.SetEquals(["action", "mode"])
-                    && mode is "grab" or "info" or "talk" or "steal" or "lockpick" or "bash"
-                    ? new(action, Mode: mode) : null;
-            if (action == "transport-select")
-                return fields.SetEquals(["action", "mode"])
-                    && mode is "foot" or "horse" or "cart"
-                    ? new(action, Mode: mode) : null;
-            if (action is "transport-leave-ship" or "transport-board-ship")
-                return fields.SetEquals(["action"]) ? new(action) : null;
-            if (action == "rest")
-            {
-                bool timedOrLoiter = mode is "timed" or "loiter";
-                bool untilHealed = mode == "until-healed";
-                bool shape = timedOrLoiter
-                    ? fields.SetEquals(["action", "mode", "hours"]) && hours is >= 0
-                    : untilHealed && fields.SetEquals(["action", "mode"]);
-                return shape ? new(action, Mode: mode, Hours: hours) : null;
-            }
-            if (action is "property-buy" or "property-sell" or "property-enter")
-                return fields.SetEquals(["action", "key"]) && !string.IsNullOrWhiteSpace(key) ? new(action, Key: key) : null;
-            if (action is "property-put" or "property-take")
-                return fields.IsSubsetOf(["action", "key", "item", "amount", "revision"])
-                    && !string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(revision)
-                    && amount is null or > 0 ? new(action, Key: key, Item: item, Amount: amount, Revision: revision) : null;
-            if (action is "wagon-put" or "wagon-take")
-                return (fields.SetEquals(["action", "revision", "item"])
-                    || fields.SetEquals(["action", "revision", "item", "amount"]))
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
-                    ? new(action, Revision: revision, Item: item, Amount: amount) : null;
-            if (action == "teleport-select")
-                return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && key is "anchor" or "recall" or "cancel" ? new(action, Revision: revision, Key: key) : null;
-            if (action is "legal-choice")
-                return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && key is "yield" or "resist" or "escape" or "guilty" or "etiquette" or "streetwise" or "accept" or "continue" ? new(action, Revision: revision, Key: key) : null;
-            if (action is "dispel-select" or "identify-select" or "create-item-select")
-                return fields.SetEquals(["action", "revision", "key"]) && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) ? new(action, Revision: revision, Key: key) : null;
-            if (action is "dispel-cancel" or "identify-cancel" or "create-item-cancel")
-                return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision) ? new(action, Revision: revision) : null;
-            if (action == "bank-open")
-                return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision) ? new(action, Revision: revision) : null;
-            if (action == "dialogue-tone")
-                return fields.SetEquals(["action", "revision", "tone"])
-                    && !string.IsNullOrWhiteSpace(revision)
-                    && tone is "polite" or "normal" or "blunt"
-                    ? new(action, Revision: revision, Tone: tone) : null;
-            if (action == "dialogue-topic")
-            {
-                if (topic == "donate")
-                    return fields.SetEquals(["action", "revision", "topic", "amount"])
-                        && !string.IsNullOrWhiteSpace(revision) && amount is > 0
-                        ? new(action, Revision: revision, Topic: topic, Amount: amount) : null;
-                if (topic is "armor" or "join" or "restore-attributes" && fields.SetEquals(["action", "revision", "topic", "key"]))
-                    return !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) && (topic == "armor" || key is "yes" or "no")
-                        ? new(action, Revision: revision, Topic: topic, Key: key) : null;
-                return fields.SetEquals(["action", "revision", "topic"])
-                    && !string.IsNullOrWhiteSpace(revision)
-                    && (ValidDialogueTopic(topic) || topic is "cure" or "rank-review" or "armor" or "house" or "join" or "teleport" or "spymaster")
-                    ? new(action, Revision: revision, Topic: topic) : null;
-            }
-            if (action == "dialogue-close")
-                return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
-                    ? new(action, Revision: revision) : null;
-            if (action == "tavern-buy")
-                return fields.SetEquals(["action", "revision", "key", "amount"])
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) && amount is not null
-                    ? new(action, Revision: revision, Key: key, Amount: amount) : null;
-            if (action == "training-commit")
-                return fields.SetEquals(["action", "revision", "key", "amount", "confirm"])
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key) && amount is > 0
-                    ? new(action, Revision: revision, Key: key, Amount: amount, Confirm: confirm) : null;
-            if (action is "merchant-buy" or "merchant-sell" or "merchant-shoplift")
-            {
-                // Buying and selling may carry the player's confirmation of a large trade.
-                bool confirmable = action != "merchant-shoplift";
-                bool shape = fields.SetEquals(["action", "revision", "item"])
-                    || fields.SetEquals(["action", "revision", "item", "amount"])
-                    || confirmable && (fields.SetEquals(["action", "revision", "item", "confirm"])
-                        || fields.SetEquals(["action", "revision", "item", "amount", "confirm"]));
-                return shape && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
-                    && (amount is null or > 0)
-                    && (!item.StartsWith("unique:", StringComparison.Ordinal) || (amount is null or 1))
-                    ? new(action, Revision: revision, Item: item, Amount: amount, Confirm: confirm) : null;
-            }
-            if (action == "merchant-quote")
-                return fields.SetEquals(["action", "revision", "item", "key", "amount"])
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && key is "buy" or "sell" && amount is > 0
-                    ? new(action, Revision: revision, Item: item, Key: key, Amount: amount) : null;
-            if (action is "merchant-repair" or "merchant-identify")
-                return fields.SetEquals(["action", "revision", "item"])
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item)
-                    ? new(action, Revision: revision, Item: item) : null;
-            if (action == "merchant-collect-repair")
-                return fields.SetEquals(["action", "revision", "key"])
-                    && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(key)
-                    ? new(action, Revision: revision, Key: key) : null;
-            if (action == "quest-choice")
-                return fields.SetEquals(["action", "questInstance", "questMessage", "questPrompt", "questChoice"])
-                    && !string.IsNullOrWhiteSpace(questInstance) && !string.IsNullOrWhiteSpace(questPrompt) && questMessage is > 0 && questChoice is not null
-                    ? new(action, QuestInstance: questInstance, QuestMessage: questMessage, QuestChoice: questChoice, QuestPrompt: questPrompt) : null;
-            if (action == "quest-offer-answer")
-                return fields.SetEquals(["action", "questInstance", "confirm"]) && !string.IsNullOrWhiteSpace(questInstance)
-                    ? new(action, QuestInstance: questInstance, Confirm: confirm) : null;
-            if (action == "quest-dismiss")
-                return fields.SetEquals(["action", "questInstance", "questDelivery"])
-                    && !string.IsNullOrWhiteSpace(questInstance) && !string.IsNullOrWhiteSpace(questDelivery)
-                    ? new(action, QuestInstance: questInstance, QuestDelivery: questDelivery) : null;
-            // "begin" is the entry screen's own action, which the product answers: the session accepts the
-            // shape so a slice carrying it is a known action it does not act on, rather than an
-            // unrecognized one it reports over the screen that asked.
-            return fields.Count == 1 && action is "attack" or "loot" or "begin" or "cinematic-skip" or "save-game" or "load-game"
-                ? new(action) : null;
+            // A rule whose kind has no case above admits no payload.
+            return null;
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException) { return null; }
     }

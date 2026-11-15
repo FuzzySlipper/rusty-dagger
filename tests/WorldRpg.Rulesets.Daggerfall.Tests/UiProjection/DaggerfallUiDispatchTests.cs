@@ -58,6 +58,15 @@ public sealed class DaggerfallUiDispatchTests : IDisposable
     }
 
     [Fact]
+    public void A_wire_no_rule_names_is_reported_as_unrecognized()
+    {
+        DaggerfallUiInput input = _dispatch.Take([Ui("""{"action":"spellinfo","key":"spell:1"}""")]);
+        Assert.True(input.IsUiAction(0));
+        Admit(input.ActionAt(0), DaggerfallUiPhases.Playing);
+        Assert.Equal(DaggerfallUiAction.UnrecognizedRefusal, _presentation.LastOutcome);
+    }
+
+    [Fact]
     public void A_form_that_suppresses_the_inventory_refuses_its_actions()
     {
         _stage.Overrides.Select(DaggerfallRacialKind.Werewolf, "curse", 0);

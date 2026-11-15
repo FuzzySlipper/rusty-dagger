@@ -265,7 +265,141 @@ public sealed class DaggerfallUiActionTests
             Assert.Equal(rule.Kind, DaggerfallUiAction.KindOf(rule.Wire));
             Assert.NotEqual(DaggerfallUiPhases.None, rule.Phases);
         }
-        Assert.Equal(DaggerfallUiActionKind.LootTake, DaggerfallUiAction.Parse(
-            Encoding.UTF8.GetBytes("{\"action\":\"loot-take\",\"revision\":\"1\",\"item\":\"stack:a\",\"container\":\"c\"}"))!.Kind);
     }
+
+    private const string Draft = "\"name\":\"Aubk-i\",\"race\":\"breton\",\"gender\":\"male\",\"faceIndex\":0,\"reflexes\":2,\"career\":\"class00\"";
+
+    /// <summary>A valid payload's fields besides its action, for each kind that carries any; every other kind carries only its action.</summary>
+    private static readonly Dictionary<DaggerfallUiActionKind, string> FieldsOf = new()
+    {
+        [DaggerfallUiActionKind.ArtRequest] = "\"revision\":\"2a1b\"",
+        [DaggerfallUiActionKind.ControlsRebind] = "\"item\":\"jump\",\"key\":\"Space\"",
+        [DaggerfallUiActionKind.ControlsRebindButton] = "\"item\":\"jump\",\"amount\":1",
+        [DaggerfallUiActionKind.ControlsVolume] = "\"item\":\"music\",\"scale\":0.5",
+        [DaggerfallUiActionKind.ControlsLook] = "\"sensitivity\":1.5,\"invert\":false",
+        [DaggerfallUiActionKind.ControlsUiScale] = "\"scale\":1.25",
+        [DaggerfallUiActionKind.ControlsGroundCover] = "\"enabled\":true",
+        [DaggerfallUiActionKind.ControlsClutterDistance] = "\"scale\":2",
+        [DaggerfallUiActionKind.ActionDrivenTime] = "\"enabled\":false",
+        [DaggerfallUiActionKind.CharacterClassQuestions] = Draft,
+        [DaggerfallUiActionKind.CharacterClassAnswer] = "\"question\":1,\"answer\":2",
+        [DaggerfallUiActionKind.CharacterUpdate] = Draft,
+        [DaggerfallUiActionKind.CharacterBackgroundReroll] = Draft,
+        [DaggerfallUiActionKind.CharacterCommit] = Draft,
+        [DaggerfallUiActionKind.CharacterQuickStart] = Draft,
+        [DaggerfallUiActionKind.CharacterLevelAllocate] = "\"attribute\":\"strength\"",
+        [DaggerfallUiActionKind.ActivationMode] = "\"mode\":\"grab\"",
+        [DaggerfallUiActionKind.SpellReady] = "\"key\":\"spell:1\"",
+        [DaggerfallUiActionKind.DaedraSummon] = "\"revision\":\"1\",\"key\":\"daedra:1\",\"amount\":200,\"confirm\":true",
+        [DaggerfallUiActionKind.DaedraAnswer] = "\"revision\":\"1\",\"confirm\":true",
+        [DaggerfallUiActionKind.ItemMakerDraft] = "\"revision\":\"1\",\"text\":\"{}\"",
+        [DaggerfallUiActionKind.ItemMakerBuy] = "\"key\":\"draft:1\",\"revision\":\"1\",\"amount\":90,\"confirm\":false",
+        [DaggerfallUiActionKind.PotionMix] = "\"revision\":\"1\",\"text\":\"{}\"",
+        [DaggerfallUiActionKind.SpellMakerDraft] = "\"revision\":\"1\",\"text\":\"{}\"",
+        [DaggerfallUiActionKind.SpellMakerBuy] = "\"key\":\"draft:1\",\"revision\":\"1\",\"amount\":90,\"confirm\":false",
+        [DaggerfallUiActionKind.SpellBuy] = "\"key\":\"spell:1\",\"revision\":\"1\",\"amount\":90,\"confirm\":false",
+        [DaggerfallUiActionKind.SpellDelete] = "\"key\":\"spell:1\",\"confirm\":true",
+        [DaggerfallUiActionKind.SpellSwap] = "\"key\":\"spell:1\",\"item\":\"spell:2\"",
+        [DaggerfallUiActionKind.SpellInfo] = "\"key\":\"spell:1\"",
+        [DaggerfallUiActionKind.TutorialContinue] = "\"page\":1",
+        [DaggerfallUiActionKind.Menu] = "\"open\":true",
+        [DaggerfallUiActionKind.IdentifySelect] = "\"revision\":\"1\",\"key\":\"unique:1002\"",
+        [DaggerfallUiActionKind.IdentifyCancel] = "\"revision\":\"1\"",
+        [DaggerfallUiActionKind.LegalChoice] = "\"revision\":\"1\",\"key\":\"yield\"",
+        [DaggerfallUiActionKind.CreateItemSelect] = "\"revision\":\"1\",\"key\":\"item:1\"",
+        [DaggerfallUiActionKind.CreateItemCancel] = "\"revision\":\"1\"",
+        [DaggerfallUiActionKind.DispelSelect] = "\"revision\":\"1\",\"key\":\"effect:1\"",
+        [DaggerfallUiActionKind.DispelCancel] = "\"revision\":\"1\"",
+        [DaggerfallUiActionKind.TeleportSelect] = "\"revision\":\"1\",\"key\":\"anchor\"",
+        [DaggerfallUiActionKind.DialogueTone] = "\"revision\":\"1\",\"tone\":\"polite\"",
+        [DaggerfallUiActionKind.DialogueTopic] = "\"revision\":\"1\",\"topic\":\"news\"",
+        [DaggerfallUiActionKind.DialogueClose] = "\"revision\":\"1\"",
+        [DaggerfallUiActionKind.TavernBuy] = "\"revision\":\"1\",\"key\":\"ale\",\"amount\":1",
+        [DaggerfallUiActionKind.TrainingCommit] = "\"revision\":\"1\",\"key\":\"long-blade\",\"amount\":250,\"confirm\":true",
+        [DaggerfallUiActionKind.MerchantBuy] = "\"revision\":\"1\",\"item\":\"stack:gold\"",
+        [DaggerfallUiActionKind.MerchantSell] = "\"revision\":\"1\",\"item\":\"stack:book\"",
+        [DaggerfallUiActionKind.MerchantRepair] = "\"revision\":\"1\",\"item\":\"unique:1002\"",
+        [DaggerfallUiActionKind.MerchantCollectRepair] = "\"revision\":\"1\",\"key\":\"merchant:repair:1\"",
+        [DaggerfallUiActionKind.MerchantIdentify] = "\"revision\":\"1\",\"item\":\"unique:1002\"",
+        [DaggerfallUiActionKind.MerchantShoplift] = "\"revision\":\"1\",\"item\":\"stack:gem\"",
+        [DaggerfallUiActionKind.MerchantQuote] = "\"revision\":\"1\",\"item\":\"stack:gold\",\"key\":\"buy\",\"amount\":90",
+        [DaggerfallUiActionKind.TransportSelect] = "\"mode\":\"foot\"",
+        [DaggerfallUiActionKind.PropertyBuy] = "\"key\":\"house:1\"",
+        [DaggerfallUiActionKind.PropertySell] = "\"key\":\"house:1\"",
+        [DaggerfallUiActionKind.PropertyEnter] = "\"key\":\"house:1\"",
+        [DaggerfallUiActionKind.PropertyPut] = "\"key\":\"house:1\",\"item\":\"unique:1002\",\"revision\":\"1\"",
+        [DaggerfallUiActionKind.PropertyTake] = "\"key\":\"house:1\",\"item\":\"unique:1002\",\"revision\":\"1\"",
+        [DaggerfallUiActionKind.MapOpen] = "\"open\":true",
+        [DaggerfallUiActionKind.MapBuilding] = "\"region\":17,\"destination\":3,\"item\":\"building:1\"",
+        [DaggerfallUiActionKind.MapNoteAdd] = "\"text\":\"Lever room\"",
+        [DaggerfallUiActionKind.MapNoteEdit] = "\"note\":\"note-1\",\"text\":\"Pulled\"",
+        [DaggerfallUiActionKind.MapNoteRemove] = "\"note\":\"note-1\"",
+        [DaggerfallUiActionKind.TravelSearch] = "\"text\":\"Daggerfall\"",
+        [DaggerfallUiActionKind.TravelPreview] = "\"region\":17,\"destination\":3,\"cautious\":true,\"inn\":false,\"ship\":false",
+        [DaggerfallUiActionKind.TravelAccept] = "\"key\":\"journey:1\",\"amount\":0",
+        [DaggerfallUiActionKind.TravelMap] = "\"open\":true",
+        [DaggerfallUiActionKind.AtlasTiles] = "\"tiles\":[[0,1,1]]",
+        [DaggerfallUiActionKind.LodgingQuote] = "\"key\":\"room:1\",\"days\":2",
+        [DaggerfallUiActionKind.LodgingBook] = "\"key\":\"room:1\",\"days\":2,\"amount\":0",
+        [DaggerfallUiActionKind.Rest] = "\"mode\":\"until-healed\"",
+        [DaggerfallUiActionKind.WagonPut] = "\"revision\":\"1\",\"item\":\"stack:gold-piece\"",
+        [DaggerfallUiActionKind.WagonTake] = "\"revision\":\"1\",\"item\":\"unique:1002\"",
+        [DaggerfallUiActionKind.QuestChoice] = "\"questInstance\":\"quest:1\",\"questMessage\":1010,\"questChoice\":0,\"questPrompt\":\"prompt:1\"",
+        [DaggerfallUiActionKind.QuestOfferAnswer] = "\"questInstance\":\"quest:1\",\"confirm\":true",
+        [DaggerfallUiActionKind.QuestDismiss] = "\"questInstance\":\"quest:1\",\"questDelivery\":\"quest-message:2\"",
+        [DaggerfallUiActionKind.DungeonTextAnswer] = "\"revision\":\"1\",\"item\":\"riddle:1\",\"text\":\"a shadow\"",
+        [DaggerfallUiActionKind.DungeonTextClose] = "\"revision\":\"1\",\"item\":\"riddle:1\"",
+        [DaggerfallUiActionKind.InventoryMove] = "\"revision\":\"1:2\",\"item\":\"unique:1002\",\"targetGrid\":3",
+        [DaggerfallUiActionKind.InventoryInspect] = "\"revision\":\"1:2\",\"item\":\"unique:1002\"",
+        [DaggerfallUiActionKind.InventoryUse] = "\"revision\":\"1:2\",\"item\":\"unique:1002\"",
+        [DaggerfallUiActionKind.InventoryDrop] = "\"revision\":\"1:2\",\"item\":\"stack:gold-piece\",\"amount\":5",
+        [DaggerfallUiActionKind.NotebookPage] = "\"revision\":\"3\",\"page\":1",
+        [DaggerfallUiActionKind.NotebookAdd] = "\"revision\":\"3\",\"text\":\"A durable note.\"",
+        [DaggerfallUiActionKind.NotebookEdit] = "\"revision\":\"3\",\"note\":\"note:1\",\"text\":\"Edited.\"",
+        [DaggerfallUiActionKind.NotebookRemove] = "\"revision\":\"3\",\"note\":\"note:1\"",
+        [DaggerfallUiActionKind.NotebookMove] = "\"revision\":\"3\",\"note\":\"note:1\",\"destination\":1",
+        [DaggerfallUiActionKind.CurrencyDepositGold] = "\"amount\":25",
+        [DaggerfallUiActionKind.CurrencyWithdrawGold] = "\"amount\":25",
+        [DaggerfallUiActionKind.CurrencyWithdrawLetter] = "\"amount\":100",
+        [DaggerfallUiActionKind.BankTransfer] = "\"amount\":250,\"destination\":4",
+        [DaggerfallUiActionKind.BankOpen] = "\"revision\":\"1\"",
+        [DaggerfallUiActionKind.BankLoanIssue] = "\"amount\":100",
+        [DaggerfallUiActionKind.BankLoanRepayAccount] = "\"amount\":100",
+        [DaggerfallUiActionKind.BankLoanRepayCarried] = "\"amount\":100",
+        [DaggerfallUiActionKind.LootClose] = "\"container\":\"2000:1\"",
+        [DaggerfallUiActionKind.LootTake] = "\"container\":\"2000:1\",\"revision\":\"2000:1:8\",\"item\":\"stack:gold-piece\"",
+        [DaggerfallUiActionKind.LootTakeAll] = "\"container\":\"2000:1\",\"revision\":\"2000:1:8\"",
+        [DaggerfallUiActionKind.SaveSlot] = "\"label\":\"Before the dungeon\"",
+        [DaggerfallUiActionKind.LoadSlot] = "\"key\":\"slot-1\"",
+        [DaggerfallUiActionKind.BundleSelect] = "\"key\":\"bundle:1\"",
+        [DaggerfallUiActionKind.DeleteSlot] = "\"key\":\"slot-1\"",
+        [DaggerfallUiActionKind.DeathLoadGame] = "\"key\":\"slot-1\"",
+    };
+
+    /// <summary>
+    /// The wire is named only by its rule, so every rule's action must reach the session: sent with a
+    /// payload of its kind's shape, each parses as its own kind.
+    /// </summary>
+    [Fact]
+    public void Every_rule_s_wire_parses_as_its_kind_with_a_payload_of_its_shape()
+    {
+        List<string> unreachable = [];
+        foreach (DaggerfallUiActionRule rule in DaggerfallUiAction.Rules)
+        {
+            string json = FieldsOf.TryGetValue(rule.Kind, out string? fields)
+                ? $"{{\"action\":\"{rule.Wire}\",{fields}}}"
+                : $"{{\"action\":\"{rule.Wire}\"}}";
+            if (DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json))?.Kind != rule.Kind) unreachable.Add($"{rule.Kind}: {json}");
+        }
+        Assert.Empty(unreachable);
+    }
+
+    /// <summary>A wire no rule names is not an action: it is refused, never thrown out of the parse.</summary>
+    [Theory]
+    [InlineData("{\"action\":\"spellinfo\",\"key\":\"spell:1\"}")]
+    [InlineData("{\"action\":\"Spell-Info\",\"key\":\"spell:1\"}")]
+    [InlineData("{\"action\":\"spell-info \",\"key\":\"spell:1\"}")]
+    [InlineData("{\"key\":\"spell:1\"}")]
+    public void A_wire_no_rule_names_is_refused_without_an_exception(string json) =>
+        Assert.Null(DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)));
 }
