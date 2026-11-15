@@ -24,6 +24,8 @@ public sealed class DaggerfallSpatialInspectionTests
         AssertInvalid(_inspection.ReadProbe(double.NaN), "Probe distance must be finite and within (0, 8].");
         AssertInvalid(_inspection.ReadClearance(0, double.PositiveInfinity, 0), "Clearance target must be finite.");
         AssertInvalid(_inspection.ReadJumpPlan(double.NaN, 0, 0), "Jump target must be finite.");
+        AssertInvalid(_inspection.ReadFloor(0, double.NaN, 0), "Floor point must be finite.");
+        AssertInvalid(_inspection.ReadRoute(double.NegativeInfinity, 0, 0), "Route goal must be finite.");
     }
 
     [Fact]
@@ -31,6 +33,7 @@ public sealed class DaggerfallSpatialInspectionTests
     {
         InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => _inspection.ReadGrid(1, 1, 1));
         Assert.Equal("Spatial inspection requires a player position.", missing.Message);
+        Assert.Null(_inspection.PlayerFloorY());
     }
 
     private static void AssertInvalid(DebugCommandResult result, string message)

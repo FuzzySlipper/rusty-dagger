@@ -31,13 +31,14 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="generation">The latest admitted update's generation, or null before one.</param>
 /// <param name="step">The latest admitted simulation step, or null before one.</param>
 /// <param name="lootReach">The reach a target without its own is used at.</param>
+/// <param name="floorY">The floor under the player, or null where it is not loaded or there is none.</param>
 internal sealed class DaggerfallPlaytestState(DaggerfallPlayerControls controls, Func<ProductMode> mode, ActorsState actors,
     DaggerfallEffectLifecycle effects, DaggerfallCombatRules combat, Func<bool> weaponDrawn, DaggerfallPlayerAttack playerAttack,
     AttackExecution<IProductFact> attackExecution, TargetingService targeting, Func<ulong?> generation, Func<ulong?> step,
     DaggerfallEncumbrancePolicy encumbrance, PlayerControlState player, PlayerInputSystem input, FirstPersonCameraSystem camera,
     PresentationState presentation, DaggerfallActivation activation, DaggerfallActivationPanel activationPanel, DaggerfallLootPresentation loot,
     DaggerfallActorRoster roster, DaggerfallEnemySenses senses, DaggerfallEnemyBehaviorModule enemyBehavior, ActorReactions reactions,
-    double lootReach)
+    double lootReach, Func<double?> floorY)
 {
     private ulong _combatEvents;
 
@@ -136,7 +137,8 @@ internal sealed class DaggerfallPlaytestState(DaggerfallPlayerControls controls,
         w.WriteString("generation", (generation() ?? 0).ToString());
         w.WriteString("hostState", "Native world, player and time are shared across browser clients. Reconnect does not reset; new game uses ordinary menu.");
         w.WriteStartObject("axes"); w.WriteString("up", "Y"); w.WriteString("yaw", "positive right; zero faces -Z");
-        w.WriteString("positionMeaning", "character center"); w.WriteNull("floorY");
+        w.WriteString("positionMeaning", "character center"); if (floorY() is double floor) w.WriteNumber("floorY", floor); else w.WriteNull("floorY");
+        w.WriteString("floorMeaning", "Floor under the player's feet; null where it is not loaded or there is none: navigation.floor says which.");
         Vector(w, "forward", look.Forward); w.WriteEndObject();
         w.WriteStartObject("player");
         if (player.Position is WorldPoint position) Vector(w, "position", position.ToVector()); else w.WriteNull("position");
@@ -198,7 +200,7 @@ internal sealed class DaggerfallPlaytestState(DaggerfallPlayerControls controls,
         TargetingEvidence? aimed = origin is WorldPoint p
             ? targeting.Inspect(p, look.Forward, combat.ReachOf(DaggerfallActorIdentity.PlayerEntityId)) : null;
         w.WriteStartObject();
-        w.WriteString("route", "unavailable; targets are loaded positions, not traversable routes");
+        w.WriteString("route", "Targets are loaded positions, not routes: navigation.route X Y Z reads one.");
         w.WriteString("visibilityCoverage", "Current gameplay perception checks retained geometry; call-local moving doors/supports are not included. Visible is not a walking route or full collision clearance.");
         w.WriteString("angleOrigin", "character center used by gameplay targeting; visual angles also supplied from camera viewpoint");
         w.WriteString("attackVisibilityMeaning", "Player's current weapon-reach query; unavailable beyond its envelope is not an enemy perception result. enemyBehavior contains the last admitted enemy decision.");

@@ -37,8 +37,18 @@ rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj --live-debug
 
 ## Limits
 
-- Floor height and a traversable route are not available. Never substitute a guessed floor or a straight line;
-  capture a navigation stall for a follow-up.
+- `navigation.floor X Y Z` reads the floor at or below a scene-local point through the collision movement meets:
+  `floor` with `floorY`, `no-floor` (loaded collision with nothing to stand on within 16 m), or `not-loaded`, whose
+  `detail` says why: staged collision still being prepared, a point outside the resident exterior window, or
+  streamed ground beyond its reach of the player or still arriving. Not-loaded is no answer; never read it as no
+  floor. `playtest.observe`'s `axes.floorY` is the floor under the player, null in either case.
+- `navigation.route X Y Z` is the Engine's navigation step query from the player's feet, the one walkers and
+  pursuers make, over the navigation they walk: its outcome, the start, goal and turning waypoints (cell centres; a
+  `level` orders height bands and is not metres) and the goal's floor. It is a suggestion: walk it with ordinary
+  input and check the position. A route can cross a surface the player slides off; report that as a stall, with the
+  positions. Where there is no navigation (the wilderness heightfield is none, nor is a roof) a route answers
+  `StartNotWalkable` or `GoalNotWalkable`; then compare `goalFloor`.
+- After `world.stand` or travel, floors read `not-loaded` until the staged collision lands: advance briefly.
 - A visible target is not proof of collision clearance; moving door and support colliders are not in the
   visibility query. Interaction focus does not promise a door is unlocked.
 - `playtest.action` preflight reads policy and resources; input admission still owns spends, cooldown and outcome.
@@ -55,6 +65,8 @@ which `rusty-live-debug --origin URL` (`help`, `complete world.`) and the in-gam
 - They act through the owners ordinary play uses, so the next save holds the result, and they wait while a screen
   or question is open.
 - Reaching a trainer: `world.enter Charing "Temple of Kynareth"`, `world.find training`, `world.goto Actor:<id>`.
+- Floor and route: `navigation.floor X Y Z`, `navigation.route X Y Z` (Limits says how to read them), beside
+  `spatial.probe`, `spatial.grid`, `spatial.clearance X Y Z` and `playtest.jump-plan X Y Z`.
 - Comparing old and new art: `world.classic-art on` draws the classic art for the run, `off` the refreshed art.
   No settings screen offers it, and nothing keeps it past the run.
 - `scripts/tour/tour.py` and `cost.py` drive them over many scenes (usage in their headers).
@@ -65,7 +77,8 @@ A session offers its live-debug modules (`IGameSession.DebugCommands`), and `Wor
 time it installs a session. A developer command is a `[DebugCommand]` member of a Kit `IDeveloper*Commands`
 interface, implemented by its owner in the ruleset's `Developer/`: a new command is that member and the owner's
 method. The playtest, spatial and interaction commands are the Engine's modules, built over the owners in the
-session's composition beside the rest of the list. Kit owns the read-only targeting mechanisms. Dagger supplies the
+session's composition beside the rest of the list; `navigation.floor` and `.route` are the Kit's
+`IPlaytestNavigationCommands`, implemented by `DaggerfallSpatialInspection`. Kit owns the read-only targeting mechanisms. Dagger supplies the
 live ruleset facts: places, buildings and targets, control mappings, hostility, equipment and animation policy. Crew
 owns bounded input, time coordination and capture. A query never activates a target, spends a resource, replaces the
 selected target or overwrites the last gameplay evidence.

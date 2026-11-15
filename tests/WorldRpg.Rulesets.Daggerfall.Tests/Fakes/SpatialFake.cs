@@ -8,7 +8,11 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 internal class SpatialFake : DispatchProxy
 {
     internal List<NavigationStepRequest> NavigationRequests { get; } = [];
-    private NavigationStepResult Navigate(NavigationStepRequest request) { NavigationRequests.Add(request); return NoNavigationPath(request); }
+    /// <summary>What a navigation step answers; an honest no-path receipt by default.</summary>
+    internal Func<NavigationStepRequest, NavigationStepResult> NavigationResult { get; set; } = NoNavigationPath;
+    private NavigationStepResult Navigate(NavigationStepRequest request) { NavigationRequests.Add(request); return NavigationResult(request); }
+    /// <summary>The navigation grids the session reports holding; none by default.</summary>
+    internal NavigationGridInfo[] NavigationGrids { get; set; } = [];
     internal Func<CharacterStepRequest, CharacterStepReceipt, CharacterStepReceipt>? StepResult { get; set; }
     internal bool KeepPosition { get; set; }
     internal Func<CharacterStepRequest, CharacterMovementFact> MovementFact { get; set; } = _ => default;
@@ -147,6 +151,7 @@ internal class SpatialFake : DispatchProxy
         // Navigation is not under test here: an honest no-path receipt leaves the
         // actor's pose intact instead of reporting a bogus waypoint.
         nameof(ISpatialService.EvaluateNavigationStep) => Navigate((NavigationStepRequest)arguments![0]!),
+        nameof(ISpatialService.ReadNavigationGrids) => new ReadOnlyMemory<NavigationGridInfo>(NavigationGrids),
         nameof(ISpatialService.CaptureCharacterContinuation) => Capture((CharacterContinuationCaptureRequest)arguments![0]!),
         _ => throw new NotSupportedException(method?.Name),
     };

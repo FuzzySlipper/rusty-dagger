@@ -56,5 +56,5 @@ public sealed class DaggerfallPlaytestStateTests
     }
 
     private DaggerfallPlaytestState Playtest() => new(null!, null!, null!, null!, null!, null!, null!, null!, null!,
-        () => _generation, () => _step, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, 2.5);
+        () => _generation, () => _step, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, 2.5, () => null);
 }

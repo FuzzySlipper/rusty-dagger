@@ -690,6 +690,24 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
         return true;
     }
 
+    /// <summary>
+    /// Why the collision at a local point is not in the scene yet, or null when it is: staged collision still being
+    /// prepared, an exterior point outside the walked window, or one whose streamed ground has not stood up. Any other
+    /// site is admitted whole, so only staged collision leaves it unknown.
+    /// </summary>
+    internal string? CollisionUnknownAt(Vector3 local)
+    {
+        if (CollisionPending) return "Staged collision is still being prepared.";
+        if (ActiveProfile.Kind != DaggerfallWorldProfileKind.Exterior) return null;
+        if (_exteriorResidency is not { IsInitialized: true } residency) return "No exterior window is admitted.";
+        DaggerfallExteriorWorldOrigin origin = ActiveOrigin(residency);
+        DaggerfallExteriorCellId cell = DaggerfallExteriorSessionOrigin.CellForLocalPosition(WorldPoint.From(local), origin,
+            new DaggerfallExteriorWorldBounds(_definitions.Terrain.Width, _definitions.Terrain.Height));
+        if (!residency.ResidentCells.Contains(cell)) return $"Map pixel {cell.X},{cell.Y} is outside the resident exterior window.";
+        return _groundCollider?.StandsAt(local, origin) == true ? null
+            : "The streamed ground there has not stood up: it is beyond the ground's reach of the player or still arriving.";
+    }
+
     /// <summary>Whether the current spatial session has an admitted exterior window.</summary>
     internal bool ExteriorResidencyInitialized => _exteriorResidency?.IsInitialized == true;
 

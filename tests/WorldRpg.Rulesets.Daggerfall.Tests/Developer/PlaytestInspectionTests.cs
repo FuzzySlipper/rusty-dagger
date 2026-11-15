@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
@@ -5,6 +6,9 @@ using Rusty.Engine.Mechanics;
 using Rusty.Engine.Interaction;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -51,6 +55,71 @@ public sealed class PlaytestInspectionTests
         Assert.Equal(position, session.State.PlayerControl.Position);
         Assert.Equal(before, fatigue.Current);
         Assert.Same(lastActivation, session.Activation.LastEvidence);
+    }
+
+    [Fact]
+    public void A_streamed_exterior_floor_is_read_only_where_its_collision_is_loaded_and_a_route_is_the_engine_step()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile charing = ReadProfile(root, FullContent(root), TestPayload.Definitions, "daggerfall.charing-exterior");
+        List<string> releases = [];
+        ContentFake content = new(releases); PopulateContent(content, charing);
+        SpatialFake spatial = SpatialFake.Create(charing.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, charing, DaggerfallTuning.Defaults));
+        Assert.True(session.AwaitArrivalGround().Done);
+        spatial.FloorHit = request => new(true, SpatialHitKind.StaticMesh, 0, 0, 0, 0, 0, 0, 0, default,
+            request.Origin with { Y = 10 }, Vector3.UnitY, request.Origin.Y - 10, 0, 0, false, true);
+        IPlaytestNavigationCommands navigation = session.Commands<IPlaytestNavigationCommands>();
+        WorldPoint player = session.State.PlayerControl.Position!.Value;
+        WorldPoint position = player;
+
+        using (JsonDocument floor = JsonDocument.Parse(navigation.ReadFloor(position.X, 10, position.Z).Message))
+        {
+            Assert.Equal("floor", floor.RootElement.GetProperty("status").GetString());
+            Assert.Equal(10, floor.RootElement.GetProperty("floorY").GetDouble());
+            Assert.True(floor.RootElement.GetProperty("standable").GetBoolean());
+        }
+        using (JsonDocument observed = JsonDocument.Parse(session.Commands<PlaytestDebugModule>().Observe().Message))
+            Assert.Equal(10, observed.RootElement.GetProperty("axes").GetProperty("floorY").GetDouble());
+
+        // Ground still arriving is not known: nothing is cast, so nothing is guessed.
+        int casts = spatial.FloorProbes.Count;
+        spatial.HeightfieldColliderReady = false;
+        using (JsonDocument arriving = JsonDocument.Parse(navigation.ReadFloor(position.X, 10, position.Z).Message))
+        {
+            Assert.Equal("not-loaded", arriving.RootElement.GetProperty("status").GetString());
+            Assert.Equal(JsonValueKind.Null, arriving.RootElement.GetProperty("floorY").ValueKind);
+            Assert.Contains("streamed ground", arriving.RootElement.GetProperty("detail").GetString());
+        }
+        Assert.Equal(casts, spatial.FloorProbes.Count);
+        spatial.HeightfieldColliderReady = true;
+        float beyond = position.X + (DaggerfallExteriorCellResidency.StreamingRadius + 2) * DaggerfallExteriorCellResidency.CellSize;
+        using (JsonDocument far = JsonDocument.Parse(navigation.ReadFloor(beyond, 10, position.Z).Message))
+        {
+            Assert.Equal("not-loaded", far.RootElement.GetProperty("status").GetString());
+            Assert.Contains("outside the resident exterior window", far.RootElement.GetProperty("detail").GetString());
+        }
+
+        spatial.NavigationGrids = [new(7, NavigationProjectionKind.HostWalkableCells, true, 100, 1, 1, .5, .3f, 1.8f, -100, 100, -100, 100)];
+        PlanarNavCell[] path = [new(0, 20, 0), new(1, 20, 0), new(2, 20, 0), new(2, 20, 1)];
+        spatial.NavigationResult = request => new(path, path.Select(_ => new NavigationPathEdge(NavigationEdgeKind.Walk)).ToArray(),
+            NavigationPathOutcome.Reached, new Vector3(.75f, 10, .25f), path[1], NavigationEdgeKind.Walk, 0, 1, 9, 1, 1, 1, false, default, default);
+        using JsonDocument route = JsonDocument.Parse(navigation.ReadRoute(1.25, 10, .75).Message);
+        NavigationStepRequest asked = spatial.NavigationRequests[^1];
+        Assert.Equal(new Vector3(1.25f, 10, .75f), asked.Target);
+        Assert.Equal(player.X, asked.From.X);
+        Assert.True(asked.From.Y < player.Y, "A route starts from the feet, below the character centre.");
+        JsonElement reply = route.RootElement;
+        Assert.Equal("Reached", reply.GetProperty("outcome").GetString());
+        Assert.Equal(7UL, reply.GetProperty("gridId").GetUInt64());
+        Assert.Equal(4, reply.GetProperty("pathCells").GetInt32());
+        Assert.Equal("floor", reply.GetProperty("goalFloor").GetProperty("status").GetString());
+        JsonElement[] waypoints = [.. reply.GetProperty("waypoints").EnumerateArray()];
+        Assert.Equal([0, 2, 3], waypoints.Select(waypoint => waypoint.GetProperty("index").GetInt32()));
+        Assert.Equal(1.25, waypoints[1].GetProperty("x").GetDouble());
+        Assert.Equal(20, waypoints[1].GetProperty("level").GetInt64());
+        Assert.Equal(player, session.State.PlayerControl.Position);
     }
 
     [Fact]

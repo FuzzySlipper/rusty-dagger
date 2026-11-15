@@ -70,6 +70,17 @@ internal sealed class DaggerfallExteriorGroundCollider : IDisposable
         return new(ready, resident, pending, refused);
     }
 
+    /// <summary>
+    /// Whether the ground at a local point in <paramref name="origin"/>'s frame stands in the collision scene. A point
+    /// no focus reaches, or whose tile is still being sampled, has none yet.
+    /// </summary>
+    internal bool StandsAt(Vector3 local, DaggerfallExteriorWorldOrigin origin)
+    {
+        Vector3 frame = local - origin.Compensation;
+        HeightfieldColliderReadout read = _spatial.ReadHeightfieldCollider(new(_collider, frame.X, frame.Z, DaggerfallHorizonGround.FinestNearCellMetres));
+        return read.Ready && read.ResidentTiles != 0;
+    }
+
     public void Dispose()
     {
         _streamer.Dispose();
