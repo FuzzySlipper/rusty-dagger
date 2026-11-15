@@ -505,19 +505,26 @@ public sealed record NormalizedMesh(
 /// These are import policy defaults, rather than hidden magic numbers in the
 /// geometry walker.  They never create a runtime navigation system.
 /// </summary>
+/// <param name="FootprintRadius">
+/// How far around a cell's centre an actor's footprint reaches. A support whose ground falls away on both sides within
+/// it is narrower than the actors that walk the navigation (a log's top, a railing, a wall's top) and admits no cell.
+/// The actors are capsules of about this radius; the player's is the tuning's <c>characterController.radius</c>.
+/// </param>
 public sealed record NavigationDerivationConfig(
     float CellSize,
     float LevelQuantum,
     float MaximumSlopeDegrees,
     float RequiredHeadroom,
-    float SupportProbeDrop)
+    float SupportProbeDrop,
+    float FootprintRadius)
 {
     public static NavigationDerivationConfig ClassicDefault { get; } = new(
         CellSize: 0.8F,
         LevelQuantum: 0.25F,
         MaximumSlopeDegrees: 45F,
         RequiredHeadroom: 1.8F,
-        SupportProbeDrop: 0.05F);
+        SupportProbeDrop: 0.05F,
+        FootprintRadius: 0.25F);
 
     public void Validate()
     {
@@ -526,8 +533,9 @@ public sealed record NavigationDerivationConfig(
         NormalizedImportDocument.RequireFinite(MaximumSlopeDegrees, nameof(MaximumSlopeDegrees));
         NormalizedImportDocument.RequireFinite(RequiredHeadroom, nameof(RequiredHeadroom));
         NormalizedImportDocument.RequireFinite(SupportProbeDrop, nameof(SupportProbeDrop));
+        NormalizedImportDocument.RequireFinite(FootprintRadius, nameof(FootprintRadius));
         if (CellSize <= 0F || LevelQuantum <= 0F || MaximumSlopeDegrees is <= 0F or >= 90F
-            || RequiredHeadroom <= 0F || SupportProbeDrop < 0F)
+            || RequiredHeadroom <= 0F || SupportProbeDrop < 0F || FootprintRadius <= 0F)
         {
             throw new ArgumentOutOfRangeException(nameof(CellSize), "Navigation derivation values must be finite, positive, and use a slope below ninety degrees.");
         }

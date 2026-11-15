@@ -352,7 +352,9 @@ public static class OfflineNavigationDeriver
         Dictionary<(int X, int Z), List<CollisionTriangle>> headroomBuckets = BuildHeadroomBuckets(collision, bucketSize);
         NormalizedNavigationCell[] cells = supports
             .Where(candidate => HasHeadroom(candidate.Key.Column, candidate.Key.Row, candidate.Value,
-                HeadroomCandidates(candidate.Key.Column, candidate.Key.Row), config))
+                HeadroomCandidates(candidate.Key.Column, candidate.Key.Row), config)
+                && HoldsFootprint((candidate.Key.Column + 0.5F) * config.CellSize, (candidate.Key.Row + 0.5F) * config.CellSize,
+                    candidate.Value, config, Near))
             .OrderBy(candidate => candidate.Key.Column).ThenBy(candidate => candidate.Key.Row).ThenBy(candidate => candidate.Key.Level)
             .Select(candidate => new NormalizedNavigationCell(candidate.Key.Column, candidate.Key.Row, candidate.Key.Level, candidate.Value, true))
             .ToArray();
@@ -364,6 +366,87 @@ public static class OfflineNavigationDeriver
             int z = CellCoordinate(MathF.Floor((row + 0.5F) * config.CellSize / bucketSize));
             return headroomBuckets.TryGetValue((x, z), out List<CollisionTriangle>? triangles) ? triangles : [];
         }
+
+        // The triangles whose horizontal bounds may cover any point between two corners: almost always one bucket's.
+        IReadOnlyList<CollisionTriangle> Near(float firstX, float firstZ, float lastX, float lastZ)
+        {
+            int fromX = CellCoordinate(MathF.Floor(MathF.Min(firstX, lastX) / bucketSize));
+            int toX = CellCoordinate(MathF.Floor(MathF.Max(firstX, lastX) / bucketSize));
+            int fromZ = CellCoordinate(MathF.Floor(MathF.Min(firstZ, lastZ) / bucketSize));
+            int toZ = CellCoordinate(MathF.Floor(MathF.Max(firstZ, lastZ) / bucketSize));
+            if (fromX == toX && fromZ == toZ)
+                return headroomBuckets.TryGetValue((fromX, fromZ), out List<CollisionTriangle>? only) ? only : [];
+            List<CollisionTriangle> union = [];
+            for (int x = fromX; x <= toX; x++)
+            for (int z = fromZ; z <= toZ; z++)
+                if (headroomBuckets.TryGetValue((x, z), out List<CollisionTriangle>? triangles)) union.AddRange(triangles);
+            return union;
+        }
+    }
+
+    /// <summary>The four directions a footprint is crossed in: the axes and the diagonals.</summary>
+    private static readonly (float X, float Z)[] FootprintDirections =
+        [(1F, 0F), (0F, 1F), (MathF.Sqrt(0.5F), MathF.Sqrt(0.5F)), (MathF.Sqrt(0.5F), -MathF.Sqrt(0.5F))];
+
+    /// <summary>
+    /// Whether an actor standing at a cell's centre stands on its support rather than balancing across it. A walkable
+    /// face can be narrower than any actor: Privateer's Hold's first room has a pile of logs whose tops are ridges of
+    /// faces within the slope limit, 0.1 to 0.3 m across, with steeper faces either side, and a support at a cell's
+    /// centre there sent routes along a log the player slides off. So across each of four directions the ground
+    /// within the footprint must not fall away on both sides. A side holds where up-facing ground at the footprint's
+    /// edge lies within what a walkable slope rises or falls over it, or where collision crosses at that rise (a wall
+    /// or a riser): a step down on one side and a wall on the other is a stair beside a wall, not a ridge.
+    /// </summary>
+    private static bool HoldsFootprint(float x, float z, float support, NavigationDerivationConfig config,
+        Func<float, float, float, float, IReadOnlyList<CollisionTriangle>> near)
+    {
+        float reach = config.FootprintRadius;
+        float rise = (reach * MathF.Tan(config.MaximumSlopeDegrees * (MathF.PI / 180F))) + config.SupportProbeDrop;
+        foreach ((float dx, float dz) in FootprintDirections)
+        {
+            if (FallsAway(dx, dz) && FallsAway(-dx, -dz)) return false;
+        }
+
+        return true;
+
+        bool FallsAway(float dx, float dz)
+        {
+            float edgeX = x + (dx * reach), edgeZ = z + (dz * reach);
+            foreach (CollisionTriangle triangle in near(edgeX, edgeZ, edgeX, edgeZ))
+            {
+                if (NormalY(triangle) > 0F && TryHeightAt(triangle, edgeX, edgeZ, out float ground) && MathF.Abs(ground - support) <= rise)
+                    return false;
+            }
+
+            float y = support + rise;
+            foreach (CollisionTriangle triangle in near(x, z, edgeX, edgeZ))
+            {
+                if (CrossesLevel(triangle, x, z, edgeX, edgeZ, y)) return false;
+            }
+
+            return true;
+        }
+    }
+
+    /// <summary>Whether the horizontal segment from (x, y, z) to (endX, y, endZ) meets the triangle (Möller–Trumbore).</summary>
+    private static bool CrossesLevel(CollisionTriangle triangle, float x, float z, float endX, float endZ, float y)
+    {
+        float dx = endX - x, dz = endZ - z;
+        float e1x = triangle.B.X - triangle.A.X, e1y = triangle.B.Y - triangle.A.Y, e1z = triangle.B.Z - triangle.A.Z;
+        float e2x = triangle.C.X - triangle.A.X, e2y = triangle.C.Y - triangle.A.Y, e2z = triangle.C.Z - triangle.A.Z;
+        // p = d × e2, with d = (dx, 0, dz).
+        float px = -dz * e2y, py = (dz * e2x) - (dx * e2z), pz = dx * e2y;
+        float determinant = (e1x * px) + (e1y * py) + (e1z * pz);
+        if (MathF.Abs(determinant) <= ParallelTolerance * ParallelTolerance) return false;
+        float sx = x - triangle.A.X, sy = y - triangle.A.Y, sz = z - triangle.A.Z;
+        float u = ((sx * px) + (sy * py) + (sz * pz)) / determinant;
+        if (u < -EdgeTolerance || u > 1F + EdgeTolerance) return false;
+        // q = s × e1.
+        float qx = (sy * e1z) - (sz * e1y), qy = (sz * e1x) - (sx * e1z), qz = (sx * e1y) - (sy * e1x);
+        float v = ((dx * qx) + (dz * qz)) / determinant;
+        if (v < -EdgeTolerance || u + v > 1F + EdgeTolerance) return false;
+        float along = ((e2x * qx) + (e2y * qy) + (e2z * qz)) / determinant;
+        return along is >= 0F and <= 1F;
     }
 
     private static Dictionary<(int X, int Z), List<CollisionTriangle>> BuildHeadroomBuckets(

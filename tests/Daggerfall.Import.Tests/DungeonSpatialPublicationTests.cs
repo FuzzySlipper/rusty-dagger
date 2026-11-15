@@ -228,6 +228,101 @@ public sealed class DungeonSpatialPublicationTests
         Assert.All(navigation.Cells, cell => Assert.Equal(height, cell.SupportHeight));
     }
 
+    /// <summary>
+    /// Privateer's Hold's first room has a pile of logs whose tops are ridges of faces within the slope limit, a few
+    /// tenths of a metre across with steep faces beside. A support at a cell's centre on one sent routes along a log
+    /// the player slides off (#10837). The ridge here is two 39 degree faces 0.1 m wide over 78 degree sides.
+    /// </summary>
+    [Fact]
+    public void ARidgeNarrowerThanAnActorAdmitsNoCell()
+    {
+        NormalizedMesh log = Quads("mesh/log",
+            Strip(0.4F, 3.6F, (1.9F, 0.92F), (2F, 1F)), Strip(0.4F, 3.6F, (2F, 1F), (2.1F, 0.92F)),
+            Strip(0.4F, 3.6F, (1.7F, 0F), (1.9F, 0.92F)), Strip(0.4F, 3.6F, (2.1F, 0.92F), (2.3F, 0F)));
+        NormalizedMesh[] room = [FlatFloor(), log];
+
+        NormalizedNavigationSurface slopeOnly = OfflineNavigationDeriver.Derive("navigation/log", "artifact/spatial/log", room,
+            NavigationDerivationConfig.ClassicDefault with { FootprintRadius = 0.001F });
+        NormalizedNavigationSurface navigation = OfflineNavigationDeriver.Derive("navigation/log", "artifact/spatial/log", room,
+            NavigationDerivationConfig.ClassicDefault);
+
+        // The ridge's faces are within the slope limit, so the slope alone admits the log's top.
+        Assert.Contains(slopeOnly.Cells, cell => cell.SupportHeight > 0.9F);
+        Assert.DoesNotContain(navigation.Cells, cell => cell.SupportHeight > 0F);
+        Assert.Contains(navigation.Cells, cell => cell.Row == 0 && cell.SupportHeight == 0F);
+    }
+
+    /// <summary>A side the footprint would fall from is held by a wall: a 0.4 m walkway against one keeps its cells.</summary>
+    [Fact]
+    public void ANarrowWalkwayHeldByAWallKeepsItsCells()
+    {
+        NormalizedMesh walkway = Quads("mesh/walkway",
+            Strip(0.4F, 3.6F, (1.8F, 1F), (2.2F, 1F)), Strip(0.4F, 3.6F, (1.8F, 0F), (1.8F, 1F)), Strip(0.4F, 3.6F, (2.2F, 0F), (2.2F, 1F)));
+        NormalizedMesh wall = Quads("mesh/wall", Strip(0F, 4F, (2.2F, 0F), (2.2F, 3F)));
+
+        NormalizedNavigationSurface freeStanding = OfflineNavigationDeriver.Derive("navigation/walkway", "artifact/spatial/walkway",
+            [FlatFloor(), walkway], NavigationDerivationConfig.ClassicDefault);
+        NormalizedNavigationSurface againstWall = OfflineNavigationDeriver.Derive("navigation/walkway", "artifact/spatial/walkway",
+            [FlatFloor(), walkway, wall], NavigationDerivationConfig.ClassicDefault);
+
+        Assert.DoesNotContain(freeStanding.Cells, cell => cell.SupportHeight == 1F);
+        Assert.Equal([0, 1, 2, 3, 4], againstWall.Cells.Where(cell => cell.SupportHeight == 1F).Select(cell => cell.Column).Order());
+    }
+
+    /// <summary>Ground an actor stands across, stairs open at their sides and a platform's edge, keeps every cell.</summary>
+    [Fact]
+    public void StairsAndAPlatformsEdgeKeepTheirCells()
+    {
+        List<NormalizedVector3[]> stair = [];
+        for (int tread = 0; tread < 5; tread++)
+        {
+            float x = 0.4F + (tread * 0.5F), y = 0.25F * (tread + 1);
+            stair.Add([new(x, y, 1F), new(x + 0.5F, y, 1F), new(x + 0.5F, y, 3F), new(x, y, 3F)]);
+            stair.Add([new(x, y - 0.25F, 1F), new(x, y, 1F), new(x, y, 3F), new(x, y - 0.25F, 3F)]);
+        }
+        NormalizedMesh platform = Quads("mesh/platform",
+            [new(0F, 1F, 3.6F), new(4F, 1F, 3.6F), new(4F, 1F, 5.6F), new(0F, 1F, 5.6F)], Strip(0F, 4F, (3.6F, 0F), (3.6F, 1F)));
+        NormalizedMesh[] room = [FlatFloor(), Quads("mesh/stair", [.. stair]), platform];
+
+        NormalizedNavigationSurface slopeOnly = OfflineNavigationDeriver.Derive("navigation/stair", "artifact/spatial/stair", room,
+            NavigationDerivationConfig.ClassicDefault with { FootprintRadius = 0.001F });
+        NormalizedNavigationSurface navigation = OfflineNavigationDeriver.Derive("navigation/stair", "artifact/spatial/stair", room,
+            NavigationDerivationConfig.ClassicDefault);
+
+        Assert.Contains(navigation.Cells, cell => cell.SupportHeight == 1.25F);
+        Assert.Contains(navigation.Cells, cell => cell.Row == 5 && cell.SupportHeight == 1F);
+        Assert.Equal(slopeOnly.Cells, navigation.Cells);
+    }
+
+    private static NormalizedMesh FlatFloor() => Quads("mesh/floor", [[new(0F, 0F, 0F), new(4F, 0F, 0F), new(4F, 0F, 5.6F), new(0F, 0F, 5.6F)]]);
+
+    /// <summary>A quad running along X from <paramref name="fromX"/> to <paramref name="toX"/>, across Z from one (z, y) edge to another.</summary>
+    private static NormalizedVector3[] Strip(float fromX, float toX, (float Z, float Y) first, (float Z, float Y) second) =>
+        [new(fromX, first.Y, first.Z), new(toX, first.Y, first.Z), new(toX, second.Y, second.Z), new(fromX, second.Y, second.Z)];
+
+    /// <summary>One collision mesh of quads, each half wound to face up or stand upright: a downward face is a ceiling.</summary>
+    private static NormalizedMesh Quads(string id, params NormalizedVector3[][] quads)
+    {
+        List<NormalizedVector3> vertices = [];
+        List<NormalizedTriangle> triangles = [];
+        foreach (NormalizedVector3[] quad in quads)
+        {
+            int at = vertices.Count;
+            vertices.AddRange(quad);
+            triangles.Add(Upward(at, at + 1, at + 2));
+            triangles.Add(Upward(at, at + 2, at + 3));
+        }
+        return new(id, "artifact/static/footprint", vertices, [.. vertices.Select(_ => new NormalizedVector3(0F, 1F, 0F))],
+            [.. vertices.Select(_ => new NormalizedVector2(0F, 0F))], triangles, [new("material/footprint", 0, triangles.Count, true)]);
+
+        NormalizedTriangle Upward(int a, int b, int c)
+        {
+            NormalizedVector3 first = vertices[a], second = vertices[b], third = vertices[c];
+            float up = ((second.Z - first.Z) * (third.X - first.X)) - ((second.X - first.X) * (third.Z - first.Z));
+            return up < 0F ? new(a, c, b) : new(a, b, c);
+        }
+    }
+
     private static NormalizedMesh Floor(string id, string artifactId, string material, float height, bool collision, float minimum = 0F, bool upward = true) => new(
         id,
         artifactId,
