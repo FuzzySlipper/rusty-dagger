@@ -825,6 +825,17 @@ internal sealed class DaggerfallExteriorWorld
             && z >= -(location.Height + 1) * block && z <= block;
     }
 
+    /// <summary>The source climate of the exterior cell the player stands in.</summary>
+    internal int CurrentClimate()
+    {
+        DaggerfallExteriorCellId cell = CurrentExteriorCell();
+        return _definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y).Value;
+    }
+
+    /// <summary>Whether the player stands in the exterior cell of <paramref name="site"/>'s own map pixel.</summary>
+    internal bool InSiteCell(DaggerfallSiteRecord? site) => site?.Exterior is { } exterior
+        && CurrentExteriorCell() == new DaggerfallExteriorCellId(exterior.MapPixelX, exterior.MapPixelY);
+
     internal DaggerfallExteriorCellId CurrentExteriorCell()
     {
         DaggerfallExteriorCellId site = ActiveExteriorCell();

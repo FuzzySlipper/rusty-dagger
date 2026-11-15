@@ -27,7 +27,7 @@ public sealed class GeneratedRangedEnemySessionTests
         // archer in place (the fixture's minimum draws choose the quarter-speed strafe) instead of the
         // melee band's retreat its bow reach would otherwise select.
         Assert.Equal(shoots ? EnemyBehaviorState.Strafe : distance <= 2 ? EnemyBehaviorState.Attack : EnemyBehaviorState.Chase,
-            f.Session.LastEnemyBehavior[id].State);
+            f.Session.EnemyBehavior.LastEvidence[id].State);
         using var restored = f.Restore();
         Assert.Equal(Arrows(f, id), restored.State.ActorInventories.InventoryFor(id)!.Read().Stacks.Where(stack => stack.Definition.Value == "arrow").Aggregate(0UL, (n, row) => n + row.Quantity));
     }
@@ -44,11 +44,11 @@ public sealed class GeneratedRangedEnemySessionTests
             f.Session.State.ItemInstances.RemoveStack(DaggerfallItemOwner.Actor(id), stack.Id);
         }
         f.Update();
-        Assert.Equal(EnemyBehaviorState.Chase, f.Session.LastEnemyBehavior[id].State);
+        Assert.Equal(EnemyBehaviorState.Chase, f.Session.EnemyBehavior.LastEvidence[id].State);
         Place(f, id, 1.5f);
         int before = f.Appearance.PlaybackRequests.Count;
         f.Update();
-        Assert.Equal(EnemyBehaviorState.Attack, f.Session.LastEnemyBehavior[id].State);
+        Assert.Equal(EnemyBehaviorState.Attack, f.Session.EnemyBehavior.LastEvidence[id].State);
         Assert.True(f.Appearance.PlaybackRequests.Count > before);
         Assert.Equal(0UL, Arrows(f, id));
         using var restored = f.Restore();
@@ -71,7 +71,7 @@ public sealed class GeneratedRangedEnemySessionTests
         var arrow = f.Inputs.ClassicPresentation.WorldVisuals.Single(row => row.MediaId == "visual.missile.arrow");
         f.Update();
         Assert.True(f.Appearance.Snapshots.Last().Any(fact => ReferenceEquals(fact.Appearance, f.Appearance.StaticMeshByPath[arrow.Path])),
-            $"Outcome: {f.Session.Presentation.LastOutcome}; marker: {index + 1}; actor: {f.Session.LastEnemyBehavior[id]}; probes: {string.Join(';', f.Spatial.FloorProbes.TakeLast(4))}");
+            $"Outcome: {f.Session.Presentation.LastOutcome}; marker: {index + 1}; actor: {f.Session.EnemyBehavior.LastEvidence[id]}; probes: {string.Join(';', f.Spatial.FloorProbes.TakeLast(4))}");
     }
 
     private static long Spawn(SanguineRoseSessionTests.Fixture f, float distance)

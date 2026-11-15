@@ -45,6 +45,9 @@ internal sealed record DaggerfallMagicDefense(int AbsorptionChance, int Reflecti
     ulong[]? AbsorptionItems = null, int AllResistanceChance = 0)
 {
     internal static DaggerfallMagicDefense None { get; } = new(0, 0, []);
+
+    /// <summary>A career's absorption, as the donor applies it to every entity: a career that absorbs spells absorbs every one.</summary>
+    internal static DaggerfallMagicDefense CareerAbsorption(bool absorbs) => absorbs ? new(100, 0, []) : None;
     internal static DaggerfallMagicDefense Combine(IEnumerable<DaggerfallMagicDefense> defenses)
     {
         DaggerfallMagicDefense[] values = defenses.ToArray();

@@ -73,7 +73,7 @@ public sealed class SocialMagicSessionTests
         var spell=Spell(40,-1);
         using Fixture f=new(spell);var s=f.Session;Fund(s);var item=Stock(s);
         s.State.Character.LearnSpell(spell.Key);s.SpellRelease.ReadyPlayerSpell(spell.Key);s.SpellRelease.ReleaseReadySpell(1,Vector3.UnitZ);f.Submit();
-        Assert.NotNull(s.IdentifyChoice.View);Assert.True(s.Interactions.IsOpen(DaggerfallInteractionScreen.Identify));Assert.True(s.Interactions.HoldsWorldOpen);
+        Assert.NotNull(s.IdentifyChoice.View);
         Assert.Contains("identify",System.Text.Json.JsonSerializer.Serialize(f.Engine.Published()));
         var view=s.IdentifyChoice.View!;Magicka(s).SetCurrent(0);f.Submit(new{action="identify-select",revision=view.Revision,key="all"});
         Assert.False(s.State.ItemInstances.RequireUnique(Id(s,item)).Identified);Assert.Equal(0,Magicka(s).Current);

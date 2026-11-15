@@ -69,8 +69,8 @@ public sealed class ExteriorBuildingDoorSessionTests
         Assert.True(restored.Site.IsBuildingDiscovered(fixture.Exterior.Site!.Value, Residence));
         Assert.Single(restored.State.Crime.Incidents);
         Assert.True(restored.TryTransitionTo(fixture.Exterior.ProfileKey));
-        Assert.Equal(0, restored.Doors.Read(fixture.DoorOf(Residence)).LockValue);
-        Assert.Equal(484, restored.Doors.All.Count());
+        Assert.Equal(0, restored.Sites.Projection.Doors.Read(fixture.DoorOf(Residence)).LockValue);
+        Assert.Equal(484, restored.Sites.Projection.Doors.All.Count());
     }
 
     /// <summary>
@@ -83,7 +83,7 @@ public sealed class ExteriorBuildingDoorSessionTests
         using Fixture fixture = new();
         DaggerfallSession session = fixture.Session;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value)).BaseValue = 100;
-        Assert.Equal(DaggerfallActivationMode.Grab, session.ActivationMode);
+        Assert.Equal(DaggerfallActivationMode.Grab, session.Activation.Mode);
         fixture.Swing(Residence);
         Assert.Equal(fixture.InteriorOf(Residence), session.Sites.ActiveProfile);
         Assert.Equal(DaggerfallCrimeKind.BreakingAndEntering, Assert.Single(session.State.Crime.Incidents).Crime);
@@ -102,7 +102,7 @@ public sealed class ExteriorBuildingDoorSessionTests
         Assert.False(session.ActivationPanel.View.Applied);
         Assert.StartsWith("Locked. ", session.ActivationPanel.View.Message);
         Assert.Equal(fixture.Exterior.ProfileKey, session.Sites.ActiveProfile);
-        Assert.Equal(DaggerfallBuildingEntryPolicy.LockValue(8), session.Doors.Read(fixture.DoorOf(Residence)).LockValue);
+        Assert.Equal(DaggerfallBuildingEntryPolicy.LockValue(8), session.Sites.Projection.Doors.Read(fixture.DoorOf(Residence)).LockValue);
 
         fixture.SetMode("info");
         fixture.Interact(Residence);
@@ -145,13 +145,13 @@ public sealed class ExteriorBuildingDoorSessionTests
         Assert.StartsWith($"{name}. Store is closed. Open from 6:00 to 23:00. ", session.ActivationPanel.View.Message);
 
         // An earlier visit leaves the door open in its saved state; the entry rule still holds it shut.
-        session.Doors.Unlock(fixture.DoorOf(GeneralStore), DaggerfallDoorOperationSource.Player);
-        session.Doors.Open(fixture.DoorOf(GeneralStore), DaggerfallDoorOperationSource.Player);
+        session.Sites.Projection.Doors.Unlock(fixture.DoorOf(GeneralStore), DaggerfallDoorOperationSource.Player);
+        session.Sites.Projection.Doors.Open(fixture.DoorOf(GeneralStore), DaggerfallDoorOperationSource.Player);
         fixture.SetMode("grab");
         fixture.Interact(GeneralStore);
         Assert.False(session.ActivationPanel.View.Applied);
         Assert.StartsWith("Locked. ", session.ActivationPanel.View.Message);
-        Assert.Equal(DaggerfallBuildingEntryPolicy.LockValue(14), session.Doors.Read(fixture.DoorOf(GeneralStore)).LockValue);
+        Assert.Equal(DaggerfallBuildingEntryPolicy.LockValue(14), session.Sites.Projection.Doors.Read(fixture.DoorOf(GeneralStore)).LockValue);
 
         fixture.AdvanceToHour(9);
         fixture.SetMode("info");
@@ -201,7 +201,7 @@ public sealed class ExteriorBuildingDoorSessionTests
         fixture.Interact(Residence);
         Assert.False(session.ActivationPanel.View.Applied);
         Assert.Equal(fixture.Exterior.ProfileKey, session.Sites.ActiveProfile);
-        Assert.Equal(lockValue, session.Doors.Read(fixture.DoorOf(Residence)).LockValue);
+        Assert.Equal(lockValue, session.Sites.Projection.Doors.Read(fixture.DoorOf(Residence)).LockValue);
         Assert.Empty(session.State.Effects.Active);
         session.State.Progression.AdvanceTo(0, lockValue);
         fixture.CastOpen();
@@ -217,13 +217,13 @@ public sealed class ExteriorBuildingDoorSessionTests
         using Fixture f = new();
         var id = f.DoorOf(Residence);
         // Charing's fixture houses have higher qualities; admit the same policy's quality-one result.
-        f.Session.Doors.ApplyBuildingEntry(id, DaggerfallBuildingEntryPolicy.LockValue(1), locked: true);
-        var door = f.Session.Doors.Read(id);
+        f.Session.Sites.Projection.Doors.ApplyBuildingEntry(id, DaggerfallBuildingEntryPolicy.LockValue(1), locked: true);
+        var door = f.Session.Sites.Projection.Doors.Read(id);
         Assert.True(door.IsLocked); Assert.Equal(0, door.LockValue);
-        Assert.Equal(DaggerfallDoorOperationResult.Locked, f.Session.Doors.Open(door.Id, DaggerfallDoorOperationSource.Player));
+        Assert.Equal(DaggerfallDoorOperationResult.Locked, f.Session.Sites.Projection.Doors.Open(door.Id, DaggerfallDoorOperationSource.Player));
         using var restored = f.Restore(f.Session.CaptureSave());
-        Assert.True(restored.Doors.Read(door.Id).IsLocked);
-        Assert.Equal(0, restored.Doors.Read(door.Id).LockValue);
+        Assert.True(restored.Sites.Projection.Doors.Read(door.Id).IsLocked);
+        Assert.Equal(0, restored.Sites.Projection.Doors.Read(door.Id).LockValue);
     }
 
     [Fact]
@@ -231,7 +231,7 @@ public sealed class ExteriorBuildingDoorSessionTests
     {
         using Fixture f = new(); f.AdvanceToHour(6); f.CastOpen(lockDoor: true); f.Interact(Residence);
         Assert.Equal(DaggerfallDungeonTextActionKind.BuildingGreeting, f.Session.DungeonText.Projection!.Kind);
-        Assert.False(f.Session.Doors.Read(f.DoorOf(Residence)).IsLocked);
+        Assert.False(f.Session.Sites.Projection.Doors.Read(f.DoorOf(Residence)).IsLocked);
         Assert.Equal(DaggerfallDoorMagic.Lock, Assert.Single(f.Session.State.Effects.Active).Definition.DoorMagic);
         f.ContinueGreeting();
         Assert.Equal(f.InteriorOf(Residence), f.Session.Sites.ActiveProfile);
@@ -255,7 +255,7 @@ public sealed class ExteriorBuildingDoorSessionTests
         Assert.Equal(20, session.Site.FailedBuildingPick(site, Residence));
         using var restored = f.Restore(session.CaptureSave());
         Assert.Equal(20, restored.Site.FailedBuildingPick(site, Residence));
-        Assert.DoesNotContain(restored.Doors.Capture(), value => value.FailedLockpickingSkill is not null);
+        Assert.DoesNotContain(restored.Sites.Projection.Doors.Capture(), value => value.FailedLockpickingSkill is not null);
     }
 
     [Fact]
@@ -370,7 +370,7 @@ public sealed class ExteriorBuildingDoorSessionTests
         /// <summary>Stands in front of the building's door, facing it, with only that door seen.</summary>
         private DaggerfallDoorView Face(DaggerfallSiteBuildingId building)
         {
-            DaggerfallDoorView door = Session.Doors.Read(DoorOf(building));
+            DaggerfallDoorView door = Session.Sites.Projection.Doors.Read(DoorOf(building));
             Session.State.PlayerControl.MoveTo(door.Pose.Translation + Vector3.UnitZ);
             Session.State.PlayerControl.YawRadians = 0;
             Session.State.PlayerControl.PitchRadians = 0;

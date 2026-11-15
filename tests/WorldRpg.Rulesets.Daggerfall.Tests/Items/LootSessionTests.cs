@@ -450,7 +450,7 @@ public sealed class LootSessionTests
         }
         LootPresentation drained = Assert.IsType<LootPresentation>(session.OpenLoot);
         Assert.True(drained.Empty);
-        Assert.Equal(ProductMode.Modal, session.Mode);
+        Assert.Equal("modal", engine.PublishedField("mode"));
         Assert.Equal(stepsBefore, spatial.StepCalls);
     }
 
@@ -565,7 +565,7 @@ public sealed class LootSessionTests
         Assert.True(after.Empty);
         Assert.Equal(carriedBefore + corpseBefore, session.State.Currency.Read().Gold);
         Assert.Equal($"Took all {opened.Items.Length} items.", after.Message);
-        Assert.Equal(ProductMode.Modal, session.Mode);
+        Assert.Equal("modal", engine.PublishedField("mode"));
     }
 
     [Fact]
@@ -768,7 +768,7 @@ public sealed class LootSessionTests
             // with empty contents, not an unregistered one.
             sourcePerception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
             Ui(original, "{\"action\":\"loot\"}", swing++);
-            var activation = Assert.IsType<InteractionTargetingEvidence>(original.LastActivationTargeting);
+            var activation = Assert.IsType<InteractionTargetingEvidence>(original.Activation.LastEvidence);
             Assert.Equal(Rusty.Engine.Interaction.InteractionReason.Ready, activation.Focus.Reason);
             Assert.Equal(ProductMode.Modal, original.PendingModeRequest);
             original.ApplyProductMode(ProductMode.Modal);

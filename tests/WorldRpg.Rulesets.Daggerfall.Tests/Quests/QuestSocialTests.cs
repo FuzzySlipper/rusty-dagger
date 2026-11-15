@@ -129,7 +129,7 @@ public sealed class QuestSocialTests
             session.State.Actors.Get(guard).ApplyPose(new(new(current.X, current.Y, current.Z - .1f), MathF.PI));
             f.Update();
         }
-        Assert.True(session.State.Crime.ScriptedCrime is null, $"Guard: {session.LastEnemyBehavior.GetValueOrDefault(guard)}; pending: {session.State.Actors.Get(guard).Attack.Pending}; health: {session.State.Actors.Player.Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current}");
+        Assert.True(session.State.Crime.ScriptedCrime is null, $"Guard: {session.EnemyBehavior.LastEvidence.GetValueOrDefault(guard)}; pending: {session.State.Actors.Get(guard).Attack.Pending}; health: {session.State.Actors.Player.Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current}");
         var incident = Assert.Single(session.State.Crime.Incidents);
         Assert.Equal(DaggerfallCrimeKind.HighTreason, incident.Crime);
         Assert.Equal(DaggerfallCrimeWitnessQuery.NotQueried, incident.Witnesses.Query);

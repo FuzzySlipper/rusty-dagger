@@ -103,6 +103,14 @@ internal sealed record DaggerfallGuildServiceDecision(
 internal static class DaggerfallConcreteGuildPolicy
 {
     /// <summary>Whether the building is a Fighters Guild hall whose rest service the player's standing admits today.</summary>
+    /// <summary>
+    /// Whether a place is holy: the donor requires an interior whose admitted building is a temple or belongs to
+    /// the Fighters Guild trainers faction.
+    /// </summary>
+    internal static bool HolyPlace(DaggerfallWorldProfileKind kind, DaggerfallInteriorBuilding? building) =>
+        kind == DaggerfallWorldProfileKind.Interior
+        && building is { BuildingType: 14 } or { FactionId: DaggerfallConcreteGuildCatalog.FightersTrainerFactionId };
+
     internal static bool FightersHallRestAllowed(DaggerfallInteriorBuilding? building,
         DaggerfallGuildMembershipPolicy membership, int region, int day)
     {

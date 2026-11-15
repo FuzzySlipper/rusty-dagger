@@ -94,10 +94,7 @@ public sealed class SanguineRoseSessionTests
         using Fixture f = new();
         f.Use();
         long ally = Assert.Single(f.Allies());
-        f.Session.State.Inventory.Destroy(f.Item);
-        f.Session.State.ItemInstances.RemoveUnique(f.Source);
-        f.Session.State.Actors.Entities.Destroy(new(WorldRpg.Kit.World.DurableIdentityKind.Item, f.Source));
-        f.Session.RemoveUniqueItemIdentity(f.Source);
+        f.Session.ItemLifetime.DestroyUnique(f.Source);
         f.Use();
         Assert.Contains("Inventory changed", f.Message);
         f.Update();
@@ -149,7 +146,7 @@ public sealed class SanguineRoseSessionTests
         Assert.Equal(new[] { 4, -1, 5, 0 }, f.Inputs.MobileSprites[27].AttackSequences[1].SourceFrames);
         f.Appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: 2);
         f.Update();
-        Assert.Equal(EnemyBehaviorState.Attack, f.Session.LastEnemyBehavior[ally].State);
+        Assert.Equal(EnemyBehaviorState.Attack, f.Session.EnemyBehavior.LastEvidence[ally].State);
         f.Appearance.AdvanceReceiptForAll = null;
         for (ulong step = 0; step < WindUpEnd(0); step++) f.Update(); // The blow lands when its wind-up ends.
         double after = Health(f.Session.State.Actors.Get(f.Enemy).Actor);
@@ -207,7 +204,7 @@ public sealed class SanguineRoseSessionTests
                     { PairTotal = 2, ProjectionIdentity = 91 };
         };
         f.Update();
-        Assert.Equal((ulong)near, Assert.Single(f.Session.LastEnemyBehavior[ally].Visibility!.Value.Pairs.ToArray()).Target);
+        Assert.Equal((ulong)near, Assert.Single(f.Session.EnemyBehavior.LastEvidence[ally].Visibility!.Value.Pairs.ToArray()).Target);
         Assert.Contains(f.Perception.Requests, request => request.PairCursor == 1);
     }
 

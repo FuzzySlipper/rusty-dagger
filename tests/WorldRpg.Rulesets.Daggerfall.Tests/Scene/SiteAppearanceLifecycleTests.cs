@@ -74,8 +74,8 @@ public sealed class SiteAppearanceLifecycleTests
         // The doors' facts are kept between snapshots while the doors stand still, and follow one that swings.
         DaggerfallRdbDoorDefinition swung = inputs.Doors[0];
         AppearanceFact closed = Assert.Single(snapshot, fact => fact.Transform.Translation == swung.Position);
-        Assert.Equal(DaggerfallDoorOperationResult.Started, session.Doors.Open(swung.Id, DaggerfallDoorOperationSource.DungeonAction));
-        session.Doors.Advance(swung.OpenDurationSeconds);
+        Assert.Equal(DaggerfallDoorOperationResult.Started, session.Sites.Projection.Doors.Open(swung.Id, DaggerfallDoorOperationSource.DungeonAction));
+        session.Sites.Projection.Doors.Advance(swung.OpenDurationSeconds);
         session.PublishInitial();
         AppearanceFact open = Assert.Single(graphics.Snapshots.Last(), fact => fact.ObjectId == closed.ObjectId);
         Assert.NotEqual(closed.Transform.Rotation, open.Transform.Rotation);

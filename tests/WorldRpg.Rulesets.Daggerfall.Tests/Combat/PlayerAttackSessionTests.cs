@@ -268,7 +268,7 @@ public sealed class PlayerAttackSessionTests
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
         // The rat has no independent ranged or spell action to replace its missing melee reach.
-        Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Idle, session.EnemyBehavior.LastEvidence[2000].State);
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 
@@ -437,7 +437,7 @@ public sealed class PlayerAttackSessionTests
         session.Touches(2000);
         session.Update(AttackUpdate());
 
-        TargetingEvidence evidence = Assert.IsType<TargetingEvidence>(session.LastMeleeTargeting);
+        TargetingEvidence evidence = Assert.IsType<TargetingEvidence>(session.State.Kit.Targeting.LastEvidence);
         Assert.Equal(2000, evidence.SelectedTargetId);
         // The evidence is a query the Engine was actually sent; the HUD's interaction prompt asks its own afterwards.
         Assert.Contains(evidence.Request, perception.Requests);

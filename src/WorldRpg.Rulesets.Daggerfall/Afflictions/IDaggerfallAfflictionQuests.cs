@@ -2,7 +2,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
 /// What lycanthropy and vampirism ask of the quests: whether a cure or clan quest is already running, the clan's
-/// ordinary work, and offering or failing one. The session answers; the curses never read the quest state themselves.
+/// ordinary work, and offering or failing one. The quests answer (DaggerfallAfflictionQuests); the curses never read the quest state themselves.
 /// </summary>
 internal interface IDaggerfallAfflictionQuests
 {

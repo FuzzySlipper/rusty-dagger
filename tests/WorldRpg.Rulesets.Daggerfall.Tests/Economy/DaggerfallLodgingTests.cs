@@ -98,15 +98,15 @@ public sealed class DaggerfallLodgingTests
         fixture.AddGold(1000);
         var quote = session.RoomRental.View!;
         fixture.Book(quote);
-        Assert.True(session.TryRelocate(new(fixture.Exterior.ProfileKey, "start")));
+        Assert.True(session.Sites.TryRelocate(new(fixture.Exterior.ProfileKey, "start")));
         Assert.Null(session.RoomRental.View);
         fixture.Submit(new { action = "lodging-book", key = quote.Key, days = 1, amount = quote.Price });
         Assert.Contains("no longer", session.Presentation.LastOutcome);
-        Assert.True(session.TryRelocate(new(fixture.Other.ProfileKey, "start")));
+        Assert.True(session.Sites.TryRelocate(new(fixture.Other.ProfileKey, "start")));
         Assert.Equal(0, session.RoomRental.View!.RemainingHours);
         fixture.Rest(1);
         Assert.Equal(0, session.RestPanel.View.ElapsedSeconds);
-        Assert.True(session.TryRelocate(new(fixture.Interior.ProfileKey, "start")));
+        Assert.True(session.Sites.TryRelocate(new(fixture.Interior.ProfileKey, "start")));
         Assert.Equal(24, session.RoomRental.View!.RemainingHours);
         fixture.Rest(1);
         Assert.Equal(3600, session.RestPanel.View.ElapsedSeconds);

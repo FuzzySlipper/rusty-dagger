@@ -23,7 +23,7 @@ public sealed class ContactEngagementSessionTests
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
-        Assert.Equal(EnemyBehaviorState.Chase, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Chase, session.EnemyBehavior.LastEvidence[2000].State);
         Assert.Null(session.State.Actors.Get(2000).Attack.Pending);
     }
 
@@ -37,7 +37,7 @@ public sealed class ContactEngagementSessionTests
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
-        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
         Assert.NotNull(session.State.Actors.Get(2000).Attack.Pending);
         using JsonDocument observation = JsonDocument.Parse(session.ReadPlaytestObservation().Message);
         Assert.Equal(FormattableString.Invariant($"EnemyAttackTelegraph:{ContactTuning.EnemyWindUpSeconds:0.###}"),

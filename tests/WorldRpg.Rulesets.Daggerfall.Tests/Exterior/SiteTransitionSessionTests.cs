@@ -90,8 +90,8 @@ public sealed class SiteTransitionSessionTests
         Assert.True(sourceDiscovery.ObserveSurface(observedSurface));
         int partialCellCount = sourceDiscovery.Capture().DiscoveredSurfaceCells.Length;
         Assert.Equal(1, partialCellCount);
-        Assert.Equal(DaggerfallDoorOperationResult.Started, session.Doors.Open(sourceDoor, DaggerfallDoorOperationSource.DungeonAction));
-        DaggerfallDoorMotion sourceDoorMotion = session.Doors.Read(sourceDoor).Motion;
+        Assert.Equal(DaggerfallDoorOperationResult.Started, session.Sites.Projection.Doors.Open(sourceDoor, DaggerfallDoorOperationSource.DungeonAction));
+        DaggerfallDoorMotion sourceDoorMotion = session.Sites.Projection.Doors.Read(sourceDoor).Motion;
         long sourceArcher = Assert.Single(source.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
         DurableIdentityReference archerIdentity = new(DurableIdentityKind.Actor, checked((ulong)sourceArcher));
         Assert.Equal(DurableEntityResolution.Materialized,
@@ -119,7 +119,7 @@ public sealed class SiteTransitionSessionTests
         Assert.Equal(MathF.IEEERemainder(.7f + MathF.PI, MathF.Tau), session.State.PlayerControl.YawRadians);
         Assert.Equal(-.2f, session.State.PlayerControl.PitchRadians);
         Assert.Equal(3, spatial.ReplaceCalls);
-        Assert.Equal(sourceDoorMotion, session.Doors.Read(sourceDoor).Motion);
+        Assert.Equal(sourceDoorMotion, session.Sites.Projection.Doors.Read(sourceDoor).Motion);
         Assert.True(sourceDiscovery.IsDoorDiscovered(sourceDoor));
         Assert.Equal(partialCellCount, sourceDiscovery.Capture().DiscoveredSurfaceCells.Length);
         Assert.Equal(sourceDoorMotion, Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Doors, door => door.Id == sourceDoor).Motion);
@@ -472,7 +472,7 @@ public sealed class SiteTransitionSessionTests
         session.State.PlayerControl.PitchRadians = -.1f;
         engine.FailNextCameraUpdate();
 
-        Assert.Throws<InvalidOperationException>(() => session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start")));
+        Assert.Throws<InvalidOperationException>(() => session.Sites.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start")));
 
         Assert.Equal(source.Site, session.Site.Active);
         Assert.Equal(sourcePosition, session.State.PlayerControl.Position);
@@ -509,15 +509,15 @@ public sealed class SiteTransitionSessionTests
         {
             session.AdmitSiteProfiles(profiles);
             long authoredActor = source.Project.Actors.Keys.First();
-            Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start", authoredActor)));
+            Assert.True(session.Sites.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start", authoredActor)));
             Assert.Equal(source.Project.PlayerPosition, session.State.Actors.Get(authoredActor).Position);
             relocatedActor = session.SpawnActor("rat", new ActorPose(new WorldPoint(3f, 0f, 3f), 0f));
-            Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start", relocatedActor)));
+            Assert.True(session.Sites.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start", relocatedActor)));
             Assert.Equal(source.Project.PlayerPosition, session.State.Actors.Get(relocatedActor).Position);
             EntityId player = session.State.Actors.Player.Actor.Entity;
             session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
 
-            Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start")));
+            Assert.True(session.Sites.TryRelocate(new DaggerfallRelocationDestination(source.ProfileKey, "start")));
             Assert.Equal(source.Project.PlayerPosition, session.State.PlayerControl.Position);
             Assert.Equal(source.InitialLook.YawRadians, session.State.PlayerControl.YawRadians);
             Assert.Equal(source.InitialLook.PitchRadians, session.State.PlayerControl.PitchRadians);
@@ -530,11 +530,11 @@ public sealed class SiteTransitionSessionTests
             WorldPoint sourceReturnPosition = session.State.PlayerControl.Position!.Value;
 
             // An actor cannot be sent into a site the player is not in; the refusal changes nothing.
-            Assert.Throws<InvalidOperationException>(() => session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start", relocatedActor)));
+            Assert.Throws<InvalidOperationException>(() => session.Sites.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start", relocatedActor)));
             Assert.Equal(source.Site, session.Site.Active);
             Assert.Equal(sourceReturnPosition, session.State.PlayerControl.Position);
             Assert.Equal(source.Project.PlayerPosition, session.State.Actors.Get(relocatedActor).Position);
-            Assert.True(session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start")));
+            Assert.True(session.Sites.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "start")));
             Assert.Equal(destination.Site, session.Site.Active);
             Assert.False(session.State.Actors.TryGet(relocatedActor, out _));
             Assert.Equal(destination.Project.PlayerPosition, session.State.PlayerControl.Position);
@@ -544,7 +544,7 @@ public sealed class SiteTransitionSessionTests
             Assert.Equal(2, spatial.ReplaceCalls);
 
             WorldPoint? positionBeforeInvalid = session.State.PlayerControl.Position;
-            Assert.Throws<InvalidOperationException>(() => session.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "missing")));
+            Assert.Throws<InvalidOperationException>(() => session.Sites.TryRelocate(new DaggerfallRelocationDestination(destination.ProfileKey, "missing")));
             Assert.Equal(positionBeforeInvalid, session.State.PlayerControl.Position);
             Assert.Equal(player, session.State.Actors.Player.Actor.Entity);
             Assert.Equal(2, spatial.ReplaceCalls);

@@ -114,7 +114,7 @@ public sealed class EnemyCombatSessionTests
         // published wind-up, and the blow lands on the player's body when that ends.
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
         appearance.AdvanceReceiptForAll = null;
         RunWindUp(session, 2, 1);
@@ -127,16 +127,16 @@ public sealed class EnemyCombatSessionTests
 
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.FacingRejected, 0d));
         session.Update(new ProductUpdateState(.125f));
-        Assert.Equal(EnemyBehaviorState.Search, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Search, session.EnemyBehavior.LastEvidence[2000].State);
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Occluded, 0d));
         session.Update(new ProductUpdateState(.125f));
-        Assert.Equal(EnemyBehaviorState.Blocked, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Blocked, session.EnemyBehavior.LastEvidence[2000].State);
 
         ActorState rat = session.State.Actors.Get(2000);
         rat.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(-999, clamp: true);
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         session.Update(new ProductUpdateState(.125f));
-        Assert.Equal(EnemyBehaviorState.Dead, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Dead, session.EnemyBehavior.LastEvidence[2000].State);
     }
 
     [Fact]
@@ -194,14 +194,14 @@ public sealed class EnemyCombatSessionTests
 
         // The enemy decides a hitting swing; its damage frame has not been reached.
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
 
         // The player swings while that strike is still in flight. The swing is admitted in this update
         // and starts the player's own cooldown; the enemy's strike has still not landed.
         Assert.True(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 2));
         session.Update(new ProductUpdate(OuterUpdate(2), AttackTap));
         session.Update(new ProductUpdate(OuterUpdate(3), []));
-        Assert.NotNull(session.LastMeleeTargeting);
+        Assert.NotNull(session.State.Kit.Targeting.LastEvidence);
         Assert.False(session.State.Kit.AttackExecution.IsReady(DaggerfallActorIdentity.PlayerEntityId, 1, 4));
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
 
@@ -222,7 +222,7 @@ public sealed class EnemyCombatSessionTests
         using DaggerfallSession disposable = session;
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
         session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.Touches(DaggerfallActorIdentity.PlayerEntityId);
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
@@ -236,7 +236,7 @@ public sealed class EnemyCombatSessionTests
         ]));
 
         Assert.True(session.State.Actors.Player.IsDefeated);
-        Assert.Null(session.LastMeleeTargeting);
+        Assert.Null(session.State.Kit.Targeting.LastEvidence);
     }
 
     [Fact]
@@ -378,7 +378,7 @@ public sealed class EnemyCombatSessionTests
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 5d, 1d, PerceptionPairKind.Visible, 5d));
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
-        Assert.Equal(EnemyBehaviorState.Chase, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Chase, session.EnemyBehavior.LastEvidence[2000].State);
         appearance.AdvanceReceiptForAll = null;
         RunWindUp(session, 3, 1);
 
@@ -402,7 +402,7 @@ public sealed class EnemyCombatSessionTests
         appearance.AdvanceReceiptForAll = null;
         RunWindUp(session, 3, 1);
 
-        Assert.Equal(EnemyBehaviorState.Dead, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Dead, session.EnemyBehavior.LastEvidence[2000].State);
         Assert.Equal(healthBefore, PlayerHealth(session));
     }
 
@@ -445,7 +445,7 @@ public sealed class EnemyCombatSessionTests
         ProductUpdateFacts facts = new(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d);
         session.Update(new ProductUpdate(facts, []));
 
-        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
         Assert.Equal(healthBefore, PlayerHealth(session));
     }
 
@@ -544,7 +544,7 @@ public sealed class EnemyCombatSessionTests
         // The update that decides the swing carries no damage: nothing has been struck
         // until the authored damage frame is reached.
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
 
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
@@ -583,7 +583,7 @@ public sealed class EnemyCombatSessionTests
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.Occluded, 0d));
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
-        Assert.Equal(EnemyBehaviorState.Search, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Search, session.EnemyBehavior.LastEvidence[2000].State);
         appearance.AdvanceReceiptForAll = null;
         RunWindUp(session, 3, 1);
 

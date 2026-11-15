@@ -61,8 +61,8 @@ public sealed class ActorLifecycleSessionTests
             first = session.SpawnActor("imp", new ActorPose(new WorldPoint(10, 0, 10), 0f));
             second = session.SpawnActor("imp", new ActorPose(new WorldPoint(20, 0, 20), 1f));
             Assert.NotEqual(first, second);
-            Assert.True(first >= (long)DaggerfallSession.DynamicActorFirstIdentity);
-            Assert.True(second >= (long)DaggerfallSession.DynamicActorFirstIdentity);
+            Assert.True(first >= (long)DaggerfallActorRoster.DynamicFirstIdentity);
+            Assert.True(second >= (long)DaggerfallActorRoster.DynamicFirstIdentity);
             Assert.Equal("imp", session.DefinitionsByActor[first].Id.Value);
             Assert.Equal(new DaggerfallActorId("imp"), session.DynamicActors[second]);
             // The spawn carries the same Mechanics binding an authored actor is built with.

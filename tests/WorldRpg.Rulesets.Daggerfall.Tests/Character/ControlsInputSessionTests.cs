@@ -464,7 +464,7 @@ public sealed class ControlsInputSessionTests
 
         session.Update(new ProductUpdate(OuterUpdate(1), [talk]));
 
-        Assert.Equal(DaggerfallActivationMode.Talk, session.ActivationMode);
+        Assert.Equal(DaggerfallActivationMode.Talk, session.Activation.Mode);
     }
 
     [Fact]
@@ -495,8 +495,8 @@ public sealed class ControlsInputSessionTests
 
         session.Update(new ProductUpdate(OuterUpdate(1), [attack, mode]));
 
-        Assert.Equal(DaggerfallActivationMode.Info, session.ActivationMode);
-        Assert.Null(session.LastMeleeTargeting);
+        Assert.Equal(DaggerfallActivationMode.Info, session.Activation.Mode);
+        Assert.Null(session.State.Kit.Targeting.LastEvidence);
         Assert.False(session.ActivationPanel.View.Applied);
     }
 
@@ -518,7 +518,7 @@ public sealed class ControlsInputSessionTests
             Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "interact"),
         ]));
 
-        Assert.Null(session.LastMeleeTargeting);
+        Assert.Null(session.State.Kit.Targeting.LastEvidence);
         Assert.Contains("No eligible target", session.ActivationPanel.View.Message, StringComparison.Ordinal);
     }
 
@@ -539,7 +539,7 @@ public sealed class ControlsInputSessionTests
         using (DaggerfallSession control = FreshSession())
         {
             control.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"attack\"}")]));
-            Assert.NotNull(control.LastMeleeTargeting);
+            Assert.NotNull(control.State.Kit.Targeting.LastEvidence);
         }
 
         // Either delivery order: the interaction still opens, so the pre-scan does not consume the
@@ -593,14 +593,14 @@ public sealed class ControlsInputSessionTests
             Ready(batched, appearance);
             batched.Update(new ProductUpdate(OuterUpdate(3), slice));
             Assert.Equal(ProductMode.Modal, batched.PendingModeRequest);
-            Assert.Null(batched.LastMeleeTargeting);
+            Assert.Null(batched.State.Kit.Targeting.LastEvidence);
         }
 
         // The same-session positive control the negative needs: an attack alone reaches combat.
         using DaggerfallSession control = LootableSession(out AppearanceFake controlAppearance);
         Ready(control, controlAppearance);
         control.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"attack\"}")]));
-        Assert.NotNull(control.LastMeleeTargeting);
+        Assert.NotNull(control.State.Kit.Targeting.LastEvidence);
     }
 
     [Fact]

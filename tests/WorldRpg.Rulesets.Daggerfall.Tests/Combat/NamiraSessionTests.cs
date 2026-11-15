@@ -62,7 +62,7 @@ public sealed class NamiraSessionTests
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: marker);
         restored.Update(new ProductUpdate(OuterUpdate(1), []));
         RunWindUp(restored, 2, 1);
-        Assert.True(restored.State.Actors.Get(enemy).IsDefeated, $"Enemy {enemy}, behavior {restored.LastEnemyBehavior[enemy].State}, condition {restored.State.ItemInstances.RequireUnique(durable).CurrentCondition}, outcome {restored.Presentation.LastOutcome}");
+        Assert.True(restored.State.Actors.Get(enemy).IsDefeated, $"Enemy {enemy}, behavior {restored.EnemyBehavior.LastEvidence[enemy].State}, condition {restored.State.ItemInstances.RequireUnique(durable).CurrentCondition}, outcome {restored.Presentation.LastOutcome}");
         Assert.True(restored.Corpses.ContainsKey(enemy));
         Assert.Equal(initial, restored.State.ItemInstances.RequireUnique(durable).CurrentCondition);
         Assert.True(restored.State.Equipment.Read().Assignments.Any(assignment => restored.State.Equipment.GetDurableItemId(new EntityId(assignment.Item.EntityId)).Value == durable));

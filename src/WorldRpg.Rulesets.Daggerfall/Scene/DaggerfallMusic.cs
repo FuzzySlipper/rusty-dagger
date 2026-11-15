@@ -49,6 +49,19 @@ internal sealed class DaggerfallMusic
     /// <summary>The donor track playing now, or nothing when no admitted track plays.</summary>
     internal string? Track => Director?.Playing;
 
+    /// <summary>
+    /// The donor context a place answers, decided in this order so that each reading counts only where it decides: a
+    /// dungeon's castle block, a building, a night place or the night, then the weather.
+    /// </summary>
+    internal DaggerfallMusicContext Context(IDaggerfallMusicPlace place)
+    {
+        DaggerfallWorldProfileKind kind = place.Kind;
+        if (kind == DaggerfallWorldProfileKind.Dungeon) return Underground(place.InsideCastle);
+        if (kind == DaggerfallWorldProfileKind.Interior) return Inside(place.Building);
+        if (NightPlace(place.Site) || !place.IsDay) return DaggerfallMusicContext.Night;
+        return Outside(place.Weather);
+    }
+
     /// <summary>The donor context under ground: a dungeon's castle block plays the castle's songs.</summary>
     internal static DaggerfallMusicContext Underground(bool insideCastle) =>
         insideCastle ? DaggerfallMusicContext.Castle : DaggerfallMusicContext.Dungeon;
@@ -211,4 +224,19 @@ internal sealed class DaggerfallMusic
             code,
             message,
             string.Empty));
+}
+
+/// <summary>
+/// What the music asks of where the player stands, each read from the domain that knows it and only when the music
+/// reaches it: a dungeon's castle block is asked only in a dungeon, the building only in an interior, the weather only
+/// outdoors by day in an ordinary place.
+/// </summary>
+internal interface IDaggerfallMusicPlace
+{
+    DaggerfallWorldProfileKind Kind { get; }
+    bool InsideCastle { get; }
+    DaggerfallInteriorBuilding? Building { get; }
+    DaggerfallSiteKind? Site { get; }
+    bool IsDay { get; }
+    DaggerfallWeatherKind Weather { get; }
 }

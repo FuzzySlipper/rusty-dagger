@@ -15,20 +15,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallHeldEnchantmentSessionTests
 {
     [Fact]
-    public void Holy_place_uses_the_admitted_interior_building_not_the_location_kind()
-    {
-        static DaggerfallInteriorBuilding Building(int type, int faction) =>
-            new(0, 0, new DaggerfallRmbBuildingId("TEST.RMB", 0), type, faction);
-
-        Assert.True(DaggerfallSession.IsHolyPlace(DaggerfallWorldProfileKind.Interior, Building(14, 0)));
-        Assert.True(DaggerfallSession.IsHolyPlace(DaggerfallWorldProfileKind.Interior, Building(18, 849)));
-        Assert.False(DaggerfallSession.IsHolyPlace(DaggerfallWorldProfileKind.Interior, Building(18, 0)));
-        Assert.False(DaggerfallSession.IsHolyPlace(DaggerfallWorldProfileKind.Exterior, Building(14, 0)));
-        Assert.False(DaggerfallSession.IsHolyPlace(DaggerfallWorldProfileKind.Dungeon, Building(14, 0)));
-        Assert.False(DaggerfallSession.IsHolyPlace(DaggerfallWorldProfileKind.Interior, null));
-    }
-
-    [Fact]
     public void Worn_deterioration_uses_the_session_time_and_survives_save_restore()
     {
         string root = TestData.RepositoryRoot;

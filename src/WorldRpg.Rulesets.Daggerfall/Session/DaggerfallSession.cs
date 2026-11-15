@@ -38,7 +38,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
 internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession, IGameBundleChoiceSession,
     IDaggerfallSiteTransitionHost, IDaggerfallRestSurroundings, IDaggerfallTeleportSites, IDaggerfallTransformationConsumer,
-    IDaggerfallAfflictionQuests
+    IDaggerfallMusicPlace
 {
     private readonly IRandomService _random;
     private readonly IEngineContext _engine;
@@ -49,12 +49,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     // The line the last mode change set for its mode, so returning to play can tell it from a result.
     private string? _modeLine = string.Empty;
     private readonly SpatialMovementSystem _spatial;
+    /// <summary>Whether static geometry covers a sound from the listener.</summary>
+    private readonly DaggerfallSoundCover _soundCover;
     /// <summary>Harm and spell delivery's physical contact over the admitted scene and canonical actor bodies.</summary>
     private readonly ActorContact _contact;
     private readonly FirstPersonCameraSystem _camera;
     private readonly DaggerfallCombatRules _combat;
-    // The player's weapon swing gesture, read from the look turns each admitted update commits and
-    // consumed by the weapon attack it admits.
     private readonly DaggerfallVitalityConsequences _vitality;
     // The player's Stamina, swimming fatigue and collapse.
     private readonly DaggerfallPlayerCondition _condition;
@@ -85,13 +85,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
     private readonly DaggerfallSessionPersistence _persistence;
     private readonly HashSet<ulong> _authoredEntityIds;
-    /// <summary>
-    /// Dynamic actors share one numeric base with generated unique items; durable kinds keep
-    /// them distinct, the way a corpse container already shares its actor's number under a
-    /// different kind.
-    /// </summary>
-    internal const ulong DynamicActorFirstIdentity = 1_000_000_000_000UL;
-    internal const ulong GroundContainerFirstIdentity = 2_000_000_000_000UL;
     private readonly DurableIdentityAllocator _actorIdentities;
     private readonly DaggerfallHeldEnchantments _heldEnchantments;
     private readonly DaggerfallItemCastTriggers _itemCastTriggers = null!;
@@ -130,8 +123,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>The activation in force over the active site.</summary>
     internal DaggerfallActivation Activation { get; } = null!;
     private DaggerfallActivationModule? _activation => Activation.Module;
-    internal DaggerfallActivationMode ActivationMode => Activation.Mode;
-    internal InteractionTargetingEvidence? LastActivationTargeting => Activation.LastEvidence;
     // Where a body or a person is sighted for use.
     private readonly DaggerfallActivationSight _sight = null!;
 
@@ -156,6 +147,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly World.DaggerfallWorldTime _time;
     private readonly World.DaggerfallHolidays _holidays = new();
     private readonly DaggerfallRest _rest;
+    /// <summary>Where the player may rest inside a building, and a tavern's let room.</summary>
+    private readonly DaggerfallRestPlaces _restPlaces;
     private readonly World.DaggerfallPlayerTime _playerTime;
 
     /// <summary>Whether action-driven play is holding the world still now.</summary>
@@ -170,7 +163,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// the light where the player is absorbs every one.
     /// </summary>
     private DaggerfallMagicDefense CareerMagicDefense(long actorId) =>
-        _passives.AbsorbsSpells(actorId, InSunlight()) ? new(100, 0, []) : DaggerfallMagicDefense.None;
+        DaggerfallMagicDefense.CareerAbsorption(_passives.AbsorbsSpells(actorId, InSunlight()));
 
     // Character creation from the title screen.
     private readonly DaggerfallCharacterCreation _creation;
@@ -186,9 +179,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     public void ApplyPlayerPreferences(string? serialized) => _controls.ApplyPreferences(serialized);
     internal bool ActionDrivenPlay => _controls.ActionDrivenTime;
     private readonly World.DaggerfallSiteContext _site;
-
-    /// <summary>The holiday announcement the calendar currently names for the session's site, or null.</summary>
-    internal World.DaggerfallHolidayAnnouncement? HolidayAnnouncement => _holidays.Announcement;
 
     /// <summary>
     /// Where the session is: the active site, the region it belongs to and the sites play has revealed.
@@ -240,8 +230,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     internal DaggerfallState State { get; }
     internal PresentationState Presentation { get; }
-    /// <summary>The selected site's one authoritative RDB door owner for activation, spells, and dungeon actions.</summary>
-    internal DaggerfallDoorRuntime Doors => _doors;
 
     /// <summary>Admits the full selected site catalog once composition has constructed this session.</summary>
     internal void AdmitSiteProfiles(DaggerfallSiteProfiles profiles) => _sites.AdmitProfiles(profiles);
@@ -254,13 +242,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>The admitted spatial scene, for Engine queries made outside an update such as a test looking along a wall.</summary>
     internal SpatialMovementSystem Spatial => _spatial;
-
-    /// <summary>Relocates the existing player (or a live actor) to an admitted named anchor.</summary>
-    internal bool TryRelocate(DaggerfallRelocationDestination destination)
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        return _sites.TryRelocate(destination);
-    }
 
     /// <summary>
     /// Attempts one real site transition, landing at the named destination anchor when there is no entrance to
@@ -344,39 +325,12 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     DaggerfallSiteRecord? IDaggerfallRestSurroundings.Site =>
         _site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord site) ? site : null;
 
-    bool IDaggerfallRestSurroundings.InteriorPrivilege
-    {
-        get
-        {
-            DaggerfallInteriorBuilding? building = CurrentInteriorBuilding();
-            if (building is not null && State.Lodging.RemainingSeconds(_activeProfileKey.Site,
-                new(building.BlockX, building.BlockY, building.Building.Index), _time.Calendar.ToAbsoluteSeconds()) > 0)
-                return true;
-            if (building is not null && State.Property.HouseAccess(new(_activeProfileKey.Site, building.Building, building.BlockX, building.BlockY)).Allowed)
-                return true;
-            return DaggerfallConcreteGuildPolicy.FightersHallRestAllowed(building, State.GuildMembership, _activeProfileKey.Site.Region,
-                checked((int)_time.Calendar.DayNumber));
-        }
-    }
-
+    bool IDaggerfallRestSurroundings.InteriorPrivilege => _restPlaces.InteriorPrivilege(_activeProfileKey.Site,
+        CurrentInteriorBuilding(), _time.Calendar.ToAbsoluteSeconds(), checked((int)_time.Calendar.DayNumber));
     long? IDaggerfallRestSurroundings.TavernRoomSeconds =>
-        CurrentInteriorBuilding() is { BuildingType: DaggerfallLodgingState.TavernBuildingType } tavern
-            ? State.Lodging.RemainingSeconds(_activeProfileKey.Site,
-                new(tavern.BlockX, tavern.BlockY, tavern.Building.Index), _time.Calendar.ToAbsoluteSeconds())
-            : null;
-
-    int IDaggerfallRestSurroundings.ExteriorClimate
-    {
-        get
-        {
-            DaggerfallExteriorCellId cell = _exterior.CurrentExteriorCell();
-            return _definitions.Grids.ClimateAtWorldPixel(cell.X, cell.Y).Value;
-        }
-    }
-
-    bool IDaggerfallRestSurroundings.InSiteCell =>
-        _site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord site) && site.Exterior is { } exterior
-        && _exterior.CurrentExteriorCell() == new DaggerfallExteriorCellId(exterior.MapPixelX, exterior.MapPixelY);
+        _restPlaces.TavernRoomSeconds(_activeProfileKey.Site, CurrentInteriorBuilding(), _time.Calendar.ToAbsoluteSeconds());
+    int IDaggerfallRestSurroundings.ExteriorClimate => _exterior.CurrentClimate();
+    bool IDaggerfallRestSurroundings.InSiteCell => _exterior.InSiteCell(((IDaggerfallRestSurroundings)this).Site);
 
     bool IDaggerfallRestSurroundings.EncounterArrives(long minute) => WorldEncounters.ArrivesWhileResting(minute);
 
@@ -384,35 +338,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     bool IDaggerfallTransformationConsumer.HasRacialOverride => State.RacialOverrides.Current is not null;
     DaggerfallInfectionConsumption IDaggerfallTransformationConsumer.Consume(DaggerfallInfectionTransition transition) =>
         transition.Kind == DaggerfallInfectionKind.Vampire ? BecomeVampire(transition) : _lycanthropy.Become(transition);
-
-    // What lycanthropy and vampirism ask of the quests, read from the quest state when they ask.
-    bool IDaggerfallAfflictionQuests.Active(string sourceFile) =>
-        State.Quests.All.Any(value => value.SourceFile == sourceFile && value.Lifecycle == DaggerfallQuestLifecycle.Active);
-    bool IDaggerfallAfflictionQuests.Started(string instanceId) => State.Quests.All.Any(value => value.InstanceId == instanceId);
-    IReadOnlyList<string> IDaggerfallAfflictionQuests.ClanWork(int clan) =>
-        [.. State.Quests.OrdinaryWorkPool(clan, true, State.Progression.Level, State.Social.FactionReputation(clan),
-            State.Progression.Level, State.Character.Identity.Gender).Select(row => row.Name)];
-
-    bool IDaggerfallAfflictionQuests.Offer(string instanceId, string sourceFile, int factionId)
-    {
-        try
-        {
-            var source = _definitions.QuestSources.Resolve(sourceFile);
-            State.Quests.Start(new(instanceId, source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []) { FactionId = factionId });
-            return true;
-        }
-        catch (Exception error) when (error is ArgumentException or NotSupportedException)
-        {
-            return false;
-        }
-    }
-
-    void IDaggerfallAfflictionQuests.FailActive(string definitionPrefix, string reason)
-    {
-        foreach (var quest in State.Quests.Capture().Instances.Where(quest => quest.Lifecycle == DaggerfallQuestLifecycle.Active
-            && quest.DefinitionName.StartsWith(definitionPrefix, StringComparison.OrdinalIgnoreCase)))
-            State.Quests.Fail(quest.InstanceId, reason);
-    }
 
     /// <summary>
     /// A swing the departing projection was still timing ends with it: retire and hand its
@@ -444,21 +369,20 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// Whether the player stands in a holy place. The donor requires an interior whose admitted
     /// building is a temple or belongs to the Fighters Guild trainers faction.
     /// </summary>
-    private bool InHolyPlace() => IsHolyPlace(_activeProfileKey.Kind,
+    private bool InHolyPlace() => DaggerfallConcreteGuildPolicy.HolyPlace(_activeProfileKey.Kind,
         _activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior
             ? CurrentInteriorBuilding() : null);
 
-    /// <summary>
-    /// The donor music context the admitted world answers: the music owner's rules, read in this order so that each
-    /// domain is asked only where it decides (a dungeon's castle block, a building, a night place, the hour, the weather).
-    /// </summary>
-    internal DaggerfallMusicContext MusicContext()
-    {
-        if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon) return DaggerfallMusic.Underground(InsideCastleZone());
-        if (_activeProfileKey.Kind == DaggerfallWorldProfileKind.Interior) return Music.Inside(CurrentInteriorBuilding());
-        if (DaggerfallMusic.NightPlace(_site.ActiveSite?.Kind) || !_time.Calendar.IsDay) return DaggerfallMusicContext.Night;
-        return DaggerfallMusic.Outside(LocalWeather.Current);
-    }
+    /// <summary>The donor music context the admitted world answers, from each domain's reading of where the player stands.</summary>
+    internal DaggerfallMusicContext MusicContext() => Music.Context(this);
+
+    // What the music asks of where the player stands, each read from the domain that knows it when the music asks.
+    DaggerfallWorldProfileKind IDaggerfallMusicPlace.Kind => _activeProfileKey.Kind;
+    bool IDaggerfallMusicPlace.InsideCastle => InsideCastleZone();
+    DaggerfallInteriorBuilding? IDaggerfallMusicPlace.Building => CurrentInteriorBuilding();
+    DaggerfallSiteKind? IDaggerfallMusicPlace.Site => _site.ActiveSite?.Kind;
+    bool IDaggerfallMusicPlace.IsDay => _time.Calendar.IsDay;
+    DaggerfallWeatherKind IDaggerfallMusicPlace.Weather => LocalWeather.Current;
 
     /// <summary>Whether the player stands in a dungeon's castle block, the donor's IsPlayerInsideDungeonCastle.</summary>
     /// <remarks>Music asks every update, so the scan stays a plain loop with no captured closure.</remarks>
@@ -471,18 +395,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         return false;
     }
 
-    private DaggerfallInteriorBuilding? CurrentInteriorBuilding()
-    {
-        DaggerfallInteriorBuilding? placement = _sites.Projection.Inputs.InteriorBuilding;
-        if (placement is null) return null;
-        DaggerfallSiteBuildingSource building = _site.RequireBuildingSource(_activeProfileKey.Site,
-            new(placement.BlockX, placement.BlockY, placement.Building.Index));
-        return placement with { BuildingType = building.Source.BuildingType, FactionId = building.Source.FactionId };
-    }
-
-    internal static bool IsHolyPlace(DaggerfallWorldProfileKind kind, DaggerfallInteriorBuilding? building) =>
-        kind == DaggerfallWorldProfileKind.Interior
-        && building is { BuildingType: 14 } or { FactionId: DaggerfallConcreteGuildCatalog.FightersTrainerFactionId };
+    /// <summary>The building the player is inside, as the site records it.</summary>
+    private DaggerfallInteriorBuilding? CurrentInteriorBuilding() =>
+        _site.InteriorBuilding(_activeProfileKey.Site, _sites.Projection.Inputs.InteriorBuilding);
 
     /// <summary>
     /// Retires the departing projection's unfinished swing. The notice it publishes belongs to the
@@ -669,9 +584,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// </summary>
     internal PresentationSlots Slots { get; } = new();
 
-    /// <summary>The input system's held state, readable so the mode request and tests agree on it.</summary>
-    internal ProductMode Mode => _mode;
-
     /// <summary>
     /// The mode this session asks the product for, derived from the one open-interaction owner. The
     /// Kit actor state owns whether the player is defeated.
@@ -766,43 +678,24 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         PublishPresentation();
     }
 
-    private GameBundleChoices? _bundles;
-    private GameBundleId? _bundleRequest;
+    /// <summary>The games the Host offers at the entry screen and the player's choice of one.</summary>
+    private readonly DaggerfallBundleChoice _bundleChoice;
 
     /// <summary>Stores the games the Host offers at the entry screen for the next HUD projection.</summary>
     public void ReportBundles(GameBundleChoices choices)
     {
-        _bundles = choices ?? throw new ArgumentNullException(nameof(choices));
+        _bundleChoice.Report(choices);
         PublishPresentation();
     }
 
     /// <summary>Takes the game the player chose at the entry screen, for the Host to switch to.</summary>
-    public GameBundleId? TakeBundleRequest()
-    {
-        GameBundleId? request = _bundleRequest;
-        _bundleRequest = null;
-        return request;
-    }
+    public GameBundleId? TakeBundleRequest() => _bundleChoice.Take();
 
     /// <summary>Presents why the Host did not switch to the chosen game.</summary>
     public void ReportBundleOutcome(string message)
     {
         Presentation.SetOutcome(message);
         PublishPresentation();
-    }
-
-    /// <summary>
-    /// Asks for another game at the entry screen. A new game that has begun its opening belongs to the game it
-    /// was created under, so the choice is open only before then.
-    /// </summary>
-    private void ChooseBundle(string key)
-    {
-        if (_mode != ProductMode.Title || _newGameInitialized)
-        {
-            Presentation.SetOutcome("The game can be changed only from the title screen.");
-            return;
-        }
-        _bundleRequest = new GameBundleId(key);
     }
 
     /// <summary>Stores Host-owned save metadata for the next ordinary HUD projection.</summary>
@@ -981,28 +874,16 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>The panel the player asked for through a device the DOM has no channel of its own for.</summary>
     internal DaggerfallPanelRequest? LatestPanelRequest => _interactions.LatestPanelRequest;
 
-    /// <summary>What is open over the world and which of it holds the world.</summary>
-    internal DaggerfallOpenInteractions Interactions => _interactions;
-
     private void RequestPanel(string panel)
     {
-        if (panel == DaggerfallPanel.Inventory && State.RacialOverrides.Current?.SuppressInventory == true)
-        {
-            Presentation.SetOutcome(DaggerfallRacialOverrideView.InventoryRefusal);
-            return;
-        }
-        _interactions.RequestPanel(panel);
+        if (_interactions.RequestPanel(panel, State.RacialOverrides.Current?.SuppressInventory == true) is { } refusal)
+            Presentation.SetOutcome(refusal);
     }
-
-    /// <summary>Optional compiled ranged-flight owner; invoked once for every admitted realtime update.</summary>
-
-    internal TargetingEvidence? LastMeleeTargeting => State.Kit.Targeting.LastEvidence;
 
     private void DeliverFacts()
     {
         _facts.Deliver(React);
     }
-    internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEnemyBehavior => _enemyBehavior.LastEvidence;
     internal DaggerfallEnemyBehaviorModule EnemyBehavior => _enemyBehavior;
     internal IReadOnlyDictionary<long, DaggerfallEnemySpellEvidence> LastEnemySpell => _enemyMagic.LastEvidence;
     internal LootPresentation? OpenLoot => _lootUi.Read();
@@ -1110,24 +991,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallItemMaker ItemMaker => _itemMaker;
     /// <summary>The Mages Guild's potion maker (Economy).</summary>
     internal DaggerfallPotionMaking PotionMaker => _potionMaker;
-    internal CorpseLootEvidence? LastCorpseLoot => _corpseLoot.LastEvidence;
-    internal CorpseLootCommitEvidence? LastCorpseLootCommit => _corpseLoot.LastCommit;
     internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _corpseLoot.Corpses;
 
     /// <summary>The session's durable identity ledger for generated unique loot.</summary>
     internal DaggerfallUniqueItemAllocator UniqueItemAllocator => _uniqueItems;
-
-    /// <summary>
-    /// Records that one generated unique item no longer exists, so its identity is
-    /// tombstoned. Authored content identities are refused — they are reserved rather
-    /// than issued, and tombstoning one would misreport content as removed.
-    /// </summary>
-    internal void RemoveUniqueItemIdentity(ulong entityId)
-    {
-        if (_authoredEntityIds.Contains(entityId))
-            throw new InvalidOperationException($"Unique item identity {entityId} is authored content and cannot be removed.");
-        _uniqueItems.Remove(new DurableIdentityReference(DurableIdentityKind.Item, entityId));
-    }
 
     /// <summary>The name of the item a player effect comes from, for the active-effect status row.</summary>
     internal string EffectItemName(ulong item) => State.ItemInstances.ContainsUnique(item)

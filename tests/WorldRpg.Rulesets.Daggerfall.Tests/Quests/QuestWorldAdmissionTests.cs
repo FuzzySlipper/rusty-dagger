@@ -233,11 +233,7 @@ public sealed class QuestWorldAdmissionTests
             Assert.Equal(DaggerfallItemOwner.Player, moved.State.ItemInstances.RequireUnique(id).Owner);
             Assert.Contains(moved.State.Inventory.Read().UniqueItems, value => moved.State.Actors.Entities.IdentityOf(value.Entity).Value == id);
         }
-        var carried = state.Inventory.Read().UniqueItems.Single(value => state.Actors.Entities.IdentityOf(value.Entity).Value == id);
-        state.Inventory.Destroy(new(carried.Entity.Value, new(carried.Definition.Value)));
-        state.ItemInstances.RemoveUnique(id);
-        state.Actors.Entities.Destroy(new(WorldRpg.Kit.World.DurableIdentityKind.Item, id));
-        session.RemoveUniqueItemIdentity(id);
+        session.ItemLifetime.DestroyUnique(id);
         using var consumed = fixture.Restore();
         consumed.State.Quests.AdmitPlacements(fixture.Inputs, consumed.QuestPlacement);
         var bound = consumed.State.Quests.Capture().Instances.Single().Resources.Single(value => value.Symbol == resource.Symbol);

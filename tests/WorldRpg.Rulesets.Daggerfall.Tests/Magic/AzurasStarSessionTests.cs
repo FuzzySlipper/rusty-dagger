@@ -168,9 +168,7 @@ public sealed class AzurasStarSessionTests
     public void Actual_item_loss_removes_held_eligibility_and_cannot_be_used_or_restored_as_a_star()
     {
         using var f = Star(); var s = f.Session; Equip(f); Assert.True(s.ItemSouls.Gems.Capture(0));
-        s.State.Equipment.Unequip(f.Item); s.State.Inventory.Destroy(f.Item);
-        s.State.Actors.Entities.Destroy(new(DurableIdentityKind.Item, f.Source));
-        s.State.ItemInstances.RemoveUnique(f.Source); s.RemoveUniqueItemIdentity(f.Source);
+        s.ItemLifetime.DestroyUnique(f.Source);
         Assert.False(s.State.HeldEnchantments.AzurasStarEquipped);
         f.Update(); f.Use(); Assert.Contains("no longer", f.Message);
         using var restored = f.Restore(out var restoredEngine);

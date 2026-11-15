@@ -181,7 +181,7 @@ internal sealed partial class DaggerfallSession
             && facts.AdmittedStepCount > 0)
         {
             foreach (var appearance in _sites.Appearances) appearance.Advance(facts);            // Scene
-            _appearance.AdvanceMobileFeedback(facts, State.Actors, State.PlayerControl.Position, ShotBlockedByCover);   // Scene
+            _appearance.AdvanceMobileFeedback(facts, State.Actors, State.PlayerControl.Position, _soundCover.Blocks);   // Scene
             // A held value is recomputed before anything this update can read it: impacts resolve, the
             // flight advances and presentation publishes against what the player is wearing now.
             _heldEnchantments.Refresh();                                                          // Magic
@@ -539,7 +539,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallConcealmentEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);   // Magic
         DaggerfallDoorMagicEffects.Publish(State.Effects, DaggerfallActorIdentity.PlayerEntityId, Slots);     // Magic
         _appearance.RetireUnavailableMagic(State.Actors, State.ItemInstances.ContainsUnique);    // Scene
-        HudFrames.Publish(new DaggerfallHudSession(_mode, _newGameInitialized, LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _bundles));   // UiProjection
+        HudFrames.Publish(new DaggerfallHudSession(_mode, _newGameInitialized, LatestPanelRequest, _saveSlots, _saveSlotDiagnostic, _bundleChoice.Offered));   // UiProjection
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);         // Scene
         Vector3 facing = ActorHeading.Forward(State.PlayerControl.YawRadians);
         Vector3? candlePosition = !State.Actors.Player.IsDefeated && State.PlayerControl.Position is { } playerPosition

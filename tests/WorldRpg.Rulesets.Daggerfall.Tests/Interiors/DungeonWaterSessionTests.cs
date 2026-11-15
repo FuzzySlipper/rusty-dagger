@@ -52,7 +52,7 @@ public sealed class DungeonWaterSessionTests
         Assert.True(spatial.StepRequests.Any(request => request.Command.Movement.Mode == CharacterMovementMode.Swimming
             && request.Position.X == actor.Position.X && request.Position.Z == actor.Position.Z
             && request.Position.Y > actor.Position.Y),
-            $"Fish behavior: {session.LastEnemyBehavior[fish]}; position {actor.Position}; request count {spatial.StepRequests.Count}; pairs {string.Join(";", session.LastEnemyBehavior[fish].Visibility!.Value.Pairs.ToArray())}");
+            $"Fish behavior: {session.EnemyBehavior.LastEvidence[fish]}; position {actor.Position}; request count {spatial.StepRequests.Count}; pairs {string.Join(";", session.EnemyBehavior.LastEvidence[fish].Visibility!.Value.Pairs.ToArray())}");
         // Continue the ordinary admitted swimming consequence until the breath pool is exhausted.
         for (ulong step = 2; step < 302 && !session.State.Actors.Player.IsDefeated; step++)
             session.Update(new ProductUpdate(OuterUpdate(step) with { FixedDeltaSeconds = 1 }, []));

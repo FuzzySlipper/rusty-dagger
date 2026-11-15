@@ -41,6 +41,47 @@ public sealed class DaggerfallMusicTests
     }
 
     [Fact]
+    public void The_context_asks_each_reading_only_where_it_decides()
+    {
+        DaggerfallMusic music = new(Engine().Context, null, false, Mages, FightersTrainer);
+        Place dungeon = new(DaggerfallWorldProfileKind.Dungeon) { InsideCastle = true };
+        Assert.Equal(DaggerfallMusicContext.Castle, music.Context(dungeon));
+        Assert.Equal(["kind", "castle"], dungeon.Asked);
+
+        Place tavern = new(DaggerfallWorldProfileKind.Interior) { Building = Building(15, 0) };
+        Assert.Equal(DaggerfallMusicContext.Tavern, music.Context(tavern));
+        Assert.Equal(["kind", "building"], tavern.Asked);
+
+        Place graveyard = new(DaggerfallWorldProfileKind.Exterior) { Site = DaggerfallSiteKind.Graveyard, IsDay = true };
+        Assert.Equal(DaggerfallMusicContext.Night, music.Context(graveyard));
+        Assert.Equal(["kind", "site"], graveyard.Asked);
+
+        Place night = new(DaggerfallWorldProfileKind.Exterior) { IsDay = false, Weather = DaggerfallWeatherKind.Rain };
+        Assert.Equal(DaggerfallMusicContext.Night, music.Context(night));
+        Assert.Equal(["kind", "site", "day"], night.Asked);
+
+        Place rain = new(DaggerfallWorldProfileKind.Exterior) { IsDay = true, Weather = DaggerfallWeatherKind.Rain };
+        Assert.Equal(DaggerfallMusicContext.Rain, music.Context(rain));
+        Assert.Equal(["kind", "site", "day", "weather"], rain.Asked);
+    }
+
+    private sealed class Place(DaggerfallWorldProfileKind kind) : IDaggerfallMusicPlace
+    {
+        internal List<string> Asked { get; } = [];
+        internal bool InsideCastle { get; init; }
+        internal DaggerfallInteriorBuilding? Building { get; init; }
+        internal DaggerfallSiteKind? Site { get; init; }
+        internal bool IsDay { get; init; }
+        internal DaggerfallWeatherKind Weather { get; init; }
+        DaggerfallWorldProfileKind IDaggerfallMusicPlace.Kind { get { Asked.Add("kind"); return kind; } }
+        bool IDaggerfallMusicPlace.InsideCastle { get { Asked.Add("castle"); return InsideCastle; } }
+        DaggerfallInteriorBuilding? IDaggerfallMusicPlace.Building { get { Asked.Add("building"); return Building; } }
+        DaggerfallSiteKind? IDaggerfallMusicPlace.Site { get { Asked.Add("site"); return Site; } }
+        bool IDaggerfallMusicPlace.IsDay { get { Asked.Add("day"); return IsDay; } }
+        DaggerfallWeatherKind IDaggerfallMusicPlace.Weather { get { Asked.Add("weather"); return Weather; } }
+    }
+
+    [Fact]
     public void Without_a_score_nothing_plays_and_nothing_is_said()
     {
         EngineContextFake engine = Engine();

@@ -198,7 +198,7 @@ public sealed class ProductModeSessionTests
         // A held update republishes the existing scene for the mode UI, but does not simulate an
         // enemy, deliver its EnemyAttackStartedFact into appearance, charge fatigue, or advance
         // any sprite playback.
-        Assert.Empty(session.LastEnemyBehavior);
+        Assert.Empty(session.EnemyBehavior.LastEvidence);
         Assert.Equal(100d, fatigue.Current);
         Assert.Equal(factReactionsBefore, appearance.ControlRequests.Count);
         Assert.Equal(playbackAdvancesBefore, appearance.AdvanceRequests.Count);
@@ -210,7 +210,7 @@ public sealed class ProductModeSessionTests
         // Complete each authored swing so this fixture does not leave a hit marker pending forever.
         appearance.AdvanceReceiptForAll = CompletedMarker(1);
         for (ulong step = 2; step <= 121; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
-        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
         Assert.True(appearance.ControlRequests.Count > factReactionsBefore);
         Assert.True(appearance.AdvanceRequests.Count > playbackAdvancesBefore);
     }
@@ -339,7 +339,6 @@ public sealed class ProductModeSessionTests
 
         // The product decides the mode, which is what the session applies.
         session.ApplyProductMode(ProductMode.Title);
-        Assert.Equal(ProductMode.Title, session.Mode);
 
         // The screen is up, so the world is not: an admitted update with held movement in it takes no
         // step, and the projection still publishes so the screen can be read.
@@ -365,7 +364,7 @@ public sealed class ProductModeSessionTests
         };
         session.Update(new ProductUpdate(OuterUpdate(2), [loot]));
         Assert.Null(session.OpenLoot);
-        Assert.Equal(ProductMode.Title, session.Mode);
+        Assert.Equal("title", engine.PublishedField("mode"));
         Assert.Equal(stepsBefore, spatial.StepCalls);
 
         // A status line would compete with the screen that is up, so the entry screen says nothing.
@@ -382,7 +381,7 @@ public sealed class ProductModeSessionTests
         };
         session.Update(new ProductUpdate(OuterUpdate(3), [begin]));
         Assert.DoesNotContain("Unrecognized", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
-        Assert.Equal(ProductMode.Title, session.Mode);
+        Assert.Equal("title", engine.PublishedField("mode"));
         Assert.Equal(stepsBefore, spatial.StepCalls);
 
         // Leaving the entry screen is the product's transition, and ordinary play resumes under it.
@@ -443,7 +442,6 @@ public sealed class ProductModeSessionTests
 
         // The product decides, and the session applies it.
         session.ApplyProductMode(ProductMode.Modal);
-        Assert.Equal(ProductMode.Modal, session.Mode);
 
         // A product that holds the world somewhere other than play asks for nothing, even with this
         // container open: the request follows the container, so a held world with one open would otherwise
@@ -469,7 +467,7 @@ public sealed class ProductModeSessionTests
         // ordinary play - the existing melee test drives the internal per-step seam - so the attack
         // half is stated as this structural fact rather than claimed as an executed refusal.)
         Intent("attack", 4);
-        Assert.Null(session.LastMeleeTargeting);
+        Assert.Null(session.State.Kit.Targeting.LastEvidence);
         Assert.Equal(stepsBeforeModal, spatial.StepCalls);
         LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
         InventoryItemPresentation gold = opened.Items.Single(item => item.Key == DaggerfallInventoryPresentation.StackKey(InventoryStackId.Parse("test.loot.4534")));

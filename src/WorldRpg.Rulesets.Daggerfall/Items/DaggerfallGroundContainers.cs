@@ -17,6 +17,9 @@ internal sealed record DaggerfallPlacedItem(DaggerfallItemOwner Owner, Inventory
 
 internal sealed class DaggerfallGroundContainers
 {
+    /// <summary>The first durable identity a ground pile's container takes.</summary>
+    internal const ulong FirstIdentity = 2_000_000_000_000UL;
+
     private readonly MechanicsInventoryContainerCoordinator _containers;
     private readonly DaggerfallItemInstances _instances;
     private readonly EntityId _player;

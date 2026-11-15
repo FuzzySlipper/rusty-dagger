@@ -48,7 +48,7 @@ public sealed class SessionCollisionResidencyTests
         Assert.Equal(sourceModels.Length, sourceAssets.Count);
         Assert.Equal(sourceModels.Sum(model => model.CollisionVertices.Length), admission.Vertices.Length);
         Assert.Equal(sourceModels.Sum(model => model.CollisionTriangles.Length), admission.Triangles.Length);
-        Assert.Equal(sourceModels.Count(model => model.DoorIdentity is not { } door || session.Doors.Read(door).CollisionEnabled),
+        Assert.Equal(sourceModels.Count(model => model.DoorIdentity is not { } door || session.Sites.Projection.Doors.Read(door).CollisionEnabled),
             admission.Instances.Length);
         Assert.True(admission.RemovedAssets.IsEmpty);
         Assert.True(admission.RemovedInstances.IsEmpty);

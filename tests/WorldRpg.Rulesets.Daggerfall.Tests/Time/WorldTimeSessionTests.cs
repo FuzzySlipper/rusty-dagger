@@ -56,17 +56,14 @@ public sealed class WorldTimeSessionTests
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession session = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
 
-        Assert.Null(session.HolidayAnnouncement);
+        Assert.DoesNotContain(session.Presentation.Messages, message => message.Contains("Day of the Dead", StringComparison.Ordinal));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
-        Assert.NotNull(session.HolidayAnnouncement);
-        Assert.Equal(18, session.HolidayAnnouncement.HolidayId);
-        Assert.Equal(new DaggerfallTextKey(DaggerfallTextKind.Resource, "8367"), session.HolidayAnnouncement.TextKey);
         string announced = session.Presentation.LastOutcome;
         Assert.Contains("Day of the Dead", announced, StringComparison.Ordinal);
         session.Update(new ProductUpdate(OuterUpdate(2), []));
         Assert.Equal(announced, session.Presentation.LastOutcome);
-        Assert.Equal(18, session.HolidayAnnouncement.HolidayId);
+        Assert.Single(session.Presentation.Messages, message => message.Contains("Day of the Dead", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -103,7 +100,6 @@ public sealed class WorldTimeSessionTests
 
         Assert.Equal(before, session.Presentation.Messages);
         session.AdvanceElapsedTime(1);
-        Assert.Equal(18, session.HolidayAnnouncement?.HolidayId);
         Assert.Contains("Day of the Dead", session.Presentation.LastOutcome, StringComparison.Ordinal);
         Assert.Single(session.Presentation.Messages, message => message.Contains("Day of the Dead", StringComparison.Ordinal));
     }
@@ -136,12 +132,11 @@ public sealed class WorldTimeSessionTests
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession session = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Null(session.HolidayAnnouncement);
+        Assert.DoesNotContain(session.Presentation.Messages, message => message.Contains("Day of the Dead", StringComparison.Ordinal));
 
         // Two admitted game hours cross midnight into the holiday. A whole admitted day would empty the
         // fatigue pool and the exhaustion collapse would take the line.
         session.Update(new ProductUpdate(FactsWithDelta(2d * 3600d / DaggerfallTuning.Defaults.Time.GameSecondsPerRealSecond), []));
-        Assert.Equal(18, session.HolidayAnnouncement?.HolidayId);
         Assert.Contains("Day of the Dead", session.Presentation.LastOutcome, StringComparison.Ordinal);
     }
 
@@ -167,12 +162,7 @@ public sealed class WorldTimeSessionTests
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
         restored.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Null(restored.HolidayAnnouncement);
-
-        // The fresh bundle session starts in a dungeon on an ordinary day: silent too.
-        using DaggerfallSession fresh = FreshSession();
-        fresh.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Null(fresh.HolidayAnnouncement);
+        Assert.DoesNotContain(restored.Presentation.Messages, message => message.Contains("Day of the Dead", StringComparison.Ordinal));
     }
 
     private static ProductUpdateFacts FactsWithDelta(double deltaSeconds) =>

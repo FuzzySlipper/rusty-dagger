@@ -99,7 +99,7 @@ public sealed class DungeonInteractionSessionTests
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
         // The ray finds something that is not a loaded door, which is what an ordinary click in the open
         // dungeon does, and the delivery carries two intents the way one service batch can.
-        ulong notADoor = session.Doors.All.Select(value => value.Entity.Value).DefaultIfEmpty(1UL).Max() + 1UL;
+        ulong notADoor = session.Sites.Projection.Doors.All.Select(value => value.Entity.Value).DefaultIfEmpty(1UL).Max() + 1UL;
         spatial.FloorHit = request => request.Direction.Y < -.5f ? default : new SpatialHit
         {
             Present = true,
@@ -213,7 +213,7 @@ public sealed class DungeonInteractionSessionTests
         // The ray finds an entity that is none of the loaded doors. Asking the door graph about it must
         // not hand the graph a door that was never matched: a door view is a value type, so a miss is a
         // default view whose identity carries no RDB source key, and that identity ends the update.
-        ulong notADoor = session.Doors.All.Select(value => value.Entity.Value).DefaultIfEmpty(1UL).Max() + 1UL;
+        ulong notADoor = session.Sites.Projection.Doors.All.Select(value => value.Entity.Value).DefaultIfEmpty(1UL).Max() + 1UL;
         spatial.FloorHit = request => request.Direction.Y < -.5f ? default : new SpatialHit
         {
             Present = true,
@@ -261,11 +261,11 @@ public sealed class DungeonInteractionSessionTests
             castle.ProfileKey.LogicalId,
             castle.DungeonActions.Select(action => action.Id == openAction.Id ? openAction : action),
             session.State.Variables.Write,
-            executeFamilyAction: action => DaggerfallDungeonDoorActions.Execute(action, session.Doors));
-        DaggerfallDoorView door = session.Doors.All.Single(value =>
+            executeFamilyAction: action => DaggerfallDungeonDoorActions.Execute(action, session.Sites.Projection.Doors));
+        DaggerfallDoorView door = session.Sites.Projection.Doors.All.Single(value =>
             DaggerfallDungeonActionGraph.DoorSourceId(value.Id) == openAction.DoorId);
         Assert.Equal(DaggerfallDoorOperationResult.Started,
-            session.Doors.Unlock(door.Id, DaggerfallDoorOperationSource.DungeonAction));
+            session.Sites.Projection.Doors.Unlock(door.Id, DaggerfallDoorOperationSource.DungeonAction));
         session.State.PlayerControl.MoveTo(door.Pose.Translation + Vector3.UnitZ);
         session.State.PlayerControl.YawRadians = 0f;
         session.State.PlayerControl.PitchRadians = 0f;
@@ -282,7 +282,7 @@ public sealed class DungeonInteractionSessionTests
             x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
 
         Assert.True(session.ActivationPanel.View.Applied, session.ActivationPanel.View.Message);
-        Assert.Equal(DaggerfallDoorMotion.Opening, session.Doors.Read(door.Id).Motion);
+        Assert.Equal(DaggerfallDoorMotion.Opening, session.Sites.Projection.Doors.Read(door.Id).Motion);
         Assert.Equal(1UL, session.State.DungeonActions[castle.ProfileKey].State[openAction.Id].ActivationCount);
     }
 
@@ -310,7 +310,7 @@ public sealed class DungeonInteractionSessionTests
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, castle]));
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
 
-        DaggerfallDoorView door = session.Doors.All.First(value =>
+        DaggerfallDoorView door = session.Sites.Projection.Doors.All.First(value =>
             value.Kind == DaggerfallDoorKind.Normal && !value.IsLocked && value.Motion == DaggerfallDoorMotion.Closed);
         string doorId = DaggerfallDungeonActionGraph.DoorSourceId(door.Id);
         DaggerfallDungeonActionDefinition warning = new(
@@ -347,7 +347,7 @@ public sealed class DungeonInteractionSessionTests
             x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
 
         Assert.Equal(DaggerfallDungeonTextActionKind.DoorText, session.DungeonText.Projection?.Kind);
-        Assert.Equal(DaggerfallDoorMotion.Closed, session.Doors.Read(door.Id).Motion);
+        Assert.Equal(DaggerfallDoorMotion.Closed, session.Sites.Projection.Doors.Read(door.Id).Motion);
         DaggerfallDungeonTextProjection first = Assert.IsType<DaggerfallDungeonTextProjection>(session.DungeonText.Projection);
         ProductInputEvent close = Input(InputEventKind.DirectDigital) with
         {
@@ -360,7 +360,7 @@ public sealed class DungeonInteractionSessionTests
 
         session.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.DirectDigital,
             x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
-        Assert.Equal(DaggerfallDoorMotion.Opening, session.Doors.Read(door.Id).Motion);
+        Assert.Equal(DaggerfallDoorMotion.Opening, session.Sites.Projection.Doors.Read(door.Id).Motion);
         Assert.Equal(2UL, session.State.DungeonActions[castle.ProfileKey].State[warning.Id].ActivationCount);
     }
 
@@ -382,10 +382,10 @@ public sealed class DungeonInteractionSessionTests
             perception.Service, random: RandomMaximum.Create());
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
-        DaggerfallDoorView door = session.Doors.All.First(value =>
+        DaggerfallDoorView door = session.Sites.Projection.Doors.All.First(value =>
             value.Motion == DaggerfallDoorMotion.Closed && !value.IsLocked && value.Kind == DaggerfallDoorKind.Normal);
         Assert.Equal(DaggerfallDoorOperationResult.Started,
-            session.Doors.Lock(door.Id, DaggerfallDoorOperationSource.DungeonAction));
+            session.Sites.Projection.Doors.Lock(door.Id, DaggerfallDoorOperationSource.DungeonAction));
         int skill = session.State.SkillUses.PermanentSkillValue(DaggerfallSkills.Lockpicking);
         session.State.PlayerControl.MoveTo(door.Pose.Translation + Vector3.UnitZ);
         session.State.PlayerControl.YawRadians = 0f;
@@ -410,8 +410,8 @@ public sealed class DungeonInteractionSessionTests
         session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital,
             x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
 
-        Assert.Equal(DaggerfallDoorMotion.Closed, session.Doors.Read(door.Id).Motion);
-        Assert.Equal(skill, session.Doors.FailedLockpickingSkill(door.Id));
+        Assert.Equal(DaggerfallDoorMotion.Closed, session.Sites.Projection.Doors.Read(door.Id).Motion);
+        Assert.Equal(skill, session.Sites.Projection.Doors.FailedLockpickingSkill(door.Id));
         Assert.Equal(1, session.State.Progression.SkillUses[DaggerfallSkills.Lockpicking]);
 
         // The source rejects a repeat at the same skill before drawing or recording another use.
@@ -427,7 +427,7 @@ public sealed class DungeonInteractionSessionTests
         _ = session.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallSkills.Lockpicking)).AddModifier(5);
         session.Update(new ProductUpdate(OuterUpdate(4), [Input(InputEventKind.DirectDigital,
             x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
-        Assert.Equal(skill + 5, session.Doors.FailedLockpickingSkill(door.Id));
+        Assert.Equal(skill + 5, session.Sites.Projection.Doors.FailedLockpickingSkill(door.Id));
         Assert.Equal(2, session.State.Progression.SkillUses[DaggerfallSkills.Lockpicking]);
 
         ContentFake restoredContent = new(releases);
@@ -437,7 +437,7 @@ public sealed class DungeonInteractionSessionTests
             random: RandomMaximum.Create());
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
-        Assert.Equal(skill, restored.Doors.FailedLockpickingSkill(door.Id));
+        Assert.Equal(skill, restored.Sites.Projection.Doors.FailedLockpickingSkill(door.Id));
         Assert.Equal(1, restored.State.Progression.SkillUses[DaggerfallSkills.Lockpicking]);
     }
 
@@ -466,9 +466,9 @@ public sealed class DungeonInteractionSessionTests
             perception.Service, random: RandomMaximum.Create());
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
 
-        DaggerfallDoorView door = session.Doors.All.First(value =>
+        DaggerfallDoorView door = session.Sites.Projection.Doors.All.First(value =>
             value.Motion == DaggerfallDoorMotion.Closed && value.IsLocked && value.Kind == DaggerfallDoorKind.Normal);
-        Assert.Equal(DaggerfallLockInteractionSurface.Exterior, session.Doors.InteractionSurface(door.Id));
+        Assert.Equal(DaggerfallLockInteractionSurface.Exterior, session.Sites.Projection.Doors.InteractionSurface(door.Id));
         int skill = session.State.SkillUses.PermanentSkillValue(DaggerfallSkills.Lockpicking);
         DaggerfallLockIncident? incident = null;
         session.Locks.Incident += value => incident = value;
@@ -488,8 +488,8 @@ public sealed class DungeonInteractionSessionTests
         session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital,
             x: 1f, phase: InputPhase.DirectUi, intent: "interact")]));
 
-        Assert.Equal(DaggerfallDoorMotion.Closed, session.Doors.Read(door.Id).Motion);
-        Assert.Equal(skill, session.Doors.FailedLockpickingSkill(door.Id));
+        Assert.Equal(DaggerfallDoorMotion.Closed, session.Sites.Projection.Doors.Read(door.Id).Motion);
+        Assert.Equal(skill, session.Sites.Projection.Doors.FailedLockpickingSkill(door.Id));
         Assert.Equal(1, session.State.Progression.SkillUses[DaggerfallSkills.Lockpicking]);
         Assert.Equal(DaggerfallLockInteractionSurface.Exterior, incident?.Surface);
         Assert.Equal(DaggerfallLockInteractionStatus.Failed, incident?.Status);

@@ -133,10 +133,7 @@ public sealed class SkullCorruptionSessionTests
         Assert.True(f.Allies().Any(), f.Message); long copy = Assert.Single(f.Allies());
         Assert.Equal(0, f.Condition); Assert.Contains("broke", f.Message);
         f.Use(); Assert.Single(f.Allies()); Assert.Contains("broken", f.Message);
-        f.Session.State.Inventory.Destroy(f.Item);
-        f.Session.State.Actors.Entities.Destroy(f.Session.State.Actors.Entities.IdentityOf(new(f.Item.EntityId)));
-        f.Session.State.ItemInstances.RemoveUnique(f.Source);
-        f.Session.RemoveUniqueItemIdentity(f.Source);
+        f.Session.ItemLifetime.DestroyUnique(f.Source);
         f.Use(); Assert.Single(f.Allies());
         using var restored = f.Restore();
         Assert.Equal(new(f.Enemy, f.Source), restored.State.Actors.Get(copy).Actor.Get<DaggerfallCorruptionOrigin>());

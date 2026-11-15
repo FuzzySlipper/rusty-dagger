@@ -30,7 +30,7 @@ public sealed class NewGameBowSessionTests
 
         f.Loose();
 
-        TargetingEvidence targeting = Assert.IsType<TargetingEvidence>(f.Game.LastMeleeTargeting);
+        TargetingEvidence targeting = Assert.IsType<TargetingEvidence>(f.Game.State.Kit.Targeting.LastEvidence);
         Assert.Equal(Fixture.Target, targeting.SelectedTargetId);
         Assert.Equal(TestPayload.Definitions.Actions["bow-shot"].Reach,
             targeting.Request.Observers.Span[0].MaximumDistance);
@@ -47,7 +47,7 @@ public sealed class NewGameBowSessionTests
 
         f.Loose();
 
-        Assert.Null(Assert.IsType<TargetingEvidence>(f.Game.LastMeleeTargeting).SelectedTargetId);
+        Assert.Null(Assert.IsType<TargetingEvidence>(f.Game.State.Kit.Targeting.LastEvidence).SelectedTargetId);
         // Nothing selected does not refuse the shot: the arrow is loosed along the look and meets what it meets.
         Assert.NotNull(f.Game.State.Actors.Player.Attack.Pending);
         Assert.Equal(23UL, f.Arrows().Quantity);

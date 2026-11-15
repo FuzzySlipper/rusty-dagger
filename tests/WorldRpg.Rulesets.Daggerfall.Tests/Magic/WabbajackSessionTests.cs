@@ -82,11 +82,7 @@ public sealed class WabbajackSessionTests
         var facts = new FactBuffer<IProductFact>();
         Assert.True(f.Session.State.Kit.AttackExecution.Start(new(1, f.Target, 1, 1, .125, true), facts));
         f.Session.SweptInto(f.Target);
-        f.Session.State.Equipment.Unequip(f.Item);
-        f.Session.State.Inventory.Destroy(f.Item);
-        f.Session.State.ItemInstances.RemoveUnique(f.Source);
-        f.Session.State.Actors.Entities.Destroy(new(WorldRpg.Kit.World.DurableIdentityKind.Item, f.Source));
-        f.Session.RemoveUniqueItemIdentity(f.Source);
+        f.Session.ItemLifetime.DestroyUnique(f.Source);
         var notice = new AttackImpactNotice(1, f.Target, 1, 1, false);
         f.Session.State.Kit.AttackExecution.ApplyImpacts([notice], 1, facts);
         f.Session.State.Kit.AttackExecution.ApplyImpacts([notice], 1, facts);

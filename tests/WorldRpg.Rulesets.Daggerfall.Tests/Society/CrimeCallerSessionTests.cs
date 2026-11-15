@@ -150,7 +150,7 @@ public sealed class CrimeCallerSessionTests
         s.State.PlayerControl.YawRadians = 0; s.State.PlayerControl.PitchRadians = 0;
         s.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
         Assert.Single(s.State.Crime.Attempts);
-        Assert.Equal(3.2d, s.LastActivationTargeting!.Request.Observers.Span[0].MaximumDistance, precision: 6);
+        Assert.Equal(3.2d, s.Activation.LastEvidence!.Request.Observers.Span[0].MaximumDistance, precision: 6);
     }
 
     [Fact]
@@ -197,7 +197,7 @@ public sealed class CrimeCallerSessionTests
         }
         internal void Steal(DaggerfallSession s, ulong step)
         {
-            if (s.ActivationMode != DaggerfallActivationMode.Steal)
+            if (s.Activation.Mode != DaggerfallActivationMode.Steal)
                 s.Update(new ProductUpdate(OuterUpdate(step - 1), [Ui("{\"action\":\"activation-mode\",\"mode\":\"steal\"}")]));
             AimActivationAt(s, TargetId);
             s.Update(new ProductUpdate(OuterUpdate(step), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));

@@ -22,7 +22,7 @@ public sealed class EnemySetupSessionTests
         actor.Actor.Get<WorldRpg.Rulesets.Daggerfall.Modules.Behavior.DaggerfallEnemyPerceptionMemory>().SetForcedHostile(true);
         f.Perception.Responder = _ => TestSessions.Receipt(new PerceptionPair((ulong)id, 1, 4, 1, PerceptionPairKind.Visible, 1));
         f.Update();
-        Assert.NotEqual(WorldRpg.Rulesets.Daggerfall.Modules.Behavior.EnemyBehaviorState.Idle, f.Session.LastEnemyBehavior[id].State);
+        Assert.NotEqual(WorldRpg.Rulesets.Daggerfall.Modules.Behavior.EnemyBehaviorState.Idle, f.Session.EnemyBehavior.LastEvidence[id].State);
         var restored = f.Restore();
         using (restored) Assert.Equal(expected, restored.State.Actors.Get(id).Stats.GetStat(StatId.Parse("critical-strike")).Value);
         // Authored placements go through the same factory rule, too.

@@ -29,6 +29,13 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </remarks>
 internal sealed class DaggerfallActorRoster
 {
+    /// <summary>
+    /// The first identity a spawned actor takes. Dynamic actors share one numeric base with generated unique
+    /// items; durable kinds keep them distinct, the way a corpse container already shares its actor's number
+    /// under a different kind.
+    /// </summary>
+    internal const ulong DynamicFirstIdentity = 1_000_000_000_000UL;
+
     private readonly ActorsState _actors;
     private readonly DaggerfallActorInventories _actorInventories;
     private readonly DaggerfallCharacterState _character;

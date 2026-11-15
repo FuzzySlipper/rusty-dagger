@@ -109,7 +109,7 @@ public sealed class DaggerfallParalysisEffectsTests
         var position = s.State.Actors.Get(enemy).Position;
         s.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(position, s.State.Actors.Get(enemy).Position);
-        Assert.Equal(WorldRpg.Rulesets.Daggerfall.Modules.Behavior.EnemyBehaviorState.Idle, s.LastEnemyBehavior[enemy].State);
+        Assert.Equal(WorldRpg.Rulesets.Daggerfall.Modules.Behavior.EnemyBehaviorState.Idle, s.EnemyBehavior.LastEvidence[enemy].State);
         var delivered = new List<IProductFact>(); facts.Deliver(delivered.Add);
         Assert.Contains(delivered, fact => fact is AttackRejectedFact { Reason: AttackRejection.Incapacitated });
         Assert.True(s.State.Effects.ControlsFor(1).Movement);

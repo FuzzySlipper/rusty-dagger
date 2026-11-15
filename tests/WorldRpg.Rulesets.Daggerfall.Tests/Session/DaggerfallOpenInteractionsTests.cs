@@ -50,6 +50,19 @@ public sealed class DaggerfallOpenInteractionsTests
         Assert.Equal(ProductMode.Playing, open.ModeRequest(ProductMode.Modal, playerDefeated: false));
     }
 
+    [Fact]
+    public void A_suppressed_inventory_refuses_its_panel_and_leaves_other_requests_alone()
+    {
+        DaggerfallOpenInteractions open = new(() => null, () => "loot", () => false, () => false, () => false, () => false, () => false);
+
+        Assert.Equal(DaggerfallRacialOverrideView.InventoryRefusal, open.RequestPanel(DaggerfallPanel.Inventory, inventorySuppressed: true));
+        Assert.Null(open.LatestPanelRequest);
+        Assert.Null(open.RequestPanel(DaggerfallPanel.Character, inventorySuppressed: true));
+        Assert.Equal(DaggerfallPanel.Character, open.LatestPanelRequest?.Panel);
+        Assert.Null(open.RequestPanel(DaggerfallPanel.Inventory, inventorySuppressed: false));
+        Assert.Equal(DaggerfallPanel.Inventory, open.LatestPanelRequest?.Panel);
+    }
+
     [Theory]
     [InlineData("""{"action":"menu","open":true}""", true)]
     [InlineData("""{"action":"menu","open":false}""", false)]

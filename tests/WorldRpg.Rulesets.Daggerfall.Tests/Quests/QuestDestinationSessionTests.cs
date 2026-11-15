@@ -40,7 +40,7 @@ public sealed class QuestDestinationSessionTests
 
         // In through the building's own door, which its block locks: the player picks it first.
         DaggerfallRdbDoorDefinition door = world.Profiles.Require(exterior).Doors.Single(candidate => candidate.ExteriorBuilding == building);
-        run.Session.Doors.Unlock(door.Id, DaggerfallDoorOperationSource.Player);
+        run.Session.Sites.Projection.Doors.Unlock(door.Id, DaggerfallDoorOperationSource.Player);
         DaggerfallDoorView live = run.Session.Sites.Projection.Doors.Read(door.Id);
         Assert.False(live.IsLocked);
         run.Use(live.Pose.Translation, live.Entity);

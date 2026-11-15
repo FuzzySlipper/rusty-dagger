@@ -100,7 +100,7 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
     private bool EnterPortal(DaggerfallWorldProfileKey destination, DaggerfallSitePortal portal)
     {
         if (!StagesSlowWork) return TryTransitionTo(destination, portal.ArrivalAnchor);
-        string place = SiteChangePlace(destination);
+        string place = _site.DestinationName(destination);
         StageWorldChange($"Entering {place}", [
             new($"Reading {place}", () => _ = _sites.RequireProfiles().Require(destination)),
             new($"Entering {place}", () =>
@@ -110,10 +110,4 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
         ], error => error.Message);
         return true;
     }
-
-    /// <summary>The name a loading screen gives a destination: its location, or its kind when it has none.</summary>
-    private string SiteChangePlace(DaggerfallWorldProfileKey destination) =>
-        _site.TryFind(destination.Site, out DaggerfallSiteRecord record) && record.Name is { Length: > 0 } name
-            ? name
-            : destination.Kind == DaggerfallWorldProfileKind.Dungeon ? "the dungeon" : "the location";
 }

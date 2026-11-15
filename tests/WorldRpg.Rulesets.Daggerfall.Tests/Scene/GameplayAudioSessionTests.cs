@@ -17,13 +17,13 @@ public sealed class GameplayAudioSessionTests
     {
         using var f = Fixture(); var s = f.Session;
         var door = f.Inputs.Doors.First(value => value.Kind == DaggerfallDoorKind.Normal);
-        s.Doors.Unlock(door.Id, DaggerfallDoorOperationSource.DungeonAction);
-        Assert.Equal(DaggerfallDoorOperationResult.Started, s.Doors.Open(door.Id, DaggerfallDoorOperationSource.Player));
+        s.Sites.Projection.Doors.Unlock(door.Id, DaggerfallDoorOperationSource.DungeonAction);
+        Assert.Equal(DaggerfallDoorOperationResult.Started, s.Sites.Projection.Doors.Open(door.Id, DaggerfallDoorOperationSource.Player));
         Cue(f, 25, "door-open");
-        s.Doors.Open(door.Id, DaggerfallDoorOperationSource.Player);
+        s.Sites.Projection.Doors.Open(door.Id, DaggerfallDoorOperationSource.Player);
         Assert.Single(f.Engine.EmittedAudio, request => request.SignalId.Contains("door-open"));
-        s.Doors.Close(door.Id, DaggerfallDoorOperationSource.Player); Cue(f, 24, "door-close");
-        s.Doors.Advance(10); s.Doors.Bash(door.Id); Cue(f, 7, "door-bash");
+        s.Sites.Projection.Doors.Close(door.Id, DaggerfallDoorOperationSource.Player); Cue(f, 24, "door-close");
+        s.Sites.Projection.Doors.Advance(10); s.Sites.Projection.Doors.Bash(door.Id); Cue(f, 7, "door-bash");
         var dagger = s.State.Inventory.Read().UniqueItems.Single(value => value.Definition.Value == "iron-dagger");
         Assert.Equal(EquipmentMoveOutcome.Applied, s.EquipmentMoves.MoveToSlot(new(dagger.Entity.Value, new(dagger.Definition.Value)), new("right-hand")).Outcome);
         Cue(f, 377, "equip");

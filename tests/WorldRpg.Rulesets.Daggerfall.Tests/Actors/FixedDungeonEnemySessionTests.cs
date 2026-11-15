@@ -51,7 +51,7 @@ public sealed class FixedDungeonEnemySessionTests
         Assert.Equal(placement.SpawnDistance, memory.SpawnDistance);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.True(memory.Pacified);
-        Assert.DoesNotContain(session.LastEnemyBehavior.Values, evidence => evidence.ActorId == placement.EntityId
+        Assert.DoesNotContain(session.EnemyBehavior.LastEvidence.Values, evidence => evidence.ActorId == placement.EntityId
             && evidence.State is EnemyBehaviorState.Attack or EnemyBehaviorState.Chase);
         var save = session.CaptureSave();
         session.Dispose();

@@ -28,7 +28,7 @@ public sealed class EnemyMotorSessionTests
         fixture.Perception.Receipt = Receipt(new PerceptionPair(2008, 1, 2, 1, PerceptionPairKind.Visible, 1));
         fixture.Spatial.NavigationRequests.Clear();
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(strafe ? EnemyBehaviorState.Strafe : EnemyBehaviorState.Retreat, session.LastEnemyBehavior[2008].State);
+        Assert.Equal(strafe ? EnemyBehaviorState.Strafe : EnemyBehaviorState.Retreat, session.EnemyBehavior.LastEvidence[2008].State);
         var request = fixture.Spatial.NavigationRequests.First(value => value.From == new Vector3(0, 0, -2));
         if (strafe) Assert.NotEqual(0, request.Target.X);
         else Assert.True(request.Target.Z < -2);
@@ -39,7 +39,7 @@ public sealed class EnemyMotorSessionTests
     {
         using var fixture = new Fixture(false);
         var session = fixture.Session;
-        var door = session.Doors.All.First(value => value.Kind == DaggerfallDoorKind.Normal && value.LockValue == 0
+        var door = session.Sites.Projection.Doors.All.First(value => value.Kind == DaggerfallDoorKind.Normal && value.LockValue == 0
             && value.Motion == DaggerfallDoorMotion.Closed);
         var point = door.Pose.Translation;
         long id = session.SpawnActor("thief", new(new(point.X, point.Y, point.Z + 1), 0));
@@ -49,7 +49,7 @@ public sealed class EnemyMotorSessionTests
         fixture.Perception.Receipt = Receipt(new PerceptionPair((ulong)id, 1, 4, 1, PerceptionPairKind.Visible, 1));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
-        Assert.NotEqual(DaggerfallDoorMotion.Closed, session.Doors.All.Single(value => value.Id == door.Id).Motion);
+        Assert.NotEqual(DaggerfallDoorMotion.Closed, session.Sites.Projection.Doors.All.Single(value => value.Id == door.Id).Motion);
     }
 
     private sealed class Fixture : IDisposable

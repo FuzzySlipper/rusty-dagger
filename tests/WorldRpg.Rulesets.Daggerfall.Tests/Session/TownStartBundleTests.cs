@@ -107,7 +107,7 @@ public sealed class TownStartBundleTests
         Assert.All(directory.Except(buildings), topic => Assert.NotNull(topic.Category));
 
         // Facing the store's door with only it seen, an ordinary interaction enters during opening hours.
-        DaggerfallDoorView door = game.Doors.Read(exterior.Doors.First(value => value.ExteriorBuilding == GeneralStore).Id);
+        DaggerfallDoorView door = game.Sites.Projection.Doors.Read(exterior.Doors.First(value => value.ExteriorBuilding == GeneralStore).Id);
         game.State.PlayerControl.MoveTo(door.Pose.Translation + Vector3.UnitZ);
         game.State.PlayerControl.YawRadians = 0;
         game.State.PlayerControl.PitchRadians = 0;

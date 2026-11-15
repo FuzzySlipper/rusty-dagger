@@ -148,6 +148,7 @@ internal sealed partial class DaggerfallSession
             Presentation = new PresentationState("Ready", DaggerfallOutcomePresentation.MessageLifetimeSeconds,
                 DaggerfallOutcomePresentation.MaximumMessages, DaggerfallOutcomePresentation.SubsequentMessageLifetimeSeconds);
             _deathScreen = new DaggerfallDeathScreen(Presentation, ReportPlayerDefeatOutcome);
+            _bundleChoice = new DaggerfallBundleChoice(Presentation);
             _time = new DaggerfallWorldTime(
                 saved?.Calendar is { } restored
                     ? new DaggerfallCalendar(restored.Year, restored.Month, restored.Day, restored.Hour, restored.Minute, restored.Second)
@@ -181,6 +182,7 @@ internal sealed partial class DaggerfallSession
             // Location artifacts are admitted by the exterior's collision placement so an exterior map-pixel
             // transition can remove and re-admit one profile without replacing the whole session.
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, null, tuning.Spatial);
+            _soundCover = new DaggerfallSoundCover(_spatial, _tuning.Camera.EyeHeight);
             _dungeonVisibility = new DaggerfallDungeonVisibility(_spatial, tuning.Spatial.CollisionVoxelSize);
             _grounding = new DaggerfallActorGrounding(engine.Spatial, _spatial,
                 tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance);
@@ -465,9 +467,9 @@ internal sealed partial class DaggerfallSession
                 ulong[] actorReservations = [DaggerfallActorIdentity.PlayerEntityId, .. inputs.Project.Actors.Values.Select(placement => checked((ulong)placement.EntityId))];
                 _actorIdentities = DurableIdentityAllocator.Restore(new DurableIdentityState(
                 [
-                    new KindAllocatorState(DurableIdentityKind.Actor, DynamicActorFirstIdentity, actorReservations, []),
+                    new KindAllocatorState(DurableIdentityKind.Actor, DaggerfallActorRoster.DynamicFirstIdentity, actorReservations, []),
                     new KindAllocatorState(DurableIdentityKind.Item, DaggerfallUniqueItemAllocator.DefaultFirstEntityId, [.. _authoredEntityIds], []),
-                    new KindAllocatorState(DurableIdentityKind.Container, GroundContainerFirstIdentity, [], []),
+                    new KindAllocatorState(DurableIdentityKind.Container, DaggerfallGroundContainers.FirstIdentity, [], []),
                 ]));
             }
             else
@@ -485,11 +487,12 @@ internal sealed partial class DaggerfallSession
             DaggerfallPoisonRuntime poisons = _poisoning.Runtime;
             // The curses an infection becomes; a curse's cure passes an hour, through quest time when a quest cures it.
             DaggerfallTransformationHealing transformationHealing = new(_diseases, _poisoning, effects, actors, character);
+            DaggerfallAfflictionQuests afflictionQuests = new(quests, definitions, actors, social, character);
             _lycanthropy = new DaggerfallLycanthropy(racialOverrides, _time, tuning.Lycanthropy,
-                () => _heldEnchantments.HircinesRingEquipped, _equipmentMoves.UnequipHands, actors, _random, Presentation, this, transformationHealing,
+                () => _heldEnchantments.HircinesRingEquipped, _equipmentMoves.UnequipHands, actors, _random, Presentation, afflictionQuests, transformationHealing,
                 seconds => AdvanceElapsedTime(seconds), seconds => AdvanceQuestTime(seconds));
             _vampirism = new DaggerfallVampirism(racialOverrides, _time, tuning.Vampirism, definitions.Factions,
-                _random, Presentation, this, transformationHealing,
+                _random, Presentation, afflictionQuests, transformationHealing,
                 seconds => AdvanceElapsedTime(seconds), seconds => AdvanceQuestTime(seconds));
             DaggerfallEncumbrancePolicy encumbrance = new(inventory, playerStats,
                 () => _heldEnchantments.CarryMultiplier);
@@ -566,6 +569,7 @@ internal sealed partial class DaggerfallSession
                 dungeonDiscoveries: dungeonDiscoveries,
                 dungeonActions: dungeonActions,
                 dialogueWorld: new DaggerfallDialogueWorldState(saved?.DialogueWorld));
+            _restPlaces = new DaggerfallRestPlaces(State.Lodging, State.Property, State.GuildMembership);
             _creation = new DaggerfallCharacterCreation(State.Character, definitions, _random);
             _atlasTiles = composition.Data is { } atlasData && DaggerfallAtlas.Read(atlasData) is { } atlas ? new(atlas, atlasData, engine.Ui) : null;
             FastTravel = new DaggerfallFastTravel(travelPolicy, State.Travel, State.Transport, _site, _random,
@@ -1058,7 +1062,7 @@ internal sealed partial class DaggerfallSession
                 State.Variables, _input, _hud, _inventoryUi, _lootUi, characterActions, LocalMap, ActivationPanel, Spellbook, makers, SummoningPanel,
                 EconomyPanels, travelPanel, RestPanel, textActions, _lootActions, _deathScreen,
                 new DaggerfallUiDispatch.SessionCalls(ChooseLegal, AnswerQuestOffer, ToggleWeapon, RequestPanel,
-                    request => _saveSlotRequest = request, ChooseBundle, open => _interactions.SetMenuOpen(open), () => _interactions.HoldsWorldOpen),
+                    request => _saveSlotRequest = request, key => _bundleChoice.Choose(key, _mode, _newGameInitialized), open => _interactions.SetMenuOpen(open), () => _interactions.HoldsWorldOpen),
                 Presentation);
             HudFrames = new DaggerfallHudFrames(_hud, State.Actors, Presentation, State.PlayerControl, Slots, _inventoryUi, EconomyPanels, _lootUi,
                 _characterUi, definitions, CurrentTextContext, _controls, ActivationPanel, State.Swimming, State.Effects, State.Quests, _questTexts, _time,

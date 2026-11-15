@@ -108,7 +108,7 @@ public sealed class DeveloperWorldCommandsTests
 
         // A closed door is collision movement meets, though the admitted scene does not hold it: a spot it
         // fills is refused unless forced.
-        DaggerfallDoorView door = session.Doors.All.First(value => session.Doors.ExteriorBuildingOf(value.Id) == TempleOfKynareth);
+        DaggerfallDoorView door = session.Sites.Projection.Doors.All.First(value => session.Sites.Projection.Doors.ExteriorBuildingOf(value.Id) == TempleOfKynareth);
         run.Spatial.OverlapHit = request => request.Entities.ToArray().Any(collider => collider.Entity == door.Entity.Value)
             ? default(SpatialHit) with { Present = true, Converged = true, Kind = SpatialHitKind.Entity, Entity = door.Entity.Value }
             : default;

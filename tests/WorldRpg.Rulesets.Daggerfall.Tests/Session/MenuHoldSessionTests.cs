@@ -19,7 +19,7 @@ public sealed class MenuHoldSessionTests
             [Ui("""{"action":"menu","open":true}""")]));
         Assert.Equal(before, DaggerfallSavePayload.Read(session.CaptureSave()).Calendar);
         Assert.Equal(fatigue, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current);
-        Assert.Empty(session.LastEnemyBehavior);
+        Assert.Empty(session.EnemyBehavior.LastEvidence);
         Assert.Equal(ProductMode.Modal, session.PendingModeRequest);
         session.ApplyProductMode(ProductMode.Modal);
         session.Update(new ProductUpdate(OuterUpdate(61) with { FixedDeltaSeconds = 1, AdmittedStepCount = 60 }, []));

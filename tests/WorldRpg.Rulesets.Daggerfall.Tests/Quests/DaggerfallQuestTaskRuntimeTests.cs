@@ -43,12 +43,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
             save = session.CaptureSave();
         }
         using DaggerfallSession restored = DaggerfallSession.Restore(Engine().Context, composition, save);
-        var retiredItem = restored.State.Inventory.Read().UniqueItems.Single(item => restored.State.Inventory.GetDurableItemId(item.Entity).Value == itemId);
-        var retiredIdentity = restored.State.Inventory.GetDurableItemId(retiredItem.Entity);
-        restored.State.Inventory.Destroy(new WorldRpg.Kit.Inventory.UniqueInventoryItem(retiredItem.Entity.Value, new InventoryItemId(retiredItem.Definition.Value)));
-        restored.State.Actors.Entities.Destroy(retiredIdentity);
-        restored.State.ItemInstances.RemoveUnique(itemId);
-        restored.RemoveUniqueItemIdentity(itemId);
+        restored.ItemLifetime.DestroyUnique(itemId);
         restored.State.Quests.Advance(restored.State.Variables, DaggerfallCalendar.Start);
         DaggerfallQuestPromptSave prompt = Assert.IsType<DaggerfallQuestPromptSave>(restored.State.Quests.Messages.Pending);
         Assert.True(restored.State.Quests.ChoosePrompt(restored.State.Variables, prompt.InstanceId, prompt.MessageId, prompt.Id, 3));

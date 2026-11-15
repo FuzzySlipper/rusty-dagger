@@ -284,11 +284,6 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
-    /// Reconciles the environment's water volumes and the player's collider with the Engine trigger
-    /// service. The player's swimming reads the overlap facts; every other actor's water is the trigger
-    /// rows this leaves current.
-    /// </summary>
-    /// <summary>
     /// The step's one trigger reconcile. Engine replaces its whole trigger geometry and overlap set on
     /// every reconcile, so water volumes, the active dungeon action triggers and the player go into one
     /// request: a request missing either family would drop its rows (actor navigation then finds no
@@ -337,24 +332,4 @@ internal sealed partial class DaggerfallSession
         DeliverFacts();
         PublishPresentation();
     }
-
-    /// <summary>
-    /// Whether admitted static geometry stands between a shot's release and its aim, asked of the
-    /// Engine's own segment query at chest height. A shooter standing inside geometry would otherwise
-    /// report every shot as blocked, so the segment starts clear of the muzzle.
-    /// </summary>
-    private bool ShotBlockedByCover(WorldPoint origin, WorldPoint aim)
-    {
-        Vector3 from = origin.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight;
-        Vector3 to = aim.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight;
-        Vector3 delta = to - from;
-        float distance = delta.Length();
-        if (!float.IsFinite(distance) || distance <= CoverCastStartMeters) return false;
-        Vector3 direction = delta / distance;
-        SpatialHit hit = _spatial.CastRay(from + direction * CoverCastStartMeters, direction, distance - CoverCastStartMeters);
-        return hit.Present && hit.Kind == SpatialHitKind.StaticMesh;
-    }
-
-    /// <summary>How far along the shot the cover query starts, clear of the shooter's own position.</summary>
-    private const float CoverCastStartMeters = .3f;
 }

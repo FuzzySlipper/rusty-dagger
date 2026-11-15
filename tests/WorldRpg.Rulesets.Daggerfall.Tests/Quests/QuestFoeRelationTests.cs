@@ -40,7 +40,7 @@ public sealed class QuestFoeRelationTests
         Assert.True(f.Session.State.Quests.IsFoeRestrained(id));
         Assert.False(f.Session.State.Quests.IsFoeRestrained(f.Enemy));
         f.Update();
-        Assert.Equal(EnemyBehaviorState.Idle, f.Session.LastEnemyBehavior[id].State);
+        Assert.Equal(EnemyBehaviorState.Idle, f.Session.EnemyBehavior.LastEvidence[id].State);
         Assert.True(f.Session.State.Actors.Get(id).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
         using var restored = f.Restore();
         Assert.Equal("player-ally", restored.QuestFoes.Team(id));
@@ -67,10 +67,10 @@ public sealed class QuestFoeRelationTests
         f.Perception.Responder = request => Receipt(request.Observers.ToArray().SelectMany(o => request.Targets.ToArray()
             .Select(t => new PerceptionPair(o.Entity, t.Entity, Vector3.Distance(o.Origin, t.Center), 1, PerceptionPairKind.Visible, 1))).ToArray());
         f.Update();
-        Assert.Equal((ulong)f.Enemy, Assert.Single(f.Session.LastEnemyBehavior[id].Visibility!.Value.Pairs.ToArray()).Target);
+        Assert.Equal((ulong)f.Enemy, Assert.Single(f.Session.EnemyBehavior.LastEvidence[id].Visibility!.Value.Pairs.ToArray()).Target);
         Assert.True(f.Session.State.Quests.ActorClicked(id)); Advance(f.Session); f.Update();
-        Assert.Equal(EnemyBehaviorState.Idle, f.Session.LastEnemyBehavior[id].State);
-        Assert.Null(f.Session.LastEnemyBehavior[id].Visibility);
+        Assert.Equal(EnemyBehaviorState.Idle, f.Session.EnemyBehavior.LastEvidence[id].State);
+        Assert.Null(f.Session.EnemyBehavior.LastEvidence[id].Visibility);
     }
 
     [Fact]

@@ -18,7 +18,7 @@ public sealed class PlaytestInspectionTests
         var (created, _, perception) = VisibleEnemySession([], distance: 5);
         using var session = created;
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        var behavior = session.LastEnemyBehavior[2000];
+        var behavior = session.EnemyBehavior.LastEvidence[2000];
         perception.Receipt = Receipt(); // The separate player query has no pair outside weapon reach.
         using var readout = JsonDocument.Parse(session.ReadPlaytestTargets().Message);
         var actor = readout.RootElement.GetProperty("actors").EnumerateArray().Single(a => a.GetProperty("id").GetString() == "actor:2000");
@@ -27,7 +27,7 @@ public sealed class PlaytestInspectionTests
         Assert.Equal("Chase", enemy.GetProperty("state").GetString());
         Assert.True(enemy.GetProperty("detected").GetBoolean());
         Assert.Equal("NoPath", enemy.GetProperty("navigation").GetString());
-        Assert.Same(behavior, session.LastEnemyBehavior[2000]);
+        Assert.Same(behavior, session.EnemyBehavior.LastEvidence[2000]);
     }
 
     [Fact]
@@ -36,7 +36,7 @@ public sealed class PlaytestInspectionTests
         using ConditionSessionFixture fixture = new();
         var session = fixture.Session;
         var position = session.State.PlayerControl.Position;
-        var lastActivation = session.LastActivationTargeting;
+        var lastActivation = session.Activation.LastEvidence;
         var fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue"));
         double before = fatigue.Current;
         var module = new InteractionDebugModule(new WorldInteraction(new CurrentInteractionInspectionScene(session.CreateInteractionInspection), targetedUseEnabled: false));
@@ -50,7 +50,7 @@ public sealed class PlaytestInspectionTests
         Assert.Equal(DebugCommandStatus.InvalidArguments, session.ReadJumpPlan(double.NaN, 0, 0).Status);
         Assert.Equal(position, session.State.PlayerControl.Position);
         Assert.Equal(before, fatigue.Current);
-        Assert.Same(lastActivation, session.LastActivationTargeting);
+        Assert.Same(lastActivation, session.Activation.LastEvidence);
     }
 
     [Fact]
@@ -103,8 +103,8 @@ public sealed class PlaytestInspectionTests
         var session = fixture.Session;
         var position = session.State.PlayerControl.Position;
         var target = session.State.Actors.Player.Targeting.Current;
-        var evidence = session.LastMeleeTargeting;
-        var interaction = session.LastActivationTargeting;
+        var evidence = session.State.Kit.Targeting.LastEvidence;
+        var interaction = session.Activation.LastEvidence;
         using var before = JsonDocument.Parse(session.ReadPlaytestObservation().Message);
         double yaw = session.State.PlayerControl.YawRadians;
         Assert.Equal(DebugCommandStatus.Success, session.InspectPlaytestLook(45, 10).Status);
@@ -113,8 +113,8 @@ public sealed class PlaytestInspectionTests
         Assert.Equal(position, session.State.PlayerControl.Position);
         Assert.NotEqual(yaw, session.State.PlayerControl.YawRadians);
         Assert.Equal(target, session.State.Actors.Player.Targeting.Current);
-        Assert.Same(evidence, session.LastMeleeTargeting);
-        Assert.Same(interaction, session.LastActivationTargeting);
+        Assert.Same(evidence, session.State.Kit.Targeting.LastEvidence);
+        Assert.Same(interaction, session.Activation.LastEvidence);
         Assert.Equal(DebugCommandStatus.Success, session.ReadPlaytestTargets().Status);
     }
 }

@@ -350,7 +350,7 @@ public sealed class DaggerfallRestSessionTests
         DaggerfallSavePayload placed = DaggerfallSavePayload.Read(restored.CaptureSave());
         long actorId = Assert.IsType<long>(Assert.Single(placed.Encounters.Resolved).SpawnedActorId);
         Assert.True(restored.Sites.Projection.Appearance.HasActor(actorId));
-        Assert.Contains(actorId, restored.LastEnemyBehavior.Keys);
+        Assert.Contains(actorId, restored.EnemyBehavior.LastEvidence.Keys);
         Assert.False(restored.Exterior.ActiveLocationLoaded);
         Assert.InRange(Vector3.Distance(restored.State.PlayerControl.Position!.Value.ToVector(), restored.State.Actors.Get(actorId).Position.ToVector()), 10f, 20f);
         Assert.NotEmpty(f.Spatial.FloorProbes);

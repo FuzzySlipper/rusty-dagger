@@ -118,7 +118,7 @@ public sealed class DaggerfallEnemyMagicSessionTests
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
         // EnemyMotor.DoRangedAttack: a ready ranged spell stands or strafes; a blocked path runs the melee band.
-        EnemyBehaviorState state = session.LastEnemyBehavior[imp].State;
+        EnemyBehaviorState state = session.EnemyBehavior.LastEvidence[imp].State;
         if (pathClear) Assert.Contains(state, new[] { EnemyBehaviorState.Idle, EnemyBehaviorState.Strafe });
         else Assert.Equal(EnemyBehaviorState.Chase, state);
     }

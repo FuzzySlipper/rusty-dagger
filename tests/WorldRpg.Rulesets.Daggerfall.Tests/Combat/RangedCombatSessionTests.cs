@@ -176,8 +176,8 @@ public sealed class RangedCombatSessionTests
 
         // It shot rather than closed: the state is the ranged attack, the player took damage, and no
         // navigation was asked for, which is what "without closing" means here.
-        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[archer].State);
-        Assert.Null(session.LastEnemyBehavior[archer].Navigation);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[archer].State);
+        Assert.Null(session.EnemyBehavior.LastEvidence[archer].Navigation);
         double healthAfterShot = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
         Assert.True(healthAfterShot < healthBefore, "the archer's shot must damage the player at that separation");
         // The line names the attacker, so the player can tell which of the enemies in front of them is
@@ -189,7 +189,7 @@ public sealed class RangedCombatSessionTests
         // shoot, which is the same evidence kind the melee behaviour test uses for the other actor.
         perception.Receipt = Receipt(new PerceptionPair(checked((ulong)archer), 1, separation, 0d, PerceptionPairKind.FacingRejected, 0d));
         session.Update(new ProductUpdate(OuterUpdate(arrivedStep + 1), []));
-        Assert.NotEqual(EnemyBehaviorState.Attack, session.LastEnemyBehavior[archer].State);
+        Assert.NotEqual(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[archer].State);
 
         // The same shot cannot land twice, and out past its own reach it stops entirely rather than
         // chasing: a ranged attacker that walks into melee is a melee attacker.
@@ -198,7 +198,7 @@ public sealed class RangedCombatSessionTests
         Assert.Equal(healthAfterShot, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
         perception.Receipt = Receipt(new PerceptionPair(checked((ulong)archer), 1, shotReach + 1d, 1d, PerceptionPairKind.Visible, 1d));
         session.Update(new ProductUpdate(OuterUpdate(arrivedStep + 3), []));
-        Assert.NotEqual(EnemyBehaviorState.Attack, session.LastEnemyBehavior[archer].State);
+        Assert.NotEqual(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[archer].State);
 
         // Every placed actor carries a policy, the archer included: an actor that cannot attack is a
         // missing capability its owner has to see, and there is no exception list left to hide one in.

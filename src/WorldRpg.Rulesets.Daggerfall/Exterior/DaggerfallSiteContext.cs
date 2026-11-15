@@ -222,6 +222,21 @@ internal sealed class DaggerfallSiteContext
             : throw new InvalidOperationException($"The selected content carries no building '{building}' at site '{site}'.");
     }
 
+    /// <summary>An interior's placed building at a site, with the type and faction its source building records.</summary>
+    internal DaggerfallInteriorBuilding? InteriorBuilding(DaggerfallSiteId site, DaggerfallInteriorBuilding? placement)
+    {
+        if (placement is null) return null;
+        DaggerfallSiteBuildingSource building = RequireBuildingSource(site,
+            new(placement.BlockX, placement.BlockY, placement.Building.Index));
+        return placement with { BuildingType = building.Source.BuildingType, FactionId = building.Source.FactionId };
+    }
+
+    /// <summary>The name a loading screen gives a destination: its location, or its kind when it has none.</summary>
+    internal string DestinationName(DaggerfallWorldProfileKey destination) =>
+        TryFind(destination.Site, out DaggerfallSiteRecord record) && record.Name is { Length: > 0 } name
+            ? name
+            : destination.Kind == DaggerfallWorldProfileKind.Dungeon ? "the dungeon" : "the location";
+
     /// <summary>Resolves the fixed quest source id through MAPS sector and raw RMB identity.</summary>
     internal bool TryResolveQuestBuilding(DaggerfallSiteId site, int sourceLocationId,
         out DaggerfallSiteBuildingSource? building, out string? unavailable)

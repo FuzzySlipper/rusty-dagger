@@ -138,6 +138,17 @@ internal sealed class DaggerfallOpenInteractions(
     /// </remarks>
     internal DaggerfallPanelRequest? LatestPanelRequest => _panelRequest is null ? null : new DaggerfallPanelRequest(_panelRequest, _panelRequestRevision);
 
+    /// <summary>
+    /// Asks the DOM for a panel, unless a racial override suppresses the inventory: a request it refuses
+    /// changes nothing and returns the line that says why.
+    /// </summary>
+    internal string? RequestPanel(string panel, bool inventorySuppressed)
+    {
+        if (panel == DaggerfallPanel.Inventory && inventorySuppressed) return DaggerfallRacialOverrideView.InventoryRefusal;
+        RequestPanel(panel);
+        return null;
+    }
+
     internal void RequestPanel(string panel)
     {
         _panelRequest = panel;
