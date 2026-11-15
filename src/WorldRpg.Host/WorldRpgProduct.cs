@@ -51,6 +51,8 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private WorldRpgSaveSlots? _saveSlots;
     private ProductStateStore<string>? _playerPreferences;
     private IGameSession _session;
+    // The Engine's debug catalogue, kept so each installed session registers its modules; null until the Engine hands it over.
+    private IDebugCommandModuleRegistrar? _debugCommands;
     // The one loading screen, kept across session replacement: slow work the Host or its session accepts is
     // acknowledged on it at once and run one phase per admitted update.
     private readonly LoadingScreen _loading;
@@ -261,44 +263,22 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     /// <summary>The context every session is created in: the Engine, its composition and the Host's loading screen.</summary>
     private GameSessionContext SessionContext(ResolvedGameComposition composition) => new(_context.Engine, composition, _loading);
 
+    /// <summary>
+    /// Keeps the Engine's debug catalogue and registers the current session's modules on it; each session installed
+    /// later registers its own (<see cref="OfferDebugCommands"/>), since new game and load replace the session.
+    /// </summary>
     public void RegisterDebugCommands(IDebugCommandModuleRegistrar registrar)
     {
-        if (_session is not IPlaytestGameSession playtest) return;
-        // New game and load replace the session. Every command resolves its current owner.
-        IPlaytestGameSession Current() => (IPlaytestGameSession)_session;
-        registrar.Register(new PlaytestDebugModule(() => Current().ReadPlaytestObservation(),
-            id => Current().InspectPlaytestAction(id), playtest.PlaytestActions,
-            (yaw, pitch) => Current().InspectPlaytestLook(yaw, pitch)));
-        registrar.Register(new PlaytestTargetsDebugModule(() => Current().ReadPlaytestTargets()));
-        if (_session is IPlaytestWorldInspectionSession)
-        {
-            IPlaytestWorldInspectionSession World() => (IPlaytestWorldInspectionSession)_session;
-            registrar.Register(new InteractionDebugModule(new WorldInteraction(
-                new CurrentInteractionInspectionScene(() => World().CreateInteractionInspection()), targetedUseEnabled: false)));
-            registrar.Register(new SpatialInspectionDebugModule(
-                (radius, verticalRadius, cellSize) => World().ReadSpatialGrid(radius, verticalRadius, cellSize),
-                distance => World().ReadSpatialProbe(distance),
-                (x, y, z) => World().ReadJumpPlan(x, y, z)));
-            registrar.Register(new SpatialClearanceDebugModule((x, y, z) => World().ReadSpatialClearance(x, y, z)));
-        }
-        if (_session is IDeveloperInspectionSession)
-        {
-            IDeveloperInspectionSession Inspection() => (IDeveloperInspectionSession)_session;
-            registrar.Register(new DeveloperInspectionDebugModule(Inspection));
-            registrar.Register(new InspectionTargetsDebugModule(_context.Engine.Graphics, () => Inspection().InspectionTargets()));
-        }
-        if (_session is IDeveloperWorldSession)
-            registrar.Register(new DeveloperWorldDebugModule(() => (IDeveloperWorldSession)_session));
-        if (_session is IDeveloperPlayerSession)
-            registrar.Register(new DeveloperPlayerDebugModule(() => (IDeveloperPlayerSession)_session));
-        if (_session is IDeveloperPeopleSession)
-            registrar.Register(new DeveloperPeopleDebugModule(() => (IDeveloperPeopleSession)_session));
-        if (_session is IDeveloperHeldSession)
-        {
-            IDeveloperHeldSession Held() => (IDeveloperHeldSession)_session;
-            registrar.Register(new DeveloperHeldDebugModule(Held));
-            registrar.Register(DeveloperHeldDebugModule.Workbench(_context.Engine.ContentSource, Held));
-        }
+        _debugCommands = registrar;
+        OfferDebugCommands();
+    }
+
+    /// <summary>Registers what the current session offers on the debug catalogue, once the Engine has handed one over.</summary>
+    private void OfferDebugCommands()
+    {
+        if (_debugCommands is null) return;
+        foreach (IDebugCommandModule module in _session.DebugCommands)
+            _debugCommands.Register(module);
     }
 
     /// <summary>The mode the product runs its session under.</summary>
@@ -415,6 +395,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         _installed = [];
         (_composition, _ruleset, _compositionIdentity) = (null, null, null);
         _session = OpenGame(_startBundle);
+        OfferDebugCommands();
         if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(_mode);
         Record(new(_mode, _mode, ProductModeChangeOutcome.AlreadyInMode, "the entry screen imported the content the game reads"));
         ReportBundleNotice();
@@ -672,6 +653,7 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         // one puts up its own, or a game that starts outdoors loses them to the title session it replaced.
         IGameSession previous = _session;
         _session = replacement;
+        OfferDebugCommands();
         previous.Dispose();
         replacement.PublishInitial();
         ProductMode from = _mode;

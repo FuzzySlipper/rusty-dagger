@@ -86,6 +86,8 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>The flora layers set, in order.</summary>
     internal IReadOnlyList<VegetationLayerRequest> FloraLayers => ((VegetationServiceFake)(object)vegetation).Layers;
     private IAuthoredContentService authored = ServiceProxy<IAuthoredContentService, AuthoredContentFake>.Create();
+    // A content source that answers nothing: the held workbench's tunables page is built over it and never saves here.
+    private readonly IContentSourceService contentSource = ServiceProxy<IContentSourceService, ServiceProxy<IContentSourceService, DispatchProxy>>.Create();
     /// <summary>Whether the far ground draws, as the last call left it.</summary>
     /// <summary>Serves the real Engine's authored content, for a fixture whose graphics are real and must read its catalogs.</summary>
     internal void UseAuthoredContent(IAuthoredContentService service) => authored = service;
@@ -146,6 +148,7 @@ internal class EngineContextFake : DispatchProxy
         "get_Vegetation" => vegetation,
         "get_AuthoredContent" => authored,
         "get_PartsRigs" => PartsRigs.Service,
+        "get_ContentSource" => contentSource,
         _ => throw new NotSupportedException(method?.Name),
     };
 

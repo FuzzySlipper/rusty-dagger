@@ -26,28 +26,27 @@ public sealed class WorldRpgProductModeTests
         using WorldRpgProduct product = Product(ruleset);
         DebugRegistrar registrar = new();
         Assert.IsAssignableFrom<IDebugCommandModuleSource>(product).RegisterDebugCommands(registrar);
-        var module = Assert.Single(registrar.Modules.OfType<PlaytestDebugModule>());
-        var interaction = Assert.Single(registrar.Modules.OfType<InteractionDebugModule>());
-        var spatial = Assert.Single(registrar.Modules.OfType<SpatialInspectionDebugModule>());
-        Assert.Equal("1", module.Observe().Message);
-        Assert.Equal("1", spatial.Probe(1).Message);
-        using (var readout = JsonDocument.Parse(interaction.Inspect().Message))
+        Assert.Equal("1", registrar.Current<PlaytestDebugModule>().Observe().Message);
+        Assert.Equal("1", registrar.Current<SpatialInspectionDebugModule>().Probe(1).Message);
+        using (var readout = JsonDocument.Parse(registrar.Current<InteractionDebugModule>().Inspect().Message))
             Assert.Equal("1", readout.RootElement.GetProperty("stamp").GetString());
         StartInPlay(product);
         product.Restart();
-        Assert.Equal("2", module.Observe().Message);
-        Assert.Equal("2", spatial.Probe(1).Message);
-        using (var readout = JsonDocument.Parse(interaction.Inspect().Message))
+        Assert.Equal("2", registrar.Current<PlaytestDebugModule>().Observe().Message);
+        Assert.Equal("2", registrar.Current<SpatialInspectionDebugModule>().Probe(1).Message);
+        using (var readout = JsonDocument.Parse(registrar.Current<InteractionDebugModule>().Inspect().Message))
             Assert.Equal("2", readout.RootElement.GetProperty("stamp").GetString());
         Assert.True(ruleset.Replaced!.Disposed);
     }
 
+    /// <summary>Keeps the last module registered of each type, as the Engine's generated catalogue does.</summary>
     private sealed class DebugRegistrar : IDebugCommandModuleRegistrar
     {
-        internal List<IDebugCommandModule> Modules { get; } = [];
+        private readonly Dictionary<Type, IDebugCommandModule> _modules = [];
+        internal T Current<T>() where T : IDebugCommandModule => (T)_modules[typeof(T)];
         public DebugCommandRegistrationResult Register<TModule>(TModule module) where TModule : class, IDebugCommandModule
         {
-            Modules.Add(module);
+            _modules[module.GetType()] = module;
             return new(DebugCommandRegistrationStatus.Registered, "registered");
         }
     }
@@ -606,19 +605,16 @@ public sealed class WorldRpgProductModeTests
         public IGameSession CreateNewGame() => _ruleset.CreateNewGame();
     }
 
-    private class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, IPlaytestGameSession, IPlaytestWorldInspectionSession, IWorldInteractionScene
+    private class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, IWorldInteractionScene
     {
         private readonly int _identity = owner.Created;
-        public IReadOnlyList<string> PlaytestActions => ["attack"];
-        public DebugCommandResult ReadPlaytestObservation() => DebugCommandResult.Success(_identity.ToString());
-        public PlaytestAction InspectPlaytestAction(string id) => new(id, "KeyQ", 100, false);
-        public DebugCommandResult InspectPlaytestLook(double yaw, double pitch) => ReadPlaytestObservation();
-        public DebugCommandResult ReadPlaytestTargets() => ReadPlaytestObservation();
-        public WorldInteraction CreateInteractionInspection() => new(this, targetedUseEnabled: false);
-        public DebugCommandResult ReadSpatialGrid(int radius, int verticalRadius, double cellSize) => ReadPlaytestObservation();
-        public DebugCommandResult ReadSpatialProbe(double distance) => ReadPlaytestObservation();
-        public DebugCommandResult ReadJumpPlan(double x, double y, double z) => ReadPlaytestObservation();
-        public DebugCommandResult ReadSpatialClearance(double x, double y, double z) => ReadPlaytestObservation();
+        private DebugCommandResult Stamp() => DebugCommandResult.Success(_identity.ToString());
+        public IReadOnlyList<IDebugCommandModule> DebugCommands =>
+        [
+            new PlaytestDebugModule(Stamp, id => new(id, "KeyQ", 100, false), ["attack"], (_, _) => Stamp()),
+            new InteractionDebugModule(new WorldInteraction(this, targetedUseEnabled: false)),
+            new SpatialInspectionDebugModule((_, _, _) => Stamp(), _ => Stamp(), (_, _, _) => Stamp()),
+        ];
         public InteractionSceneSnapshot ReadInteraction() => new(
             new InteractionQuery(Vector3.Zero, Vector3.UnitZ, 1, 1, 2, 2, 1, 1),
             ReadOnlyMemory<InteractionCandidate>.Empty, _identity.ToString(), "inspect");

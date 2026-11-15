@@ -32,7 +32,7 @@ internal sealed class DaggerfallDebugOverlays(IEngineContext engine, PlayerContr
     PlayerInputSystem input, ActorsState actors, DaggerfallNpcRegistry npcs, TargetingService targeting, DaggerfallActorRoster roster,
     DaggerfallEnemySenses senses, DaggerfallEnemyBehaviorModule enemyBehavior, DaggerfallCombatRules combat, DaggerfallPlayerAttack playerAttack,
     SpatialMovementSystem spatial, DaggerfallSiteCrossing sites, DaggerfallActivation activation, DaggerfallBuildingEntrance entrance,
-    Func<DaggerfallDialogueService?> dialogue, double lootReach)
+    Func<DaggerfallDialogueService?> dialogue, double lootReach) : IDeveloperInspectionCommands
 {
     internal const string InteractionOverlaySet = "interaction";
     internal const string PeopleOverlaySet = "people";
@@ -49,11 +49,11 @@ internal sealed class DaggerfallDebugOverlays(IEngineContext engine, PlayerContr
         [InteractionOverlaySet, PeopleOverlaySet, DoorsOverlaySet, ActorsOverlaySet, MarkersOverlaySet, PlayerOverlaySet, SwingOverlaySet];
     private readonly HashSet<string> _on = new(StringComparer.Ordinal);
 
-    internal IReadOnlyList<string> Sets => DaggerOverlaySets;
+    public IReadOnlyList<string> Sets => DaggerOverlaySets;
 
-    internal bool IsOn(string name) => _on.Contains(name);
+    public bool IsOn(string name) => _on.Contains(name);
 
-    internal bool Set(string name, bool on)
+    public bool Set(string name, bool on)
     {
         if (!DaggerOverlaySets.Contains(name, StringComparer.Ordinal)) return false;
         if (on) _on.Add(name);

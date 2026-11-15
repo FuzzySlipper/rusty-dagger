@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
+using Rusty.Engine.Debugging;
 using WorldRpg.Kit.Presentation;
 
 namespace WorldRpg.Kit;
@@ -373,7 +374,18 @@ public interface ILoadingScreenSession
 {
     void PublishLoading();
 }
-public interface IGameSession : IDisposable { void PublishInitial(); ProductUpdateResult Update(ProductUpdate update); }
+public interface IGameSession : IDisposable
+{
+    void PublishInitial();
+    ProductUpdateResult Update(ProductUpdate update);
+
+    /// <summary>
+    /// The live-debug modules this session's owners answer, none unless it offers some. The host registers them each
+    /// time it installs the session, so a command reaches the session running now. Each module type appears once, and
+    /// a ruleset's sessions offer the same types, since the Engine keeps the last instance registered of each.
+    /// </summary>
+    IReadOnlyList<IDebugCommandModule> DebugCommands => [];
+}
 
 /// <summary>Optional entry flow that constructs a fresh session from committed character choices.</summary>
 public interface ICharacterCreationSession

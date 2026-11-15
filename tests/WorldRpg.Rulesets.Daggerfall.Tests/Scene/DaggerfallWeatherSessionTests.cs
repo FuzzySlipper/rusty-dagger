@@ -90,7 +90,7 @@ public sealed class DaggerfallWeatherSessionTests
         session.ApplyProductMode(ProductMode.Playing);
         session.PublishInitial();
 
-        session.Hour(23);
+        session.Commands<IDeveloperSceneCommands>().Hour(23);
         session.Update(Update(1));
         StarsRequest night = fixture.Engine.Stars.Last();
         Assert.True(night.Brightness > 0);
@@ -140,7 +140,7 @@ public sealed class DaggerfallWeatherSessionTests
         session.Update(Update(3));
         Assert.True(fixture.Engine.BackdropLinked);
 
-        session.ClassicArt("on");
+        session.Commands<IDeveloperSceneCommands>().ClassicArt("on");
         session.Update(Update(4));
         session.Update(Update(5));
         Assert.False(fixture.Engine.BackdropLinked);
@@ -172,7 +172,7 @@ public sealed class DaggerfallWeatherSessionTests
 
         foreach (string kind in new[] {"Rain", "Thunder", "Snow", "Fog"})
         {
-            session.Weather(kind);
+            session.Commands<IDeveloperSceneCommands>().Weather(kind);
             session.Update(Update(2));
             Assert.Equal(fixture.Engine.Fogs.Last().Color, fixture.Engine.BackgroundColors.Last());
             Assert.Equal(panoramas, fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count);
@@ -180,19 +180,19 @@ public sealed class DaggerfallWeatherSessionTests
         Assert.Equal(cleared + 1, fixture.Engine.ClearedSkyBackgrounds);
 
         // The first update out of closed weather already leaves the panorama up, under either art.
-        session.Weather("Sunny");
+        session.Commands<IDeveloperSceneCommands>().Weather("Sunny");
         session.Update(Update(3));
         Assert.Equal("panorama", fixture.Engine.Background);
 
-        session.Weather("Rain");
+        session.Commands<IDeveloperSceneCommands>().Weather("Rain");
         session.Update(Update(4));
         Assert.Equal("colour", fixture.Engine.Background);
-        session.ClassicArt("on");
+        session.Commands<IDeveloperSceneCommands>().ClassicArt("on");
         session.Update(Update(5));
         Assert.Equal("panorama", fixture.Engine.Background);
         session.Update(Update(6));
         Assert.Equal("panorama", fixture.Engine.Background);
-        session.ClassicArt("off");
+        session.Commands<IDeveloperSceneCommands>().ClassicArt("off");
         session.Update(Update(7));
         session.Update(Update(8));
         Assert.Equal("colour", fixture.Engine.Background);
@@ -231,7 +231,7 @@ public sealed class DaggerfallWeatherSessionTests
             Assert.True(rain.Drops > 0);
             Assert.True(rain.Velocity.Y < 0);
             Assert.Equal(tuning.Ambient.PrecipitationPixels, rain.PixelSize);
-            session.GroundWeather(1, 1);
+            session.Commands<IDeveloperSceneCommands>().GroundWeather(1, 1);
             session.Update(Update(3));
             Assert.Equal(tuning.Ambient.WetLook, fixture.Engine.Wetness.Last().Wetness);
             Assert.Equal(tuning.Ambient.SnowLook, fixture.Engine.Snow.Last().Amount);

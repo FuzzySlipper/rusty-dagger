@@ -20,21 +20,21 @@ public sealed class DaggerfallPeopleRigSwitchTests
         using DaggerfallPeopleRigSwitch peopleRigs = new(rig, () => rigs.Service, new ActorsState());
 
         // Off before any use answers, and makes no crowd.
-        Assert.Equal("Walking people show their own art again.", peopleRigs.Use("off").Message);
+        Assert.Equal("Walking people show their own art again.", peopleRigs.Rig("off").Message);
         Assert.Null(peopleRigs.Crowd);
 
-        var unknown = peopleRigs.Use("6");
+        var unknown = peopleRigs.Rig("6");
         Assert.False(unknown.Succeeded);
         Assert.Equal($"People rig {rig.Name} has no view set '6'; it has {string.Join(", ", rig.Directions.Keys.Order(StringComparer.Ordinal))}, or off.", unknown.Message);
         Assert.Null(peopleRigs.Crowd);
 
-        var four = peopleRigs.Use("4");
+        var four = peopleRigs.Rig("4");
         Assert.True(four.Succeeded);
         Assert.Equal($"Walking people draw as {rig.Name} seen from 4 directions; 0 walk here now.", four.Message);
         Assert.NotNull(peopleRigs.Crowd!.Figure);
         Assert.Equal(["front", "side", "back"], rigs.Loaded.Select(path => Path.GetFileName(Path.GetDirectoryName(path))));
 
-        Assert.True(peopleRigs.Use("off").Succeeded);
+        Assert.True(peopleRigs.Rig("off").Succeeded);
         Assert.Null(peopleRigs.Crowd.Figure);
     }
 
@@ -42,10 +42,10 @@ public sealed class DaggerfallPeopleRigSwitchTests
     public void An_art_set_without_a_people_rig_refuses_every_view_set()
     {
         using DaggerfallPeopleRigSwitch peopleRigs = new(null, () => PartsRigsRecorder.Create().Service, new ActorsState());
-        var refused = peopleRigs.Use("4");
+        var refused = peopleRigs.Rig("4");
         Assert.False(refused.Succeeded);
         Assert.Equal("The art set carries no people rig.", refused.Message);
-        Assert.True(peopleRigs.Use("off").Succeeded);
+        Assert.True(peopleRigs.Rig("off").Succeeded);
     }
 
     private static DaggerfallPeopleRig PeopleRig()

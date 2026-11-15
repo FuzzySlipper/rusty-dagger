@@ -1,3 +1,4 @@
+using Rusty.Engine.Debugging;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using System.Text.Json;
 using Rusty.Engine;
@@ -39,7 +40,7 @@ public sealed class ContactEngagementSessionTests
 
         Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
         Assert.NotNull(session.State.Actors.Get(2000).Attack.Pending);
-        using JsonDocument observation = JsonDocument.Parse(session.ReadPlaytestObservation().Message);
+        using JsonDocument observation = JsonDocument.Parse(session.Commands<PlaytestDebugModule>().Observe().Message);
         Assert.Equal(FormattableString.Invariant($"EnemyAttackTelegraph:{ContactTuning.EnemyWindUpSeconds:0.###}"),
             observation.RootElement.GetProperty("lastCombatEvent").GetProperty("kind").GetString());
     }

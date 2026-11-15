@@ -1,3 +1,4 @@
+using Rusty.Engine.Debugging;
 using System.Numerics;
 using System.Text.Json;
 using Rusty.Engine;
@@ -24,7 +25,7 @@ public sealed class NewGameBowSessionTests
     public void A_new_archer_targets_beyond_melee_reach_and_spends_one_starting_arrow(double distance)
     {
         using Fixture f = new(distance);
-        var action = f.Game.InspectPlaytestAction("attack");
+        var action = f.Game.PlaytestAction("attack");
         Assert.True(action.Available, action.Reason);
         double fatigue = f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current;
 
@@ -62,7 +63,7 @@ public sealed class NewGameBowSessionTests
         f.Game.State.Inventory.Consume(new InventoryConsume(stack, 24));
         f.Game.State.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, stack);
         double fatigue = f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current;
-        var action = f.Game.InspectPlaytestAction("attack");
+        var action = f.Game.PlaytestAction("attack");
         Assert.False(action.Available);
         Assert.Equal("EmptyQuiver", action.Reason);
 
@@ -70,7 +71,7 @@ public sealed class NewGameBowSessionTests
 
         Assert.Null(f.Game.State.Actors.Player.Attack.Pending);
         Assert.Equal(fatigue, f.Game.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current);
-        using var observation = JsonDocument.Parse(f.Game.ReadPlaytestObservation().Message);
+        using var observation = JsonDocument.Parse(f.Game.Commands<PlaytestDebugModule>().Observe().Message);
         Assert.Equal("AttackRejected:EmptyQuiver", observation.RootElement.GetProperty("lastCombatEvent").GetProperty("kind").GetString());
     }
 

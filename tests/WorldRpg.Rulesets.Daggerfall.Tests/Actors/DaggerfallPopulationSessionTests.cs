@@ -377,8 +377,8 @@ public sealed class DaggerfallPopulationSessionTests
         ActorState[] civilians = [.. session.State.Actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian)];
         Assert.NotEmpty(civilians);
 
-        Assert.False(session.RigPeople("6").Succeeded);
-        Assert.True(session.RigPeople("4").Succeeded);
+        Assert.False(session.Commands<IDeveloperPeopleCommands>().Rig("6").Succeeded);
+        Assert.True(session.Commands<IDeveloperPeopleCommands>().Rig("4").Succeeded);
         Assert.Equal(["front", "side", "back"], rigs.Loaded.Select(path => Path.GetFileName(Path.GetDirectoryName(path))));
         session.Update(new ProductUpdate(OuterUpdate(3), []));
 
@@ -403,14 +403,14 @@ public sealed class DaggerfallPopulationSessionTests
         }
 
         // The eight-direction set adds the three-quarter views, each with its mirrored twin.
-        Assert.True(session.RigPeople("8").Succeeded);
+        Assert.True(session.Commands<IDeveloperPeopleCommands>().Rig("8").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(4), []));
         AppearanceFact eight = fixture.Appearance.Snapshots[^1].First(fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilians[0].DurableId, "Actor"));
         Assert.Equal([0F, 45F, 90F, 135F, 180F, -135F, -90F, -45F], Assert.Single(rigs.Appearances, pair => pair.Appearance == eight.Appearance).Request.Views.ToArray()
             .Select(view => MathF.Round(float.RadiansToDegrees(view.Heading), 3)));
 
         // Off draws her own sprite again, and the figure's appearances and rigs are released once no snapshot draws them.
-        Assert.True(session.RigPeople("off").Succeeded);
+        Assert.True(session.Commands<IDeveloperPeopleCommands>().Rig("off").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(5), []));
         session.Update(new ProductUpdate(OuterUpdate(6), []));
         AppearanceFact own = fixture.Appearance.Snapshots[^1].First(fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilians[0].DurableId, "Actor"));

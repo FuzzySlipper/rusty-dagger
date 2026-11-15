@@ -517,7 +517,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         {
             float cell = DaggerfallExteriorCellResidency.CellSize;
             WorldPoint start = session.State.PlayerControl.Position!.Value;
-            Assert.True(session.Teleport(start.X + (east * 1100 * cell), start.Y, start.Z + (south * 600 * cell), force: true).Succeeded);
+            Assert.True(session.Commands<IDeveloperPlacementCommands>().Teleport(start.X + (east * 1100 * cell), start.Y, start.Z + (south * 600 * cell), force: true).Succeeded);
 
             for (ulong step = 1; step <= 3; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
 
@@ -535,7 +535,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         {
             float cell = DaggerfallExteriorCellResidency.CellSize;
             WorldPoint start = session.State.PlayerControl.Position!.Value;
-            Assert.True(session.Teleport(start.X + (1100 * cell), start.Y, start.Z, force: true).Succeeded);
+            Assert.True(session.Commands<IDeveloperPlacementCommands>().Teleport(start.X + (1100 * cell), start.Y, start.Z, force: true).Succeeded);
             spatial.StepResult = (request, result) => result with
             {
                 Transform = result.Transform with { Translation = request.Position + new Vector3(3F, 0F, 2F) },
@@ -580,7 +580,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             host.Call(_ =>
             {
                 WorldPoint start = session.State.PlayerControl.Position!.Value;
-                Assert.True(session.Teleport(start.X + (1100 * cell), start.Y, start.Z, force: true).Succeeded);
+                Assert.True(session.Commands<IDeveloperPlacementCommands>().Teleport(start.X + (1100 * cell), start.Y, start.Z, force: true).Succeeded);
             });
             OnGround(host, session);
             host.Call(_ => session.Update(new ProductUpdate(OuterUpdate(1), [])));

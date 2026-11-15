@@ -1,6 +1,7 @@
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Targeting;
 using Rusty.Engine;
+using Rusty.Engine.Debugging;
 using System.Numerics;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
@@ -186,6 +187,18 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     /// <summary>The refreshed art set the session draws, or null when a developer switched to classic art or the bundle carries none.</summary>
     private DaggerfallArtReplacements? DrawnArt => _classicArt ? null : _composition.ArtReplacements;
+
+    /// <summary>The live-debug modules the developer and playtest owners answer, which the host registers for this session.</summary>
+    public IReadOnlyList<IDebugCommandModule> DebugCommands { get; } = null!;
+
+    /// <summary>The playtest state writer: the gameplay facts, the last combat event and the last use.</summary>
+    private readonly DaggerfallPlaytestState _playtest = null!;
+
+    /// <summary>The debug overlay sets, built each presentation while on.</summary>
+    private readonly DaggerfallDebugOverlays _overlays = null!;
+
+    /// <summary>The switch that draws walking people as the parts-rig test figure.</summary>
+    private readonly DaggerfallPeopleRigSwitch _peopleRigs = null!;
     private bool _newGameInitialized;
     public bool RequiresCharacterInitialization => !_newGameInitialized;
 

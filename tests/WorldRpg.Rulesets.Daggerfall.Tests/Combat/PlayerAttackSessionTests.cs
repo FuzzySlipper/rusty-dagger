@@ -1,3 +1,4 @@
+using Rusty.Engine.Debugging;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Targeting;
 using System.Numerics;
@@ -296,7 +297,7 @@ public sealed class PlayerAttackSessionTests
         Assert.DoesNotContain("Nothing in reach", session.Presentation.LastOutcome);
         Dictionary<string, object?> published = (Dictionary<string, object?>)engine.Published()!;
         Assert.DoesNotContain("Nothing in reach", (string)published["lastOutcome"]!);
-        using System.Text.Json.JsonDocument readout = System.Text.Json.JsonDocument.Parse(session.ReadPlaytestTargets().Message);
+        using System.Text.Json.JsonDocument readout = System.Text.Json.JsonDocument.Parse(session.Commands<PlaytestTargetsDebugModule>().Targets().Message);
         System.Text.Json.JsonElement query = readout.RootElement.GetProperty("lastMeleeQuery");
         Assert.Equal(System.Text.Json.JsonValueKind.Null, query.GetProperty("selectedTarget").ValueKind);
         Assert.Equal(42, query.GetProperty("observers").GetInt32());
@@ -643,7 +644,7 @@ public sealed class PlayerAttackSessionTests
 
     private static string LastCombatEvent(DaggerfallSession session)
     {
-        using JsonDocument observation = JsonDocument.Parse(session.ReadPlaytestObservation().Message);
+        using JsonDocument observation = JsonDocument.Parse(session.Commands<PlaytestDebugModule>().Observe().Message);
         return observation.RootElement.GetProperty("lastCombatEvent").GetProperty("kind").GetString()!;
     }
 

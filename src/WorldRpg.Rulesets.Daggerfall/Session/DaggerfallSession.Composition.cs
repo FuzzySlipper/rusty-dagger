@@ -1,6 +1,8 @@
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Targeting;
 using Rusty.Engine;
+using Rusty.Engine.Interaction;
+using Rusty.Engine.Debugging;
 using System.Numerics;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
@@ -1079,7 +1081,7 @@ internal sealed partial class DaggerfallSession
                 IdentifyChoice, Spellbook, Detectors, _playerTime, _loading, _tutorial, Radial, Activation, _input, () => DrawnArt,
                 () => State.WeaponDrawn, () => _interactions.HoldsWorldOpen,
                 Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone));
-            _heldWorkbench = new DaggerfallHeldWorkbench(composition.HeldArt, tuning.Attacks, tuning.Viewmodel.Style, () => _appearance, () =>
+            DaggerfallHeldWorkbench heldWorkbench = new(composition.HeldArt, tuning.Attacks, tuning.Viewmodel.Style, () => _appearance, () =>
             {
                 if (!_inAdmittedUpdate && !_disposed) PublishPresentation();
             });                                                                                   // Developer
@@ -1090,22 +1092,39 @@ internal sealed partial class DaggerfallSession
                 State.Kit.AttackExecution, State.Kit.Targeting, () => _latestUpdateGeneration, () => _latestSimulationStep, State.Encumbrance,
                 State.PlayerControl, _input, _camera, Presentation, Activation, ActivationPanel, _lootUi, _roster, _senses, _enemyBehavior, _reactions,
                 tuning.LootInteraction.MaximumDistance);                                          // Developer
-            _spatialInspection = new DaggerfallSpatialInspection(engine, _spatial, _sites, State.PlayerControl, _input, State.Actors, Activation,
+            DaggerfallSpatialInspection spatialInspection = new(engine, _spatial, _sites, State.PlayerControl, _input, State.Actors, Activation,
                 _controls, () => _latestUpdateGeneration, () => _latestSimulationStep, _overlays);    // Developer
             DaggerfallDeveloperHold hold = new(() => _mode, State.Actors, State.PlayerControl,
                 () => Enum.GetValues<DaggerfallInteractionScreen>().Where(screen => screen != DaggerfallInteractionScreen.Menu && _interactions.IsOpen(screen))
                     .Select(screen => screen.ToString()),
                 Summoning, State.Quests, Law, DispelChoice, IdentifyChoice, CreateItemChoice, _openingCinematics, Cinematics);   // Developer
-            _developerPlacement = new DaggerfallDeveloperPlacement(hold, engine, _spatial, _sites, _site, State.PlayerControl, State.Actors, State.Npcs,
+            DaggerfallDeveloperPlacement placement = new(hold, engine, _spatial, _sites, _site, State.PlayerControl, State.Actors, State.Npcs,
                 definitions, FastTravel, Activation, Entrance, _horizon, _time, () => _mode, Presentation, (actor, pose) => SpawnActor(actor, pose),
                 local => _exterior.ProfilePosition(local), BuildingLanding);                                                    // Developer
-            _developerScene = new DaggerfallDeveloperScene(_time, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); }, _horizon, _sites,
+            DaggerfallDeveloperScene scene = new(_time, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); }, _horizon, _sites,
                 LocalWeather, State.PlayerControl, definitions, classic => _classicArt = classic);   // Developer
-            _developerGrants = new DaggerfallDeveloperGrants(hold, definitions, _random, State.Actors, State.PlayerControl, EquipmentMoves,
+            DaggerfallDeveloperGrants grants = new(hold, definitions, _random, State.Actors, State.PlayerControl, EquipmentMoves,
                 () => State.WeaponDrawn = true, State.Currency, State.SkillUses, State.LevelUps, State.Character, State.Transport, State.Inventory,
                 State.Encumbrance, State.ItemInstances, _uniqueItems, State.RacialOverrides, _lycanthropy, _time, TransportAccess,
                 ApplyTransportChange);                                                                // Developer
             _peopleRigs = new DaggerfallPeopleRigSwitch(composition.ArtReplacements?.PeopleRig, () => _engine.PartsRigs, State.Actors);   // Developer
+            DebugCommands =
+            [
+                new PlaytestDebugModule(_playtest.ReadObservation, _playtest.InspectAction, _playtest.Actions, _playtest.InspectLook),
+                new PlaytestTargetsDebugModule(_playtest.ReadTargets),
+                new InteractionDebugModule(new WorldInteraction(new CurrentInteractionInspectionScene(spatialInspection.CreateInteractionInspection),
+                    targetedUseEnabled: false)),
+                new SpatialInspectionDebugModule(spatialInspection.ReadGrid, spatialInspection.ReadProbe, spatialInspection.ReadJumpPlan),
+                new SpatialClearanceDebugModule(spatialInspection.ReadClearance),
+                _overlays,
+                new InspectionTargetsDebugModule(engine.Graphics, _overlays.InspectionTargets),
+                placement,
+                scene,
+                grants,
+                _peopleRigs,
+                heldWorkbench,
+                new TunablesDebugModule(engine.ContentSource, heldWorkbench.Page, heldWorkbench.Choose),
+            ];                                                                                     // Developer
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,
                     snapshot => DungeonText.Restore(snapshot, () => DungeonActions.ActiveActions, CurrentTextContext));

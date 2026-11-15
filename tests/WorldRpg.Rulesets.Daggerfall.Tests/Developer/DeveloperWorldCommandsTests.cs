@@ -1,3 +1,4 @@
+using WorldRpg.Kit;
 using System.Numerics;
 using System.Text.Json;
 using Rusty.Engine;
@@ -29,17 +30,17 @@ public sealed class DeveloperWorldCommandsTests
         DaggerfallSession session = run.Session;
         Vector3 start = Position(session);
         // With nothing below, a spot is refused unless forced: an interior is a box in empty space.
-        DebugCommandResult floorless = session.Teleport(start.X + 3, start.Y - 1, start.Z - 2, force: false);
+        DebugCommandResult floorless = session.Commands<IDeveloperPlacementCommands>().Teleport(start.X + 3, start.Y - 1, start.Z - 2, force: false);
         Assert.False(floorless.Succeeded);
         Assert.Contains("no floor", floorless.Message, StringComparison.Ordinal);
         Assert.Equal(start, Position(session));
         // From here on the fake world is level ground at the player's starting floor.
-        float ground = Json(session.Where()).GetProperty("feet").GetProperty("y").GetSingle();
+        float ground = Json(session.Commands<IDeveloperPlacementCommands>().Where()).GetProperty("feet").GetProperty("y").GetSingle();
         run.Spatial.FloorHit = request => request.Direction.Y < -.99f && request.Origin.Y > ground
             ? default(SpatialHit) with { Present = true, Converged = true, Point = request.Origin with { Y = ground }, Normal = Vector3.UnitY }
             : default;
 
-        DebugCommandResult moved = session.Teleport(start.X + 3, ground, start.Z - 2, force: false);
+        DebugCommandResult moved = session.Commands<IDeveloperPlacementCommands>().Teleport(start.X + 3, ground, start.Z - 2, force: false);
         Assert.True(moved.Succeeded, moved.Message);
         Assert.Equal(new Vector2(start.X + 3, start.Z - 2), Planar(Position(session)), new PlanarComparer());
         Assert.Equal(session.Sites.ActiveProfile.LogicalId, Json(moved).GetProperty("profile").GetString());
@@ -47,13 +48,13 @@ public sealed class DeveloperWorldCommandsTests
         // A spot the standing body would overlap is refused with the clearance facts, and the player stays put.
         Vector3 before = Position(session);
         run.Spatial.OverlapHit = _ => default(SpatialHit) with { Present = true, Converged = true };
-        DebugCommandResult refused = session.Teleport(before.X + 5, before.Y, before.Z, force: false);
+        DebugCommandResult refused = session.Commands<IDeveloperPlacementCommands>().Teleport(before.X + 5, before.Y, before.Z, force: false);
         Assert.False(refused.Succeeded);
         Assert.Contains("overlap", refused.Message, StringComparison.Ordinal);
         Assert.Contains("targetStatus", refused.Message, StringComparison.Ordinal);
         Assert.Equal(before, Position(session));
-        Assert.False(session.Forward(4).Succeeded);
-        DebugCommandResult forced = session.Teleport(before.X + 5, before.Y, before.Z, force: true);
+        Assert.False(session.Commands<IDeveloperPlacementCommands>().Forward(4).Succeeded);
+        DebugCommandResult forced = session.Commands<IDeveloperPlacementCommands>().Teleport(before.X + 5, before.Y, before.Z, force: true);
         Assert.True(forced.Succeeded, forced.Message);
         Assert.Equal(new Vector2(before.X + 5, before.Z), Planar(Position(session)), new PlanarComparer());
         run.Spatial.OverlapHit = _ => default;
@@ -61,26 +62,26 @@ public sealed class DeveloperWorldCommandsTests
         // An actor brought in stands along the facing; a name no definition has is refused.
         session.State.PlayerControl.YawRadians = 0;
         Vector3 eye = Position(session);
-        DebugCommandResult spawned = session.Spawn("fire-daedra", 3);
+        DebugCommandResult spawned = session.Commands<IDeveloperPlacementCommands>().Spawn("fire-daedra", 3);
         Assert.True(spawned.Succeeded, spawned.Message);
         long daedra = Assert.Single(session.DynamicActors, actor => actor.Value.Value == "fire-daedra").Key;
         Assert.Equal(new Vector2(eye.X, eye.Z - 3), Planar(session.State.Actors.Get(daedra).Position.ToVector()), new PlanarComparer());
-        Assert.False(session.Spawn("no-such-actor", 3).Succeeded);
+        Assert.False(session.Commands<IDeveloperPlacementCommands>().Spawn("no-such-actor", 3).Succeeded);
         session.RetireActor(daedra);
 
         // Relative moves: an offset, and a distance along the facing.
         Vector3 here = Position(session);
-        Assert.True(session.Move(-1, 0, 1).Succeeded);
+        Assert.True(session.Commands<IDeveloperPlacementCommands>().Move(-1, 0, 1).Succeeded);
         Assert.Equal(new Vector2(here.X - 1, here.Z + 1), Planar(Position(session)), new PlanarComparer());
         session.State.PlayerControl.YawRadians = 0;
         here = Position(session);
-        Assert.True(session.Forward(2).Succeeded);
+        Assert.True(session.Commands<IDeveloperPlacementCommands>().Forward(2).Succeeded);
         Assert.Equal(new Vector2(here.X, here.Z - 2), Planar(Position(session)), new PlanarComparer());
 
         // Repeated moves keep the body standing on the same ground: the feet given are its floor, not its centre.
         float height = Position(session).Y;
-        Assert.True(session.Move(1, 0, 0).Succeeded);
-        Assert.True(session.Move(1, 0, 0).Succeeded);
+        Assert.True(session.Commands<IDeveloperPlacementCommands>().Move(1, 0, 0).Succeeded);
+        Assert.True(session.Commands<IDeveloperPlacementCommands>().Move(1, 0, 0).Succeeded);
         Assert.Equal(height, Position(session).Y, .01f);
 
         // The saved game holds the moved player.
@@ -100,8 +101,8 @@ public sealed class DeveloperWorldCommandsTests
             ? default(SpatialHit) with { Present = true, Converged = true, Point = request.Origin - Vector3.UnitY, Normal = Vector3.UnitY }
             : default;
 
-        Assert.False(session.Travel("Nowhere At All").Succeeded);
-        DebugCommandResult arrived = session.Travel("Charing");
+        Assert.False(session.Commands<IDeveloperPlacementCommands>().Travel("Nowhere At All").Succeeded);
+        DebugCommandResult arrived = session.Commands<IDeveloperPlacementCommands>().Travel("Charing");
         Assert.True(arrived.Succeeded, arrived.Message);
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(Charing), session.Sites.ActiveProfile);
         Assert.Equal("Charing", Json(arrived).GetProperty("place").GetString());
@@ -113,19 +114,19 @@ public sealed class DeveloperWorldCommandsTests
             ? default(SpatialHit) with { Present = true, Converged = true, Kind = SpatialHitKind.Entity, Entity = door.Entity.Value }
             : default;
         Vector3 outside = Position(session), doorway = door.Pose.Translation;
-        DebugCommandResult blocked = session.Teleport(doorway.X, doorway.Y, doorway.Z, force: false);
+        DebugCommandResult blocked = session.Commands<IDeveloperPlacementCommands>().Teleport(doorway.X, doorway.Y, doorway.Z, force: false);
         Assert.False(blocked.Succeeded);
         Assert.Contains("overlap", blocked.Message, StringComparison.Ordinal);
         Assert.Equal(outside, Position(session));
-        Assert.True(session.Teleport(doorway.X, doorway.Y, doorway.Z, force: true).Succeeded);
+        Assert.True(session.Commands<IDeveloperPlacementCommands>().Teleport(doorway.X, doorway.Y, doorway.Z, force: true).Succeeded);
         run.Spatial.OverlapHit = _ => default;
 
         // world.find names the building and how to enter it before it is entered.
-        JsonElement found = Json(session.Find("training"));
+        JsonElement found = Json(session.Commands<IDeveloperPlacementCommands>().Find("training"));
         JsonElement temple = found.GetProperty("buildings").EnumerateArray().Single(value => value.GetProperty("id").GetString() == TempleOfKynareth.ToString());
         Assert.Equal("The Temple of Kynareth", temple.GetProperty("building").GetString());
 
-        DebugCommandResult entered = session.Enter("Charing", "Temple of Kynareth");
+        DebugCommandResult entered = session.Commands<IDeveloperPlacementCommands>().Enter("Charing", "Temple of Kynareth");
         Assert.True(entered.Succeeded, entered.Message);
         Assert.Equal(DaggerfallWorldProfileIds.Interior(Charing, TempleOfKynareth), session.Sites.ActiveProfile);
         Assert.Equal("The Temple of Kynareth", Json(entered).GetProperty("building").GetString());
@@ -133,8 +134,8 @@ public sealed class DeveloperWorldCommandsTests
         // The temple's trainer is loaded; goto stands the player within reach of them, facing them.
         DaggerfallNpc trainer = session.State.Npcs.All.Single(npc => npc.Presence == DaggerfallNpcPresence.Active
             && npc.Services.Contains("training") && session.State.Actors.TryGet(npc.DurableId, out _));
-        Assert.Contains(Json(session.Find("training")).GetProperty("loaded").EnumerateArray(), value => value.GetProperty("id").GetString() == $"Actor:{trainer.DurableId}");
-        DebugCommandResult reached = session.GoTo($"Actor:{trainer.DurableId}");
+        Assert.Contains(Json(session.Commands<IDeveloperPlacementCommands>().Find("training")).GetProperty("loaded").EnumerateArray(), value => value.GetProperty("id").GetString() == $"Actor:{trainer.DurableId}");
+        DebugCommandResult reached = session.Commands<IDeveloperPlacementCommands>().GoTo($"Actor:{trainer.DurableId}");
         Assert.True(reached.Succeeded, reached.Message);
         Vector3 player = Position(session), them = session.State.Actors.Get(trainer.DurableId).Position.ToVector();
         float apart = Vector2.Distance(Planar(player), Planar(them));
@@ -149,18 +150,18 @@ public sealed class DeveloperWorldCommandsTests
 
         // While the conversation holds the world, movement is refused and nothing moves; the conversation stays open.
         Vector3 talking = Position(session);
-        DebugCommandResult held = session.Teleport(talking.X + 1, talking.Y, talking.Z, force: true);
+        DebugCommandResult held = session.Commands<IDeveloperPlacementCommands>().Teleport(talking.X + 1, talking.Y, talking.Z, force: true);
         Assert.False(held.Succeeded);
         Assert.Contains("Dialogue", held.Message, StringComparison.Ordinal);
-        Assert.False(session.Travel("Charing").Succeeded);
-        Assert.False(session.GoTo($"Actor:{trainer.DurableId}").Succeeded);
+        Assert.False(session.Commands<IDeveloperPlacementCommands>().Travel("Charing").Succeeded);
+        Assert.False(session.Commands<IDeveloperPlacementCommands>().GoTo($"Actor:{trainer.DurableId}").Succeeded);
         Assert.Equal(talking, Position(session));
         Assert.NotNull(session.ActivationPanel.View.Dialogue);
         session.Dialogue.Close();
 
         // Unknown and ambiguous names are refused with what was found.
-        Assert.False(session.GoTo("Nobody Of That Name").Succeeded);
-        Assert.False(session.Enter("Charing", "Nowhere Hall").Succeeded);
+        Assert.False(session.Commands<IDeveloperPlacementCommands>().GoTo("Nobody Of That Name").Succeeded);
+        Assert.False(session.Commands<IDeveloperPlacementCommands>().Enter("Charing", "Nowhere Hall").Succeeded);
 
         // The saved game is inside the temple, by the trainer.
         Vector3 saved = Position(session);
@@ -174,14 +175,14 @@ public sealed class DeveloperWorldCommandsTests
     {
         AssembledWorld world = Shared.Value;
         using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold);
-        DebugCommandResult several = run.Session.Travel("Castle");
+        DebugCommandResult several = run.Session.Commands<IDeveloperPlacementCommands>().Travel("Castle");
         Assert.False(several.Succeeded);
         Assert.Contains("Name one by region/index", several.Message, StringComparison.Ordinal);
 
         run.Session.State.Actors.Player.Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).SetCurrent(0);
         run.Step();
         Assert.True(run.Session.State.Actors.Player.IsDefeated);
-        Assert.Equal("The player is dead.", run.Session.Teleport(0, 0, 0, force: true).Message);
+        Assert.Equal("The player is dead.", run.Session.Commands<IDeveloperPlacementCommands>().Teleport(0, 0, 0, force: true).Message);
     }
 
     private static Vector3 Position(DaggerfallSession session) => session.State.PlayerControl.Position!.Value.ToVector();

@@ -1,3 +1,4 @@
+using Rusty.Engine.Debugging;
 using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
@@ -73,7 +74,7 @@ public sealed class ContactRulesAcceptanceTests
 
         Assert.Null(session.State.Actors.Player.Attack.Pending);
         Assert.Empty(spatial.OverlapContactsRequests);
-        Assert.True(Health(session, Enemy) < health, session.ReadPlaytestObservation().Message);
+        Assert.True(Health(session, Enemy) < health, session.Commands<PlaytestDebugModule>().Observe().Message);
     }
 
     [Fact]
@@ -101,7 +102,7 @@ public sealed class ContactRulesAcceptanceTests
         appearance.AdvanceReceiptForAll = null;
         session.Update(new ProductUpdate(OuterUpdate(2) with { SimulationStep = 62, AdmittedStepCount = 60 }, []));
 
-        Assert.True(Health(session, Player) < health, session.ReadPlaytestObservation().Message);
+        Assert.True(Health(session, Player) < health, session.Commands<PlaytestDebugModule>().Observe().Message);
     }
 
     [Fact]
@@ -190,7 +191,7 @@ public sealed class ContactRulesAcceptanceTests
         for (ulong step = 1; step <= 120 && Health(session, Player) == health; step++)
             session.Update(new ProductUpdate(OuterUpdate(step), []));
 
-        Assert.True(Health(session, Player) < health, session.ReadPlaytestObservation().Message);
+        Assert.True(Health(session, Player) < health, session.Commands<PlaytestDebugModule>().Observe().Message);
     }
 
     [Fact]
@@ -207,7 +208,7 @@ public sealed class ContactRulesAcceptanceTests
         Assert.NotNull(f.Game.State.Actors.Player.Attack.Pending);
         for (int step = 0; step < 240 && Health(f.Game, NewGameBowSessionTests.Fixture.Target) == health; step++) f.Advance();
 
-        Assert.True(Health(f.Game, NewGameBowSessionTests.Fixture.Target) < health, f.Game.ReadPlaytestObservation().Message);
+        Assert.True(Health(f.Game, NewGameBowSessionTests.Fixture.Target) < health, f.Game.Commands<PlaytestDebugModule>().Observe().Message);
     }
 
     private static (EngineContextFake Engine, CapturingDaggerfallRuleset Ruleset) Product(InMemoryPersistenceService persistence)

@@ -20,7 +20,7 @@ public sealed class PlaytestInspectionTests
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         var behavior = session.EnemyBehavior.LastEvidence[2000];
         perception.Receipt = Receipt(); // The separate player query has no pair outside weapon reach.
-        using var readout = JsonDocument.Parse(session.ReadPlaytestTargets().Message);
+        using var readout = JsonDocument.Parse(session.Commands<PlaytestTargetsDebugModule>().Targets().Message);
         var actor = readout.RootElement.GetProperty("actors").EnumerateArray().Single(a => a.GetProperty("id").GetString() == "actor:2000");
         Assert.Equal("unavailable", actor.GetProperty("currentAttackVisibility").GetString());
         var enemy = actor.GetProperty("enemyBehavior");
@@ -39,15 +39,15 @@ public sealed class PlaytestInspectionTests
         var lastActivation = session.Activation.LastEvidence;
         var fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue"));
         double before = fatigue.Current;
-        var module = new InteractionDebugModule(new WorldInteraction(new CurrentInteractionInspectionScene(session.CreateInteractionInspection), targetedUseEnabled: false));
+        var module = session.Commands<InteractionDebugModule>();
         using var readout = JsonDocument.Parse(module.Inspect().Message);
         Assert.Equal("observation-only", readout.RootElement.GetProperty("assistance").GetString());
         Assert.False(readout.RootElement.GetProperty("targetedUseEnabled").GetBoolean());
-        using var probe = JsonDocument.Parse(session.ReadSpatialProbe(1).Message);
+        using var probe = JsonDocument.Parse(session.Commands<SpatialInspectionDebugModule>().Probe(1).Message);
         Assert.Equal(32, probe.RootElement.GetProperty("samples").GetArrayLength());
-        Assert.Equal(DebugCommandStatus.InvalidArguments, session.ReadSpatialProbe(0).Status);
-        Assert.Equal(DebugCommandStatus.InvalidArguments, session.ReadSpatialGrid(16, 0, 1).Status);
-        Assert.Equal(DebugCommandStatus.InvalidArguments, session.ReadJumpPlan(double.NaN, 0, 0).Status);
+        Assert.Equal(DebugCommandStatus.InvalidArguments, session.Commands<SpatialInspectionDebugModule>().Probe(0).Status);
+        Assert.Equal(DebugCommandStatus.InvalidArguments, session.Commands<SpatialInspectionDebugModule>().Grid(16, 0, 1).Status);
+        Assert.Equal(DebugCommandStatus.InvalidArguments, session.Commands<SpatialInspectionDebugModule>().Jump(double.NaN, 0, 0).Status);
         Assert.Equal(position, session.State.PlayerControl.Position);
         Assert.Equal(before, fatigue.Current);
         Assert.Same(lastActivation, session.Activation.LastEvidence);
@@ -62,13 +62,13 @@ public sealed class PlaytestInspectionTests
         var fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue"));
         fatigue.SetCurrent(0);
         // The donor never refuses a swing for fatigue; an empty pool is the exhaustion collapse's.
-        var action = session.InspectPlaytestAction("attack");
+        var action = session.PlaytestAction("attack");
         Assert.True(action.Available);
         Assert.Null(action.Reason);
         Assert.Equal(0, fatigue.Current);
         Assert.Null(session.State.Actors.Player.Attack.Pending);
         session.ApplyProductMode(ProductMode.Modal);
-        Assert.Contains("mode-Modal", session.InspectPlaytestAction("forward").Reason);
+        Assert.Contains("mode-Modal", session.PlaytestAction("forward").Reason);
     }
 
     [Fact]
@@ -79,16 +79,16 @@ public sealed class PlaytestInspectionTests
         using var session = created;
         var fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue"));
         double before = fatigue.Current;
-        Assert.Equal("Primary", session.InspectPlaytestAction("attack").Key);
+        Assert.Equal("Primary", session.PlaytestAction("attack").Key);
         DaggerfallControlSettings controls = new();
         controls.Rebind("attack", ["KeyB"]);
         session.ApplyPlayerPreferences(controls.Serialize());
-        Assert.Equal("KeyB", session.InspectPlaytestAction("attack").Key);
+        Assert.Equal("KeyB", session.PlaytestAction("attack").Key);
         var speed = session.State.Actors.Player.Stats.GetStat(StatId.Parse("speed"));
         speed.BaseValue = 20;
-        double slow = session.InspectPlaytestAction("attack").DurationMs;
+        double slow = session.PlaytestAction("attack").DurationMs;
         speed.BaseValue = 90;
-        double fast = session.InspectPlaytestAction("attack").DurationMs;
+        double fast = session.PlaytestAction("attack").DurationMs;
         // The hold stays under the power threshold, so the action is a tap and the motion runs on from it.
         Assert.Equal(slow, fast);
         Assert.True(fast / 1000d < DaggerfallTuning.Defaults.Attacks.PowerThresholdSeconds);
@@ -105,16 +105,16 @@ public sealed class PlaytestInspectionTests
         var target = session.State.Actors.Player.Targeting.Current;
         var evidence = session.State.Kit.Targeting.LastEvidence;
         var interaction = session.Activation.LastEvidence;
-        using var before = JsonDocument.Parse(session.ReadPlaytestObservation().Message);
+        using var before = JsonDocument.Parse(session.Commands<PlaytestDebugModule>().Observe().Message);
         double yaw = session.State.PlayerControl.YawRadians;
-        Assert.Equal(DebugCommandStatus.Success, session.InspectPlaytestLook(45, 10).Status);
-        using var after = JsonDocument.Parse(session.ReadPlaytestObservation().Message);
+        Assert.Equal(DebugCommandStatus.Success, session.Commands<PlaytestDebugModule>().Look(45, 10).Status);
+        using var after = JsonDocument.Parse(session.Commands<PlaytestDebugModule>().Observe().Message);
         Assert.Equal(before.RootElement.GetProperty("simulationStep").GetString(), after.RootElement.GetProperty("simulationStep").GetString());
         Assert.Equal(position, session.State.PlayerControl.Position);
         Assert.NotEqual(yaw, session.State.PlayerControl.YawRadians);
         Assert.Equal(target, session.State.Actors.Player.Targeting.Current);
         Assert.Same(evidence, session.State.Kit.Targeting.LastEvidence);
         Assert.Same(interaction, session.Activation.LastEvidence);
-        Assert.Equal(DebugCommandStatus.Success, session.ReadPlaytestTargets().Status);
+        Assert.Equal(DebugCommandStatus.Success, session.Commands<PlaytestTargetsDebugModule>().Targets().Status);
     }
 }

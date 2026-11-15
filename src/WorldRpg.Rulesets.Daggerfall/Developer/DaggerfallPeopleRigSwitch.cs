@@ -17,7 +17,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="rig">The art set's people rig, or null when it carries none.</param>
 /// <param name="partsRigs">The Engine's parts rigs, which the crowd draws through.</param>
 /// <param name="actors">The actors, counted for who walks here now.</param>
-internal sealed class DaggerfallPeopleRigSwitch(DaggerfallPeopleRig? rig, Func<IPartsRigsService> partsRigs, ActorsState actors) : IDisposable
+internal sealed class DaggerfallPeopleRigSwitch(DaggerfallPeopleRig? rig, Func<IPartsRigsService> partsRigs, ActorsState actors) : IDisposable, IDeveloperPeopleCommands
 {
     /// <summary>The rig pages are painted far finer than a classic person's pixels, so they are sampled smooth.</summary>
     private const TextureFilter Filter = TextureFilter.Linear;
@@ -28,7 +28,7 @@ internal sealed class DaggerfallPeopleRigSwitch(DaggerfallPeopleRig? rig, Func<I
     /// <summary>The crowd drawn as the figure, or null before the switch was first turned on.</summary>
     internal PartsRigCrowd? Crowd { get; private set; }
 
-    internal DebugCommandResult Use(string set)
+    public DebugCommandResult Rig(string set)
     {
         if (set == "off")
         {

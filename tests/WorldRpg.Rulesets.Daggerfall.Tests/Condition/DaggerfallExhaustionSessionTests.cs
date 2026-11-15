@@ -117,7 +117,7 @@ public sealed class DaggerfallExhaustionSessionTests
         using AssembledWorldRun run = World.Value.Start(AssembledWorld.PrivateersHold);
         DaggerfallSession session = run.Session;
         run.Spatial.KeepPosition = false;
-        Assert.True(session.Ride("horse").Succeeded);
+        Assert.True(session.Commands<IDeveloperPlayerCommands>().Ride("horse").Succeeded);
         WorldPoint here = session.State.PlayerControl.Position!.Value;
         session.SpawnActor("rat", new ActorPose(new WorldPoint(here.X + 2f, here.Y, here.Z), 0f));
         StatsComponent stats = session.State.Actors.Player.Stats;
@@ -150,7 +150,7 @@ public sealed class DaggerfallExhaustionSessionTests
         using AssembledWorldRun run = World.Value.Start(AssembledWorld.PrivateersHold);
         DaggerfallSession session = run.Session;
         run.Spatial.KeepPosition = false;
-        Assert.True(session.Ride("horse").Succeeded);
+        Assert.True(session.Commands<IDeveloperPlayerCommands>().Ride("horse").Succeeded);
         Ride(session, 10, Held(KeyboardControl.KeyW), Held(KeyboardControl.KeyW), () => { });
         Assert.True(session.State.Transport.Ride.Speed > 0f);
 

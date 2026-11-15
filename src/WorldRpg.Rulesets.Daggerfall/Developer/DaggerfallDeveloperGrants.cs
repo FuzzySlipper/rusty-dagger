@@ -36,7 +36,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
     DaggerfallSkillUseReactions skillUses, DaggerfallLevelUpState levelUps, DaggerfallCharacterState character, DaggerfallTransportPolicy transport,
     MechanicsInventoryCoordinator inventory, DaggerfallEncumbrancePolicy encumbrance, DaggerfallItemInstances itemInstances,
     DaggerfallUniqueItemAllocator uniqueItems, DaggerfallRacialOverrides racialOverrides, DaggerfallLycanthropy lycanthropy, DaggerfallWorldTime time,
-    Func<DaggerfallTransportAccessContext> transportAccess, Action<DaggerfallTransportActionResult> applyTransportChange)
+    Func<DaggerfallTransportAccessContext> transportAccess, Action<DaggerfallTransportActionResult> applyTransportChange) : IDeveloperPlayerCommands
 {
     // A developer grant may give this many of one item at once.
     private const int MostGiven = 1000;
@@ -45,7 +45,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
     // Grants made this run, which name each grant's request and stack.
     private ulong _grants;
 
-    internal DebugCommandResult Give(string item, int count)
+    public DebugCommandResult Give(string item, int count)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (count is < 1 or > MostGiven)
@@ -66,7 +66,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
         return DebugCommandResult.Success($"Gave {label} ×{given}.");
     }
 
-    internal DebugCommandResult Hold(string item)
+    public DebugCommandResult Hold(string item)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (ResolveItemTemplate(item, out DaggerfallItemTemplateDefinition? template, out string? material) is { } unresolved) return Refused(unresolved);
@@ -77,7 +77,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
         return Wield(created);
     }
 
-    internal DebugCommandResult HoldMagic()
+    public DebugCommandResult HoldMagic()
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         // The regular magic templates of the weapons' base group.
@@ -99,7 +99,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
         return DebugCommandResult.Success($"Holding {ItemLabel(created)}, drawn.");
     }
 
-    internal DebugCommandResult Equip(string item)
+    public DebugCommandResult Equip(string item)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (ResolveItemTemplate(item, out DaggerfallItemTemplateDefinition? template, out string? material) is { } unresolved) return Refused(unresolved);
@@ -119,7 +119,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
             : Refused($"Gave {ItemLabel(created)}, but it was not worn: {worn.Detail}");
     }
 
-    internal DebugCommandResult Money(long amount)
+    public DebugCommandResult Money(long amount)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (amount is < 1 or > 100_000_000)
@@ -129,7 +129,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
             : Refused("The gold could not be added.");
     }
 
-    internal DebugCommandResult Skill(string skill, int value)
+    public DebugCommandResult Skill(string skill, int value)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (!skillUses.Skills.Contains(skill))
@@ -139,7 +139,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
         return DebugCommandResult.Success($"{skill} is {set}" + (skillUses.PendingLevelUp ? "; a level is due (player.levelup opens it)." : "."));
     }
 
-    internal DebugCommandResult LevelUp()
+    public DebugCommandResult LevelUp()
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (levelUps.Read() is not null) return Refused("A level-up is already open on the character sheet.");
@@ -154,14 +154,14 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
     }
 
     /// <summary>Fills every vital as a new game fills them; no owner has a call for it, so it sets the player's tracks.</summary>
-    internal DebugCommandResult Heal()
+    public DebugCommandResult Heal()
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         foreach (var (_, track) in actors.Player.Stats.Tracks) track.SetCurrent(track.Maximum.Value, clamp: true);
         return DebugCommandResult.Success("Vitals restored.");
     }
 
-    internal DebugCommandResult Spell(string spell)
+    public DebugCommandResult Spell(string spell)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         var named = definitions.Magic.Spells.Where(pair => pair.Value.Name.Contains(spell ?? "", StringComparison.OrdinalIgnoreCase)).OrderBy(pair => pair.Value.Name, StringComparer.Ordinal).ToArray();
@@ -172,7 +172,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
         return DebugCommandResult.Success(character.LearnSpell(named[0].Key) ? $"Learned {named[0].Value.Name}." : $"{named[0].Value.Name} is already known.");
     }
 
-    internal DebugCommandResult Ride(string mount)
+    public DebugCommandResult Ride(string mount)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (!Enum.TryParse(mount, ignoreCase: true, out DaggerfallTransportMode mode) || mode == DaggerfallTransportMode.Ship)
@@ -184,7 +184,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
         return result.Applied ? DebugCommandResult.Success(result.Message) : Refused(result.Message);
     }
 
-    internal DebugCommandResult RideState()
+    public DebugCommandResult RideState()
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (transport.RideTuning is null) return Refused("The player rides nothing.");
@@ -194,7 +194,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
             $"{transport.Mode} at {ride.Speed:0.0} m/s, heading {(ride.HeadingRadians ?? yaw) * 180 / MathF.PI:0}, the view {-ride.TurnFrom(yaw) * 180 / MathF.PI:0} degrees past it."));
     }
 
-    internal DebugCommandResult Morph(string form)
+    public DebugCommandResult Morph(string form)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         DaggerfallRacialOverrideView? racial = racialOverrides.Current;
@@ -213,7 +213,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
         return DebugCommandResult.Success($"Changed into {kind} form.");
     }
 
-    internal DebugCommandResult Items(string filter)
+    public DebugCommandResult Items(string filter)
     {
         StringBuilder text = new();
         foreach (DaggerfallItemTemplateDefinition template in Templates()

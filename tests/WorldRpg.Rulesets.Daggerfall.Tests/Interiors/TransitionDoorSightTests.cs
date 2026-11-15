@@ -97,7 +97,7 @@ public sealed class TransitionDoorSightTests
         session.State.PlayerControl.MoveTo(at);
         session.State.PlayerControl.YawRadians = ActorHeading.Yaw(facing);
         session.State.PlayerControl.PitchRadians = 0F;
-        WorldInteractionReadout readout = session.CreateInteractionInspection().Inspect();
+        WorldInteractionReadout readout = session.InteractionInspection().Inspect();
         InteractionObservation row = readout.Focus.Candidates.Single(candidate => candidate.Candidate.Target.Id == entity.Value);
         return (row.Candidate.Visibility, row.Reason);
     }

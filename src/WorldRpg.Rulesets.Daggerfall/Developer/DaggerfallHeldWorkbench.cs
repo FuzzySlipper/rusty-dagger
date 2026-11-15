@@ -2,6 +2,7 @@ using System.Numerics;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
+using WorldRpg.Kit;
 using Rusty.Engine.FirstPerson;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -28,7 +29,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <param name="style">The viewmodel style the tuning asks for.</param>
 /// <param name="appearance">The current site's appearance, which draws the viewmodel.</param>
 /// <param name="publish">Republishes the presentation, so a change shows at once.</param>
-internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, DaggerfallAttackTuning attacks, DaggerfallViewmodelStyle style, Func<DaggerfallSiteAppearance> appearance, Action publish)
+internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, DaggerfallAttackTuning attacks, DaggerfallViewmodelStyle style, Func<DaggerfallSiteAppearance> appearance, Action publish) : IDeveloperHeldCommands
 {
     internal const string Title = "First-person workbench";
     private const string WornArms = "worn";
@@ -65,7 +66,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     private ArmClip Clip => art!.Document.Families[Family].Strikes[strike!];
 
     /// <summary>Shows a look's family at rest with one of its strikes, and lists the strike's marks.</summary>
-    internal DebugCommandResult Show(string heldLook, string action)
+    public DebugCommandResult Show(string heldLook, string action)
     {
         if (Unavailable is { } unavailable) return Failure(unavailable);
         if (art!.Look(heldLook) is not { } drawing) return Failure($"The art draws no '{heldLook}'. Looks: {string.Join(", ", Looks)}.");
@@ -83,8 +84,9 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     /// Moves the shields' seat on the hand joint (<paramref name="part"/> <c>seat</c>: where, then the turn) or the hand's
     /// carry (<c>carry</c>: the grip, then the hold) in the loaded art, shown at the next draw; the answer is what to save.
     /// </summary>
-    internal DebugCommandResult Shield(string part, Vector3 at, Vector3 turn)
+    public DebugCommandResult Shield(string part, float x, float y, float z, float turnX, float turnY, float turnZ)
     {
+        Vector3 at = new(x, y, z), turn = new(turnX, turnY, turnZ);
         if (Unavailable is { } unavailable) return Failure(unavailable);
         if (art!.Document.Shield is not { } shield) return Failure("The held definition draws no shields.");
         switch (part)
@@ -97,7 +99,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     }
 
     /// <summary>Holds the strike's clip exactly at mark <paramref name="n"/> (0 start, 1 strike, 2 recover, 3 end; -1 is rest).</summary>
-    internal DebugCommandResult Key(int n)
+    public DebugCommandResult Key(int n)
     {
         if (Viewed() is not { } viewed) return Unshown();
         if (n < -1 || n >= MarkNames.Length) return Failure($"Marks run from 0 to {MarkNames.Length - 1} (start, strike, recover, end; -1 is rest).");
@@ -110,12 +112,12 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     }
 
     /// <summary>Holds the next mark (<paramref name="step"/> 1; after the last, rest) or the previous (-1; before the first, rest).</summary>
-    internal DebugCommandResult Step(int step) => look is null ? Unshown()
+    public DebugCommandResult Step(int step) => look is null ? Unshown()
         : step is not (1 or -1) ? Failure("A step is 1 (next) or -1 (previous).")
         : Key((key + 1 + step + MarkNames.Length + 1) % (MarkNames.Length + 1) - 1);
 
     /// <summary>Plays the strike from rest at <paramref name="speed"/> (1 as in play, 0.25 a quarter), on world time.</summary>
-    internal DebugCommandResult Play(float speed)
+    public DebugCommandResult Play(float speed)
     {
         if (Viewed() is not { } viewed) return Unshown();
         if (!(speed >= .01F && speed <= 4)) return Failure("Speed runs from 0.01 to 4.");
@@ -127,7 +129,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     }
 
     /// <summary>Shows the strike paused <paramref name="seconds"/> after its start, as the arms play it.</summary>
-    internal DebugCommandResult At(float seconds)
+    public DebugCommandResult At(float seconds)
     {
         if (Viewed() is not { } viewed) return Unshown();
         var (timing, frame) = AttackTiming(look!, strike!)!.Value;
@@ -140,7 +142,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     }
 
     /// <summary>What the drawn 3D weapon's arms play now: its family, the clip, its time and phase, what fades out under it, and how far the arms are clip-led.</summary>
-    internal DebugCommandResult Read()
+    public DebugCommandResult Read()
     {
         if (Unavailable is { } unavailable) return Failure(unavailable);
         if (appearance().DrawnHeld is not { } drawn) return Failure("No 3D weapon is drawn: the hands wield no weapon the art draws, or a strike without a clip shows its sprite.");
@@ -151,7 +153,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     }
 
     /// <summary>Returns the hands to what they wield.</summary>
-    internal DebugCommandResult Off()
+    public DebugCommandResult Off()
     {
         (look, strike, key) = (null, null, -1);
         appearance().EndHeldView();
@@ -199,7 +201,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     }
 
     /// <summary>Shows the shown look enchanted, or plain.</summary>
-    internal DebugCommandResult Enchant(bool on)
+    public DebugCommandResult Enchant(bool on)
     {
         if (Unavailable is { } unavailable) return Failure(unavailable);
         if (look is null || strike is null) return Unshown();
@@ -210,7 +212,7 @@ internal sealed class DaggerfallHeldWorkbench(DaggerfallHeldArt? art, Daggerfall
     /// <summary>
     /// Shows the shown look in arm set <paramref name="set"/>, or in what the player wears (<see cref="WornArms"/>).
     /// </summary>
-    internal DebugCommandResult Arms(string set)
+    public DebugCommandResult Arms(string set)
     {
         if (Unavailable is { } unavailable) return Failure(unavailable);
         if (look is null || strike is null) return Unshown();

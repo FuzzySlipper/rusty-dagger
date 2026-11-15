@@ -35,7 +35,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
     DaggerfallDefinitions definitions, DaggerfallFastTravel fastTravel, DaggerfallActivation activation, DaggerfallBuildingEntrance entrance,
     DaggerfallHorizon horizon, DaggerfallWorldTime time, Func<ProductMode> mode, PresentationState presentation,
     Func<string, ActorPose, long> spawn, Func<WorldPoint, Vector3> profilePosition,
-    Func<DaggerfallSiteProfile, DaggerfallRdbDoorId, DaggerfallSiteAnchor> buildingLanding)
+    Func<DaggerfallSiteProfile, DaggerfallRdbDoorId, DaggerfallSiteAnchor> buildingLanding) : IDeveloperPlacementCommands
 {
     /// <summary>How far from a target <see cref="GoTo"/> stands: inside every interaction reach, clear of a counter's far side.</summary>
     private const float GoToStandoff = 1.5F;
@@ -44,7 +44,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
     /// <summary>The farthest a scout stands the player from where they are, well inside the Engine's local envelope.</summary>
     private const double ScoutStandMetres = 4000;
 
-    internal DebugCommandResult Teleport(double x, double y, double z, bool force)
+    public DebugCommandResult Teleport(double x, double y, double z, bool force)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (!double.IsFinite(x) || !double.IsFinite(y) || !double.IsFinite(z))
@@ -60,14 +60,14 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         return Land(feet, player.YawRadians, player.PitchRadians, "developer-teleport");
     }
 
-    internal DebugCommandResult Move(double dx, double dy, double dz)
+    public DebugCommandResult Move(double dx, double dy, double dz)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         Vector3 feet = PlayerFloor();
         return Teleport(feet.X + dx, feet.Y + dy, feet.Z + dz, force: false);
     }
 
-    internal DebugCommandResult Forward(double metres)
+    public DebugCommandResult Forward(double metres)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (!double.IsFinite(metres)) return DebugCommandResult.Failure(DebugCommandStatus.InvalidArguments, "A distance must be finite.");
@@ -75,7 +75,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         return Move(offset.X, 0, offset.Z);
     }
 
-    internal DebugCommandResult Spawn(string actor, double metres)
+    public DebugCommandResult Spawn(string actor, double metres)
     {
         if (!double.IsFinite(metres) || metres <= 0) return Refused("A distance is finite and above 0.");
         if (!definitions.Actors.TryGetValue(new DaggerfallActorId(actor), out DaggerfallActorDefinition? definition) || definition.Kind == DaggerfallActorKinds.Player)
@@ -87,7 +87,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         return DebugCommandResult.Success($"{actor} ({spawned}) stands {metres:0.#} m ahead.");
     }
 
-    internal DebugCommandResult Travel(string place)
+    public DebugCommandResult Travel(string place)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (ResolvePlace(place, out DaggerfallSiteProfile? exterior) is { } unresolved) return Refused(unresolved);
@@ -95,7 +95,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         return Where();
     }
 
-    internal DebugCommandResult Enter(string place, string building)
+    public DebugCommandResult Enter(string place, string building)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (ResolvePlace(place, out DaggerfallSiteProfile? exterior) is { } unresolved) return Refused(unresolved);
@@ -115,7 +115,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         return Where();
     }
 
-    internal DebugCommandResult GoTo(string target)
+    public DebugCommandResult GoTo(string target)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (activation.Module is not { } module) return Refused("No interaction targets are loaded.");
@@ -134,7 +134,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         return Where();
     }
 
-    internal DebugCommandResult Where()
+    public DebugCommandResult Where()
     {
         if (player.Position is not WorldPoint position) return Refused("The player has no position.");
         return Json(w =>
@@ -163,7 +163,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         });
     }
 
-    internal DebugCommandResult Stand(double east, double south)
+    public DebugCommandResult Stand(double east, double south)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (sites.Exterior.ActiveExteriorOrigin is not { } origin || player.Position is not { } position)
@@ -173,7 +173,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         return Teleport(feet.X + east, feet.Y + rise + .05, feet.Z + south, force: true);
     }
 
-    internal DebugCommandResult Scout(string kind, double kilometres)
+    public DebugCommandResult Scout(string kind, double kilometres)
     {
         if (hold.Refusal() is { } refusal) return Refused(refusal);
         if (!DaggerfallHorizonGround.Kinds.Contains(kind)) return Refused($"Ground is one of {string.Join(", ", DaggerfallHorizonGround.Kinds)}.");
@@ -206,7 +206,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
             : stood;
     }
 
-    internal DebugCommandResult Find(string service)
+    public DebugCommandResult Find(string service)
     {
         if (site.ActiveSite is not { } record) return Refused("The player is at no place with people.");
         Dictionary<long, string> labels = (activation.Module?.InspectTargets() ?? [])

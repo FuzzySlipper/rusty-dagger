@@ -17,9 +17,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="passTime">Lets this many game seconds pass (the session's AdvanceElapsedTime, without idle fatigue).</param>
 /// <param name="useClassicArt">Draws the classic art in place of the refreshed art (true) or the refreshed art (false).</param>
 internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<long> passTime, DaggerfallHorizon horizon,
-    DaggerfallSiteCrossing sites, DaggerfallWeather weather, PlayerControlState player, DaggerfallDefinitions definitions, Action<bool> useClassicArt)
+    DaggerfallSiteCrossing sites, DaggerfallWeather weather, PlayerControlState player, DaggerfallDefinitions definitions, Action<bool> useClassicArt) : IDeveloperSceneCommands
 {
-    internal DebugCommandResult Hour(int hour)
+    public DebugCommandResult Hour(int hour)
     {
         if (hour is < 0 or > 23) return Refused("An hour is from 0 to 23.");
         const int secondsPerDay = 86_400;
@@ -28,7 +28,7 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
         return DebugCommandResult.Success($"It is {time.Calendar.SecondOfDay / 3_600}:00, {time.Calendar.Season}.");
     }
 
-    internal DebugCommandResult Season(string season)
+    public DebugCommandResult Season(string season)
     {
         if (!Enum.TryParse(season, ignoreCase: true, out DaggerfallSeason target) || !Enum.IsDefined(target))
             return Refused($"A season is one of {string.Join(", ", Enum.GetNames<DaggerfallSeason>())}.");
@@ -41,7 +41,7 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
         return DebugCommandResult.Success($"It is day {time.Calendar.Day + 1} of month {time.Calendar.Month + 1}, {time.Calendar.Season}.");
     }
 
-    internal DebugCommandResult GroundBlend(double contrast, double repeatMetres, double triplanarSharpness)
+    public DebugCommandResult GroundBlend(double contrast, double repeatMetres, double triplanarSharpness)
     {
         if (contrast < 1 || repeatMetres <= 0 || triplanarSharpness < 0) return Refused("A contrast is 1 or more, a repeat above 0 and a sharpness 0 or more.");
         if (!DaggerfallGroundBlend.FillsCell((float)repeatMetres)) return Refused($"A texture repeating every {repeatMetres} metres would break at every cell's edge.");
@@ -50,13 +50,13 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
         return DebugCommandResult.Success("Ground layers again by these settings.");
     }
 
-    internal DebugCommandResult GroundWeather(double wet, double snow)
+    public DebugCommandResult GroundWeather(double wet, double snow)
     {
         weather.State.Force((float)wet, (float)snow);
         return DebugCommandResult.Success($"The ground here is {weather.Conditions.Wet:0.##} wet and {weather.Conditions.Snow:0.##} snowed.");
     }
 
-    internal DebugCommandResult Weather(string kind)
+    public DebugCommandResult Weather(string kind)
     {
         if (!Enum.TryParse(kind, ignoreCase: true, out DaggerfallWeatherKind chosen) || !Enum.IsDefined(chosen))
             return Refused($"The weather is one of {string.Join(", ", Enum.GetNames<DaggerfallWeatherKind>())}.");
@@ -64,15 +64,15 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
         return DebugCommandResult.Success($"The weather is {chosen}.");
     }
 
-    internal DebugCommandResult NearestRiver() => sites.Exterior.ActiveExteriorOrigin is { } origin && player.Position is { } position
+    public DebugCommandResult NearestRiver() => sites.Exterior.ActiveExteriorOrigin is { } origin && player.Position is { } position
         ? DebugCommandResult.Success(horizon.NearestRiver(origin, position.ToVector(), definitions.Terrain))
         : Refused("The player is not outdoors.");
 
-    internal DebugCommandResult GroundSurvey() => DebugCommandResult.Success(horizon.GroundSurvey(definitions.Terrain));
+    public DebugCommandResult GroundSurvey() => DebugCommandResult.Success(horizon.GroundSurvey(definitions.Terrain));
 
-    internal DebugCommandResult Horizon() => DebugCommandResult.Success(horizon.Readout());
+    public DebugCommandResult Horizon() => DebugCommandResult.Success(horizon.Readout());
 
-    internal DebugCommandResult HorizonSet(double lift, double fogDensity)
+    public DebugCommandResult HorizonSet(double lift, double fogDensity)
     {
         if (!double.IsFinite(lift) || lift < 1) return Refused("A lift is 1 (true height) or more.");
         if (!double.IsFinite(fogDensity) || fogDensity <= 0) return Refused("A haze is a positive density per metre.");
@@ -80,28 +80,28 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
         return DebugCommandResult.Success(horizon.Readout());
     }
 
-    internal DebugCommandResult Flora(double density)
+    public DebugCommandResult Flora(double density)
     {
         if (!double.IsFinite(density) || density < 0) return Refused("A density is finite and 0 or more.");
         horizon.UseFloraDensity((float)density);
         return DebugCommandResult.Success(horizon.Readout());
     }
 
-    internal DebugCommandResult FarForest(string state)
+    public DebugCommandResult FarForest(string state)
     {
         if (state is not ("on" or "off")) return Refused("The far forest is on or off.");
         horizon.UseFarForest(state == "on");
         return DebugCommandResult.Success($"The far forest is {state}.");
     }
 
-    internal DebugCommandResult Trees(string kind)
+    public DebugCommandResult Trees(string kind)
     {
         if (kind is not ("mesh" or "sprite")) return Refused("Trees grow as mesh or sprite.");
         horizon.UseTreeMeshes(kind == "mesh");
         return DebugCommandResult.Success($"Trees grow as {kind}s.");
     }
 
-    internal DebugCommandResult ClassicArt(string state)
+    public DebugCommandResult ClassicArt(string state)
     {
         if (state is not ("on" or "off")) return Refused("Classic art is on or off.");
         bool classic = state == "on";
@@ -109,7 +109,7 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
         return DebugCommandResult.Success(classic ? "Classic art is drawn in place of the refreshed art for this run." : "The refreshed art is drawn.");
     }
 
-    internal DebugCommandResult GroundCover(string kinds)
+    public DebugCommandResult GroundCover(string kinds)
     {
         if (horizon.GroundCover is not { } cover) return Refused("Ground cover draws outdoors in refreshed art.");
         string[] named = kinds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

@@ -1,3 +1,4 @@
+using WorldRpg.Kit;
 using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
@@ -486,7 +487,7 @@ public sealed class UiArtDeliverySessionTests
 
         // A weapon or armour in a metal draws the refreshed bare-steel image tinted in its metal through the steel's
         // mask, both demanded with the pack that shows them; classic art draws the classic metal image untinted.
-        Assert.True(session.Give("dwarven Cuirass", 1).Succeeded);
+        Assert.True(session.Commands<IDeveloperPlayerCommands>().Give("dwarven Cuirass", 1).Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital)]));
         hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
         Dictionary<string, object?> Cuirass(Dictionary<string, object?> snapshot) => Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(snapshot["inventory"])["items"])
@@ -527,7 +528,7 @@ public sealed class UiArtDeliverySessionTests
             new HashSet<string> { "effect.glint.magic", "effect.glint.coins", "refreshed.effect.glint.magic", "refreshed.effect.glint.coins" });
 
         // A developer's world.classic-art draws the classic images again, with their pixels square.
-        Assert.True(session.ClassicArt("on").Succeeded);
+        Assert.True(session.Commands<IDeveloperSceneCommands>().ClassicArt("on").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(3), []));
         Dictionary<string, object?> classic = Assert.IsType<Dictionary<string, object?>>(engine.Published());
         Assert.All(Layers(classic), layer => Assert.Equal((false, false), (Assert.IsType<string>(layer["mediaId"]).StartsWith("refreshed.", StringComparison.Ordinal), layer["smooth"])));
@@ -560,7 +561,7 @@ public sealed class UiArtDeliverySessionTests
 
         // With refreshed art it lies as itself: its world image standing on the floor, as tall as it is on the paper
         // doll's body (a hundredth of a metre per doll unit), in its metal through the bare steel's mask.
-        Assert.True(session.ClassicArt("off").Succeeded);
+        Assert.True(session.Commands<IDeveloperSceneCommands>().ClassicArt("off").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(5), []));
         SpriteFromAtlasRequest item = appearance.SpriteRequests.Last();
         float height = (float)steel.Doll!.Height * .01F;

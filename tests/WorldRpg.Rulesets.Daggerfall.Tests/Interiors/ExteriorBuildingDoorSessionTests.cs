@@ -403,7 +403,7 @@ public sealed class ExteriorBuildingDoorSessionTests
         internal string InspectLabel(DaggerfallSiteBuildingId building)
         {
             DaggerfallDoorView door = Face(building);
-            WorldInteractionReadout readout = Session.CreateInteractionInspection().Inspect();
+            WorldInteractionReadout readout = Session.InteractionInspection().Inspect();
             return readout.Focus.Candidates.Single(candidate => candidate.Candidate.Target.Id == door.Entity.Value).Candidate.Label;
         }
 

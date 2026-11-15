@@ -1,3 +1,4 @@
+using WorldRpg.Kit;
 using System.Numerics;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
@@ -93,7 +94,7 @@ public sealed class DungeonTrapSessionTests
         Track health = stats.GetTrack(TrackId.Parse("health"));
         health.Maximum.BaseValue = 1000;
         health.SetCurrent(1000);
-        if (player) Assert.True(session.Teleport(fire.X, fire.Y, fire.Z, force: true).Succeeded);
+        if (player) Assert.True(session.Commands<IDeveloperPlacementCommands>().Teleport(fire.X, fire.Y, fire.Z, force: true).Succeeded);
         else
         {
             enemy.ApplyPose(new ActorPose(WorldPoint.From(fire), 0f));

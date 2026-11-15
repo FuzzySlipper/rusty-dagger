@@ -61,8 +61,11 @@ which `rusty-live-debug --origin URL` (`help`, `complete world.`) and the in-gam
 
 ## Implementation ownership
 
-`WorldRpgProduct` registers the Engine's debug module with current-session delegates. Kit owns the developer
-modules over optional session interfaces and the read-only targeting mechanisms. Dagger supplies the live ruleset
-facts: places, buildings and targets, control mappings, hostility, equipment and animation policy. Crew owns bounded
-input, time coordination and capture. A query never activates a target, spends a resource, replaces the selected
-target or overwrites the last gameplay evidence.
+A session offers its live-debug modules (`IGameSession.DebugCommands`), and `WorldRpgProduct` registers them each
+time it installs a session. A developer command is a `[DebugCommand]` member of a Kit `IDeveloper*Commands`
+interface, implemented by its owner in the ruleset's `Developer/`: a new command is that member and the owner's
+method. The playtest, spatial and interaction commands are the Engine's modules, built over the owners in the
+session's composition beside the rest of the list. Kit owns the read-only targeting mechanisms. Dagger supplies the
+live ruleset facts: places, buildings and targets, control mappings, hostility, equipment and animation policy. Crew
+owns bounded input, time coordination and capture. A query never activates a target, spends a resource, replaces the
+selected target or overwrites the last gameplay evidence.

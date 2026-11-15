@@ -6,89 +6,47 @@ namespace WorldRpg.Kit;
 /// Developer overrides of the player's possessions and progress, for testing what needs an item, money or a level the
 /// test would otherwise have to play for. Each goes through the ruleset's own owners (item creation, equipment,
 /// currency, skills, level-up, vitals), so the result behaves and saves as if earned. These exist only as live-debug
-/// commands; no game surface offers them.
+/// commands; no game surface offers them. Each <see cref="DebugCommandAttribute"/> here is the command: the Engine's
+/// catalogue is generated from it and calls the ruleset's owner that implements this.
 /// </summary>
-public interface IDeveloperPlayerSession
-{
-    /// <summary>Gives the player <paramref name="count"/> of an item, named as the ruleset names it, as if picked up.</summary>
-    DebugCommandResult Give(string item, int count);
-
-    /// <summary>Gives the player one of an item and wields it in the main hand, drawn, through the ordinary equip rules.</summary>
-    DebugCommandResult Hold(string item);
-
-    /// <summary>Gives the player a magic weapon and wields it in the main hand, drawn, through the ordinary equip rules.</summary>
-    DebugCommandResult HoldMagic();
-
-    /// <summary>Gives the player one of an item and wears it in the first slot that takes it, a shield on the off arm, through the ordinary equip rules.</summary>
-    DebugCommandResult Equip(string item);
-
-    /// <summary>Gives the player an amount of money.</summary>
-    DebugCommandResult Money(long amount);
-
-    /// <summary>Sets one of the player's skills to a value, within the ruleset's range.</summary>
-    DebugCommandResult Skill(string skill, int value);
-
-    /// <summary>Advances the player's skills until a level is earned and starts the ordinary level-up.</summary>
-    DebugCommandResult LevelUp();
-
-    /// <summary>Restores the player's vitals to their maximum.</summary>
-    DebugCommandResult Heal();
-
-    /// <summary>Teaches the player a spell, named as the ruleset names it, as if learned.</summary>
-    DebugCommandResult Spell(string spell);
-
-    /// <summary>Puts the player on a mount the ruleset names, giving them it if they have none, or back on foot.</summary>
-    DebugCommandResult Ride(string mount);
-
-    /// <summary>Reports the mount under the player: its speed and heading and how far the view looks past it.</summary>
-    DebugCommandResult RideState();
-
-    /// <summary>Changes the player into a beast form the ruleset names, through the ordinary change; none names the way back.</summary>
-    DebugCommandResult Morph(string form);
-
-    /// <summary>The items <see cref="Give"/> knows whose names contain <paramref name="filter"/>, and the skills <see cref="Skill"/> sets.</summary>
-    DebugCommandResult Items(string filter);
-}
-
-/// <summary>The live-debug commands over <see cref="IDeveloperPlayerSession"/>; the delegate follows session replacement.</summary>
-public sealed class DeveloperPlayerDebugModule(Func<IDeveloperPlayerSession> current) : IDebugCommandModule
+public interface IDeveloperPlayerCommands : IDebugCommandModule
 {
     [DebugCommand("player.give", Description = "Developer: give the player COUNT of ITEM (quoted when it has spaces, such as \"Steel Dagger\"; player.items lists names), as if picked up.")]
-    public DebugCommandResult Give(string item, int count) => current().Give(item, count);
+    DebugCommandResult Give(string item, int count);
 
     [DebugCommand("player.hold", Description = "Developer: give the player one ITEM and wield it in the main hand, drawn, through the ordinary equip rules (what was there stays in the pack).")]
-    public DebugCommandResult Hold(string item) => current().Hold(item);
+    DebugCommandResult Hold(string item);
 
     [DebugCommand("player.hold.magic", Description = "Developer: give the player a magic weapon and wield it in the main hand, drawn, through the ordinary equip rules.")]
-    public DebugCommandResult HoldMagic() => current().HoldMagic();
+    DebugCommandResult HoldMagic();
 
     [DebugCommand("player.equip", Description = "Developer: give the player one ITEM and wear it through the ordinary equip rules, a shield on the off arm (what was there stays in the pack).")]
-    public DebugCommandResult Equip(string item) => current().Equip(item);
+    DebugCommandResult Equip(string item);
 
     [DebugCommand("player.gold", Description = "Developer: give the player AMOUNT gold.")]
-    public DebugCommandResult Money(long amount) => current().Money(amount);
+    DebugCommandResult Money(long amount);
 
     [DebugCommand("player.skill", Description = "Developer: set the player's SKILL (player.items lists the ids) to VALUE.")]
-    public DebugCommandResult Skill(string skill, int value) => current().Skill(skill, value);
+    DebugCommandResult Skill(string skill, int value);
 
     [DebugCommand("player.levelup", Description = "Developer: raise the player's level skills until the next level is earned and open the ordinary level-up.")]
-    public DebugCommandResult LevelUp() => current().LevelUp();
+    DebugCommandResult LevelUp();
 
     [DebugCommand("player.heal", Description = "Developer: restore the player's vitals to their maximum.")]
-    public DebugCommandResult Heal() => current().Heal();
+    DebugCommandResult Heal();
 
     [DebugCommand("player.spell", Description = "Developer: teach the player SPELL, named or part of its name (quoted when it has spaces), as if learned.")]
-    public DebugCommandResult Spell(string spell) => current().Spell(spell);
+    DebugCommandResult Spell(string spell);
 
     [DebugCommand("player.ride", Description = "Developer: put the player on MOUNT (horse, cart), giving them it if they have none, or back on foot.")]
-    public DebugCommandResult Ride(string mount) => current().Ride(mount);
+    DebugCommandResult Ride(string mount);
 
     [DebugCommand("player.ride.state", Description = "Developer: the mount under the player, its speed in metres a second, its heading and how far the view looks past it.")]
-    public DebugCommandResult RideState() => current().RideState();
+    DebugCommandResult RideState();
 
     [DebugCommand("player.morph", Description = "Developer: change the player into beast FORM, cursing them with it if they aren't, or back with \"\".")]
-    public DebugCommandResult Morph(string form) => current().Morph(form);
+    DebugCommandResult Morph(string form);
 
     [DebugCommand("player.items", Description = "Developer: the item names player.give and player.hold take that contain FILTER (\"\" for all), and the skill ids player.skill takes.")]
-    public DebugCommandResult Items(string filter) => current().Items(filter);
+    DebugCommandResult Items(string filter);
 }
