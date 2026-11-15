@@ -85,6 +85,8 @@ public sealed class DaggerfallExteriorWorldTests
         Assert.Equal(Vector3.Zero, exterior.LocalCompensation);
         WorldPoint point = new(3f, 1f, -2f);
         Assert.Equal(point, exterior.ProfileToLocal(point));
+        // A relocation inside takes the profile's own frame, which with no origin is the scene's.
+        Assert.Equal(point.ToVector(), exterior.ProfilePosition(point));
 
         // The same owner over an exterior holds its town unloaded until the window admits it.
         site.ActiveProfile = new(inputs.ProfileKey.Site, DaggerfallWorldProfileKind.Exterior, "outside");
@@ -94,5 +96,10 @@ public sealed class DaggerfallExteriorWorldTests
             []);
         Assert.False(outside.ActiveLocationLoaded);
         Assert.False(outside.ExteriorResidencyInitialized);
+        // Outside, a relocation takes the site's local frame, which needs the active site this stage has none of, never
+        // the map-global projection, which would answer with the point unmoved.
+        Assert.Equal(point.ToVector(), outside.LocalToProfile(point.ToVector()));
+        Assert.Contains("requires an active Daggerfall site",
+            Assert.Throws<InvalidOperationException>(() => outside.ProfilePosition(point)).Message, StringComparison.Ordinal);
     }
 }

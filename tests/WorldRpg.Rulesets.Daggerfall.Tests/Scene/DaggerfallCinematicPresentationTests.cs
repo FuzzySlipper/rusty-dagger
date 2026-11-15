@@ -10,6 +10,17 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallCinematicPresentationTests
 {
     [Fact]
+    public void A_key_or_button_press_skips_a_cinematic_and_a_release_or_an_axis_does_not()
+    {
+        Assert.True(DaggerfallCinematicPresentation.SkipPressed([TestSessions.Input(InputEventKind.Key, InputEdge.Pressed)]));
+        Assert.True(DaggerfallCinematicPresentation.SkipPressed([TestSessions.Input(InputEventKind.ControllerButton, InputEdge.Pressed)]));
+        Assert.True(DaggerfallCinematicPresentation.SkipPressed([TestSessions.AttackDown]));
+        Assert.False(DaggerfallCinematicPresentation.SkipPressed([TestSessions.Input(InputEventKind.Key, InputEdge.Released)]));
+        Assert.False(DaggerfallCinematicPresentation.SkipPressed([TestSessions.Input(InputEventKind.ControllerAxis, InputEdge.Pressed)]));
+        Assert.False(DaggerfallCinematicPresentation.SkipPressed([]));
+    }
+
+    [Fact]
     public void Normal_reference_is_released_after_play_and_completion_releases_playback()
     {
         Harness state = new();

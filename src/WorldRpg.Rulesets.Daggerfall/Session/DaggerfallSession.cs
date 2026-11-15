@@ -290,8 +290,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     void IDaggerfallSiteTransitionHost.ReconcileArrivalPopulation() => Population.Reconcile();
 
-    void IDaggerfallExteriorHost.GroundArrivedActors() => _grounding.GroundAwaiting(actor =>
-        State.Actors.TryGet(actor.DurableId, out ActorState live) && live.Actor.Entity == actor.Actor.Entity);
+    void IDaggerfallExteriorHost.GroundArrivedActors() => _grounding.GroundAwaiting(State.Actors);
 
     void IDaggerfallExteriorHost.AdmitResidentCivilianAppearances(DaggerfallSiteProjection projection) =>
         Civilians.AdmitResidentAppearances(projection.Inputs, projection.Appearance);
@@ -300,20 +299,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     DaggerfallWorldProfileKey IDaggerfallTeleportSites.ActiveProfile => _activeProfileKey;
     DaggerfallWorldProfileKey? IDaggerfallTeleportSites.ReturnProfile => _sites.ReturnProfile;
     DaggerfallSiteReturnPose? IDaggerfallTeleportSites.ReturnPose => _site.ReturnPose;
-    Vector3 IDaggerfallTeleportSites.ProfilePosition(WorldPoint local) => ProfilePosition(local);
+    Vector3 IDaggerfallTeleportSites.ProfilePosition(WorldPoint local) => _exterior.ProfilePosition(local);
     bool IDaggerfallTeleportSites.TryRelocatePlayer(DaggerfallWorldProfileKey profile, DaggerfallSiteAnchor pose) =>
         _sites.TryRelocatePlayer(profile, pose);
     void IDaggerfallTeleportSites.RestoreReturnDestination(DaggerfallWorldProfileKey? profile, DaggerfallSiteReturnPose? pose) =>
         _sites.RestoreReturnDestination(profile, pose);
-
-    /// <summary>
-    /// A scene-local point in the active profile's own frame, as <see cref="DaggerfallSiteCrossing.TryRelocatePlayer"/>
-    /// takes it. Exterior profiles author poses in the site's local frame; LocalToProfile is the map-global projection
-    /// used by live population and map reads, so feeding it back to a relocation resolves an impossible exterior cell.
-    /// </summary>
-    private Vector3 ProfilePosition(WorldPoint local) => _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior
-        ? _exterior.ExteriorSitePosition(local).ToVector()
-        : _exterior.LocalToProfile(local.ToVector());
 
     bool IDaggerfallRestSurroundings.MustFeed => _vampirism.MustFeed;
     bool IDaggerfallRestSurroundings.EncounterPending => _encounters.HasPending(_activeProfileKey.LogicalId);
@@ -339,15 +329,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     DaggerfallInfectionConsumption IDaggerfallTransformationConsumer.Consume(DaggerfallInfectionTransition transition) =>
         transition.Kind == DaggerfallInfectionKind.Vampire ? BecomeVampire(transition) : _lycanthropy.Become(transition);
 
-    /// <summary>
-    /// Whether the player stands in sunlight. The donor reads daytime while not inside any structure,
-    /// so a shop, home or guild counts as darkness by day exactly as a dungeon does. The donor also
-    /// exempts prison; no product state reaches prison yet, so that input is false until one does.
-    /// </summary>
-    private bool InSunlight() => DaggerfallHeldEnchantments.InSunlight(
-        _time.Calendar.IsDay,
-        insideStructure: _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior,
-        inPrison: false);
+    /// <summary>Whether the player stands in sunlight (Magic's rule), from the calendar and the active profile.</summary>
+    private bool InSunlight() => DaggerfallHeldEnchantments.InSunlight(_time.Calendar.IsDay, _activeProfileKey.Kind);
 
     /// <summary>
     /// Whether the player stands in a holy place. The donor requires an interior whose admitted
@@ -368,16 +351,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     bool IDaggerfallMusicPlace.IsDay => _time.Calendar.IsDay;
     DaggerfallWeatherKind IDaggerfallMusicPlace.Weather => LocalWeather.Current;
 
-    /// <summary>Whether the player stands in a dungeon's castle block, the donor's IsPlayerInsideDungeonCastle.</summary>
-    /// <remarks>Music asks every update, so the scan stays a plain loop with no captured closure.</remarks>
-    private bool InsideCastleZone()
-    {
-        if (_sites.Projection.Inputs.ProfileKind != DaggerfallWorldProfileKind.Dungeon || State.PlayerControl.Position is not { } position) return false;
-        var point = position.ToVector();
-        foreach (DaggerfallAmbientZone zone in _sites.Projection.Inputs.AmbientZones)
-            if (zone.Kind == DaggerfallAmbientZoneKind.Castle && zone.Contains(point)) return true;
-        return false;
-    }
+    /// <summary>Whether the player stands in a dungeon's castle block (Content's rule over the projection's zones).</summary>
+    private bool InsideCastleZone() => DaggerfallAmbientZones.InsideCastle(_sites.Projection.Inputs.ProfileKind,
+        _sites.Projection.Inputs.AmbientZones, State.PlayerControl.Position);
 
     /// <summary>The building the player is inside, as the site records it.</summary>
     private DaggerfallInteriorBuilding? CurrentInteriorBuilding() =>
@@ -403,18 +379,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         _roster.Retire(durableId);
-    }
-
-    public void PublishInitial()
-    {
-        // A client that attaches starts with its game menu closed. A menu left open by a page that
-        // went away must not hold the world for a client that cannot see it.
-        _interactions.SetMenuOpen(false);
-        _hud.RequestArt();
-        // A fresh page holds none of the travel map's places either.
-        _hud.RequestTravelPlaces();
-        SyncWeatherContext();
-        PublishPresentation();
     }
 
     /// <summary>Captures meaningful state using the current product schema.</summary>
@@ -608,36 +572,14 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         AppendDamage(effect.Result, DaggerfallDamageCause.Effect, 0);
     }
 
-    private void AppendSpellTransfer(DaggerfallSpellTransferResult result)
-    {
-        if (result.HealthDamage is { } health) AppendEffectDamage(new(health));
-        if (result.TrackDamage is { } fatigue) AppendSpellTrackLoss(fatigue);
-        _facts.Append(new VitalTransferredFact(checked((long)result.Caster.Get<DurableEntityIdentity>().Identity.Value),
-            checked((long)result.Target.Get<DurableEntityIdentity>().Identity.Value), result.Track.Value, result.Amount,
-            result.ActualLoss, result.Restored, result.TargetDefeated, _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL));
-    }
+    private void AppendSpellTransfer(DaggerfallSpellTransferResult result) =>
+        DaggerfallDamageFacts.AppendTransfer(_facts, result, _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);
 
-    private void AppendSpellTrackLoss(DaggerfallSpellTrackResult result)
-    {
-        long source = checked((long)result.Source.Get<DurableEntityIdentity>().Identity.Value);
-        long target = checked((long)result.Target.Get<DurableEntityIdentity>().Identity.Value);
-        ulong generation = _latestUpdateGeneration ?? 1UL, step = _latestSimulationStep ?? 1UL;
-        _facts.Append(result.Track == TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)
-            ? new FatigueAppliedFact(source, target, result.CalculatedLoss, result.ActualLoss, generation, step)
-            : new SpellPointsAppliedFact(source, target, result.CalculatedLoss, result.ActualLoss, generation, step));
-    }
+    private void AppendSpellTrackLoss(DaggerfallSpellTrackResult result) =>
+        DaggerfallDamageFacts.AppendTrackLoss(_facts, result, _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);
 
     private void AppendDamage(DamageResult result, DaggerfallDamageCause cause, int struckBody) =>
         DaggerfallDamageFacts.Append(_facts, result, cause, struckBody, _latestUpdateGeneration ?? 1UL, _latestSimulationStep ?? 1UL);
-
-    private static bool PressesAnyKey(ReadOnlySpan<ProductInputEvent> input)
-    {
-        foreach (ProductInputEvent value in input)
-            if (value.Edge == InputEdge.Pressed && value.Kind is InputEventKind.Key or InputEventKind.PointerButton
-                    or InputEventKind.ControllerButton or InputEventKind.MappedDigital or InputEventKind.DirectDigital)
-                return true;
-        return false;
-    }
 
     /// <summary>The carried inventory as the HUD publishes it, eligibility included.</summary>
     internal InventoryPresentation ReadInventoryPresentation() => _inventoryUi.Read();
@@ -764,8 +706,5 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallUniqueItemAllocator UniqueItemAllocator => _uniqueItems;
 
     /// <summary>The name of the item a player effect comes from, for the active-effect status row.</summary>
-    internal string EffectItemName(ulong item) => State.ItemInstances.ContainsUnique(item)
-        && _definitions.TryResolveItem(new(State.ItemInstances.RequireUnique(item).ItemId), out DaggerfallItemDefinition? definition)
-        ? DaggerfallItemNames.Label(_definitions, definition, State.ItemInstances.RequireUnique(item))
-        : "an enchanted item";
+    internal string EffectItemName(ulong item) => DaggerfallItemNames.EffectItemName(_definitions, State.ItemInstances, item);
 }

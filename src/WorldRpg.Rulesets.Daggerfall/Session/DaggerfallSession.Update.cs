@@ -26,7 +26,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// call one of its fixed steps makes; <see cref="ResolveExhaustion"/> is what a collapse does across domains;
 /// <see cref="RemoveCarriedQuestItems"/> is what a quest's end does to the items it lent; <see cref="Arrest"/>, <see cref="ChooseLegal"/>,
 /// <see cref="BeginCourt"/>, <see cref="ApplyCourtSentence"/> and <see cref="ServePrison"/> are what the law's steps do; <see cref="ReconcileSummoningFoes"/>
-/// is how a summoning's hostiles arrive; <see cref="PublishPresentation"/> is what the HUD and the world show of a moment; <see cref="ApplyDeathMode"/> is what death does to the Dead screen, the camera and the player's sprite; <see cref="ExpireConjuredItems"/> is what a conjured item's last minute does;
+/// is how a summoning's hostiles arrive; <see cref="PublishPresentation"/> is what the HUD and the world show of a moment, and <see cref="PublishInitial"/> what a client that attaches is first shown; <see cref="ApplyDeathMode"/> is what death does to the Dead screen, the camera and the player's sprite; <see cref="ExpireConjuredItems"/> is what a conjured item's last minute does;
 /// <see cref="ApplyPlayerActs"/>, <see cref="ApplyDeferredPlayerActs"/> and <see cref="ReconcileTriggers"/> are the player's acts and the step's
 /// one trigger request; <see cref="React"/>, <see cref="ReactToAttack"/> and <see cref="ApplyAttackImpacts"/> are who hears a fact, an attack and
 /// the impacts; <see cref="CreateNewGame"/> is what a new game does; <see cref="ApplyProductMode"/> and <see cref="ApplyRelocation"/> are a mode
@@ -77,10 +77,8 @@ internal sealed partial class DaggerfallSession
             HudFrames.ObserveInputDevice(input);                                                 // UiProjection
             Cinematics?.Poll();                                                                   // Scene
             _openingCinematics.Poll();                                                            // Scene
-            // The donor ends a playing video on any key or button press (DaggerfallVidPlayerWindow,
-            // AnyKeyDownIgnoreAxisBinds). The shell draws a video above the product UI, so a press is
-            // also the only way to skip that the player can reach while one plays.
-            if ((_openingCinematics.IsActive || Cinematics?.ActiveSource is not null) && PressesAnyKey(input))
+            if ((_openingCinematics.IsActive || Cinematics?.ActiveSource is not null)
+                && DaggerfallCinematicPresentation.SkipPressed(input))                            // Scene
             {
                 if (_openingCinematics.IsActive) _openingCinematics.Skip();                       // Scene
                 else Cinematics?.Skip();                                                          // Scene
@@ -532,6 +530,20 @@ internal sealed partial class DaggerfallSession
         ResolveExhaustion();                                                                      // Condition
         PublishPresentation();                                                                    // UiProjection
         if (Music.Scored) Music.Advance(MusicContext(), _time.Calendar.DayNumber);                // Scene
+    }
+
+    /// <summary>
+    /// The first publication's list, for a client that attaches: it starts with its game menu closed, since a menu left
+    /// open by a page that went away must not hold the world for a client that cannot see it, and a fresh page holds
+    /// none of the art or the travel map's places, so both are asked for again before the weather and the publication.
+    /// </summary>
+    public void PublishInitial()
+    {
+        _interactions.SetMenuOpen(false);                                                         // Session: the open interactions
+        _hud.RequestArt();                                                                        // UiProjection
+        _hud.RequestTravelPlaces();                                                               // UiProjection
+        SyncWeatherContext();                                                                     // Exterior
+        PublishPresentation();                                                                    // UiProjection
     }
 
     /// <summary>

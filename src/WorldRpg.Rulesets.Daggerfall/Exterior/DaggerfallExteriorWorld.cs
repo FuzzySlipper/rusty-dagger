@@ -1405,6 +1405,16 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
     internal Vector3 LocalToProfile(Vector3 position) =>
         position - LocalCompensation - ActiveExteriorFrameOffset();
 
+    /// <summary>
+    /// A scene-local point in the active profile's own frame, as a relocation takes it. Exterior profiles author poses
+    /// in the site's local frame (<see cref="ExteriorSitePosition"/>); <see cref="LocalToProfile"/> is the map-global
+    /// projection live population and map reads use, so feeding it back to a relocation would resolve an impossible
+    /// exterior cell.
+    /// </summary>
+    internal Vector3 ProfilePosition(WorldPoint local) => ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior
+        ? ExteriorSitePosition(local).ToVector()
+        : LocalToProfile(local.ToVector());
+
     /// <summary>Moves the exterior origin under the player once it strays a cell away; true when it moved.</summary>
     internal bool RebaseExteriorIfNeeded()
     {

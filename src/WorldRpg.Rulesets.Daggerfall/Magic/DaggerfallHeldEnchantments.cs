@@ -641,10 +641,12 @@ internal sealed partial class DaggerfallHeldEnchantments : IDisposable
     };
 
     /// <summary>
-    /// Whether the player stands in sunlight, exactly as the donor reads it: daytime, not inside any
-    /// structure — a building counts as much as a dungeon — and not in prison.
+    /// Whether the player stands in sunlight, as the donor reads it: daytime and not inside any structure, so every
+    /// profile but the exterior is darkness by day, a shop, home or guild as much as a dungeon. The donor also exempts
+    /// prison; no product state reaches prison yet, so nothing here reads it.
     /// </summary>
-    internal static bool InSunlight(bool isDay, bool insideStructure, bool inPrison) => isDay && !insideStructure && !inPrison;
+    internal static bool InSunlight(bool isDay, DaggerfallWorldProfileKind profile) =>
+        isDay && profile == DaggerfallWorldProfileKind.Exterior;
 
     internal static double WeightMultiplier(int param) => param switch
     {

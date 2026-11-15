@@ -53,6 +53,31 @@ public sealed class DaggerfallActorRosterTests
         Assert.Equal(DurableIdentityClassification.Removed, stage.Identities.Classify(ActorsState.Identity(actor)));
     }
 
+    [Fact]
+    public void Actors_placed_while_their_floor_was_pending_are_grounded_once_it_is_live()
+    {
+        using ActorsState actors = new();
+        List<string> releases = [];
+        SpatialFake fake = SpatialFake.Create(new ContentSha256(1, 2, 3, 4), releases);
+        using SpatialMovementSystem spatial = new(fake.Service, new ContentFake(releases), null, DaggerfallTuning.Defaults.Spatial);
+        DaggerfallTuning tuning = DaggerfallTuning.Defaults;
+        DaggerfallActorGrounding grounding = new(fake.Service, spatial, tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance);
+        ActorState Create(long id) => actors.CreateActor(id, new EntityTypeId("rat"), TestSessions.HealthyMechanics(),
+            new ActorPose(new WorldPoint(0f, 0f, 0f), 0f), "health");
+        int asked = 0;
+        grounding.FloorPending = () => { asked++; return true; };
+        grounding.Ground(Create(200));
+        grounding.Ground(Create(201));
+        asked = 0;
+        grounding.FloorPending = () => { asked++; return false; };
+
+        grounding.GroundAwaiting(actors);
+        // Grounding asks for the floor once for each actor it settles; settled, none waits any longer.
+        Assert.Equal(2, asked);
+        grounding.GroundAwaiting(actors);
+        Assert.Equal(2, asked);
+    }
+
     private static DaggerfallDynamicActorSave Saved(long id) =>
         new(id, "rat", 0f, 0f, 0f, 0f, DaggerfallStatsSaveBoundary.Capture(TestSessions.HealthyMechanics(), new EntityId((ulong)id)))
         { Level = 1, SpawnDistance = 0, Passive = false };

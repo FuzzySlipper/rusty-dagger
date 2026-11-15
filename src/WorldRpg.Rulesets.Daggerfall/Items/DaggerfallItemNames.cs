@@ -35,4 +35,11 @@ internal static class DaggerfallItemNames
             weapon ? "longWeaponNameFormatString" : "longArmorNameFormatString")).TextRuns);
         return string.Format(CultureInfo.InvariantCulture, format, material, name);
     }
+
+    /// <summary>The name of the item a player effect comes from: its label while the item lives, else "an enchanted item".</summary>
+    internal static string EffectItemName(DaggerfallDefinitions definitions, DaggerfallItemInstances instances, ulong item) =>
+        instances.ContainsUnique(item)
+        && definitions.TryResolveItem(new(instances.RequireUnique(item).ItemId), out DaggerfallItemDefinition? definition)
+            ? Label(definitions, definition, instances.RequireUnique(item))
+            : "an enchanted item";
 }

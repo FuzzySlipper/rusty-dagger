@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text.Json;
+using WorldRpg.Kit.Controls;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -20,6 +21,17 @@ internal sealed record DaggerfallAmbientZone(string Id, DaggerfallAmbientZoneKin
 
 internal static class DaggerfallAmbientZones
 {
+    /// <summary>Whether a point stands in a dungeon's castle block, the donor's IsPlayerInsideDungeonCastle.</summary>
+    /// <remarks>Music asks every update, so the scan stays a plain loop with no captured closure.</remarks>
+    internal static bool InsideCastle(DaggerfallWorldProfileKind profile, IReadOnlyList<DaggerfallAmbientZone> zones, WorldPoint? position)
+    {
+        if (profile != DaggerfallWorldProfileKind.Dungeon || position is not { } at) return false;
+        Vector3 point = at.ToVector();
+        foreach (DaggerfallAmbientZone zone in zones)
+            if (zone.Kind == DaggerfallAmbientZoneKind.Castle && zone.Contains(point)) return true;
+        return false;
+    }
+
     internal static IReadOnlyList<DaggerfallAmbientZone> Read(ReadOnlyMemory<byte>? bytes, DaggerfallContentDiagnostics diagnostics)
     {
         if (bytes is null) { diagnostics.Add("Normalized world closure is absent for ambient zone admission."); return []; }

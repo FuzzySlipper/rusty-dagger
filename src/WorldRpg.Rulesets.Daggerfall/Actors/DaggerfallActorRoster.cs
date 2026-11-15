@@ -728,13 +728,16 @@ internal sealed class DaggerfallActorGrounding(ISpatialService spatialService, S
         actor.ApplyPose(new ActorPose(GroundPosition(actor.Position), actor.HeadingYawRadians));
     }
 
-    /// <summary>Settles the actors placed while their floor was pending, those of them still live.</summary>
-    internal void GroundAwaiting(Func<ActorState, bool> live)
+    /// <summary>
+    /// Settles the actors placed while their floor was pending, those of them still live: still in the store under their
+    /// identity, and as the same entity, not one retired and spawned again under it meanwhile.
+    /// </summary>
+    internal void GroundAwaiting(ActorsState actors)
     {
         ActorState[] awaiting = [.. _awaitingFloor];
         _awaitingFloor.Clear();
         foreach (ActorState actor in awaiting)
-            if (live(actor)) Ground(actor);
+            if (actors.TryGet(actor.DurableId, out ActorState live) && live.Actor.Entity == actor.Actor.Entity) Ground(actor);
     }
 
     /// <summary>

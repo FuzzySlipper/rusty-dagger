@@ -1096,7 +1096,7 @@ internal sealed partial class DaggerfallSession
                 Summoning, State.Quests, Law, DispelChoice, IdentifyChoice, CreateItemChoice, _openingCinematics, Cinematics);   // Developer
             _developerPlacement = new DaggerfallDeveloperPlacement(hold, engine, _spatial, _sites, _site, State.PlayerControl, State.Actors, State.Npcs,
                 definitions, FastTravel, Activation, Entrance, _horizon, _time, () => _mode, Presentation, (actor, pose) => SpawnActor(actor, pose),
-                ProfilePosition, BuildingLanding);                                                    // Developer
+                local => _exterior.ProfilePosition(local), BuildingLanding);                                                    // Developer
             _developerScene = new DaggerfallDeveloperScene(_time, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); }, _horizon, _sites,
                 LocalWeather, State.PlayerControl, definitions, classic => _classicArt = classic);   // Developer
             _developerGrants = new DaggerfallDeveloperGrants(hold, definitions, _random, State.Actors, State.PlayerControl, EquipmentMoves,

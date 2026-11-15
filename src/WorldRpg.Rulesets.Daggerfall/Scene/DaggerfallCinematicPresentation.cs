@@ -37,6 +37,20 @@ internal sealed class DaggerfallCinematicPresentation(IEngineContext engine, Dag
         _unreadResult = null;
     }
 
+    /// <summary>
+    /// Whether this input skips a playing cinematic: the donor ends a video on any key or button press
+    /// (DaggerfallVidPlayerWindow, AnyKeyDownIgnoreAxisBinds), never on an axis. The shell draws a video above the
+    /// product UI, so a press is also the only way to skip that the player can reach while one plays.
+    /// </summary>
+    internal static bool SkipPressed(ReadOnlySpan<ProductInputEvent> input)
+    {
+        foreach (ProductInputEvent value in input)
+            if (value.Edge == InputEdge.Pressed && value.Kind is InputEventKind.Key or InputEventKind.PointerButton
+                    or InputEventKind.ControllerButton or InputEventKind.MappedDigital or InputEventKind.DirectDigital)
+                return true;
+        return false;
+    }
+
     internal void Skip()
     {
         if (_active is not { } active) return;

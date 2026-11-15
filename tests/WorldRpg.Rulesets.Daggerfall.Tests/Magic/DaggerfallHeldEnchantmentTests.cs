@@ -251,11 +251,11 @@ public sealed class DaggerfallHeldEnchantmentTests
     public void Sunlight_is_the_donors_reading_of_daytime_outside_every_structure()
     {
         // The donor reads daytime while the player is not inside anything, so a building is darkness by
-        // day exactly as a dungeon is, and prison is darkness whatever the sky says.
-        Assert.True(DaggerfallHeldEnchantments.InSunlight(isDay: true, insideStructure: false, inPrison: false));
-        Assert.False(DaggerfallHeldEnchantments.InSunlight(isDay: false, insideStructure: false, inPrison: false));
-        Assert.False(DaggerfallHeldEnchantments.InSunlight(isDay: true, insideStructure: true, inPrison: false));
-        Assert.False(DaggerfallHeldEnchantments.InSunlight(isDay: true, insideStructure: false, inPrison: true));
+        // day exactly as a dungeon is.
+        Assert.True(DaggerfallHeldEnchantments.InSunlight(isDay: true, DaggerfallWorldProfileKind.Exterior));
+        Assert.False(DaggerfallHeldEnchantments.InSunlight(isDay: false, DaggerfallWorldProfileKind.Exterior));
+        Assert.False(DaggerfallHeldEnchantments.InSunlight(isDay: true, DaggerfallWorldProfileKind.Interior));
+        Assert.False(DaggerfallHeldEnchantments.InSunlight(isDay: true, DaggerfallWorldProfileKind.Dungeon));
     }
 
     [Fact]
