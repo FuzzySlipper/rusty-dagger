@@ -74,8 +74,8 @@ internal static class DaggerfallLocationArrival
     }
 
     /// <summary>
-    /// A location's source start markers: an assembled exterior states each of them; an authored closure
-    /// publishes its own start marker as its start.
+    /// A location's source start markers, which its exterior states whether assembled or an authored closure; an
+    /// exterior that states none receives the traveller at its start.
     /// </summary>
     private static IEnumerable<DaggerfallSiteAnchor> StartMarkers(DaggerfallSiteProfile exterior)
     {

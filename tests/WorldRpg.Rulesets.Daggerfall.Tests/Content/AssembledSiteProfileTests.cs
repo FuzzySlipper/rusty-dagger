@@ -3,6 +3,7 @@ using System.Text.Json;
 using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -30,6 +31,14 @@ public sealed class AssembledSiteProfileTests
 
     private static DaggerfallSiteProfile Published(string pack) =>
         DaggerfallSiteContent.Read(TestSessions.Data(Fixture.Value.Content), TestContentFiles.Read(TestData.PackPayload(pack)), TestPayload.Definitions);
+
+    /// <summary>A site pack read as the product reads it: beside the per-block publication, which gives its source start markers.</summary>
+    private static DaggerfallSiteProfile Composed(string pack)
+    {
+        using DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(TestSessions.Data(Fixture.Value.Content));
+        return DaggerfallSiteContent.Read(TestSessions.Data(Fixture.Value.Content), TestContentFiles.Read(TestData.PackPayload(pack)),
+            TestPayload.Definitions, media, Fixture.Value.Assembly.ExteriorStartMarkers);
+    }
 
     private static JsonElement Normalized(string closure) =>
         JsonDocument.Parse(TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports", closure, "normalized.json"))).RootElement.GetProperty("world");
@@ -167,6 +176,33 @@ public sealed class AssembledSiteProfileTests
         Assert.Contains(assembled.Geometry.Meshes, mesh => mesh.Path.StartsWith(DaggerfallWorldMedia.Root + "/geometry/placement/", StringComparison.Ordinal));
         HashSet<uint> slots = [.. assembled.Materials.Select(material => material.Slot)];
         Assert.All(assembled.Geometry.Meshes, mesh => Assert.All(mesh.Materials!, binding => Assert.Contains(binding.WorldMaterialSlot, slots)));
+    }
+
+    /// <summary>
+    /// Travel lands at a city's source start marker nearest the side it arrives from. Charing's closure start, its
+    /// scenario's, stands on a building's eave 3.2 m above the street, and travel landed there while the closure
+    /// published no markers of its own. Read as the product reads it, the closure lands where the assembled exterior
+    /// does: each side at its own gate, on the street.
+    /// </summary>
+    [Fact]
+    public void Travel_lands_at_charing_s_gates_on_the_street_whether_published_or_assembled()
+    {
+        DaggerfallSiteRecord site = TestPayload.Definitions.Locations.Records.Single(record => record.Id == Charing);
+        DaggerfallSiteProfile published = Composed("daggerfall.charing-exterior");
+        DaggerfallSiteProfile assembled = Fixture.Value.Assembly.Assemble(DaggerfallWorldProfileIds.Exterior(Charing));
+        WorldPoint[] gates = [.. Fixture.Value.Assembly.ExteriorStartMarkers(Charing)];
+        Assert.Equal(4, gates.Length);
+        Assert.All(gates, gate => Assert.Equal(.1F, gate.Y, 3));
+
+        DaggerfallSiteAnchor[] landings = [.. Enum.GetValues<DaggerfallArrivalSide>().Select(side =>
+        {
+            DaggerfallSiteAnchor landing = DaggerfallLocationArrival.Landing(published, site, side);
+            Assert.Equal(DaggerfallLocationArrival.Landing(assembled, site, side).Position, landing.Position);
+            return landing;
+        })];
+        Assert.All(landings, landing => Assert.Contains(landing.Position, gates));
+        Assert.Equal(4, landings.Select(landing => landing.Position).Distinct().Count());
+        Assert.DoesNotContain(published.RequireAnchor(DaggerfallLocationAssembly.StartAnchor).Position, landings.Select(landing => landing.Position));
     }
 
     /// <summary>The other published exteriors are the exteriors their locations assemble.</summary>

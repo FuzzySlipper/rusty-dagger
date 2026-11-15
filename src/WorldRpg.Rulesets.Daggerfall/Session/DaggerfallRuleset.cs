@@ -193,7 +193,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
 
             DaggerfallSiteProfiles profiles = DaggerfallSiteProfiles.Resolve(
                 sitePacks.Zip(headers, (pack, header) => new DaggerfallAuthoredSite(header,
-                    () => DaggerfallSiteContent.Read(data, pack.Payload, definitions, worldMedia.Value))),
+                    () => DaggerfallSiteContent.Read(data, pack.Payload, definitions, worldMedia.Value, assembly.ExteriorStartMarkers))),
                 assembly, Join);
             // The authored new-game definition names the site a new game starts at; pack order in the
             // bundle carries no meaning, so adding or reordering sites cannot move the start.

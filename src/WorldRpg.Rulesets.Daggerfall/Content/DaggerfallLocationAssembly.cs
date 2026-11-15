@@ -121,6 +121,32 @@ internal sealed class DaggerfallLocationAssembly
     private bool TryRecord(DaggerfallSiteId site, out DaggerfallSiteRecord? record) => _records.Value.TryGetValue(site, out record);
 
     /// <summary>
+    /// A location's source start markers in its exterior's frame, in block order, as its assembled exterior publishes
+    /// them (<see cref="StartMarkerAnchor"/>). An authored closure of that exterior shares the frame and publishes them
+    /// too, so travel arrives at a closure city where it would at the assembled one. Only the exterior's block
+    /// documents are read; a location with no exterior has none.
+    /// </summary>
+    internal IReadOnlyList<WorldPoint> ExteriorStartMarkers(DaggerfallSiteId site)
+    {
+        if (!TryRecord(site, out DaggerfallSiteRecord? record) || record!.Exterior is not { Blocks.Count: > 0 } exterior) return [];
+        DaggerfallSiteBlock[] placed = PlacedBlocks(exterior);
+        IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> documents = _blocks.Read(placed.Select(ExteriorBlockKey));
+        return [.. placed.SelectMany(block => StartMarkers(block, documents[ExteriorBlockKey(block)]))];
+    }
+
+    /// <summary>An exterior's blocks in the order its site closure places them.</summary>
+    private static DaggerfallSiteBlock[] PlacedBlocks(DaggerfallSiteExterior exterior) =>
+        [.. exterior.Blocks.OrderBy(block => block.X).ThenBy(block => block.Y).ThenBy(block => block.SourceName, StringComparer.Ordinal)];
+
+    private static DaggerfallWorldBlockKey ExteriorBlockKey(DaggerfallSiteBlock block) => new(DaggerfallWorldBlockKind.RmbExterior, block.SourceName);
+
+    /// <summary>Where an RMB block's own frame sits in its location's exterior: blocks run east along +X and north along -Z.</summary>
+    private static Vector3 RmbBlockOrigin(DaggerfallSiteBlock block) => new(block.X * RmbBlockSide, 0F, -(block.Y * RmbBlockSide));
+
+    private static IEnumerable<WorldPoint> StartMarkers(DaggerfallSiteBlock block, DaggerfallWorldBlockDocument document) =>
+        document.StartMarkers.Select(marker => WorldPoint.From(RmbBlockOrigin(block) + marker));
+
+    /// <summary>
     /// Reads the world media publication's mesh index: each mesh artifact with its digest and the material
     /// its slots draw.
     /// </summary>
@@ -201,7 +227,7 @@ internal sealed class DaggerfallLocationAssembly
         private Vector3? _enter;
         private readonly List<DaggerfallSitePortal> _portals = [];
         private readonly Dictionary<string, DaggerfallSiteAnchor> _anchors = new(StringComparer.Ordinal);
-        private readonly List<Vector3> _startMarkers = [];
+        private readonly List<WorldPoint> _startMarkers = [];
         private readonly List<DaggerfallWorldBlockTransitionDoor> _dungeonExits = [];
         private DaggerfallWorldBlockTransitionDoor? _lowestEntrance;
         private readonly List<DaggerfallCityGateDefinition> _gates = [];
@@ -211,14 +237,13 @@ internal sealed class DaggerfallLocationAssembly
         internal void Exterior()
         {
             DaggerfallSiteExterior exterior = record.Exterior!;
-            DaggerfallSiteBlock[] placed = [.. exterior.Blocks.OrderBy(block => block.X).ThenBy(block => block.Y).ThenBy(block => block.SourceName, StringComparer.Ordinal)];
-            IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> blocks = owner._blocks.Read(
-                placed.Select(block => new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.RmbExterior, block.SourceName)));
+            DaggerfallSiteBlock[] placed = PlacedBlocks(exterior);
+            IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> blocks = owner._blocks.Read(placed.Select(ExteriorBlockKey));
             HashSet<(int X, int Z)> clear = [];
             foreach (DaggerfallSiteBlock block in placed)
             {
-                DaggerfallWorldBlockDocument document = blocks[new(DaggerfallWorldBlockKind.RmbExterior, block.SourceName)];
-                Vector3 origin = new(block.X * RmbBlockSide, 0F, -(block.Y * RmbBlockSide));
+                DaggerfallWorldBlockDocument document = blocks[ExteriorBlockKey(block)];
+                Vector3 origin = RmbBlockOrigin(block);
                 Place(document, $"block/{block.X}/{block.Y}", block.X * RmbBlockCells, -(block.Y * RmbBlockCells));
                 HashSet<string> gates = [.. document.Gates.Select(gate => gate.ModelId)];
                 foreach (DaggerfallWorldBlockModel model in document.Models.Where(model => !gates.Contains(model.Id))) Draw(model, origin);
@@ -228,7 +253,7 @@ internal sealed class DaggerfallLocationAssembly
                 foreach (DaggerfallWorldBlockGate gate in document.Gates) CityGate(gate, origin, id => PlaceId(id, block.X, block.Y));
                 if (document.StartMarker is { } start) _start ??= origin + start;
                 if (document.EnterMarker is { } enter) _enter ??= origin + enter;
-                _startMarkers.AddRange(document.StartMarkers.Select(marker => origin + marker));
+                _startMarkers.AddRange(StartMarkers(block, document));
                 PlaceStaticNpcs(document, origin, id => PlaceId(id, block.X, block.Y));
                 foreach (JsonNode? light in document.Section("lights")) Append("lights", Moved(light, origin, id => PlaceId(id, block.X, block.Y)));
                 foreach (JsonNode? flat in document.Section("billboards")) Append("billboards", Moved(flat, origin, id => PlaceId(id, block.X, block.Y)));
@@ -491,7 +516,7 @@ internal sealed class DaggerfallLocationAssembly
             if (key.Kind == DaggerfallWorldProfileKind.Dungeon && _enter is { } enterMarker)
                 Anchor(EnterAnchor, new WorldPoint(enterMarker.X, enterMarker.Y, enterMarker.Z), 0F);
             for (int index = 0; index < _startMarkers.Count; index++)
-                Anchor(StartMarkerAnchor(index), new WorldPoint(_startMarkers[index].X, _startMarkers[index].Y, _startMarkers[index].Z), 0F);
+                Anchor(StartMarkerAnchor(index), _startMarkers[index], 0F);
             // Leaving the dungeon lands outside its lowest entrance, facing away from it (PositionPlayerToDungeonExit).
             if (_lowestEntrance is { } entrance)
                 Anchor(DungeonEntranceAnchor, Landing(entrance.Position with { Y = entrance.Bounds.Minimum.Y }, entrance.Normal, presentation.DungeonExitLanding),

@@ -16,18 +16,28 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>Reads one authored site pack's scenario facts and normalized world closure; no project entity names participate in runtime selection.</summary>
 internal static partial class DaggerfallSiteContent
 {
+    /// <summary>
+    /// Reads one site pack on its own, as a fixture does: with no per-block publication beside it, an exterior closure
+    /// publishes no source start markers.
+    /// </summary>
     internal static DaggerfallSiteProfile Read(DaggerfallData content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
     {
         using DaggerfallWorldMedia product = DaggerfallWorldMedia.Read(content);
-        return Read(content, payload, definitions, product);
+        return Read(content, payload, definitions, product, _ => []);
     }
 
     /// <summary>
     /// Reads one site pack against the product-wide world media its closure references, which the caller
     /// reads once for every site it admits.
     /// </summary>
-    internal static DaggerfallSiteProfile Read(DaggerfallData content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions, DaggerfallWorldMedia product)
+    /// <param name="startMarkers">
+    /// A location's source start markers in its exterior's frame (<see cref="DaggerfallLocationAssembly.ExteriorStartMarkers"/>),
+    /// which an exterior closure publishes as the assembled exterior does.
+    /// </param>
+    internal static DaggerfallSiteProfile Read(DaggerfallData content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions, DaggerfallWorldMedia product,
+        Func<DaggerfallSiteId, IReadOnlyList<WorldPoint>> startMarkers)
     {
+        ArgumentNullException.ThrowIfNull(startMarkers);
         ArgumentNullException.ThrowIfNull(product);
         DaggerfallContentDiagnostics diagnostics = new();
         try
@@ -54,6 +64,7 @@ internal static partial class DaggerfallSiteContent
                 start,
                 definitions,
                 product,
+                startMarkers,
                 diagnostics);
             diagnostics.ThrowIfAny();
             return inputs;
@@ -70,7 +81,8 @@ internal static partial class DaggerfallSiteContent
         }
     }
 
-    private static DaggerfallSiteProfile ReadNormalizedClosure(DaggerfallData content, AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallWorldMedia product, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallSiteProfile ReadNormalizedClosure(DaggerfallData content, AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallWorldMedia product,
+        Func<DaggerfallSiteId, IReadOnlyList<WorldPoint>> startMarkers, DaggerfallContentDiagnostics diagnostics)
     {
         JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
         string publicationRoot = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics);
@@ -112,6 +124,12 @@ internal static partial class DaggerfallSiteContent
         AuthoredWorldAppearance worldAppearance = ReadWorldAppearance(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(world, "appearance", diagnostics), "world.appearance", diagnostics), diagnostics);
         IReadOnlyList<DaggerfallSitePortal> portals = ReadSitePortals(world, diagnostics);
         IReadOnlyList<DaggerfallSiteAnchor> anchors = ReadSiteAnchors(world, start, diagnostics);
+        // Travel lands at a city's source start marker nearest the side it arrives from. A closure's start is its
+        // scenario's, which can be anywhere (Charing's stood on a roof), so an exterior closure publishes its location's
+        // markers as the assembled exterior does, in the frame the two share.
+        if (profileKind == DaggerfallWorldProfileKind.Exterior && start.Site is { } markedSite)
+            anchors = [.. anchors, .. startMarkers(markedSite).Select((marker, index) =>
+                new DaggerfallSiteAnchor(DaggerfallLocationAssembly.StartMarkerAnchor(index), marker, 0F, 0F))];
         ReadOnlyMemory<byte> normalizedWorld = files.GetExactlyOne(normalizedPath);
         if (profileKind == DaggerfallWorldProfileKind.Dungeon && ReadEnterMarker(normalizedWorld, diagnostics) is { } enterMarker
             && anchors.All(anchor => anchor.Id != DaggerfallLocationAssembly.EnterAnchor))
