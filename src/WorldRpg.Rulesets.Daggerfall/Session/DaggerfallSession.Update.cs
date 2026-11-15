@@ -1493,4 +1493,36 @@ internal sealed partial class DaggerfallSession
         State.Quests.ObserveFoeRemoval(npcId);                                                    // Quests
         return true;
     }
+
+    /// <summary>
+    /// The new game's list: the committed character's kit and spells are made before the title session is replaced, so
+    /// a refusal leaves the title as it was; the new session (built at the bundle's start site) then stands the
+    /// character where it begins, commits its choices, swaps the player definition's loadout for the kit, applies the
+    /// background's standing, teaches the spells, fills the tracks and starts the new-game quests. A load restores its
+    /// own inventory instead.
+    /// </summary>
+    public IGameSession CreateNewGame()
+    {
+        DaggerfallCharacterCreationChoices choices = _creation.NewGameChoices(_newGameInitialized);             // Character
+        DaggerfallStartingKit kit = DaggerfallStartingKit.Make(_definitions, _random, choices, State.Character.Career);   // Items
+        string[] spells = _creation.NewGameSpells(State.Character.Career, choices.CustomCareer is not null);   // Character
+        var replacement = StartNew(_engine, _composition);                                                     // Session
+        try
+        {
+            replacement._sites.PlaceNewCharacter();                                                            // Interiors
+            replacement._creation.CommitNewCharacter(choices);                                                 // Character
+            DaggerfallStartingKit.ClearLoadout(replacement.State.Inventory, replacement.State.Equipment,
+                replacement.State.ItemInstances, replacement.State.Actors.Entities);                           // Items
+            kit.Grant(replacement.State.Inventory, replacement.State.ItemInstances, replacement._uniqueItems,
+                replacement.State.Actors.Entities, replacement.EquipmentMoves, replacement.State.Currency.ReceiveGold);   // Items, its gold Economy's
+            replacement.State.Social.ApplyBackground(replacement._definitions, replacement.State.Character.Career,
+                choices.Background!);                                                                          // Society
+            replacement._creation.CompleteNewCharacter(spells, replacement.State.Actors.Player.Stats);         // Character
+            replacement._newGameInitialized = true;                                                            // Session
+            replacement.State.Quests.StartNewGame(_composition.NewGameQuests);                                 // Quests
+            replacement.Presentation.SetOutcome($"New game initialized for {choices.Name}.");                  // UiProjection
+            return replacement;
+        }
+        catch { replacement.Dispose(); throw; }
+    }
 }

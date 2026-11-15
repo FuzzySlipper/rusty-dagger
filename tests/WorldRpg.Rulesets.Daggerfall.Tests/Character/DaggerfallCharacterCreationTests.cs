@@ -21,6 +21,47 @@ public sealed class DaggerfallCharacterCreationTests
         new(name, race, gender, 3, 1, career, null, null, null, null, null, null, null, null, null);
 
     [Fact]
+    public void A_new_game_takes_the_committed_character_its_career_spells_and_full_tracks()
+    {
+        var (creation, character) = Create();
+        Assert.False(creation.Committed);
+        Assert.Throws<ArgumentException>(() => creation.NewGameChoices(newGameBegun: false));
+        Assert.True(creation.OpenFresh());
+        Assert.False(creation.OpenFresh());
+        creation.QuickStart(Sheet());
+        Assert.True(creation.Committed);
+        Assert.Throws<ArgumentException>(() => creation.NewGameChoices(newGameBegun: true));
+
+        DaggerfallCharacterCreationChoices choices = creation.NewGameChoices(newGameBegun: false);
+        Assert.Equal(("Aubk-i", "khajiit", "class08"), (choices.Name, choices.RaceId, choices.CareerId));
+        string[] spells = creation.NewGameSpells(character.Career, custom: false);
+        Assert.Equal(TestPayload.Definitions.NewGame.Careers.Single(value => value.Career == "class08").Spells, spells);
+
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
+        StatsComponent stats = new DaggerfallMechanicsState().CreateStats(player,
+            DaggerfallPlayerVitals.Initial(player.Stats, definitions.Catalogs.RequireCareer("class00")));
+        DaggerfallCharacterState fresh = new(definitions, stats, player);
+        DaggerfallCharacterCreation newGame = new(fresh, definitions, RandomMinimum.Create());
+        newGame.CommitNewCharacter(choices);
+        Assert.Equal(("khajiit", "class08"), (fresh.Race.Id, fresh.Career.Id));
+        foreach (var (_, track) in stats.Tracks) track.SetCurrent(0, clamp: true);
+        newGame.CompleteNewCharacter(spells, stats);
+        Assert.All(stats.Tracks, entry => Assert.Equal(entry.Value.Maximum.Value, entry.Value.Current));
+        Assert.All(spells, spell => Assert.Contains(spell, fresh.KnownSpells));
+    }
+
+    [Theory]
+    [InlineData("destruction", true)]
+    [InlineData("long-blade", false)]
+    public void A_custom_class_starts_with_magic_only_from_a_primary_or_major_school_of_magic(string primary, bool magic)
+    {
+        var (creation, character) = Create();
+        DaggerfallCareerDefinition career = character.Career with { PrimarySkills = [primary], MajorSkills = [] };
+        Assert.Equal(magic ? TestPayload.Definitions.NewGame.CustomMagicSpells : [], creation.NewGameSpells(career, custom: true));
+    }
+
+    [Fact]
     public void Choices_open_once_and_an_edit_needs_an_open_draft()
     {
         var (creation, character) = Create();

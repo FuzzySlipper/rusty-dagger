@@ -167,6 +167,26 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     // Character creation from the title screen.
     private readonly DaggerfallCharacterCreation _creation;
+    private readonly DaggerfallSessionComposition _composition;
+
+    /// <summary>
+    /// Whether this run draws classic art in place of the refreshed art set: a developer's comparison, switched by
+    /// <c>world.classic-art</c>, never offered to a player nor kept past the run.
+    /// </summary>
+    private bool _classicArt;
+
+    /// <summary>The refreshed art set the session draws, or null when a developer switched to classic art or the bundle carries none.</summary>
+    private DaggerfallArtReplacements? DrawnArt => _classicArt ? null : _composition.ArtReplacements;
+    private bool _newGameInitialized;
+    public bool RequiresCharacterInitialization => !_newGameInitialized;
+
+    public bool HasCommittedCharacter => !_newGameInitialized && _creation.Committed;
+
+    public void OpenCharacterCreation()
+    {
+        if (_newGameInitialized || !_creation.OpenFresh()) return;
+        Presentation.SetOutcome("Character choices opened.");
+    }
     // The player's control settings: bindings, look, pad, sound levels, ground cover and action-driven time.
     private readonly DaggerfallPlayerControls _controls;
     public string CapturePlayerPreferences() => _controls.Capture();

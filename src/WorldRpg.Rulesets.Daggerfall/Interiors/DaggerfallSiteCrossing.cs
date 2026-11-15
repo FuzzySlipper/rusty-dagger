@@ -252,6 +252,22 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
     }
 
     /// <summary>Recalls a saved pose through the same admission and movement owner as named anchors.</summary>
+    /// <summary>
+    /// Where a new character starts in a profile: a dungeon's Enter marker rather than the door-side Start marker
+    /// (StartGameBehaviour.StartNewCharacter prefers it; Privateer's Hold's is the quiet cave); null to stay put.
+    /// </summary>
+    internal static DaggerfallSiteAnchor? NewCharacterAnchor(DaggerfallWorldProfileKind kind, IReadOnlyDictionary<string, DaggerfallSiteAnchor> anchors) =>
+        kind == DaggerfallWorldProfileKind.Dungeon && anchors.TryGetValue(DaggerfallLocationAssembly.EnterAnchor, out DaggerfallSiteAnchor? enter)
+            ? enter : null;
+
+    /// <summary>Stands a new character where the start profile has them begin.</summary>
+    internal void PlaceNewCharacter()
+    {
+        DaggerfallWorldProfileKey start = ActiveProfile;
+        if (NewCharacterAnchor(start.Kind, Projection.Inputs.Anchors) is { } anchor)
+            _ = TryRelocatePlayer(start, anchor);
+    }
+
     internal bool TryRelocatePlayer(DaggerfallWorldProfileKey profile, DaggerfallSiteAnchor pose)
     {
         profile.Validate();

@@ -115,6 +115,19 @@ internal sealed class DaggerfallSocialState : IDaggerfallReactionSources
     /// <summary>Sets the selected BIOG reaction assignment reconstructed from the character save.</summary>
     internal void SetBiographyReactionModifier(int value) => _biographyReactionModifier = value;
 
+    /// <summary>
+    /// What a new character's background does to standing: the biography's reaction modifier and the reputations it
+    /// grants, read from Character's background policy.
+    /// </summary>
+    internal void ApplyBackground(DaggerfallDefinitions definitions, DaggerfallCareerDefinition career, DaggerfallCharacterBackgroundSave background)
+    {
+        SetBiographyReactionModifier(background.Modifiers.Reaction);
+        foreach ((int faction, int amount) in DaggerfallCharacterBackgroundPolicy.FactionReputations(definitions, career, background))
+            ChangeFactionReputation(faction, amount, DaggerfallFactionReputationChange.Propagate);
+        foreach ((int group, int amount) in DaggerfallCharacterBackgroundPolicy.SocialReputations(definitions, career, background))
+            ChangePersonalReputation(group, amount);
+    }
+
     internal int ReactionModifier(int socialGroup)
     {
         RequireSocialGroup(socialGroup);

@@ -24,6 +24,57 @@ internal sealed class DaggerfallCharacterCreation(DaggerfallCharacterState chara
     /// <summary>The name a quick-started character takes when the draft has none.</summary>
     internal const string QuickStartName = "Adventurer";
 
+    /// <summary>Opens fresh choices from the title screen, unless a draft is already open.</summary>
+    internal bool OpenFresh()
+    {
+        if (character.Pending is not null) return false;
+        character.BeginFreshChoices(random);
+        return true;
+    }
+
+    /// <summary>Whether a complete character waits, committed, for its new game.</summary>
+    internal bool Committed => character.Pending is null && character.Background is not null;
+
+    /// <summary>The committed character's choices for its new game; refused before a whole character is committed or once a new game has begun.</summary>
+    internal DaggerfallCharacterCreationChoices NewGameChoices(bool newGameBegun)
+    {
+        if (newGameBegun || character.Pending is not null || character.Background is null)
+            throw new ArgumentException("Commit a complete character before beginning the new game.");
+        var captured = character.Capture();
+        return new DaggerfallCharacterCreationChoices(captured.Name, captured.RaceId, captured.Gender,
+            captured.FaceIndex, captured.Reflexes, captured.CareerId, captured.CustomCareer, captured.Background);
+    }
+
+    /// <summary>
+    /// The spells a new character knows: its career's, or for a custom class the custom magic spells when one of its
+    /// primary or major skills is a school of magic. Each must be a published spell.
+    /// </summary>
+    internal string[] NewGameSpells(DaggerfallCareerDefinition career, bool custom)
+    {
+        string[] spells = custom
+            ? career.PrimarySkills.Concat(career.MajorSkills).Any(skill => skill is
+                "destruction" or "restoration" or "illusion" or "alteration" or "thaumaturgy" or "mysticism")
+                ? definitions.NewGame.CustomMagicSpells : []
+            : definitions.NewGame.Careers.Single(value => value.Career == career.Id).Spells;
+        foreach (string spell in spells) _ = definitions.Magic.Spells[spell];
+        return spells;
+    }
+
+    /// <summary>The new session's character takes the committed choices.</summary>
+    internal void CommitNewCharacter(DaggerfallCharacterCreationChoices choices)
+    {
+        character.ReplacePending(choices);
+        character.CommitChoices();
+    }
+
+    /// <summary>The new character learns its spells and starts with every track full.</summary>
+    internal void CompleteNewCharacter(IEnumerable<string> spells, Rusty.Engine.Mechanics.StatsComponent stats)
+    {
+        foreach (string spell in spells) character.LearnSpell(spell);
+        foreach (var (_, track) in stats.Tracks)
+            track.SetCurrent(track.Maximum.Value, clamp: true);
+    }
+
     internal void Begin()
     {
         if (character.Pending is not null) throw new ArgumentException("Character choices are already open.");

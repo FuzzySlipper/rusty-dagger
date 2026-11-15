@@ -859,6 +859,16 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     }
 
 
+    /// <summary>Starts the bundle's new-game quests, each active under its own new-game instance.</summary>
+    internal void StartNewGame(IEnumerable<string> sourceFiles)
+    {
+        foreach (string sourceFile in sourceFiles)
+        {
+            DaggerfallQuestSourceDefinition source = _definitions.QuestSources.Resolve(sourceFile);
+            Start(new("new-game:" + source.Name, sourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], []));
+        }
+    }
+
     internal DaggerfallQuestInstanceSave Start(DaggerfallQuestInstanceSave instance)
     {
         ArgumentNullException.ThrowIfNull(instance);
