@@ -47,4 +47,20 @@ public sealed class InventoryGridLayoutTests
         layout.Arrange(["a"]);
         Assert.Equal((0, 1, 2), (layout.Position("a"), layout.Position("d"), layout.Position("b")));
     }
+
+    [Fact]
+    public void Restoring_sets_the_saved_positions_with_their_gaps_and_refuses_a_position_used_twice_or_outside()
+    {
+        InventoryGridLayout layout = new(4);
+        layout.Reconcile(["a", "b", "c"]);
+        ulong revision = layout.Revision;
+        layout.Restore([new("c", 0), new("a", 3)]);
+        Assert.Equal((0, 3), (layout.Position("c"), layout.Position("a")));
+        Assert.Null(layout.Position("b"));
+        Assert.True(layout.Revision > revision);
+        Assert.Throws<ArgumentException>(() => layout.Restore([new("a", 1), new("b", 1)]));
+        Assert.Throws<ArgumentException>(() => layout.Restore([new("a", 1), new("a", 2)]));
+        Assert.Throws<ArgumentException>(() => layout.Restore([new("a", 4)]));
+        Assert.Equal((0, 3), (layout.Position("c"), layout.Position("a")));
+    }
 }

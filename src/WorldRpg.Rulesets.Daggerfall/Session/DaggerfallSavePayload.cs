@@ -49,6 +49,8 @@ internal sealed record DaggerfallSavePayload(
     [property: JsonRequired] DaggerfallCharacterSave? Character = null,
     DaggerfallLevelUpSave? LevelUp = null)
 {
+    /// <summary>The cell of every item in the player's pack grid, as the player left them.</summary>
+    [JsonRequired] public DaggerfallPackLayoutSave Pack { get; init; } = null!;
     [JsonRequired]
     public DaggerfallWorldVariantSave[] WorldVariants { get; init; } = [];
     [JsonRequired]
@@ -664,6 +666,7 @@ internal sealed record DaggerfallSavePayload(
         if (ReadySpell?.ItemId is ulong readySource && !uniqueItems.ContainsKey(readySource))
             throw new ArgumentException($"Saved ready spell '{ReadySpell.SpellKey}' names missing item {readySource}.");
         RequireLiveUniqueItems(savedLedger, uniqueItems.Keys);
+        (Pack ?? throw new ArgumentException("The save has no pack layout.")).Validate(Inventory);
         Encounters.Validate();
         if (Encounters.Resolved.Any(encounter => !StringComparer.Ordinal.Equals(encounter.ProfileId, inputs.ProfileKey.LogicalId)
                 && profiles?.TryGetLogicalProfile(encounter.ProfileId, out _) != true))

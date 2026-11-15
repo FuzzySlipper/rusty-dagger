@@ -74,10 +74,12 @@ internal sealed class DaggerfallEquipmentMoves(
     internal const int GridCapacity = 80;
     private readonly InventoryGridLayout _layout = new(GridCapacity);
 
+    private const string UniquePrefix = "unique:";
+    private const string StackPrefix = "stack:";
     internal static string LayoutKey(ulong entity) =>
-        $"unique:{entity.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        UniquePrefix + entity.ToString(System.Globalization.CultureInfo.InvariantCulture);
     internal static string LayoutKey(UniqueItem item) => LayoutKey(item.EntityId);
-    internal static string LayoutKey(InventoryStackId stack) => $"stack:{stack.Value}";
+    internal static string LayoutKey(InventoryStackId stack) => StackPrefix + stack.Value;
 
     internal InventoryView ReadInventory() => inventory.Read();
     internal EquipmentRead ReadEquipment() => equipment.Read();
@@ -99,6 +101,32 @@ internal sealed class DaggerfallEquipmentMoves(
         HashSet<ulong> equipped = equipment.Read().Assignments.Select(assignment => assignment.Item.EntityId).ToHashSet();
         _layout.Reconcile(current.Stacks.Select(stack => LayoutKey(stack.Id))
             .Concat(current.UniqueItems.Where(item => !equipped.Contains(item.Entity.Value)).Select(item => LayoutKey(new UniqueItem(item.Entity.Value, new InventoryItemId(item.Definition.Value))))));
+    }
+
+    /// <summary>
+    /// The pack's cells as they stand, for a save: a stack by its id, a unique item by its durable identity,
+    /// since layout keys name session-local entities.
+    /// </summary>
+    internal DaggerfallPackLayoutSave CaptureLayout()
+    {
+        ReconcileLayout();
+        return new([.. _layout.Positions.OrderBy(entry => entry.Value).Select(entry => entry.Key.StartsWith(StackPrefix, StringComparison.Ordinal)
+            ? new DaggerfallPackPlaceSave(entry.Value, StackId: entry.Key[StackPrefix.Length..])
+            : new DaggerfallPackPlaceSave(entry.Value, ItemEntityId: equipment.GetDurableItemId(new Rusty.Engine.Entities.EntityId(
+                ulong.Parse(entry.Key.AsSpan(UniquePrefix.Length), System.Globalization.CultureInfo.InvariantCulture))).Value))]);
+    }
+
+    /// <summary>Puts the restored pack's items back in the cells a save left them in. The inventory is restored first.</summary>
+    internal void RestoreLayout(DaggerfallPackLayoutSave saved)
+    {
+        ArgumentNullException.ThrowIfNull(saved);
+        Dictionary<ulong, string> uniques = inventory.Read().UniqueItems
+            .ToDictionary(item => equipment.GetDurableItemId(item.Entity).Value, item => LayoutKey(item.Entity.Value));
+        _layout.Restore(saved.Places.Select(place => KeyValuePair.Create(place.StackId is { } stack
+            ? LayoutKey(InventoryStackId.Parse(stack))
+            : uniques.TryGetValue(place.ItemEntityId!.Value, out string? key) ? key
+            : throw new InvalidOperationException($"The saved pack places item {place.ItemEntityId} in cell {place.Cell}, but the restored pack does not hold it."), place.Cell)));
+        ReconcileLayout();
     }
 
     /// <summary>Lays the pack out in the given order of layout keys, from the first cell.</summary>
@@ -320,17 +348,17 @@ internal sealed class DaggerfallEquipmentMoves(
         occupant = new UniqueItem(0, new InventoryItemId(string.Empty));
         isStack = false;
         InventoryView current = inventory.Read();
-        if (key.StartsWith("unique:", StringComparison.Ordinal)
-            && ulong.TryParse(key.AsSpan("unique:".Length), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out ulong entity))
+        if (key.StartsWith(UniquePrefix, StringComparison.Ordinal)
+            && ulong.TryParse(key.AsSpan(UniquePrefix.Length), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out ulong entity))
         {
             if (!current.UniqueItems.Any(entry => entry.Entity.Value == entity)) return false;
             var found = current.UniqueItems.First(entry => entry.Entity.Value == entity);
             occupant = new UniqueItem(entity, new InventoryItemId(found.Definition.Value));
             return true;
         }
-        if (key.StartsWith("stack:", StringComparison.Ordinal))
+        if (key.StartsWith(StackPrefix, StringComparison.Ordinal))
         {
-            string id = key.Substring("stack:".Length);
+            string id = key[StackPrefix.Length..];
             if (!current.Stacks.Any(entry => entry.Id.Value == id)) return false;
             isStack = true;
             return true;
@@ -364,3 +392,39 @@ internal sealed class DaggerfallEquipmentMoves(
     // WeaponManager.EquipDelayTimes, indexed by the donor's retained weapon/armor group index.
     private static readonly int[] EquipDelayMilliseconds = [500, 700, 1200, 900, 900, 1800, 1600, 1700, 1700, 3000, 3400, 2000, 2200, 2000, 2200, 2000, 4000, 5000];
 }
+
+/// <summary>The pack grid as the player left it: the cell of every placed item, in the player's save.</summary>
+internal sealed record DaggerfallPackLayoutSave(DaggerfallPackPlaceSave[] Places)
+{
+    /// <summary>
+    /// Refuses a layout the saved pack disagrees with, since loading it would show an order the player never had:
+    /// a cell outside the grid or used twice, a place naming an item the pack does not hold or that is worn, or a
+    /// pack item with no cell while the grid has room.
+    /// </summary>
+    internal void Validate(DaggerfallInventorySave pack)
+    {
+        ArgumentNullException.ThrowIfNull(Places);
+        HashSet<string> carried = [.. pack.Stacks.Select(stack => StackKey(stack.StackId)),
+            .. pack.UniqueItems.Select(item => item.EntityId).Except(pack.Equipment.Select(worn => worn.ItemEntityId)).Select(UniqueKey)];
+        HashSet<int> cells = [];
+        HashSet<string> placed = [];
+        foreach (DaggerfallPackPlaceSave place in Places)
+        {
+            if (place is null || (place.StackId is null) == (place.ItemEntityId is null))
+                throw new ArgumentException($"The saved pack's cell {place?.Cell} names no item or two: a place names exactly one stack or one item.");
+            string item = place.StackId is { } stack ? StackKey(stack) : UniqueKey(place.ItemEntityId!.Value);
+            if (place.Cell < 0 || place.Cell >= DaggerfallEquipmentMoves.GridCapacity || !cells.Add(place.Cell))
+                throw new ArgumentException($"The saved pack places {item} in cell {place.Cell}, outside the grid or taken.");
+            if (!carried.Contains(item) || !placed.Add(item))
+                throw new ArgumentException($"The saved pack places {item} in cell {place.Cell}, but the saved pack does not carry it unworn, or places it twice.");
+        }
+        if (Places.Length < DaggerfallEquipmentMoves.GridCapacity && carried.Except(placed).FirstOrDefault() is { } unplaced)
+            throw new ArgumentException($"The saved pack carries {unplaced} with no cell while the grid has room.");
+    }
+
+    private static string StackKey(string stack) => $"stack {stack}";
+    private static string UniqueKey(ulong item) => $"item {item}";
+}
+
+/// <summary>One placed item's cell: a stack by its owner-scoped id, or a unique item by its durable identity.</summary>
+internal sealed record DaggerfallPackPlaceSave(int Cell, string? StackId = null, ulong? ItemEntityId = null);

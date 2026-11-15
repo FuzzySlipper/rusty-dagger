@@ -814,7 +814,7 @@ internal sealed partial class DaggerfallSession
                 strikeTuning: tuning.StrikeEnchantments);
             _itemEnchanting.Enchanted += _itemCastTriggers.Enchanted;
             effects.Completed += _itemCastTriggers.EffectCompleted;
-            _persistence = new(State, _corpseLoot, _groundContainers, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, DungeonText, propertyStorage.Capture, FastTravel.Position, authored, () => Casting.NextSequence);
+            _persistence = new(State, _corpseLoot, _groundContainers, _equipmentMoves, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, DungeonText, propertyStorage.Capture, FastTravel.Position, authored, () => Casting.NextSequence);
             _persistence.EquipCountdown = () => _combat.EquipCountdown;
             if (saved is not null) _combat.EquipCountdown = saved.EquipCountdown;
             _roster = new DaggerfallActorRoster(actors, State.ActorInventories, State.Character, State.Containers, State.Effects, State.InventoryStore,

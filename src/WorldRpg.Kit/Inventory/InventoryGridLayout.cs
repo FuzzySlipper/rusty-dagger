@@ -52,6 +52,25 @@ public sealed class InventoryGridLayout(int capacity)
         Revision++;
     }
 
+    /// <summary>
+    /// Sets every position as a save left it, gaps included, replacing the current ones. Each key and
+    /// position is used once and every position is inside the capacity.
+    /// </summary>
+    public void Restore(IEnumerable<KeyValuePair<string, int>> positions)
+    {
+        Dictionary<string, int> restored = new(StringComparer.Ordinal);
+        HashSet<int> used = [];
+        foreach ((string key, int position) in positions)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(key);
+            if (position < 0 || position >= Capacity || !used.Add(position) || !restored.TryAdd(key, position))
+                throw new ArgumentException($"Grid position {position} for '{key}' is outside the grid or used twice.", nameof(positions));
+        }
+        _positions.Clear();
+        foreach ((string key, int position) in restored) _positions.Add(key, position);
+        Revision++;
+    }
+
     public void Place(string key, int target)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);

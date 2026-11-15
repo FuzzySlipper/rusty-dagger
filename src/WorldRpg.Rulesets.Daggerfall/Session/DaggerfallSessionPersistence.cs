@@ -33,6 +33,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     private readonly DaggerfallState State;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
     private readonly DaggerfallGroundContainers _groundContainers;
+    private readonly DaggerfallEquipmentMoves _pack;
     private readonly DaggerfallBookNotebook _notebook;
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
     private readonly FirstPersonCameraSystem _camera;
@@ -63,7 +64,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     internal Func<double> PlaySeconds { get; set; } = () => 0;
     internal Func<DaggerfallTeleportAnchor?> TeleportAnchor { get; set; } = () => null;
     internal Func<IReadOnlySet<long>> BanishedActors { get; set; } = () => new HashSet<long>();
-    internal DaggerfallSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallBookNotebook notebook,
+    internal DaggerfallSessionPersistence(DaggerfallState state, DaggerfallCorpseLootModule corpses, DaggerfallGroundContainers groundContainers, DaggerfallEquipmentMoves pack, DaggerfallBookNotebook notebook,
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
         DaggerfallEffectLifecycle effects, Func<DaggerfallDoorRuntime> doors, DaggerfallLocomotionPolicy locomotion,
         DaggerfallClimbingPolicy climbing, DaggerfallSwimmingPolicy swimming, DaggerfallDungeonText dungeonText,
@@ -77,7 +78,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         ArgumentNullException.ThrowIfNull(dungeonText);
         ArgumentNullException.ThrowIfNull(capturePropertyStorage);
         _actorDefinitions = actorDefinitions;
-        State = state; _corpseLoot = corpses; _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers)); _notebook = notebook ?? throw new ArgumentNullException(nameof(notebook)); _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion; _climbing = climbing; _swimming = swimming; _dungeonText = dungeonText;
+        State = state; _corpseLoot = corpses; _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers)); _pack = pack ?? throw new ArgumentNullException(nameof(pack)); _notebook = notebook ?? throw new ArgumentNullException(nameof(notebook)); _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion; _climbing = climbing; _swimming = swimming; _dungeonText = dungeonText;
         _capturePropertyStorage = capturePropertyStorage;
         _travelPosition = travelPosition ?? throw new ArgumentNullException(nameof(travelPosition));
     }
@@ -157,6 +158,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             MagicRounds = State.Effects.MagicRounds,
             Infections = Infections(),
             NextCastSequence = _nextCastSequence(),
+            Pack = _pack.CaptureLayout(),
             PoisonDraws = PoisonDraws(),
             ReadySpell=ReadySpell(),
             PendingCreateItem = PendingCreateItem(),
@@ -318,7 +320,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     /// <item>encounters, against every live and detached spawned actor and the retired identities;</item>
     /// <item>actor and spawned-actor poses;</item>
     /// <item>progression, skill uses, locomotion, climbing, level-up and quests;</item>
-    /// <item>player, actor and ground inventories, wagon, transport and notebook;</item>
+    /// <item>player inventory and its pack layout, actor and ground inventories, wagon, transport and notebook;</item>
     /// <item>the player pose, corpses, attack cooldowns and active effects, then the camera;</item>
     /// <item>held enchantments over the restored equipment, once;</item>
     /// <item>defeated actors' appearance, the pending dungeon text and the action-trigger player rebase.</item>
@@ -383,6 +385,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         State.Quests.Restore(saved.Quests);
 
         ApplyInventory(saved.Inventory, State.Inventory, State.Equipment, DaggerfallItemOwner.Player);
+        _pack.RestoreLayout(saved.Pack);
         ApplyActorInventories(saved.ActorInventories);
         _groundContainers.Restore(saved.GroundContainers);
         State.QuestItems.Restore(saved.QuestCustody);
