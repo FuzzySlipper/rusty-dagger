@@ -82,7 +82,7 @@ public sealed class DomainOrderLawTests
             "src/WorldRpg.Rulesets.Daggerfall/AGENTS.md orders a folder the ruleset does not have: " + string.Join(", ", missing));
     }
 
-    /// <summary>The folders in order: every backticked name of the numbered list that follows the order's bullet.</summary>
+    /// <summary>The folders in order: every backticked name on the numbered lines of the list that follows the order's bullet.</summary>
     private static IReadOnlyList<string> Order()
     {
         string[] lines = File.ReadAllLines(OrderFile);
@@ -91,6 +91,8 @@ public sealed class DomainOrderLawTests
         List<string> order = [];
         for (int index = start + 1; index < lines.Length; index++)
         {
+            // A folder's purpose sits on an indented bullet under its item and names no folder for the law.
+            if (Regex.IsMatch(lines[index], @"^\s+-\s")) continue;
             Match item = Regex.Match(lines[index], @"^\s+\d+\.\s+(.*)$");
             if (!item.Success) break;
             order.AddRange(Regex.Matches(item.Groups[1].Value, "`([A-Za-z]+)`").Select(name => name.Groups[1].Value));

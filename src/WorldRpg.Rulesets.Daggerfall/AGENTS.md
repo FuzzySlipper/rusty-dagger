@@ -4,19 +4,24 @@ On top of the root `AGENTS.md`.
 
 ## Layout
 
-- Every source file sits in the folder of the domain it serves, judged by what it does, not by its name. The project root holds no source file. A `DaggerfallSession.X.cs` partial goes in its domain's folder.
+- Every source file sits in the folder of the domain it serves, judged by what it does, not by its name. The project root holds no source file. The session's partials are all in `Session/`; a new rule is an owner in its domain's folder, never a session partial.
 - References point down this order, never up it, within a tier as between tiers:
   1. `Content`
-  2. `Facts` (the typed product facts), `Scene` and `Text`, shared
+     - Content: reads packs into definitions, and holds the vocabulary and tables later domains give their meaning (doors, dungeon actions, weather, seasons, gates, sky time, stat modifiers, loot tables).
+  2. `Facts`, `Scene` and `Text`, shared
+     - Facts: the typed facts every domain may raise, with the attack and magic outcome vocabulary they carry.
+     - Scene: what the site looks and sounds like (appearance, lighting, held art, sky, music, cinematics), and the small vocabulary drawing and rules share (ground containers, attack ids, racial kind, flight views).
+     - Text: text resolution, name banks, the book reader and the notebook.
   3. `Character`, `Condition`, `Time`, `Items`
   4. `Magic`, `Afflictions`, `Combat`, `Actors`
   5. `Exterior`, `Interiors`, `Travel`
+     - Exterior: the site as well as the outdoors: the site context and projection with the doors, locks and dungeon motion every site has, and weather, besides the streamed cells, terrain, horizon, ground cover, trees and rivers.
   6. `Society`, `Economy`, `Dialogue`
   7. `Quests`
   8. `UiProjection`, which reads everything before it
   9. `Developer`, then `Session`, which compose everything
 
-  So no domain names the last three and nothing names `Session`. This list is the order's one home: `DomainOrderLawTests` in `tests/WorldRpg.Architecture.Tests` reads it, fails on a type that names a type in a later folder, and holds the few references accepted against it, each with its reason.
+  So no domain names the last three and nothing names `Session`. This list is the order's one home (the law reads the numbered lines; the purpose lines under them are for reading): `DomainOrderLawTests` in `tests/WorldRpg.Architecture.Tests` reads it, fails on a type that names a type in a later folder, and holds the few references accepted against it, each with its reason.
 - A domain's owner takes what it uses as inputs, never `DaggerfallSession` or `DaggerfallState`, and is tested without the session. Its save and tuning records sit beside it; `DaggerfallSavePayload` and `DaggerfallTuning` compose them. What one rule does across domains is an ordered list in `Session/DaggerfallSession.Update.cs`, each line marked with its domain, like `ResolveExhaustion` (the collapse). An owner that passes time is handed "pass this much time" as an input the session binds to `AdvanceElapsedTime` with that owner's kind of interval, as `DaggerfallRest` is; it never advances `DaggerfallWorldTime` or calls the session for it. What it needs of later domains it may ask through an interface declared beside it that the session implements, like `IDaggerfallRestSurroundings`, or that the later domain's owner implements, like `IDaggerfallReactionSources`. State an owner keeps inside an effect's save entry is serialized by a JSON context declared beside it (`DaggerfallAfflictionJson`), not the session's.
 - Tests mirror these folders in `tests/WorldRpg.Rulesets.Daggerfall.Tests`. Shared test support stays in that project's root and `Fakes/`.
 
