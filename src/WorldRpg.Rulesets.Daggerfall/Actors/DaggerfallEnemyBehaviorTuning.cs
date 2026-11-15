@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
@@ -27,6 +29,34 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
         if (!double.IsFinite(SpawnGroundProbeDistance) || SpawnGroundProbeDistance <= SpawnGroundProbeLift) throw new ArgumentOutOfRangeException(nameof(SpawnGroundProbeDistance));
         if (NavigationMaximumVisited == 0) throw new ArgumentOutOfRangeException(nameof(NavigationMaximumVisited));
         return this;
+    }
+
+    internal static DaggerfallEnemyBehaviorTuning Read(JsonElement section)
+    {
+        // This profile used to tune one reach for every enemy in the world. Reach is authored on the
+        // attack that carries it now, so a profile still naming it is refused rather than loaded with its
+        // intent quietly dropped: an operator who had tuned melee reach would otherwise get the authored
+        // value back with no way to tell why their tuning stopped applying.
+        if (section.TryGetProperty("attackReach", out _))
+            throw new InvalidOperationException("Tuning profile enemyBehavior.attackReach is obsolete: how far an attack carries is authored on the action, not on the enemy behaviour tuning. Remove the key and set reach on the actions that need it.");
+        JsonElement maneuvers = section.GetProperty("maneuvers");
+        return new(
+            section.GetProperty("detectionDistance").GetDouble(),
+            section.GetProperty("chaseSpeedUnitsPerSecond").GetSingle(),
+            checked((uint)section.GetProperty("navigationMaximumVisited").GetInt32()),
+            section.GetProperty("spawnGroundProbeLift").GetSingle(),
+            section.GetProperty("spawnGroundProbeDistance").GetDouble())
+        {
+            Maneuvers = new(
+                maneuvers.GetProperty("enhancedCombatAi").GetBoolean(),
+                maneuvers.GetProperty("retreatDistance").GetSingle(),
+                maneuvers.GetProperty("strafeDistance").GetSingle(),
+                maneuvers.GetProperty("retreatMultiplier").GetSingle(),
+                maneuvers.GetProperty("tooCloseMultiplier").GetSingle(),
+                maneuvers.GetProperty("advanceDistanceMultiplier").GetSingle(),
+                maneuvers.GetProperty("searchDistance").GetSingle(),
+                maneuvers.GetProperty("searchStep").GetSingle()),
+        };
     }
 }
 

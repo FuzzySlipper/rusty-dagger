@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json;
 using Rusty.Engine;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
@@ -53,4 +54,8 @@ internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, do
         if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
         return this;
     }
+
+    internal static DaggerfallMeleeTargetingTuning Read(JsonElement section) => new(
+        section.GetProperty("maximumDistance").GetDouble(),
+        section.GetProperty("minimumFacingCosine").GetDouble());
 }

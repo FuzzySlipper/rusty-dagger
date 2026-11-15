@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Provisional donor damage modulation and observed vampiric range (DEC-11).</summary>
@@ -9,4 +11,8 @@ internal sealed record DaggerfallStrikeEnchantmentTuning(int DamageAdjustment, d
             throw new ArgumentOutOfRangeException(nameof(DamageAdjustment), "Enchantment damage adjustment and range must be finite and nonnegative/positive.");
         return this;
     }
+
+    internal static DaggerfallStrikeEnchantmentTuning Read(JsonElement section) => new(
+        section.GetProperty("damageAdjustment").GetInt32(),
+        section.GetProperty("vampiricRange").GetDouble());
 }

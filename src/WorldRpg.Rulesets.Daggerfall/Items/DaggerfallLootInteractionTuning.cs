@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Ruleset-tunable Engine visibility query bounds for explicit corpse looting.</summary>
@@ -9,4 +11,8 @@ internal sealed record DaggerfallLootInteractionTuning(double MaximumDistance, d
         if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
         return this;
     }
+
+    internal static DaggerfallLootInteractionTuning Read(JsonElement section) => new(
+        section.GetProperty("maximumDistance").GetDouble(),
+        section.GetProperty("minimumFacingCosine").GetDouble());
 }

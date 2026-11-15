@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -47,6 +48,33 @@ internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pit
         if (!float.IsFinite(ContactPitch) || ContactPitch <= 0F) throw new ArgumentOutOfRangeException(nameof(ContactPitch));
         return this;
     }
+
+    internal static DaggerfallPresentationAudioTuning Read(JsonElement section) => new(
+        section.GetProperty("volume").GetSingle(),
+        section.GetProperty("pitch").GetSingle(),
+        section.GetProperty("spatialBlend").GetSingle(),
+        section.GetProperty("maxDistance").GetSingle())
+    {
+        AttractRadius = section.GetProperty("attractRadius").GetSingle(),
+        AttractMinimumDelaySeconds = section.GetProperty("attractMinimumDelaySeconds").GetInt32(),
+        AttractMaximumDelaySeconds = section.GetProperty("attractMaximumDelaySeconds").GetInt32(),
+        AttractMoveChancePercent = section.GetProperty("attractMoveChancePercent").GetInt32(),
+        AttackCueChancePercent = section.GetProperty("attackCueChancePercent").GetInt32(),
+        OccludedVolumeScale = section.GetProperty("occludedVolumeScale").GetSingle(),
+        MuteHumanSounds = section.GetProperty("muteHumanSounds").GetBoolean(),
+        BeastMinimumDelaySeconds = section.GetProperty("beastMinimumDelaySeconds").GetInt32(),
+        BeastMaximumDelaySeconds = section.GetProperty("beastMaximumDelaySeconds").GetInt32(),
+        BeastAttackChancePercent = section.GetProperty("beastAttackChancePercent").GetInt32(),
+        VampireAttackChancePercent = section.GetProperty("vampireAttackChancePercent").GetInt32(),
+        VampireBarkChancePercent = section.GetProperty("vampireBarkChancePercent").GetInt32(),
+        BeastBarkChancePercent = section.GetProperty("beastBarkChancePercent").GetInt32(),
+        ContactPitch = section.GetProperty("contactPitch").GetSingle(),
+        FootstepDistance = section.GetProperty("footstepDistance").GetSingle(),
+        HoofDistance = section.GetProperty("hoofDistance").GetSingle(),
+        CartDistance = section.GetProperty("cartDistance").GetSingle(),
+        FootstepVolumeScale = section.GetProperty("footstepVolumeScale").GetSingle(),
+        PlayerPainChancePercent = section.GetProperty("playerPainChancePercent").GetInt32(),
+    };
 }
 
 /// <summary>
@@ -140,6 +168,38 @@ internal sealed record DaggerfallSiteLightingTuning(
                 throw new ArgumentOutOfRangeException(nameof(DaggerfallSiteLightingTuning), "Site ambient values must be finite normalized RGB levels.");
         return this;
     }
+
+    internal static DaggerfallSiteLightingTuning Read(JsonElement section) => new(
+        section.GetProperty("interiorDay").GetSingle(),
+        section.GetProperty("interiorNight").GetSingle(),
+        section.GetProperty("dungeon").GetSingle(),
+        section.GetProperty("exteriorNoon").GetSingle(),
+        section.GetProperty("exteriorNight").GetSingle())
+    {
+        MobileGlowRange = section.GetProperty("mobileGlowRange").GetSingle(),
+        MobileGlowIntensity = section.GetProperty("mobileGlowIntensity").GetSingle(),
+        SpellLightRange = section.GetProperty("spellLightRange").GetSingle(),
+        SpellLightIntensity = section.GetProperty("spellLightIntensity").GetSingle(),
+        ExteriorScale = section.GetProperty("exteriorScale").GetSingle(),
+        ExteriorSun = section.GetProperty("exteriorSun").GetSingle(),
+        SunTiltDegrees = section.GetProperty("sunTiltDegrees").GetSingle(),
+        SunShadowRange = section.GetProperty("sunShadowRange").GetSingle(),
+        SunShadowResolution = section.GetProperty("sunShadowResolution").GetUInt32(),
+        InteriorScale = section.GetProperty("interiorScale").GetSingle(),
+        DungeonScale = section.GetProperty("dungeonScale").GetSingle(),
+        ViewFull = section.GetProperty("viewFull").GetSingle(),
+        ViewFloor = section.GetProperty("viewFloor").GetSingle(),
+        LowSunColor = ReadColor(section.GetProperty("lowSunColor")),
+        NightColor = ReadColor(section.GetProperty("nightColor")),
+        WindowColor = ReadColor(section.GetProperty("windowColor")),
+        WindowLevel = section.GetProperty("windowLevel").GetSingle(),
+        LampLevel = section.GetProperty("lampLevel").GetSingle(),
+        CreatureGlow = section.GetProperty("creatureGlow").GetSingle(),
+        SpellGlow = section.GetProperty("spellGlow").GetSingle(),
+        Bloom = section.GetProperty("bloom").GetSingle(),
+    };
+
+    private static Vector3 ReadColor(JsonElement rgb) => new(rgb[0].GetSingle(), rgb[1].GetSingle(), rgb[2].GetSingle());
 }
 
 internal sealed record DaggerfallNormalLightTuning(float Distance, float HeightFraction, float Range, float Intensity)
@@ -147,4 +207,10 @@ internal sealed record DaggerfallNormalLightTuning(float Distance, float HeightF
     internal DaggerfallNormalLightTuning Validate() => float.IsFinite(Distance) && Distance > 0
         && float.IsFinite(HeightFraction) && HeightFraction is >= 0 and <= 1 && float.IsFinite(Range) && Range > 0
         && float.IsFinite(Intensity) && Intensity > 0 ? this : throw new ArgumentException("Normal light tuning requires a finite pose, range and intensity.");
+
+    internal static DaggerfallNormalLightTuning Read(JsonElement section) => new(
+        section.GetProperty("distance").GetSingle(),
+        section.GetProperty("heightFraction").GetSingle(),
+        section.GetProperty("range").GetSingle(),
+        section.GetProperty("intensity").GetSingle());
 }

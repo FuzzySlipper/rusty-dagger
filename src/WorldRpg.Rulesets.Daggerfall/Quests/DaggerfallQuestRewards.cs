@@ -1,3 +1,4 @@
+using System.Text.Json;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
@@ -8,6 +9,12 @@ internal sealed record DaggerfallQuestRewardTuning(int MinimumDeliveryHour, int 
     internal DaggerfallQuestRewardTuning Validate() => MinimumDeliveryHour is >= 0 and <= 23 && MaximumDeliveryHour >= MinimumDeliveryHour
         && MaximumDeliveryHour <= 23 && MinimumDelaySeconds >= 0 && MaximumDelaySeconds >= MinimumDelaySeconds && MaximumDelaySeconds <= int.MaxValue / 10
         ? this : throw new ArgumentException("Quest reward delivery tuning requires ordered hours and bounded nonnegative delays.");
+
+    internal static DaggerfallQuestRewardTuning Read(JsonElement section) => new(
+        section.GetProperty("minimumDeliveryHour").GetInt32(),
+        section.GetProperty("maximumDeliveryHour").GetInt32(),
+        section.GetProperty("minimumDelaySeconds").GetInt32(),
+        section.GetProperty("maximumDelaySeconds").GetInt32());
 }
 
 internal sealed record DaggerfallQuestRewardState(bool WaitingForTown, double DelaySeconds, long? GroundContainer = null,

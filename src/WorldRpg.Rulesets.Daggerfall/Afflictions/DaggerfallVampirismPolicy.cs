@@ -1,3 +1,4 @@
+using System.Text.Json;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Policies;
@@ -43,4 +44,9 @@ internal sealed record DaggerfallVampirismTuning(int AttributeBonus, int SkillBo
     internal static DaggerfallVampirismTuning Classic { get; } = new(20, 30, 1440);
     internal DaggerfallVampirismTuning Validate() => AttributeBonus >= 0 && SkillBonus >= 0 && SatiationMinutes > 0
         ? this : throw new ArgumentException("Vampirism tuning contains invalid bonuses or satiation duration.");
+
+    internal static DaggerfallVampirismTuning Read(JsonElement section) => new(
+        section.GetProperty("attributeBonus").GetInt32(),
+        section.GetProperty("skillBonus").GetInt32(),
+        section.GetProperty("satiationMinutes").GetInt32());
 }

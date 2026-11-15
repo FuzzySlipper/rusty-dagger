@@ -1,3 +1,4 @@
+using System.Text.Json;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
@@ -68,6 +69,18 @@ internal sealed record DaggerfallPropertyTuning(
         LargeShipArrival.Validate();
         return this;
     }
+
+    internal static DaggerfallPropertyTuning Read(JsonElement section) => new(
+        section.GetProperty("housePricePerModelRadius").GetInt32(),
+        section.GetProperty("smallShipPrice").GetUInt64(),
+        section.GetProperty("largeShipPrice").GetUInt64(),
+        section.GetProperty("salePercent").GetInt32(),
+        ReadShipArrival(section.GetProperty("smallShipArrival")),
+        ReadShipArrival(section.GetProperty("largeShipArrival")));
+
+    private static DaggerfallShipArrivalAnchor ReadShipArrival(JsonElement anchor) => new(
+        anchor.GetProperty("mapPixelX").GetInt32(),
+        anchor.GetProperty("mapPixelY").GetInt32());
 }
 
 /// <summary>

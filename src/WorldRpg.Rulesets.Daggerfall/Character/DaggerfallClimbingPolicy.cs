@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Controls;
@@ -192,4 +193,15 @@ internal sealed record DaggerfallClimbingTuning(float StartCheckSeconds, float C
             throw new ArgumentOutOfRangeException(nameof(DaggerfallClimbingTuning));
         return this;
     }
+
+    internal static DaggerfallClimbingTuning Read(JsonElement section) => new(
+        section.GetProperty("startCheckSeconds").GetSingle(),
+        section.GetProperty("continueCheckSeconds").GetSingle(),
+        section.GetProperty("regainCheckSeconds").GetSingle(),
+        section.GetProperty("startBaseChance").GetInt32(),
+        section.GetProperty("graspBaseChance").GetInt32(),
+        section.GetProperty("continueBaseChance").GetInt32(),
+        section.GetProperty("regainBaseChance").GetInt32(),
+        section.GetProperty("speedDivisor").GetSingle(),
+        section.GetProperty("enhancedSpeedMultiplier").GetSingle());
 }

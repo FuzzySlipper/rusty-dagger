@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Rusty.Engine.Entities;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
@@ -89,4 +90,6 @@ internal sealed record DaggerfallDetectionTuning(double MaximumDistance)
             throw new ArgumentOutOfRangeException(nameof(MaximumDistance));
         return this;
     }
+
+    internal static DaggerfallDetectionTuning Read(JsonElement section) => new(section.GetProperty("maximumDistance").GetDouble());
 }

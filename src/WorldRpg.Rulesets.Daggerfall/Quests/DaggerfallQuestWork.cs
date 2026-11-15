@@ -1,3 +1,4 @@
+using System.Text.Json;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Crime;
@@ -10,6 +11,10 @@ internal sealed record DaggerfallQuestOfferTuning(int SocialProviderChancePercen
 {
     internal DaggerfallQuestOfferTuning Validate() => SocialProviderChancePercent is >= 0 and <= 100 && CastleProviderChancePercent is >= 0 and <= 100
         ? this : throw new ArgumentException("Quest provider chances must be percentages.");
+
+    internal static DaggerfallQuestOfferTuning Read(JsonElement section) => new(
+        section.GetProperty("socialProviderChancePercent").GetInt32(),
+        section.GetProperty("castleProviderChancePercent").GetInt32());
 }
 
 /// <summary>

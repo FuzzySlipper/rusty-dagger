@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Controls;
@@ -180,6 +181,34 @@ internal sealed record DaggerfallTransportTuning(
         if (!(GallopFatigueReserve >= 0d && GallopFatigueReserve < 1d)) throw new ArgumentOutOfRangeException(nameof(GallopFatigueReserve));
         return this;
     }
+
+    internal static DaggerfallTransportTuning Read(JsonElement section) => new(
+        section.GetProperty("footTravelModifier").GetInt32(),
+        section.GetProperty("horseTravelModifier").GetInt32(),
+        section.GetProperty("cartTravelModifier").GetInt32(),
+        section.GetProperty("footOceanMinutes").GetInt32(),
+        section.GetProperty("shipOceanMinutes").GetInt32(),
+        section.GetProperty("walkBaseClassicUnits").GetInt32(),
+        section.GetProperty("horseBaseClassicUnits").GetInt32(),
+        section.GetProperty("cartBaseClassicUnits").GetInt32(),
+        section.GetProperty("wagonCapacityClassicUnits").GetInt32(),
+        section.GetProperty("wagonAccessRange").GetSingle(),
+        ReadRide(section.GetProperty("horseRide")),
+        ReadRide(section.GetProperty("cartRide")),
+        section.GetProperty("gallopFatigueReserve").GetDouble());
+
+    private static RideTuning ReadRide(JsonElement ride) => new(
+        ride.GetProperty("walkShare").GetSingle(),
+        ride.GetProperty("trotShare").GetSingle(),
+        ride.GetProperty("acceleration").GetSingle(),
+        ride.GetProperty("coasting").GetSingle(),
+        ride.GetProperty("braking").GetSingle(),
+        ride.GetProperty("reverseSpeed").GetSingle(),
+        ride.GetProperty("standingTurnDegrees").GetSingle(),
+        ride.GetProperty("fullTurnDegrees").GetSingle(),
+        ride.GetProperty("lookRangeDegrees").GetSingle(),
+        ride.GetProperty("uphillDrag").GetSingle(),
+        ride.GetProperty("waterShare").GetSingle());
 }
 
 /// <summary>One semantic transport request result, including a relocation when a ship is left.</summary>

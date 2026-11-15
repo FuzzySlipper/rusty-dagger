@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -21,6 +22,10 @@ internal sealed record DaggerfallProgressionTuning(bool EnableExperimentalKillEx
         if (ExperiencePerLevel <= 0) throw new ArgumentOutOfRangeException(nameof(ExperiencePerLevel));
         return this;
     }
+
+    internal static DaggerfallProgressionTuning Read(JsonElement section) => new(
+        section.GetProperty("enableExperimentalKillExperience").GetBoolean(),
+        section.GetProperty("experiencePerLevel").GetInt32());
 }
 
 /// <summary>Daggerfall-owned reward policy for defeated registered actors.</summary>

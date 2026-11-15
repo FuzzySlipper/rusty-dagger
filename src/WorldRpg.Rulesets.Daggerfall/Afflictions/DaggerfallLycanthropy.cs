@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Actors;
@@ -135,4 +136,12 @@ internal sealed record DaggerfallLycanthropyTuning(int AttributeBonus, int Skill
     internal DaggerfallLycanthropyTuning Validate() => AttributeBonus >= 0 && SkillBonus >= 0 && MorphCooldownMinutes >= 0
         && HungerPeriodMinutes > 0 && double.IsFinite(HealthLossPerMinute) && HealthLossPerMinute > 0 && MinimumHealth > 0
         ? this : throw new ArgumentException("Lycanthropy tuning contains invalid bonuses, time periods or hunger limits.");
+
+    internal static DaggerfallLycanthropyTuning Read(JsonElement section) => new(
+        section.GetProperty("attributeBonus").GetInt32(),
+        section.GetProperty("skillBonus").GetInt32(),
+        section.GetProperty("morphCooldownMinutes").GetInt32(),
+        section.GetProperty("hungerPeriodMinutes").GetInt32(),
+        section.GetProperty("healthLossPerMinute").GetDouble(),
+        section.GetProperty("minimumHealth").GetInt32());
 }

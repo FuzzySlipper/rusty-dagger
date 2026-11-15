@@ -150,229 +150,38 @@ internal sealed record DaggerfallTuning(
     {
         using JsonDocument document = JsonDocument.Parse(payload.ToArray());
         JsonElement root = document.RootElement;
-        // This profile used to tune one reach for every enemy in the world. Reach is authored on the
-        // attack that carries it now, so a profile still naming it is refused rather than loaded with its
-        // intent quietly dropped: an operator who had tuned melee reach would otherwise get the authored
-        // value back with no way to tell why their tuning stopped applying.
-        if (root.TryGetProperty("enemyBehavior", out JsonElement obsoleteBehavior) && obsoleteBehavior.TryGetProperty("attackReach", out _))
-            throw new InvalidOperationException("Tuning profile enemyBehavior.attackReach is obsolete: how far an attack carries is authored on the action, not on the enemy behaviour tuning. Remove the key and set reach on the actions that need it.");
-        JsonElement controls = root.GetProperty("playerControl");
-        JsonElement spatial = root.GetProperty("spatial");
-        JsonElement locomotion = root.GetProperty("locomotion");
-        JsonElement camera = root.GetProperty("camera");
-        JsonElement meleeTargeting = root.GetProperty("meleeTargeting");
-        JsonElement enemyBehavior = root.GetProperty("enemyBehavior");
-        JsonElement lootInteraction = root.GetProperty("lootInteraction");
-        JsonElement time = root.GetProperty("time");
-        JsonElement presentationAudio = root.GetProperty("presentationAudio");
-        JsonElement progression = root.GetProperty("progression");
-        JsonElement siteLighting = root.GetProperty("siteLighting");
-        JsonElement climbing = root.GetProperty("climbing");
-        JsonElement property = root.GetProperty("property");
-        JsonElement transport = root.GetProperty("transport");
         return new DaggerfallTuning(
-            new PlayerControlTuning(
-                controls.GetProperty("lookSensitivity").GetSingle(),
-                controls.GetProperty("pitchMinimumRadians").GetSingle(),
-                controls.GetProperty("pitchMaximumRadians").GetSingle(),
-                controls.GetProperty("maximumLookDeltaRadians").GetSingle(),
-                controls.GetProperty("invertHorizontal").GetBoolean(),
-                controls.GetProperty("invertVertical").GetBoolean(),
-                controls.GetProperty("wrapYaw").GetBoolean()),
+            ReadPlayerControl(root.GetProperty("playerControl")),
             ReadControllerInput(root.GetProperty("controllerInput")),
-            new SpatialTuning(
-                spatial.GetProperty("collisionVoxelSize").GetDouble(),
-                checked((uint)spatial.GetProperty("collisionChunkSize").GetInt32()),
-                checked((uint)spatial.GetProperty("navigationChunkSize").GetInt32()),
-                checked((uint)spatial.GetProperty("navigationMaximumStepCells").GetInt32()),
-                ReadCharacterController(spatial.GetProperty("characterController"))),
-            new DaggerfallLocomotionTuning(
-                locomotion.GetProperty("classicToEngineSpeedRatio").GetSingle(),
-                locomotion.GetProperty("walkBase").GetSingle(),
-                locomotion.GetProperty("crouchBase").GetSingle(),
-                locomotion.GetProperty("runBaseMultiplier").GetSingle(),
-                locomotion.GetProperty("runningSkillDivisor").GetSingle(),
-                locomotion.GetProperty("minimumWalkSpeedAttribute").GetInt32(),
-                locomotion.GetProperty("idleFatiguePerGameMinute").GetInt32(),
-                locomotion.GetProperty("runningFatiguePerGameMinute").GetInt32(),
-                locomotion.GetProperty("jumpFatigueCost").GetInt32(),
-                locomotion.GetProperty("jumpBaseSpeed").GetSingle(),
-                locomotion.GetProperty("jumpSkillMultiplier").GetSingle(),
-                locomotion.GetProperty("crouchedJumpMultiplier").GetSingle(),
-                locomotion.GetProperty("climbingFatiguePerGameMinute").GetInt32(),
-                locomotion.TryGetProperty("swimmingFatiguePerGameMinute", out JsonElement swimmingFatigue)
-                    ? swimmingFatigue.GetInt32() : 44,
-                locomotion.GetProperty("levitationVerticalSpeed").GetSingle(),
-                locomotion.GetProperty("athleticJumpBonus").GetSingle(),
-                locomotion.GetProperty("improvedAthleticJumpBonus").GetSingle(),
-                locomotion.GetProperty("enhancedJumpBonus").GetSingle(),
-                locomotion.GetProperty("slowfallDescentSpeed").GetSingle()),
-            new FirstPersonCameraTuning(
-                camera.GetProperty("eyeHeight").GetSingle(),
-                camera.GetProperty("fieldOfViewYDegrees").GetDouble(),
-                camera.GetProperty("nearPlane").GetDouble(),
-                camera.GetProperty("farPlane").GetDouble()),
-            new DaggerfallMeleeTargetingTuning(
-                meleeTargeting.GetProperty("maximumDistance").GetDouble(),
-                meleeTargeting.GetProperty("minimumFacingCosine").GetDouble()),
-            new DaggerfallEnemyBehaviorTuning(
-                enemyBehavior.GetProperty("detectionDistance").GetDouble(),
-                enemyBehavior.GetProperty("chaseSpeedUnitsPerSecond").GetSingle(),
-                checked((uint)enemyBehavior.GetProperty("navigationMaximumVisited").GetInt32()),
-                enemyBehavior.GetProperty("spawnGroundProbeLift").GetSingle(),
-                enemyBehavior.GetProperty("spawnGroundProbeDistance").GetDouble())
-            {
-                Maneuvers = new(
-                    enemyBehavior.GetProperty("maneuvers").GetProperty("enhancedCombatAi").GetBoolean(),
-                    enemyBehavior.GetProperty("maneuvers").GetProperty("retreatDistance").GetSingle(),
-                    enemyBehavior.GetProperty("maneuvers").GetProperty("strafeDistance").GetSingle(),
-                    enemyBehavior.GetProperty("maneuvers").GetProperty("retreatMultiplier").GetSingle(),
-                    enemyBehavior.GetProperty("maneuvers").GetProperty("tooCloseMultiplier").GetSingle(),
-                    enemyBehavior.GetProperty("maneuvers").GetProperty("advanceDistanceMultiplier").GetSingle(),
-                    enemyBehavior.GetProperty("maneuvers").GetProperty("searchDistance").GetSingle(),
-                    enemyBehavior.GetProperty("maneuvers").GetProperty("searchStep").GetSingle()),
-            },
-            new DaggerfallLootInteractionTuning(
-                lootInteraction.GetProperty("maximumDistance").GetDouble(),
-                lootInteraction.GetProperty("minimumFacingCosine").GetDouble()),
-            new DaggerfallTimeTuning(time.GetProperty("gameSecondsPerRealSecond").GetDouble()),
-            new DaggerfallPresentationAudioTuning(
-                presentationAudio.GetProperty("volume").GetSingle(),
-                presentationAudio.GetProperty("pitch").GetSingle(),
-                presentationAudio.GetProperty("spatialBlend").GetSingle(),
-                presentationAudio.GetProperty("maxDistance").GetSingle())
-            {
-                AttractRadius = presentationAudio.GetProperty("attractRadius").GetSingle(),
-                AttractMinimumDelaySeconds = presentationAudio.GetProperty("attractMinimumDelaySeconds").GetInt32(),
-                AttractMaximumDelaySeconds = presentationAudio.GetProperty("attractMaximumDelaySeconds").GetInt32(),
-                AttractMoveChancePercent = presentationAudio.GetProperty("attractMoveChancePercent").GetInt32(),
-                AttackCueChancePercent = presentationAudio.GetProperty("attackCueChancePercent").GetInt32(),
-                OccludedVolumeScale = presentationAudio.GetProperty("occludedVolumeScale").GetSingle(),
-                MuteHumanSounds = presentationAudio.GetProperty("muteHumanSounds").GetBoolean(),
-                BeastMinimumDelaySeconds = presentationAudio.GetProperty("beastMinimumDelaySeconds").GetInt32(),
-                BeastMaximumDelaySeconds = presentationAudio.GetProperty("beastMaximumDelaySeconds").GetInt32(),
-                BeastAttackChancePercent = presentationAudio.GetProperty("beastAttackChancePercent").GetInt32(),
-                VampireAttackChancePercent = presentationAudio.GetProperty("vampireAttackChancePercent").GetInt32(),
-                VampireBarkChancePercent = presentationAudio.GetProperty("vampireBarkChancePercent").GetInt32(),
-                BeastBarkChancePercent = presentationAudio.GetProperty("beastBarkChancePercent").GetInt32(),
-                ContactPitch = presentationAudio.GetProperty("contactPitch").GetSingle(),
-                FootstepDistance = presentationAudio.GetProperty("footstepDistance").GetSingle(),
-                HoofDistance = presentationAudio.GetProperty("hoofDistance").GetSingle(),
-                CartDistance = presentationAudio.GetProperty("cartDistance").GetSingle(),
-                FootstepVolumeScale = presentationAudio.GetProperty("footstepVolumeScale").GetSingle(),
-                PlayerPainChancePercent = presentationAudio.GetProperty("playerPainChancePercent").GetInt32(),
-            },
-            new DaggerfallProgressionTuning(
-                progression.GetProperty("enableExperimentalKillExperience").GetBoolean(),
-                progression.GetProperty("experiencePerLevel").GetInt32()),
-            new DaggerfallSiteLightingTuning(
-                siteLighting.GetProperty("interiorDay").GetSingle(),
-                siteLighting.GetProperty("interiorNight").GetSingle(),
-                siteLighting.GetProperty("dungeon").GetSingle(),
-                siteLighting.GetProperty("exteriorNoon").GetSingle(),
-                siteLighting.GetProperty("exteriorNight").GetSingle())
-            {
-                MobileGlowRange = siteLighting.GetProperty("mobileGlowRange").GetSingle(),
-                MobileGlowIntensity = siteLighting.GetProperty("mobileGlowIntensity").GetSingle(),
-                SpellLightRange = siteLighting.GetProperty("spellLightRange").GetSingle(),
-                SpellLightIntensity = siteLighting.GetProperty("spellLightIntensity").GetSingle(),
-                ExteriorScale = siteLighting.GetProperty("exteriorScale").GetSingle(),
-                ExteriorSun = siteLighting.GetProperty("exteriorSun").GetSingle(),
-                SunTiltDegrees = siteLighting.GetProperty("sunTiltDegrees").GetSingle(),
-                SunShadowRange = siteLighting.GetProperty("sunShadowRange").GetSingle(),
-                SunShadowResolution = siteLighting.GetProperty("sunShadowResolution").GetUInt32(),
-                InteriorScale = siteLighting.GetProperty("interiorScale").GetSingle(),
-                DungeonScale = siteLighting.GetProperty("dungeonScale").GetSingle(),
-                ViewFull = siteLighting.GetProperty("viewFull").GetSingle(),
-                ViewFloor = siteLighting.GetProperty("viewFloor").GetSingle(),
-                LowSunColor = new(siteLighting.GetProperty("lowSunColor")[0].GetSingle(), siteLighting.GetProperty("lowSunColor")[1].GetSingle(),
-                    siteLighting.GetProperty("lowSunColor")[2].GetSingle()),
-                NightColor = new(siteLighting.GetProperty("nightColor")[0].GetSingle(), siteLighting.GetProperty("nightColor")[1].GetSingle(),
-                    siteLighting.GetProperty("nightColor")[2].GetSingle()),
-                WindowColor = new(siteLighting.GetProperty("windowColor")[0].GetSingle(), siteLighting.GetProperty("windowColor")[1].GetSingle(),
-                    siteLighting.GetProperty("windowColor")[2].GetSingle()),
-                WindowLevel = siteLighting.GetProperty("windowLevel").GetSingle(),
-                LampLevel = siteLighting.GetProperty("lampLevel").GetSingle(),
-                CreatureGlow = siteLighting.GetProperty("creatureGlow").GetSingle(),
-                SpellGlow = siteLighting.GetProperty("spellGlow").GetSingle(),
-                Bloom = siteLighting.GetProperty("bloom").GetSingle(),
-            },
-            new DaggerfallClimbingTuning(
-                climbing.GetProperty("startCheckSeconds").GetSingle(),
-                climbing.GetProperty("continueCheckSeconds").GetSingle(),
-                climbing.GetProperty("regainCheckSeconds").GetSingle(),
-                climbing.GetProperty("startBaseChance").GetInt32(),
-                climbing.GetProperty("graspBaseChance").GetInt32(),
-                climbing.GetProperty("continueBaseChance").GetInt32(),
-                climbing.GetProperty("regainBaseChance").GetInt32(),
-                climbing.GetProperty("speedDivisor").GetSingle(),
-                climbing.GetProperty("enhancedSpeedMultiplier").GetSingle()),
-            new DaggerfallPropertyTuning(
-                property.GetProperty("housePricePerModelRadius").GetInt32(),
-                property.GetProperty("smallShipPrice").GetUInt64(),
-                property.GetProperty("largeShipPrice").GetUInt64(),
-                property.GetProperty("salePercent").GetInt32(),
-                ReadShipArrival(property.GetProperty("smallShipArrival")),
-                ReadShipArrival(property.GetProperty("largeShipArrival"))),
-            new DaggerfallTransportTuning(
-                transport.GetProperty("footTravelModifier").GetInt32(),
-                transport.GetProperty("horseTravelModifier").GetInt32(),
-                transport.GetProperty("cartTravelModifier").GetInt32(),
-                transport.GetProperty("footOceanMinutes").GetInt32(),
-                transport.GetProperty("shipOceanMinutes").GetInt32(),
-                transport.GetProperty("walkBaseClassicUnits").GetInt32(),
-                transport.GetProperty("horseBaseClassicUnits").GetInt32(),
-                transport.GetProperty("cartBaseClassicUnits").GetInt32(),
-                transport.GetProperty("wagonCapacityClassicUnits").GetInt32(),
-                transport.GetProperty("wagonAccessRange").GetSingle(),
-                ReadRide(transport.GetProperty("horseRide")),
-                ReadRide(transport.GetProperty("cartRide")),
-                transport.GetProperty("gallopFatigueReserve").GetDouble()))
+            ReadSpatial(root.GetProperty("spatial")),
+            DaggerfallLocomotionTuning.Read(root.GetProperty("locomotion")),
+            ReadCamera(root.GetProperty("camera")),
+            DaggerfallMeleeTargetingTuning.Read(root.GetProperty("meleeTargeting")),
+            DaggerfallEnemyBehaviorTuning.Read(root.GetProperty("enemyBehavior")),
+            DaggerfallLootInteractionTuning.Read(root.GetProperty("lootInteraction")),
+            DaggerfallTimeTuning.Read(root.GetProperty("time")),
+            DaggerfallPresentationAudioTuning.Read(root.GetProperty("presentationAudio")),
+            DaggerfallProgressionTuning.Read(root.GetProperty("progression")),
+            DaggerfallSiteLightingTuning.Read(root.GetProperty("siteLighting")),
+            DaggerfallClimbingTuning.Read(root.GetProperty("climbing")),
+            DaggerfallPropertyTuning.Read(root.GetProperty("property")),
+            DaggerfallTransportTuning.Read(root.GetProperty("transport")))
         {
-            StrikeEnchantments = new(root.GetProperty("strikeEnchantments").GetProperty("damageAdjustment").GetInt32(),
-                root.GetProperty("strikeEnchantments").GetProperty("vampiricRange").GetDouble()),
-            QuestOffers = new(root.GetProperty("questOffers").GetProperty("socialProviderChancePercent").GetInt32(), root.GetProperty("questOffers").GetProperty("castleProviderChancePercent").GetInt32()),
-            QuestRewards = new(root.GetProperty("questRewards").GetProperty("minimumDeliveryHour").GetInt32(),
-                root.GetProperty("questRewards").GetProperty("maximumDeliveryHour").GetInt32(),
-                root.GetProperty("questRewards").GetProperty("minimumDelaySeconds").GetInt32(),
-                root.GetProperty("questRewards").GetProperty("maximumDelaySeconds").GetInt32()),
-            QuestSpawning = new(root.GetProperty("questSpawning").GetProperty("minimumFoeDistance").GetSingle(),
-                root.GetProperty("questSpawning").GetProperty("maximumFoeDistance").GetSingle(),
-                root.GetProperty("questSpawning").GetProperty("minimumWildernessDistance").GetSingle(),
-                root.GetProperty("questSpawning").GetProperty("maximumWildernessDistance").GetSingle(),
-                root.GetProperty("questSpawning").GetProperty("maximumActiveGuards").GetInt32(),
-                root.GetProperty("questSpawning").GetProperty("guardWitnessDistance").GetSingle(),
-                root.GetProperty("questSpawning").GetProperty("guardWitnessAngleDegrees").GetSingle(),
-                root.GetProperty("questSpawning").GetProperty("guardConversionAngleDegrees").GetSingle(),
-                root.GetProperty("questSpawning").GetProperty("guardConversionChance").GetInt32()),
-            Law = new(root.GetProperty("law").GetProperty("minimumResponseSeconds").GetInt32(),
-                root.GetProperty("law").GetProperty("maximumResponseSeconds").GetInt32(),
-                root.GetProperty("law").GetProperty("minimumGuards").GetInt32(), root.GetProperty("law").GetProperty("maximumGuards").GetInt32(),
-                root.GetProperty("law").GetProperty("minimumArrivalDistance").GetSingle(), root.GetProperty("law").GetProperty("maximumArrivalDistance").GetSingle(),
-                root.GetProperty("law").GetProperty("arrestReach").GetDouble()),
-            NormalLight = new(root.GetProperty("normalLight").GetProperty("distance").GetSingle(),
-                root.GetProperty("normalLight").GetProperty("heightFraction").GetSingle(),
-                root.GetProperty("normalLight").GetProperty("range").GetSingle(), root.GetProperty("normalLight").GetProperty("intensity").GetSingle()),
-            Vampirism = new(root.GetProperty("vampirism").GetProperty("attributeBonus").GetInt32(),
-                root.GetProperty("vampirism").GetProperty("skillBonus").GetInt32(),
-                root.GetProperty("vampirism").GetProperty("satiationMinutes").GetInt32()),
-            Lycanthropy = new(root.GetProperty("lycanthropy").GetProperty("attributeBonus").GetInt32(),
-                root.GetProperty("lycanthropy").GetProperty("skillBonus").GetInt32(),
-                root.GetProperty("lycanthropy").GetProperty("morphCooldownMinutes").GetInt32(),
-                root.GetProperty("lycanthropy").GetProperty("hungerPeriodMinutes").GetInt32(),
-                root.GetProperty("lycanthropy").GetProperty("healthLossPerMinute").GetDouble(),
-                root.GetProperty("lycanthropy").GetProperty("minimumHealth").GetInt32()),
-            Detection = new(root.GetProperty("detection").GetProperty("maximumDistance").GetDouble()),
-            Music = new DaggerfallMusicTuning(root.GetProperty("music").GetProperty("alternatePlaylists").GetBoolean()),
+            StrikeEnchantments = DaggerfallStrikeEnchantmentTuning.Read(root.GetProperty("strikeEnchantments")),
+            QuestOffers = DaggerfallQuestOfferTuning.Read(root.GetProperty("questOffers")),
+            QuestRewards = DaggerfallQuestRewardTuning.Read(root.GetProperty("questRewards")),
+            QuestSpawning = DaggerfallQuestSpawningTuning.Read(root.GetProperty("questSpawning")),
+            Law = DaggerfallLawTuning.Read(root.GetProperty("law")),
+            NormalLight = DaggerfallNormalLightTuning.Read(root.GetProperty("normalLight")),
+            Vampirism = DaggerfallVampirismTuning.Read(root.GetProperty("vampirism")),
+            Lycanthropy = DaggerfallLycanthropyTuning.Read(root.GetProperty("lycanthropy")),
+            Detection = DaggerfallDetectionTuning.Read(root.GetProperty("detection")),
+            Music = DaggerfallMusicTuning.Read(root.GetProperty("music")),
             Viewmodel = DaggerfallViewmodelTuning.Read(root.GetProperty("viewmodel")),
-            WorldOrigin = new(root.GetProperty("worldOrigin").GetProperty("verticalRebaseDistance").GetSingle()),
-            CivilianWander = new(root.GetProperty("civilianWander").GetProperty("movementSpeedUnitsPerSecond").GetSingle(),
-                root.GetProperty("civilianWander").GetProperty("waypointDistance").GetSingle(),
-                root.GetProperty("civilianWander").GetProperty("idleDurationSeconds").GetSingle(),
-                root.GetProperty("civilianWander").GetProperty("navigationMaximumVisited").GetUInt32(),
-                root.GetProperty("civilianWander").GetProperty("recycleDistanceMeters").GetSingle()),
+            WorldOrigin = DaggerfallWorldOriginTuning.Read(root.GetProperty("worldOrigin")),
+            CivilianWander = DaggerfallCivilianWanderTuning.Read(root.GetProperty("civilianWander")),
             Swimming = root.TryGetProperty("swimming", out JsonElement swimming)
-                ? ReadSwimming(swimming)
+                ? DaggerfallSwimmingTuning.Read(swimming)
                 : DaggerfallSwimmingTuning.Classic,
             Weather = DaggerfallWeatherTuning.Read(root.GetProperty("weather")),
             Ambient = DaggerfallAmbientTuning.Read(root.GetProperty("ambient")),
@@ -389,22 +198,22 @@ internal sealed record DaggerfallTuning(
         }.Validate();
     }
 
-    private static RideTuning ReadRide(JsonElement ride) => new(
-        ride.GetProperty("walkShare").GetSingle(),
-        ride.GetProperty("trotShare").GetSingle(),
-        ride.GetProperty("acceleration").GetSingle(),
-        ride.GetProperty("coasting").GetSingle(),
-        ride.GetProperty("braking").GetSingle(),
-        ride.GetProperty("reverseSpeed").GetSingle(),
-        ride.GetProperty("standingTurnDegrees").GetSingle(),
-        ride.GetProperty("fullTurnDegrees").GetSingle(),
-        ride.GetProperty("lookRangeDegrees").GetSingle(),
-        ride.GetProperty("uphillDrag").GetSingle(),
-        ride.GetProperty("waterShare").GetSingle());
+    // The Kit's records don't know this payload, so their readers sit here.
+    private static PlayerControlTuning ReadPlayerControl(JsonElement controls) => new(
+        controls.GetProperty("lookSensitivity").GetSingle(),
+        controls.GetProperty("pitchMinimumRadians").GetSingle(),
+        controls.GetProperty("pitchMaximumRadians").GetSingle(),
+        controls.GetProperty("maximumLookDeltaRadians").GetSingle(),
+        controls.GetProperty("invertHorizontal").GetBoolean(),
+        controls.GetProperty("invertVertical").GetBoolean(),
+        controls.GetProperty("wrapYaw").GetBoolean());
 
-    private static DaggerfallShipArrivalAnchor ReadShipArrival(JsonElement anchor) => new(
-        anchor.GetProperty("mapPixelX").GetInt32(),
-        anchor.GetProperty("mapPixelY").GetInt32());
+    private static SpatialTuning ReadSpatial(JsonElement spatial) => new(
+        spatial.GetProperty("collisionVoxelSize").GetDouble(),
+        checked((uint)spatial.GetProperty("collisionChunkSize").GetInt32()),
+        checked((uint)spatial.GetProperty("navigationChunkSize").GetInt32()),
+        checked((uint)spatial.GetProperty("navigationMaximumStepCells").GetInt32()),
+        ReadCharacterController(spatial.GetProperty("characterController")));
 
     private static CharacterControllerTuning ReadCharacterController(JsonElement controller) => new(
         StandingHeight: controller.GetProperty("standingHeight").GetSingle(),
@@ -421,13 +230,11 @@ internal sealed record DaggerfallTuning(
         RecoveryMaximumDistance: controller.GetProperty("recoveryMaximumDistance").GetSingle(),
         MaximumStepHeight: controller.GetProperty("maximumStepHeight").GetSingle());
 
-    private static DaggerfallSwimmingTuning ReadSwimming(JsonElement swimming) => new(
-        swimming.GetProperty("speed").GetSingle(),
-        swimming.GetProperty("acceleration").GetSingle(),
-        swimming.GetProperty("drag").GetSingle(),
-        swimming.GetProperty("gravityScale").GetSingle(),
-        swimming.GetProperty("buoyancy").GetSingle(),
-        swimming.GetProperty("breathSecondsPerPoint").GetSingle());
+    private static FirstPersonCameraTuning ReadCamera(JsonElement camera) => new(
+        camera.GetProperty("eyeHeight").GetSingle(),
+        camera.GetProperty("fieldOfViewYDegrees").GetDouble(),
+        camera.GetProperty("nearPlane").GetDouble(),
+        camera.GetProperty("farPlane").GetDouble());
 
     /// <summary>
     /// Reads the pad's positional mapping. The Engine numbers controller axes and buttons rather than
@@ -510,10 +317,15 @@ internal sealed record DaggerfallTimeTuning(double GameSecondsPerRealSecond)
         if (!double.IsFinite(GameSecondsPerRealSecond) || GameSecondsPerRealSecond <= 0d) throw new ArgumentOutOfRangeException(nameof(GameSecondsPerRealSecond));
         return this;
     }
+
+    internal static DaggerfallTimeTuning Read(JsonElement section) => new(section.GetProperty("gameSecondsPerRealSecond").GetDouble());
 }
 
 /// <summary>Chooses the donor's standard or alternate playlists; JSON admission requires a Boolean.</summary>
-internal sealed record DaggerfallMusicTuning(bool AlternatePlaylists);
+internal sealed record DaggerfallMusicTuning(bool AlternatePlaylists)
+{
+    internal static DaggerfallMusicTuning Read(JsonElement section) => new(section.GetProperty("alternatePlaylists").GetBoolean());
+}
 
 /// <summary>
 /// The first-person weapon's look. A 3D style draws the art installed beside the product

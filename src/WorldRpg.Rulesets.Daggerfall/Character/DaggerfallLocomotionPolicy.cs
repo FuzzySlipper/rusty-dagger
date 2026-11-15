@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Input;
 using Rusty.Engine.Mechanics;
@@ -297,6 +298,28 @@ internal sealed record DaggerfallLocomotionTuning(
             throw new ArgumentOutOfRangeException(nameof(MinimumWalkSpeedAttribute));
         return this;
     }
+
+    internal static DaggerfallLocomotionTuning Read(JsonElement section) => new(
+        section.GetProperty("classicToEngineSpeedRatio").GetSingle(),
+        section.GetProperty("walkBase").GetSingle(),
+        section.GetProperty("crouchBase").GetSingle(),
+        section.GetProperty("runBaseMultiplier").GetSingle(),
+        section.GetProperty("runningSkillDivisor").GetSingle(),
+        section.GetProperty("minimumWalkSpeedAttribute").GetInt32(),
+        section.GetProperty("idleFatiguePerGameMinute").GetInt32(),
+        section.GetProperty("runningFatiguePerGameMinute").GetInt32(),
+        section.GetProperty("jumpFatigueCost").GetInt32(),
+        section.GetProperty("jumpBaseSpeed").GetSingle(),
+        section.GetProperty("jumpSkillMultiplier").GetSingle(),
+        section.GetProperty("crouchedJumpMultiplier").GetSingle(),
+        section.GetProperty("climbingFatiguePerGameMinute").GetInt32(),
+        section.TryGetProperty("swimmingFatiguePerGameMinute", out JsonElement swimmingFatigue)
+            ? swimmingFatigue.GetInt32() : 44,
+        section.GetProperty("levitationVerticalSpeed").GetSingle(),
+        section.GetProperty("athleticJumpBonus").GetSingle(),
+        section.GetProperty("improvedAthleticJumpBonus").GetSingle(),
+        section.GetProperty("enhancedJumpBonus").GetSingle(),
+        section.GetProperty("slowfallDescentSpeed").GetSingle());
 }
 
 /// <summary>Durable movement work awaiting the next calendar-minute fatigue charge; physical held input is deliberately not saved.</summary>

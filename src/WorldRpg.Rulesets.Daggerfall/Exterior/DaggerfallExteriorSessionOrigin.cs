@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json;
 using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -20,6 +21,8 @@ internal sealed record DaggerfallWorldOriginTuning(float VerticalRebaseDistance)
             throw new ArgumentOutOfRangeException(nameof(VerticalRebaseDistance));
         return this;
     }
+
+    internal static DaggerfallWorldOriginTuning Read(JsonElement section) => new(section.GetProperty("verticalRebaseDistance").GetSingle());
 }
 
 /// <summary>Pure product-side interpretation of the Engine WorldOrigin commit receipt.</summary>

@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text.Json;
 using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -26,6 +27,14 @@ internal sealed record DaggerfallSwimmingTuning(
         if (!float.IsFinite(BreathSecondsPerPoint) || BreathSecondsPerPoint <= 0f) throw new ArgumentOutOfRangeException(nameof(BreathSecondsPerPoint));
         return this;
     }
+
+    internal static DaggerfallSwimmingTuning Read(JsonElement section) => new(
+        section.GetProperty("speed").GetSingle(),
+        section.GetProperty("acceleration").GetSingle(),
+        section.GetProperty("drag").GetSingle(),
+        section.GetProperty("gravityScale").GetSingle(),
+        section.GetProperty("buoyancy").GetSingle(),
+        section.GetProperty("breathSecondsPerPoint").GetSingle());
 }
 
 /// <summary>Current swimming continuation, including the timer that may be saved mid-submersion.</summary>

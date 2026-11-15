@@ -1,3 +1,4 @@
+using System.Text.Json;
 using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -15,6 +16,17 @@ internal sealed record DaggerfallQuestSpawningTuning(float MinimumFoeDistance, f
         && float.IsFinite(GuardWitnessAngleDegrees) && GuardWitnessAngleDegrees is >= 0 and <= 180
         && float.IsFinite(GuardConversionAngleDegrees) && GuardConversionAngleDegrees is >= 0 and <= 180
         && GuardConversionChance is >= 0 and <= 100 ? this : throw new ArgumentException("Quest spawn tuning has invalid ranges, angles, count, or chance.");
+
+    internal static DaggerfallQuestSpawningTuning Read(JsonElement section) => new(
+        section.GetProperty("minimumFoeDistance").GetSingle(),
+        section.GetProperty("maximumFoeDistance").GetSingle(),
+        section.GetProperty("minimumWildernessDistance").GetSingle(),
+        section.GetProperty("maximumWildernessDistance").GetSingle(),
+        section.GetProperty("maximumActiveGuards").GetInt32(),
+        section.GetProperty("guardWitnessDistance").GetSingle(),
+        section.GetProperty("guardWitnessAngleDegrees").GetSingle(),
+        section.GetProperty("guardConversionAngleDegrees").GetSingle(),
+        section.GetProperty("guardConversionChance").GetInt32());
 }
 
 internal sealed record DaggerfallQuestFoeSpawn(int IntervalSeconds, int? MaximumGroups, int Chance, bool Send);

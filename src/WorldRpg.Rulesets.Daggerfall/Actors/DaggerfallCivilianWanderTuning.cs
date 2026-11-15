@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
@@ -18,4 +20,11 @@ internal sealed record DaggerfallCivilianWanderTuning(float MovementSpeedUnitsPe
         if (!float.IsFinite(RecycleDistanceMeters) || RecycleDistanceMeters <= 0f) throw new ArgumentOutOfRangeException(nameof(RecycleDistanceMeters));
         return this;
     }
+
+    internal static DaggerfallCivilianWanderTuning Read(JsonElement section) => new(
+        section.GetProperty("movementSpeedUnitsPerSecond").GetSingle(),
+        section.GetProperty("waypointDistance").GetSingle(),
+        section.GetProperty("idleDurationSeconds").GetSingle(),
+        section.GetProperty("navigationMaximumVisited").GetUInt32(),
+        section.GetProperty("recycleDistanceMeters").GetSingle());
 }
