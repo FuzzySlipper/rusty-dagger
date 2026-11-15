@@ -120,7 +120,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
     public DebugCommandResult Where()
     {
         if (State.PlayerControl.Position is not WorldPoint position) return Refused("The player has no position.");
-        return PlaytestJson(w =>
+        return DaggerfallDeveloperReplies.Json(w =>
         {
             w.WriteStartObject();
             DaggerfallSiteRecord? site = _site.ActiveSite;
@@ -130,7 +130,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
             w.WriteBoolean("playing", _mode != ProductMode.Title);
             if (site is not null && _sites.Projection.Inputs.InteriorBuilding is { } interior)
                 w.WriteString("building", BuildingLabel(site, new(interior.BlockX, interior.BlockY, interior.Building.Index)));
-            Vector(w, "feet", PlayerFloor()); Vector(w, "centre", position.ToVector());
+            DaggerfallDeveloperReplies.Vector(w, "feet", PlayerFloor()); DaggerfallDeveloperReplies.Vector(w, "centre", position.ToVector());
             w.WriteNumber("yawDegrees", State.PlayerControl.YawRadians * 180 / MathF.PI);
             w.WriteNumber("pitchDegrees", State.PlayerControl.PitchRadians * 180 / MathF.PI);
             w.WriteString("lastOutcome", Presentation.LastOutcome);
@@ -297,7 +297,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
         Dictionary<long, string> labels = (_activation?.InspectTargets() ?? [])
             .Where(target => target.Kind == DaggerfallActivationTargetKind.Npc)
             .GroupBy(target => (long)target.Identity.Value).ToDictionary(group => group.Key, group => group.First().Label ?? "person");
-        return PlaytestJson(w =>
+        return DaggerfallDeveloperReplies.Json(w =>
         {
             w.WriteStartObject();
             w.WriteString("place", site.Name); w.WriteString("service", service);
@@ -308,7 +308,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
             {
                 w.WriteStartObject(); w.WriteString("id", $"Actor:{npc.DurableId}");
                 w.WriteString("label", labels.GetValueOrDefault(npc.DurableId, npc.Role)); w.WriteString("role", npc.Role);
-                Vector(w, "position", State.Actors.Get(npc.DurableId).Position.ToVector()); w.WriteEndObject();
+                DaggerfallDeveloperReplies.Vector(w, "position", State.Actors.Get(npc.DurableId).Position.ToVector()); w.WriteEndObject();
             }
             w.WriteEndArray();
             // Everyone placed in the place's buildings, so a service is found before its building is entered.
@@ -326,7 +326,7 @@ internal sealed partial class DaggerfallSession : IDeveloperWorldSession
                     foreach (DaggerfallStaticNpcPlacement npc in offering)
                     {
                         w.WriteStartObject(); w.WriteString("role", npc.Role); w.WriteNumber("faction", npc.Appearance.FactionId);
-                        Vector(w, "profilePosition", npc.Position.ToVector()); w.WriteEndObject();
+                        DaggerfallDeveloperReplies.Vector(w, "profilePosition", npc.Position.ToVector()); w.WriteEndObject();
                     }
                     w.WriteEndArray(); w.WriteEndObject();
                 }

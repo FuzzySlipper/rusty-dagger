@@ -1,5 +1,6 @@
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
+using Rusty.Engine.Interaction;
 using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -9,8 +10,14 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// The Kit's developer interfaces the Host registers its live-debug modules by, each member a one-line call to the
 /// Developer owner that answers it. The owners are built at the end of the session's composition.
 /// </summary>
-internal sealed partial class DaggerfallSession : IDeveloperInspectionSession, IDeveloperHeldSession, IDeveloperPeopleSession
+internal sealed partial class DaggerfallSession : IPlaytestGameSession, IPlaytestWorldInspectionSession, IDeveloperInspectionSession, IDeveloperHeldSession, IDeveloperPeopleSession
 {
+    /// <summary>The playtest state writer: the gameplay facts, the last combat event and the last use.</summary>
+    private readonly DaggerfallPlaytestState _playtest = null!;
+
+    /// <summary>Read-only inspection of interaction and collision about the player.</summary>
+    private readonly DaggerfallSpatialInspection _spatialInspection = null!;
+
     /// <summary>The debug overlay sets, built each presentation while on.</summary>
     private readonly DaggerfallDebugOverlays _overlays = null!;
 
@@ -19,6 +26,18 @@ internal sealed partial class DaggerfallSession : IDeveloperInspectionSession, I
 
     /// <summary>The switch that draws walking people as the parts-rig test figure.</summary>
     private readonly DaggerfallPeopleRigSwitch _peopleRigs = null!;
+
+    public IReadOnlyList<string> PlaytestActions => _playtest.Actions;
+    public DebugCommandResult ReadPlaytestObservation() => _playtest.ReadObservation();
+    public PlaytestAction InspectPlaytestAction(string id) => _playtest.InspectAction(id);
+    public DebugCommandResult InspectPlaytestLook(double yawDegrees, double pitchDegrees) => _playtest.InspectLook(yawDegrees, pitchDegrees);
+    public DebugCommandResult ReadPlaytestTargets() => _playtest.ReadTargets();
+
+    public WorldInteraction CreateInteractionInspection() => _spatialInspection.CreateInteractionInspection();
+    public DebugCommandResult ReadSpatialGrid(int radius, int verticalRadius, double cellSize) => _spatialInspection.ReadGrid(radius, verticalRadius, cellSize);
+    public DebugCommandResult ReadSpatialProbe(double distance) => _spatialInspection.ReadProbe(distance);
+    public DebugCommandResult ReadJumpPlan(double x, double y, double z) => _spatialInspection.ReadJumpPlan(x, y, z);
+    public DebugCommandResult ReadSpatialClearance(double x, double y, double z) => _spatialInspection.ReadClearance(x, y, z);
 
     public IReadOnlyList<string> DebugOverlaySets => _overlays.Sets;
     public bool IsDebugOverlayOn(string name) => _overlays.IsOn(name);

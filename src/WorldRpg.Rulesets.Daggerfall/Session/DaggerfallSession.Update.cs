@@ -711,10 +711,9 @@ internal sealed partial class DaggerfallSession
     private bool TryActivateContextual(LookReceipt look)
     {
         if (Activation.Module is null) return false;
-        _lastPlaytestUseStep = _latestSimulationStep ?? 0;                                         // Developer
-        _lastPlaytestUseRefusal = null;                                                           // Developer
+        _playtest.ObserveUse(_latestSimulationStep ?? 0);                                         // Developer
         DaggerfallActivationOutcome outcome = Activation.Activate(look, out string? refusal)!;    // Interiors
-        _lastPlaytestUseRefusal = refusal;                                                        // Developer
+        _playtest.ObserveUseRefusal(refusal);                                                     // Developer
         _activationPresentation.Report(outcome);                                                  // UiProjection
         Presentation.SetOutcome(outcome.Message);                                                 // UiProjection
         return true;
