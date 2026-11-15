@@ -12,7 +12,7 @@ content source.
 | What | Where |
 | --- | --- |
 | Rules for working in this repository | [AGENTS.md](AGENTS.md), and the `AGENTS.md` beside the code in [src/ui](src/ui/AGENTS.md) and the [Daggerfall ruleset](src/WorldRpg.Rulesets.Daggerfall/AGENTS.md) |
-| Design and reference (architecture, combat, UI, world, coverage, import, art) | den-wiki, under `wiki/rusty-dagger` |
+| Design and reference (architecture, combat, UI, world, coverage, import, art) | den-wiki, under `wiki/rusty-dagger`; how the ruleset is built (owners by domain folder, the update list, the order and its law) is `wiki/rusty-dagger/architecture` |
 | Tasks, status, evidence and review | Den project `rusty-dagger` |
 | Open questions and discussion | Crew board `rusty-dagger` |
 | Art pipeline | [authoring/README.md](authoring/README.md); first-person arms in [authoring/tools/fp-arms](authoring/tools/fp-arms/README.md) |

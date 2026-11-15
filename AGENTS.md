@@ -40,8 +40,8 @@ and don't invent task records or infer completion from source or Git.
 
 | Owner | Responsibility |
 | --- | --- |
-| `WorldRpg.Kit` | Reusable world-RPG mechanisms: typed IDs, ruleset/session contracts, bundle/content-pack/tuning resolution, controls, actor lifetime, spatial session stepping, progression, bounded facts, structured UI values, inventory/equipment, targeting, attack execution, effects, AI coordination, corpse/loot and typed notifications. Not a universal RPG framework. |
-| `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack and reward policy, content interpretation, presentation meaning, save behavior and session composition. Each file sits in the folder of the domain it serves, in the order its `AGENTS.md` gives. |
+| `WorldRpg.Kit` | Reusable world-RPG mechanisms: typed IDs, ruleset/session contracts, bundle/content-pack/tuning resolution, controls, actor lifetime, spatial session stepping, progression, bounded facts, structured UI values, inventory/equipment, targeting, attack execution, effects, AI coordination, corpse/loot and typed notifications. Not a universal RPG framework. It names nothing of the ruleset: the one-way project reference makes that a compile error. |
+| `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack and reward policy, content interpretation, presentation meaning, save behavior and session composition. Each file sits in the folder of the domain it serves, in the order its `AGENTS.md` gives; `DomainOrderLawTests` fails on a type that names a later folder. |
 | `WorldRpg.Host` | Product lifecycle, the one product type and bundle declaration, built-in ruleset/default selection, the entry screen's bundle choice, and session construction. It may select Daggerfall; it never interprets Daggerfall rules or source files. |
 | `Daggerfall.Import` | Offline Arena2 and Daggerfall Unity knowledge: source formats, conversion quirks, provenance, differential validation. Runtime code consumes normalized packs, not source-shaped data. |
 | `Daggerfall.Import.Tool` | The `import` command, its steps and `pack`. Every file is an importer revision input, so a command that does not feed the data containers belongs in `Daggerfall.Source.Tool` (reference exports, inventory reports). |
@@ -64,7 +64,8 @@ are the way to make contributions discoverable.
 A mechanism has its own tests and never references the session. The Kit's
 mechanisms meet that, and their tests run without the Daggerfall data; a new
 mechanism may equally sit in the ruleset beside the domain that uses it, and
-any of them may use Daggerfall's names.
+any of them may use Daggerfall's names. The Kit stays its own project so the
+compiler keeps it from naming the ruleset.
 
 Give each value one home: adjustable rule values are typed, validated tuning
 handles; actor, item, encounter and world values are content; algorithmic
@@ -77,6 +78,9 @@ Compose Engine `Actor` in Kit/Daggerfall facades with named properties (`Stats`,
 `Inventory`, `Equipment`, `Targeting`) over the attached components.
 `DaggerfallActorFactory` assembles actors and `DaggerfallState.Kit` provides the
 session services. Factories create components; wrapping an entity never does.
+`DaggerfallSession` holds composition, the update list and its marked lists, the
+save boundary and loading; a rule is an owner in its domain's folder, as the
+ruleset's `AGENTS.md` describes.
 Keep runtime EntityId, kind/origin TypeId and durable product identity distinct.
 
 Use direct methods for simple reads and actions, typed RuleEvents where
