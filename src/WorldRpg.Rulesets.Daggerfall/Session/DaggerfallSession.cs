@@ -68,6 +68,16 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallLocomotionPolicy _locomotion;
     private readonly DaggerfallClimbingPolicy _climbing;
     private readonly DaggerfallLevitationPolicy _levitation = new();
+    /// <summary>The player's movement in each simulation step.</summary>
+    private readonly DaggerfallPlayerMovement _movement;
+    /// <summary>When the player's acts run: now, or behind an enemy hit on the player in flight.</summary>
+    private readonly DaggerfallPlayerActTiming _actTiming;
+
+    /// <summary>Readies or sheathes the weapon when the hands are free (Travel's rule): its key on a step, or the radial's command, which a held world never steps.</summary>
+    private void ToggleWeapon()
+    {
+        if (State.Transport.WeaponHandsFree) State.WeaponDrawn = !State.WeaponDrawn;
+    }
     private readonly DaggerfallDungeonVisibility _dungeonVisibility;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
     private readonly DaggerfallEnemyMagicModule _enemyMagic;

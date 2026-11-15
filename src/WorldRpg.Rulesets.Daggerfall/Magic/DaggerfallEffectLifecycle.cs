@@ -200,8 +200,17 @@ internal sealed class DaggerfallActiveEffect
 /// Daggerfall's compiled policy over Kit's Engine-backed active-effect lifecycle. It owns effect
 /// keys, like-kind selection, bounded donor-style catch-up, and the DTO that persistence restores.
 /// </summary>
-internal sealed class DaggerfallEffectLifecycle : IDisposable
+internal sealed class DaggerfallEffectLifecycle : IDisposable, IDaggerfallMovementEffects
 {
+    // What the player's movement asks of the effects on them (Character's interface).
+    WorldRpg.Kit.Controls.ActorControlRestrictions IDaggerfallMovementEffects.ControlsFor(long targetId) => ControlsFor(targetId);
+    bool IDaggerfallMovementEffects.GrantsSlowfall(long targetId) => GrantsSlowfall(targetId);
+    bool IDaggerfallMovementEffects.EnhancesJumping(long targetId) => EnhancesJumping(targetId);
+    bool IDaggerfallMovementEffects.GrantsWaterWalking(long targetId) => GrantsWaterWalking(targetId);
+    bool IDaggerfallMovementEffects.EnhancesClimbing(long targetId) => EnhancesClimbing(targetId);
+    bool IDaggerfallMovementEffects.GrantsLevitation(long targetId) => GrantsLevitation(targetId);
+    bool IDaggerfallMovementEffects.GrantsWaterBreathing(long targetId) => GrantsWaterBreathing(targetId);
+
     internal const uint MaximumElapsedCatchupRounds = 2 * 24 * 60;
     private readonly ActorsState _actors;
     private readonly DaggerfallEffectCatalog _catalog;

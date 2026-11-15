@@ -26,7 +26,12 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// call one of its fixed steps makes; <see cref="ResolveExhaustion"/> is what a collapse does across domains;
 /// <see cref="RemoveCarriedQuestItems"/> is what a quest's end does to the items it lent; <see cref="Arrest"/>, <see cref="ChooseLegal"/>,
 /// <see cref="BeginCourt"/>, <see cref="ApplyCourtSentence"/> and <see cref="ServePrison"/> are what the law's steps do; <see cref="ReconcileSummoningFoes"/>
-/// is how a summoning's hostiles arrive; <see cref="PublishPresentation"/> is what the HUD and the world show of a moment; <see cref="ApplyDeathMode"/> is what death does to the Dead screen, the camera and the player's sprite; and <see cref="ExpireConjuredItems"/> is what a conjured item's last minute does. Each line says the domain it belongs to. Order is behaviour: a call
+/// is how a summoning's hostiles arrive; <see cref="PublishPresentation"/> is what the HUD and the world show of a moment; <see cref="ApplyDeathMode"/> is what death does to the Dead screen, the camera and the player's sprite; <see cref="ExpireConjuredItems"/> is what a conjured item's last minute does;
+/// <see cref="ApplyPlayerActs"/>, <see cref="ApplyDeferredPlayerActs"/> and <see cref="ReconcileTriggers"/> are the player's acts and the step's
+/// one trigger request; <see cref="React"/>, <see cref="ReactToAttack"/> and <see cref="ApplyAttackImpacts"/> are who hears a fact, an attack and
+/// the impacts; <see cref="CreateNewGame"/> is what a new game does; <see cref="ApplyProductMode"/> and <see cref="ApplyRelocation"/> are a mode
+/// change and a relocation; <see cref="RetireDetachedActor"/> is a detached actor's retirement; and the site host's members are what a site's
+/// arrival, rebase and departure do. Each line says the domain it belongs to. Order is behaviour: a call
 /// moves only with a reason that names what it changes.
 /// </summary>
 internal sealed partial class DaggerfallSession
@@ -188,7 +193,7 @@ internal sealed partial class DaggerfallSession
             _heldEnchantments.Refresh();                                                          // Magic
             ApplyAttackImpacts();                                                                 // Combat
             // Acts a step held behind an enemy hit on the player run once that hit's frame had its chance.
-            ApplyDeferredPlayerActs();                                                            // Character
+            ApplyDeferredPlayerActs();                                                            // Session: the deferred acts' list, below
             UpdateRangedFlight(facts);                                                            // Combat, Magic: the ranged flight's list, below
             // Every fatigue sink this update reached has now settled, so an emptied pool collapses once here.
             ResolveExhaustion();                                                                  // Condition
@@ -209,7 +214,7 @@ internal sealed partial class DaggerfallSession
             && double.IsFinite(facts.FixedDeltaSeconds) && facts.FixedDeltaSeconds > 0;
         SyncWeatherContext(ambientPlaying ? facts.FixedDeltaSeconds * facts.AdmittedStepCount : 0, ambientPlaying);   // Exterior
         // A paused or held update reached no impact boundary, so acts it deferred are not performed.
-        _deferredPlayerActs = null;                                                               // Character
+        _actTiming.Drop();                                                                        // Character
         foreach (var appearance in _sites.Appearances) appearance.CompleteAdmittedUpdate();      // Scene
         return ProductUpdateResult.None;
     }
@@ -412,22 +417,22 @@ internal sealed partial class DaggerfallSession
         State.Kit.AttackExecution.ObserveTimeline(generation, simulationStep);                    // Combat
 
         // The player's movement, with the doors, gates, triggers and terrain it meets at the point it meets them.
-        PlayerStep player = ApplyPlayerControls(update);                                          // Character
+        DaggerfallPlayerStep player = _movement.ApplyControls(update, State.Encumbrance.Read().CanMove);   // Character, Items' load
         State.Transport.Reconcile(State.Inventory.Read(), new DaggerfallTransportAccessContext(
             IsIndoor: _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior,
             IsDungeon: _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon));            // Travel
-        BeginLocomotion(ref player, update);                                                      // Character
+        _movement.BeginLocomotion(ref player, update);                                            // Character
         _doors.Advance(update.DeltaSeconds);                                                      // Interiors
         _sites.Projection.AdvanceMotion(update.DeltaSeconds);                                     // Exterior
         _exterior.SyncCityGates();                                                                // Exterior
         player.Environment = _exterior.CharacterEnvironment(State.PlayerControl.Motion);         // Exterior
-        ReconcileTriggers(player.Environment, simulationStep, actionGraph);                       // Character
-        ShapeLocomotion(ref player, update, generation, simulationStep);                          // Character: water, climbing, levitation
+        ReconcileTriggers(player.Environment, simulationStep, actionGraph);                       // Session: the triggers' list, below
+        _movement.ShapeLocomotion(ref player, update, generation, simulationStep, _exterior);    // Character: water (Exterior's surface), climbing, levitation
         if (State.Transport.RideTuning is not null)
             player.Locomotion = State.Transport.RideStep(player.Locomotion, update, player.ActiveWater is not null,
                 _locomotion.CanGallop(State.Actors.Player.Stats, _tuning.Transport.GallopFatigueReserve), State.PlayerControl);   // Travel, Character: the gallop's fatigue
-        ConstrainLocomotion(ref player);                                                          // Character: control restrictions, slowfall
-        player.Movement = _spatial.Step(State.PlayerControl, update, player.Environment, player.Locomotion.Controls);   // Character
+        _movement.ConstrainLocomotion(ref player);                                                // Character: control restrictions, slowfall
+        _movement.Move(ref player, update);                                                       // Character
         if (player.Movement is { } ridden)
             State.Transport.Ride.Moved(ridden.Displacement, update.DeltaSeconds, ridden.Motion.Grounded);   // Travel
         if (player.Movement is not null && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior)
@@ -440,11 +445,12 @@ internal sealed partial class DaggerfallSession
             // Its live wilderness actors still use the admitted terrain and actor owners.
         }
         if (player.Movement is not null)
-            ReconcileTriggers(player.Environment, simulationStep, actionGraph);                   // Character
+            ReconcileTriggers(player.Environment, simulationStep, actionGraph);                   // Session: the triggers' list, below
         if (player.Movement is not null && State.DungeonDiscoveries.TryGetValue(_activeProfileKey, out DaggerfallDungeonDiscovery? discovery))
             _dungeonVisibility.Observe(discovery, State.PlayerControl, _doors, player.Environment, simulationStep,
                 _tuning.Camera.EyeHeight, _exterior.LocalCompensation);                           // Interiors
-        CompleteLocomotion(ref player, update, swimmingMinuteBefore, swimmingMinuteAfter);        // Character: swimming, landing, climbing
+        _movement.CompleteLocomotion(ref player, update, swimmingMinuteBefore, swimmingMinuteAfter,
+            _time.Calendar.MinuteNumber);                                                         // Character: swimming, landing, climbing
         if (player.Movement is { } acceptedMovement && player.PositionBefore is { } previousPosition)
             _appearance.AdvanceFootsteps(previousPosition, acceptedMovement.Transform.Translation,
                 player.MotionBefore.Grounded, State.PlayerControl.Motion.Grounded, player.WasSwimming, player.Swimming.Swimming,
@@ -462,9 +468,9 @@ internal sealed partial class DaggerfallSession
         // whether an actor stands in water, so after the origin moves they are reconciled again in the new
         // frame before any actor steps. The player's place relative to the water is unchanged by it.
         if (_exterior.RebaseExteriorIfNeeded())                                                   // Exterior
-            ReconcileTriggers(_exterior.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, actionGraph);   // Character
+            ReconcileTriggers(_exterior.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, actionGraph);   // Session: the triggers' list
         if (player.Movement is not null && player.Alive && _sites.ActivateLocationAtPlayer())    // Interiors: the crossing
-            ReconcileTriggers(_exterior.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, null);   // Character
+            ReconcileTriggers(_exterior.CharacterEnvironment(State.PlayerControl.Motion), simulationStep, null);   // Session: the triggers' list
         StrikeFeel.Settle(update.DeltaSeconds);                                                   // Combat
         _camera.Update(State.PlayerControl, _appearance.MountEyeLift(_tuning.Camera.EyeHeight)); // Character
 
@@ -494,7 +500,9 @@ internal sealed partial class DaggerfallSession
         if (State.Actors.Player.IsDefeated
             || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d)
             return;
-        PerformOrDeferPlayerActs(update);                                                         // Character
+        // An enemy hit on the player already in flight holds the step's own acts for the update's impact boundary.
+        if (_actTiming.PerformNow(DaggerfallPlayerActs.Read(update)) is { } acts) ApplyPlayerActs(acts);   // Character, then the acts' list below
+        else _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);    // Scene
         PlayerAttack.Step(update.DeltaSeconds, generation, simulationStep);                       // Combat
         // The guard follows the step's acts, so a swing begun this step keeps the guard down.
         PlayerAttack.StepGuard(update.DeltaSeconds, generation, simulationStep);                  // Combat
@@ -520,7 +528,7 @@ internal sealed partial class DaggerfallSession
         ObservePlayerInput(update.Inputs.ToArray(), update.DeltaSeconds, update);                 // Session: the input's list, below
         SimulateStep(update, 0, 0);                                                               // Session: the step's list
         DeliverFacts();                                                                           // Session
-        ApplyDeferredPlayerActs();                                                                // Character
+        ApplyDeferredPlayerActs();                                                                // Session: the deferred acts' list, below
         ResolveExhaustion();                                                                      // Condition
         PublishPresentation();                                                                    // UiProjection
         if (Music.Scored) Music.Advance(MusicContext(), _time.Calendar.DayNumber);                // Scene
@@ -1524,5 +1532,72 @@ internal sealed partial class DaggerfallSession
             return replacement;
         }
         catch { replacement.Dispose(); throw; }
+    }
+
+    /// <summary>
+    /// The acts' list: the player's own requests from one simulation step, a shortcut first taking the slice, the
+    /// weapon readied or sheathed, the swing pressed, the use, then the panel buttons.
+    /// </summary>
+    private void ApplyPlayerActs(DaggerfallPlayerActs acts)
+    {
+        foreach (string shortcut in acts.Shortcuts) _dispatch.ApplyShortcut(shortcut);           // UiProjection
+        acts = acts.AfterShortcuts();                                                             // Character
+        if (acts.ToggleWeapon) ToggleWeapon();                                                    // Character, Travel's hands
+        _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);         // Scene
+        LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);                 // Character
+        if (acts.Swings(State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId), State.WeaponDrawn))   // Character
+        {
+            if (acts.Attack) PlayerAttack.Clock.Press();                                          // Combat
+            if (acts.Kick) PlayerAttack.Clock.PressKick();                                        // Combat
+        }
+        if (acts.Interact)
+            _ = TryActivateContextual(currentLook);                                               // Session: the use's list, above
+        // A panel button asks the DOM for a panel during ordinary play, which is where the keyboard's
+        // own I, C and Escape are heard. While a modal or a death holds the world the DOM already has
+        // a panel in front of the player, so a request there would fight the mode rather than serve it.
+        // Two panel buttons in one admitted slice ask in a fixed order and the last one stands, which
+        // is what the DOM's own key handling does with two keys in one frame: one panel can open, so
+        // the earlier press must not swallow the later one.
+        if (acts.Inventory) RequestPanel(DaggerfallPanel.Inventory);                             // UiProjection
+        if (acts.Character) RequestPanel(DaggerfallPanel.Character);                             // UiProjection
+        if (acts.Map) RequestPanel(DaggerfallPanel.Map);                                         // UiProjection
+        if (acts.Menu) RequestPanel(DaggerfallPanel.Menu);                                       // UiProjection
+    }
+
+    /// <summary>
+    /// The deferred acts' list: the acts a step held behind an enemy hit on the player run once this update's impacts
+    /// have landed, unless a lethal impact or a legal modal now holds the world, and their facts are delivered.
+    /// </summary>
+    private void ApplyDeferredPlayerActs()
+    {
+        if (_actTiming.TakeDeferred(Law.ModalOpen, State.Actors.Player.IsDefeated
+            || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) is not { } acts)
+            return;                                                                               // Character, Society's modal
+        ApplyPlayerActs(acts);                                                                    // Session: the acts' list, above
+        DeliverFacts();                                                                           // Session
+    }
+
+    /// <summary>
+    /// The triggers' list: the step's one trigger request carries the water, the active dungeon actions' triggers and
+    /// the player (Character builds and sends it and swimming reads its facts), then the dungeon actions hear it.
+    /// </summary>
+    private void ReconcileTriggers(CharacterStepEnvironment environment, ulong simulationStep, DaggerfallDungeonActionGraph? actionGraph)
+    {
+        SpatialTriggerReconcileResult reconciliation = _movement.ReconcileTriggers(environment, simulationStep,
+            actionGraph is null ? [] : _sites.Interiors.ActionTriggers.ContactColliders(actionGraph, simulationStep));   // Character, Interiors' triggers
+        if (actionGraph is not null)
+            _ = DungeonActions.Report(_sites.Interiors.ActionTriggers.Dispatch(actionGraph, reconciliation.Facts.Span,
+                State.Actors.Player.Actor.Entity));                                               // Interiors
+    }
+
+    /// <summary>A melee strike a test or tool asks for outside a step: the timeline, the strike, its facts and the publication.</summary>
+    internal void ResolveExplicitMelee(ExplicitMeleeRequest request)
+    {
+        _latestUpdateGeneration = request.Generation;                                             // Session
+        _latestSimulationStep = request.SimulationStep;                                           // Session
+        State.Kit.AttackExecution.ObserveTimeline(request.Generation, request.SimulationStep);    // Combat
+        _combat.ResolveExplicit(request, _facts);                                                 // Combat
+        DeliverFacts();                                                                           // Session
+        PublishPresentation();                                                                    // UiProjection
     }
 }

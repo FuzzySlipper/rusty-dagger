@@ -8,10 +8,11 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>What the player rides, as locomotion reads it: whether the player is on foot, and the ride's ground speed.</summary>
+/// <summary>What the player rides, as locomotion reads it: whether the player is on foot or aboard a ship, and the ride's ground speed.</summary>
 internal interface IDaggerfallRide
 {
     bool IsOnFoot { get; }
+    bool OnShip { get; }
     double MovementSpeed(double liveSpeed, double classicToEngineRatio);
 }
 

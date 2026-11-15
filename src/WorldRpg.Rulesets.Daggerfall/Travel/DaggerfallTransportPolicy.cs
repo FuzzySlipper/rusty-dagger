@@ -221,6 +221,7 @@ internal sealed class DaggerfallTransportPolicy : IDaggerfallRide
     internal DaggerfallTransportTuning Tuning => _tuning;
     internal bool IsOnFoot => !_onShip && _mode == DaggerfallTransportMode.Foot;
     bool IDaggerfallRide.IsOnFoot => IsOnFoot;
+    bool IDaggerfallRide.OnShip => OnShip;
     double IDaggerfallRide.MovementSpeed(double liveSpeed, double classicToEngineRatio) => MovementSpeed(liveSpeed, classicToEngineRatio);
     internal bool CanRun => IsOnFoot;
     /// <summary>The reins take the hands while riding, so the weapon is readied or sheathed only on foot or aboard ship.</summary>

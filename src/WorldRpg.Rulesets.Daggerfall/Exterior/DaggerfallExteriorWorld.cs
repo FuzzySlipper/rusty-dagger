@@ -94,8 +94,10 @@ internal interface IDaggerfallExteriorHost
 /// (<see cref="DaggerfallDeferredCollision"/>) is followed on the update, and play holds until it is live.</item>
 /// </list>
 /// </remarks>
-internal sealed class DaggerfallExteriorWorld
+internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
 {
+    CharacterWaterVolume? IDaggerfallWaterSurface.WaterAt(CharacterWaterVolume? volume, Vector3 position) => WaterAt(volume, position);
+
     private readonly IEngineContext _engine;
     private readonly ActorsState _actors;
     private readonly DaggerfallNpcRegistry _npcs;
