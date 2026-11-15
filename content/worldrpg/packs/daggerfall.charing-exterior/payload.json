@@ -87,8 +87,8 @@
   "startingState": {
     "position": [
       312.4,
-      3.2250001,
-      -365.2
+      0,
+      -362.8
     ],
     "look": {
       "yawRadians": 0,
