@@ -41,6 +41,23 @@ public sealed class DaggerfallMerchantSessionTests
     }
 
     [Fact]
+    public void A_carried_quest_item_cannot_be_sold_and_stays_in_the_pack()
+    {
+        using var fixture = new ConditionSessionFixture(random: RandomMaximum.Create());
+        DaggerfallSession session = fixture.Session;
+        session.AdvanceElapsedTime(6 * 60 * 60);
+        DaggerfallMerchantProviderContext context = Context(OpenProvider(session, faction: 0, service: "shop", "shop"), buildingType: 13);
+        AddArrows(session, 10, questId: "merchant.test.quest");
+
+        DaggerfallMerchantView view = session.State.Merchants.Read(context);
+        Assert.False(view.PlayerItems.Single(item => item.Key == "stack:merchant.test.arrows").CanSell);
+        DaggerfallMerchantResult sold = session.State.Merchants.Sell(context, view.Revision, "stack:merchant.test.arrows", 4);
+        Assert.False(sold.Accepted);
+        Assert.Equal(DaggerfallQuestItemExits.Refused, DaggerfallMerchantTrade.OutcomeText(sold));
+        Assert.Equal(10UL, StackQuantity(session, "merchant.test.arrows"));
+    }
+
+    [Fact]
     public void The_players_gold_is_the_purse_and_never_a_row_offered_for_sale()
     {
         using var fixture = new ConditionSessionFixture(random: RandomMaximum.Create());
@@ -342,11 +359,11 @@ public sealed class DaggerfallMerchantSessionTests
             InventoryStackId.Parse("merchant.test.gold"));
     }
 
-    private static void AddArrows(DaggerfallSession session, ulong quantity)
+    private static void AddArrows(DaggerfallSession session, ulong quantity, string? questId = null)
     {
         DaggerfallItemFactory factory = new(TestPayload.Definitions, RandomMinimum.Create());
         factory.Materialize(factory.Create(new("Weapons", "merchant.test.arrows", DaggerfallItemOwner.Player,
-            Quantity: quantity, TemplateIndex: 131)), session.State.Inventory, session.State.ItemInstances,
+            Quantity: quantity, TemplateIndex: 131, QuestId: questId, QuestSymbol: questId is null ? null : "arrows")), session.State.Inventory, session.State.ItemInstances,
             InventoryStackId.Parse("merchant.test.arrows"));
     }
 

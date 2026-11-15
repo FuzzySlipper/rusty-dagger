@@ -80,7 +80,7 @@ public sealed class DaggerfallPropertyHoldingsTests
         DaggerfallWorldProfileKey interior = DaggerfallWorldProfileIds.Interior(h.Site.Id, shop.Id);
         DaggerfallPropertyContainerPlacement chest = new("chest", new WorldPoint(1, 0, 1), [], [new WorldPoint(2, 0, 1), new WorldPoint(9, 0, 1)]);
         DaggerfallGroundContainers containers = new(h.Fixture.Containers, h.Fixture.Instances, h.Fixture.PlayerEntity,
-            new DurableIdentityAllocator(DurableIdentityKind.Container, 500), interior);
+            new DurableIdentityAllocator(DurableIdentityKind.Container, 500), interior, QuestItemDropsFake.Exits(h.Fixture.Instances));
         PlayerControlState player = new(new WorldPoint(3, 0, 1), 0f, 0f);
         DaggerfallPropertyLoot loot = new(containers, h.Fixture.Definitions, RandomMinimum.Create(), h.Fixture.UniqueItems,
             society.Crimes, society.Crime, h.Fixture.Instances, society.Actors, new(), society.Character, society.SkillUses, player, h.Sites,
@@ -139,7 +139,7 @@ public sealed class DaggerfallPropertyHoldingsTests
                 Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))));
             Profile = DaggerfallWorldProfileIds.Exterior(Site.Id);
             DaggerfallPropertyStorage storage = new(Fixture.Containers, Fixture.Instances, Fixture.Definitions,
-                new DurableIdentityAllocator(DurableIdentityKind.Container, 100), Property, Fixture.PlayerEntity);
+                new DurableIdentityAllocator(DurableIdentityKind.Container, 100), Property, Fixture.PlayerEntity, QuestItemDropsFake.Exits(Fixture.Instances));
             Owner = new(Property, storage, new DaggerfallRegionalBankState(Fixture.Currency, Fixture.Inventory, Fixture.Instances),
                 Fixture.Currency, new DaggerfallTransportPolicy(DaggerfallTuning.Defaults.Transport),
                 new DaggerfallKnightlyOrderClaimRuntime(Fixture.GuildServices, new DaggerfallKnightlyOrderClaimState(), RandomMinimum.Create()),

@@ -45,7 +45,7 @@ internal sealed class QuestItemStage : IDisposable
             new DaggerfallEquipmentMoves(inventory, equipment, Definitions, itemInstances: Instances));
         Quests.BindItems(QuestItems);
         Site = Definitions.Locations.Records.First(site => site.Exterior is not null);
-        Ground = new(Containers, Instances, PlayerEntity, Identities, DaggerfallWorldProfileIds.Exterior(Site.Id));
+        Ground = new(Containers, Instances, PlayerEntity, Identities, DaggerfallWorldProfileIds.Exterior(Site.Id), QuestItemDropsFake.Exits(Instances));
     }
 
     internal DaggerfallDefinitions Definitions { get; } = QuestWorldAdmissionTests.Definitions();

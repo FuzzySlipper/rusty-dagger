@@ -380,7 +380,7 @@ public sealed class DaggerfallRegionalBankTests
 
         internal DaggerfallWagonStorage CreateWagon()
         {
-            DaggerfallWagonStorage wagon = new(Containers, Instances, _definitions, Player, _containerIdentities, DaggerfallTuning.Defaults.Transport);
+            DaggerfallWagonStorage wagon = new(Containers, Instances, _definitions, Player, _containerIdentities, DaggerfallTuning.Defaults.Transport, QuestItemDropsFake.Exits(Instances));
             _ = wagon.EnsureCreated();
             return wagon;
         }

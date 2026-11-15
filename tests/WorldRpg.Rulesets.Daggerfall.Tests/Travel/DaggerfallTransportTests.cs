@@ -166,6 +166,23 @@ public sealed class DaggerfallTransportTests
     }
 
     [Fact]
+    public void A_quest_item_is_refused_by_the_wagon_and_stays_in_the_pack()
+    {
+        using Fixture fixture = new();
+        fixture.AddCart(30);
+        InventoryStackId gold = fixture.AddGold(40, 10);
+        fixture.Instances.ReplaceStack(DaggerfallItemOwner.Player, gold,
+            fixture.Instances.RequireStack(DaggerfallItemOwner.Player, gold) with { QuestId = "wagon.test", QuestItemSymbol = "gold" });
+        DaggerfallWagonStorage wagon = fixture.CreateWagonStorage();
+
+        var refused = Assert.Throws<DaggerfallItemExitRefusedException>(() => wagon.TransferToWagon(
+            new(new InventoryItemId("gold-piece"), 4, Stack: gold), new(), fixture.Store.Revision));
+
+        Assert.Equal(DaggerfallQuestItemExits.Refused, refused.Message);
+        Assert.Equal(10UL, fixture.ReadPlayer().Stacks.Single(stack => stack.Id == gold).Quantity);
+    }
+
+    [Fact]
     public void Wagon_transfer_uses_engine_container_and_preserves_daggerfall_owner_metadata()
     {
         using Fixture fixture = new();
@@ -328,7 +345,7 @@ public sealed class DaggerfallTransportTests
 
         internal void DestroyStack(InventoryStackId stack) => Store.Consume(Player, stack, Store.Read(Player).Stacks.Single(value => value.Id == stack).Quantity);
 
-        internal DaggerfallWagonStorage CreateWagonStorage() => new(Containers, Instances, Definitions, Player, Identities, DaggerfallTuning.Defaults.Transport);
+        internal DaggerfallWagonStorage CreateWagonStorage() => new(Containers, Instances, Definitions, Player, Identities, DaggerfallTuning.Defaults.Transport, QuestItemDropsFake.Exits(Instances));
 
         private void AddUniqueItem(ulong id, string definition)
         {

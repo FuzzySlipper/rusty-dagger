@@ -112,10 +112,9 @@ internal sealed class DaggerfallInventoryPresentation
     private Func<DaggerfallCalendar>? loanCalendar;
     private Func<int>? loanLevel;
     private Func<int?>? currentRegion;
-    private Func<DaggerfallItemInstanceMetadata, string?>? canDropQuestItem;
-    private Action<DaggerfallItemInstanceMetadata>? questItemDropped;
-    internal void BindQuestDrops(Func<DaggerfallItemInstanceMetadata, string?> canDrop, Action<DaggerfallItemInstanceMetadata> dropped)
-    { canDropQuestItem = canDrop; questItemDropped = dropped; }
+    private DaggerfallQuestItemExits? exits;
+    /// <summary>The rule for an item leaving the pack, read to show a drop row's refusal; the drop itself asks it again.</summary>
+    internal void BindItemExits(DaggerfallQuestItemExits value) => exits = value;
     internal event Action<DaggerfallReadableBook>? BookOpened;
     internal string Message { get; private set; } = "Drag items between the grid and compatible equipment slots.";
     /// <summary>
@@ -543,14 +542,12 @@ internal sealed class DaggerfallInventoryPresentation
         else { Message = "That item is no longer in your inventory."; return; }
         WorldRpg.Kit.Controls.WorldPoint? position = groundPosition();
         if (position is null) { Message = "You cannot drop an item without a world position."; return; }
-        var metadata = Metadata(row.Key, itemOwner);
-        if (metadata is not null && canDropQuestItem?.Invoke(metadata) is { } refusal) { Message = refusal; return; }
         try
         {
             _ = ground.Drop(selection, position.Value, ulong.Parse(current.Revision.Split(':')[0], CultureInfo.InvariantCulture));
-            if (metadata is not null) questItemDropped?.Invoke(metadata);
             Message = $"Dropped {row.Label}.";
         }
+        catch (DaggerfallItemExitRefusedException refused) { Message = refused.Message; }
         catch (Exception rejection) when (rejection is InvalidOperationException or ArgumentException)
         {
             Message = $"You cannot drop {row.Label} here.";
@@ -644,7 +641,7 @@ internal sealed class DaggerfallInventoryPresentation
         string? equipRefusal = carried ? moves.EquipRefusal(definition, key.StartsWith("unique:", StringComparison.Ordinal), metadata?.CurrentCondition) : null;
         string? dropRefusal = !carried ? null
             : equippedSlots is { Length: > 0 } ? "Unequip that item before dropping it."
-            : metadata is not null ? canDropQuestItem?.Invoke(metadata) : null;
+            : metadata is not null ? exits?.Refusal(metadata) : null;
         (string? icon, PaperDollTint? iconTint) = Icon(definition, metadata);
         return new InventoryItemPresentation(key, itemId, display.Label, quantity.ToString(CultureInfo.InvariantCulture),
             metadata?.WeightClassicUnits is ulong weight ? checked((int)(weight / 100)) : definition.Weight, CurrentValue(definition, metadata), details, icon, gridSlot, equippedSlots ?? [],

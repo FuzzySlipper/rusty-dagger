@@ -31,6 +31,7 @@ internal sealed record DaggerfallWagonSave(long Id, DaggerfallInventorySave Inve
 internal sealed class DaggerfallWagonStorage
 {
     private readonly MechanicsInventoryContainerCoordinator _containers;
+    private readonly DaggerfallQuestItemExits _exits;
     private readonly DaggerfallItemInstances _instances;
     private readonly DaggerfallDefinitions _definitions;
     private readonly EntityId _player;
@@ -40,8 +41,9 @@ internal sealed class DaggerfallWagonStorage
 
     internal DaggerfallWagonStorage(MechanicsInventoryContainerCoordinator containers, DaggerfallItemInstances instances,
         DaggerfallDefinitions definitions, EntityId player, DurableIdentityAllocator identities,
-        DaggerfallTransportTuning tuning)
+        DaggerfallTransportTuning tuning, DaggerfallQuestItemExits exits)
     {
+        _exits = exits ?? throw new ArgumentNullException(nameof(exits));
         _containers = containers ?? throw new ArgumentNullException(nameof(containers));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
@@ -111,6 +113,7 @@ internal sealed class DaggerfallWagonStorage
         if (IsTransportation(definition))
             throw new InvalidOperationException("Transportation items cannot be stored in the wagon.");
         EnsureUniqueMetadata(selection, DaggerfallItemOwner.Player);
+        _exits.RequireMayLeave(selection, _containers.Entities);
         EnsureWagonCapacity(selection, definition);
         DaggerfallWagon wagon = EnsureCreated();
         InventoryContainerSelection transferSelection = PrepareTransferSelection(selection, DaggerfallItemOwner.Wagon(wagon.Id), wagon.Owner);

@@ -86,6 +86,7 @@ internal sealed class DaggerfallTravelPanel(DaggerfallFastTravel fastTravel, Dag
                 _ = wagon.TransferFromWagon(selection!, transportAccess(), inventory.Read().StoreRevision);
             presentation.SetOutcome(put ? "Item stored in wagon." : "Item taken from wagon.");
         }
+        catch (DaggerfallItemExitRefusedException refused) { presentation.SetOutcome(refused.Message); }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or OverflowException)
         {
             presentation.SetOutcome(put ? "That item cannot be stored in the wagon." : "That item cannot be taken from the wagon.");

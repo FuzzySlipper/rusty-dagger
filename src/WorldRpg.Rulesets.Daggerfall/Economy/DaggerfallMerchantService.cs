@@ -196,6 +196,7 @@ internal sealed class DaggerfallMerchantService
         };
 
     private readonly DaggerfallDefinitions _definitions;
+    private readonly DaggerfallQuestItemExits _exits;
     private readonly IRandomService _random;
     private readonly DaggerfallNpcRegistry _npcs;
     private readonly DaggerfallSocialState _social;
@@ -257,6 +258,7 @@ internal sealed class DaggerfallMerchantService
         DaggerfallItemConditionService conditions,
         DaggerfallSkillUseReactions skillUses,
         DaggerfallCrimeState crime,
+        DaggerfallQuestItemExits exits,
         Func<DaggerfallCalendar> calendar,
         Func<DaggerfallNpcSite?> currentSite,
         IEnumerable<DaggerfallMerchantSave>? restored = null,
@@ -282,6 +284,7 @@ internal sealed class DaggerfallMerchantService
         _conditions = conditions ?? throw new ArgumentNullException(nameof(conditions));
         _skillUses = skillUses ?? throw new ArgumentNullException(nameof(skillUses));
         _crime = crime ?? throw new ArgumentNullException(nameof(crime));
+        _exits = exits ?? throw new ArgumentNullException(nameof(exits));
         _crimeWitnesses = crimeWitnesses ?? (() => DaggerfallCrimeWitnessEvidence.NotQueried);
         _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
         _currentSite = currentSite ?? throw new ArgumentNullException(nameof(currentSite));
@@ -358,6 +361,7 @@ internal sealed class DaggerfallMerchantService
         if (!RevisionMatches(binding, revision)) return Refused("Stale");
         if (!TrySelection(DaggerfallItemOwner.Player, itemKey, quantity, out InventoryContainerSelection selection, out DaggerfallTradeLine line))
             return Refused("ItemUnavailable");
+        if (_exits.Refusal(line.Metadata) is not null) return Refused("QuestItem");
         if (!CanSellToProvider(binding.Context, line.Metadata)) return Refused("ItemNotAccepted");
         DaggerfallTradeQuote? trade = Quote(binding, DaggerfallTradeSide.SellToMerchant, line);
         if (trade is null) return Refused("QuoteUnavailable");
@@ -390,6 +394,7 @@ internal sealed class DaggerfallMerchantService
         if (!TrySelection(DaggerfallItemOwner.Player, itemKey, 1, out InventoryContainerSelection selection, out DaggerfallTradeLine line)
             || selection.UniqueEntityId is not ulong itemEntity || line.Metadata.MaximumCondition == 0)
             return Refused("ItemUnavailable");
+        if (_exits.Refusal(line.Metadata) is not null) return Refused("QuestItem");
         ulong itemId = _containers.GetDurableItemId(new EntityId(itemEntity)).Value;
         if (line.Metadata.CurrentCondition == line.Metadata.MaximumCondition) return Refused("AlreadyRepaired");
         DaggerfallConcreteGuildServiceRuntimeDecision? guild = ConcreteGuildProvider(context, DaggerfallConcreteGuildService.Repair);
@@ -648,7 +653,7 @@ internal sealed class DaggerfallMerchantService
                 new(definition, metadata, 1));
             rows.Add(new("stack:" + stack.Id.Value, definition.Id.Value, ItemLabel(definition, metadata), stack.Quantity, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
-                buying, !buying && CanSellToProvider(binding.Context, metadata),
+                buying, !buying && _exits.Refusal(metadata) is null && CanSellToProvider(binding.Context, metadata),
                 IconMetadata: metadata));
         }
         foreach (EngineUniqueInventoryItem item in inventory.UniqueItems.OrderBy(value => value.Entity.Value))
@@ -660,7 +665,7 @@ internal sealed class DaggerfallMerchantService
                 new(definition, metadata, 1));
             rows.Add(new("unique:" + id, definition.Id.Value, ItemLabel(definition, metadata), 1, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
-                buying, !buying && CanSellToProvider(binding.Context, metadata),
+                buying, !buying && _exits.Refusal(metadata) is null && CanSellToProvider(binding.Context, metadata),
                 Repair(definition, metadata), Identify(definition, metadata), metadata));
         }
         return [.. rows];

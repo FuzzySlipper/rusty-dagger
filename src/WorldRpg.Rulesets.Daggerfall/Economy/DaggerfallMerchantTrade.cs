@@ -124,6 +124,7 @@ internal sealed class DaggerfallMerchantTrade(
             "Stale" => "The shop's goods changed. Choose the item again.",
             "ItemUnavailable" => "That item is no longer available.",
             "ItemNotAccepted" => "This shop does not buy that kind of item.",
+            "QuestItem" => DaggerfallQuestItemExits.Refused,
             "QuoteUnavailable" => "The merchant will not trade that item.",
             "ConfirmationRequired" => "Confirm a trade that large first.",
             "AlreadyRepaired" => "That item does not need repairing.",

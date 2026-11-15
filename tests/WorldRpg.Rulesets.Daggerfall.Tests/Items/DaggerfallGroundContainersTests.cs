@@ -31,7 +31,7 @@ public sealed class DaggerfallGroundContainersTests
         instances.RegisterStack(DaggerfallItemOwner.Player, stack, Metadata(DaggerfallItemOwner.Player));
         DurableIdentityAllocator identities = new(DurableIdentityKind.Container, 100);
         DaggerfallGroundContainers ground = new(containers, instances, player, identities,
-            Profile(DaggerfallWorldProfileKind.Exterior, "charing-exterior"));
+            Profile(DaggerfallWorldProfileKind.Exterior, "charing-exterior"), QuestItemDropsFake.Exits(instances));
         var old = ground.Drop(new(new("apple"), 3, stack), default, store.Revision);
         var dropped = containers.Read(old.Owner).Stacks.Single().Id;
         if (retainOtherContents)
@@ -82,7 +82,7 @@ public sealed class DaggerfallGroundContainersTests
         DaggerfallWorldProfileKey exterior = Profile(DaggerfallWorldProfileKind.Exterior, "charing-exterior");
         DaggerfallWorldProfileKey interior = Profile(DaggerfallWorldProfileKind.Interior, "charing-interior");
         DurableIdentityAllocator identities = new(DurableIdentityKind.Container, 100);
-        DaggerfallGroundContainers ground = new(containers, instances, player, identities, exterior);
+        DaggerfallGroundContainers ground = new(containers, instances, player, identities, exterior, QuestItemDropsFake.Exits(instances));
 
         Assert.Throws<InvalidOperationException>(() => ground.Drop(new(new InventoryItemId("apple"), 3, playerStack),
             new WorldPoint(4, 0, 8), store.Revision - 1));
@@ -151,7 +151,7 @@ public sealed class DaggerfallGroundContainersTests
             new(DurableIdentityKind.Item, 201, [200], []),
         ]));
         var profile = Profile(DaggerfallWorldProfileKind.Exterior, "charing-exterior");
-        DaggerfallGroundContainers ground = new(containers, instances, player, ledger, profile);
+        DaggerfallGroundContainers ground = new(containers, instances, player, ledger, profile, QuestItemDropsFake.Exits(instances));
         var saved = new DaggerfallGroundContainerSave(DaggerfallWorldProfileKeySave.Capture(profile), 99, 819.3f, 2, -4,
             new([new("apples", "apple", 3, Metadata(DaggerfallItemOwner.Ground(99)).Capture())],
                 [new("ring", 200, Metadata(DaggerfallItemOwner.Ground(99)).Capture())], []));
@@ -181,7 +181,7 @@ public sealed class DaggerfallGroundContainersTests
         restoredStore.RegisterInventory(new InventoryState(restoredPlayer));
         restoredEntities.Store.Add(restoredPlayer, new InventoryComponent(restoredStore, restoredPlayer));
         var restoredLedger = DurableIdentityAllocator.Restore(ledger.CaptureState());
-        DaggerfallGroundContainers restored = new(new(restoredStore, restoredEntities, definitions), new(), restoredPlayer, restoredLedger, profile);
+        DaggerfallGroundContainers restored = new(new(restoredStore, restoredEntities, definitions), new(), restoredPlayer, restoredLedger, profile, QuestItemDropsFake.Exits(new()));
         restored.ReconcileExteriorResidency(DaggerfallExteriorSessionOrigin.ResidentAt([new(10, 10)], origin with { Compensation = delta }));
         restored.Restore([captured]);
         Assert.Equal(DurableEntityResolution.Unloaded, restoredEntities.Classify(new(DurableIdentityKind.Container, 99), restoredLedger));

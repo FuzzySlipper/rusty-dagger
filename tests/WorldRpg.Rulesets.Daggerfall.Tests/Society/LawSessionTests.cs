@@ -277,6 +277,22 @@ public sealed class LawSessionTests
     }
 
     [Fact]
+    public void Confiscation_leaves_a_stolen_quest_item_with_the_player()
+    {
+        using var f = new Fixture(); var s = f.Session;
+        var carried = s.State.Inventory.Read().UniqueItems.First();
+        ulong id = s.State.Inventory.GetDurableItemId(carried.Entity).Value;
+        s.State.ItemInstances.ReplaceUnique(id, s.State.ItemInstances.RequireUnique(id) with {Stolen = true, QuestId = "law.test", QuestItemSymbol = "gift"});
+        s.State.Currency.TrySpendGold(s.State.Currency.Read().Gold, []);
+        f.Guard(); f.Charge(); f.Step(); f.Choose("yield");
+        var response = s.State.Crime.LegalResponses.Single();
+        s.State.Crime.SetResponse(response with {Penalty = new(160, 4, false)});
+        f.Choose("guilty"); f.Choose("accept");
+        Assert.True(s.State.ItemInstances.ContainsUnique(id));
+        Assert.Contains(s.State.Inventory.Read().UniqueItems, item => item.Entity == carried.Entity);
+    }
+
+    [Fact]
     public void A_confiscated_starting_item_stays_gone_across_a_load_and_keeps_its_authored_reservation()
     {
         using var f = new Fixture(); var s = f.Session;

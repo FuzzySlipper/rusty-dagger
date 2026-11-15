@@ -355,16 +355,23 @@ internal sealed class DaggerfallItemInstances
         ArgumentNullException.ThrowIfNull(sourceAfter);
         ArgumentNullException.ThrowIfNull(entities);
         foreach (InventoryContainerStackTransfer stack in transfer.Stacks)
+        {
             TransferStack(source, destination, stack.SourceStack, stack.DestinationStack,
                 !sourceAfter.Stacks.Any(value => value.Id == stack.SourceStack));
+            Transferred?.Invoke(RequireStack(destination, stack.DestinationStack), source, destination);
+        }
         foreach (InventoryContainerUniqueTransfer unique in transfer.UniqueItems)
         {
             DurableIdentityReference identity = entities.IdentityOf(new EntityId(unique.EntityId));
             if (identity.Kind != DurableIdentityKind.Item)
                 throw new InvalidOperationException($"Transferred entity {unique.EntityId} is not a durable item.");
             MoveUnique(identity.Value, destination);
+            Transferred?.Invoke(RequireUnique(identity.Value), source, destination);
         }
     }
+
+    /// <summary>An item a container transfer moved, with the owner it left and the owner it reached.</summary>
+    internal event Action<DaggerfallItemInstanceMetadata, DaggerfallItemOwner, DaggerfallItemOwner>? Transferred;
 
     /// <summary>
     /// Stamps the owner a transfer gave the item and reports the move. The stamp is compared with the

@@ -58,7 +58,7 @@ internal sealed class GuildMakerFixture : IDisposable
         Equipment = new(pack, worn, Entities, items, slots);
         Containers = new(world, Entities, items);
         Wagon = new(Containers, Instances, Definitions, player, new DurableIdentityAllocator(DurableIdentityKind.Container, 1),
-            DaggerfallTuning.Defaults.Transport);
+            DaggerfallTuning.Defaults.Transport, QuestItemDropsFake.Exits(Instances));
 
         DaggerfallActorDefinition actor = Definitions.RequireActor(new DaggerfallActorId("player"));
         StatsComponent stats = Stats = new DaggerfallMechanicsState().CreateStats(actor,
@@ -96,7 +96,7 @@ internal sealed class GuildMakerFixture : IDisposable
             new DaggerfallTradeQuoteService(Definitions, new DaggerfallItemValuation(Definitions), prices), prices,
             new DaggerfallItemConditionService(Definitions, Instances, moves),
             new DaggerfallSkillUseReactions(progression, Stats, Definitions, () => Character.Career),
-            new Crime.DaggerfallCrimeState(null, () => false), () => Calendar, () => _site);
+            new Crime.DaggerfallCrimeState(null, () => false), QuestItemDropsFake.Exits(Instances), () => Calendar, () => _site);
     }
 
     /// <summary>One item of <paramref name="template"/> in the pack: the spellbook is 132.</summary>

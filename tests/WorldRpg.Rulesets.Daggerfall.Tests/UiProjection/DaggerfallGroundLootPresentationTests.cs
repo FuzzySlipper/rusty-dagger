@@ -39,7 +39,7 @@ public sealed class DaggerfallGroundLootPresentationTests
             definitions.RequireItem(new DaggerfallItemId("gold-piece")));
         DaggerfallWorldProfileKey profile = new DaggerfallWorldProfileKey(new DaggerfallSiteId(1, 2), DaggerfallWorldProfileKind.Exterior, "charing-exterior").Validate();
         DaggerfallGroundContainers ground = new(new MechanicsInventoryContainerCoordinator(store, entities, items), instances, player,
-            new DurableIdentityAllocator(DurableIdentityKind.Container, 100), profile);
+            new DurableIdentityAllocator(DurableIdentityKind.Container, 100), profile, QuestItemDropsFake.Exits(instances));
         DaggerfallGroundContainer pile = ground.Drop(new(new InventoryItemId("gold-piece"), 4, gold), new WorldPoint(4, 0, 8), store.Revision);
         DaggerfallInventoryPresentation inventoryPresentation = new(new DaggerfallEquipmentMoves(inventory, equipment, definitions), definitions, new Dictionary<string, string>());
         DaggerfallLootPresentation loot = new(null!, inventoryPresentation, ground);

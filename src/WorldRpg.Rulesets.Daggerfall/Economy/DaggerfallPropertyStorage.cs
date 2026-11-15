@@ -16,6 +16,7 @@ internal sealed class DaggerfallPropertyStorage
 {
 
     private readonly MechanicsInventoryContainerCoordinator _containers;
+    private readonly DaggerfallQuestItemExits _exits;
     private readonly DaggerfallItemInstances _instances;
     private readonly DaggerfallDefinitions _definitions;
     private readonly DurableIdentityAllocator _identities;
@@ -25,8 +26,9 @@ internal sealed class DaggerfallPropertyStorage
 
     internal DaggerfallPropertyStorage(MechanicsInventoryContainerCoordinator containers,
         DaggerfallItemInstances instances, DaggerfallDefinitions definitions, DurableIdentityAllocator identities,
-        DaggerfallPropertyState state, EntityId player)
+        DaggerfallPropertyState state, EntityId player, DaggerfallQuestItemExits exits)
     {
+        _exits = exits ?? throw new ArgumentNullException(nameof(exits));
         _containers = containers ?? throw new ArgumentNullException(nameof(containers));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
@@ -111,6 +113,7 @@ internal sealed class DaggerfallPropertyStorage
             throw new InvalidOperationException("Inventory changed. Choose the item again.");
         ValidateSelection(selection, player);
         EnsureUniqueMetadata(selection, DaggerfallItemOwner.Player);
+        _exits.RequireMayLeave(selection, _containers.Entities);
         long propertyId = RequirePropertyContainerId(destination);
         InventoryContainerSelection prepared = PrepareTransferSelection(selection, DaggerfallItemOwnerFor(key), destination,
             DaggerfallItemOwner.Player, propertyId);

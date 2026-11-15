@@ -891,14 +891,19 @@ internal sealed partial class DaggerfallSession
             _sites.TryRelocatePlayer(destination, new("court-release", entrance, 0, 0));         // Interiors
     }
 
-    /// <summary>The court's confiscation: the player's stolen items and stacks are destroyed and their equipment let go.</summary>
+    /// <summary>
+    /// The court's confiscation: the player's stolen items and stacks are destroyed and their equipment let go. A quest
+    /// item stays: it is its quest's, and only the quest takes it from the player.
+    /// </summary>
     private void ConfiscateStolenProperty()
     {
         var before = State.Equipment.Read();                                                      // Items
         var inventory = State.Inventory.Read();
-        var removed = inventory.UniqueItems.Where(item => State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(item.Entity).Value).Stolen).ToArray();
+        var removed = inventory.UniqueItems.Where(item => State.ItemInstances.RequireUnique(State.Inventory.GetDurableItemId(item.Entity).Value)
+            is { Stolen: true, QuestId: null }).ToArray();
         foreach (var item in removed) _itemLifetime.DestroyUnique(State.Inventory.GetDurableItemId(item.Entity).Value);
-        foreach (var stack in State.ItemInstances.StackItems.Where(value => value.Owner == DaggerfallItemOwner.Player && value.Metadata.Stolen).ToArray())
+        foreach (var stack in State.ItemInstances.StackItems.Where(value => value.Owner == DaggerfallItemOwner.Player
+            && value.Metadata is { Stolen: true, QuestId: null }).ToArray())
             _itemLifetime.ConsumeStack(stack.Owner, stack.Stack);
         _equipmentMoves.NotifyRemoved(before, before.Assignments.Where(value => removed.Any(item => item.Entity.Value == value.Item.EntityId)).Select(value => value.Item).DistinctBy(value => value.EntityId).ToArray());
         State.HeldEnchantments.Refresh();                                                         // Magic

@@ -154,7 +154,7 @@ public sealed class QuestWorldAdmissionTests
         var coordinator = new WorldRpg.Kit.Inventory.MechanicsInventoryContainerCoordinator(state.InventoryStore,
             state.Actors.Entities, itemDefinitions);
         var ground = new WorldRpg.Rulesets.Daggerfall.Modules.Loot.DaggerfallGroundContainers(coordinator, state.ItemInstances,
-            state.Actors.Player.Actor.Entity, identities, fixture.Inputs.ProfileKey);
+            state.Actors.Player.Actor.Entity, identities, fixture.Inputs.ProfileKey, QuestItemDropsFake.Exits(state.ItemInstances));
         var before = state.InventoryStore.View(state.Actors.Player.Actor.Entity);
         Assert.ThrowsAny<Exception>(() => ground.CreateQuestItem(created, default, unique));
         Assert.Empty(ground.Capture());

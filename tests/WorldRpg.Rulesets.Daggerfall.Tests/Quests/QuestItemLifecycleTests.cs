@@ -362,18 +362,20 @@ public sealed class QuestItemLifecycleTests
         Start(state);
         state.Quests.GrantItem("items", "gift");
         ulong id = Item(state).Binding.UniqueItemIds.Single();
-        var metadata = state.ItemInstances.RequireUnique(id);
         f.Update();
-        f.Submit(new { action = "inventory-drop", revision = f.Engine.PublishedNested("inventory", "revision"),
-            item = $"unique:{state.Actors.Entities.Resolve(new(DurableIdentityKind.Item, id)).Value}", amount = 1 });
-        var ground = state.ItemInstances.RequireUnique(id).Owner;
-        Assert.Equal("ground", ground.Scope);
+        // A quest item leaves the pack only as its quest allows, so it is handed to the NPC directly here.
+        var entity = state.Actors.Entities.Resolve(new(DurableIdentityKind.Item, id));
+        state.Containers.Transfer(state.Actors.Player.Actor.Entity, state.Actors.Get(f.Enemy).Actor.Entity,
+            new(new(state.Inventory.Read().UniqueItems.Single(item => item.Entity == entity).Definition.Value), 1, UniqueEntityId: entity.Value));
+        state.ItemInstances.MoveUnique(id, DaggerfallItemOwner.Actor(f.Enemy));
+        var held = state.ItemInstances.RequireUnique(id).Owner;
+        Assert.Equal("actor", held.Scope);
         state.Quests.Complete("items", "done");
         state.Quests.Advance(state.Variables, DaggerfallCalendar.Start);
         state.Quests.Advance(state.Variables, DaggerfallCalendar.Start.Advance(8 * 24 * 60 * 60, out _));
         Assert.Empty(state.Quests.All);
         using var restored = f.Restore();
-        Assert.Equal(ground, restored.State.ItemInstances.RequireUnique(id).Owner);
+        Assert.Equal(held, restored.State.ItemInstances.RequireUnique(id).Owner);
         Assert.Equal("items", restored.State.ItemInstances.RequireUnique(id).QuestId);
     }
 

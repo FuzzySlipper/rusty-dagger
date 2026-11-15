@@ -55,7 +55,7 @@ public sealed class DaggerfallLootActionsTests : IDisposable
             definitions.RequireItem(new DaggerfallItemId("gold-piece")));
         DaggerfallWorldProfileKey profile = new DaggerfallWorldProfileKey(new DaggerfallSiteId(1, 2), DaggerfallWorldProfileKind.Exterior, "loot-exterior").Validate();
         _ground = new(new MechanicsInventoryContainerCoordinator(store, _entities, items), instances, player,
-            new DurableIdentityAllocator(DurableIdentityKind.Container, 100), profile);
+            new DurableIdentityAllocator(DurableIdentityKind.Container, 100), profile, QuestItemDropsFake.Exits(instances));
         _pile = _ground.Drop(new(new InventoryItemId("gold-piece"), 4, Gold), new WorldPoint(4, 0, 8), store.Revision).Id;
         DaggerfallInventoryPresentation inventoryUi = new(new DaggerfallEquipmentMoves(_inventory, equipment, definitions), definitions, new Dictionary<string, string>());
         _loot = new(null!, inventoryUi, _ground);

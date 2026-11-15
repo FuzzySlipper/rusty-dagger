@@ -330,7 +330,7 @@ public sealed class DaggerfallPropertyTests
         }
 
         internal DaggerfallPropertyStorage CreateStorage(DaggerfallPropertyState state) =>
-            new(Containers, Instances, Definitions, Identities, state, Player);
+            new(Containers, Instances, Definitions, Identities, state, Player, QuestItemDropsFake.Exits(Instances));
 
         public void Dispose() => Entities.Dispose();
     }

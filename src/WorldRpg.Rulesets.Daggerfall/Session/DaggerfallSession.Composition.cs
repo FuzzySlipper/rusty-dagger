@@ -135,6 +135,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallQuestInstances quests = new(definitions, _random, composition.QuestAdmission, composition.DisabledQuestSelection);
             DaggerfallQuestTrainingState questTraining = new(saved?.QuestTraining);
             DaggerfallItemInstances itemInstances = assembled.ItemInstances;
+            DaggerfallQuestItemExits questItemExits = new(itemInstances, quests);
             DaggerfallNpcRegistry npcs = assembled.Npcs;
             social.SetBiographyReactionModifier(character.Background?.Modifiers.Reaction ?? 0);
             Dictionary<long, DaggerfallActorDefinition> authored = assembled.Definitions;
@@ -503,7 +504,7 @@ internal sealed partial class DaggerfallSession
             DaggerfallRegionalBankState bank = new(currency, inventory, itemInstances, saved?.Bank);
             DaggerfallLoanState loans = new(saved?.Loans);
             DaggerfallPropertyState property = new(tuning.Property, saved?.Property);
-            DaggerfallPropertyStorage propertyStorage = new(containers, itemInstances, definitions, _actorIdentities, property, playerEntity);
+            DaggerfallPropertyStorage propertyStorage = new(containers, itemInstances, definitions, _actorIdentities, property, playerEntity, questItemExits);
             if (saved?.Property is { } savedProperty) propertyStorage.Restore(savedProperty);
             DaggerfallCrimeState crime = new(saved?.Crime, () => racialOverrides.Current?.SuppressCrime == true);
             DaggerfallServiceTransactions services = new(npcs, social, inventory, itemInstances,
@@ -524,12 +525,12 @@ internal sealed partial class DaggerfallSession
             DaggerfallTradeQuoteService tradeQuotes = new(definitions, new DaggerfallItemValuation(definitions), regionalPrices);
             DaggerfallMerchantService merchants = new(definitions, _random, npcs, social, playerStats, character, progression,
                 inventory, containers, itemInstances, _uniqueItems, _actorIdentities, currency, services, concreteGuildServices, tradeQuotes,
-                regionalPrices, _itemCondition, skillUses, crime, () => _time.Calendar,
+                regionalPrices, _itemCondition, skillUses, crime, questItemExits, () => _time.Calendar,
                 () => _dialogue?.CurrentNpc()?.Site,
                 saved?.Merchants, () => Crimes.QueryWitnesses());
             DaggerfallTransportPolicy transport = new(tuning.Transport);
             DaggerfallWagonStorage wagon = new(containers, itemInstances, definitions,
-                playerEntity, _actorIdentities, tuning.Transport);
+                playerEntity, _actorIdentities, tuning.Transport, questItemExits);
             DaggerfallSwimmingPolicy swimming = new(tuning.Swimming);
             State = new DaggerfallState(
                 assembled,
@@ -680,7 +681,7 @@ internal sealed partial class DaggerfallSession
                 _actorIdentities);
             _itemOwnership = new DaggerfallItemOwnership(State.Actors, State.InventoryStore, actor => _corpseLoot.Corpses[actor].Owner);
             _itemLifetime = new DaggerfallItemLifetime(State.Actors.Entities, State.InventoryStore, State.ItemInstances, _uniqueItems, _itemOwnership);
-            _groundContainers = new DaggerfallGroundContainers(containers, State.ItemInstances, playerEntity, _actorIdentities, activeProfile);
+            _groundContainers = new DaggerfallGroundContainers(containers, State.ItemInstances, playerEntity, _actorIdentities, activeProfile, questItemExits);
             Detectors = new DaggerfallDetectors(State.Effects, actors, containers, _tuning.Detection.MaximumDistance,
                 () => assembled.PlayerControl.Position, npcs.IsGameplayActive, id => DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null,
                 () => _groundContainers.All.Values.Select(ground => (ground.Id, ground.Owner, ground.Position))
@@ -692,6 +693,7 @@ internal sealed partial class DaggerfallSession
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, definitions.Mobiles, definitions.Text);
             _inventoryUi = new DaggerfallInventoryPresentation(_equipmentMoves, definitions, composition.StartSite.ClassicPresentation.InventoryIcons,
                 State.Encumbrance, State.Currency);
+            _inventoryUi.BindItemExits(questItemExits);
             State.Quests.BindResourceAllocator(new(definitions, engine.Random, new DaggerfallItemFactory(definitions, engine.Random), questNames,
                 () => new(State.Progression.Level, State.Character.Identity.RaceId,
                     State.Character.Identity.Gender.ToString().ToLowerInvariant(), _site.ActiveSite?.Region
@@ -729,7 +731,6 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindSocial(State.Social, State.Crime, () => _site.Region);
             State.Quests.BindWorldRead(() => _sites.ReadQuestLocation());
             State.Quests.BindWorldActions((instance, operation) => _questWorldActions.Apply(instance, operation));
-            _inventoryUi.BindQuestDrops(State.Quests.CanDropItem, State.Quests.ItemDropped);
             State.Quests.BindFoeCommands((id, remove) => QuestFoes.Command(id, remove));
             State.Quests.BindFoeSpawning((operation, foe, send) => QuestFoes.Spawn(operation, foe, send));
             State.Quests.BindEnemyRelations(clear => QuestFoes.CommandAllEnemies(clear), id => actors.TryGet(id, out var actor) && !actor.IsDefeated);
@@ -757,6 +758,7 @@ internal sealed partial class DaggerfallSession
                 bankOpen: () => Banking.ActiveRegion is not null, dispelOpen: () => DispelChoice.Pending is not null, identifyOpen: () => IdentifyChoice.Open, teleportOpen: () => TeleportChoice.Pending is not null, createItemOpen: () => CreateItemChoice.Pending is not null, legalOpen: () => Law.ModalOpen,
                 tutorialOpen: () => _tutorial.Shown);
             itemInstances.StackChanged += State.Quests.ObserveStackChange;
+            itemInstances.Transferred += questItemExits.Moved;
             // Only a held bundle lives as long as its item is worn and whole. A used or striking item's
             // cast, its readied spell and its missile outlive the item breaking or changing hands, as in
             // the donor; a destroyed item ends them, since no effect may name an item that no longer exists.

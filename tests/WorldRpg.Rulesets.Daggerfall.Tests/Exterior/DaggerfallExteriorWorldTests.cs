@@ -70,7 +70,7 @@ public sealed class DaggerfallExteriorWorldTests
             new DaggerfallActorGrounding(spatialFake.Service, spatial, tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance),
             () => inputs, () => throw new InvalidOperationException("No appearance is read here."), _ => { }, corpses);
         DaggerfallGroundContainers ground = new(assembled.Containers, assembled.ItemInstances, actors.Player.Actor.Entity,
-            new DurableIdentityAllocator(DurableIdentityKind.Container, 100), inputs.ProfileKey);
+            new DurableIdentityAllocator(DurableIdentityKind.Container, 100), inputs.ProfileKey, QuestItemDropsFake.Exits(assembled.ItemInstances));
         Host host = new();
 
         DaggerfallExteriorWorld exterior = new(engine.Context, actors, assembled.Npcs, assembled.PlayerControl, effects, definitions, tuning.Site,

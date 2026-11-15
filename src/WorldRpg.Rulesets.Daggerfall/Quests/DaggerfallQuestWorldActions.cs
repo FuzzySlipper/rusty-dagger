@@ -43,7 +43,7 @@ internal static partial class DaggerfallQuestTaskCompiler
     }
 }
 
-internal sealed partial class DaggerfallQuestInstances
+internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestItemDrops
 {
     private Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestTaskOperation, bool>? _worldAction;
     internal void BindWorldActions(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestTaskOperation, bool> apply) => _worldAction = apply;
@@ -64,17 +64,21 @@ internal sealed partial class DaggerfallQuestInstances
                     yield return (instance, instance.Tasks[task], index, operation);
             }
     }
-    internal string? CanDropItem(DaggerfallItemInstanceMetadata item)
-    {
-        var watchers = DropWatchers(item).ToArray();
-        return watchers.Length == 0 || watchers.Any(watch => IsAtPlace(watch.Instance, watch.Operation.Targets[1]))
-            ? null : "This quest item must be dropped at its designated place.";
-    }
-    internal void ItemDropped(DaggerfallItemInstanceMetadata item)
+    /// <summary>The original's <c>AllowDrop</c>: a running drop-at-place task for the item has the player at its place.</summary>
+    public bool MayLeave(DaggerfallItemInstanceMetadata item) =>
+        DropWatchers(item).Any(watch => IsAtPlace(watch.Instance, watch.Operation.Targets[1]));
+    /// <summary>The original's <c>PlayerDropped</c>, set for the watchers whose place the player is at.</summary>
+    public void Left(DaggerfallItemInstanceMetadata item)
     {
         foreach (var watch in DropWatchers(item))
             if (IsAtPlace(watch.Instance, watch.Operation.Targets[1]))
                 watch.State.OperationState[watch.Index] = watch.State.OperationState[watch.Index] with { ItemDropped = true };
+    }
+    /// <summary>Picked up again before its task read the drop: the drop no longer counts.</summary>
+    public void Returned(DaggerfallItemInstanceMetadata item)
+    {
+        foreach (var watch in DropWatchers(item))
+            watch.State.OperationState[watch.Index] = watch.State.OperationState[watch.Index] with { ItemDropped = false };
     }
     private bool IsAtPlace(DaggerfallQuestRuntimeInstance instance, string symbol)
     {

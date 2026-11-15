@@ -174,6 +174,7 @@ internal sealed class DaggerfallEconomyPanels(DaggerfallBanking banking, Daggerf
             else holdings.Storage.TransferFrom(key, selection!, revision);
             presentation.SetOutcome(put ? "Item stored in property." : "Item taken from property.");
         }
+        catch (DaggerfallItemExitRefusedException refused) { presentation.SetOutcome(refused.Message); }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or OverflowException)
         { presentation.SetOutcome(put ? "That item cannot be stored here." : "That item cannot be taken from storage."); }
     }

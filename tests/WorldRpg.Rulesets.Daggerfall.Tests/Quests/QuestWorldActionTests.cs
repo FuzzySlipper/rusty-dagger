@@ -41,7 +41,7 @@ public sealed class QuestWorldActionTests
         ulong entity = f.Session.State.Actors.Entities.Resolve(new(DurableIdentityKind.Item, id)).Value;
         Drop(f, entity);
         Assert.Equal(DaggerfallItemOwner.Player, f.Session.State.ItemInstances.RequireUnique(id).Owner);
-        Assert.Contains("designated place", f.Message);
+        Assert.Equal(DaggerfallQuestItemExits.Refused, f.Message);
         Assert.True(f.Session.TryTransitionTo(castle.ProfileKey)); f.Update(); Drop(f, entity); f.Update();
         Assert.Equal("ground", f.Session.State.ItemInstances.RequireUnique(id).Owner.Scope);
         Assert.True(Quest(f.Session).Tasks.Single(t => t.Symbol == "dropped").IsSet);
@@ -49,6 +49,21 @@ public sealed class QuestWorldActionTests
         using var restored = f.Restore(profiles); Advance(restored); Advance(restored);
         Assert.True(Quest(restored).Tasks.Single(t => t.Symbol == "dropped").IsSet);
         Assert.Single(restored.State.Quests.Messages.Deliveries);
+    }
+
+    [Fact]
+    public void A_quest_item_no_drop_task_watches_cannot_be_dropped_anywhere()
+    {
+        var definitions = QuestWorldAdmissionTests.Definitions(secondPlace: true, actions: ["get item _gift_"]);
+        using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: QuestWorldAdmissionTests.WithMarker);
+        var castle = QuestWorldAdmissionTests.WithMarker(f.Castle);
+        var profiles = new DaggerfallSiteProfiles([f.Inputs, castle]); f.Session.AdmitSiteProfiles(profiles);
+        Start(f, castle); f.Update();
+        ulong id = Quest(f.Session).Resources.Single(r => r.Symbol == "gift").Binding.UniqueItemIds.Single();
+        ulong entity = f.Session.State.Actors.Entities.Resolve(new(DurableIdentityKind.Item, id)).Value;
+        Drop(f, entity);
+        Assert.Equal(DaggerfallItemOwner.Player, f.Session.State.ItemInstances.RequireUnique(id).Owner);
+        Assert.Equal(DaggerfallQuestItemExits.Refused, f.Message);
     }
 
     [Theory]

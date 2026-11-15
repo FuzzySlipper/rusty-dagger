@@ -24,13 +24,14 @@ internal sealed class DaggerfallGroundContainers
     private readonly DaggerfallItemInstances _instances;
     private readonly EntityId _player;
     private readonly DurableIdentityAllocator _identities;
+    private readonly DaggerfallQuestItemExits _exits;
     private readonly Dictionary<long, DaggerfallGroundContainer> _ground = [];
     private readonly Dictionary<long, DaggerfallGroundContainerSave> _unloaded = [];
     private DaggerfallWorldProfileKey _activeProfile;
     private Func<WorldPoint, bool>? _resident;
 
     internal DaggerfallGroundContainers(MechanicsInventoryContainerCoordinator containers, DaggerfallItemInstances instances,
-        EntityId player, DurableIdentityAllocator identities, DaggerfallWorldProfileKey activeProfile)
+        EntityId player, DurableIdentityAllocator identities, DaggerfallWorldProfileKey activeProfile, DaggerfallQuestItemExits exits)
     {
         _containers = containers ?? throw new ArgumentNullException(nameof(containers));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
@@ -38,6 +39,7 @@ internal sealed class DaggerfallGroundContainers
         _player = player;
         _identities = identities ?? throw new ArgumentNullException(nameof(identities));
         _activeProfile = activeProfile.Validate();
+        _exits = exits ?? throw new ArgumentNullException(nameof(exits));
     }
 
     /// <summary>Only piles belonging to the profile currently projected by the session are interactable.</summary>
@@ -159,6 +161,7 @@ internal sealed class DaggerfallGroundContainers
         InventoryView playerBefore = ValidatePlayerSelection(selection);
         if (playerBefore.StoreRevision != expectedWorldRevision)
             throw new InvalidOperationException("Inventory changed. Choose the item again.");
+        _exits.RequireMayLeave(selection, _containers.Entities);
         DurableIdentityReference identity = _identities.Allocate(DurableIdentityKind.Container);
         InventoryContainerSelection transferSelection = selection;
         if (selection.Stack is InventoryStackId source && selection.DestinationStack is null
