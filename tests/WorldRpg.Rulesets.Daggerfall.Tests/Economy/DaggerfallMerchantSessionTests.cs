@@ -50,7 +50,9 @@ public sealed class DaggerfallMerchantSessionTests
         AddArrows(session, 10, questId: "merchant.test.quest");
 
         DaggerfallMerchantView view = session.State.Merchants.Read(context);
-        Assert.False(view.PlayerItems.Single(item => item.Key == "stack:merchant.test.arrows").CanSell);
+        DaggerfallMerchantItemView row = view.PlayerItems.Single(item => item.Key == "stack:merchant.test.arrows");
+        Assert.False(row.CanSell);
+        Assert.Equal(DaggerfallQuestItemExits.Refused, row.Refusal);
         DaggerfallMerchantResult sold = session.State.Merchants.Sell(context, view.Revision, "stack:merchant.test.arrows", 4);
         Assert.False(sold.Accepted);
         Assert.Equal(DaggerfallQuestItemExits.Refused, DaggerfallMerchantTrade.OutcomeText(sold));

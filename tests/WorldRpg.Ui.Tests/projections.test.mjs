@@ -4162,6 +4162,28 @@ test('enchanted items shimmer in the pack and the shop, stealable stock glints, 
   } finally { f.dispose(); useGlints(null); }
 });
 
+test('a quest item the shop may not take shows why on its row and offers no Sell', () => {
+  const f = fixture();
+  try {
+    const kept = { key: 'unique:21', definition: 'template-116', label: 'Sealed letter', quantity: 1, maximumQuantity: 1, unitPrice: 5,
+      currentCondition: 1, maximumCondition: 1, identified: true, stolen: false, canBuy: false, canSell: false, refusal: 'You cannot remove this item.' };
+    const sold = { ...kept, key: 'unique:22', label: 'Dagger', canSell: true, refusal: null };
+    const merchant = { revision: 'merchant-1', provider: 'Shopkeeper', quality: 10, gold: '100', buyAvailable: false,
+      sellAvailable: true, repairAvailable: false, identifyAvailable: false, result: '', largeTradeGold: 500, stock: [], playerItems: [kept, sold], repairs: [] };
+    f.publish({ activation: { mode: 'talk', dialogue: { ...offering(['trade', 'Sell']), revision: 'merchant-1', targetLabel: 'Shopkeeper', greeting: 'Welcome.',
+      tone: 'normal', question: null, reply: null, topics: [], diagnostics: [], merchant } } });
+    f.openService('trade');
+
+    const pack = f.root.querySelector('.dagger-dialogue-merchant [data-transfer-side="pack"]');
+    const keptRow = pack.querySelector('[data-transfer-item="unique:21"]');
+    assert.equal(keptRow.querySelector('.dagger-transfer-refusal').textContent, 'You cannot remove this item.');
+    assert.equal(keptRow.querySelector('[data-transfer-command="merchant-sell"]'), null);
+    const soldRow = pack.querySelector('[data-transfer-item="unique:22"]');
+    assert.equal(soldRow.querySelector('.dagger-transfer-refusal'), null);
+    assert.notEqual(soldRow.querySelector('[data-transfer-command="merchant-sell"]'), null);
+  } finally { f.dispose(); }
+});
+
 test('the shop is the transfer layout: line totals, confirms for large trades and theft, and service-only rows', () => {
   const f = fixture();
   try {

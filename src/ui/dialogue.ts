@@ -414,7 +414,7 @@ function mountShop(root: HTMLElement, send: Send, ask: (question: ConfirmQuestio
       // Stock with a Steal command is stealable shelf stock, which the coin glint marks (DaggerfallInventoryWindow).
       stealable: commands.some(command => command.id === 'merchant-shoplift'),
       quantity: item.maximumQuantity > 1 ? String(item.quantity) : null,
-      maximumQuantity: item.maximumQuantity, facts, commands,
+      maximumQuantity: item.maximumQuantity, facts, commands, refusal: item.refusal ?? null,
       price: commands.some(command => command.takesAmount && command.id !== 'merchant-shoplift') ? amount => priceOf(seller ? 'pack' : 'source', item, amount) : undefined };
   };
 

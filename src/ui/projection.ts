@@ -283,6 +283,8 @@ export interface MerchantItemProjection {
   readonly enchanted?: boolean;
   readonly canBuy: boolean;
   readonly canSell: boolean;
+  /** Why the item may not leave the pack for this shop (a quest item its quest keeps), or null. */
+  readonly refusal?: string | null;
   readonly canRepair?: boolean;
   readonly canIdentify?: boolean;
   /** The provider's quoted repair price in gold, where it would repair this item. */

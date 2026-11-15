@@ -694,6 +694,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("enchanted", builder.Boolean(item.Enchanted)),
         ("canBuy", builder.Boolean(item.CanBuy)),
         ("canSell", builder.Boolean(item.CanSell)),
+        ("refusal", item.Refusal is null ? builder.Null() : builder.String(item.Refusal)),
         ("canRepair", builder.Boolean(canRepair)),
         ("canIdentify", builder.Boolean(canIdentify)),
         ("repairCost", canRepair && item.RepairCost is ulong repairCost ? builder.String(repairCost.ToString(CultureInfo.InvariantCulture)) : builder.Null()),

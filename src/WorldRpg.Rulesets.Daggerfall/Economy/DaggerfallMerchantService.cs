@@ -34,7 +34,8 @@ internal sealed record DaggerfallMerchantItemView(
     bool CanSell,
     ulong? RepairCost = null,
     ulong? IdentifyCost = null,
-    DaggerfallItemInstanceMetadata? IconMetadata = null)
+    DaggerfallItemInstanceMetadata? IconMetadata = null,
+    string? Refusal = null)
 {
     /// <summary>The icon the row's item draws in the pack, resolved from its definition and <see cref="IconMetadata"/> by the inventory presentation.</summary>
     internal string? Icon { get; init; }
@@ -651,10 +652,11 @@ internal sealed class DaggerfallMerchantService
                 // Quote during the action, so a stack row must price one item here rather than
                 // displaying the total for the complete stock beside a one-item control.
                 new(definition, metadata, 1));
+            string? refusal = buying ? null : _exits.Refusal(metadata);
             rows.Add(new("stack:" + stack.Id.Value, definition.Id.Value, ItemLabel(definition, metadata), stack.Quantity, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
-                buying, !buying && _exits.Refusal(metadata) is null && CanSellToProvider(binding.Context, metadata),
-                IconMetadata: metadata));
+                buying, !buying && refusal is null && CanSellToProvider(binding.Context, metadata),
+                IconMetadata: metadata, Refusal: refusal));
         }
         foreach (EngineUniqueInventoryItem item in inventory.UniqueItems.OrderBy(value => value.Entity.Value))
         {
@@ -663,10 +665,12 @@ internal sealed class DaggerfallMerchantService
             DaggerfallItemDefinition definition = _definitions.RequireItem(new DaggerfallItemId(item.Definition.Value));
             ulong price = Price(binding, buying ? DaggerfallTradeSide.BuyFromMerchant : DaggerfallTradeSide.SellToMerchant,
                 new(definition, metadata, 1));
+            // A quest item its quest keeps can be neither sold nor handed over for repair; the row says why.
+            string? refusal = buying ? null : _exits.Refusal(metadata);
             rows.Add(new("unique:" + id, definition.Id.Value, ItemLabel(definition, metadata), 1, price,
                 metadata.CurrentCondition, metadata.MaximumCondition, metadata.Identified, metadata.Stolen,
-                buying, !buying && _exits.Refusal(metadata) is null && CanSellToProvider(binding.Context, metadata),
-                Repair(definition, metadata), Identify(definition, metadata), metadata));
+                buying, !buying && refusal is null && CanSellToProvider(binding.Context, metadata),
+                refusal is null ? Repair(definition, metadata) : null, Identify(definition, metadata), metadata, refusal));
         }
         return [.. rows];
     }
