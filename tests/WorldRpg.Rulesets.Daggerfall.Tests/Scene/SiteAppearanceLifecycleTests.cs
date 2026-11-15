@@ -17,6 +17,16 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>Site appearance lifecycle: world visuals, ground containers, lights, texture admission and release on failure.</summary>
 public sealed class SiteAppearanceLifecycleTests
 {
+    [Fact]
+    public void Winter_footsteps_crunch_in_snow_except_in_the_climates_the_donor_keeps_dry()
+    {
+        Assert.True(DaggerfallSiteAppearance.SnowUnderfoot(DaggerfallSeason.Winter, 231));
+        Assert.True(DaggerfallSiteAppearance.SnowUnderfoot(DaggerfallSeason.Winter, 226));
+        foreach (int dry in new[] { 224, 225, 227, 229 })
+            Assert.False(DaggerfallSiteAppearance.SnowUnderfoot(DaggerfallSeason.Winter, dry));
+        Assert.False(DaggerfallSiteAppearance.SnowUnderfoot(DaggerfallSeason.Summer, 231));
+    }
+
     [Theory]
     [InlineData(.9f)]
     [InlineData(1.2f)]

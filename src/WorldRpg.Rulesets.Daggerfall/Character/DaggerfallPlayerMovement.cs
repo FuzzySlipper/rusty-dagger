@@ -52,6 +52,10 @@ internal struct DaggerfallPlayerStep
     internal bool WasSwimming;
     internal DaggerfallSwimmingStep Swimming;
     internal DaggerfallLanding? Landing;
+
+    /// <summary>Whether the step ended in a hard landing the player hears: within the fall grace, out of water and not slowfalling.</summary>
+    internal readonly bool HardLanding => Landing is { } landed && DaggerfallFormulaPolicy.IsHardLanding(landed.Distance)
+        && !Swimming.Swimming && !SlowfallDescending;
 }
 
 /// <summary>

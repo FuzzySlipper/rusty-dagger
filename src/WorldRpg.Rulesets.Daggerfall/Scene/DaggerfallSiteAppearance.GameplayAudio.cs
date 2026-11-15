@@ -52,6 +52,10 @@ internal sealed partial class DaggerfallSiteAppearance
         SpawnSpellImpact(sequence, element, position);
     }
 
+    /// <summary>Whether winter footsteps crunch in snow: every climate but the two deserts, the rainforest and the subtropics, which the donor keeps dry.</summary>
+    internal static bool SnowUnderfoot(DaggerfallSeason season, int climate) =>
+        season == DaggerfallSeason.Winter && climate is not (224 or 225 or 227 or 229);
+
     internal void ResetFootsteps() { footstepDistance = 0; observedFootstepState = false; }
 
     /// <summary>PlayerFootsteps distance cadence over the accepted character step, never input intent.</summary>
@@ -93,6 +97,9 @@ internal sealed partial class DaggerfallSiteAppearance
         PlayPlayerPain(race, female, hurt.ActualHealthLost, maximumHealth);
         if (hurt.Cause == DaggerfallDamageCause.Fall) PlayGameplaySound(91, "fall-damage");
     }
+
+    /// <summary>A hard landing's thud, which a fall within the grace distance makes without harm.</summary>
+    internal void PlayHardLanding() => PlayGameplaySound(92, "hard-landing");
 
     internal void PlayPlayerPain(string race, bool female, double loss, double maximum)
     {

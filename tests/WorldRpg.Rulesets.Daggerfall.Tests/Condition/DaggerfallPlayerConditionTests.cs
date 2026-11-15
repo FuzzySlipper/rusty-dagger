@@ -2,6 +2,7 @@ using System.Reflection;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -71,9 +72,13 @@ public sealed class DaggerfallPlayerConditionTests
         Assert.True(death.Defeated);
         Assert.Equal(0d, stats.GetTrack(Health).Current);
         Assert.Equal(expected, line);
-        Assert.Equal(expected, condition.ExhaustionDeathLine);
-        condition.ClearExhaustionDeathLine();
-        Assert.Null(condition.ExhaustionDeathLine);
+        // Only the death says the collapse's line, until play resumes.
+        Assert.Equal(expected, condition.ModeLine(ProductMode.Dead));
+        Assert.Null(condition.ModeLine(ProductMode.Paused));
+        condition.EnterMode(ProductMode.Dead);
+        Assert.Equal(expected, condition.ModeLine(ProductMode.Dead));
+        condition.EnterMode(ProductMode.Playing);
+        Assert.Null(condition.ModeLine(ProductMode.Dead));
     }
 
     [Fact]

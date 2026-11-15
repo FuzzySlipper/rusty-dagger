@@ -64,8 +64,15 @@ public sealed class DaggerfallTransportTests
         Assert.Equal(DaggerfallTransportMode.Foot, policy.Mode);
 
         policy.SelectMount(DaggerfallTransportMode.Horse, fixture.ReadPlayer(), new());
+        policy.Reconcile(fixture.ReadPlayer(), DaggerfallWorldProfileKind.Exterior);
+        Assert.Equal(DaggerfallTransportMode.Horse, policy.Mode);
+        // A profile that is not the exterior admits no mount, however the player came to be in it.
+        policy.Reconcile(fixture.ReadPlayer(), DaggerfallWorldProfileKind.Dungeon);
+        Assert.Equal(DaggerfallTransportMode.Foot, policy.Mode);
+
+        policy.SelectMount(DaggerfallTransportMode.Horse, fixture.ReadPlayer(), new());
         fixture.DestroyUnique(22);
-        policy.Reconcile(fixture.ReadPlayer(), new());
+        policy.Reconcile(fixture.ReadPlayer(), DaggerfallWorldProfileKind.Exterior);
         Assert.Equal(DaggerfallTransportMode.Foot, policy.Mode);
     }
 

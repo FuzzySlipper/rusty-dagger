@@ -15,6 +15,17 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallPlayerMovementTests
 {
     [Fact]
+    public void A_hard_landing_is_one_within_the_fall_grace_on_dry_ground_and_not_slowfalling()
+    {
+        DaggerfallPlayerStep step = new() { Landing = new DaggerfallLanding(4f) };
+        Assert.True(step.HardLanding);
+        Assert.False((step with { Landing = new DaggerfallLanding(1f) }).HardLanding);
+        Assert.False((step with { Landing = null }).HardLanding);
+        Assert.False((step with { Swimming = DaggerfallSwimmingStep.None with { Swimming = true } }).HardLanding);
+        Assert.False((step with { SlowfallDescending = true }).HardLanding);
+    }
+
+    [Fact]
     public void A_load_too_heavy_or_death_stops_the_feet_and_a_movement_restriction_forbids_moving()
     {
         using Stage stage = new();

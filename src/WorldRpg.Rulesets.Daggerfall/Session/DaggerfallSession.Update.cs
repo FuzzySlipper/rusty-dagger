@@ -416,9 +416,7 @@ internal sealed partial class DaggerfallSession
 
         // The player's movement, with the doors, gates, triggers and terrain it meets at the point it meets them.
         DaggerfallPlayerStep player = _movement.ApplyControls(update, State.Encumbrance.Read().CanMove);   // Character, Items' load
-        State.Transport.Reconcile(State.Inventory.Read(), new DaggerfallTransportAccessContext(
-            IsIndoor: _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior,
-            IsDungeon: _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon));            // Travel
+        State.Transport.Reconcile(State.Inventory.Read(), _activeProfileKey.Kind);                // Travel
         _movement.BeginLocomotion(ref player, update);                                            // Character
         _doors.Advance(update.DeltaSeconds);                                                      // Interiors
         _sites.Projection.AdvanceMotion(update.DeltaSeconds);                                     // Exterior
@@ -454,10 +452,9 @@ internal sealed partial class DaggerfallSession
                 player.MotionBefore.Grounded, State.PlayerControl.Motion.Grounded, player.WasSwimming, player.Swimming.Swimming,
                 player.ActiveWater is not null && !player.Swimming.Swimming,
                 State.Transport.IsOnFoot && !player.Climb.Climbing && !player.Levitation.IsLevitating,
-                _time.Calendar.Season == DaggerfallSeason.Winter && LocalWeather.Climate is not (224 or 225 or 227 or 229),
+                DaggerfallSiteAppearance.SnowUnderfoot(_time.Calendar.Season, LocalWeather.Climate),
                 State.Transport.Mode);                                                            // Scene
-        if (player.Landing is { } landed && DaggerfallFormulaPolicy.IsHardLanding(landed.Distance) && !player.Swimming.Swimming && !player.SlowfallDescending)
-            _appearance.PlayGameplaySound(92, "hard-landing");                                    // Scene
+        if (player.HardLanding) _appearance.PlayHardLanding();                                    // Scene, Character's landing
         if (player.Swimming.Drowning)
             AppendDamage(_vitality.ResolveDrowning(State.Actors.Player.Actor), DaggerfallDamageCause.Drowning, 0);   // Condition
         if (_vitality.ResolveLanding(State.Actors.Player.Actor, player.Landing, State.Effects.PreventsFallDamage(DaggerfallActorIdentity.PlayerEntityId)) is { } fall)
@@ -1439,10 +1436,8 @@ internal sealed partial class DaggerfallSession
         NeutralizeGuard();                                                                        // Combat
         _appearance.ResetFootsteps();                                                             // Scene
         ApplyDeathMode(mode);                                                                     // Session: death's list, above
-        // A death from exhaustion keeps the donor's collapse text rather than the generic death line.
-        _modeLine.Say(mode, mode == ProductMode.Dead && _condition.ExhaustionDeathLine is { } exhausted
-            ? exhausted : _interactions.ModeMessage(_mode));                                      // UiProjection, its exhaustion line Condition's
-        if (mode is ProductMode.Playing or ProductMode.Title) _condition.ClearExhaustionDeathLine();   // Condition
+        _modeLine.Say(mode, _condition.ModeLine(mode) ?? _interactions.ModeMessage(_mode));      // UiProjection, an exhaustion death's line Condition's
+        _condition.EnterMode(mode);                                                               // Condition
         PublishPresentation();                                                                    // UiProjection
     }
 

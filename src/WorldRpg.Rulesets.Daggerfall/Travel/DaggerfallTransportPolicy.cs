@@ -291,13 +291,15 @@ internal sealed class DaggerfallTransportPolicy : IDaggerfallRide
         if (!_onShip) _mode = DaggerfallTransportMode.Foot;
     }
 
-    /// <summary>Removes a mount that was lost or consumed from the current policy state.</summary>
-    internal void Reconcile(InventoryView inventory, DaggerfallTransportAccessContext context)
+    /// <summary>
+    /// Removes a mount that was lost or consumed, or that the profile the player stands in admits none of. Only whether
+    /// mounts are allowed is read, so the access is taken for the profile alone, with no dungeon distance or ship.
+    /// </summary>
+    internal void Reconcile(InventoryView inventory, DaggerfallWorldProfileKind profile)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        context.Validate();
         if (_onShip) return;
-        if (!context.MountsAllowed
+        if (!DaggerfallTransportAccessContext.At(profile, position: null, dungeonMap: null, shipAccessAllowed: true).MountsAllowed
             || _mode == DaggerfallTransportMode.Horse && !HasHorse(inventory)
             || _mode == DaggerfallTransportMode.Cart && !HasCart(inventory))
             _mode = DaggerfallTransportMode.Foot;

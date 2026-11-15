@@ -1,6 +1,7 @@
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Kit;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
@@ -29,11 +30,20 @@ internal sealed class DaggerfallPlayerCondition(DaggerfallVitalityConsequences v
     /// <summary>The player's combat Stamina between spends.</summary>
     internal DaggerfallPlayerStamina Stamina { get; } = new(stamina);
 
+    // The line of the last fatal collapse, until play resumes or the title returns.
+    private string? _exhaustionDeathLine;
+
     /// <summary>
-    /// The line a death caused by exhaustion keeps on the status line when the product enters Dead, in place of
-    /// the generic death line; cleared when play resumes or the title returns.
+    /// The line a mode change says in place of its own: entering Dead from exhaustion keeps the donor's collapse text
+    /// rather than the generic death line. Null for every other mode or death.
     /// </summary>
-    internal string? ExhaustionDeathLine { get; private set; }
+    internal string? ModeLine(ProductMode mode) => mode == ProductMode.Dead ? _exhaustionDeathLine : null;
+
+    /// <summary>A collapse's line is let go once play resumes or the title returns.</summary>
+    internal void EnterMode(ProductMode mode)
+    {
+        if (mode is ProductMode.Playing or ProductMode.Title) _exhaustionDeathLine = null;
+    }
 
     /// <summary>
     /// Whether one swimming minute charges the swimming fatigue loss: the donor's <c>Dice100.FailedRoll</c>
@@ -61,7 +71,7 @@ internal sealed class DaggerfallPlayerCondition(DaggerfallVitalityConsequences v
         string line = Line(text, inWater
             ? new DaggerfallTextKey(DaggerfallTextKind.Internal, ExhaustedInWaterText)
             : new DaggerfallTextKey(DaggerfallTextKind.Resource, ExhaustedNearEnemiesText));
-        ExhaustionDeathLine = line;
+        _exhaustionDeathLine = line;
         return (vitality.ResolveExhaustionDeath(player), line);
     }
 
@@ -83,8 +93,6 @@ internal sealed class DaggerfallPlayerCondition(DaggerfallVitalityConsequences v
     /// <summary>The donor's line for waking from a safe collapse.</summary>
     internal string AwakeningLine(DaggerfallTextResolver text) =>
         Line(text, new DaggerfallTextKey(DaggerfallTextKind.Resource, ExhaustedSafelyText));
-
-    internal void ClearExhaustionDeathLine() => ExhaustionDeathLine = null;
 
     /// <summary>The donor's published collapse text, or a plain report when the pack carries none.</summary>
     private static string Line(DaggerfallTextResolver text, DaggerfallTextKey key)

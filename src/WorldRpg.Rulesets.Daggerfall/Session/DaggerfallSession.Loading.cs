@@ -36,6 +36,8 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
     /// <summary>Whether slow work accepted now is staged on the loading screen rather than run at once.</summary>
     private bool StagesSlowWork => _loading is { IsLoading: false } && _inAdmittedUpdate;
 
+    private bool _arrivalStood;
+
     /// <summary>
     /// Stages slow work on the loading screen. Held movement is dropped as the screen goes up: the keys that
     /// were down belong to the place being left. A phase that throws reports why; the player stays where they were.
@@ -46,8 +48,6 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
     /// the next phase runs only then, so its own synchronous collision changes never wait on the bake. A refused
     /// bake fails the work as a throwing phase does.
     /// </remarks>
-    private bool _arrivalStood;
-
     private void StageWorldChange(string title, IReadOnlyList<LoadingPhase> phases, Func<Exception, string> failure)
     {
         _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();
