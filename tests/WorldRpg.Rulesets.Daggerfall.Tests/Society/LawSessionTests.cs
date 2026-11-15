@@ -4,6 +4,7 @@ using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Crime;
 using Xunit;
@@ -273,6 +274,31 @@ public sealed class LawSessionTests
         Assert.NotEqual(diseaseBefore, disease.State.GetRawText());
         // The release UI also admits the next ordinary world slice.
         Assert.InRange(Seconds(s) - now, 4 * 86400L + 14400, 4 * 86400L + 14401);
+    }
+
+    [Fact]
+    public void A_confiscated_starting_item_stays_gone_across_a_load_and_keeps_its_authored_reservation()
+    {
+        using var f = new Fixture(); var s = f.Session;
+        var stolen = s.State.Inventory.Read().UniqueItems.First();
+        ulong id = s.State.Inventory.GetDurableItemId(stolen.Entity).Value;
+        // A starting-kit item: authored ids sit below the first one the session issues.
+        Assert.InRange(id, 1UL, DaggerfallUniqueItemAllocator.DefaultFirstEntityId - 1);
+        s.State.ItemInstances.ReplaceUnique(id, s.State.ItemInstances.RequireUnique(id) with {Stolen = true});
+        s.State.Currency.TrySpendGold(s.State.Currency.Read().Gold, []);
+        f.Guard(); f.Charge(); f.Step(); f.Choose("yield");
+        var response = s.State.Crime.LegalResponses.Single();
+        s.State.Crime.SetResponse(response with {Penalty = new(160, 4, false)});
+        f.Choose("guilty"); f.Choose("accept");
+        Assert.False(s.State.ItemInstances.ContainsUnique(id));
+        f.Choose("continue");
+
+        using var restored = f.Restore(s.CaptureSave());
+        Assert.False(restored.State.ItemInstances.ContainsUnique(id));
+        Assert.DoesNotContain(restored.State.Inventory.Read().UniqueItems, item => restored.State.Inventory.GetDurableItemId(item.Entity).Value == id);
+        var ledger = DaggerfallSavePayload.Read(restored.CaptureSave()).Identities.Kinds.Single(kind => kind.Kind == DurableIdentityKind.Item);
+        Assert.Contains(id, ledger.Reserved);
+        Assert.DoesNotContain(id, ledger.Removed);
     }
 
     [Fact]

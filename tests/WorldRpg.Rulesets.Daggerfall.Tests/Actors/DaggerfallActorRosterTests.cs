@@ -80,7 +80,7 @@ public sealed class DaggerfallActorRosterTests
                 new KindAllocatorState(DurableIdentityKind.Item, DaggerfallUniqueItemAllocator.DefaultFirstEntityId, [], []),
                 new KindAllocatorState(DurableIdentityKind.Container, DaggerfallGroundContainers.FirstIdentity, [], []),
             ]));
-            UniqueItems = DaggerfallUniqueItemAllocator.Sharing(Identities);
+            UniqueItems = DaggerfallUniqueItemAllocator.Sharing(Identities, new HashSet<ulong>());
             List<string> releases = [];
             SpatialFake fake = SpatialFake.Create(new ContentSha256(1, 2, 3, 4), releases);
             _spatial = new SpatialMovementSystem(fake.Service, new ContentFake(releases), null, DaggerfallTuning.Defaults.Spatial);
@@ -90,7 +90,7 @@ public sealed class DaggerfallActorRosterTests
             DaggerfallTuning tuning = DaggerfallTuning.Defaults;
             Roster = new DaggerfallActorRoster(Actors, new DaggerfallActorInventories(Actors, items, slots), character, containers,
                 new DaggerfallEffectLifecycle(Actors, new DaggerfallEffectCatalog([])), Store, Instances, new DaggerfallNpcRegistry(), Definitions,
-                RandomMinimum.Create(), new DaggerfallMechanicsState(), Identities, UniqueItems, new HashSet<ulong>(),
+                RandomMinimum.Create(), new DaggerfallMechanicsState(), Identities, UniqueItems,
                 new Dictionary<long, DaggerfallActorDefinition>(), [],
                 new DaggerfallActorGrounding(fake.Service, _spatial, tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance),
                 () => throw new InvalidOperationException("No site in this stage."), () => throw new InvalidOperationException("No appearance in this stage."),

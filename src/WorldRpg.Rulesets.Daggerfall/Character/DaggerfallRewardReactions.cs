@@ -238,32 +238,43 @@ internal static class LootRandomKey
 }
 
 /// <summary>
-/// Daggerfall's durable identity for generated unique loot. Allocation,
-/// reservations, and tombstones are Kit mechanism; this type only names the
-/// Daggerfall-owned durable item id resolved through the session entity directory.
+/// Daggerfall's durable identity for unique items. Allocation, reservations, and tombstones are Kit mechanism;
+/// this type names the Daggerfall-owned durable item id resolved through the session entity directory, and
+/// holds the one rule for retiring it: which identities the selected content authored.
 /// </summary>
 internal sealed class DaggerfallUniqueItemAllocator
 {
     internal const ulong DefaultFirstEntityId = 1_000_000_000_000UL;
     private static readonly DurableIdentityKind LootKind = DurableIdentityKind.Item;
     private readonly DurableIdentityAllocator _identities;
+    private readonly IReadOnlySet<ulong> _authored;
 
     internal DaggerfallUniqueItemAllocator(
         ulong firstEntityId,
         IEnumerable<ulong>? reserved = null,
-        IEnumerable<ulong>? removed = null) =>
+        IEnumerable<ulong>? removed = null,
+        IReadOnlySet<ulong>? authored = null)
+    {
         _identities = new DurableIdentityAllocator(LootKind, firstEntityId, reserved, removed);
+        _authored = authored ?? new HashSet<ulong>();
+    }
 
-    private DaggerfallUniqueItemAllocator(DurableIdentityAllocator identities) => _identities = identities;
+    private DaggerfallUniqueItemAllocator(DurableIdentityAllocator identities, IReadOnlySet<ulong> authored)
+    {
+        _identities = identities;
+        _authored = authored;
+    }
 
     /// <summary>
     /// Shares one session ledger with the dynamic actor identities: both kinds persist in the
-    /// same save state through the shared instance this allocator wraps.
+    /// same save state through the shared instance this allocator wraps. <paramref name="authored"/> is the
+    /// selected content's admitted entity ids, the reservations no retirement may tombstone.
     /// </summary>
-    internal static DaggerfallUniqueItemAllocator Sharing(DurableIdentityAllocator shared)
+    internal static DaggerfallUniqueItemAllocator Sharing(DurableIdentityAllocator shared, IReadOnlySet<ulong> authored)
     {
         ArgumentNullException.ThrowIfNull(shared);
-        return new DaggerfallUniqueItemAllocator(shared);
+        ArgumentNullException.ThrowIfNull(authored);
+        return new DaggerfallUniqueItemAllocator(shared, authored);
     }
 
     internal ulong NextEntityId => _identities.NextIdentity(LootKind);
@@ -276,7 +287,7 @@ internal sealed class DaggerfallUniqueItemAllocator
     internal static DaggerfallUniqueItemAllocator Restore(DurableIdentityState state)
     {
         ArgumentNullException.ThrowIfNull(state);
-        return new DaggerfallUniqueItemAllocator(DurableIdentityAllocator.Restore(state));
+        return new DaggerfallUniqueItemAllocator(DurableIdentityAllocator.Restore(state), new HashSet<ulong>());
     }
 
     /// <summary>Captures this session's allocator evidence for the save payload.</summary>
@@ -285,6 +296,14 @@ internal sealed class DaggerfallUniqueItemAllocator
     /// <summary>Issues one durable reference; the entity directory supplies its runtime entity.</summary>
     internal DurableIdentityReference AllocateReference() => _identities.Allocate(LootKind);
 
-    /// <summary>Records that one generated identity no longer exists in this world.</summary>
-    internal void Remove(DurableIdentityReference identity) => _identities.Remove(identity);
+    /// <summary>
+    /// Retires one unique item's identity once its entity is gone. An issued identity is tombstoned and never
+    /// reissued. An authored one (the player's starting kit) stays reserved: tombstoning it would report content
+    /// as removed, which the Kit ledger refuses but cannot tell apart below its cursor. The item stays gone across
+    /// a save either way, because a load never materializes the starting kit again.
+    /// </summary>
+    internal void Remove(DurableIdentityReference identity)
+    {
+        if (!_authored.Contains(identity.Value)) _identities.Remove(identity);
+    }
 }

@@ -14,15 +14,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallRewardReactionTests
 {
     [Fact]
-    public void Generated_unique_loot_allocator_skips_composed_entity_reservations()
-    {
-        DaggerfallUniqueItemAllocator allocator = new(1_000, [1_000, 1_001]);
-
-        Assert.Equal(new DurableIdentityReference(DurableIdentityKind.Item, 1_002), allocator.AllocateReference());
-        Assert.Equal(new DurableIdentityReference(DurableIdentityKind.Item, 1_003), allocator.AllocateReference());
-    }
-
-    [Fact]
     public void Daggerfall_actor_construction_shares_health_maximum_with_its_track()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();

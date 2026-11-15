@@ -94,7 +94,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallWorldEncounters WorldEncounters { get; }
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
     private readonly DaggerfallSessionPersistence _persistence;
-    private readonly HashSet<ulong> _authoredEntityIds;
     private readonly DurableIdentityAllocator _actorIdentities;
     private readonly DaggerfallHeldEnchantments _heldEnchantments;
     private readonly DaggerfallItemCastTriggers _itemCastTriggers = null!;

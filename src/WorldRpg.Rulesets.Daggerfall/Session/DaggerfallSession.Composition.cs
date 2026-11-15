@@ -462,14 +462,14 @@ internal sealed partial class DaggerfallSession
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),
                 openBlockedDoor: actor => _doors.TryOpenForEnemy(actor.Position), selectTarget: observer => QuestFoes.SelectTarget(observer), questRestrained: id => QuestFoes.Restrained(id), attackAtDistance: _combat.EnemyAttackAtDistance,
                 engagement: new DaggerfallContactEngagement(_tuning.Contact));
-            _authoredEntityIds = DaggerfallActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
+            HashSet<ulong> authoredEntityIds = DaggerfallActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {
                 ulong[] actorReservations = [DaggerfallActorIdentity.PlayerEntityId, .. inputs.Project.Actors.Values.Select(placement => checked((ulong)placement.EntityId))];
                 _actorIdentities = DurableIdentityAllocator.Restore(new DurableIdentityState(
                 [
                     new KindAllocatorState(DurableIdentityKind.Actor, DaggerfallActorRoster.DynamicFirstIdentity, actorReservations, []),
-                    new KindAllocatorState(DurableIdentityKind.Item, DaggerfallUniqueItemAllocator.DefaultFirstEntityId, [.. _authoredEntityIds], []),
+                    new KindAllocatorState(DurableIdentityKind.Item, DaggerfallUniqueItemAllocator.DefaultFirstEntityId, [.. authoredEntityIds], []),
                     new KindAllocatorState(DurableIdentityKind.Container, DaggerfallGroundContainers.FirstIdentity, [], []),
                 ]));
             }
@@ -479,7 +479,7 @@ internal sealed partial class DaggerfallSession
                 _actorIdentities = restore.Identities;
             }
 
-            _uniqueItems = DaggerfallUniqueItemAllocator.Sharing(_actorIdentities);
+            _uniqueItems = DaggerfallUniqueItemAllocator.Sharing(_actorIdentities, authoredEntityIds);
             npcs.Identities = _actorIdentities;
             // Poisons are active effects, so restoring them is the effect lifecycle's own restore; the
             // admission keeps only its draw ordinal.
@@ -819,7 +819,7 @@ internal sealed partial class DaggerfallSession
             if (saved is not null) _combat.EquipCountdown = saved.EquipCountdown;
             _roster = new DaggerfallActorRoster(actors, State.ActorInventories, State.Character, State.Containers, State.Effects, State.InventoryStore,
                 State.ItemInstances, State.Npcs, definitions, _random, assembled.Mechanics, _actorIdentities, _uniqueItems,
-                _authoredEntityIds, authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection.Inputs, () => _sites.Projection.Appearance,
+                authored, saved?.DynamicActors ?? [], _grounding, () => _sites.Projection.Inputs, () => _sites.Projection.Appearance,
                 _lootUi.CloseActor, _corpseLoot);
             _roster.ActorRetired += State.Quests.ObserveFoeRemoval;
             Crimes = new DaggerfallCrimes(State.Crime, State.Actors, State.Npcs, State.PlayerControl, _site, _roster.Definitions, definitions,

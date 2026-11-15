@@ -49,7 +49,6 @@ internal sealed class DaggerfallActorRoster
     private readonly DaggerfallMechanicsState _mechanics;
     private readonly DurableIdentityAllocator _identities;
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
-    private readonly IReadOnlySet<ulong> _authoredEntityIds;
     private readonly Dictionary<long, DaggerfallActorDefinition> _definitionsByActor;
     private readonly Dictionary<long, DaggerfallActorId> _dynamicActors;
     private readonly DaggerfallActorGrounding _grounding;
@@ -65,7 +64,7 @@ internal sealed class DaggerfallActorRoster
         MechanicsInventoryContainerCoordinator containers, DaggerfallEffectLifecycle effects, InventoryStore inventoryStore,
         DaggerfallItemInstances itemInstances, DaggerfallNpcRegistry npcs, DaggerfallDefinitions definitions, IRandomService random,
         DaggerfallMechanicsState mechanics, DurableIdentityAllocator identities, DaggerfallUniqueItemAllocator uniqueItems,
-        IReadOnlySet<ulong> authoredEntityIds, Dictionary<long, DaggerfallActorDefinition> definitionsByActor,
+        Dictionary<long, DaggerfallActorDefinition> definitionsByActor,
         IEnumerable<DaggerfallDynamicActorSave> restoredDynamicActors, DaggerfallActorGrounding grounding,
         Func<DaggerfallSiteProfile> profile, Func<DaggerfallSiteAppearance> appearance, Action<long> closeLoot, DaggerfallCorpseLootModule corpseLoot)
     {
@@ -82,7 +81,6 @@ internal sealed class DaggerfallActorRoster
         _mechanics = mechanics ?? throw new ArgumentNullException(nameof(mechanics));
         _identities = identities ?? throw new ArgumentNullException(nameof(identities));
         _uniqueItems = uniqueItems ?? throw new ArgumentNullException(nameof(uniqueItems));
-        _authoredEntityIds = authoredEntityIds ?? throw new ArgumentNullException(nameof(authoredEntityIds));
         _definitionsByActor = definitionsByActor ?? throw new ArgumentNullException(nameof(definitionsByActor));
         _grounding = grounding ?? throw new ArgumentNullException(nameof(grounding));
         _profile = profile ?? throw new ArgumentNullException(nameof(profile));
@@ -699,10 +697,7 @@ internal sealed class DaggerfallActorRoster
             _ = _effects.CancelItemReferences(itemId);
             DurableIdentityReference reference = new(DurableIdentityKind.Item, itemId);
             _actors.Entities.Destroy(reference);
-            // Authored reservations stay reserved: the destroyed entity is gone either way, and
-            // tombstoning one would misreport content as removed. This is the same rule as
-            // RemoveUniqueItemIdentity, minus the throw — retirement must not fail midway.
-            if (!_authoredEntityIds.Contains(itemId)) _uniqueItems.Remove(reference);
+            _uniqueItems.Remove(reference);
         }
     }
 }
