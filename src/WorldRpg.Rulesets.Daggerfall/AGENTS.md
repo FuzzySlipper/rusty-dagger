@@ -13,8 +13,10 @@ On top of the root `AGENTS.md`.
   5. `Exterior`, `Interiors`, `Travel`
   6. `Society`, `Economy`, `Dialogue`
   7. `Quests`
+  8. `UiProjection`, which reads everything before it
+  9. `Developer`, then `Session`, which compose everything
 
-  `Session` and `Developer` compose everything and `UiProjection` reads everything; nothing references those three. Existing code still has references against the order. Don't add new ones.
+  So no domain names the last three and nothing names `Session`. This list is the order's one home: `DomainOrderLawTests` in `tests/WorldRpg.Architecture.Tests` reads it, fails on a type that names a type in a later folder, and holds the few references accepted against it, each with its reason.
 - A domain's owner takes what it uses as inputs, never `DaggerfallSession` or `DaggerfallState`, and is tested without the session. Its save and tuning records sit beside it; `DaggerfallSavePayload` and `DaggerfallTuning` compose them. What one rule does across domains is an ordered list in `Session/DaggerfallSession.Update.cs`, each line marked with its domain, like `ResolveExhaustion` (the collapse). An owner that passes time is handed "pass this much time" as an input the session binds to `AdvanceElapsedTime` with that owner's kind of interval, as `DaggerfallRest` is; it never advances `DaggerfallWorldTime` or calls the session for it. What it needs of later domains it may ask through an interface declared beside it that the session implements, like `IDaggerfallRestSurroundings`, or that the later domain's owner implements, like `IDaggerfallReactionSources`. State an owner keeps inside an effect's save entry is serialized by a JSON context declared beside it (`DaggerfallAfflictionJson`), not the session's.
 - Tests mirror these folders in `tests/WorldRpg.Rulesets.Daggerfall.Tests`. Shared test support stays in that project's root and `Fakes/`.
 
