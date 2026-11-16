@@ -1,4 +1,20 @@
 {
+ "444": {
+  "status": "accepted",
+  "note": "Battlements, as Patch chose from #10856's A/B sheets (\"Yeah go for B it looks better anyway actually\"): crenels cut 0.8 m into the classic parapet, inside its hull. Each wall run's knife-edged wedge parapet becomes a 0.4 m block on the wedge's footprint, merlons keeping the classic top at 8.05 m and crenel sills at 7.25 m, 0.8 m merlons and crenels with half merlons at each piece's ends so pieces meet in whole ones; the corner tower's crown, a parapet round its roof walk, takes crenels between its corner merlons. The classic faces keep their uvs where no crenel cuts them, and new faces wear the parapet's classic stone at its repeat, so the climate and season swaps reach them (#10856)."
+ },
+ "445": {
+  "status": "accepted",
+  "note": "Battlements, as Patch chose from #10856's A/B sheets (\"Yeah go for B it looks better anyway actually\"): crenels cut 0.8 m into the classic parapet, inside its hull. Each wall run's knife-edged wedge parapet becomes a 0.4 m block on the wedge's footprint, merlons keeping the classic top at 8.05 m and crenel sills at 7.25 m, 0.8 m merlons and crenels with half merlons at each piece's ends so pieces meet in whole ones; the tower stays classic: its top is a solid roof at the top of the hull, which a notch could not open to the sky. The classic faces keep their uvs where no crenel cuts them, and new faces wear the parapet's classic stone at its repeat, so the climate and season swaps reach them (#10856)."
+ },
+ "446": {
+  "status": "accepted",
+  "note": "Battlements, as Patch chose from #10856's A/B sheets (\"Yeah go for B it looks better anyway actually\"): crenels cut 0.8 m into the classic parapet, inside its hull. Each wall run's knife-edged wedge parapet becomes a 0.4 m block on the wedge's footprint, merlons keeping the classic top at 8.05 m and crenel sills at 7.25 m, 0.8 m merlons and crenels with half merlons at each piece's ends so pieces meet in whole ones; the tower stays classic: its top is a solid roof at the top of the hull, which a notch could not open to the sky; the open gate. The classic faces keep their uvs where no crenel cuts them, and new faces wear the parapet's classic stone at its repeat, so the climate and season swaps reach them (#10856)."
+ },
+ "447": {
+  "status": "accepted",
+  "note": "Battlements, as Patch chose from #10856's A/B sheets (\"Yeah go for B it looks better anyway actually\"): crenels cut 0.8 m into the classic parapet, inside its hull. Each wall run's knife-edged wedge parapet becomes a 0.4 m block on the wedge's footprint, merlons keeping the classic top at 8.05 m and crenel sills at 7.25 m, 0.8 m merlons and crenels with half merlons at each piece's ends so pieces meet in whole ones; the tower stays classic: its top is a solid roof at the top of the hull, which a notch could not open to the sky; the closed gate. The classic faces keep their uvs where no crenel cuts them, and new faces wear the parapet's classic stone at its repeat, so the climate and season swaps reach them (#10856)."
+ },
  "41003": {
   "status": "accepted",
   "note": "Direction B, as Patch chose (#10847: \"Yeah B looks the best on all of them without the extra chunkier pixels\"): an armoire with frame-and-panel doors, strap hinges, bracket feet and a cornice stepped under the classic's slope, built inside the classic's volume and worn in its own pixel atlas, baked from the refreshed wood and iron with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10847)."
