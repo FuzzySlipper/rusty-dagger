@@ -45,7 +45,8 @@ public sealed class SpellEffectPresentationTests
         """)), "test.art");
 
     private static (DaggerfallSiteAppearance Presentation, AppearanceFake Graphics, PresentationRecorder Particles) Compose(Func<bool> refreshed,
-        NormalizedActorSprite? corpse = null, AnimationRecorder? animation = null, IReadOnlyList<DaggerfallSiteDecoration>? decorations = null)
+        NormalizedActorSprite? corpse = null, AnimationRecorder? animation = null, IReadOnlyList<DaggerfallSiteDecoration>? decorations = null,
+        float lampLevel = 0F)
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -64,6 +65,7 @@ public sealed class SpellEffectPresentationTests
         AppearanceFake graphics = new(releases);
         DaggerfallSiteAppearance presentation = new(content, graphics, MediaInputs(classic: ClassicEffects(fireSpell: true), corpse: corpse, decorations: decorations));
         PresentationRecorder particles = PresentationRecorder.Create();
+        presentation.UpdateLampGlow(lampLevel);
         presentation.UseEffectArt(particles.Service, (animation ?? AnimationRecorder.Create()).Service, Art(), refreshed);
         return (presentation, graphics, particles);
     }
@@ -296,13 +298,17 @@ public sealed class SpellEffectPresentationTests
     }
 
     [Fact]
-    public void A_mesh_naming_a_glowing_slot_twice_is_refused()
+    public void A_lamp_mesh_placed_while_the_lamps_are_lit_shines_at_once()
     {
-        InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() => DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes(WithHash("""
-            {"artReplacements": {"images": [], "meshes": [
-              {"replaces": {"archive": 210, "record": 28}, "path": "refreshed/lamp-post.glb", "byteLength": 1, "sha256": "HASH", "glow": [1, 1]}]}}
-            """)), "test.art"));
-        Assert.Contains("glowing slot twice", refused.Message, StringComparison.Ordinal);
+        // A site resumed at night places its lamps after the level was set, which no later change repeats.
+        AnimationRecorder animation = AnimationRecorder.Create();
+        NormalizedBillboardSprite lamp = new("sprite/lamp.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, 0F), new Vector2(.7F, 3.8F));
+        DaggerfallSiteDecoration post = new("flat-1", new WorldPoint(4, 0, 6), true, lamp, lamp, (210, 28), (210, 28));
+        var (presentation, _, _) = Compose(() => true, animation: animation, decorations: [post], lampLevel: 2.5F);
+        using DaggerfallSiteAppearance owned = presentation;
+
+        MeshMaterialFactors glass = Assert.Single(Assert.Single(animation.FactorUpdates).Factors.ToArray());
+        Assert.Equal((1u, 2.5F), (glass.MaterialSlot, glass.EmissiveStrength));
     }
 
     [Fact]

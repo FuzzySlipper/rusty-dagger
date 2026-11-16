@@ -132,10 +132,6 @@ class Promotion(unittest.TestCase):
         self.assertEqual(self.pack(), by_key)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class WorldMesh(unittest.TestCase):
     def test_a_sprite_mesh_states_the_slots_that_carry_an_emissive_map_and_leaves_its_width_to_the_glb(self):
         root = Path(tempfile.mkdtemp())
@@ -155,3 +151,7 @@ class WorldMesh(unittest.TestCase):
         self.assertNotIn("footprint", lamp)
         self.assertEqual((root / "lamp.glb").read_bytes(), (promote.STAGE / lamp["path"]).read_bytes())
         self.assertNotIn("glow", promote.world_mesh_entry(glb("cart.glb", [{"name": "wood"}]), 205, 27))
+
+
+if __name__ == "__main__":
+    unittest.main()

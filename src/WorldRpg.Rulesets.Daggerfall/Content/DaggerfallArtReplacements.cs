@@ -426,9 +426,6 @@ internal sealed class DaggerfallArtReplacements
                 {
                     (int, int) replaces = (mesh.GetProperty("replaces").GetProperty("archive").GetInt32(), mesh.GetProperty("replaces").GetProperty("record").GetInt32());
                     uint[] glowing = mesh.TryGetProperty("glow", out JsonElement slots) ? [.. slots.EnumerateArray().Select(slot => slot.GetUInt32())] : [];
-                    // The Engine takes one set of factors per slot, so a slot named twice would fault the site that lights it.
-                    if (glowing.Distinct().Count() != glowing.Length)
-                        throw new InvalidOperationException($"Content pack '{packId}' names a glowing slot twice for the mesh replacing {replaces.Item1}/{replaces.Item2}.");
                     if (!meshes.TryAdd(replaces, new(new(mesh.GetProperty("path").GetString()!,
                             DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), glowing)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two meshes for {replaces.Item1}/{replaces.Item2}.");
