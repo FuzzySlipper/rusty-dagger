@@ -781,9 +781,9 @@ public sealed class PublishedContentDeliveryTests
     /// <summary>
     /// The refreshed ground cover ships its shells' texture, their shader and a tuft at the bytes it states, and grass
     /// colours for the temperate, mountain and swamp summers alone: the deserts' sand and the winters' snow grow none.
-    /// Every other open ground layer of those climates and their winters, and the desert's, has relief, as has every
-    /// texture a remodel's shell stack draws, and nothing else; each relief texture is its record's own size, so it lies
-    /// texel for texel on the surface it lifts.
+    /// Every other open ground layer of those climates and their winters, and the desert's, has relief; every shell slot
+    /// of a remodel finds the relief of the texture a location draws for it, in every climate and season; and each relief
+    /// texture is its record's own size, so it lies texel for texel on the surface it lifts.
     /// </summary>
     [Fact]
     public void Refreshed_ground_cover_ships_its_files_grass_for_the_green_summers_alone_and_relief_for_open_ground_and_shells()
@@ -802,9 +802,23 @@ public sealed class PublishedContentDeliveryTests
         (int, int)[] open = [.. new[] { 2, 102, 103, 302, 303, 402, 403 }.SelectMany(archive => DaggerfallGroundLayers.Records(archive).Take(archive == 402 ? 5 : 4)
             .Where((_, layer) => layer > 0 || !cover.Grass.ContainsKey(archive)))
             .Distinct()];
-        (int, int)[] shelled = [.. art.Models.Values.SelectMany(model => model.Slots).Where(slot => slot.Shell is not null)
-            .Select(slot => slot.Material!.Split('-')).Select(part => (int.Parse(part[1], CultureInfo.InvariantCulture), int.Parse(part[2], CultureInfo.InvariantCulture))).Distinct()];
-        Assert.Equal(open.Union(shelled).Order(), cover.Relief.Keys.Order());
+        Assert.All(open, layer => Assert.True(cover.Relief.ContainsKey(layer), $"Open ground {layer} has no relief."));
+
+        // A shell slot draws the relief of whatever texture the location draws for its classic one.
+        DaggerfallClimateGridDefinition climate = TestPayload.Definitions.Grids.Climate;
+        string[] shelled = [.. art.Models.Values.SelectMany(model => model.Slots).Where(slot => slot.Shell is not null).Select(slot => slot.Material!).Distinct()];
+        Assert.NotEmpty(shelled);
+        foreach (string material in shelled)
+        {
+            string[] part = material.Split('-');
+            (int archive, int record) = (int.Parse(part[1], CultureInfo.InvariantCulture), int.Parse(part[2], CultureInfo.InvariantCulture));
+            foreach (DaggerfallClimateValueDefinition place in climate.Values.Where(value => value.ClimateBase.Length != 0))
+            foreach (DaggerfallClimateSeason season in Enum.GetValues<DaggerfallClimateSeason>())
+            {
+                int drawn = DaggerfallSiteContent.ExteriorTextureArchive(climate, archive, record, place.Value, place.Value, season);
+                Assert.True(cover.Relief.ContainsKey((drawn, record)), $"A shell of {material} draws texture {drawn}-{record} in climate {place.Value}'s {season}, which has no relief.");
+            }
+        }
         foreach (((int archive, int record), DaggerfallGroundRelief relief) in cover.Relief)
         {
             Assert.True(relief.Tallest is > 0 and <= 1);

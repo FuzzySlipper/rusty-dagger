@@ -10,8 +10,10 @@
 - relief for the other open ground layers: each is its refreshed ground texture itself, texel for texel, with an alpha
   that is the texel's height, so a stack of shells over it lifts the ground into pixel relief: clods with stray grass on
   dirt, pebbles on rock, ripples and plates on sand, drifts on snow, tall grass on a swamp's lush ground. Each kind sets
-  how tall it stands and what in the texture rises: its lighter texels, its green ones and its broad clumps. A relief is
-  its record's own size, square or not, and states its tallest texel.
+  how tall it stands and what in the texture rises: its lighter texels, its green ones and its broad clumps;
+- relief in the same way for the refreshed surfaces remodels draw as shell stacks (art pack `models`, hedges.py): the
+  hedges' leaves, their lit sprays standing out of the shade inside. A remodel's stack is its own depth, so its relief
+  reaches the top of it.
 
 Both images are greyscale, so the tint alone colours them. The textures are made in code from a fixed seed; run it again
 after changing them, or after the refreshed grass surfaces change.
@@ -46,6 +48,7 @@ KINDS = {
     "sand": dict(cap=.6, detail=.45, clump=.9, cell=32, bare=.3, green=0),
     "snow": dict(cap=.6, detail=.25, clump=.9, cell=32, bare=.2, green=.8),
     "lush": dict(cap=1, detail=.7, clump=.5, cell=10, bare=.1, green=0),
+    "leaves": dict(cap=1, detail=.8, clump=.6, cell=12, bare=.12, green=0),
 }
 # The open ground layers that grow relief, by ground archive and record (DaggerfallGroundLayers.Records): each climate's
 # dirt and rock, the desert's three sands, the snow its winter wears (a winter set's grass and dirt alike), and the swamp's
@@ -56,6 +59,9 @@ RELIEF = {(102, 1): "clods", (302, 1): "clods", (402, 1): "clods",
           (2, 1): "sand", (2, 2): "sand", (2, 3): "sand",
           (103, 2): "snow", (303, 2): "snow", (403, 2): "snow", (103, 1): "snow", (303, 1): "snow", (403, 1): "snow",
           (402, 3): "lush"}
+# The refreshed surfaces remodels stack in shells, by archive and record: the hedges' 33-0, which no climate swaps.
+SHELLED = {(33, 0): "leaves"}
+SURFACES = "worldrpg/packs/daggerfall.art-replacements/media/surfaces"
 
 # How each kind of relief is drawn: how far its top sways in the wind, as a share of the shells' sway (tall grass bends,
 # snow's loose top drifts downwind); the linear colour its lowest layer is shaded to, rising to its own at the top (snow's
@@ -65,6 +71,8 @@ LOOKS = {
     "ground": {"sway": 0, "shade": [.6, .6, .6], "glints": 0, "sinksUnderSnow": True},
     "lush": {"sway": 1, "shade": [.6, .6, .6], "glints": 0, "sinksUnderSnow": True},
     "snow": {"sway": .5, "shade": [.52, .62, .86], "glints": .012, "sinksUnderSnow": False},
+    # A remodel's shells stand still; a hedge's inner leaves sit in its own shade.
+    "leaves": {"sway": 0, "shade": [.45, .5, .45], "glints": 0, "sinksUnderSnow": False},
 }
 
 rng = np.random.default_rng(10647)
@@ -167,9 +175,9 @@ def hashed(name):
     return {"path": f"{MEDIA}/{name}", "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
 
 
-def relief_entry(archive, record, kind):
+def relief_entry(archive, record, kind, source=TERRAIN):
     """A relief texture's file and size, its tallest texel as a share of the stack, and by its kind how it is drawn (LOOKS)."""
-    image = relief(Image.open(CONTENT / TERRAIN / f"texture-{archive:03d}-{record}.png"), kind)
+    image = relief(Image.open(CONTENT / source / f"texture-{archive:03d}-{record}.png"), kind)
     return publish(f"relief-{archive:03d}-{record}", image) | {
         "kind": kind, "tallest": round(np.asarray(image)[..., 3].max() / 255, 4)} | LOOKS.get(kind, LOOKS["ground"])
 
@@ -188,7 +196,8 @@ def main():
         "tuft": publish("tuft", tuft_image),
         "shader": hashed("shells.wgsl"),
         "grass": grass,
-        "relief": {f"{archive}-{record}": relief_entry(archive, record, kind) for (archive, record), kind in RELIEF.items()},
+        "relief": {f"{archive}-{record}": relief_entry(archive, record, kind) for (archive, record), kind in RELIEF.items()}
+        | {f"{archive}-{record}": relief_entry(archive, record, kind, SURFACES) for (archive, record), kind in SHELLED.items()},
     }
     PAYLOAD.write_text(json.dumps(payload, indent=1) + "\n")
     print(json.dumps(payload["artReplacements"]["groundCover"], indent=1))

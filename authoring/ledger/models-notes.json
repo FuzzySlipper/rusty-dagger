@@ -502,5 +502,65 @@
  "51128": {
   "status": "accepted",
   "note": "The goods stand in front of the shelf back, as Patch chose (#10847: \"Shelves staggered thickness edge painted looks great\"): each goods texture split into the empty back, carrying the goods' painted shade, and the goods, standing 12 cm in front as cutouts at their own depths with darker slices behind for a thickness edge; boards at the painted rows, the classic's other faces kept (#10847)."
+ },
+ "744": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "745": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "746": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "747": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "748": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "749": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "750": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "751": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "752": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "753": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "754": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "905": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "735": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "736": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "737": {
+  "status": "accepted",
+  "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
  }
 }
