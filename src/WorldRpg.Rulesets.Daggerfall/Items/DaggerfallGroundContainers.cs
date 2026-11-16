@@ -264,6 +264,8 @@ internal sealed class DaggerfallGroundContainers
         string key = $"property:{_activeProfile.LogicalId}:{placement.Id}:{day}";
         string group = placement.ItemGroups[draw(key + ":group", 0, placement.ItemGroups.Length - 1)];
         if (group is "MensClothing" or "WomensClothing") group = gender == "male" ? "MensClothing" : "WomensClothing";
+        // StockHouseContainer gives the player's race and gender only to the clothing, armor and magic items it draws.
+        bool appearance = DaggerfallItemFactory.TakesAppearance(group);
         List<InventoryContainerSeed> seeds = [];
         List<(DaggerfallCreatedItem Item, InventoryStackId? Stack, DurableIdentityReference? Unique)> items = [];
         int continuation = 100;
@@ -272,7 +274,7 @@ internal sealed class DaggerfallGroundContainers
         {
             string itemKey = $"{key}:{ordinal}";
             var item = factory.Create(new(group, itemKey, DaggerfallItemOwner.Ground(container.Id), Level: level,
-                Race: race, Gender: gender));
+                Race: appearance ? race : null, Gender: appearance ? gender : null));
             InventoryStackId? stack = item.Stackable ? InventoryStackId.Parse($"daggerfall.property.{container.Id}.{day}.{ordinal}") : null;
             DurableIdentityReference? unique = item.Stackable ? null : uniqueItems.AllocateReference();
             seeds.Add(new(item.Item, item.Quantity, Stack: stack, UniqueItem: unique));

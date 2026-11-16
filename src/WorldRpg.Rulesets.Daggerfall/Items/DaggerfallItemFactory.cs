@@ -15,6 +15,12 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
     private readonly DaggerfallDefinitions _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
     private readonly IRandomService _random = random ?? throw new ArgumentNullException(nameof(random));
 
+    /// <summary>
+    /// Whether a category's items take the player's race and gender: clothing and armor wear them, and a magic item hands
+    /// them to the base it enchants. Create refuses them for any other item.
+    /// </summary>
+    internal static bool TakesAppearance(string category) => category is "Armor" or "MensClothing" or "WomensClothing" or "Magic";
+
     internal DaggerfallCreatedItem Create(DaggerfallItemCreateRequest request)
     {
         request.Validate();

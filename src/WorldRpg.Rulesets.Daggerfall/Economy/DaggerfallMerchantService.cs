@@ -1013,12 +1013,9 @@ internal sealed class DaggerfallMerchantService
         new DaggerfallItemFactory(_definitions, _random).Create(new(category, key,
             DaggerfallItemOwner.Merchant(binding.MerchantContainerId), Quantity: null, TemplateIndex: template,
             Level: Math.Max(1, _progression.Level),
-            Race: RequiresAppearance(category) ? _character.Identity.RaceId : null,
-            Gender: RequiresAppearance(category) ? _character.Identity.Gender.ToString().ToLowerInvariant() : null,
+            Race: DaggerfallItemFactory.TakesAppearance(category) ? _character.Identity.RaceId : null,
+            Gender: DaggerfallItemFactory.TakesAppearance(category) ? _character.Identity.Gender.ToString().ToLowerInvariant() : null,
             PotionRecipeKey: recipe, MagicItemKey: magicKey));
-
-    private static bool RequiresAppearance(string category) =>
-        category is "Armor" or "MensClothing" or "WomensClothing" or "Magic";
 
     private void AddGenerated(Binding binding, DaggerfallCreatedItem item,
         List<InventoryContainerSeed> seeds,

@@ -116,6 +116,45 @@ public sealed class DaggerfallPropertyHoldingsTests
         Assert.Equal(recorded, society.Crime.OperationCount);
     }
 
+    /// <summary>
+    /// StockHouseContainer gives the player's race and gender only to the clothing, armor and magic items it draws. Furniture
+    /// drawing any other group stocks its goods without them, where the factory refuses an item they cannot dress. A magic
+    /// item hands them to the base it enchants, and the minimum draw enchants leather armor.
+    /// </summary>
+    [Theory]
+    [InlineData("UselessItems2", false)]
+    [InlineData("ReligiousItems", false)]
+    [InlineData("Books", false)]
+    [InlineData("Weapons", false)]
+    [InlineData("MensClothing", true)]
+    [InlineData("Armor", true)]
+    [InlineData("Magic", true)]
+    public void A_property_container_gives_race_and_gender_only_to_the_goods_that_wear_them(string group, bool worn)
+    {
+        using Holdings h = new();
+        using SocietyStage society = new();
+        DaggerfallSiteBuildingSource shop = h.Site.Exterior!.Buildings.Values.First();
+        DaggerfallInteriorBuilding standing = new(shop.Id.BlockX, shop.Id.BlockY, shop.Source.Id, shop.Source.BuildingType, 0);
+        DaggerfallWorldProfileKey interior = DaggerfallWorldProfileIds.Interior(h.Site.Id, shop.Id);
+        DaggerfallPropertyContainerPlacement furniture = new("furniture", new WorldPoint(1, 0, 1), [group], [new WorldPoint(2, 0, 1)]);
+        DaggerfallGroundContainers containers = new(h.Fixture.Containers, h.Fixture.Instances, h.Fixture.PlayerEntity,
+            new DurableIdentityAllocator(DurableIdentityKind.Container, 500), interior, QuestItemDropsFake.Exits(h.Fixture.Instances));
+        DaggerfallPropertyLoot loot = new(containers, h.Fixture.Definitions, RandomMinimum.Create(), h.Fixture.UniqueItems,
+            society.Crimes, society.Crime, h.Fixture.Instances, society.Actors, new(), society.Character, society.SkillUses,
+            new PlayerControlState(new WorldPoint(3, 0, 1), 0f, 0f), h.Sites,
+            () => h.Fixture.Calendar, () => interior, () => [furniture], () => standing, _ => false);
+        loot.Stock();
+        DaggerfallGroundContainer placed = Assert.Single(containers.All.Values);
+
+        Assert.Equal(true, loot.Open(placed.Id));
+        var contents = h.Fixture.Containers.Read(placed.Owner);
+        DaggerfallItemInstanceMetadata[] goods = [
+            .. contents.Stacks.Select(stack => h.Fixture.Instances.RequireStack(DaggerfallItemOwner.Ground(placed.Id), stack.Id)),
+            .. contents.UniqueItems.Select(item => h.Fixture.Instances.RequireUnique(h.Fixture.Containers.Entities.IdentityOf(item.Entity).Value))];
+        Assert.NotEmpty(goods);
+        Assert.All(goods, item => Assert.Equal((worn, worn), (item.Race is not null, item.Gender is not null)));
+    }
+
     /// <summary>The holdings over a real property state, storage, bank and transport at a city of ten or more buildings that is no port.</summary>
     private sealed class Holdings : IDisposable
     {
