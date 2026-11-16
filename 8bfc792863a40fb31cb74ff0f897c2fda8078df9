@@ -1,0 +1,14 @@
+scripts/route.py main: passed
+rusty-dagger verify at 8bfc792863a40fb31cb74ff0f897c2fda8078df9 passed in 28.1 min
+verify on den-nimo, 28.1 min, pass: /home/agent/dev/rusty-dagger/local/build/route/main-8bfc792863a4-20261116T053033/verify.log
+    lane: run 164613e31da6083f749e34b03dc5be3a of verify on den-nimo at 8bfc792863a40fb31cb74ff0f897c2fda8078df9 (0 s)
+    lane: tooling took 10 s, peak memory 38 MiB
+    skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run `dotnet run --project src/Daggerfall.Source.Tool -- export-items`
+    Passed!  - Failed:     0, Passed:    12, Skipped:     0, Total:    12, Duration: 266 ms - WorldRpg.Architecture.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:   864, Skipped:     0, Total:   864, Duration: 13 m 2 s - Daggerfall.Import.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:  4404, Skipped:     8, Total:  4412, Duration: 12 m 59 s - WorldRpg.Rulesets.Daggerfall.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:   288, Skipped:     0, Total:   288, Duration: 113 ms - WorldRpg.Kit.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:    52, Skipped:     0, Total:    52, Duration: 85 ms - WorldRpg.Host.Tests.dll (net10.0)
+    play-smoke 21.5s passed: mode Playing, drawn cameras 1, characterStepCalls 1, voxelResidencyCalls 0, music cue started
+    Verified Engine pair 0.1.0-dev.9615009ff574: CoreCLR. Use --aot for the NativeAOT fidelity publish.
+    lane: verify took 1666 s, peak memory 21121 MiB
