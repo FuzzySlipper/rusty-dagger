@@ -598,7 +598,16 @@ WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)]),
                 ("logs-213-11.glb", [(213, 11)]), ("logs-213-12.glb", [(213, 12)]),
                 *((f"stalagmite-300-{record}.glb", [(300, record)]) for record in range(6, 16)),
                 # the barrel flat streets, houses and dungeons place (#10848), staves painted from its refreshed flat
-                ("barrel-205-0.glb", [(205, 0)])]
+                ("barrel-205-0.glb", [(205, 0)]),
+                # the common street flats (#10852), in metres at their sprites' size: the lamp posts and the haystack
+                # lathed from their refreshed sprites and the well built from parts measured off its sprite (lamps.py,
+                # well.py in the task's evidence); the pumps from H3 orbits of their sprites and the fountains from
+                # their sprites, through Pixal3D; and #10851's cart 41214 for the handcart
+                ("lamp-wooden-lantern.glb", [(210, 14)]), ("lamp-copper-globe.glb", [(210, 15)]),
+                ("lamp-iron-globe.glb", [(210, 28)]), ("lamp-iron-lantern.glb", [(210, 29)]),
+                ("well.glb", [(212, 0)]), ("haystack.glb", [(212, 1)]), ("fountain-spire.glb", [(212, 2)]),
+                ("fountain-column.glb", [(212, 3)]), ("pump-green.glb", [(212, 8)]), ("pump-iron.glb", [(212, 9)]),
+                ("handcart.glb", [(205, 27)])]
 
 
 def glb_width(path):

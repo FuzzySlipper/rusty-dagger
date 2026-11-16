@@ -50397,6 +50397,128 @@
     "byteLength": 49224,
     "sha256": "6574e287e594b41da2abcc7daf6a3e85fdb6c75f901fb60953d76cc27fbcc807",
     "footprint": 1.016
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 14
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/lamp-wooden-lantern.glb",
+    "byteLength": 24588,
+    "sha256": "b79b85d403d66c23bfe9130c3027ed13bfa4e2c85bf34ddad09123966045dc0e",
+    "footprint": 0.35,
+    "glow": [
+     0
+    ]
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 15
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/lamp-copper-globe.glb",
+    "byteLength": 35628,
+    "sha256": "cfe6a2935582a9e243021a0ed76d8cf1b195edace32d55f15d31f96a8545c0d8",
+    "footprint": 0.328,
+    "glow": [
+     0
+    ]
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 28
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/lamp-iron-globe.glb",
+    "byteLength": 42696,
+    "sha256": "9bca78368093c96ff310e0fb672464648a1c12d9772d5ef74d637f9e82a640b0",
+    "footprint": 0.712,
+    "glow": [
+     0
+    ]
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 29
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/lamp-iron-lantern.glb",
+    "byteLength": 31272,
+    "sha256": "61c54efc6fdb5317dbd14836328aaa2766cbbf0f47620e0578a15461e177acf6",
+    "footprint": 0.524,
+    "glow": [
+     0
+    ]
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 0
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/well.glb",
+    "byteLength": 52424,
+    "sha256": "db750e4e1e5c87909536535e97a8ff871db29abcecd039d741b6b7e360dfc2ce",
+    "footprint": 1.97
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 1
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/haystack.glb",
+    "byteLength": 59432,
+    "sha256": "659b3e7f5bf54833dff04dad1c5347ba54286b625fadf9e8a9363ce8b47839bc",
+    "footprint": 1.922
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 2
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/fountain-spire.glb",
+    "byteLength": 1981532,
+    "sha256": "39df944eba9ac878bae86abb8e7722e27799fb02cdd2954b195cc338883c00fc",
+    "footprint": 1.95
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 3
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/fountain-column.glb",
+    "byteLength": 1788396,
+    "sha256": "d036b1481867fb1051af8c0620f31925184348cf6841640e9de17e66d99c0413",
+    "footprint": 1.961
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 8
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/pump-green.glb",
+    "byteLength": 198216,
+    "sha256": "befebf96a49f58c9f7ea8e64fd1f9ec44708a4e7e05d95ebb7b040ed7859b83b",
+    "footprint": 0.67
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 9
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/pump-iron.glb",
+    "byteLength": 209016,
+    "sha256": "152e3d6230f9c276d1c5f8c6cf231f07c241b29ae904396d7b53183f8e3ca688",
+    "footprint": 0.673
+   },
+   {
+    "replaces": {
+     "archive": 205,
+     "record": 27
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/handcart.glb",
+    "byteLength": 1327348,
+    "sha256": "8f0001a4eaeda80a50d98da38727aa5ae15f3b4e9c9e1f0288c2f0522980ef8d",
+    "footprint": 3.673
    }
   ],
   "surfaces": [
