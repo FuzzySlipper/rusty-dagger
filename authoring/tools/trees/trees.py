@@ -21,7 +21,7 @@ sprite's frame, with where its foot stands.
 
     trees.py
 """
-import hashlib, json
+import hashlib, json, shutil, tempfile
 from pathlib import Path
 
 import sys
@@ -324,23 +324,25 @@ def main():
     payload = json.loads(PAYLOAD.read_text())
     flats = {(f["replaces"]["archive"], f["replaces"]["record"]): f for f in payload["artReplacements"]["flats"]}
     folder = CONTENT / MEDIA
-    folder.mkdir(parents=True, exist_ok=True)
-    global SNOW_SHADER
-    SNOW_SHADER = (folder / "snow.wgsl").read_text()
-    for old in folder.glob("*"):
-        old.unlink()
-    trees = {}
-    for archive, forms in FORMS.items():
-        for record, (species, variant) in forms.items():
-            trees[f"{archive}-{record}"] = tree(flats[(archive, record)], archive, record, species, variant, folder)
-    payload["artReplacements"]["trees"] = trees
     # The shader that lays the winter trees' snow on their leaves, written by hand beside them.
-    shader = CONTENT / MEDIA / "snow.wgsl"
-    shader.write_text(SNOW_SHADER)
-    payload["artReplacements"]["treeSnow"] = publish("snow.wgsl", shader)
+    snow = (folder / "snow.wgsl").read_text()
+    trees = {}
+    # Built whole apart first and moved in only then, so a run that fails (a sprite it cannot read, rusty-craftsurvive
+    # not at CRAFTSURVIVE) leaves the trees as they were rather than deleted.
+    with tempfile.TemporaryDirectory() as built:
+        built = Path(built)
+        for archive, forms in FORMS.items():
+            for record, (species, variant) in forms.items():
+                trees[f"{archive}-{record}"] = tree(flats[(archive, record)], archive, record, species, variant, built)
+        (built / "snow.wgsl").write_text(snow)
+        payload["artReplacements"]["treeSnow"] = publish("snow.wgsl", built / "snow.wgsl")
+        for old in folder.glob("*"):
+            old.unlink()
+        for file in built.iterdir():
+            shutil.copyfile(file, folder / file.name)
+    payload["artReplacements"]["trees"] = trees
     PAYLOAD.write_text(json.dumps(payload, indent=1) + "\n")
     print(f"{len(trees)} trees, {len(list(folder.glob('*.prop-mesh.json')))} meshes")
-
 
 if __name__ == "__main__":
     main()
