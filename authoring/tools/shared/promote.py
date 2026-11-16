@@ -53,16 +53,15 @@ for a glint the part of a frame an inventory slot holds (`slot`, fractions, top-
 frame stays classic. The area also writes the soft white glow (`effectGlow`) the game's spell trails and impact bursts tint
 in each element's colour, and the world meshes (`meshes`): the `effects` final `corpse-bones.glb`, a skull-free bone
 pile resting on the floor, stands in for TEXTURE.380 record 1 (the corpse every human enemy class shares, men and
-women alike, so it is no one in particular) and record 4 (the bone pile placed in dungeons). Each entry states the
-mesh's footprint, its longest side in metres, so the game draws it at the width of the classic sprite it replaces.
+women alike, so it is no one in particular) and record 4 (the bone pile placed in dungeons). WORLD_MESHES names each such
+sprite mesh, which naming accepts; each entry is keyed by the record it replaces (`380-4`) and states the mesh's footprint,
+its longest side in metres, so the game draws it at the width of the classic sprite it replaces.
 
 The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
 its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
 8-bit RGBA PNG at its own size, and the game draws it on the location materials and terrain that draw that record.
 The `terrain` area does the same into `surfaces` for the ground tiles, from local/art/generated/terrain (tools/terrain/ground.py). A
-record has one entry: a ground tile models also draw is marked superseded in the surfaces ledger. Each art session holds only
-its own finals, so `--key texture-AAA-R` promotes one, replacing its entry and PNG and keeping the rest of the section; a
-whole-area run refuses, before it removes anything, while the ledger accepts a record the checkout has no final for.
+record has one entry: a ground tile models also draw is marked superseded in the surfaces ledger.
 
 The `flats` area promotes the world's placed billboards and terrain nature (`flats`): each record in local/art/reference/flats/usage.csv
 whose every frame has an accepted final becomes one PNG atlas, as an effect does, and the game draws it at the classic
@@ -92,10 +91,7 @@ classic, out of the classic's own faces. It reads the classic from local/inputs/
 MASK draws its PNG cut out at half its alpha (`"alpha": "mask"`); one whose glTF extras state `frames` and
 `framesPerSecond` is a strip of that many frames side by side that the game steps through, its faces' uvs covering one
 frame's width of [0, 1], as a hearth's flames are; and one under KHR_materials_unlit draws at its own colours whatever the
-light (`"unlit": true`). Each art session holds only its own finals, so
-`--key ID` promotes one, replacing that entry and its files and keeping the rest of the section; a whole-area run
-refuses while the ledger accepts a remodel this checkout has no final for, and names any entry it removes because the
-ledger no longer accepts it.
+light (`"unlit": true`).
 
 A held weapon's layer leaves a gap where the doll's hand holds it; its whole image (whole.py, in local/art/generated/worn/whole/)
 is published beside it as its `icon`, which the inventory, shops and the ground draw instead.
@@ -112,14 +108,29 @@ classic image's size at the treasure piles' scale, the classic body's waist), ea
 after that, promotion keeps every value the payload holds, so a value changed on purpose survives a re-promotion.
 `--set ID NAME VALUE` sets one, marked `hand`; `--recompute ID` (or `all`) takes them from the original again.
 
-Only finals whose ledger/AREA-notes.json status is `accepted` are promoted. Rerunning an area replaces that
-area's entries and files and keeps every other area's: it deletes the area's files and writes them all again, about ten
-minutes for `worn`, so don't interrupt it. `--key KEY` promotes one accepted paper-doll or worn final and leaves the rest.
-The import must have run (local/build/import/staging), and a paper-doll or worn final without its rect sidecar is refused.
+Every area promotes the same way (promote_area). Its units are what an entry replaces, keyed as the area keys them: an
+art key (paper-doll, worn, spells, ui, surfaces, terrain), an item's media id (items), an effect's media id, a sprite
+mesh's ARCHIVE-RECORD and `effectGlow` (effects), a classic record `texture-AAA-record-RRR` (flats, people), an ARCH3D
+record id (models) or the rig figure (people-rig); each unit draws finals, which ledger/AREA-notes.json must mark
+`accepted`. Only the shared checkout holds every final (local/art/generated is ignored), so:
 
+  - `--key KEY` promotes the units KEY names, by their key or a final they draw, with every unit that draws one of those
+    finals (records sharing an atlas, a mesh's records), and keeps every other entry and file as it is. It refuses a unit
+    whose finals the ledger doesn't accept or this checkout doesn't hold. It leaves the worn tints as they are.
+  - A whole-area run (no `--key`) refuses while the ledger accepts a final this checkout doesn't hold, naming them, since it
+    would drop their entries; it names every entry it removes because the ledger no longer accepts all it draws, and
+    leaves in the area's folders only the files its entries name.
+  - Every file is written to a staging folder first and moves into content, and the payload is written, only once every
+    area named has built, so a refused run changes nothing.
+
+The import must have run (local/build/import/staging); effects, flats and people also read local/art/reference, and a
+paper-doll or worn final without its rect sidecar is refused.
+
+    promote.py --area worn --key texture-235-record-000-frame-000
     promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces --area terrain
 """
 import argparse, csv, hashlib, io, json, os, re, shutil, subprocess, sys, tempfile
+from collections import namedtuple
 from pathlib import Path
 
 import numpy as np
@@ -137,7 +148,6 @@ CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/packs/daggerfall.art-replacements/media"
 PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
 QUALITY = 90
-AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain", "flats", "people", "people-rig", "ui", "models")
 ARENA2 = REPOSITORY / "local/inputs/arena2"
 PEOPLE_RIG = Path(os.environ.get("PEOPLE_RIG", "/home/agent/dev/asset-pipeline/live-evidence/publications/w453-walk-20261109"))
 PEOPLE_RIG_FIGURE = "w453"
@@ -247,13 +257,24 @@ def rect_of(area, key, path):
     return placed(layer, "canvas")[1]
 
 
+# Where this run writes: every file lands here first, under its content path, and moves into content only once every
+# area has built (commit), so a refused run leaves the pack as it was.
+STAGE = None
+
+
+def write(target, data):
+    """Writes a file at a content path, into this run's staging folder, and states its path, length and hash."""
+    path = STAGE / target
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+
+
 def webp(image, target, lossless=False):
     """Writes the image as WebP at a content path, and states its path, length and hash."""
     buffer = io.BytesIO()
     image.save(buffer, "WEBP", lossless=True) if lossless else image.save(buffer, "WEBP", quality=QUALITY, method=6)
-    data = buffer.getvalue()
-    (CONTENT / target).write_bytes(data)
-    return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+    return write(target, buffer.getvalue())
 
 
 def world_png(image, target):
@@ -261,9 +282,7 @@ def world_png(image, target):
     palette), and states its path, length, hash and size."""
     buffer = io.BytesIO()
     image.convert("RGBA").save(buffer, "PNG", optimize=True)
-    data = buffer.getvalue()
-    (CONTENT / target).write_bytes(data)
-    return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest(), "width": image.width, "height": image.height}
+    return {**write(target, buffer.getvalue()), "width": image.width, "height": image.height}
 
 
 def world_image(image, height, doll=False):
@@ -433,12 +452,12 @@ def promote(area, key, path, rect=None, mediaId=None, name=None):
 
 
 def ledger(area):
-    return json.load(open(AUTHORING / "ledger" / f"{area}-notes.json"))
+    return json.loads((AUTHORING / "ledger" / f"{area}-notes.json").read_text())
 
 
-def accepted_final(area, notes, key):
-    path = ART / "generated" / area / f"{key}.png"
-    return path if notes.get(key, {}).get("status") == "accepted" and path.exists() else None
+def generated(area, key, suffix=".png"):
+    """A final of an area's ledger, where local/art/generated keeps it."""
+    return Final(area, key, ART / "generated" / area / f"{key}{suffix}")
 
 
 def icon(final, area):
@@ -449,48 +468,46 @@ def icon(final, area):
     return image
 
 
-def inventory_icons():
-    """An entry for every published inventory image of the `items` area whose record has an accepted final."""
-    notes = ledger("items")
-    classic, entries = [], []
+def doll_units(area):
+    """The paper doll's and the worn layers' units: each final is its own image."""
+    return {key: Unit([generated(area, key)], lambda key=key: [("images", promote(area, key, ART / "generated" / area / f"{key}.png"))])
+            for key in sorted(ledger(area))}
+
+
+def item_units():
+    """The `items` area's units, by the media id each replaces: every published inventory image, drawn from the final of
+    its record."""
     images = [(published["mediaId"], published["textureArchive"], published["sourceRecordOrdinal"], f"items/{published['itemId']}")
               for published in json.load(open(CLASSIC_MANIFEST))["inventoryIcons"]]
     for media in sorted({media for icon in json.load(open(IMPORTED))["paperDoll"]["icons"] for media in icon["mediaIds"]}):
         archive, record = map(int, ITEM_IMAGE.fullmatch(media).groups())
         images.append((media, archive, record, f"items/{media}"))
-    for media, archive, record, name in images:
-        final = accepted_final("items", notes, f"texture-{archive}-record-{record:03d}-frame-000")
-        if final is None:
-            classic.append(media)
-            continue
+
+    def build(media, final, name):
         ground = own(media, ["ground"], lambda: {"ground": round(classic_size(media)["height"] * metres_per_classic_pixel(), 6)})
-        entries.append(icon_entry(media, icon(final, "items"), name, ground))
-    if classic:
-        print(f"items: {len(classic)} icons stay classic, their records have no accepted final: {', '.join(classic)}")
-    return entries
+        return [("images", icon_entry(media, icon(final.path, "items"), name, ground))]
+    return {media: Unit([final], lambda media=media, final=final, name=name: build(media, final, name))
+            for media, archive, record, name in images
+            for final in [generated("items", f"texture-{archive}-record-{record:03d}-frame-000")]}
 
 
-def spell_icons():
+def spell_units():
+    """The `spells` area's units: each spell icon, targeting tile and element tile final."""
     notes = ledger("spells")
     replaced = {key: f"spell.icon.{int(m[1])}" for key in notes if (m := SPELL_ICON.fullmatch(key))} | {key: media for key, media in SPELL_TILES.items() if key in notes}
-    return [icon_entry(media, icon(final, "spells"), f"spells/{key}") for key, media in sorted(replaced.items())
-            if (final := accepted_final("spells", notes, key))]
+    return {key: Unit([final], lambda media=media, final=final: [("images", icon_entry(media, icon(final.path, "spells"), f"spells/{final.key}"))])
+            for key, media in sorted(replaced.items()) for final in [generated("spells", key)]}
 
 
-def ui_images():
-    """An entry for every accepted `ui` final: a screen at its own size, an escort portrait at PORTRAIT pixels."""
-    notes = ledger("ui")
-    entries = []
-    for key in sorted(key for key, note in notes.items() if note.get("status") == "accepted"):
-        final = accepted_final("ui", notes, key)
-        if final is None:
-            raise SystemExit(f"{key} is accepted in ledger/ui-notes.json but has no final in local/art/generated/ui.")
-        image = Image.open(final).convert("RGBA")
-        if UI_FACE.fullmatch(key):
+def ui_units():
+    """The `ui` area's units: each final, a screen at its own size or an escort portrait at PORTRAIT pixels."""
+    def build(final):
+        image = Image.open(final.path).convert("RGBA")
+        if UI_FACE.fullmatch(final.key):
             image = image.crop(image.getchannel("A").getbbox())
             image.thumbnail((PORTRAIT, PORTRAIT), Image.Resampling.LANCZOS)
-        entries.append(icon_entry(replaces(key), image, f"ui/{key}"))
-    return entries
+        return [("images", icon_entry(replaces(final.key), image, f"ui/{final.key}"))]
+    return {key: Unit([final], lambda final=final: build(final)) for key in sorted(ledger("ui")) for final in [generated("ui", key)]}
 
 
 def classic_box(source):
@@ -505,10 +522,7 @@ def png_file(image, target):
     """Writes an image as PNG content and names it: its path, length and hash."""
     buffer = io.BytesIO()
     image.save(buffer, "PNG", optimize=True)
-    data = buffer.getvalue()
-    (CONTENT / target).parent.mkdir(parents=True, exist_ok=True)
-    (CONTENT / target).write_bytes(data)
-    return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+    return write(target, buffer.getvalue())
 
 
 def frame_atlas(name, sources, finals, target, longest=None, crunch=None, colours=reduce.COLOURS, glow=None):
@@ -552,27 +566,16 @@ def frame_atlas(name, sources, finals, target, longest=None, crunch=None, colour
                         "width": round((region[2] - region[0]) / width, 4), "height": round((region[3] - region[1]) / height, 4)}}
 
 
-def world_effects():
-    """An atlas entry for every world effect whose every frame has an accepted final."""
-    entries, classic = [], []
-    for media, (area, key, raw) in sorted(WORLD_EFFECTS.items()):
-        notes = ledger(area)
-        sources = sorted((ART / "reference").glob(f"{raw}-frame-*.png"))
-        finals = [accepted_final(area, notes, f"{key}-frame-{frame:03d}") for frame in range(len(sources))]
-        if not sources or None in finals:
-            classic.append(media)
-            continue
-        entry = {"replaces": media, **frame_atlas(media, sources, finals, f"{MEDIA}/effects/{media.replace('.', '-')}.png", EFFECT_FRAME)}
-        frame = entry.pop("classic")
-        names = ["size", "pivot", "sequence", "framesPerSecond", "loops", *(["slot"] if media.startswith("effect.glint.") else [])]
-        entry["placement"] = own(media, names, lambda: effect_placement(media, frame))
-        if any(not 0 <= index < len(entry["frames"]) for index in entry["placement"]["sequence"]):
-            raise SystemExit(f"{media}: its sequence {entry['placement']['sequence']} names a frame its {len(entry['frames'])} frames lack; "
-                             f"set it (--set {media} sequence '[...]') or --recompute {media}.")
-        entries.append(entry)
-    if classic:
-        print(f"effects: {len(classic)} effects stay classic, a frame has no accepted final: {', '.join(classic)}")
-    return entries
+def effect_entry(media, sources, finals):
+    """A world effect's atlas entry, from its classic frames and their finals."""
+    entry = {"replaces": media, **frame_atlas(media, sources, finals, f"{MEDIA}/effects/{media.replace('.', '-')}.png", EFFECT_FRAME)}
+    frame = entry.pop("classic")
+    names = ["size", "pivot", "sequence", "framesPerSecond", "loops", *(["slot"] if media.startswith("effect.glint.") else [])]
+    entry["placement"] = own(media, names, lambda: effect_placement(media, frame))
+    if any(not 0 <= index < len(entry["frames"]) for index in entry["placement"]["sequence"]):
+        raise SystemExit(f"{media}: its sequence {entry['placement']['sequence']} names a frame its {len(entry['frames'])} frames lack; "
+                         f"set it (--set {media} sequence '[...]') or --recompute {media}.")
+    return entry
 
 
 def effect_glow():
@@ -583,48 +586,51 @@ def effect_glow():
     image = Image.merge("RGBA", (*[Image.new("L", (GLOW, GLOW), 255)] * 3, Image.fromarray(alpha)))
     buffer = io.BytesIO()
     image.save(buffer, "PNG", optimize=True)
-    data = buffer.getvalue()
-    target = f"{MEDIA}/effects/glow.png"
-    (CONTENT / target).write_bytes(data)
-    return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+    return write(f"{MEDIA}/effects/glow.png", buffer.getvalue())
 
 
-# The world meshes: each final, the classic TEXTURE records it stands in for, and its footprint (longest side, metres).
+# The sprite meshes: each final in local/art/generated/effects, the classic TEXTURE records it stands in for, and its
+# footprint (longest side, metres). Naming a final here is what accepts it.
 WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)], 2.15)]
 
 
-def world_meshes():
-    """Copies each world mesh final into the pack, with an entry for every classic record it replaces."""
-    entries = []
+def effect_units():
+    """The `effects` area's units: each world effect by its media id, whose finals are its classic frames'; each sprite
+    mesh by the classic record it replaces (ARCHIVE-RECORD); and the effect glow (`effectGlow`), made here."""
+    units = {}
+    for media, (area, key, raw) in sorted(WORLD_EFFECTS.items()):
+        sources = sorted((ART / "reference").glob(f"{raw}-frame-*.png"))
+        if not sources:
+            raise SystemExit(f"effects: no classic frames of {media} under local/art/reference/{raw}: export or link the reference.")
+        finals = [generated(area, f"{key}-frame-{frame:03d}") for frame in range(len(sources))]
+        units[media] = Unit(finals, lambda media=media, sources=sources, finals=finals: [("effects", effect_entry(media, sources, [final.path for final in finals]))])
     for name, records, footprint in WORLD_MESHES:
-        final = ART / "generated" / "effects" / name
-        if not final.exists():
-            print(f"effects: no {name} final; {', '.join(f'{a}/{r}' for a, r in records)} stay sprites")
-            continue
-        data = final.read_bytes()
-        target = f"{MEDIA}/effects/{name}"
-        (CONTENT / target).write_bytes(data)
-        entries += [{"replaces": {"archive": archive, "record": record}, "path": target, "byteLength": len(data),
-                     "sha256": hashlib.sha256(data).hexdigest(), "footprint": footprint} for archive, record in records]
-    return entries
+        final = Final(None, name, ART / "generated" / "effects" / name)
+        for archive, record in records:
+            units[f"{archive}-{record}"] = Unit([final], lambda final=final, archive=archive, record=record, footprint=footprint: [
+                ("meshes", {"replaces": {"archive": archive, "record": record}, **write(f"{MEDIA}/effects/{final.key}", final.path.read_bytes()),
+                            "footprint": footprint})])
+    units["effectGlow"] = Unit([], lambda: [("effectGlow", effect_glow())])
+    return units
 
 
-def models(written, keys):
-    """Writes the accepted remodels `keys` into the folder `written` through the source tool's model-mesh, which holds
-    each to the classic's volume, and returns their entries by ARCH3D record id."""
-    entries = {}
+def model_units():
+    """The `models` area's units, by ARCH3D record id: each remodel written through the source tool's model-mesh, which
+    holds it to the classic's volume."""
     notes = ledger("models")
-    for key in sorted(keys, key=int):
-        note = notes[key]
-        final = ART / "generated" / "models" / f"{key}.glb"
+
+    def build(final):
+        written = STAGE / MEDIA / "models"
+        written.mkdir(parents=True, exist_ok=True)
         run = subprocess.run(["dotnet", "run", "--project", str(REPOSITORY / "src/Daggerfall.Source.Tool"), "--", "model-mesh",
-                              "--arena2", str(ARENA2), "--model", key, "--glb", str(final), "--output", str(written),
-                              "--content-path", f"{MEDIA}/models", "--fit", note.get("fit", "hull")], capture_output=True, text=True)
+                              "--arena2", str(ARENA2), "--model", final.key, "--glb", str(final.path), "--output", str(written),
+                              "--content-path", f"{MEDIA}/models", "--fit", notes[final.key].get("fit", "hull")], capture_output=True, text=True)
         if run.returncode:
-            raise SystemExit(f"models: {key}: {(run.stderr or run.stdout).strip()}")
-        entries[key] = json.loads(run.stdout.strip().splitlines()[-1])
-        print(f"models: {key}, {entries[key]['triangles']} triangles", flush=True)
-    return entries
+            raise SystemExit(f"models: {final.key}: {(run.stderr or run.stdout).strip()}")
+        entry = json.loads(run.stdout.strip().splitlines()[-1])
+        print(f"models: {final.key}, {entry['triangles']} triangles", flush=True)
+        return [("models", entry)]
+    return {key: Unit([final], lambda final=final: build(final)) for key in sorted(notes, key=int) for final in [generated("models", key, ".glb")]}
 
 
 def classic_size(media):
@@ -640,29 +646,16 @@ def classic_size(media):
     return {"width": right - left, "height": bottom - top}
 
 
-def surfaces(area, keys):
-    """Each accepted final's entry in the area, by the classic texture record it replaces: the finals `keys` names, or with
-    none every final the ledger accepts. Refused, before anything is written, for a key the ledger doesn't accept or the
-    checkout has no final for."""
-    finals = {path.stem: path for path in (ART / "generated" / area).glob("*/texture-*.png") if path.parent.name != "raw"}
-    accepted = {key for key, note in ledger(area).items() if note.get("status") == "accepted"}
-    for key in keys or sorted(accepted):
-        if key not in accepted:
-            raise SystemExit(f"{key} is not accepted in ledger/{area}-notes.json.")
-        if key not in finals:
-            raise SystemExit(f"{key} is accepted in ledger/{area}-notes.json but has no final under local/art/generated/{area}"
-                             + ("; promote this checkout's own finals with --key." if not keys else "."))
-    directory = CONTENT / MEDIA / area
-    directory.mkdir(parents=True, exist_ok=True)
-    if not keys:
-        for old in directory.glob("*.png"):
-            old.unlink()
-    promoted = []
-    for key in keys or sorted(accepted):
-        archive, record = map(int, SURFACE.fullmatch(key).groups())
-        promoted.append({"replaces": {"archive": archive, "record": record},
-                         **world_png(Image.open(finals[key]), f"{MEDIA}/{area}/{key}.png")})
-    return promoted
+def surface_units(area):
+    """The `surfaces` or `terrain` area's units: each final `texture-AAA-R`, from its family's folder, by the classic
+    texture record it replaces."""
+    held = {path.stem: path for path in (ART / "generated" / area).glob("*/texture-*.png") if path.parent.name != "raw"}
+
+    def build(final):
+        archive, record = map(int, SURFACE.fullmatch(final.key).groups())
+        return [("surfaces", {"replaces": {"archive": archive, "record": record}, **world_png(Image.open(final.path), f"{MEDIA}/{area}/{final.key}.png")})]
+    return {key: Unit([final], lambda final=final: build(final))
+            for key in sorted(ledger(area)) for final in [Final(area, key, held.get(key, ART / "generated" / area / f"{key}.png"))]}
 
 
 def glow_of(archive, record):
@@ -672,28 +665,34 @@ def glow_of(archive, record):
     return None
 
 
-def flats():
-    """An atlas entry for every placed classic record whose every frame has an accepted final: from the `flats` area, or,
-    for a record an item also draws, its accepted `items` final."""
-    entries, classic = [], []
-    area_notes = {area: ledger(area) for area in ("flats", "items")}
+def flat_units():
+    """The `flats` area's units, by classic record (`texture-AAA-record-RRR`): every placed record with classic frames,
+    each frame drawn from its `flats` final, or, for a record an item also draws and the area has no accepted final of
+    its own for, its `items` final."""
+    notes = {area: ledger(area) for area in ("flats", "items")}
+
+    def final(key):
+        own_final = notes["flats"].get(key, {}).get("status") == "accepted" or notes["items"].get(key, {}).get("status") != "accepted"
+        return generated("flats" if own_final else "items", key)
+
+    def build(archive, record, stem, sources, finals):
+        return [("flats", {"replaces": {"archive": archive, "record": record},
+                           **frame_atlas(stem, sources, [final.path for final in finals], f"{MEDIA}/flats/{stem}.png", crunch=FLAT_CRUNCH,
+                                         glow=glow_of(archive, record))})]
+    units = {}
     for row in csv.DictReader(open(ART / "reference/flats/usage.csv")):
         archive, record = int(row["archive"]), int(row["record"])
         stem = f"texture-{archive:03d}-record-{record:03d}"
         sources = sorted((ART / "reference/flats" / row["family"] / f"texture-{archive:03d}/flat").glob(f"{stem}-frame-*-source.png"))
-        finals = [accepted_final("flats", area_notes["flats"], f"{stem}-frame-{frame:03d}")
-                  or accepted_final("items", area_notes["items"], f"{stem}-frame-{frame:03d}") for frame in range(len(sources))]
-        if not sources or None in finals:
-            classic.append(stem)
-            continue
-        entries.append({"replaces": {"archive": archive, "record": record},
-                        **frame_atlas(stem, sources, finals, f"{MEDIA}/flats/{stem}.png", crunch=FLAT_CRUNCH, glow=glow_of(archive, record))})
-    print(f"flats: {len(entries)} records refreshed, {len(classic)} stay classic")
-    return entries
+        if sources:
+            finals = [final(f"{stem}-frame-{frame:03d}") for frame in range(len(sources))]
+            units[stem] = Unit(finals, lambda archive=archive, record=record, stem=stem, sources=sources, finals=finals: build(archive, record, stem, sources, finals))
+    return units
 
 
-def people():
-    """An atlas entry for every placed person whose standing frame, or a record's with the same frame, has an accepted final."""
+def people_units():
+    """The `people` area's units, by classic record (`texture-AAA-record-RRR`): every placed person, drawn by the final of
+    the first record with the same standing frame that the ledger accepts, so records with one frame share its atlas."""
     notes = ledger("people")
     placed_people = []
     for row in csv.DictReader(open(ART / "reference/people/usage.csv")):
@@ -702,25 +701,26 @@ def people():
         stem = f"texture-{int(row['archive']):03d}-record-{int(row['record']):03d}"
         source = ART / "reference/people" / row["family"] / f"texture-{int(row['archive']):03d}/person/{stem}-frame-000-source.png"
         image = Image.open(source).convert("RGBA")
-        placed_people.append((row, stem, source, (image.size, image.tobytes())))
+        placed_people.append((int(row["archive"]), int(row["record"]), stem, source, (image.size, image.tobytes())))
+    painted = {}
+    for _, _, stem, source, frame in placed_people:
+        if frame not in painted and notes.get(f"{stem}-frame-000", {}).get("status") == "accepted":
+            painted[frame] = (stem, source)
     atlases = {}
-    for _, stem, source, frame in placed_people:
-        if frame not in atlases and (final := accepted_final("people", notes, f"{stem}-frame-000")):
-            atlases[frame] = frame_atlas(stem, [source], [final], f"{MEDIA}/people/{stem}.png", crunch=PEOPLE_CRUNCH, colours=None)
-    entries = [{"replaces": {"archive": int(row["archive"]), "record": int(row["record"])}, **atlases[frame]}
-               for row, _, _, frame in placed_people if frame in atlases]
-    print(f"people: {len(entries)} records refreshed by {len(atlases)} atlases, {len(placed_people) - len(entries)} stay classic, "
-          f"{sum(entry['byteLength'] for entry in atlases.values()) / 1e6:.1f} MB", flush=True)
-    return entries
+
+    def build(archive, record, stem, source):
+        if stem not in atlases:
+            atlases[stem] = frame_atlas(stem, [source], [ART / "generated/people" / f"{stem}-frame-000.png"], f"{MEDIA}/people/{stem}.png",
+                                        crunch=PEOPLE_CRUNCH, colours=None)
+        return [("people", {"replaces": {"archive": archive, "record": record}, **atlases[stem]})]
+    return {stem: Unit([generated("people", f"{by[0]}-frame-000")], lambda archive=archive, record=record, by=by: build(archive, record, *by))
+            for archive, record, stem, source, frame in placed_people for by in [painted.get(frame, (stem, source))]}
 
 
 def people_rig():
     """Copies the publication's views into the pack and states them, their view sets, clips and layer stack."""
     def copied(source, target):
-        data = source.read_bytes()
-        (CONTENT / target).parent.mkdir(parents=True, exist_ok=True)
-        (CONTENT / target).write_bytes(data)
-        return {"path": target, "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
+        return write(target, source.read_bytes())
 
     sets = {name: json.loads((PEOPLE_RIG / manifest).read_text()) for name, manifest in PEOPLE_RIG_SETS.items()}
     members = {artifact["id"]: artifact["path"] for publication in sets.values() for artifact in publication["artifacts"]}
@@ -759,147 +759,228 @@ def icon_entry(replaces, image, name, placement=None):
     return entry
 
 
-def main():
+# A final an entry draws: its ledger area (None for one this file names, which accepts it) and art key, and where this
+# checkout would hold it.
+Final = namedtuple("Final", "ledger key path")
+# What one entry or a few replace, keyed as its area keys them: the finals it draws, and how to build its entries,
+# [(section, entry)], into the staging folder.
+Unit = namedtuple("Unit", "finals build")
+# An area: the media folders its files are in, the payload sections its entries are in, its units by key in the order its
+# sections keep them, and what a whole-area run also writes once every unit is promoted (`finish(payload, units)`). A
+# section maps to the unit an entry is (a list of entries), to KEYED (an object of entries by unit) or to (ONE, unit) (the
+# entry itself).
+Area = namedtuple("Area", "folders sections units finish", defaults=(None,))
+KEYED, ONE = "keyed", "one"
+
+
+def stem(entry):
+    return Path(entry["path"]).stem
+
+
+def record_stem(entry):
+    return f"texture-{entry['replaces']['archive']:03d}-record-{entry['replaces']['record']:03d}"
+
+
+def worn_tints(payload, units):
+    """The dye and metal tints, from every worn final of a classic record (a named design is left out: the tints are
+    measured against the classic images of each record)."""
+    finals = [(key, ART / "generated/worn" / f"{key}.png") for key in units if WORN.fullmatch(key)]
+    clothing = [final for final in finals if int(WORN.fullmatch(final[0])[1]) in CLOTHING]
+    metal = [final for final in finals if int(WORN.fullmatch(final[0])[1]) not in CLOTHING]
+    payload["artReplacements"]["dyeTints"] = dye_tints(clothing, DYES, "red") | dye_tints(metal, METALS, "daedric")
+
+
+AREAS = {
+    "paper-doll": Area(["paper-doll"], {"images": stem}, lambda: doll_units("paper-doll")),
+    "worn": Area(["worn"], {"images": stem}, lambda: doll_units("worn"), worn_tints),
+    "items": Area(["items"], {"images": lambda entry: entry["replaces"]}, item_units),
+    "spells": Area(["spells"], {"images": stem}, spell_units),
+    "effects": Area(["effects"], {"effects": lambda entry: entry["replaces"],
+                                  "meshes": lambda entry: f"{entry['replaces']['archive']}-{entry['replaces']['record']}",
+                                  "effectGlow": (ONE, "effectGlow")}, effect_units),
+    "surfaces": Area(["surfaces"], {"surfaces": stem}, lambda: surface_units("surfaces")),
+    "terrain": Area(["terrain"], {"surfaces": stem}, lambda: surface_units("terrain")),
+    "flats": Area(["flats"], {"flats": record_stem}, flat_units),
+    "people": Area(["people"], {"people": record_stem}, people_units),
+    "people-rig": Area(["people-rigs"], {"peopleRig": (ONE, PEOPLE_RIG_FIGURE)}, lambda: {PEOPLE_RIG_FIGURE: Unit([], lambda: [("peopleRig", people_rig())])}),
+    "ui": Area(["ui"], {"images": stem}, ui_units),
+    "models": Area(["models"], {"models": KEYED}, model_units),
+}
+# The order of a section several areas share, whatever area wrote last.
+SECTION_ORDER = {"images": lambda entry: entry["replaces"],
+                 "surfaces": lambda entry: (entry["replaces"]["archive"], entry["replaces"]["record"])}
+
+
+def paths(value):
+    """Every content path an entry names, its own and its parts'."""
+    if isinstance(value, dict):
+        return [*([value["path"]] if isinstance(value.get("path"), str) else []), *(p for part in value.values() for p in paths(part))]
+    if isinstance(value, list):
+        return [p for part in value for p in paths(part)]
+    return []
+
+
+def owned(area, entry):
+    """Whether an entry is the area's: its files are in the area's folders."""
+    return any(path.startswith(f"{MEDIA}/{folder}/") for path in paths(entry)[:1] for folder in area.folders)
+
+
+def gather(payload, area):
+    """The area's entries in the payload, as (section, unit, entry)."""
+    found = []
+    for section, unit in area.sections.items():
+        value = payload["artReplacements"].get(section)
+        if value is None:
+            continue
+        pairs = value.items() if unit == KEYED else [(unit[1], value)] if isinstance(unit, tuple) else [(unit(entry), entry) for entry in value]
+        found += [(section, key, entry) for key, entry in pairs if owned(area, entry)]
+    return found
+
+
+def scatter(payload, area, entries, order):
+    """Places the area's entries, (section, unit, entry), in the payload in their units' order, keeping every other area's."""
+    art = payload["artReplacements"]
+    for section, unit in area.sections.items():
+        mine = [(key, entry) for s, key, entry in sorted(entries, key=lambda e: order.get(e[1], len(order))) if s == section]
+        if unit == KEYED:
+            art[section] = dict(mine)
+        elif isinstance(unit, tuple):
+            if mine:
+                art[section] = mine[0][1]
+            else:
+                art.pop(section, None)
+        else:
+            entries_ = [entry for entry in art.get(section, []) if not owned(area, entry)] + [entry for _, entry in mine]
+            art[section] = sorted(entries_, key=SECTION_ORDER[section]) if section in SECTION_ORDER else entries_
+
+
+def promote_area(payload, name, keys):
+    """Promotes an area into the payload, its files into the staging folder, and returns the content files it no longer
+    names, and the keys that named its units.
+
+    With `keys`, it promotes the units they name, by the unit's key or a final it draws, and every unit that draws a final
+    of theirs (records sharing an atlas, a mesh's records), replacing just their entries and files; it refuses a unit the
+    ledger doesn't accept or this checkout has no final for. With none it promotes every unit whose finals the ledger
+    accepts, and refuses while it accepts one this checkout has no final for, since the run would drop its entry; it names
+    any entry it removes."""
+    area = AREAS[name]
+    units = area.units()
+    notes = {}
+
+    def accepted(final):
+        if final.ledger is None:
+            return True
+        if final.ledger not in notes:
+            notes[final.ledger] = ledger(final.ledger)
+        return notes[final.ledger].get(final.key, {}).get("status") == "accepted"
+
+    def ready(key):
+        return all(accepted(final) and final.path.exists() for final in units[key].finals)
+    if keys:
+        named = [key for key, unit in units.items() if key in keys or any(final.key in keys for final in unit.finals)]
+        if not named:
+            return set(), set()
+        refused = [key for key in named if not ready(key)]
+        if refused:
+            raise SystemExit(f"{name}: {', '.join(refused)} draws a final the ledger doesn't accept or this checkout has no final for.")
+        drawn = {final.path for key in named for final in units[key].finals}
+        chosen = [key for key, unit in units.items() if key in named or ready(key) and drawn & {final.path for final in unit.finals}]
+    else:
+        missing = sorted({final.key for unit in units.values() for final in unit.finals if accepted(final) and not final.path.exists()})
+        if missing:
+            listed = ", ".join(missing[:12]) + (f" and {len(missing) - 12} more" if len(missing) > 12 else "")
+            raise SystemExit(f"{name}: this checkout has no final for {listed}, which the ledger accepts and a whole-area run would drop; "
+                             "promote this checkout's own finals with --key.")
+        chosen = [key for key in units if ready(key)]
+    built = [(section, key, entry) for key in chosen for section, entry in units[key].build()]
+    old = gather(payload, area)
+    replaced = set(chosen) if keys else {key for _, key, _ in old} | set(chosen)
+    entries = [(section, key, entry) for section, key, entry in old if key not in replaced] + built
+    removed = sorted({key for _, key, _ in old} - {key for _, key, _ in entries})
+    if removed:
+        print(f"{name}: removes {', '.join(removed)}, whose finals the ledger no longer accepts", flush=True)
+    scatter(payload, area, entries, {key: index for index, key in enumerate(units)})
+    if not keys and area.finish:
+        area.finish(payload, chosen)
+    named_now = {path for _, _, entry in entries for path in paths(entry)}
+    if keys:
+        candidates = {path for _, key, entry in old if key in replaced for path in paths(entry)}
+    else:
+        candidates = {file.relative_to(CONTENT).as_posix() for folder in area.folders for file in (CONTENT / MEDIA / folder).rglob("*") if file.is_file()}
+    size = sum(file.stat().st_size for file in STAGE.rglob("*") if file.is_file() and any(file.relative_to(STAGE).as_posix().startswith(f"{MEDIA}/{folder}/") for folder in area.folders))
+    print(f"{name}: {len(chosen)} of {len(units)} promoted, {size / 1e6:.1f} MB written", flush=True)
+    return candidates - named_now, keys & {name for key in chosen for name in [key, *(final.key for final in units[key].finals)]}
+
+
+def commit(stale, folders):
+    """Moves the staged files into content, and removes the files no entry names any more and the folders left empty."""
+    for target in stale:
+        (CONTENT / target).unlink(missing_ok=True)
+    for file in sorted(STAGE.rglob("*")):
+        if file.is_file():
+            target = CONTENT / file.relative_to(STAGE)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(file, target)
+    for folder in folders:
+        for directory in sorted((CONTENT / MEDIA / folder).rglob("*"), reverse=True):
+            if directory.is_dir() and not any(directory.iterdir()):
+                directory.rmdir()
+
+
+def main(argv=None):
+    global STAGE
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--area", action="append", choices=AREAS, default=[])
-    ap.add_argument("--key", action="append", help="promote only this accepted final of a paper-doll, worn, models, surfaces or terrain --area, "
-                    "leaving the area's other files (and the worn tints) as they are; a whole area deletes and rewrites its media")
+    ap.add_argument("--area", action="append", choices=list(AREAS), default=[])
+    ap.add_argument("--key", action="append", default=[],
+                    help="promote only the units this names, by their key or a final they draw, leaving the rest of the area "
+                    "(and the worn tints) as it is")
     ap.add_argument("--recompute", action="append", default=[], metavar="ID",
                     help="take the placement of the entry replacing ID (or every promoted entry, with `all`) from the original again")
     ap.add_argument("--set", action="append", nargs=3, default=[], metavar=("ID", "NAME", "VALUE"),
                     help="set placement value NAME (size.width, framesPerSecond, ground, waist, ...) of the entry replacing ID "
                     "to the JSON VALUE, marked as set by hand, after any --area")
-    a = ap.parse_args()
+    a = ap.parse_args(argv)
     if not a.area and not a.set:
         ap.error("give an --area to promote or a --set")
+    if a.key and not a.area:
+        ap.error("--key promotes within the --area named")
+    KEPT.clear(), KEPT_ART.clear(), RECOMPUTE.clear()
     RECOMPUTE.update(a.recompute)
     payload = json.loads(PAYLOAD.read_text()) if PAYLOAD.exists() else {"artReplacements": {"images": []}}
-    images = payload["artReplacements"]["images"]
-    placed = lambda: [entry for entry in [*images, *payload["artReplacements"].get("effects", [])] if "placement" in entry]
+    placed = lambda: [entry for entry in [*payload["artReplacements"].get("images", []), *payload["artReplacements"].get("effects", [])]
+                      if "placement" in entry]
     for entry in placed():
         KEPT[entry["replaces"]], KEPT_ART[entry["replaces"]] = entry["placement"], entry["sha256"]
-    for area in a.area:
-        if area == "models":
-            section = payload["artReplacements"].get("models", {})
-            accepted = {key for key, note in ledger("models").items() if note.get("status") == "accepted"}
-            here = {key for key in accepted if (ART / "generated" / "models" / f"{key}.glb").exists()}
-            removed = []
-            if a.key:
-                for key in a.key:
-                    if key not in here:
-                        raise SystemExit(f"models: {key} is not accepted in ledger/models-notes.json, or has no final in local/art/generated/models.")
-                keys = set(a.key)
-            else:
-                elsewhere = sorted(accepted - here, key=int)
-                if elsewhere:
-                    raise SystemExit(f"models: this checkout has no final for {', '.join(elsewhere)}, which a whole-area run would drop; "
-                                     "promote this checkout's own finals with --key.")
-                removed = sorted(set(section) - accepted, key=int)
-                if removed:
-                    print(f"models: removes {', '.join(removed)}, which the ledger no longer accepts", flush=True)
-                keys = here
-            # Written apart and moved in once every remodel passes, so a refused one leaves the area as it was.
-            target = CONTENT / MEDIA / "models"
-            with tempfile.TemporaryDirectory() as written:
-                entries = models(Path(written), keys)
-                target.mkdir(exist_ok=True)
-                for key in [*keys, *removed]:
-                    for old in [target / f"{key}.rstatmsh", *target.glob(f"{key}-*.png")]:
-                        old.unlink(missing_ok=True)
-                for file in Path(written).iterdir():
-                    shutil.copyfile(file, target / file.name)
-            kept = {key: entry for key, entry in section.items() if key not in keys and key not in removed}
-            payload["artReplacements"]["models"] = dict(sorted({**kept, **entries}.items(), key=lambda item: int(item[0])))
-            continue
-        if a.key and area not in ("surfaces", "terrain"):
-            notes = ledger(area)
-            for key in a.key:
-                if notes.get(key, {}).get("status") != "accepted":
-                    raise SystemExit(f"{key} is not accepted in ledger/{area}-notes.json.")
-                images[:] = [entry for entry in images if entry["replaces"] != replaces(key)]
-                images.append(promote(area, key, ART / "generated" / area / f"{key}.png"))
-                print(f"{area}: {key}", flush=True)
-            continue
-        if area == "effects":
-            directory = CONTENT / MEDIA / "effects"
-            directory.mkdir(parents=True, exist_ok=True)
-            # Files are rewritten in place and the stale ones removed after, so a refused effect leaves the area as it was.
-            effects = payload["artReplacements"]["effects"] = world_effects()
-            payload["artReplacements"]["effectGlow"] = effect_glow()
-            payload["artReplacements"].pop("corpseMesh", None)
-            payload["artReplacements"]["meshes"] = world_meshes()
-            written = {entry["path"] for entry in [*effects, payload["artReplacements"]["effectGlow"], *payload["artReplacements"]["meshes"]]}
-            for old in [*directory.glob("*.png"), *directory.glob("*.glb")]:
-                if f"{MEDIA}/effects/{old.name}" not in written:
-                    old.unlink()
-            print(f"effects: {len(effects)} effects, {sum(entry['byteLength'] for entry in effects) / 1e6:.1f} MB", flush=True)
-            continue
-        if area == "flats":
-            shutil.rmtree(CONTENT / MEDIA / "flats", ignore_errors=True)
-            payload["artReplacements"]["flats"] = flats()
-            continue
-        if area == "people":
-            shutil.rmtree(CONTENT / MEDIA / "people", ignore_errors=True)
-            payload["artReplacements"]["people"] = people()
-            continue
-        if area == "people-rig":
-            shutil.rmtree(CONTENT / MEDIA / "people-rigs", ignore_errors=True)
-            payload["artReplacements"]["peopleRig"] = people_rig()
-            continue
-        if area in ("surfaces", "terrain"):
-            promoted = surfaces(area, a.key)
-            written = {entry["path"] for entry in promoted}
-            kept = [entry for entry in payload["artReplacements"].get("surfaces", [])
-                    if not (entry["path"] in written if a.key else entry["path"].startswith(f"{MEDIA}/{area}/"))]
-            entries = sorted(kept + promoted, key=lambda entry: (entry["replaces"]["archive"], entry["replaces"]["record"]))
-            records = [(entry["replaces"]["archive"], entry["replaces"]["record"]) for entry in entries]
-            if len(set(records)) != len(records):
-                raise SystemExit(f"Two areas replace one record: {sorted(r for r in set(records) if records.count(r) > 1)}.")
-            payload["artReplacements"]["surfaces"] = entries
-            print(f"{area}: {len(promoted)} finals, {sum(entry['byteLength'] for entry in promoted) / 1e6:.1f} MB", flush=True)
-            continue
-        notes = ledger(area)
-        accepted = sorted(key for key, note in notes.items() if note.get("status") == "accepted")
-        directory = CONTENT / MEDIA / area
-        directory.mkdir(parents=True, exist_ok=True)
-        for old in [*directory.glob("*.webp"), *directory.glob("*.png")]:
-            old.unlink()
-        images[:] = [entry for entry in images if not entry["path"].startswith(f"{MEDIA}/{area}/")]
-        if area in ("items", "spells", "ui"):
-            promoted = inventory_icons() if area == "items" else spell_icons() if area == "spells" else ui_images()
-            images.extend(promoted)
-            print(f"{area}: {len(promoted)} icons, {sum(entry['byteLength'] for entry in promoted) / 1e6:.1f} MB", flush=True)
-            continue
-        for key in accepted:
-            path = ART / "generated" / area / f"{key}.png"
-            if not path.exists():
-                raise SystemExit(f"{key} is accepted in ledger/{area}-notes.json but {path} does not exist.")
-            images.append(promote(area, key, path))
-        if area == "worn":
-            # A named design is left out: the tints are measured against the classic images of each record.
-            finals = [(key, ART / "generated" / area / f"{key}.png") for key in accepted if WORN.fullmatch(key)]
-            clothing = [final for final in finals if int(WORN.fullmatch(final[0])[1]) in CLOTHING]
-            metal = [final for final in finals if int(WORN.fullmatch(final[0])[1]) not in CLOTHING]
-            payload["artReplacements"]["dyeTints"] = dye_tints(clothing, DYES, "red") | dye_tints(metal, METALS, "daedric")
-        size = sum(entry["byteLength"] + entry.get("dyeMask", {}).get("byteLength", 0) for entry in images if entry["path"].startswith(f"{MEDIA}/{area}/"))
-        print(f"{area}: {len(accepted)} finals, {size / 1e6:.1f} MB", flush=True)
-    for entry in placed():
-        if entry["replaces"] in KEPT_ART and entry["sha256"] != KEPT_ART[entry["replaces"]] and entry["placement"] is KEPT[entry["replaces"]]:
-            print(f"{entry['replaces']}: new art kept its placement; check it, or --recompute {entry['replaces']}", flush=True)
-    for media, name, value in a.set:
-        entry = next((entry for entry in placed() if entry["replaces"] == media), None)
-        if entry is None:
-            raise SystemExit(f"No promoted entry replacing {media} has a placement.")
-        *path, last = name.split(".")
-        target = entry["placement"]
-        for step in path:
-            target = target[step]
-        if path and last not in target or not path and name not in entry["placement"]["from"]:
-            raise SystemExit(f"{media} has no placement value {name}: it has {', '.join(entry['placement']['from'])}.")
-        target[last] = json.loads(value)
-        entry["placement"]["from"][path[0] if path else name] = HAND
-        print(f"{media}: {name} = {value}, set by hand", flush=True)
-    images.sort(key=lambda entry: entry["replaces"])
+    with tempfile.TemporaryDirectory() as stage:
+        STAGE = Path(stage)
+        stale, matched = set(), set()
+        for area in a.area:
+            gone, keys = promote_area(payload, area, set(a.key))
+            stale |= gone
+            matched |= keys
+        if unmatched := sorted(set(a.key) - matched):
+            raise SystemExit(f"No unit of {', '.join(a.area)} is or draws {', '.join(unmatched)}.")
+        records = [(entry["replaces"]["archive"], entry["replaces"]["record"]) for entry in payload["artReplacements"].get("surfaces", [])]
+        if len(set(records)) != len(records):
+            raise SystemExit(f"Two areas replace one record: {sorted(r for r in set(records) if records.count(r) > 1)}.")
+        for entry in placed():
+            if entry["replaces"] in KEPT_ART and entry["sha256"] != KEPT_ART[entry["replaces"]] and entry["placement"] is KEPT[entry["replaces"]]:
+                print(f"{entry['replaces']}: new art kept its placement; check it, or --recompute {entry['replaces']}", flush=True)
+        for media, name, value in a.set:
+            entry = next((entry for entry in placed() if entry["replaces"] == media), None)
+            if entry is None:
+                raise SystemExit(f"No promoted entry replacing {media} has a placement.")
+            *path, last = name.split(".")
+            target = entry["placement"]
+            for step in path:
+                target = target[step]
+            if path and last not in target or not path and name not in entry["placement"]["from"]:
+                raise SystemExit(f"{media} has no placement value {name}: it has {', '.join(entry['placement']['from'])}.")
+            target[last] = json.loads(value)
+            entry["placement"]["from"][path[0] if path else name] = HAND
+            print(f"{media}: {name} = {value}, set by hand", flush=True)
+        commit(stale, [folder for area in a.area for folder in AREAS[area].folders])
+        STAGE = None
     PAYLOAD.write_text(json.dumps(payload, indent=1) + "\n")
 
 

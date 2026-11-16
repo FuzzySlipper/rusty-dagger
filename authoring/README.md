@@ -59,8 +59,11 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - Paper doll: `landmarks.py check` on bodies and heads before dressing or promoting. `heads.py`, then `skin.py`,
   then `doll_preview.py`.
 - `matte.py` only once an area's finals are accepted. Never despeckle effects that carry embers.
-- `promote.py` takes only finals the ledger marks `accepted`. A whole-area run deletes and rewrites that area's
-  files (about ten minutes for `worn`): don't interrupt it, and use `--key` for one final. The import must have run.
+- `promote.py` takes only finals the ledger marks `accepted`. From a task worktree, promote your own finals with
+  `--key` (an art key, a record, an item, an effect or a sprite mesh's `ARCHIVE-RECORD`): it replaces those entries
+  and keeps the rest. Only the shared checkout holds every final, so a whole-area run anywhere else refuses rather than
+  drop what it lacks. The import must have run; effects, flats and people also read `local/art/reference`, which a
+  worktree links from the main checkout.
 - Effects, item icons and the clothed bodies carry their own `placement` (an effect's size in metres, pivot, frames,
   rate and loop; an icon's ground height in metres; a body's waist row). A new entry takes it from the classic once;
   after that, promotion keeps what the payload holds, so promote with `main` first. A redone effect with other frames
