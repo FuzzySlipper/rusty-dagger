@@ -165,7 +165,6 @@ internal sealed class DaggerfallCorpseLootModule
                     fact.OriginatingSequence,
                     _character.Identity.RaceId,
                     _character.Identity.Gender == DaggerfallCharacterGender.Male ? "male" : "female",
-                    _character.Identity.Gender == DaggerfallCharacterGender.Male ? "MensClothing" : "WomensClothing",
                     EnemyMapChance: mapChance))
                 : null;
             // Donor RemoveLootContainer disables interaction but preserves the

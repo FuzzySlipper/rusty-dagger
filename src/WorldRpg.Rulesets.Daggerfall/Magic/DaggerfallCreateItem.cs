@@ -40,7 +40,8 @@ internal sealed class DaggerfallCreateItem(DaggerfallDefinitions definitions, IR
             (129, "Short Bow"), (131, "Arrows"), (127, "Steel Battle Axe") })
             choices.Add(new($"weapon-{template}", name, "Weapons", template, template == 131 ? null : "steel"));
         bool female = character.Identity.Gender == DaggerfallCharacterGender.Female;
-        choices.Add(new("robes", "Robes", female ? "WomensClothing" : "MensClothing", female ? 200 : 163, null));
+        choices.Add(new("robes", "Robes", DaggerfallItemFactory.ClothingGroup(character.Identity.Gender.ToString().ToLowerInvariant()),
+            female ? 200 : 163, null));
         return choices.ToArray();
     }
 

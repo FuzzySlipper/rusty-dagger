@@ -212,7 +212,7 @@ internal sealed class DaggerfallGroundContainers
         {
             var generated = population.Generate(new(new("world-treasure", identity.Value), DaggerfallItemOwner.Ground(id),
                 Policies.DaggerfallDungeonLootTables.DungeonTableKey(dungeonType), level, 1, 1, race, gender,
-                gender == "male" ? "MensClothing" : "WomensClothing", DungeonType: dungeonType));
+                DungeonType: dungeonType));
             if (generated.Seeds.Count > 0) _containers.Seed(owner, generated.Seeds);
             population.RegisterGeneratedMetadata(generated, _instances);
             _ground.Add(id, container);
@@ -263,7 +263,7 @@ internal sealed class DaggerfallGroundContainers
         if (playerOwned || placement.ItemGroups.Length == 0) return container;
         string key = $"property:{_activeProfile.LogicalId}:{placement.Id}:{day}";
         string group = placement.ItemGroups[draw(key + ":group", 0, placement.ItemGroups.Length - 1)];
-        if (group is "MensClothing" or "WomensClothing") group = gender == "male" ? "MensClothing" : "WomensClothing";
+        group = DaggerfallItemFactory.PlayerGroup(group, gender);
         // StockHouseContainer gives the player's race and gender only to the clothing, armor and magic items it draws.
         bool appearance = DaggerfallItemFactory.TakesAppearance(group);
         List<InventoryContainerSeed> seeds = [];

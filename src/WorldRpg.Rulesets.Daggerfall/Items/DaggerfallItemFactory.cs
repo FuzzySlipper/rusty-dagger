@@ -30,6 +30,21 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
 
     private static bool IsAppearanceGroup(string group) => AppearanceGroups.Contains(group, StringComparer.Ordinal);
 
+    /// <summary>The clothing group ItemBuilder dresses the player from: men's clothing for a male, women's for a female.</summary>
+    internal static string ClothingGroup(string? gender) => gender switch
+    {
+        "male" => "MensClothing",
+        "female" => "WomensClothing",
+        _ => throw new ArgumentException("Clothing for the player needs the player's gender, male or female.", nameof(gender)),
+    };
+
+    /// <summary>
+    /// The group a source's draw from <paramref name="group"/> takes for the player: a source that names either clothing
+    /// group draws the player's own (CreateRandomClothing takes the player's gender), and any other group is itself.
+    /// </summary>
+    internal static string PlayerGroup(string group, string? gender) =>
+        group is "MensClothing" or "WomensClothing" ? ClothingGroup(gender) : group;
+
     internal DaggerfallCreatedItem Create(DaggerfallItemCreateRequest request)
     {
         request.Validate();
@@ -105,23 +120,10 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
 
     private (string Category, int? Template, string? Material) MagicBase(DaggerfallMagicItemDefinition magic, DaggerfallItemCreateRequest request)
     {
+        string[] categories = magic.BaseCategories;
         if (magic.Type == 0)
         {
-            string[] choices = magic.Group switch
-            {
-                0 => ["Armor", "Weapons", "MensClothing", "ReligiousItems", "WomensClothing", "Gems", "Jewellery"],
-                1 => ["Armor", "Weapons", "MensClothing", "WomensClothing", "Jewellery"],
-                2 => ["Weapons"],
-                _ => throw new InvalidOperationException($"Regular magic template '{magic.Key}' has unknown base-group selector {magic.Group}."),
-            };
-            string selected = choices[Draw(request.Key + ".magic-group", 0, choices.Length - 1)];
-            // Both source clothing groups dispatch to CreateRandomClothing(player gender).
-            if (selected is "MensClothing" or "WomensClothing")
-                selected = request.Gender switch
-                {
-                    "male" => "MensClothing", "female" => "WomensClothing",
-                    _ => throw new ArgumentException("Magic clothing requires an explicit player gender.", nameof(request)),
-                };
+            string selected = PlayerGroup(categories[Draw(request.Key + ".magic-group", 0, categories.Length - 1)], request.Gender);
             // ItemBuilder retries arrows before enchanting; select uniformly from the same
             // eligible weapon set so every keyed draw produces an enchantable base.
             int? selectedTemplate = null;
@@ -134,12 +136,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
             }
             return (selected, selectedTemplate, null);
         }
-        string category = magic.Group switch
-        {
-            2 => "Armor", 3 => "Weapons", 6 => "MensClothing", 7 => "Books", 10 => "ReligiousItems",
-            12 => "WomensClothing", 14 => "Gems", 15 => "PlantIngredients1", 25 => "Jewellery",
-            _ => throw new InvalidOperationException($"Magic template '{magic.Key}' names unsupported donor group {magic.Group}."),
-        };
+        string category = categories.Single();
         DaggerfallItemTemplateDefinition[] candidates = _definitions.ItemTemplateCatalog.Templates.Values
             .Where(item => item.Groups.Contains(category, StringComparer.Ordinal)).OrderBy(item => item.Index).ToArray();
         if (magic.GroupIndex < 0 || magic.GroupIndex >= candidates.Length)
@@ -225,10 +222,10 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
         string race = request.Race ?? throw new ArgumentException($"Template {template.Index} requires an explicit published race.", nameof(request));
         if (!_definitions.CharacterPresentation.Races.ContainsKey(race))
             throw new ArgumentException($"Race '{race}' is not published by the selected character presentation.", nameof(request));
+        if (request.Gender is not (null or "male" or "female")) throw new ArgumentException("Item gender must be male or female.", nameof(request));
+        // Clothing is cut for its catalog's gender whoever is given it (CreateMensClothing and CreateWomensClothing take
+        // no gender); armor is fitted to its wearer.
         string gender = mens ? "male" : womens ? "female" : request.Gender ?? throw new ArgumentException($"Armor template {template.Index} requires an explicit gender.", nameof(request));
-        if (gender is not ("male" or "female")) throw new ArgumentException("Item gender must be male or female.", nameof(request));
-        if ((mens && request.Gender is not null && request.Gender != "male") || (womens && request.Gender is not null && request.Gender != "female"))
-            throw new ArgumentException($"Template {template.Index} belongs to the {(mens ? "men's" : "women's")} clothing catalog.", nameof(request));
         string dye = request.Dye ?? (mens || womens
             ? request.TemplateIndex is null || request.RandomizeClothingDye ? ClothingDyes[Draw(request.Key + ".dye", 0, ClothingDyes.Length - 1)] : "blue"
             : material);

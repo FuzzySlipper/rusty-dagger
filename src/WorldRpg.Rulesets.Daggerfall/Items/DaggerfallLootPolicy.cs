@@ -31,7 +31,7 @@ internal static class DaggerfallLootPolicy
         string tableKey,
         int playerLevel,
         Func<string, int, int, int> draw,
-        string? clothingGroup = null)
+        string? playerGender = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentException.ThrowIfNullOrWhiteSpace(tableKey);
@@ -55,7 +55,7 @@ internal static class DaggerfallLootPolicy
             int chance = table.Categories.TryGetValue(spec.Name, out int value) ? value : 0;
             if (chance == 0) continue;
             int effectiveChance = spec.LevelScaled ? checked(chance * playerLevel) : chance;
-            IReadOnlyList<DaggerfallItemDefinition> pool = Pool(definitions, spec.Pool, clothingGroup);
+            IReadOnlyList<DaggerfallItemDefinition> pool = Pool(definitions, spec.Pool, playerGender);
             IReadOnlyList<string> magic = spec.Mode == PoolMode.Magic
                 ? definitions.Magic.MagicItems.Values.Where(item => item.Type == 0).OrderBy(item => item.Key, StringComparer.Ordinal).Select(item => item.Key).ToArray()
                 : [];
@@ -95,12 +95,12 @@ internal static class DaggerfallLootPolicy
         int dungeonType,
         int playerLevel,
         Func<string, int, int, int> draw,
-        string? clothingGroup = null)
+        string? playerGender = null)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(draw);
         string tableKey = DaggerfallDungeonLootTables.DungeonTableKey(dungeonType);
-        DaggerfallLootResult ordinary = Generate(definitions, tableKey, playerLevel, draw, clothingGroup);
+        DaggerfallLootResult ordinary = Generate(definitions, tableKey, playerLevel, draw, playerGender);
         List<DaggerfallLootDrop> drops = ordinary.Drops.ToList();
         List<DaggerfallLootExtraRoll> extras = [];
         if (tableKey[0] is >= 'J' and <= 'O')
@@ -179,11 +179,11 @@ internal static class DaggerfallLootPolicy
         return value;
     }
 
-    private static IReadOnlyList<DaggerfallItemDefinition> Pool(DaggerfallDefinitions definitions, PoolKind kind, string? clothingGroup)
+    private static IReadOnlyList<DaggerfallItemDefinition> Pool(DaggerfallDefinitions definitions, PoolKind kind, string? playerGender)
     {
         if (kind.Mode == PoolMode.TemplateGroup) return TemplateGroup(definitions, kind.Group!);
-        if (kind.Mode == PoolMode.PlayerClothing && clothingGroup is "MensClothing" or "WomensClothing")
-            return TemplateGroup(definitions, clothingGroup);
+        if (kind.Mode == PoolMode.PlayerClothing && playerGender is not null)
+            return TemplateGroup(definitions, DaggerfallItemFactory.ClothingGroup(playerGender));
         return [];
     }
 

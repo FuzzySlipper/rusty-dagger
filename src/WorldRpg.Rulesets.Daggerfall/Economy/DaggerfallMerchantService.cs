@@ -963,8 +963,7 @@ internal sealed class DaggerfallMerchantService
                     }
                     continue;
                 }
-                string actualCategory = category is "MensClothing" or "WomensClothing"
-                    ? (_character.Identity.Gender == DaggerfallCharacterGender.Male ? "MensClothing" : "WomensClothing") : category;
+                string actualCategory = DaggerfallItemFactory.PlayerGroup(category, _character.Identity.Gender.ToString().ToLowerInvariant());
                 DaggerfallItemTemplateDefinition[] templates = _definitions.ItemTemplateCatalog.Templates.Values
                     .Where(template => template.Groups.Contains(actualCategory, StringComparer.Ordinal) && template.Rarity <= binding.Context.Quality)
                     .OrderBy(template => template.Index).ToArray();

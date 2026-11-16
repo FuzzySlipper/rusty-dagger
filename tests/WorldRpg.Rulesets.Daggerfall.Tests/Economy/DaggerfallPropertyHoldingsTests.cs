@@ -118,9 +118,10 @@ public sealed class DaggerfallPropertyHoldingsTests
 
     /// <summary>
     /// StockHouseContainer gives the player's race and gender only to the clothing, armor and magic items it draws. Furniture
-    /// drawing any other group stocks its goods without them, where the factory refuses an item they cannot dress. A magic
-    /// item hands them to the base it enchants, and the minimum draw enchants leather armor. The rows are every group the
-    /// donor's private property tables let furniture draw, so none of them throws on stocking.
+    /// drawing any other group stocks its goods without them, where the factory refuses an item they cannot dress. Either
+    /// clothing group stocks the player's own clothing, so its goods carry the player's gender, and a magic item hands race
+    /// and gender to the base it enchants, which the minimum draw makes leather armor. The rows are every group the donor's
+    /// private property tables let furniture draw, so none of them throws on stocking.
     /// </summary>
     [Theory]
     [InlineData("Armor", true)]
@@ -165,7 +166,9 @@ public sealed class DaggerfallPropertyHoldingsTests
             .. contents.Stacks.Select(stack => h.Fixture.Instances.RequireStack(DaggerfallItemOwner.Ground(placed.Id), stack.Id)),
             .. contents.UniqueItems.Select(item => h.Fixture.Instances.RequireUnique(h.Fixture.Containers.Entities.IdentityOf(item.Entity).Value))];
         Assert.NotEmpty(goods);
-        Assert.All(goods, item => Assert.Equal((worn, worn), (item.Race is not null, item.Gender is not null)));
+        string race = society.Character.Identity.RaceId;
+        string gender = society.Character.Identity.Gender.ToString().ToLowerInvariant();
+        Assert.All(goods, item => Assert.Equal(worn ? (race, gender) : (null, null), (item.Race, item.Gender)));
     }
 
     /// <summary>The holdings over a real property state, storage, bank and transport at a city of ten or more buildings that is no port.</summary>

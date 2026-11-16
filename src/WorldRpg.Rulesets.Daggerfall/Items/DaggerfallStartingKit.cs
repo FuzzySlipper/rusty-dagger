@@ -47,7 +47,7 @@ internal sealed class DaggerfallStartingKit
         var config = definitions.NewGame;
         bool female = choices.Gender == DaggerfallCharacterGender.Female;
         string gender = female ? "female" : "male";
-        string clothing = female ? "WomensClothing" : "MensClothing";
+        string clothing = DaggerfallItemFactory.ClothingGroup(gender);
         yield return new("MiscItems", "new-game.spellbook", DaggerfallItemOwner.Player, TemplateIndex: config.SpellbookTemplate);
         yield return new(clothing, "new-game.shirt", DaggerfallItemOwner.Player,
             TemplateIndex: female ? config.FemaleShirtTemplate : config.MaleShirtTemplate, Variant: 0, Race: choices.RaceId, Gender: gender, RandomizeClothingDye: true);

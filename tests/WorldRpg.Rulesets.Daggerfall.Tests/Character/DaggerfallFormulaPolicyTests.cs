@@ -211,7 +211,7 @@ public sealed class DaggerfallFormulaPolicyTests
         DaggerfallDefinitions definitions = LoadDefinitions();
         DaggerfallLootCategoryResult[] categories = definitions.LootTables.Values
             .Where(table => table.Key != "-")
-            .SelectMany(table => DaggerfallLootPolicy.Generate(definitions, table.Key, 1, (_, minimum, _) => minimum, "MensClothing").Categories)
+            .SelectMany(table => DaggerfallLootPolicy.Generate(definitions, table.Key, 1, (_, minimum, _) => minimum, "male").Categories)
             .ToArray();
 
         Assert.Equal(

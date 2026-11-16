@@ -160,6 +160,23 @@ public sealed class DeveloperPlayerCommandsTests
     }
 
     [Fact]
+    public void Give_makes_clothing_from_either_catalog_cut_for_that_catalog()
+    {
+        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        DaggerfallSession session = run.Session;
+        string Gender(string definition) => session.State.ItemInstances.RequireUnique(session.State.Actors.Entities.IdentityOf(
+            session.State.Inventory.Read().UniqueItems.Single(item => item.Definition.Value == definition).Entity).Value).Gender!;
+
+        // Men's robes and women's robes: one of them is from the other catalog than the player's own.
+        foreach (string template in new[] { "163", "200" })
+        {
+            DebugCommandResult given = session.Commands<IDeveloperPlayerCommands>().Give(template, 1);
+            Assert.True(given.Succeeded, given.Message);
+        }
+        Assert.Equal(("male", "female"), (Gender("template-163"), Gender("template-200")));
+    }
+
+    [Fact]
     public void Gold_skill_level_and_heal_go_through_currency_progression_and_vitals()
     {
         using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);

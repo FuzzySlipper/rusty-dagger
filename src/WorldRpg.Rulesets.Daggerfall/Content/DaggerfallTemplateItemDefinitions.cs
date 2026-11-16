@@ -87,7 +87,7 @@ internal static class DaggerfallTemplateItemDefinitions
     {
         foreach (DaggerfallMagicItemDefinition magicItem in magic.MagicItems.Values.OrderBy(value => value.Key, StringComparer.Ordinal))
         {
-            string[] categories = MagicCategories(magicItem);
+            string[] categories = magicItem.BaseCategories;
             foreach (DaggerfallItemDefinition baseItem in result.Values.ToArray()
                 .Where(item => item.Template is not null && item.Template.Index != 131 && !item.Id.Value.Contains("-magic-", StringComparison.Ordinal) && !item.Id.Value.EndsWith("-enchantable", StringComparison.Ordinal)
                     && categories.Any(category => item.Template.Groups.Contains(category, StringComparer.Ordinal))))
@@ -99,23 +99,6 @@ internal static class DaggerfallTemplateItemDefinitions
             }
         }
     }
-
-    private static string[] MagicCategories(DaggerfallMagicItemDefinition magicItem) => magicItem.Type == 0
-        ? magicItem.Group switch
-        {
-            0 => ["Armor", "Weapons", "MensClothing", "ReligiousItems", "WomensClothing", "Gems", "Jewellery"],
-            1 => ["Armor", "Weapons", "MensClothing", "WomensClothing", "Jewellery"],
-            2 => ["Weapons"],
-            _ => throw new InvalidOperationException($"Regular magic template '{magicItem.Key}' has unknown base-group selector {magicItem.Group}."),
-        }
-        : [MagicCategory(magicItem.Group)];
-
-    private static string MagicCategory(int group) => group switch
-    {
-        2 => "Armor", 3 => "Weapons", 6 => "MensClothing", 7 => "Books", 10 => "ReligiousItems",
-        12 => "WomensClothing", 14 => "Gems", 15 => "PlantIngredients1", 25 => "Jewellery",
-        _ => throw new InvalidOperationException($"Magic template group {group} has no retained ItemBuilder category."),
-    };
 
     private static void Add(Dictionary<DaggerfallItemId, DaggerfallItemDefinition> result,
         DaggerfallItemTemplateDefinition template, DaggerfallItemDefinition? source, string material)

@@ -44,12 +44,12 @@ internal sealed class DaggerfallLootPopulation
             minimum,
             maximum)).Value);
         DaggerfallDungeonLootResult? dungeon = request.DungeonType is int dungeonType
-            ? DaggerfallLootPolicy.GenerateDungeon(_catalog, dungeonType, request.PlayerLevel, draw, request.ClothingGroup)
+            ? DaggerfallLootPolicy.GenerateDungeon(_catalog, dungeonType, request.PlayerLevel, draw, request.Gender)
             : null;
         // EnemyEntity's order: an empty loot key generates no table items, then every enemy's extra
         // chances follow the table drops.
         DaggerfallLootResult? loot = dungeon?.Loot ?? (request.TableKey is string tableKey
-            ? DaggerfallLootPolicy.Generate(_catalog, tableKey, request.PlayerLevel, draw, request.ClothingGroup)
+            ? DaggerfallLootPolicy.Generate(_catalog, tableKey, request.PlayerLevel, draw, request.Gender)
             : null);
         DaggerfallEnemyLootExtrasResult? enemy = request.EnemyMapChance is int mapChance
             ? DaggerfallLootPolicy.GenerateEnemyExtras(_catalog.Magic, mapChance, request.TableKey is not null, draw)
@@ -148,7 +148,6 @@ internal sealed record DaggerfallLootPopulationRequest(
     ulong Sequence,
     string Race,
     string Gender,
-    string ClothingGroup,
     int? DungeonType = null,
     int? EnemyMapChance = null)
 {
@@ -163,7 +162,7 @@ internal sealed record DaggerfallLootPopulationRequest(
         ArgumentException.ThrowIfNullOrWhiteSpace(Race);
         if (Owner.Scope != (Id.Scope == "world-treasure" ? "ground" : Id.Scope) || Owner.Id != checked((long)Id.Value)
             || PlayerLevel < 1 || Generation == 0 || Sequence == 0 || DungeonType is < 0 or > 18
-            || Gender is not ("male" or "female") || ClothingGroup is not ("MensClothing" or "WomensClothing"))
+            || Gender is not ("male" or "female"))
             throw new ArgumentException("Loot population request carries invalid source, level, or player appearance data.");
         if (DungeonType is int dungeonType && !string.Equals(TableKey, DaggerfallDungeonLootTables.DungeonTableKey(dungeonType), StringComparison.Ordinal))
             throw new ArgumentException("Dungeon loot population must use the table selected by its dungeon type.", nameof(TableKey));

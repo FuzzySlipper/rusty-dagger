@@ -84,16 +84,13 @@ internal sealed class DaggerfallQuestResourceAllocator(
                         throw new NotSupportedException($"Quest Item '{declaration.CanonicalId}' has unavailable group {groupId} ordinal {ordinal}.");
                     template = group.Values[selected];
                 }
-                // A quest names its clothing catalog, and the factory gives clothing that catalog's gender, so the
-                // player's gender dresses only armor.
-                bool clothing = groupId is 6 or 12;
                 bool appearance = DaggerfallItemFactory.TakesAppearance(group.Name);
                 int? potion = template is 83 or 278
                     ? options.Key ?? definitions.Magic.ChoosePotionRecipe((low, high) => Draw(key + "/recipe", low, high)) : null;
                 request = new(group.Name, key, DaggerfallItemOwner.Player, Quantity: 1, TemplateIndex: template, Variant: 0,
                     Material: groupId == 2 ? "leather" : groupId == 3 && template != 131 ? "iron" : null, Level: context.Level,
                     Race: appearance ? context.Race : null,
-                    Gender: appearance && !clothing ? context.Gender : null,
+                    Gender: appearance ? context.Gender : null,
                     RandomizeClothingDye: options.Template is null,
                     BookId: groupId == 7 ? options.Key : null, PotionRecipeKey: potion,
                     QuestId: instanceId, QuestSymbol: declaration.CanonicalId);

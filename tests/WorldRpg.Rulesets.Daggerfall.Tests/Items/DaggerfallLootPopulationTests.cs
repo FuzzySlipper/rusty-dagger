@@ -24,8 +24,7 @@ public sealed class DaggerfallLootPopulationTests
             Generation: 7,
             Sequence: 11,
             Race: "breton",
-            Gender: "male",
-            ClothingGroup: "MensClothing");
+            Gender: "male");
 
         DaggerfallLootPopulationResult generated = population.Generate(request);
 
@@ -132,11 +131,11 @@ public sealed class DaggerfallLootPopulationTests
 
     private static DaggerfallLootPopulationRequest CorpseRequest(string? table, int? mapChance) => new(
         new DaggerfallLootPopulationId("corpse", 2000), DaggerfallItemOwner.Corpse(2000), table,
-        1, 1, 1, "breton", "male", "MensClothing", EnemyMapChance: mapChance);
+        1, 1, 1, "breton", "male", EnemyMapChance: mapChance);
 
     private static DaggerfallLootPopulationRequest Request(string table) => new(
         new DaggerfallLootPopulationId("world-treasure", 4000), DaggerfallItemOwner.Ground(4000), table,
-        1, 1, 1, "breton", "male", "MensClothing");
+        1, 1, 1, "breton", "male");
 
     /// <summary>Answers each keyed draw by the roll name it ends with, and the minimum otherwise.</summary>
     private class RollsByKey : DispatchProxy
