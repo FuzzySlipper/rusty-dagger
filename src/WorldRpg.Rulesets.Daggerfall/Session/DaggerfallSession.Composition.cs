@@ -1032,7 +1032,7 @@ internal sealed partial class DaggerfallSession
                     .Concat(_definitions.CharacterPresentation.RacialForms.Values.SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId })),
                     DaggerfallTravelMap.MediaIds.Concat(glintMedia).Concat(composition.ArtReplacements is { } art
                         ? glintMedia.Where(art.Effects.ContainsKey).Select(DaggerfallArtReplacements.EffectMediaId) : []),
-                    composition.ArtReplacements, composition.ArtReplacements is { } drawn ? DrawnAnew(drawn) : null);
+                    composition.ArtReplacements, composition.ArtReplacements is { } drawn ? DaggerfallUiArtChoice.DrawnAnew(drawn) : null);
             _hud = new DaggerfallHudProjection(engine.Ui, definitions.HudResources, composition.Identity, _uiArt)
             {
                 // The controls screen shows each action's controller buttons against the authored pad layout.

@@ -145,19 +145,14 @@ internal sealed partial class DaggerfallSiteAppearance
     /// A refreshed decoration's sprite. A light source shines through the emission map cut from its art, or, where the set
     /// has none, through its own texture as a classic one does.
     /// </summary>
-    /// <exception cref="InvalidOperationException">The refreshed flat does not have its classic sprite's frame count,
-    /// so the classic frame identities would name the wrong frames.</exception>
     private DecorationSprite CreateRefreshedDecorationSprite(NormalizedBillboardSprite sprite, DaggerfallArtFlat art, bool baseAligned, SpriteMaterialDescriptor material, bool givesLight)
     {
-        if (art.Frames.Count != sprite.Frames.Count)
-            throw new InvalidOperationException($"Refreshed flat '{art.File.Path}' has {art.Frames.Count} frames; its classic sprite has {sprite.Frames.Count}.");
         if (!decorationAtlases.TryGetValue(art.File.Path, out var atlas))
         {
             var resource = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest);
             decorationResources.Add(resource.Handle);
             decorationTextures.Add(art.File.Path, resource.Handle);
-            atlas = appearance.CreateSpriteAtlas(new(resource.Handle, SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
-                art.Frames.Select((frame, index) => new NormalizedSpriteFrame(sprite.Frames[index].Id, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray())));
+            atlas = appearance.CreateSpriteAtlas(new(resource.Handle, RefreshedFlatFrames(art, sprite)));
             decorationAtlases.Add(art.File.Path, atlas);
         }
         (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot);
@@ -170,6 +165,18 @@ internal sealed partial class DaggerfallSiteAppearance
         StartDecorationPlayback(result, atlas, sprite);
         return result;
     }
+
+    /// <summary>
+    /// A refreshed flat's frames as its classic sprite's: each named by the classic frame identity it stands for, so the
+    /// classic sprite's playback steps through them.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The refreshed flat does not have its classic sprite's frame count,
+    /// so the classic frame identities would name the wrong frames.</exception>
+    private static SpriteAtlasFrame[] RefreshedFlatFrames(DaggerfallArtFlat art, NormalizedBillboardSprite sprite) =>
+        art.Frames.Count != sprite.Frames.Count
+            ? throw new InvalidOperationException($"Refreshed flat '{art.File.Path}' has {art.Frames.Count} frames; its classic sprite has {sprite.Frames.Count}.")
+            : SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
+                art.Frames.Select((frame, index) => new NormalizedSpriteFrame(sprite.Frames[index].Id, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray());
 
     /// <summary>A refreshed lamp's emission map, opened once however many lamps share it.</summary>
     private RenderResource GlowMap(DaggerfallArtFile emission)
@@ -282,8 +289,10 @@ internal sealed partial class DaggerfallSiteAppearance
 
     private void AdvanceDecorations()
     {
+        bool refreshed = drawRefreshedEffects();
         foreach (var flat in decorations)
-            if (DrawnDecoration(flat).Playback is { } playback)
+            // A decoration drawn as its refreshed mesh has no sprite playing.
+            if (!(refreshed && flat.Mesh is not null) && DrawnDecoration(flat).Playback is { } playback)
                 appearance.AdvanceSpritePlayback(new(playback));
     }
 

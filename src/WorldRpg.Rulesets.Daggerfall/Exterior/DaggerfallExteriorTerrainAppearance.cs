@@ -69,8 +69,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
             foreach (DaggerfallExteriorNaturePlacement placement in cell.Source
                 .DistinctBy(placement => (placement.SpriteArchive, placement.SpriteRecord)))
             {
-                (NatureSpriteKey key, NormalizedBillboardSprite sprite) = ResolveNatureSprite(placement);
-                GetNatureSprite(key, sprite, null);
+                // Keyed by the classic file, as a cell drawn in classic art looks it up.
+                (_, NormalizedBillboardSprite sprite) = ResolveNatureSprite(placement);
+                GetNatureSprite(new(placement.SpriteArchive, placement.SpriteRecord, sprite.TexturePath), sprite, null);
             }
     }
 

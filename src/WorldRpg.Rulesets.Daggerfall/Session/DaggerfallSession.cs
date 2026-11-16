@@ -216,19 +216,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         return null;
     }
 
-    /// <summary>
-    /// Whether the art set draws a classic UI image anew: an image it replaces, a glint it redraws, or a spell atlas every
-    /// cell of which has its own image. Composition leaves those unread.
-    /// </summary>
-    private static Func<string, bool> DrawnAnew(DaggerfallArtReplacements art)
-    {
-        bool icons = Enumerable.Range(0, DaggerfallSpellConstruction.IconCount).All(index => art.For(DaggerfallSpellConstruction.IconMedia(index)) is not null);
-        bool selectors = Enumerable.Range(0, DaggerfallSpellConstruction.SelectorCount).All(index =>
-            art.For(DaggerfallSpellConstruction.TargetMedia(index)) is not null && art.For(DaggerfallSpellConstruction.ElementMedia(index)) is not null);
-        return id => art.For(id) is not null || art.Effects.ContainsKey(id)
-            || icons && id == DaggerfallSpellConstruction.IconAtlasMedia || selectors && id == DaggerfallSpellConstruction.SelectorAtlasMedia;
-    }
-
     /// <summary>The live-debug modules the developer and playtest owners answer, which the host registers for this session.</summary>
     public IReadOnlyList<IDebugCommandModule> DebugCommands { get; } = null!;
 

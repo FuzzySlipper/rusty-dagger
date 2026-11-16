@@ -68,27 +68,33 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
         DaggerfallArtReplacements art = Art.Value;
         DaggerfallSiteProfile site = Site(logicalId);
         ContentFake content = Content(site, art);
-        HashSet<string> replaced = [.. ReplacedSiteFiles(site, art)];
+        HashSet<string> replaced = [.. ReplacedSiteFiles(site, art), Candle(site, art)];
         HashSet<string> nature = [.. ReplacedNatureFiles(site, art)];
         using DaggerfallSession session = Start(content, site, art, out EngineContextFake engine, out string[] delivered);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
+        // A Light spell's candle burns as the switch is made (the session puts it out again on its next update, as no spell burns).
+        session.Sites.Projection.Appearance.UpdateMagicCandle(Vector3.Zero);
         Report(logicalId, content, [.. replaced, .. nature], delivered, art);
         Assert.Empty(content.Opened.Intersect(replaced.Concat(nature)));
         Assert.Empty(delivered.Intersect(ReplacedUiImages(art).Keys));
 
+        // The switch itself opens every replaced file the site draws, the burning candle's among them, before any update draws.
         Assert.True(session.Commands<IDeveloperSceneCommands>().ClassicArt("on").Succeeded);
-        session.Update(new ProductUpdate(OuterUpdate(2), []));
-        // Every replaced file the site draws is open now, and the UI has the classic images it draws without naming them.
         string[] unopened = [.. replaced.Except(content.Opened).Select(path => $"{path} {Holder(site, path)}")];
         foreach (string path in unopened) output.WriteLine($"unopened: {path}");
         Assert.Empty(unopened);
-        // Outdoors, the nature the resident cells place too.
-        Assert.Equal(nature.Count > 0, content.Opened.Any(nature.Contains));
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        // The UI has the classic images it draws without naming them.
         string[] demanded = [.. Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(
             Assert.IsType<Dictionary<string, object?>>(engine.Published())["uiArtDemanded"])["images"])
             .Cast<Dictionary<string, object?>>().Select(image => Assert.IsType<string>(image["id"]))];
         Assert.Superset(new HashSet<string>(["screen.title", "screen.death", "spell.icons", "spell.selectors", "effect.glint.magic", "effect.glint.coins"]),
             new HashSet<string>(demanded));
+        // Outdoors, the nature the resident cells place too, each sprite at most once for the terrain and once for the site
+        // where it also places that record as a decoration: what the switch built is what classic art draws.
+        Assert.Equal(nature.Count > 0, content.Opened.Any(nature.Contains));
+        HashSet<string> placed = [.. site.Decorations.SelectMany(flat => new[] { flat.Summer.TexturePath, flat.Winter.TexturePath })];
+        Assert.All(content.Opened.Where(nature.Contains).GroupBy(path => path), opens => Assert.InRange(opens.Count(), 1, placed.Contains(opens.Key) ? 2 : 1));
         Assert.True(session.Commands<IDeveloperSceneCommands>().ClassicArt("off").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(3), []));
     }

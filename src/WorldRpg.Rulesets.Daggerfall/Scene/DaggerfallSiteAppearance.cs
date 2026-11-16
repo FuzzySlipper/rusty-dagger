@@ -102,13 +102,12 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 sprite.TextureSha256, sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size));
             return (atlas, Glowing(LitSprite, texture, lighting.LampLevel), sprite.Size, sprite.Pivot);
         }
+        // The candle lives with the site, not its location, so it opens its own rather than the decorations' resources.
         DaggerfallArtFlat art = surfaceArt!.Flats[(LightFlatArchive, 3)];
-        if (art.Frames.Count != sprite.Frames.Count)
-            throw new InvalidOperationException($"Refreshed flat '{art.File.Path}' has {art.Frames.Count} frames; its classic sprite has {sprite.Frames.Count}.");
+        SpriteAtlasFrame[] frames = RefreshedFlatFrames(art, sprite);
         RenderResource image = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest).Handle;
         ownedResources.Add(image);
-        SpriteAtlas refreshedAtlas = appearance.CreateSpriteAtlas(new(image, SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
-            art.Frames.Select((frame, index) => new NormalizedSpriteFrame(sprite.Frames[index].Id, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray())));
+        SpriteAtlas refreshedAtlas = appearance.CreateSpriteAtlas(new(image, frames));
         atlases.Add(refreshedAtlas);
         RenderResource map = image;
         if (art.Emission is { } emission)
@@ -402,7 +401,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
 
     /// <summary>
     /// Builds every classic visual this site left unbuilt while refreshed art was drawn (surfaces with their seasons and
-    /// frames, models a remodel stands in for, decorations, people, quest people, remains and effects), so classic art draws from the
+    /// frames, models a remodel stands in for, decorations, people, quest people, remains, effects and a burning candle), so classic art draws from the
     /// next snapshot: the developer's switch to classic art. They are kept until the site is let go.
     /// </summary>
     /// <exception cref="InvalidOperationException">A classic file could not be opened; the message names it.</exception>
@@ -421,6 +420,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (ActorVisual visual in actors.Values) { ClassicLive(visual); ClassicCorpse(visual); }
         foreach (NpcVisual visual in npcVisuals.Values) ClassicNpc(visual);
         foreach (NormalizedClassicEffect effect in classicEffects.Values) ClassicEffectTexture(effect);
+        // A candle burning now draws its classic sprite from the next update.
+        if (candleAppearance is not null && candleSprite is { } candle && !candleLooks.ContainsKey(false)) candleLooks.Add(false, CandleLook(candle, refreshed: false));
     }
 
     /// <summary>
