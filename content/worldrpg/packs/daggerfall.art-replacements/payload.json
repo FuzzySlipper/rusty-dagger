@@ -94597,16 +94597,16 @@
    },
    "41214": {
     "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41214.rstatmsh",
-    "byteLength": 324083,
-    "sha256": "a96f788cdb4ca57aca7b911fb463bb4cefa5d62f319f4349c96bacb4ef84fb00",
-    "triangles": 2992,
+    "byteLength": 162842,
+    "sha256": "50f1f797416c50d22746c313a376dfe0b327503b4c0238d75c620ff7b5630824",
+    "triangles": 1499,
     "slots": [
      {
       "slot": 0,
       "texture": {
        "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41214-0.png",
-       "byteLength": 1401676,
-       "sha256": "44aa8f5bca94e7e2a37e798b410c58a2404d67c1568a4a4c5fb7bc712c538676"
+       "byteLength": 1549636,
+       "sha256": "a04474c2d8a20c7b0f13654e47dedf245d131923a30b1f6f06b2a733914e86e8"
       }
      }
     ]

@@ -5,7 +5,7 @@
  },
  "41214": {
   "status": "accepted",
-  "note": "Cart: #10844's TRELLIS.2 mesh (Patch, #10844 47167: \"41221 hand built, 41214 trellis, 41239/41241 make a trellis version, 43061/43073 trellis reduced building new one where needed\"), refitted by hull so it faces the classic's way (handles to -z), its texture the one TRELLIS baked onto these 2,992 triangles (#10851)."
+  "note": "Cart: #10844's TRELLIS.2 mesh (Patch, #10844 47167: \"41214 trellis\"), refitted by hull so it faces the classic's way (handles to -z), reduced to 1,499 triangles as #10844 recommended (\"about 1,500\") and its colour baked again from the full 2,992-triangle mesh onto a fresh unwrap (#10851)."
  },
  "41220": {
   "status": "accepted",
