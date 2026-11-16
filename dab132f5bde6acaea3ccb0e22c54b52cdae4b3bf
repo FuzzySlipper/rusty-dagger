@@ -1,0 +1,7 @@
+scripts/route.py main: FAILED (product): scripts/verify.sh failed
+rusty-dagger verify at dab132f5bde6acaea3ccb0e22c54b52cdae4b3bf FAILED in 1.1 min
+verify on den-m5, 1.1 min, FAIL: /home/agent/dev/rusty-dagger/local/build/route/main-dab132f5bde6-20261116T033034/verify.log
+    lane: run 8b0a0b0e15896415753a267c7e161582 of verify on den-m5 at dab132f5bde6acaea3ccb0e22c54b52cdae4b3bf (0 s)
+    lane: tooling took 10 s, peak memory 40 MiB
+    lane: verify took 36 s, peak memory 3061 MiB
+    lane: verify failed (exit 1)
