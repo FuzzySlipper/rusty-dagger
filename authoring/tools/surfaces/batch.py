@@ -4,8 +4,9 @@ export-surfaces reference set (local/art/reference/surfaces, usage.csv), to a re
 
 For each record, in order, each step skipped when its output exists:
   1. prepare  the classic record; a floor or ceiling (mostly flat planes) without its bevel frame (reduce.unframe).
-     Seamless on an axis where the models repeat the record (texture coordinates spanning past it; 16 units a texel)
-     and the classic itself wraps there (reduce.wraps); bands and storeys the classic draws stay as they are.
+     Seamless on an axis where the placed models repeat the record (tiling.usage: the published meshes' texture
+     coordinates run past a record edge, through the climate swaps and dungeon tables) and the classic itself wraps
+     there (reduce.wraps, the tiling check's judgement); bands and storeys the classic draws stay as they are.
   2. caption  Qwen3-VL (ComfyUI TextGenerate) says what the classic shows: materials, layout, colours; or the authored
      caption in corrections.json beside this script, for a record it misreads (plaster as wood, a slab as small stones).
   3. generate Z-Image base, image to image from the classic upscaled with wrap on its seamless axes, with
@@ -19,7 +20,10 @@ redrew as another picture (not reduce.snowed) is converted like a summer one.
 
     batch.py --host den-m5 --family exterior-city-a --family exterior-roofs
     batch.py --host den-nimo --families-from list.txt
+    batch.py --host den-m5 --key texture-312-1 --key texture-313-1     (a fix: remove the final, and raw/ to generate again)
 Writes local/art/generated/surfaces/<set>/texture-AAA-R.png (finals), raw/, and captions.json; a run log on stdout.
+Then `tiling.py --pack local/art/generated/surfaces` checks the finals tile where the game repeats them; promote those that
+pass, by key (promote.py --area surfaces --key texture-AAA-R).
 """
 import argparse, csv, json, os, shutil, sys, tempfile, time
 from pathlib import Path
@@ -30,14 +34,13 @@ from PIL import Image
 AUTHORING = Path(__file__).resolve().parents[2]
 ART = AUTHORING.parent / "local" / "art"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import reduce  # noqa: E402
+import reduce, tiling  # noqa: E402,E401
 
 AP = Path(os.environ.get("ASSET_PIPELINE", Path.home() / "dev/asset-pipeline"))
 HOSTS = {"den-m5": "http://192.168.1.24:8188", "den-nimo": "http://192.168.1.23:8188"}
 RAW = ART / "reference/surfaces"
 OUT = ART / "generated/surfaces"
 CORRECTIONS = json.loads((Path(__file__).resolve().parent / "corrections.json").read_text())
-TEXELS = 16  # ARCH3D texture-coordinate units per texel
 CAPTION = ("Describe this game texture in one sentence of at most 45 words: what surface or object it shows (materials, "
            "how they are laid out, any band, frame, window, door or carving and where it sits) and its main colours. "
            "Do not mention style, pixels, resolution or that it is a texture. Reply with the sentence only.")
@@ -69,16 +72,15 @@ def classic(row):
     return Image.open(folder / f"texture-{int(row['archive']):03d}-record-{int(row['record']):03d}-frame-000-source.png").convert("RGB")
 
 
-def prepare(row):
-    """The classic as generation starts from it, and the seamless mode."""
+def prepare(row, repeats):
+    """The classic as generation starts from it, and the seamless mode: seamless on each axis the placed models repeat the
+    record (`repeats`, tiling.usage) and the classic wraps."""
     image = classic(row)
     if int(row["flat_planes"]) > int(row["standing_planes"]):
         image = reduce.unframe(image)
     wrap_x, wrap_y = reduce.wraps(image)
-    width, height = int(row["width"]), int(row["height"])
-    repeat_x = int(row["span_u"]) > width * TEXELS * 1.05
-    repeat_y = int(row["span_v"]) > height * TEXELS * 1.05
-    x, y = wrap_x and repeat_x, wrap_y and repeat_y
+    laid = repeats.get((int(row["archive"]), int(row["record"])), {})
+    x, y = wrap_x and laid.get("x", 0) > 0, wrap_y and laid.get("y", 0) > 0
     return image, "enable" if x and y else "x_only" if x else "y_only" if y else "disable"
 
 
@@ -139,6 +141,7 @@ def main():
     ap.add_argument("--host", choices=list(HOSTS), required=True)
     ap.add_argument("--family", action="append", default=[])
     ap.add_argument("--families-from")
+    ap.add_argument("--key", action="append", default=[], help="convert only this record (texture-AAA-R), as a fix")
     a = ap.parse_args()
     families = set(a.family) | (set(Path(a.families_from).read_text().split()) if a.families_from else set())
     os.environ["COMFY_URL"] = HOSTS[a.host]
@@ -148,12 +151,13 @@ def main():
     rows = records()
     by_key = {(int(r["archive"]), int(r["record"])): r for r in rows}
     family_of = lambda r: r["set"].removesuffix("-snow")
-    todo = [r for r in rows if used(r) and family_of(r) in families]
+    todo = [r for r in rows if used(r) and (family_of(r) in families or f"texture-{int(r['archive']):03d}-{r['record']}" in a.key)]
     # A used winter record needs its summer converted first.
     for r in list(todo):
         if r["set"].endswith("-snow") and (summer := by_key.get((int(r["archive"]) - 1, int(r["record"])))) and summer not in todo:
             todo.insert(0, summer)
     todo.sort(key=lambda r: r["set"].endswith("-snow"))
+    repeats = tiling.usage({(int(r["archive"]), int(r["record"])): (int(r["width"]), int(r["height"])) for r in todo})
     captions_path = OUT / "captions.json"
     OUT.mkdir(parents=True, exist_ok=True)
     cache = json.loads(captions_path.read_text()) if captions_path.exists() else {}
@@ -171,7 +175,7 @@ def main():
             reduce.winter(Image.open(summer_final), classic(summer_row), classic(row)).save(final)
             print(f"{key} winter", flush=True)
             continue
-        image, mode = prepare(row)
+        image, mode = prepare(row, repeats)
         text = caption(comfy, image, cache, key)
         # Another host's run writes the same file: keep its captions too.
         cache = (json.loads(captions_path.read_text()) if captions_path.exists() else {}) | cache
@@ -184,7 +188,7 @@ def main():
             wrap_upscale(image, size, mode).save(init)
             generate_raw(comfy, generate, text + " " + STYLE.format(tiling=TILING[mode]), init, size, mode,
                          CORRECTIONS.get(key, {}).get("denoise", 0.5 if mode == "disable" else 0.55), raw)
-        reduce.crunch(raw, classic(row)).save(final)
+        reduce.crunch(raw, classic(row), mode).save(final)
         print(f"{key} {mode} {time.time() - started:.0f} s: {text}", flush=True)
     print("BATCH-DONE", sorted(families))
 

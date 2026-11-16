@@ -1,14 +1,15 @@
 """Surface reduction (rusty-dagger #10497): a generated surface brought back to Daggerfall's look.
 
   crunch    Lanczos to twice the classic record's size, its colours matched to the classic in CIE Lab (mean and spread),
-            a strong unsharp mask at that size, then every pixel mapped to up to 32 colours of Daggerfall's world-texture
+            a strong unsharp mask at that size (resize and mask wrapping on the axes the generation made seamless), then every pixel mapped to up to 32 colours of Daggerfall's world-texture
             palette (ART_PAL.COL) chosen for this image, without dithering: crisp up-res pixel art in a PC-era palette.
   winter    a winter record as its refreshed summer with the classic winter's own snow and ice laid over, pixels doubled
             square, wherever the classic winter is brighter in every channel than the classic summer. No generation, so
             winter is the summer surface unchanged under the classic's snow. Only where the classic winter is its summer
             under snow (snowed); some winter records are another picture (a different shelf, a plain wall for a door).
-  wraps     whether a classic record repeats across each axis: its opposite edges differ no more than its neighbouring
-            pixels do (WRAP times), which says how it was meant to tile.
+  seam      how much a texture changes across its wrap edge on an axis, against its own ordinary change there.
+  wraps     whether a classic record repeats across each axis: its wrap edge is no seam (under SEAM), which says how it
+            was meant to tile; a storey, a frame or a beam it draws at the edge scores over.
 """
 from functools import cache
 from pathlib import Path
@@ -20,7 +21,9 @@ from PIL import Image, ImageCms, ImageFilter
 PALETTE_FILE = Path.home() / "research/daggerfall-files/ART_PAL.COL"
 COLOURS = 32
 SCALE = 2
-WRAP = 1.6
+SEAM = 1.5        # a wrap edge changing this many times the texture's ordinary change is a seam
+ORDINARY = 90     # the percentile of a texture's line-to-line change an edge is measured against
+BAND = 4          # lines each side of an edge whose means are compared, for a shape or shade cut off there
 SNOW = 24
 SNOWED = 0.6
 GLOW_PATCH = 0.1   # the smallest share of a light's largest glowing patch that still glows
@@ -71,11 +74,18 @@ def subset_palette(image, colours=COLOURS):
     return palette[np.unique(np.argmin(((centres[:, None] - palette[None]) ** 2).sum(-1), 1))]
 
 
-def crunch(raw, classic):
-    """The generated surface at twice the classic's size, in the classic's colours and an ART_PAL subset."""
+def crunch(raw, classic, mode="disable"):
+    """The generated surface at twice the classic's size, in the classic's colours and an ART_PAL subset. On its seamless
+    axes (`mode`, as batch.py generated it) the resize and the sharpening wrap, so they see the far edge where the game
+    repeats it rather than clamping, which would leave a seam at an edge the generation made seamless."""
     source = Image.open(raw).convert("RGB")
     size = (classic.width * SCALE, classic.height * SCALE)
-    image = match(source.resize(size, Image.Resampling.LANCZOS), classic).filter(ImageFilter.UnsharpMask(radius=1, percent=140, threshold=1))
+    nx, ny = (3 if mode in ("enable", "x_only") else 1), (3 if mode in ("enable", "y_only") else 1)
+    tiled = Image.fromarray(np.tile(np.asarray(source), (ny, nx, 1)))
+    # Matched as a whole: the copies have the one surface's mean and spread.
+    image = match(tiled.resize((size[0] * nx, size[1] * ny), Image.Resampling.LANCZOS), classic).filter(ImageFilter.UnsharpMask(radius=1, percent=140, threshold=1))
+    left, top = size[0] * (nx // 2), size[1] * (ny // 2)
+    image = image.crop((left, top, left + size[0], top + size[1]))
     palette = subset_palette(image)
     pixels = np.asarray(image, np.float32)
     nearest = np.argmin(((pixels.reshape(-1, 3)[:, None] - palette[None]) ** 2).sum(-1), 1)
@@ -128,9 +138,10 @@ def winter(summer_refreshed, summer_classic, winter_classic):
     s = np.asarray(summer_classic.convert("RGB"), np.int16)
     w = np.asarray(winter_classic.convert("RGB"), np.int16)
     snow = (w.min(-1) - s.min(-1)) > SNOW
-    size = summer_refreshed.size
-    overlay = np.asarray(winter_classic.convert("RGB").resize(size, Image.Resampling.NEAREST))
-    mask = np.asarray(Image.fromarray(snow.astype(np.uint8) * 255).resize(size, Image.Resampling.NEAREST)) > 0
+    rows = np.arange(summer_refreshed.height) * s.shape[0] // summer_refreshed.height
+    columns = np.arange(summer_refreshed.width) * s.shape[1] // summer_refreshed.width
+    overlay = np.asarray(winter_classic.convert("RGB"))[rows][:, columns]
+    mask = snow[rows][:, columns]
     out = np.asarray(summer_refreshed.convert("RGB"), np.uint8).copy()
     out[mask] = overlay[mask]
     return Image.fromarray(out)
@@ -147,12 +158,24 @@ def snowed(summer_classic, winter_classic):
     return not bare.any() or (np.abs(w - s).max(-1)[bare] <= SNOW).mean() >= SNOWED
 
 
+def seam(image, axis):
+    """(step, band) across the wrap edge on `axis` (1 across columns, 0 across rows), each over the ORDINARY percentile of
+    the same measure at every other line: step, the colour change from the last line to the first (a pixel seam); band,
+    the change between the means of the BAND lines either side (a shape or a shade cut off at the edge)."""
+    a = np.moveaxis(lab(image), axis, 0)  # lines first
+    out = []
+    for width in (1, max(1, min(BAND, a.shape[0] // 4))):
+        # Edge k: the `width` lines after line k against the `width` lines up to it; edge n-1 is the wrap.
+        after = np.stack([np.roll(a, -k, 0) for k in range(1, width + 1)]).mean(0)
+        before = np.stack([np.roll(a, k, 0) for k in range(width)]).mean(0)
+        edges = np.linalg.norm(after - before, axis=-1).mean(1)
+        out.append(float(edges[-1] / max(np.percentile(edges[:-1], ORDINARY), 1e-3)))
+    return tuple(out)
+
+
 def wraps(classic):
-    """(x, y): whether the classic repeats across each axis."""
-    a = np.asarray(classic.convert("L"), np.float32)
-    inner_x = np.mean(np.abs(np.diff(a, axis=1))) + 1
-    inner_y = np.mean(np.abs(np.diff(a, axis=0))) + 1
-    return (np.mean(np.abs(a[:, 0] - a[:, -1])) <= WRAP * inner_x, np.mean(np.abs(a[0] - a[-1])) <= WRAP * inner_y)
+    """(x, y): whether the classic repeats across each axis, its wrap edge no seam."""
+    return tuple(max(seam(classic, axis)) < SEAM for axis in (1, 0))
 
 
 FRAME = 2.0

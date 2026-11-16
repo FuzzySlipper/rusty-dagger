@@ -60,7 +60,9 @@ The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each a
 its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
 8-bit RGBA PNG at its own size, and the game draws it on the location materials and terrain that draw that record.
 The `terrain` area does the same into `surfaces` for the ground tiles, from local/art/generated/terrain (tools/terrain/ground.py). A
-record has one entry: a ground tile models also draw is marked superseded in the surfaces ledger.
+record has one entry: a ground tile models also draw is marked superseded in the surfaces ledger. Each art session holds only
+its own finals, so `--key texture-AAA-R` promotes one, replacing its entry and PNG and keeping the rest of the section; a
+whole-area run refuses, before it removes anything, while the ledger accepts a record the checkout has no final for.
 
 The `flats` area promotes the world's placed billboards and terrain nature (`flats`): each record in local/art/reference/flats/usage.csv
 whose every frame has an accepted final becomes one PNG atlas, as an effect does, and the game draws it at the classic
@@ -635,15 +637,25 @@ def classic_size(media):
     return {"width": right - left, "height": bottom - top}
 
 
-def surfaces(area):
-    """Each accepted final's entry in the area, by the classic texture record it replaces."""
+def surfaces(area, keys):
+    """Each accepted final's entry in the area, by the classic texture record it replaces: the finals `keys` names, or with
+    none every final the ledger accepts. Refused, before anything is written, for a key the ledger doesn't accept or the
+    checkout has no final for."""
     finals = {path.stem: path for path in (ART / "generated" / area).glob("*/texture-*.png") if path.parent.name != "raw"}
-    promoted = []
-    for key, note in ledger(area).items():
-        if note.get("status") != "accepted":
-            continue
+    accepted = {key for key, note in ledger(area).items() if note.get("status") == "accepted"}
+    for key in keys or sorted(accepted):
+        if key not in accepted:
+            raise SystemExit(f"{key} is not accepted in ledger/{area}-notes.json.")
         if key not in finals:
-            raise SystemExit(f"{key} is accepted in ledger/{area}-notes.json but has no final under local/art/generated/{area}.")
+            raise SystemExit(f"{key} is accepted in ledger/{area}-notes.json but has no final under local/art/generated/{area}"
+                             + ("; promote this checkout's own finals with --key." if not keys else "."))
+    directory = CONTENT / MEDIA / area
+    directory.mkdir(parents=True, exist_ok=True)
+    if not keys:
+        for old in directory.glob("*.png"):
+            old.unlink()
+    promoted = []
+    for key in keys or sorted(accepted):
         archive, record = map(int, SURFACE.fullmatch(key).groups())
         promoted.append({"replaces": {"archive": archive, "record": record},
                          **world_png(Image.open(finals[key]), f"{MEDIA}/{area}/{key}.png")})
@@ -747,7 +759,7 @@ def icon_entry(replaces, image, name, placement=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--area", action="append", choices=AREAS, default=[])
-    ap.add_argument("--key", action="append", help="promote only this accepted final of a paper-doll, worn or models --area, "
+    ap.add_argument("--key", action="append", help="promote only this accepted final of a paper-doll, worn, models, surfaces or terrain --area, "
                     "leaving the area's other files (and the worn tints) as they are; a whole area deletes and rewrites its media")
     ap.add_argument("--recompute", action="append", default=[], metavar="ID",
                     help="take the placement of the entry replacing ID (or every promoted entry, with `all`) from the original again")
@@ -796,7 +808,7 @@ def main():
             kept = {key: entry for key, entry in section.items() if key not in keys and key not in removed}
             payload["artReplacements"]["models"] = dict(sorted({**kept, **entries}.items(), key=lambda item: int(item[0])))
             continue
-        if a.key:
+        if a.key and area not in ("surfaces", "terrain"):
             notes = ledger(area)
             for key in a.key:
                 if notes.get(key, {}).get("status") != "accepted":
@@ -832,12 +844,10 @@ def main():
             payload["artReplacements"]["peopleRig"] = people_rig()
             continue
         if area in ("surfaces", "terrain"):
-            directory = CONTENT / MEDIA / area
-            directory.mkdir(parents=True, exist_ok=True)
-            for old in directory.glob("*.png"):
-                old.unlink()
-            promoted = surfaces(area)
-            kept = [entry for entry in payload["artReplacements"].get("surfaces", []) if not entry["path"].startswith(f"{MEDIA}/{area}/")]
+            promoted = surfaces(area, a.key)
+            written = {entry["path"] for entry in promoted}
+            kept = [entry for entry in payload["artReplacements"].get("surfaces", [])
+                    if not (entry["path"] in written if a.key else entry["path"].startswith(f"{MEDIA}/{area}/"))]
             entries = sorted(kept + promoted, key=lambda entry: (entry["replaces"]["archive"], entry["replaces"]["record"]))
             records = [(entry["replaces"]["archive"], entry["replaces"]["record"]) for entry in entries]
             if len(set(records)) != len(records):
