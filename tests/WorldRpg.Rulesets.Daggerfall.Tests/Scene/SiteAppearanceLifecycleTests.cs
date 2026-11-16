@@ -469,13 +469,13 @@ public sealed class SiteAppearanceLifecycleTests
             Assert.All(appearance.LightRequests, request => Assert.InRange(request.LogicalId, 1UL, (1UL << 53) - 1UL));
             Assert.Equal(appearance.LightRequests.Count, appearance.LightRequests.Select(request => request.LogicalId).Distinct().Count());
             LightRequest ambient = Assert.Single(appearance.LightRequests, request => request.Descriptor.Kind == LightKind.Ambient);
-            Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.Dungeon, ambient.Descriptor.Intensity);
+            Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.Dungeon * DaggerfallTuning.Defaults.SiteLighting.DungeonScale, ambient.Descriptor.Intensity);
             Assert.Equal(new Color(0F, 0F, 0F, 1F), engine.BackgroundColors.Single());
             LightRequest first = appearance.LightRequests.First(request => request.Descriptor.Position == new Vector3(54.4F, 34.4F, -17.2F));
             Assert.Equal(LightKind.Point, first.Descriptor.Kind);
             Assert.Equal(Vector3.One, first.Descriptor.Color);
             Assert.Equal(7.5F, first.Descriptor.Range);
-            Assert.Equal(1F, first.Descriptor.Intensity);
+            Assert.Equal(1F * DaggerfallTuning.Defaults.SiteLighting.DungeonLampScale, first.Descriptor.Intensity);
             // A lamp that lights the room is made ready to cast at the tuned detail, and asks once the player stands near it.
             Assert.Equal(LightShadowIntent.Disabled, first.Descriptor.ShadowIntent);
             Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.LampShadowResolution, first.Descriptor.ShadowResolution);

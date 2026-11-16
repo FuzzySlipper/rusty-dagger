@@ -30,8 +30,8 @@ export function mountVideoSettings(root: HTMLElement, send: (action: ControlActi
   const lampOptions = (): ProductVideoOption[] => lamps ? [
     {
       id: 'lampShadows', label: 'Lamp shadows', group: 'Quality', kind: 'choice', value: lamps.lamps,
-      choices: [{ value: 'off', label: 'Off' }, { value: 'big', label: 'Big lamps' }, { value: 'main', label: 'Main lamps' }, { value: 'all', label: 'All lamps' }],
-      description: 'Which lamps near you cast shadows: hearths, braziers and big lamps; every lamp that lights a room; or candles too. The shadow budget keeps the nearest.',
+      choices: lamps.lampChoices.map(choice => ({ value: choice.id, label: choice.label })),
+      description: 'Which lamps near you cast shadows, by how far they light: only the farthest-reaching, every lamp that lights a room, or every lamp, candles too. The shadow budget keeps the nearest.',
       onChange: value => shadows({ lamps: String(value) }),
     },
     {

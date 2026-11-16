@@ -13,6 +13,15 @@ internal readonly record struct DaggerfallLampShadowChoice(DaggerfallLampShadowL
     /// <summary>The main lamps, in half-block sectors, indoors: what Patch chose to start from (#10867).</summary>
     internal static DaggerfallLampShadowChoice Default { get; } = new(DaggerfallLampShadowLamps.Main, 1f, false);
 
+    /// <summary>A lamp choice's name, as the video settings show it.</summary>
+    internal static string Label(DaggerfallLampShadowLamps lamps) => lamps switch
+    {
+        DaggerfallLampShadowLamps.Off => "Off",
+        DaggerfallLampShadowLamps.Big => "Big lamps",
+        DaggerfallLampShadowLamps.Main => "Main lamps",
+        _ => "All lamps",
+    };
+
     /// <summary>The sector sides a player may choose, as shares of the tuned side; 0 is none.</summary>
     internal static IReadOnlyList<float> SectorShares { get; } = [0f, .5f, 1f, 2f, 4f];
 

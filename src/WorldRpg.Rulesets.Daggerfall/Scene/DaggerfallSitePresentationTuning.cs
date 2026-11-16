@@ -96,16 +96,16 @@ internal sealed record DaggerfallSiteLightingTuning(
     internal float SpellLightIntensity { get; init; } = 1f;
     /// <summary>What the ambient of each kind of place is multiplied by.</summary>
     internal float ExteriorScale { get; init; } = 3f;
-    internal float InteriorScale { get; init; } = 1.3f;
-    internal float DungeonScale { get; init; } = 1f;
+    internal float InteriorScale { get; init; } = .65f;
+    internal float DungeonScale { get; init; } = .5f;
     /// <summary>
     /// What the lamps of each kind of place are multiplied by. They carry the light where they burn, well above the
     /// ambient, so a room has pools, dark corners and visible lamp shadows: the donor's intensities, made for Unity's
     /// gentler falloff, light barely two metres against the ambient by the Engine's inverse square.
     /// </summary>
-    internal float ExteriorLampScale { get; init; } = 3f;
-    internal float InteriorLampScale { get; init; } = 1.3f;
-    internal float DungeonLampScale { get; init; } = 1f;
+    internal float ExteriorLampScale { get; init; } = 7.5f;
+    internal float InteriorLampScale { get; init; } = 3.25f;
+    internal float DungeonLampScale { get; init; } = 2.5f;
     /// <summary>
     /// The sun at full daylight. The day's ambient and the sun together light level ground under a high sun near its
     /// texture's own value; the sun carries most of it, as a clear day's direct light does, so what its shadow covers
@@ -126,11 +126,11 @@ internal sealed record DaggerfallSiteLightingTuning(
     internal uint SunShadowResolution { get; init; } = 2048;
     /// <summary>
     /// How far, in metres, a lamp under a roof must light for it to cast a shadow, and the texels on a side of each of its
-    /// six faces. Candles and small lanterns reach less and never cast; of the lamps that may, the Engine's shadow budget
-    /// keeps the nearest.
+    /// six faces. A single candle or a small lantern reaches less and never casts; of the lamps that may, the Engine's
+    /// shadow budget keeps the nearest.
     /// </summary>
     internal float LampShadowReach { get; init; } = 6f;
-    /// <summary>How far a big lamp lights (a hearth, brazier, chandelier, skull or standing torch, round lamp), when only those cast.</summary>
+    /// <summary>How far a lamp must light to count as a big lamp, when only those cast: the importer's braziers, chandeliers, skull and standing torches and round lamps reach this far.</summary>
     internal float BigLampShadowReach { get; init; } = 12f;
     internal uint LampShadowResolution { get; init; } = 512;
     /// <summary>
@@ -159,7 +159,7 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// <summary>How much of the light above 1 spreads as a glow; 0 for none.</summary>
     internal float Bloom { get; init; } = .25f;
     internal static DaggerfallSiteLightingTuning Classic { get; } = new(
-        160F / 255F, 100F / 255F, 75F / 255F, .3333F, .1333F);
+        160F / 255F, 100F / 255F, 75F / 255F, .3333F, .0667F);
 
     internal DaggerfallSiteLightingTuning Validate()
     {

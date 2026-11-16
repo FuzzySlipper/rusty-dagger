@@ -2721,7 +2721,8 @@ test('Settings offers lamp shadows beside the shadow budget and sends the whole 
   const f = fixture();
   try {
     f.publish({ controls: { diagnostic: '', bindings: [],
-      lampShadows: { lamps: 'main', sectors: 1, outdoors: false, sectorShares: [0, 0.5, 1, 2, 4] } } });
+      lampShadows: { lamps: 'main', sectors: 1, outdoors: false, sectorShares: [0, 0.5, 1, 2, 4],
+        lampChoices: [{ id: 'off', label: 'Off' }, { id: 'big', label: 'Big lamps' }, { id: 'main', label: 'Main lamps' }, { id: 'all', label: 'All lamps' }] } } });
     f.root.querySelector('[data-action="settings"]').click();
     const rows = video.mounts.at(-1).options.productOptions;
     const lamps = rows.find(row => row.id === 'lampShadows');
@@ -2729,6 +2730,7 @@ test('Settings offers lamp shadows beside the shadow budget and sends the whole 
     const outdoors = rows.find(row => row.id === 'outdoorLampShadows');
     assert.deepEqual([lamps.group, sectors.group, outdoors.group], ['Quality', 'Quality', 'Quality']);
     assert.equal(lamps.value, 'main');
+    assert.deepEqual(lamps.choices, [{ value: 'off', label: 'Off' }, { value: 'big', label: 'Big lamps' }, { value: 'main', label: 'Main lamps' }, { value: 'all', label: 'All lamps' }]);
     assert.deepEqual(sectors.choices.map(choice => choice.value), ['0', '0.5', '1', '2', '4']);
     assert.equal(sectors.value, '1');
     lamps.onChange('big');

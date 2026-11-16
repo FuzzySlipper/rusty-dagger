@@ -297,6 +297,24 @@
     "groundCover": null,
     "lampShadows": {
       "lamps": "main",
+      "lampChoices": [
+        {
+          "id": "off",
+          "label": "Off"
+        },
+        {
+          "id": "big",
+          "label": "Big lamps"
+        },
+        {
+          "id": "main",
+          "label": "Main lamps"
+        },
+        {
+          "id": "all",
+          "label": "All lamps"
+        }
+      ],
       "sectors": 1,
       "outdoors": false,
       "sectorShares": [

@@ -267,6 +267,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             // Which lamps cast shadows near the player, in sectors of what share of the game's side (0 for none), and outdoors.
             ("lampShadows", builder.Object(
                 ("lamps", builder.String(controlSettings.LampShadows.Lamps.ToString().ToLowerInvariant())),
+                ("lampChoices", builder.Array(Enum.GetValues<DaggerfallLampShadowLamps>().Select(lamps => builder.Object(
+                    ("id", builder.String(lamps.ToString().ToLowerInvariant())), ("label", builder.String(DaggerfallLampShadowChoice.Label(lamps))))).ToArray())),
                 ("sectors", builder.Number(controlSettings.LampShadows.SectorShare)),
                 ("outdoors", builder.Boolean(controlSettings.LampShadows.Outdoors)),
                 ("sectorShares", builder.Array(DaggerfallLampShadowChoice.SectorShares.Select(share => builder.Number(share)).ToArray())))),

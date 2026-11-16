@@ -32,14 +32,14 @@ public sealed class DaggerfallWeatherSessionTests
         {
             session.PublishInitial();
             var lighting = session.Sites.Projection.Lighting;
-            Assert.Equal(tuning.Ambient.ZoneAmbient, LastAmbient(fixture.Appearance));
+            Assert.Equal(tuning.Ambient.ZoneAmbient * tuning.SiteLighting.DungeonScale, LastAmbient(fixture.Appearance));
             int lights = fixture.Appearance.LightRequests.Count;
             session.State.PlayerControl.MoveTo(start + Vector3.UnitX * 20);
             session.PublishInitial();
-            Assert.Equal(tuning.SiteLighting.Dungeon, LastAmbient(fixture.Appearance));
+            Assert.Equal(tuning.SiteLighting.Dungeon * tuning.SiteLighting.DungeonScale, LastAmbient(fixture.Appearance));
             session.State.PlayerControl.MoveTo(start + Vector3.UnitX * 10);
             session.PublishInitial();
-            Assert.Equal(tuning.Ambient.ZoneAmbient, LastAmbient(fixture.Appearance));
+            Assert.Equal(tuning.Ambient.ZoneAmbient * tuning.SiteLighting.DungeonScale, LastAmbient(fixture.Appearance));
             Assert.Same(lighting, session.Sites.Projection.Lighting);
             Assert.Equal(lights, fixture.Appearance.LightRequests.Count);
             saved = session.CaptureSave();
@@ -47,7 +47,7 @@ public sealed class DaggerfallWeatherSessionTests
             session.Sites.Projection.Rebase(offset);
             session.State.PlayerControl.MoveTo(start + Vector3.UnitX * 10 + offset);
             session.PublishInitial();
-            Assert.Equal(tuning.Ambient.ZoneAmbient, LastAmbient(fixture.Appearance));
+            Assert.Equal(tuning.Ambient.ZoneAmbient * tuning.SiteLighting.DungeonScale, LastAmbient(fixture.Appearance));
             Assert.Equal(lights, fixture.Appearance.LightRequests.Count);
         }
         Assert.Equal(fixture.Appearance.LightRequests.Count, fixture.Appearance.DisposedLights);
@@ -55,7 +55,7 @@ public sealed class DaggerfallWeatherSessionTests
         using (var restored = DaggerfallSession.Restore(resumed.Engine.Context, composition, saved))
         {
             restored.PublishInitial();
-            Assert.Equal(tuning.Ambient.ZoneAmbient, LastAmbient(resumed.Appearance));
+            Assert.Equal(tuning.Ambient.ZoneAmbient * tuning.SiteLighting.DungeonScale, LastAmbient(resumed.Appearance));
             Assert.Single(resumed.Appearance.LightRequests, request => request.Descriptor.Kind == LightKind.Ambient);
         }
         Assert.Equal(resumed.Appearance.LightRequests.Count, resumed.Appearance.DisposedLights);

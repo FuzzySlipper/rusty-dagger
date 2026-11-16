@@ -30,8 +30,10 @@ export interface GroundCoverChoice {
 }
 
 export interface LampShadowChoice {
-  /** off, big, main or all. */
+  /** The chosen lamps' id, one of lampChoices. */
   readonly lamps: string;
+  /** Which lamps may cast, by the ruleset's ids and names. */
+  readonly lampChoices: readonly { readonly id: string; readonly label: string }[];
   /** The sectors' side as a share of the game's; 0 for none, every lamp of the place asking. */
   readonly sectors: number;
   readonly outdoors: boolean;

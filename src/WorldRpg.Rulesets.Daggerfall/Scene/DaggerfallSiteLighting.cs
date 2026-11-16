@@ -133,7 +133,6 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     /// </summary>
     internal void UpdateShadowSector(Vector3 player, DaggerfallLampShadowChoice choice)
     {
-        if (_disposed || _suspended) return;
         float side = choice.SectorShare * _tuning.ShadowSectorMetres;
         (int X, int Z) sector = side > 0 ? ShadowSector(player, side) : default;
         if (sector == _shadowSector && choice == _shadowChoice) return;
