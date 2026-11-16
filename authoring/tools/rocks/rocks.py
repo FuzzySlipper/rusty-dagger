@@ -27,7 +27,8 @@ identity, which the location draws. Finals go to local/art/generated/models/ID.g
 
 Nature flats: trees.py draws them in the flora field, taking their shapes from `nature_rock`, `gnarled` and `logs`
 here, each painted from its refreshed sprite. Placed flats (`placed`): the decoration flats blocks place, as GLBs in
-local/art/generated/effects/ for the art pack's `meshes`, each with the footprint it prints.
+local/art/generated/effects/ for the art pack's `meshes` (promote.py's WORLD_MESHES, `--area effects --key A-R`), each
+built across its sprite's width, which promotion measures as its footprint.
 
     rocks.py models [ID ...]
     rocks.py placed [ARCHIVE-RECORD ...]

@@ -925,8 +925,9 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(16, art.Effects.Count);
         Assert.All(art.Effects.Keys, id => Assert.Contains(id, classic));
         Assert.NotNull(art.EffectGlow);
-        // The bone pile stands in for the corpse every human class shares and for the bone pile flat.
-        Assert.Equal([(380, 1), (380, 4)], art.Meshes.Keys.Order());
+        // The bone pile stands in for the corpse every human class shares and for the bone pile flat, and rocks.py's
+        // meshes for the fallen logs towns lay about and the dungeons' stalagmites (#10849).
+        Assert.Equal([(213, 11), (213, 12), .. Enumerable.Range(6, 10).Select(record => (300, record)), (380, 1), (380, 4)], art.Meshes.Keys.Order());
 
         // Every item image a dropped item can stand as has a world PNG, crunched as a world flat is at two pixels to a
         // classic world pixel of 2.5 cm: an icon is its stated ground height tall, a worn item's doll rect is in doll

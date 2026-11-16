@@ -55,7 +55,9 @@ in each element's colour, and the world meshes (`meshes`): the `effects` final `
 pile resting on the floor, stands in for TEXTURE.380 record 1 (the corpse every human enemy class shares, men and
 women alike, so it is no one in particular) and record 4 (the bone pile placed in dungeons). WORLD_MESHES names each such
 sprite mesh, which naming accepts; each entry is keyed by the record it replaces (`380-4`) and states the mesh's footprint,
-its longest side in metres, so the game draws it at the width of the classic sprite it replaces.
+its longest side in metres, so the game draws it at the width of the classic sprite it replaces. A mesh built across its
+sprite's width (rocks.py's placed logs and stalagmites, #10849) names no footprint: it is measured from the GLB, its
+width across (x).
 
 The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
 its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
@@ -590,8 +592,19 @@ def effect_glow():
 
 
 # The sprite meshes: each final in local/art/generated/effects, the classic TEXTURE records it stands in for, and its
-# footprint (longest side, metres). Naming a final here is what accepts it.
-WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)], 2.15)]
+# footprint (longest side, metres), or None for one measured across its width. Naming a final here is what accepts it.
+WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)], 2.15),
+                # rocks.py's placed flats (#10849): the fallen logs towns lay about, and the dungeons' stalagmites.
+                ("logs-213-11.glb", [(213, 11)], None), ("logs-213-12.glb", [(213, 12)], None),
+                *((f"stalagmite-300-{record}.glb", [(300, record)], None) for record in range(6, 16))]
+
+
+def glb_width(path):
+    """A GLB's width across, x, in its own metres: the extent of its meshes' positions (glTF states each accessor's bounds)."""
+    data = path.read_bytes()
+    document = json.loads(data[20:20 + int.from_bytes(data[12:16], "little")])
+    bounds = [document["accessors"][primitive["attributes"]["POSITION"]] for mesh in document["meshes"] for primitive in mesh["primitives"]]
+    return round(max(b["max"][0] for b in bounds) - min(b["min"][0] for b in bounds), 3)
 
 
 def effect_units():
@@ -609,7 +622,7 @@ def effect_units():
         for archive, record in records:
             units[f"{archive}-{record}"] = Unit([final], lambda final=final, archive=archive, record=record, footprint=footprint: [
                 ("meshes", {"replaces": {"archive": archive, "record": record}, **write(f"{MEDIA}/effects/{final.key}", final.path.read_bytes()),
-                            "footprint": footprint})])
+                            "footprint": footprint if footprint is not None else glb_width(final.path)})])
     units["effectGlow"] = Unit([], lambda: [("effectGlow", effect_glow())])
     return units
 
