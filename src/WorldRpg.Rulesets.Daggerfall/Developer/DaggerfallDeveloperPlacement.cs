@@ -106,10 +106,13 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         DaggerfallDoorView? door = doors.All.Where(value => doors.ExteriorBuildingOf(value.Id) == id)
             .Select(value => (DaggerfallDoorView?)value).FirstOrDefault();
         if (door is not { } entrance) return Refused($"{BuildingLabel(record, id)} has no door in the loaded exterior.");
-        // Stand at the door first, so leaving the building returns the player to its doorstep as walking in would.
+        // Stand at the door first, so leaving the building returns the player to its doorstep as walking in would;
+        // entering from anywhere else would make wherever the player stood its doorstep.
         if (activation.Module?.InspectTargets().Where(target => target.Entity == entrance.Entity)
-            .Select(target => (DaggerfallActivationTarget?)target).FirstOrDefault() is { } doorTarget)
-            _ = StandWithinReach(doorTarget, out _);
+            .Select(target => (DaggerfallActivationTarget?)target).FirstOrDefault() is not { } doorTarget)
+            return Refused($"{BuildingLabel(record, id)}'s door is not loaded as a target, so the player cannot stand at it to enter.");
+        if (!StandWithinReach(doorTarget, out string? why))
+            return Refused($"{BuildingLabel(record, id)} was not entered: {why}");
         if (!sites.TryEnterBuilding(inside!.ProfileKey, buildingLanding(inside, entrance.Id)))
             return Refused($"{BuildingLabel(record, id)} could not be entered.");
         return Where();
@@ -383,7 +386,8 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
             Vector3 from = feet + Vector3.UnitY * eye, line = aim - from;
             float length = line.Length();
             SpatialHit blocked = spatial.CastRay(from, line / length, length, LiveCollision());
-            if (blocked.Present && Vector3.Distance(blocked.Point, aim) > .4F) continue;
+            // A closed door's collider encloses its own point, so a line that meets the target itself reaches it.
+            if (blocked.Present && blocked.Entity != target.Entity.Value && Vector3.Distance(blocked.Point, aim) > .4F) continue;
             Vector3 facing = point - feet;
             Land(feet, ActorHeading.Yaw(facing), MathF.Atan2(aim.Y - from.Y, new Vector2(line.X, line.Z).Length()), $"developer-goto:{TargetId(target)}");
             why = null;

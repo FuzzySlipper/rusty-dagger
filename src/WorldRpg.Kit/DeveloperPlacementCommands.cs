@@ -29,7 +29,7 @@ public interface IDeveloperPlacementCommands : IDebugCommandModule
     [DebugCommand("world.travel", Description = "Developer: land at a map place by name (quoted when it has spaces) or region/index, instantly and free.")]
     DebugCommandResult Travel(string place);
 
-    [DebugCommand("world.enter", Description = "Developer: land inside a building of a place: world.enter PLACE BUILDING, the building by name or block-x/block-y/index.")]
+    [DebugCommand("world.enter", Description = "Developer: land inside a building of a place, from its doorstep: world.enter PLACE BUILDING, the building by name or block-x/block-y/index. Refused when no clear spot stands at its door.")]
     DebugCommandResult Enter(string place, string building);
 
     [DebugCommand("world.goto", Description = "Developer: stand within reach of a loaded person, door or container (its label or navigation.targets id), facing it.")]

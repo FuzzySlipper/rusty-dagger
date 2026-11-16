@@ -123,6 +123,17 @@ public sealed class DeveloperWorldCommandsTests
         Assert.True(session.Commands<IDeveloperPlacementCommands>().Teleport(doorway.X, doorway.Y, doorway.Z, force: true).Succeeded);
         run.Spatial.OverlapHit = _ => default;
 
+        // With no clear spot at the door, world.enter refuses rather than entering from where the player stands,
+        // which leaving would return them to.
+        run.Spatial.OverlapHit = _ => default(SpatialHit) with { Present = true, Converged = true, Kind = SpatialHitKind.StaticMesh };
+        Vector3 standing = Position(session);
+        DebugCommandResult crowded = session.Commands<IDeveloperPlacementCommands>().Enter("Charing", "Temple of Kynareth");
+        Assert.False(crowded.Succeeded);
+        Assert.Contains("No clear spot", crowded.Message, StringComparison.Ordinal);
+        Assert.Equal(DaggerfallWorldProfileIds.Exterior(Charing), session.Sites.ActiveProfile);
+        Assert.Equal(standing, Position(session));
+        run.Spatial.OverlapHit = _ => default;
+
         // world.find names the building and how to enter it before it is entered.
         JsonElement found = Json(session.Commands<IDeveloperPlacementCommands>().Find("training"));
         JsonElement temple = found.GetProperty("buildings").EnumerateArray().Single(value => value.GetProperty("id").GetString() == TempleOfKynareth.ToString());
