@@ -778,5 +778,121 @@
  "41701": {
   "status": "accepted",
   "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): wooden stocks with the neck and wrist holes cut through the board, on splayed feet from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41300": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a torture couch with clamping claw arms from Pixal3D four-view on four Qwen redraws of the classic's views, fitted per axis into the classic's box, rebuilt as one closed 12 mm voxel surface where reduction crumpled its claws, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41301": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): three hooked iron claws hanging over a stone tub from Pixal3D four-view on four Qwen redraws of the classic's views, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41302": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a spiked iron press over a stone tub from Pixal3D four-view on four Qwen redraws of the classic's views, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41303": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a stretching rack with its winch from Pixal3D four-view on four Qwen redraws of the classic's views, fitted per axis into the classic's box, rebuilt as one closed voxel surface where reduction tore it, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41308": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a panelled altar under an overhanging slab from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, rebuilt as one closed voxel surface where reduction tore it, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41309": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a slab-top altar on a tapered block from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, rebuilt as one closed voxel surface where reduction tore it, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41310": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a slab-top altar with a chamfered top on a straight block from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, rebuilt as one closed voxel surface where reduction tore it, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41311": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a slab-top altar with carved corner posts from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41312": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a tall cage of iron bars between a plank floor and roof from Pixal3D four-view on four Qwen redraws of the classic's views, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41313": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a low cage of iron bars between a plank floor and roof from Pixal3D four-view on four Qwen redraws of the classic's views, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41315": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a closed wooden coffin with a moulded lid from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41316": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a wooden coffin with its lid slid half off from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41317": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a closed six-sided wooden coffin from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41318": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): an open six-sided wooden coffin from TRELLIS.2 on a Qwen redraw of the classic, its generated lid cut away at the rim, fitted per axis into the box of the classic's coffin, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps; the lid is the classic's own, slid aside across the coffin, made a plank resting on its rim with the ankh on top (#10848)."
+ },
+ "41319": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a closed granite sarcophagus with carved panels and the ankh on its lid from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41320": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a granite sarcophagus with its lid slid aside from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41321": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): an open granite sarcophagus, its lid leaning against its side from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41322": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): an open wooden coffin, its lid hinged up from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, rebuilt as one closed voxel surface where reduction tore it, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41323": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): an open six-sided wooden coffin with a skeleton inside from TRELLIS.2 on a Qwen redraw of the classic, its generated lid cut away at the rim, fitted per axis into the box of the classic's coffin, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps; the lid is the classic's own, leaning out from one side, made a 3 cm plank with each face drawn as the classic draws it, the ankh outward (#10848)."
+ },
+ "41324": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): an open granite sarcophagus, its lid leaning against its side, 41321's geometry in 41324's own textures from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41325": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): an open wooden coffin, its lid hinged up, 41322's geometry in 41325's own textures from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, rebuilt as one closed voxel surface where reduction tore it, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41326": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): an open six-sided wooden coffin, 41323's geometry in 41326's own textures with a wrapped body inside from TRELLIS.2 on a Qwen redraw of the classic, its generated lid cut away at the rim, fitted per axis into the box of the classic's coffin, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps; the lid is the classic's own, leaning out from one side, made a 3 cm plank with each face drawn as the classic draws it, the ankh outward (#10848)."
+ },
+ "41327": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): an open granite sarcophagus, its lid leaning against its side, 41321's geometry in 41327's own textures from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "62325": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a hooded stone figure kneeling back on its heels with no plinth, as the classic kneels, from Pixal3D four-view on four Qwen redraws of the classic's views, fitted per axis into the classic's box, turned to face as the classic does and leaned back along its depth so its bowed head sits in the classic's head, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "62329": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a hooded stone figure kneeling back on its heels with no plinth, as the classic kneels, 62325's geometry in 62329's own texture, from Pixal3D four-view on four Qwen redraws of the classic's views, fitted per axis into the classic's box, turned to face as the classic does and leaned back along its depth so its bowed head sits in the classic's head, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "74086": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a square marble font on a dark pedestal from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "74091": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a basin altar with a copper-framed marble top on a tapered pedestal from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, rebuilt as one closed voxel surface where reduction tore it, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "74226": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a suit of plate armour on its stand from Pixal3D four-view on four Qwen redraws of the classic's views, fitted per axis into the classic's box, rebuilt as one closed voxel surface where reduction tore it, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "74229": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a marble frame of posts and lintels on a granite base slab from Pixal3D four-view on four Qwen redraws of the classic's views, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
  }
 }
