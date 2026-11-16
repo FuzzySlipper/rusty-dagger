@@ -98,6 +98,8 @@ public sealed class SpatialMovementSystem : IDisposable
     private CharacterContinuationCheckpoint? _restoredCheckpoint;
     private readonly Dictionary<ulong, (string Scope, string Tag, int References, bool Active)> _registeredTriggers = [];
     private bool _verticalDriven;
+    // The player is held in collision with no clear spot in reach, and that has been reported (CharacterPenetration).
+    private bool _heldInCollision;
 
     /// <summary>Whether the last accepted or restored Engine continuation used controlled vertical motion.</summary>
     public bool IsVerticalDriven => _verticalDriven;
@@ -161,7 +163,11 @@ public sealed class SpatialMovementSystem : IDisposable
         catch { session.Dispose(); throw; }
     }
 
-    /// <summary>Submits the current control state to the Engine and applies its receipt in the admitted update order.</summary>
+    /// <summary>
+    /// Submits the current control state to the Engine and applies its receipt in the admitted update order. Null, with
+    /// no receipt applied, when the Engine refuses a body its recovery cannot free: the player is then stood clear or
+    /// held (<see cref="CharacterPenetration"/>).
+    /// </summary>
     public CharacterStepReceipt? Step(PlayerControlState player, ProductUpdateState update, CharacterStepEnvironment? environment = null, CharacterStepControls? controls = null)
     {
         if (_disposed) return null;
@@ -229,7 +235,17 @@ public sealed class SpatialMovementSystem : IDisposable
             stepEnvironment.MeshInstances,
             config,
             command);
-        CharacterStepReceipt receipt = _spatial.ProposeCharacterStep(request);
+        CharacterStepReceipt receipt;
+        try
+        {
+            receipt = _spatial.ProposeCharacterStep(request);
+        }
+        catch (EngineCallException failure) when (CharacterPenetration.IsUnresolved(failure))
+        {
+            StandClear(player, position, motion.Stance, config, stepEnvironment, failure);
+            return null;
+        }
+        _heldInCollision = false;
         _latestGeneration = receipt.Generation;
         // Population may admit direct Engine character steps after the player. Capture the
         // player's full native continuation at this boundary so a later save never asks the
@@ -722,11 +738,37 @@ public sealed class SpatialMovementSystem : IDisposable
         if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
         ArgumentNullException.ThrowIfNull(player);
         position.Validate();
-        // A relocated character has not fallen from anywhere: its fall starts where it now is.
-        player.Restore(position, default(CharacterMotion) with { PeakY = position.Y, FallOriginY = position.Y });
+        Relocate(player, position, CharacterStance.Standing);
+    }
+
+    // A relocated character starts at rest in its stance and has not fallen from anywhere: its fall starts where it now is.
+    private void Relocate(PlayerControlState player, WorldPoint position, CharacterStance stance)
+    {
+        player.Restore(position, default(CharacterMotion) with { Stance = stance, PeakY = position.Y, FallOriginY = position.Y });
         _latestGeneration = null;
         _latestCheckpoint = null;
         _restoredCheckpoint = null;
+        _heldInCollision = false;
+    }
+
+    /// <summary>
+    /// The Engine refused the player's step for a body its recovery cannot free. The player is stood at the nearest clear
+    /// spot in reach, in the stance they had, and steps on from there next update; with none clear they stay where they
+    /// are, reported once until a step is accepted or the player is moved.
+    /// </summary>
+    private void StandClear(PlayerControlState player, WorldPoint position, CharacterStance stance,
+        CharacterControllerConfig config, CharacterStepEnvironment environment, EngineCallException failure)
+    {
+        if (CharacterPenetration.NearestClearCentre(_spatial, _session, config, stance, position.ToVector(), environment) is { } clear)
+        {
+            WorldPoint stood = WorldPoint.From(clear);
+            Relocate(player, stood, stance);
+            Console.Error.WriteLine($"The player is stood clear at {stood}, out of collision at {position}: {failure.Message}");
+            return;
+        }
+        if (_heldInCollision) return;
+        _heldInCollision = true;
+        Console.Error.WriteLine($"The player stays at {position}, with no clear spot within {config.Recovery.MaximumDistance} m: {failure.Message}");
     }
 
     /// <summary>Captures the Engine-owned continuation only at a completed proposal boundary.</summary>

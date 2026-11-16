@@ -63,7 +63,8 @@ public sealed class ActorNavigationCoordinator
     private readonly ISpatialService _spatial;
     private readonly SpatialSession _session;
     private readonly bool _useCharacterController;
-    private readonly HashSet<EntityId> _reportedPenetrations = [];
+    // Actors held in collision with no clear spot in reach, each reported once until it steps (CharacterPenetration).
+    private readonly HashSet<EntityId> _heldInCollision = [];
     private readonly CharacterControllerConfig _characterControllerConfig;
     private readonly Func<ActorState, CharacterStepEnvironment>? _environmentProvider;
 
@@ -81,7 +82,9 @@ public sealed class ActorNavigationCoordinator
 
     /// <summary>
     /// Evaluates one Engine-owned navigation step. Only an explicit Reached
-    /// outcome changes product pose; every other Engine fact leaves it intact.
+    /// outcome changes product pose; every other Engine fact leaves it intact,
+    /// but for a body the Engine cannot free, which is stood clear if it can
+    /// be (<see cref="CharacterPenetration"/>).
     /// </summary>
     public NavigationStepResult Evaluate(ActorState actor, ActorNavigationRequest request)
     {
@@ -189,13 +192,13 @@ public sealed class ActorNavigationCoordinator
                 _session, before.Position.ToVector() + centerOffset, motion, environment.Support,
                 environment.Obstacles, environment.MeshInstances, _characterControllerConfig, command));
         }
-        catch (EngineCallException failure) when (IsUnresolvedPenetration(failure))
+        catch (EngineCallException failure) when (CharacterPenetration.IsUnresolved(failure))
         {
-            if (_reportedPenetrations.Add(actor.Actor.Entity))
-                Console.Error.WriteLine($"Actor {actor.DurableId} stays at {before.Position}: {failure.Message}");
-            return CharacterReceipt(NavigationPathOutcome.StartBlocked, before.Position.ToVector(), 0);
+            StandClear(actor, motion, environment, failure);
+            return CharacterReceipt(NavigationPathOutcome.StartBlocked, actor.Pose.Position.ToVector(), 0);
         }
 
+        _heldInCollision.Remove(actor.Actor.Entity);
         actor.Actor.Store.Set(actor.Actor.Entity, EngineComponentTypes.CharacterMotion, accepted.Motion);
         Vector3 position = accepted.Transform.Translation - centerOffset;
         bool moved = (accepted.Displacement.LengthSquared() > .0000001f)
@@ -216,7 +219,7 @@ public sealed class ActorNavigationCoordinator
     /// <summary>
     /// One step of an actor thrown at <paramref name="velocity"/>, or falling once it stops. The Engine
     /// character controller owns collision and gravity; a flying actor drifts without falling. Null when
-    /// the actor is wedged and cannot move.
+    /// the actor is wedged and cannot move: it is then stood clear or held (<see cref="CharacterPenetration"/>).
     /// </summary>
     public CharacterStepReceipt? Throw(ActorState actor, Vector3 velocity, ActorNavigationMode mode, float stepSeconds)
     {
@@ -239,12 +242,12 @@ public sealed class ActorNavigationCoordinator
                 _session, before.Position.ToVector() + centerOffset, motion, environment.Support,
                 environment.Obstacles, environment.MeshInstances, _characterControllerConfig, command));
         }
-        catch (EngineCallException failure) when (IsUnresolvedPenetration(failure))
+        catch (EngineCallException failure) when (CharacterPenetration.IsUnresolved(failure))
         {
-            if (_reportedPenetrations.Add(actor.Actor.Entity))
-                Console.Error.WriteLine($"Actor {actor.DurableId} stays at {before.Position}: {failure.Message}");
+            StandClear(actor, motion, environment, failure);
             return null;
         }
+        _heldInCollision.Remove(actor.Actor.Entity);
         actor.Actor.Store.Set(actor.Actor.Entity, EngineComponentTypes.CharacterMotion, accepted.Motion);
         actor.ApplyPose(new ActorPose(WorldPoint.From(accepted.Transform.Translation - centerOffset), before.HeadingYawRadians));
         return accepted;
@@ -267,12 +270,28 @@ public sealed class ActorNavigationCoordinator
         return Vector3.UnitY * (height * .5f + shape.ContactSkin + shape.ClearancePadding);
     }
 
-    private static bool IsUnresolvedPenetration(EngineCallException failure)
+    /// <summary>
+    /// The Engine refused an actor's step for a body its recovery cannot free. The actor is stood at the nearest clear
+    /// spot in reach, at rest in its stance, and steps on from there; with none clear it stays where it is, reported once
+    /// until it steps.
+    /// </summary>
+    private void StandClear(ActorState actor, CharacterMotion motion, CharacterStepEnvironment environment, EngineCallException failure)
     {
-        if (failure.Service != "Spatial" || failure.Operation != "ProposeCharacterStep") return false;
-        foreach (EngineDiagnostic diagnostic in failure.Diagnostics.Span)
-            if (diagnostic.Code == "unresolved-character-controller-penetration") return true;
-        return false;
+        ActorPose before = actor.Pose;
+        Vector3 centerOffset = CenterOffset(motion);
+        if (CharacterPenetration.NearestClearCentre(_spatial, _session, _characterControllerConfig, motion.Stance,
+                before.Position.ToVector() + centerOffset, environment) is { } clear)
+        {
+            actor.Actor.Store.Set(actor.Actor.Entity, EngineComponentTypes.CharacterMotion,
+                default(CharacterMotion) with { Stance = motion.Stance, PeakY = clear.Y, FallOriginY = clear.Y });
+            actor.ApplyPose(new ActorPose(WorldPoint.From(clear - centerOffset), before.HeadingYawRadians));
+            _heldInCollision.Remove(actor.Actor.Entity);
+            Console.Error.WriteLine($"Actor {actor.DurableId} is stood clear at {actor.Pose.Position}, out of collision at {before.Position}: {failure.Message}");
+            return;
+        }
+        if (_heldInCollision.Add(actor.Actor.Entity))
+            Console.Error.WriteLine($"Actor {actor.DurableId} stays at {before.Position}, with no clear spot within "
+                + $"{_characterControllerConfig.Recovery.MaximumDistance} m: {failure.Message}");
     }
 
     /// <summary>

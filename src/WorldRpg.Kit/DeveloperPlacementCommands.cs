@@ -17,7 +17,7 @@ public interface IDeveloperPlacementCommands : IDebugCommandModule
     [DebugCommand("world.teleport", Description = "Developer: stand the player at scene-local feet X Y Z (as navigation.targets reports positions). Refuses a spot the body would overlap.")]
     DebugCommandResult Teleport(double x, double y, double z) => Teleport(x, y, z, force: false);
 
-    [DebugCommand("world.teleport-force", Description = "Developer: stand the player at scene-local feet X Y Z even when the body would overlap collision there.")]
+    [DebugCommand("world.teleport-force", Description = "Developer: stand the player at scene-local feet X Y Z even when the body would overlap collision there; a body the Engine cannot step free is stood at the nearest clear spot within its recovery reach, or held there.")]
     DebugCommandResult TeleportForce(double x, double y, double z) => Teleport(x, y, z, force: true);
 
     [DebugCommand("world.move", Description = "Developer: move the player by a scene-local offset DX DY DZ, refusing an occupied spot.")]
