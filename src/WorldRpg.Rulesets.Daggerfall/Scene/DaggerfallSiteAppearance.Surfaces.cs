@@ -57,6 +57,7 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         surfaceArt = art;
         foreach (SurfaceMaterial surface in surfaceMaterials) AttachRefreshedSurface(surface);
+        UseShellArt(art);
         foreach (DecorationVisual flat in decorations) AttachDecorationFlats(flat);
         foreach (ActorVisual visual in actors.Values) AttachRefreshedPerson(visual);
         ApplySurfaces();
@@ -93,5 +94,6 @@ internal sealed partial class DaggerfallSiteAppearance
             appearance.UpdateMaterial(new MaterialUpdateRequest(surface.Material, SurfaceRequest(wanted, glass)));
             (surface.Current, surface.CurrentGlass, surface.Level) = (wanted, glass, level);
         }
+        ApplyShells(season, surfacesRefreshed);
     }
 }

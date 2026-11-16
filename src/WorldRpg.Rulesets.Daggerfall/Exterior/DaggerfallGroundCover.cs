@@ -263,7 +263,7 @@ internal sealed class DaggerfallGroundCover : IDisposable
                 (int, int) key = look.Layers[layer];
                 if (!_reliefShown || !_art.Relief.TryGetValue(key, out DaggerfallGroundRelief? art)) continue;
                 if (!relief.TryGetValue(key, out Stack? stack))
-                    relief[key] = stack = new(ReliefMaterials(key, art), art.Height, art.Shade, true, count);
+                    relief[key] = stack = new(ReliefMaterials(key, art), art.Tallest, art.Shade, true, count);
                 stack.Cover[vertex] += weight;
                 stack.Tint[vertex] = Vector3.One;
             }
@@ -342,10 +342,10 @@ internal sealed class DaggerfallGroundCover : IDisposable
     {
         if (_relief.TryGetValue(key, out (RenderResource Image, Material[] Layers) known)) return known.Layers;
         RenderResource image = _engine.Graphics.OpenTexture(_engine.Content, art.File.Path, art.File.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
-        int layers = Math.Max(1, Enumerable.Range(0, _tuning.ShellLayers).Count(layer => Cutoff(layer) < art.Height));
+        int layers = Math.Max(1, Enumerable.Range(0, _tuning.ShellLayers).Count(layer => Cutoff(layer) < art.Tallest));
         Material[] materials = [.. Enumerable.Range(0, layers).Select(layer =>
             // Only the top half of a stack glints, where light catches a drift's crest.
-            ShellLayer(image, layer, art.Texels, art.Texels / _groundRepeat, art.Sway * _tuning.ShellSway,
+            ShellLayer(image, layer, art.Width, art.Width / _groundRepeat, art.Sway * _tuning.ShellSway,
                 layer >= layers / 2 ? art.Glints : 0, art.SinksUnderSnow))];
         _relief[key] = (image, materials);
         return materials;

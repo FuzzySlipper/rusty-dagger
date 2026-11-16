@@ -8,15 +8,26 @@ namespace Daggerfall.Source.Tool.Remodels;
 /// <summary>
 /// One material of an authored remodel: the triangles it draws, each corner's position, normal and uv in the classic
 /// model's frame, and what it draws them with: a classic texture identity, or else the PNG the GLB carries for it, cut
-/// out where its alpha is under half when <paramref name="Mask"/>.
+/// out where its alpha is under half when <paramref name="Mask"/>. A classic texture may be drawn as one layer of a
+/// shell stack (<paramref name="Shell"/>).
 /// </summary>
-internal sealed record RemodelPart(string? ClassicMaterial, byte[]? Png, IReadOnlyList<(Vector3 Position, Vector3 Normal, Vector2 Uv)> Corners, bool Mask = false);
+internal sealed record RemodelPart(string? ClassicMaterial, byte[]? Png, IReadOnlyList<(Vector3 Position, Vector3 Normal, Vector2 Uv)> Corners, bool Mask = false,
+    RemodelShell? Shell = null);
+
+/// <summary>
+/// One layer of a shell stack drawing a classic texture's relief, whose alpha is each texel's height: layer 0 is the
+/// stack's core, drawn whole, and layer K of N shows the texels at least K/N tall, so a texel's column rises from the core
+/// to the outermost layer.
+/// </summary>
+internal sealed record RemodelShell(int Layer, int Layers);
 
 /// <summary>
 /// Reads an authored remodel from a binary glTF (GLB): every triangle of the default scene, placed by its nodes'
 /// transforms, grouped by material. The GLB is in the classic model's own frame: importer space, right-handed metres with
 /// Y up, as glTF is. A material named <c>texture-A-R</c> (or <c>material/texture-A-R</c>) draws that classic texture
-/// record, its uvs in whole repeats of the record with v down, as glTF's are; any other material carries its own PNG base
+/// record, its uvs in whole repeats of the record with v down, as glTF's are, and one whose glTF <c>extras</c> state
+/// <c>"shell": {"layer": K, "layers": N}</c> draws it as layer K of an N-layer shell stack (<see cref="RemodelShell"/>), the
+/// slot's own <c>shell</c> in the art pack; any other material carries its own PNG base
 /// colour, opaque or, with glTF's <c>alphaMode</c> <c>MASK</c> at the default cutoff of half, cut out by its alpha. That PNG
 /// is written again as 8-bit RGBA, the only PNG the Engine admits as a texture, whatever 8-bit truecolour form the GLB
 /// carries it in. Only what an authoring tool writes for a static mesh is read; anything else is refused by name.
@@ -117,10 +128,16 @@ internal static class RemodelGlb
             string alpha = material.TryGetProperty("alphaMode", out JsonElement mode) ? mode.GetString() ?? "OPAQUE" : "OPAQUE";
             if (alpha is not ("OPAQUE" or "MASK") || material.TryGetProperty("alphaCutoff", out JsonElement cutoff) && cutoff.GetSingle() != 0.5F)
                 throw new InvalidDataException($"{label}'s material '{name}' is drawn {alpha} with its own cutoff: a remodel is opaque, or cut out at half its alpha (MASK).");
+            RemodelShell? shell = material.TryGetProperty("extras", out JsonElement extras) && extras.TryGetProperty("shell", out JsonElement stack)
+                ? new(stack.GetProperty("layer").GetInt32(), stack.GetProperty("layers").GetInt32()) : null;
+            if (shell is not null && (shell.Layers is < 2 or > 16 || shell.Layer < 0 || shell.Layer >= shell.Layers))
+                throw new InvalidDataException($"{label}'s material '{name}' is no layer of a shell stack of 2 to 16.");
             if (System.Text.RegularExpressions.Regex.Match(name, @"^(?:material/)?texture-(\d+)-(\d+)$") is { Success: true } classic)
                 return alpha == "MASK"
-                    ? throw new InvalidDataException($"{label}'s material '{name}' cuts out a classic texture, which draws the location's own opaque surface.")
-                    : new($"material/texture-{classic.Groups[1].Value}-{classic.Groups[2].Value}", null, corners);
+                    ? throw new InvalidDataException($"{label}'s material '{name}' cuts out a classic texture, which draws the location's own opaque surface or its shells' own cut.")
+                    : new($"material/texture-{classic.Groups[1].Value}-{classic.Groups[2].Value}", null, corners, Shell: shell);
+            if (shell is not null)
+                throw new InvalidDataException($"{label}'s material '{name}' stacks shells of a texture of its own: a shell stack draws a classic texture's relief.");
             if (!material.TryGetProperty("pbrMetallicRoughness", out JsonElement pbr) || !pbr.TryGetProperty("baseColorTexture", out JsonElement texture))
                 throw new InvalidDataException($"{label}'s material '{name}' names no classic texture (texture-A-R) and carries no base colour texture.");
             JsonElement image = root.GetProperty("images")[root.GetProperty("textures")[texture.GetProperty("index").GetInt32()].GetProperty("source").GetInt32()];

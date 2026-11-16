@@ -492,7 +492,10 @@ internal sealed class DaggerfallLocationAssembly
             List<DaggerfallSiteMesh> meshes = [.. _placedMeshes.Select(mesh => new DaggerfallSiteMesh(mesh.Path, mesh.Sha256, mesh.Pose, Bindings(mesh.Materials)) { ModelId = mesh.ModelId })];
             Dictionary<string, DaggerfallSiteRemodel> remodels = _remodels.ToDictionary(pair => pair.Key, pair => new DaggerfallSiteRemodel(
                 pair.Value.Art.File.Path, pair.Value.Art.File.Sha256, Bindings(pair.Value.Textures),
-                [.. pair.Value.Art.Slots.Where(slot => slot.Texture is not null).Select(slot => new DaggerfallRemodelTexture(slot.Slot, slot.Texture!.Path, slot.Texture.Sha256, slot.Mask))]),
+                [.. pair.Value.Art.Slots.Where(slot => slot.Texture is not null).Select(slot => new DaggerfallRemodelTexture(slot.Slot, slot.Texture!.Path, slot.Texture.Sha256, slot.Mask))])
+            {
+                Shells = pair.Value.Art.Slots.Where(slot => slot.Shell is not null).ToDictionary(slot => slot.Slot, slot => slot.Shell!),
+            },
                 StringComparer.Ordinal);
             DaggerfallRdbDoorDefinition[] doors = [.. _doors.Select(door => door.Visual is { } visual
                 ? door with { Visual = visual with { Materials = Bindings(Visual(visual)) } }

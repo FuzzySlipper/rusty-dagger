@@ -781,11 +781,12 @@ public sealed class PublishedContentDeliveryTests
     /// <summary>
     /// The refreshed ground cover ships its shells' texture, their shader and a tuft at the bytes it states, and grass
     /// colours for the temperate, mountain and swamp summers alone: the deserts' sand and the winters' snow grow none.
-    /// Every other open ground layer of those climates and their winters, and the desert's, has relief, and each
-    /// relief texture is as many texels a side as its layer's own ground texture, so it lies on the ground it lifts.
+    /// Every other open ground layer of those climates and their winters, and the desert's, has relief, as has every
+    /// texture a remodel's shell stack draws, and nothing else; each relief texture is its record's own size, so it lies
+    /// texel for texel on the surface it lifts.
     /// </summary>
     [Fact]
-    public void Refreshed_ground_cover_ships_its_files_grass_for_the_green_summers_alone_and_relief_for_open_ground()
+    public void Refreshed_ground_cover_ships_its_files_grass_for_the_green_summers_alone_and_relief_for_open_ground_and_shells()
     {
         ProductContent content = AdmittedContent();
         const string payloadPath = "worldrpg/packs/daggerfall.art-replacements/payload.json";
@@ -801,11 +802,13 @@ public sealed class PublishedContentDeliveryTests
         (int, int)[] open = [.. new[] { 2, 102, 103, 302, 303, 402, 403 }.SelectMany(archive => DaggerfallGroundLayers.Records(archive).Take(archive == 402 ? 5 : 4)
             .Where((_, layer) => layer > 0 || !cover.Grass.ContainsKey(archive)))
             .Distinct()];
-        Assert.Equal(open.Order(), cover.Relief.Keys.Order());
+        (int, int)[] shelled = [.. art.Models.Values.SelectMany(model => model.Slots).Where(slot => slot.Shell is not null)
+            .Select(slot => slot.Material!.Split('-')).Select(part => (int.Parse(part[1], CultureInfo.InvariantCulture), int.Parse(part[2], CultureInfo.InvariantCulture))).Distinct()];
+        Assert.Equal(open.Union(shelled).Order(), cover.Relief.Keys.Order());
         foreach (((int archive, int record), DaggerfallGroundRelief relief) in cover.Relief)
         {
-            Assert.True(relief.Height is > 0 and <= 1);
-            Assert.Equal(art.Surfaces[(archive, record)].Width, relief.Texels);
+            Assert.True(relief.Tallest is > 0 and <= 1);
+            Assert.Equal((art.Surfaces[(archive, record)].Width, art.Surfaces[(archive, record)].Height), (relief.Width, relief.Height));
         }
     }
 

@@ -10,7 +10,8 @@
 - relief for the other open ground layers: each is its refreshed ground texture itself, texel for texel, with an alpha
   that is the texel's height, so a stack of shells over it lifts the ground into pixel relief: clods with stray grass on
   dirt, pebbles on rock, ripples and plates on sand, drifts on snow, tall grass on a swamp's lush ground. Each kind sets
-  how tall it stands and what in the texture rises: its lighter texels, its green ones and its broad clumps.
+  how tall it stands and what in the texture rises: its lighter texels, its green ones and its broad clumps. A relief is
+  its record's own size, square or not, and states its tallest texel.
 
 Both images are greyscale, so the tint alone colours them. The textures are made in code from a fixed seed; run it again
 after changing them, or after the refreshed grass surfaces change.
@@ -70,15 +71,16 @@ rng = np.random.default_rng(10647)
 
 
 def tileable_noise(size, cell):
-    """Smooth value noise that wraps at the edges."""
-    grid = rng.random((size // cell, size // cell))
-    y, x = np.mgrid[:size, :size] / cell
+    """Smooth value noise that wraps at the edges, over a square side or a (rows, columns) size."""
+    rows, columns = (size, size) if np.isscalar(size) else size
+    grid = rng.random((rows // cell, columns // cell))
+    y, x = np.mgrid[:rows, :columns] / cell
     x0, y0 = x.astype(int), y.astype(int)
     fx, fy = x - x0, y - y0
     fx, fy = fx * fx * (3 - 2 * fx), fy * fy * (3 - 2 * fy)
-    n = grid.shape[0]
-    a, b = grid[y0 % n, x0 % n], grid[y0 % n, (x0 + 1) % n]
-    c, d = grid[(y0 + 1) % n, x0 % n], grid[(y0 + 1) % n, (x0 + 1) % n]
+    n, m = grid.shape
+    a, b = grid[y0 % n, x0 % m], grid[y0 % n, (x0 + 1) % m]
+    c, d = grid[(y0 + 1) % n, x0 % m], grid[(y0 + 1) % n, (x0 + 1) % m]
     return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy
 
 
@@ -127,7 +129,7 @@ def relief(ground, kind):
     light = linear(rgb) @ [.2126, .7152, .0722]
     detail = light - blur(light, 3)
     detail = np.clip(.5 + detail / (detail.std() * 4 + 1e-6), 0, 1)
-    size = rgba.shape[0]
+    size = rgba.shape[:2]
     clumps = tileable_noise(size, k["cell"]) * .7 + tileable_noise(size, max(2, k["cell"] // 3)) * .3
     height = np.clip(k["detail"] * detail + k["clump"] * clumps - .35, 0, 1)
     height[height < np.quantile(height, k["bare"])] = 0
@@ -166,10 +168,10 @@ def hashed(name):
 
 
 def relief_entry(archive, record, kind):
-    """A relief texture's file, its tallest texel as a share of the stack, and by its kind how it is drawn (LOOKS)."""
+    """A relief texture's file and size, its tallest texel as a share of the stack, and by its kind how it is drawn (LOOKS)."""
     image = relief(Image.open(CONTENT / TERRAIN / f"texture-{archive:03d}-{record}.png"), kind)
     return publish(f"relief-{archive:03d}-{record}", image) | {
-        "kind": kind, "height": round(np.asarray(image)[..., 3].max() / 255, 4)} | LOOKS.get(kind, LOOKS["ground"])
+        "kind": kind, "tallest": round(np.asarray(image)[..., 3].max() / 255, 4)} | LOOKS.get(kind, LOOKS["ground"])
 
 
 def main():

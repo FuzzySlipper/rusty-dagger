@@ -101,8 +101,25 @@ internal sealed record DaggerfallArtModel(DaggerfallArtFile File, IReadOnlyList<
 /// One material slot of a remodel: a classic texture identity (<c>material/texture-A-R</c>), drawn as the location's own
 /// surface for it with its refreshed art, climate, season and dungeon remaps, or else a PNG the art pack ships, opaque or,
 /// with <paramref name="Mask"/>, cut out where its alpha is under half, as a cutout layer of goods before a shelf's back.
+/// A classic texture may instead be drawn as one layer of a shell stack (<paramref name="Shell"/>).
 /// </summary>
-internal sealed record DaggerfallArtModelSlot(uint Slot, string? Material, DaggerfallArtFile? Texture, bool Mask = false);
+internal sealed record DaggerfallArtModelSlot(uint Slot, string? Material, DaggerfallArtFile? Texture, bool Mask = false, DaggerfallArtShell? Shell = null);
+
+/// <summary>
+/// One layer of a remodel's shell stack, the ground cover's effect on a model's faces: the mesh draws its classic texture's
+/// faces again in <paramref name="Layers"/> layers, each a step deeper inside the classic than the one over it, and each layer
+/// draws the relief of the texture the location draws there (<see cref="DaggerfallGroundCoverArt.Relief"/>), whose alpha is
+/// each texel's height. Layer 0 is the stack's core and draws every texel; layer K the texels at least K/N tall, so a
+/// texel's column rises from the core toward the classic's own faces.
+/// </summary>
+internal sealed record DaggerfallArtShell(int Layer, int Layers)
+{
+    /// <summary>The height a texel must reach to show in this layer, as a share of the stack: the ground's own cutoffs.</summary>
+    internal float Cutoff => (float)Layer / Layers;
+
+    /// <summary>How high the layer stands in its stack, from 0 at the core to 1 at the classic's faces.</summary>
+    internal float Height => (float)Layer / (Layers - 1);
+}
 
 /// <summary>
 /// A refreshed surface texture standing in for one classic texture record that walls, floors and ceilings draw: an RGBA
@@ -113,8 +130,9 @@ internal sealed record DaggerfallArtSurface(DaggerfallArtFile File, int Width, i
 /// <summary>
 /// The refreshed ground cover: a tileable shell texture whose alpha is each texel's blade height, this many texels square and
 /// drawn this many to the metre, the shader that sways the shells, and a grass tuft, both images greyscale; and each ground archive's grass, the
-/// linear tints that colour the shells and the tufts there. An archive the set names no grass for grows no grass. Each
-/// open ground layer's relief, by the ground archive and record it lifts, is that layer's own texture with its heights.
+/// linear tints that colour the shells and the tufts there. An archive the set names no grass for grows no grass. The relief
+/// of each classic texture record shells lift (every open ground layer, and each surface a remodel stacks in shells), by its
+/// archive and record, is that record's own refreshed texture with its texels' heights: the set's one home for them.
 /// </summary>
 internal sealed record DaggerfallGroundCoverArt(DaggerfallArtFile Shell, int ShellTexels, float ShellTexelsPerMetre, DaggerfallArtFile Shader, DaggerfallArtFile Tuft,
     IReadOnlyDictionary<int, (Vector3 Shells, Vector3 Tufts)> Grass, IReadOnlyDictionary<(int Archive, int Record), DaggerfallGroundRelief> Relief);
@@ -129,12 +147,14 @@ internal sealed record DaggerfallTreeArt(DaggerfallArtFile Mesh, float MeshHeigh
     (float Share, Vector3 Colour, int Texels)? Snow = null);
 
 /// <summary>
-/// A ground layer's relief: its own texture, whose alpha is each texel's height as a share of the shell stack; the tallest
-/// texel's share, so the stack draws only the layers it reaches; its texels a side; how far its top sways in the wind, as a
-/// share of the shells' sway; the linear colour its lowest layer is shaded to, rising to its own at the top; what share of
-/// its top texels glint as the viewer moves; and whether lying snow buries it, as it buries all but the snow's own relief.
+/// A classic texture record's relief, the art set's one home for its texels' heights, which a ground layer's shells and a
+/// remodel's shell stack draw: its refreshed texture, whose alpha is each texel's height as a share of the shell stack; the
+/// tallest texel's share, so the stack draws only the layers it reaches; its size in texels, as the record's (a ground
+/// tile's is square, a wall's need not be); how far its top sways in the wind, as a share of the shells' sway (a remodel's
+/// shells stand still); the linear colour its lowest layer is shaded to, rising to its own at the top; what share of its
+/// top texels glint as the viewer moves; and whether lying snow buries it, as it buries all but the snow's own relief.
 /// </summary>
-internal sealed record DaggerfallGroundRelief(DaggerfallArtFile File, float Height, int Texels, float Sway, Vector3 Shade, float Glints, bool SinksUnderSnow);
+internal sealed record DaggerfallGroundRelief(DaggerfallArtFile File, float Tallest, int Width, int Height, float Sway, Vector3 Shade, float Glints, bool SinksUnderSnow);
 
 /// <summary>
 /// A refreshed world billboard standing in for one classic texture record: a PNG atlas of its frames in classic order, each
@@ -235,9 +255,18 @@ internal sealed class DaggerfallArtReplacements
     /// (<c>…/texture-ARCHIVE-RECORD.png</c>), if the set has one.
     /// </summary>
     internal DaggerfallArtSurface? Surface(string texturePath) =>
+        Record(texturePath) is { } record && Surfaces.TryGetValue(record, out DaggerfallArtSurface? surface) ? surface : null;
+
+    /// <summary>
+    /// The relief of the classic texture record the importer published at <paramref name="texturePath"/>, which a remodel's
+    /// shell stack draws, if the set has one.
+    /// </summary>
+    internal DaggerfallGroundRelief? Relief(string texturePath) =>
+        Record(texturePath) is { } record && GroundCover?.Relief.TryGetValue(record, out DaggerfallGroundRelief? relief) == true ? relief : null;
+
+    private static (int Archive, int Record)? Record(string texturePath) =>
         System.Text.RegularExpressions.Regex.Match(texturePath, @"/texture-(\d+)-(\d+)\.png$") is { Success: true } match
-        && Surfaces.TryGetValue((int.Parse(match.Groups[1].Value), int.Parse(match.Groups[2].Value)), out DaggerfallArtSurface? surface)
-            ? surface : null;
+            ? (int.Parse(match.Groups[1].Value), int.Parse(match.Groups[2].Value)) : null;
 
     /// <summary>Every replacement.</summary>
     internal IEnumerable<DaggerfallArtReplacement> All => _byClassic.Values;
@@ -397,7 +426,11 @@ internal sealed class DaggerfallArtReplacements
                         string? alpha = slot.TryGetProperty("alpha", out JsonElement cut) ? cut.GetString() : null;
                         if (alpha is not (null or "mask") || alpha is not null && texture is null)
                             throw new InvalidOperationException($"Content pack '{packId}' cuts out a slot of {subject} by '{alpha}': only a texture of its own is cut out, by \"mask\".");
-                        return new DaggerfallArtModelSlot(slot.GetProperty("slot").GetUInt32(), material, texture, alpha == "mask");
+                        DaggerfallArtShell? shell = slot.TryGetProperty("shell", out JsonElement stack)
+                            ? new(stack.GetProperty("layer").GetInt32(), stack.GetProperty("layers").GetInt32()) : null;
+                        if (shell is not null && (material is null || shell.Layers is < 2 or > 16 || shell.Layer < 0 || shell.Layer >= shell.Layers))
+                            throw new InvalidOperationException($"Content pack '{packId}' states a slot of {subject} as no layer of a shell stack of 2 to 16 drawing a classic texture.");
+                        return new DaggerfallArtModelSlot(slot.GetProperty("slot").GetUInt32(), material, texture, alpha == "mask", shell);
                     })];
                     if (slots.Length == 0 || slots.DistinctBy(slot => slot.Slot).Count() != slots.Length)
                         throw new InvalidOperationException($"Content pack '{packId}' states {subject} without its slots, each once.");
@@ -464,11 +497,12 @@ internal sealed class DaggerfallArtReplacements
                 foreach (JsonProperty layer in cover.GetProperty("relief").EnumerateObject())
                 {
                     string[] key = layer.Name.Split('-');
-                    float height = layer.Value.GetProperty("height").GetSingle();
-                    if (key.Length != 2 || !float.IsFinite(height) || height is <= 0 or > 1)
-                        throw new InvalidOperationException($"Content pack '{packId}' states ground relief '{layer.Name}' without an archive, record and height.");
+                    float tallest = layer.Value.GetProperty("tallest").GetSingle();
+                    int width = layer.Value.GetProperty("width").GetInt32(), height = layer.Value.GetProperty("height").GetInt32();
+                    if (key.Length != 2 || !float.IsFinite(tallest) || tallest is <= 0 or > 1 || width <= 0 || height <= 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' states relief '{layer.Name}' without an archive, record, size and tallest texel.");
                     relief.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
-                        new(File(layer.Value, $"The ground relief {layer.Name}"), height, layer.Value.GetProperty("width").GetInt32(), layer.Value.GetProperty("sway").GetSingle(),
+                        new(File(layer.Value, $"The relief {layer.Name}"), tallest, width, height, layer.Value.GetProperty("sway").GetSingle(),
                             Tint(layer.Value.GetProperty("shade")), layer.Value.GetProperty("glints").GetSingle(),
                             layer.Value.GetProperty("sinksUnderSnow").GetBoolean()));
                 }
@@ -481,6 +515,9 @@ internal sealed class DaggerfallArtReplacements
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
+        // A shell stack draws with the ground cover's shader and relief, so a set that stacks shells has them.
+        if (groundCover is null && models.FirstOrDefault(model => model.Value.Slots.Any(slot => slot.Shell is not null)).Key is { } shelled)
+            throw new InvalidOperationException($"Content pack '{packId}' draws the remodel of ARCH3D model {shelled} in shells but has no ground cover to draw them with.");
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people)
         { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, PeopleRig = peopleRig, Models = models };
 

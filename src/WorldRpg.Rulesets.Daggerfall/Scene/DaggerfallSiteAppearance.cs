@@ -1075,6 +1075,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         actionModelVisuals.Clear();
         retired.AddRange(remodels.Values.Reverse());
         remodels.Clear();
+        shellMaterials.Clear();
+        reliefImages.Clear();
         foreach ((GateVisual open, GateVisual closed, ulong _) in gateVisuals.Values.Reverse()) retired.AddRange([closed.Classic, open.Classic]);
         gateVisuals.Clear();
         retired.AddRange(locationMaterials.AsEnumerable().Reverse());

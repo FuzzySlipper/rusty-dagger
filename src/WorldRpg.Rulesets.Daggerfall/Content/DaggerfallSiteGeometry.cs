@@ -48,10 +48,15 @@ internal sealed record DaggerfallSiteMesh(string Path, ContentSha256 Sha256, Tra
 /// <summary>
 /// The remodel a profile draws in place of one classic ARCH3D model while refreshed art is drawn: the art pack's static
 /// mesh, its slots that name classic texture identities bound to the profile's material slots for them (so they take the
-/// location's climate, season and dungeon remaps), and the rest bound to the textures the pack ships for them.
+/// location's climate, season and dungeon remaps), the rest bound to the textures the pack ships for them, and which of
+/// its classic slots draw their texture as a layer of a shell stack.
 /// </summary>
 internal sealed record DaggerfallSiteRemodel(string Path, ContentSha256 Sha256, IReadOnlyList<DaggerfallMeshMaterialBinding> Materials,
-    IReadOnlyList<DaggerfallRemodelTexture> Textures);
+    IReadOnlyList<DaggerfallRemodelTexture> Textures)
+{
+    /// <summary>The shell layer each stacked slot draws, by its mesh slot.</summary>
+    internal IReadOnlyDictionary<uint, DaggerfallArtShell> Shells { get; init; } = new Dictionary<uint, DaggerfallArtShell>();
+}
 
 /// <summary>A remodel's material slot that draws a texture the art pack ships, opaque or cut out by its alpha (<paramref name="Mask"/>).</summary>
 internal sealed record DaggerfallRemodelTexture(uint MeshSlot, string Path, ContentSha256 Sha256, bool Mask);

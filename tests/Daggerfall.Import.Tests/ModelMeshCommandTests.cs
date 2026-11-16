@@ -89,17 +89,17 @@ public sealed class ModelMeshCommandTests
     {
         // An 8-bit RGB texture, as image tools often write one: the Engine admits only 8-bit RGBA.
         byte[] png = Png(2, [200, 120, 40, 10, 20, 30]);
-        byte[] glb = Glb([("texture-67-0", null, Square(0), null), ("planks", png, Square(1), null), ("material/texture-85-0", null, Square(2), null), ("goods", png, Square(3), "MASK")]);
+        byte[] glb = Glb([("texture-67-0", null, Square(0), null, null), ("planks", png, Square(1), null, null), ("material/texture-85-0", null, Square(2), null, null), ("goods", png, Square(3), "MASK", null)]);
         IReadOnlyList<RemodelPart> parts = RemodelGlb.Read(glb, "41209.glb");
         Assert.Equal(["material/texture-67-0", null, "material/texture-85-0", null], parts.Select(part => part.ClassicMaterial));
         Assert.Equal([false, false, false, true], parts.Select(part => part.Mask));
         // The node's translation places the faces.
         Assert.Equal(new Vector3(0, 1, 0), parts[0].Corners[0].Position);
 
-        (byte[] bytes, IReadOnlyList<(string Material, int Slot)> slots, int triangles, IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) =
+        (byte[] bytes, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell)> slots, int triangles, IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) =
             ModelMeshCommand.Write("41209", parts, "packs/art/media/models");
         Assert.Equal(8, triangles);
-        Assert.Equal([("material/texture-67-0", 0), ("material/texture-85-0", 1), ("packs/art/media/models/41209-0.png", 2), ("packs/art/media/models/41209-1.png", 3)], slots);
+        Assert.Equal([("material/texture-67-0", 0, null), ("material/texture-85-0", 1, null), ("packs/art/media/models/41209-0.png", 2, null), ("packs/art/media/models/41209-1.png", 3, null)], slots);
         // One PNG drawn opaque and cut out is published once for each, written again as 8-bit RGBA with its colours kept.
         Assert.Equal([false, true], textures.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value.Mask));
         Assert.All(textures.Values, texture =>
@@ -114,9 +114,33 @@ public sealed class ModelMeshCommandTests
     }
 
     [Fact]
+    public void A_classic_texture_drawn_in_shells_is_a_slot_per_layer_and_a_stack_missing_a_layer_is_refused()
+    {
+        // A hedge's stack of three: its core and two layers inset over it, beside a plain classic slot.
+        byte[] glb = Glb([("texture-33-0", null, Square(0), null, new RemodelShell(0, 3)), ("texture-33-0", null, Square(1), null, new RemodelShell(1, 3)),
+            ("material/texture-33-0", null, Square(2), null, new RemodelShell(2, 3)), ("texture-29-0", null, Square(3), null, null)]);
+        IReadOnlyList<RemodelPart> parts = RemodelGlb.Read(glb, "750.glb");
+        Assert.All(parts, part => Assert.StartsWith("material/texture-", part.ClassicMaterial, StringComparison.Ordinal));
+        Assert.Equal([new RemodelShell(0, 3), new RemodelShell(1, 3), new RemodelShell(2, 3), null], parts.Select(part => part.Shell));
+
+        (byte[] bytes, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell)> slots, _, IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) =
+            ModelMeshCommand.Write("750", parts, "packs/art/media/models");
+        Assert.Empty(textures);
+        // Every layer is a slot of its own drawing the same classic texture, the mesh naming each by its layer.
+        Assert.Equal([("material/texture-29-0", null), ("material/texture-33-0", new RemodelShell(0, 3)), ("material/texture-33-0", new RemodelShell(1, 3)),
+            ("material/texture-33-0", new RemodelShell(2, 3))], slots.OrderBy(slot => slot.Slot).Select(slot => (slot.Material, slot.Shell)));
+        using EngineBinaryContent.StaticMesh mesh = EngineBinaryContent.ReadStaticMesh(bytes);
+        Assert.Contains("material/texture-33-0/shell-1-of-3", mesh.Root.GetProperty("materialSlots").EnumerateArray().Select(slot => slot.GetProperty("material").GetString()));
+
+        IReadOnlyList<RemodelPart> holed = RemodelGlb.Read(Glb([("texture-33-0", null, Square(0), null, new RemodelShell(0, 3)), ("texture-33-0", null, Square(2), null, new RemodelShell(2, 3))]), "750.glb");
+        Assert.Equal("The remodel of ARCH3D model 750 draws material/texture-33-0 in shell layers 0 of 3, 2 of 3: a stack has each of its layers.",
+            Assert.Throws<InvalidOperationException>(() => ModelMeshCommand.Write("750", holed, "packs/art/media/models")).Message);
+    }
+
+    [Fact]
     public void A_glb_texture_that_is_not_8_bit_truecolour_is_refused_with_its_format()
     {
-        byte[] glb = Glb([("planks", Png(3, [0, 1]), Square(0), null)]);
+        byte[] glb = Glb([("planks", Png(3, [0, 1]), Square(0), null, null)]);
         Assert.Equal("'41214.glb's material 'planks' texture' is not eight-bit non-interlaced truecolour PNG (bit depth 8, colour type 3).",
             Assert.Throws<InvalidOperationException>(() => RemodelGlb.Read(glb, "41214.glb")).Message);
     }
@@ -125,9 +149,13 @@ public sealed class ModelMeshCommandTests
     [InlineData("wood", false, null, "names no classic texture")]
     [InlineData("texture-67-0", false, "MASK", "cuts out a classic texture")]
     [InlineData("glass", true, "BLEND", "a remodel is opaque, or cut out at half its alpha")]
-    public void A_glb_material_the_game_cannot_draw_is_refused(string name, bool png, string? alpha, string reason)
+    [InlineData("texture-33-0", false, null, "is no layer of a shell stack of 2 to 16", 3, 3)]
+    [InlineData("texture-33-0", false, null, "is no layer of a shell stack of 2 to 16", 0, 1)]
+    [InlineData("texture-33-0", false, "MASK", "cuts out a classic texture", 1, 3)]
+    [InlineData("leaves", true, null, "a shell stack draws a classic texture's relief", 1, 3)]
+    public void A_glb_material_the_game_cannot_draw_is_refused(string name, bool png, string? alpha, string reason, int layer = 0, int layers = 0)
     {
-        byte[] glb = Glb([(name, png ? [0x89, (byte)'P'] : null, Square(0), alpha)]);
+        byte[] glb = Glb([(name, png ? Png(6, [1, 2, 3, 4, 5, 6, 7, 8]) : null, Square(0), alpha, layers == 0 ? null : new RemodelShell(layer, layers))]);
         Assert.Contains(reason, Assert.Throws<InvalidDataException>(() => RemodelGlb.Read(glb, "41209.glb")).Message, StringComparison.Ordinal);
     }
 
@@ -158,8 +186,11 @@ public sealed class ModelMeshCommandTests
     /// <summary>Two triangles of a unit square at height <paramref name="z"/>, in its own frame.</summary>
     private static Vector3[] Square(float z) => [new(0, 0, z), new(1, 0, z), new(1, 1, z), new(0, 0, z), new(1, 1, z), new(0, 1, z)];
 
-    /// <summary>A GLB of one node, lifted 1 m, with a primitive per material; a material with a PNG carries it as its base colour.</summary>
-    private static byte[] Glb(IReadOnlyList<(string Name, byte[]? Png, Vector3[] Corners, string? Alpha)> materials)
+    /// <summary>
+    /// A GLB of one node, lifted 1 m, with a primitive per material; a material with a PNG carries it as its base colour, and
+    /// one with a shell layer states it in its extras.
+    /// </summary>
+    private static byte[] Glb(IReadOnlyList<(string Name, byte[]? Png, Vector3[] Corners, string? Alpha, RemodelShell? Shell)> materials)
     {
         List<byte> binary = [];
         List<object> views = [], accessors = [], primitives = [], images = [], textures = [], materialList = [];
@@ -176,10 +207,11 @@ public sealed class ModelMeshCommandTests
             accessors.Add(new { bufferView = View(data), componentType = 5126, count, type });
             return accessors.Count - 1;
         }
-        foreach ((string name, byte[]? png, Vector3[] corners, string? alpha) in materials)
+        foreach ((string name, byte[]? png, Vector3[] corners, string? alpha, RemodelShell? shell) in materials)
         {
             Dictionary<string, object> material = new() { ["name"] = name };
             if (alpha is not null) material["alphaMode"] = alpha;
+            if (shell is not null) material["extras"] = new { shell = new { layer = shell.Layer, layers = shell.Layers } };
             if (png is not null)
             {
                 images.Add(new { bufferView = View(png), mimeType = "image/png" });

@@ -66,6 +66,9 @@ public sealed class ModelRemodelAssemblyTests
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "wood"}]}}""", "names neither one classic texture identity nor one texture of its own")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-67-0", "alpha": "mask"}]}}""", "only a texture of its own is cut out")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "alpha": "blend"}]}}""", "only a texture of its own is cut out")]
+    [InlineData("""{"750": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "shell": {"layer": 0, "layers": 2}}]}}""", "as no layer of a shell stack of 2 to 16 drawing a classic texture")]
+    [InlineData("""{"750": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-33-0", "shell": {"layer": 2, "layers": 2}}]}}""", "as no layer of a shell stack of 2 to 16 drawing a classic texture")]
+    [InlineData("""{"750": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-33-0", "shell": {"layer": 0, "layers": 1}}]}}""", "as no layer of a shell stack of 2 to 16 drawing a classic texture")]
     public void A_remodel_without_a_usable_id_or_slot_is_refused_by_name(string models, string reason)
     {
         string json = models.Replace("ENTRY", Entry("""{"slot": 0, "material": "material/texture-67-0"}"""), StringComparison.Ordinal).Replace("HASH", HashHex, StringComparison.Ordinal);
