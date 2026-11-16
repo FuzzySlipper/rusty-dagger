@@ -44,6 +44,33 @@ public static class DaggerfallInteriorLightFacts
         return [.. kept, .. lamps.Where(lamp => !outreached.Contains(lamp.Id))];
     }
 
+    /// <summary>
+    /// The classic hearths by ARCH3D model id, and where each one's fire burns in the model's own right-handed frame (x
+    /// right, y up, its front toward −z): just in front of the fire, so one light serves the classic fire face and #10848's
+    /// remodel firebox alike. The donor gave a hearth no light: its fire is a texture on the model, not a lamp flat.
+    /// </summary>
+    private static readonly Dictionary<string, NormalizedVector3> HearthFires = new(StringComparer.Ordinal)
+    {
+        ["41116"] = new(0F, -.25F, -.3F),
+        ["41117"] = new(0F, -.1F, -.42F),
+    };
+
+    /// <summary>A hearth's fire lights the room it heats as a hanging lantern does, in an ember's warmer colour.</summary>
+    private static readonly NormalizedLightPlacement HearthLight = new("light-hearth", new(0F, 0F, 0F), 10F, 1.4F, new(1F, .78F, .48F));
+
+    /// <summary>
+    /// The light of a hearth's fire, if <paramref name="modelId"/> is a hearth, where <paramref name="place"/> carries a
+    /// point of the model's import frame into the block's.
+    /// </summary>
+    internal static bool TryProjectHearth(string id, string modelId, Func<Arena2ImportPoint, Arena2ImportPoint> place, out NormalizedLightPlacement light)
+    {
+        light = default!;
+        if (!HearthFires.TryGetValue(modelId, out NormalizedVector3 fire)) return false;
+        // The import frame runs its z opposite to the right-handed frame the fire is measured in.
+        light = HearthLight with { Id = id, Position = MeshGeometry.ToRightHanded(place(new Arena2ImportPoint(fire.X, fire.Y, -fire.Z))) };
+        return true;
+    }
+
     private static float Distance(NormalizedVector3 a, NormalizedVector3 b) =>
         MathF.Sqrt(((a.X - b.X) * (a.X - b.X)) + ((a.Y - b.Y) * (a.Y - b.Y)) + ((a.Z - b.Z) * (a.Z - b.Z)));
 

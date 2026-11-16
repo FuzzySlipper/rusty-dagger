@@ -175,11 +175,14 @@ public sealed class WorldBlockNormalizer
         List<DaggerfallWorldBlockModel> models = [];
         List<NormalizedPropertyContainer> containers = [];
         List<DaggerfallWorldBlockTransitionDoor> exits = [];
+        List<NormalizedLightPlacement> hearths = [];
         BlockGeometry geometry = new();
         foreach (RmbBlockModel model in interiorModels)
         {
             Arch3dMesh mesh = RmbMesh(model);
             string modelId = $"model/{model.Ordinal}";
+            if (DaggerfallInteriorLightFacts.TryProjectHearth($"light-hearth/{PublishedIds.Slug(content.SourceKey)}/{model.Ordinal}", model.ModelId, model.Frame.Place,
+                out NormalizedLightPlacement hearth)) hearths.Add(hearth);
             var mapVertices = mesh.Planes.Where(plane => plane.Points.Count >= 3)
                 .SelectMany(plane => plane.Points).Select(point => MeshGeometry.ToRightHanded(model.Frame.Place(Arena2SourceTransform.ToImportPoint(point)))).ToArray();
             models.Add(RmbModel(modelId, model) with
@@ -209,7 +212,7 @@ public sealed class WorldBlockNormalizer
             { EntryFrame = content.InteriorEntryFrame(buildingIndex) with { Doors = [.. exits.Select(door => new NormalizedBuildingEntryDoor(door.Position, door.Normal))] } },
             TransitionDoors = exits,
             Billboards = decoration.Billboards,
-            Lights = decoration.Lights,
+            Lights = [.. decoration.Lights, .. hearths],
             StartMarker = FirstMarker(flats, RdbSourceClassification.StartMarkerRecord, "marker/start"),
             EnterMarker = FirstMarker(flats, RdbSourceClassification.EnterMarkerRecord, "marker/enter"),
             QuestMarkers = [.. flats
@@ -237,10 +240,13 @@ public sealed class WorldBlockNormalizer
         List<DaggerfallWorldBlockModel> models = [];
         List<DaggerfallWorldBlockDoor> doors = [];
         List<DaggerfallWorldBlockTransitionDoor> exits = [];
+        List<NormalizedLightPlacement> lamps = [];
         BlockGeometry geometry = new();
         foreach (RdbBlockModel model in content.Models)
         {
             string id = $"model/{scope}/{model.Index}";
+            if (!model.ActionModel && !model.ActionDoor && DaggerfallInteriorLightFacts.TryProjectHearth($"light-hearth/{scope}/{model.Index}", model.Source.ModelId,
+                point => model.Place(model.Rotate(point), origin), out NormalizedLightPlacement hearth)) lamps.Add(hearth);
             string? doorId = model.ActionDoor ? $"door/{scope}/{model.Index}" : null;
             Arena2EulerDegrees degrees = model.RotationDegrees;
             Arch3dMesh? mesh = RdbMesh(model.Source.ModelId);
@@ -298,7 +304,6 @@ public sealed class WorldBlockNormalizer
             }
         }
 
-        List<NormalizedLightPlacement> lamps = [];
         List<NormalizedBillboardPlacement> billboards = [];
         foreach (RdbBlockFlat flat in content.Flats.Where(flat => flat.Kind == RdbFlatKind.Billboard && !StaticNpcNormalization.IsDungeonNpc(flat.Source.TextureArchive)))
         {

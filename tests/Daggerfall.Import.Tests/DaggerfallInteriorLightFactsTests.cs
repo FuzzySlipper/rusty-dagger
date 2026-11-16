@@ -32,6 +32,17 @@ public sealed class DaggerfallInteriorLightFactsTests
         Assert.Equal(Centre.Y + aboveCentre, light.Position.Y, 4);
     }
 
+    /// <summary>A hearth's fire lights its room from just in front of the fire, in the model's own right-handed frame; other models give no light.</summary>
+    [Fact]
+    public void A_hearth_lights_from_in_front_of_its_fire()
+    {
+        Assert.True(DaggerfallInteriorLightFacts.TryProjectHearth("light-hearth/test/0", "41117", point => point, out NormalizedLightPlacement hearth));
+        Assert.Equal(new NormalizedVector3(0F, -.1F, -.42F), hearth.Position);
+        Assert.Equal("light-hearth/test/0", hearth.Id);
+        Assert.True(hearth.Range >= 6F);
+        Assert.False(DaggerfallInteriorLightFacts.TryProjectHearth("light-hearth/test/1", "41108", point => point, out _));
+    }
+
     [Fact]
     public void A_dungeon_lights_each_lamp_once_by_its_farther_reaching_light()
     {
