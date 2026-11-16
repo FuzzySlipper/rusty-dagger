@@ -53,6 +53,11 @@ internal sealed record DaggerfallPlayerSave(float X, float Y, float Z, float Yaw
 {
     /// <summary>Whether the player held the weapon drawn; a sheathed weapon stays sheathed across a load.</summary>
     [JsonRequired] public bool WeaponDrawn { get; init; } = true;
+    /// <summary>
+    /// Whether the body was crouched, as the donor saves <c>isCrouching</c> with the pose: the position is the body's
+    /// centre, which holds only in the stance it was saved in.
+    /// </summary>
+    [JsonRequired] public bool Crouched { get; init; }
     internal void Validate()
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z) || !float.IsFinite(YawRadians) || !float.IsFinite(PitchRadians))

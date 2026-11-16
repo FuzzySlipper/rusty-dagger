@@ -1050,7 +1050,8 @@ internal sealed partial class DaggerfallSession
         if (Holdings.BoardingRefusal(context, out DaggerfallWorldProfileKey ship) is { } refused) return refused; // Economy
         _exterior.NormalizeExteriorOrigin();                                                      // Exterior
         DaggerfallWorldProfileKey land = _activeProfileKey;
-        DaggerfallTransportPose pose = new(State.PlayerControl.Position!.Value, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians);
+        DaggerfallTransportPose pose = new(State.PlayerControl.Position!.Value, State.PlayerControl.YawRadians, State.PlayerControl.PitchRadians,
+            State.PlayerControl.Motion.Stance);
         // Admit the real ship projection before changing transport ownership or return state.
         if (!_sites.TryRelocate(new(ship, "start")))                                              // Interiors
             return new(false, State.Transport.Mode, State.Transport.OnShip, DaggerfallTransportRejection.ShipUnavailableAtSite, "The ship world is unavailable.");
@@ -1093,7 +1094,7 @@ internal sealed partial class DaggerfallSession
             _appearance.PlayGameplaySound(99, "neigh");                                           // Scene
         }
         if (result.Relocation is { } returnPose)
-            ApplyRelocation(returnPose.Position, returnPose.YawRadians, returnPose.PitchRadians); // Session
+            ApplyRelocation(returnPose.Position, returnPose.YawRadians, returnPose.PitchRadians, returnPose.Stance); // Session
     }
 
     /// <summary>
@@ -1412,9 +1413,10 @@ internal sealed partial class DaggerfallSession
     /// <summary>
     /// A relocation's list: retained input and open interaction state clear before the landing pose is installed. The
     /// Kit starts the next Engine proposal with detached motion, so stale floor support, jump state, and velocity
-    /// cannot carry across a teleport or admitted content replacement.
+    /// cannot carry across a teleport or admitted content replacement. The body keeps its stance, or takes the one a
+    /// remembered pose (a recall anchor, a door's or the ship's return) was taken in.
     /// </summary>
-    private void ApplyRelocation(WorldPoint position, float yawRadians, float pitchRadians)
+    private void ApplyRelocation(WorldPoint position, float yawRadians, float pitchRadians, CharacterStance? stance = null)
     {
         if (!float.IsFinite(yawRadians)) throw new ArgumentOutOfRangeException(nameof(yawRadians));
         if (!float.IsFinite(pitchRadians)) throw new ArgumentOutOfRangeException(nameof(pitchRadians));
@@ -1427,7 +1429,7 @@ internal sealed partial class DaggerfallSession
         State.PlayerControl.YawRadians = yawRadians;                                              // Character
         State.PlayerControl.PitchRadians = pitchRadians;                                          // Character
         State.Transport.Ride.Reset();                                                             // Travel
-        _spatial.Relocate(State.PlayerControl, position);                                         // Character
+        _spatial.Relocate(State.PlayerControl, position, stance);                                 // Character
         _camera.Update(State.PlayerControl);                                                      // Character
     }
 

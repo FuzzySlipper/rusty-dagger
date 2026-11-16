@@ -295,8 +295,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         return _sites.TryTransitionTo(destination, arrivalAnchor);
     }
 
-    void IDaggerfallExteriorHost.RelocatePlayer(WorldPoint position, float yawRadians, float pitchRadians) =>
-        ApplyRelocation(position, yawRadians, pitchRadians);
+    void IDaggerfallExteriorHost.RelocatePlayer(WorldPoint position, float yawRadians, float pitchRadians, CharacterStance? stance) =>
+        ApplyRelocation(position, yawRadians, pitchRadians, stance);
 
     void IDaggerfallExteriorHost.ConfigureSiteAppearance(DaggerfallSiteAppearance appearance) =>
         ConfigureSiteAppearance(appearance);

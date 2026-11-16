@@ -97,7 +97,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             playerPosition.X, playerPosition.Y, playerPosition.Z,
             control.YawRadians, control.PitchRadians,
             DaggerfallStatsSaveBoundary.Capture(State.Actors.Player.Stats, State.Actors.Player.Actor.Entity))
-        { WeaponDrawn = State.WeaponDrawn };
+        { WeaponDrawn = State.WeaponDrawn, Crouched = control.Motion.Stance == CharacterStance.Crouched };
         DaggerfallActorSave[] actors = State.Actors.All
             .Where(actor => !dynamicActors.ContainsKey(actor.DurableId))
             .OrderBy(actor => actor.DurableId)
@@ -397,7 +397,12 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         State.PlayerControl.YawRadians = saved.Player.YawRadians;
         State.PlayerControl.PitchRadians = saved.Player.PitchRadians;
         State.WeaponDrawn = saved.Player.WeaponDrawn;
-        State.PlayerControl.Restore(position, default(CharacterMotion) with { PeakY = position.Y, FallOriginY = position.Y });
+        State.PlayerControl.Restore(position, default(CharacterMotion) with
+        {
+            Stance = saved.Player.Crouched ? CharacterStance.Crouched : CharacterStance.Standing,
+            PeakY = position.Y,
+            FallOriginY = position.Y,
+        });
         // Native continuation and held input start fresh; durable pose and corpse relationships are restored.
         _corpseLoot.Restore(saved.Corpses, CorpseIdentities(saved.Corpses));
         State.Kit.AttackExecution.RestoreCooldowns(saved.CombatCooldowns.Select(value => new AttackCooldown(value.AttackerId, value.RemainingSteps)));

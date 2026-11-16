@@ -165,7 +165,7 @@ internal sealed partial class DaggerfallSession
                     definitions.Locations,
                     ToSiteId(restoredSite.Active),
                     ToSiteId(restoredSite.ReturnAnchor),
-                    ToSiteReturnPose(restoredSite.ReturnPose),
+                    restoredSite.ReturnPose?.Restore(),
                     restoredSite.Discovered.Select(id => id.Require()), restoredSite.Buildings, restoredSite.FailedBuildingPicks)
                 : new World.DaggerfallSiteContext(definitions.Locations, inputs.Site, null, []);
             LocalWeather = new DaggerfallWeather(weather, (x, y) => definitions.Grids.ClimateAtWorldPixel(x, y).Value,
@@ -1298,8 +1298,4 @@ internal sealed partial class DaggerfallSession
         .Select(actor => actor.Position.ToVector());
 
     private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();
-
-    private static World.DaggerfallSiteReturnPose? ToSiteReturnPose(DaggerfallSiteReturnPoseSave? pose) => pose is null
-        ? null
-        : new World.DaggerfallSiteReturnPose(new WorldPoint(pose.X, pose.Y, pose.Z), pose.YawRadians, pose.PitchRadians);
 }

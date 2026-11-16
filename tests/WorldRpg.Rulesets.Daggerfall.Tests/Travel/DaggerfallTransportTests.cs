@@ -1,3 +1,4 @@
+using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Controls;
@@ -15,16 +16,17 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallTransportTests
 {
     [Fact]
-    public void Ship_return_pose_persists_its_detached_land_profile_and_pose()
+    public void Ship_return_pose_persists_its_detached_land_profile_pose_and_stance()
     {
         DaggerfallTransportPolicy policy = new(DaggerfallTuning.Defaults.Transport);
-        Assert.True(policy.BoardShip(true, new(), new(new WorldPoint(1002, 3, 1004), .3f, .1f), new(new(17, 4), DaggerfallWorldProfileKind.Exterior, "land")).Applied);
+        Assert.True(policy.BoardShip(true, new(), new(new WorldPoint(1002, 3, 1004), .3f, .1f, CharacterStance.Crouched), new(new(17, 4), DaggerfallWorldProfileKind.Exterior, "land")).Applied);
         DaggerfallTransportPolicy restored = new(DaggerfallTuning.Defaults.Transport);
         restored.Restore(policy.Capture());
         DaggerfallTransportPose left = Assert.IsType<DaggerfallTransportPose>(restored.LeaveShip().Relocation);
         Assert.Equal(new WorldPoint(1002, 3, 1004), left.Position);
         Assert.Equal(.3f, left.YawRadians);
         Assert.Equal(.1f, left.PitchRadians);
+        Assert.Equal(CharacterStance.Crouched, left.Stance);
     }
 
     [Fact]
@@ -79,7 +81,7 @@ public sealed class DaggerfallTransportTests
     [Fact]
     public void Ship_boarding_retains_return_pose_in_current_state_and_leaving_returns_it()
     {
-        DaggerfallTransportPose pose = new(new WorldPoint(12, 3, -8), 1.2f, -0.3f);
+        DaggerfallTransportPose pose = new(new WorldPoint(12, 3, -8), 1.2f, -0.3f, CharacterStance.Standing);
         DaggerfallTransportPolicy policy = new(DaggerfallTuning.Defaults.Transport);
 
         DaggerfallTransportActionResult boarded = policy.BoardShip(true, new(), pose, new(new(17, 4), DaggerfallWorldProfileKind.Exterior, "land"));

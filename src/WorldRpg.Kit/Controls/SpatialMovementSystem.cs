@@ -288,12 +288,7 @@ public sealed class SpatialMovementSystem : IDisposable
         ArgumentNullException.ThrowIfNull(player);
         if (player.Position is null) return false;
         CharacterShapeConfig shape = _controller.Shape;
-        float height = player.Motion.Stance switch
-        {
-            CharacterStance.Standing => shape.StandingHeight,
-            CharacterStance.Crouched => shape.CrouchedHeight,
-            _ => throw new ArgumentOutOfRangeException(nameof(player), "Character stance is invalid."),
-        };
+        float height = StanceHeight(player.Motion.Stance);
         float feetOffset = -height * 0.5f + shape.ContactSkin + shape.ClearancePadding;
         return TryProbeClimbWall(player, direction, feetOffset, out hit, environment);
     }
@@ -324,23 +319,34 @@ public sealed class SpatialMovementSystem : IDisposable
         return hit.Present;
     }
 
+    /// <summary>The height of the current controller's capsule in <paramref name="stance"/>.</summary>
+    public float StanceHeight(CharacterStance stance) => stance switch
+    {
+        CharacterStance.Standing => _controller.Shape.StandingHeight,
+        CharacterStance.Crouched => _controller.Shape.CrouchedHeight,
+        _ => throw new ArgumentOutOfRangeException(nameof(stance), "Character stance is invalid."),
+    };
+
     /// <summary>
-    /// Where a standing character placed at <paramref name="arrival"/> rests: the character position is its capsule's
-    /// centre, so a point on (or just above) a floor is raised until the standing capsule clears the first upward-facing
-    /// support found below half a standing height above it. A point already higher keeps its height and the character
-    /// falls from there, unless it is at most <paramref name="settleDepth"/> above its standing height: such a point is
-    /// lowered onto the support instead. With no support below, the point is returned unchanged.
+    /// Where a character in <paramref name="stance"/> placed at <paramref name="arrival"/> rests: the character position
+    /// is its capsule's centre, so a point on (or just above) a floor is raised until that stance's capsule clears the
+    /// first upward-facing support found below half its height above it, as the donor's <c>FixStanding</c> stands the
+    /// body by the controller's current height. A point already higher keeps its height and the character falls from
+    /// there, unless it is at most <paramref name="settleDepth"/> above its standing height: such a point is lowered onto
+    /// the support instead. With no support below, the point is returned unchanged.
     /// </summary>
-    public WorldPoint StandingPosition(WorldPoint arrival, CharacterStepEnvironment? environment = null, float settleDepth = 0f)
+    public WorldPoint StandingPosition(WorldPoint arrival, CharacterStance stance, CharacterStepEnvironment? environment = null,
+        float settleDepth = 0f)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
         arrival.Validate();
         if (!float.IsFinite(settleDepth) || settleDepth < 0f)
             throw new ArgumentOutOfRangeException(nameof(settleDepth), "A settle depth must be finite and non-negative.");
         CharacterShapeConfig shape = _controller.Shape;
-        float halfHeight = shape.StandingHeight * .5f;
+        float height = StanceHeight(stance);
+        float halfHeight = height * .5f;
         SpatialHit floor = CastRay(arrival.ToVector() + (Vector3.UnitY * halfHeight), -Vector3.UnitY,
-            (shape.StandingHeight * 2f) + settleDepth, environment);
+            (height * 2f) + settleDepth, environment);
         if (!floor.Present || floor.StartSolid || floor.Normal.Y <= 0f) return arrival;
         float standing = floor.Point.Y + halfHeight + shape.ContactSkin + shape.ClearancePadding;
         if (arrival.Y >= standing && arrival.Y - standing > settleDepth) return arrival;
@@ -447,12 +453,7 @@ public sealed class SpatialMovementSystem : IDisposable
             throw new InvalidOperationException("A character collider requires a live player position.");
 
         CharacterShapeConfig shape = _controller.Shape;
-        float height = player.Motion.Stance switch
-        {
-            CharacterStance.Standing => shape.StandingHeight,
-            CharacterStance.Crouched => shape.CrouchedHeight,
-            _ => throw new ArgumentOutOfRangeException(nameof(player), "Character stance is invalid."),
-        };
+        float height = StanceHeight(player.Motion.Stance);
         float radius = shape.Radius + shape.ContactSkin;
         float halfHeight = height * .5f + shape.ClearancePadding;
         Vector3 center = position.ToVector();
@@ -738,19 +739,18 @@ public sealed class SpatialMovementSystem : IDisposable
     /// Starts the next Engine character proposal at a newly selected world position without carrying
     /// motion or support references from the former position. The Engine still owns grounding on
     /// that next proposal; this product state only supplies its safe, detached starting point.
+    /// The body keeps its stance, as the donor moves a crouched player crouched, unless <paramref name="stance"/> names the
+    /// one a remembered pose was taken in: the position is the capsule's centre, which holds only for that stance.
     /// </summary>
-    public void Relocate(PlayerControlState player, WorldPoint position)
+    public void Relocate(PlayerControlState player, WorldPoint position, CharacterStance? stance = null)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
         ArgumentNullException.ThrowIfNull(player);
         position.Validate();
-        Relocate(player, position, CharacterStance.Standing);
-    }
-
-    // A relocated character starts at rest in its stance and has not fallen from anywhere: its fall starts where it now is.
-    private void Relocate(PlayerControlState player, WorldPoint position, CharacterStance stance)
-    {
-        player.Restore(position, default(CharacterMotion) with { Stance = stance, PeakY = position.Y, FallOriginY = position.Y });
+        CharacterStance kept = stance ?? player.Motion.Stance;
+        if (!Enum.IsDefined(kept)) throw new ArgumentOutOfRangeException(nameof(stance), "Character stance is invalid.");
+        // A relocated character starts at rest in its stance and has not fallen from anywhere: its fall starts where it now is.
+        player.Restore(position, default(CharacterMotion) with { Stance = kept, PeakY = position.Y, FallOriginY = position.Y });
         _latestGeneration = null;
         _latestCheckpoint = null;
         _restoredCheckpoint = null;

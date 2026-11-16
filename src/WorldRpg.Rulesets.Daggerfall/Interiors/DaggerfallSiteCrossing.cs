@@ -275,7 +275,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         pose.Validate();
         if (profile == ActiveProfile)
         {
-            _host.RelocatePlayer(_exterior.ProfileToLocal(pose.Position), pose.YawRadians, pose.PitchRadians);
+            _host.RelocatePlayer(_exterior.ProfileToLocal(pose.Position), pose.YawRadians, pose.PitchRadians, pose.Stance);
             if (profile.Kind == DaggerfallWorldProfileKind.Exterior) _exterior.FollowRecall();
             _exterior.StandArrivingPlayer();
             return true;
@@ -370,6 +370,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
         DaggerfallSiteContextCheckpoint sourceSite = _site.CaptureCheckpoint();
         float sourceYawRadians = player.YawRadians;
         float sourcePitchRadians = player.PitchRadians;
+        CharacterStance sourceStance = player.Motion.Stance;
         bool sourceLocationLoaded = _exterior.ActiveLocationLoaded;
         DaggerfallExteriorCellId? sourceLocationCell = _exterior.LocationCell;
         IReadOnlySet<long> sourceDynamicActorIds = _exterior.ActiveDynamicActorIds();
@@ -487,19 +488,20 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
                 // The player entered facing the doorway; as the donor's exit leaves them outside it, still
                 // facing the way they walked out, they stand where they entered turned away from the door.
                 _host.RelocatePlayer(DaggerfallSceneOrigin.Shift(returned.Pose.Position, destinationFrameOffset),
-                    MathF.IEEERemainder(returned.Pose.YawRadians + MathF.PI, MathF.Tau), returned.Pose.PitchRadians);
+                    MathF.IEEERemainder(returned.Pose.YawRadians + MathF.PI, MathF.Tau), returned.Pose.PitchRadians,
+                    returned.Pose.Stance);
             }
             else
             {
                 // A return belongs to the departed profile, independent of which town anchored
                 // the terrain window before the player walked here.
                 _site.Enter(destination.Site, DaggerfallSceneOrigin.Shift(sourcePosition, -sourceFrameOffset),
-                    player.YawRadians, player.PitchRadians);
+                    player.YawRadians, player.PitchRadians, sourceStance);
                 playerRelocated = true;
                 if (arrival is { } selected)
                     _host.RelocatePlayer(destination.Kind == DaggerfallWorldProfileKind.Exterior
                         ? DaggerfallSceneOrigin.Shift(selected.Position, destinationFrameOffset)
-                        : selected.Position, selected.YawRadians, selected.PitchRadians);
+                        : selected.Position, selected.YawRadians, selected.PitchRadians, selected.Stance);
                 else
                     _host.RelocatePlayer(destination.Kind == DaggerfallWorldProfileKind.Exterior
                         ? DaggerfallSceneOrigin.Shift(target.Project.PlayerPosition ?? sourcePosition, destinationFrameOffset)
@@ -615,7 +617,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
             catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
             if (playerRelocated)
             {
-                try { _host.RelocatePlayer(sourcePosition, sourceYawRadians, sourcePitchRadians); }
+                try { _host.RelocatePlayer(sourcePosition, sourceYawRadians, sourcePitchRadians, sourceStance); }
                 catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
             }
             try { _host.RebuildActivation(); }

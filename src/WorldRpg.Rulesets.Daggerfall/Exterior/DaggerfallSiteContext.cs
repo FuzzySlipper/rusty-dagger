@@ -336,7 +336,8 @@ internal sealed class DaggerfallSiteContext
     /// Enters a destination after runtime admission has accepted it, retaining the actual source pose
     /// that an exit restores.  The caller must not invoke this while merely preparing a candidate.
     /// </summary>
-    internal void Enter(DaggerfallSiteId id, WorldPoint sourcePosition, float sourceYawRadians, float sourcePitchRadians)
+    internal void Enter(DaggerfallSiteId id, WorldPoint sourcePosition, float sourceYawRadians, float sourcePitchRadians,
+        CharacterStance sourceStance)
     {
         if (!float.IsFinite(sourcePosition.X) || !float.IsFinite(sourcePosition.Y) || !float.IsFinite(sourcePosition.Z))
             throw new ArgumentOutOfRangeException(nameof(sourcePosition), "A return position must be finite.");
@@ -346,7 +347,7 @@ internal sealed class DaggerfallSiteContext
         if (Active is { } previous)
         {
             ReturnAnchor = previous;
-            _returnPose = new DaggerfallSiteReturnPose(sourcePosition, sourceYawRadians, sourcePitchRadians);
+            _returnPose = new DaggerfallSiteReturnPose(sourcePosition, sourceYawRadians, sourcePitchRadians, sourceStance).Validate();
         }
         SelectedBuilding = null;
         Active = record.Id;
@@ -436,21 +437,29 @@ internal sealed class DaggerfallSiteContext
         Active is { } active ? new DaggerfallSiteIdSave(active.Region, active.Index) : null,
         ReturnAnchor is { } anchor ? new DaggerfallSiteIdSave(anchor.Region, anchor.Index) : null,
         [.. _discovered.OrderBy(id => id.Region).ThenBy(id => id.Index).Select(id => new DaggerfallSiteIdSave(id.Region, id.Index))],
-        _returnPose is { } pose ? new DaggerfallSiteReturnPoseSave(pose.Position.X, pose.Position.Y, pose.Position.Z, pose.YawRadians, pose.PitchRadians) : null)
+        _returnPose?.Capture())
         { Buildings = _buildingsDiscovered.OrderBy(value => value.Site.Region).ThenBy(value => value.Site.Index)
             .ThenBy(value => value.Building.BlockX).ThenBy(value => value.Building.BlockY).ThenBy(value => value.Building.Index).ToArray(), FailedBuildingPicks = FailedPicks() };
 }
 
-/// <summary>Return placement retained by a site context; it is product state, never a runtime entity handle.</summary>
-internal sealed record DaggerfallSiteReturnPose(WorldPoint Position, float YawRadians, float PitchRadians)
+/// <summary>
+/// Return placement retained by a site context; it is product state, never a runtime entity handle. The position is the
+/// body's centre, which holds only in the stance the body had there, so the pose keeps that stance too.
+/// </summary>
+internal sealed record DaggerfallSiteReturnPose(WorldPoint Position, float YawRadians, float PitchRadians, CharacterStance Stance)
 {
-    internal void Validate()
+    internal DaggerfallSiteReturnPose Validate()
     {
         if (!float.IsFinite(Position.X) || !float.IsFinite(Position.Y) || !float.IsFinite(Position.Z))
             throw new ArgumentOutOfRangeException(nameof(Position), "A return position must be finite.");
         if (!float.IsFinite(YawRadians) || !float.IsFinite(PitchRadians))
             throw new ArgumentOutOfRangeException(nameof(YawRadians), "A return look must be finite.");
+        if (!Enum.IsDefined(Stance)) throw new ArgumentOutOfRangeException(nameof(Stance), "A return stance must be defined.");
+        return this;
     }
+
+    internal DaggerfallSiteReturnPoseSave Capture() =>
+        new(Position.X, Position.Y, Position.Z, YawRadians, PitchRadians) { Crouched = Stance == CharacterStance.Crouched };
 }
 
 internal sealed record DaggerfallSiteReturnDestination(DaggerfallSiteId Site, DaggerfallSiteReturnPose Pose);
@@ -480,6 +489,9 @@ internal sealed record DaggerfallSiteBuildingRecord(DaggerfallSiteId Site, Dagge
 /// <summary>The exact player pose to restore when a site transition returns to its source.</summary>
 internal sealed record DaggerfallSiteReturnPoseSave(float X, float Y, float Z, float YawRadians, float PitchRadians)
 {
+    /// <summary>Whether the body was crouched there, as the donor saves <c>isCrouching</c> with every pose.</summary>
+    [JsonRequired] public bool Crouched { get; init; }
+
     internal void Validate()
     {
         if (!float.IsFinite(X) || !float.IsFinite(Y) || !float.IsFinite(Z))
@@ -487,6 +499,9 @@ internal sealed record DaggerfallSiteReturnPoseSave(float X, float Y, float Z, f
         if (!float.IsFinite(YawRadians) || !float.IsFinite(PitchRadians))
             throw new ArgumentException("A saved site return look must be finite.");
     }
+
+    internal DaggerfallSiteReturnPose Restore() => new DaggerfallSiteReturnPose(new WorldPoint(X, Y, Z), YawRadians, PitchRadians,
+        Crouched ? CharacterStance.Crouched : CharacterStance.Standing).Validate();
 }
 
 /// <summary>The delta a site context saves: where the player is, the entrance it returns to and what play revealed.</summary>

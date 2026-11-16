@@ -114,9 +114,9 @@ internal sealed class DaggerfallTeleport(IDaggerfallTeleportSites sites, PlayerC
             var position = sites.ProfilePosition(player.Position!.Value);
             var returned = sites.ReturnPose;
             _anchor = new(DaggerfallWorldProfileKeySave.Capture(sites.ActiveProfile),
-                new(position.X, position.Y, position.Z, player.YawRadians, player.PitchRadians),
+                new(position.X, position.Y, position.Z, player.YawRadians, player.PitchRadians) { Crouched = player.Motion.Stance == CharacterStance.Crouched },
                 sites.ReturnProfile is { } profile ? DaggerfallWorldProfileKeySave.Capture(profile) : null,
-                returned is null ? null : new(returned.Position.X, returned.Position.Y, returned.Position.Z, returned.YawRadians, returned.PitchRadians),
+                returned?.Capture(),
                 transport.OnShip ? ownedShip() : null,
                 transport.OnShip ? transport.Capture() : null);
             presentation.SetOutcome("Teleport anchor set."); return;
@@ -127,14 +127,14 @@ internal sealed class DaggerfallTeleport(IDaggerfallTeleportSites sites, PlayerC
         { presentation.SetOutcome("The anchored ship is no longer owned."); return; }
         try
         {
-            var pose = anchor.Pose;
-            if (!sites.TryRelocatePlayer(anchor.Profile.Require(), new("teleport-recall", new(pose.X, pose.Y, pose.Z), pose.YawRadians, pose.PitchRadians)))
+            // The donor's recall restores the anchor as a saved pose, crouch included (Teleport.cs, SerializablePlayer.RestorePosition).
+            DaggerfallSiteReturnPose pose = anchor.Pose.Restore();
+            if (!sites.TryRelocatePlayer(anchor.Profile.Require(), new("teleport-recall", pose.Position, pose.YawRadians, pose.PitchRadians, pose.Stance)))
             { presentation.SetOutcome("The teleport destination could not be admitted."); return; }
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException)
         { presentation.SetOutcome("The teleport failed; you remain where you are."); return; }
-        sites.RestoreReturnDestination(anchor.ReturnProfile?.Require(), anchor.ReturnPose is { } entrance
-            ? new(new(entrance.X, entrance.Y, entrance.Z), entrance.YawRadians, entrance.PitchRadians) : null);
+        sites.RestoreReturnDestination(anchor.ReturnProfile?.Require(), anchor.ReturnPose?.Restore());
         if (anchor.ShipReturn is { } aboard) transport.Restore(aboard);
         else if (transport.OnShip) _ = transport.LeaveShip();
         _anchor = null;

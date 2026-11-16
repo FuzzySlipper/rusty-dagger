@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Numerics;
+using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Kit.Controls;
 
@@ -74,8 +75,12 @@ internal sealed record DaggerfallSitePortal(string Id, WorldPoint Position, floa
 /// <summary>
 /// A named, authored landing pose in one admitted profile. Dungeon actions, travel, recall, and
 /// quest policy resolve this stable content identity before changing the live site projection.
+/// An authored anchor names a floor, and the arriving body keeps its own stance there, as the donor's arrivals leave
+/// crouch alone. A recalled pose is a body's centre instead, which holds only in the <paramref name="Stance"/> it was
+/// taken in, so the body arrives in that stance, as the donor's recall restores the anchor's crouch.
 /// </summary>
-internal sealed record DaggerfallSiteAnchor(string Id, WorldPoint Position, float YawRadians, float PitchRadians)
+internal sealed record DaggerfallSiteAnchor(string Id, WorldPoint Position, float YawRadians, float PitchRadians,
+    CharacterStance? Stance = null)
 {
     internal DaggerfallSiteAnchor Validate()
     {
@@ -84,6 +89,7 @@ internal sealed record DaggerfallSiteAnchor(string Id, WorldPoint Position, floa
             throw new ArgumentOutOfRangeException(nameof(Position));
         if (!float.IsFinite(YawRadians)) throw new ArgumentOutOfRangeException(nameof(YawRadians));
         if (!float.IsFinite(PitchRadians)) throw new ArgumentOutOfRangeException(nameof(PitchRadians));
+        if (Stance is { } stance && !Enum.IsDefined(stance)) throw new ArgumentOutOfRangeException(nameof(Stance));
         return this;
     }
 }

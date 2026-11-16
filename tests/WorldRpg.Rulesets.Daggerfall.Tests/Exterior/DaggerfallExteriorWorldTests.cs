@@ -29,7 +29,7 @@ public sealed class DaggerfallExteriorWorldTests
 
     private sealed class Host : IDaggerfallExteriorHost, IDaggerfallSiteDeltas
     {
-        public void RelocatePlayer(WorldPoint position, float yawRadians, float pitchRadians) => throw new InvalidOperationException();
+        public void RelocatePlayer(WorldPoint position, float yawRadians, float pitchRadians, CharacterStance? stance) => throw new InvalidOperationException();
         public void RebuildActivation() => throw new InvalidOperationException();
         public void ConfigureSiteAppearance(DaggerfallSiteAppearance appearance) => throw new InvalidOperationException();
         public void RebaseTransientWorld(Vector3 delta) => throw new InvalidOperationException();

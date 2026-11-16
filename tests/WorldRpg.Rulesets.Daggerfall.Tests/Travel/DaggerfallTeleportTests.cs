@@ -1,4 +1,5 @@
 using System.Numerics;
+using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -34,6 +35,7 @@ public sealed class DaggerfallTeleportTests
         DaggerfallTeleportAnchor anchor = teleport.Anchor!;
         Assert.Equal(sites.ActiveProfile, anchor.Profile.Require());
         Assert.Equal((11f, 2f, 3f, .5f, .1f), (anchor.Pose.X, anchor.Pose.Y, anchor.Pose.Z, anchor.Pose.YawRadians, anchor.Pose.PitchRadians));
+        Assert.False(anchor.Pose.Crouched);
 
         teleport.Request("third");
         teleport.Choose("third", "recall");
@@ -41,6 +43,7 @@ public sealed class DaggerfallTeleportTests
         var (profile, pose) = Assert.Single(sites.Relocations);
         Assert.Equal(sites.ActiveProfile, profile);
         Assert.Equal(new WorldPoint(11f, 2f, 3f), pose.Position);
+        Assert.Equal(CharacterStance.Standing, pose.Stance);
         Assert.True(sites.ReturnRestored);
         Assert.Null(teleport.Anchor);
     }

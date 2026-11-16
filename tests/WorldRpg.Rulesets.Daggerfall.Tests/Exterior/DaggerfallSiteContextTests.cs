@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Rusty.Engine;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Controls;
@@ -251,7 +252,7 @@ public sealed class DaggerfallSiteContextTests
     }
 
     [Fact]
-    public void Persists_the_exact_source_pose_with_a_return_site()
+    public void Persists_the_exact_source_pose_and_its_stance_with_a_return_site()
     {
         DaggerfallDefinitions definitions = Read();
         DaggerfallSiteId settlement = new(17, 4);
@@ -260,19 +261,19 @@ public sealed class DaggerfallSiteContextTests
         DaggerfallSiteContext before = Context();
 
         before.Enter(settlement);
-        before.Enter(dungeon, sourcePosition, 1.25F, -0.3F);
+        before.Enter(dungeon, sourcePosition, 1.25F, -0.3F, CharacterStance.Crouched);
         DaggerfallSiteReturnDestination returnDestination = before.RequireReturnDestination();
         Assert.Equal(settlement, returnDestination.Site);
         Assert.Equal(sourcePosition, returnDestination.Pose.Position);
         Assert.Equal(1.25F, returnDestination.Pose.YawRadians);
         Assert.Equal(-0.3F, returnDestination.Pose.PitchRadians);
+        Assert.Equal(CharacterStance.Crouched, returnDestination.Pose.Stance);
 
         DaggerfallSiteSave saved = DaggerfallSavePayload.Read(DaggerfallSavePayload.Encode(Payload(before.Capture()))).Site;
         Assert.Equal(new DaggerfallSiteIdSave(17, 4), saved.ReturnAnchor);
-        Assert.Equal(new DaggerfallSiteReturnPoseSave(17.25F, 3.5F, -22.75F, 1.25F, -0.3F), saved.ReturnPose);
+        Assert.Equal(new DaggerfallSiteReturnPoseSave(17.25F, 3.5F, -22.75F, 1.25F, -0.3F) { Crouched = true }, saved.ReturnPose);
         DaggerfallSiteContext restored = new(definitions.Locations, ToId(saved.Active), ToId(saved.ReturnAnchor),
-            new DaggerfallSiteReturnPose(new WorldPoint(saved.ReturnPose!.X, saved.ReturnPose.Y, saved.ReturnPose.Z), saved.ReturnPose.YawRadians, saved.ReturnPose.PitchRadians),
-            saved.Discovered.Select(id => id.Require()));
+            saved.ReturnPose!.Restore(), saved.Discovered.Select(id => id.Require()));
         Assert.Equal(returnDestination, restored.RequireReturnDestination());
 
         restored.Leave();

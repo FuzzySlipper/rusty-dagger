@@ -56,7 +56,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         if (!force && BodyOverlap(feet) is { Present: true })
             return Refused($"The body would overlap collision at ({Format(feet)}); world.teleport-force places it anyway. "
                 + SpatialClearanceSnapshot.Capture(engine.Spatial, spatial.Session, PlayerCentre(), feet + Vector3.UnitY * FloorClearance,
-                    spatial.CurrentController.Shape.StandingHeight, spatial.CurrentController, SpatialMovementSystem.SpatialColliders(LiveCollision())));
+                    BodyHeight, spatial.CurrentController, SpatialMovementSystem.SpatialColliders(LiveCollision())));
         return Land(feet, player.YawRadians, player.PitchRadians, "developer-teleport");
     }
 
@@ -256,17 +256,19 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
     /// <summary>The gap a standing body keeps above its floor, as the movement owner stands it.</summary>
     private float FloorClearance => spatial.CurrentController.Shape.ContactSkin + spatial.CurrentController.Shape.ClearancePadding;
 
+    /// <summary>The player's body in its stance, which a relocation keeps: a crouched player is placed and measured crouched.</summary>
+    private float BodyHeight => spatial.StanceHeight(player.Motion.Stance);
+
     private Vector3 PlayerCentre() => player.Position!.Value.ToVector();
 
-    /// <summary>The floor under the standing player: the centre less half the body and its clearance.</summary>
-    private Vector3 PlayerFloor() =>
-        PlayerCentre() - Vector3.UnitY * ((spatial.CurrentController.Shape.StandingHeight * .5F) + FloorClearance);
+    /// <summary>The floor under the player: the centre less half the body and its clearance.</summary>
+    private Vector3 PlayerFloor() => PlayerCentre() - Vector3.UnitY * ((BodyHeight * .5F) + FloorClearance);
 
-    /// <summary>What a standing body on <paramref name="feet"/> would overlap in the retained collision, if anything.</summary>
+    /// <summary>What the player's body on <paramref name="feet"/> would overlap in the retained collision, if anything.</summary>
     private SpatialHit BodyOverlap(Vector3 feet)
     {
         var shape = spatial.CurrentController.Shape;
-        float halfHeight = shape.StandingHeight * .5F;
+        float halfHeight = BodyHeight * .5F;
         return spatial.OverlapCapsule(feet + Vector3.UnitY * (halfHeight + FloorClearance), Math.Max(0, halfHeight - shape.Radius), shape.Radius,
             ReadOnlyMemory<SpatialEntityCollider>.Empty, LiveCollision());
     }
@@ -279,7 +281,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
     private DebugCommandResult Land(Vector3 feet, float yaw, float pitch, string anchor)
     {
         fastTravel.CloseMap();
-        Vector3 centre = feet + Vector3.UnitY * ((spatial.CurrentController.Shape.StandingHeight * .5F) + FloorClearance);
+        Vector3 centre = feet + Vector3.UnitY * ((BodyHeight * .5F) + FloorClearance);
         Vector3 position = profilePosition(new WorldPoint(centre.X, centre.Y, centre.Z));
         if (!sites.TryRelocatePlayer(sites.ActiveProfile, new(anchor, new(position.X, position.Y, position.Z), yaw, pitch)))
             return Refused("The relocation was refused.");
@@ -367,7 +369,7 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
             ? new Vector3(normal.X, 0, normal.Z)
             : new Vector3(PlayerCentre().X - point.X, 0, PlayerCentre().Z - point.Z);
         float start = toward.LengthSquared() > .0001F ? MathF.Atan2(toward.X, toward.Z) : 0F;
-        float eye = spatial.CurrentController.Shape.StandingHeight * .9F;
+        float eye = BodyHeight * .9F;
         // A person's point is their feet; aim at their chest. A door or container is aimed at as it is.
         Vector3 aim = target.Kind == DaggerfallActivationTargetKind.Npc ? point + Vector3.UnitY : point;
         for (int step = 0; step < GoToBearings; step++)

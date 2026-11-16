@@ -52,8 +52,11 @@ internal interface IDaggerfallSiteDeltas
 /// </summary>
 internal interface IDaggerfallExteriorHost
 {
-    /// <summary>Installs a landing pose, clearing retained input and open interactions first.</summary>
-    void RelocatePlayer(WorldPoint position, float yawRadians, float pitchRadians);
+    /// <summary>
+    /// Installs a landing pose, clearing retained input and open interactions first. The body keeps its stance unless
+    /// <paramref name="stance"/> names the one a remembered pose was taken in.
+    /// </summary>
+    void RelocatePlayer(WorldPoint position, float yawRadians, float pitchRadians, CharacterStance? stance = null);
 
     /// <summary>Rebuilds contextual activation over the current projection.</summary>
     void RebuildActivation();
@@ -474,7 +477,7 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
             start = arrival with { Y = MathF.Max(arrival.Y, terrain) };
             settle = start.Y - terrain;
         }
-        WorldPoint standing = _spatial.StandingPosition(start, CharacterEnvironment(player.Motion), settle);
+        WorldPoint standing = _spatial.StandingPosition(start, player.Motion.Stance, CharacterEnvironment(player.Motion), settle);
         if (standing != arrival) _host.RelocatePlayer(standing, player.YawRadians, player.PitchRadians);
     }
 
@@ -663,8 +666,8 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
         PlayerControlState player = _player;
         if (player.Position is not WorldPoint position || player.Motion.Grounded
             || !TryExteriorTerrainHeight(position, out float terrain)) return false;
-        if (position.Y + (_spatial.CurrentController.Shape.StandingHeight * .5F) >= terrain) return false;
-        WorldPoint standing = _spatial.StandingPosition(position with { Y = terrain }, CharacterEnvironment(player.Motion));
+        if (position.Y + (_spatial.StanceHeight(player.Motion.Stance) * .5F) >= terrain) return false;
+        WorldPoint standing = _spatial.StandingPosition(position with { Y = terrain }, player.Motion.Stance, CharacterEnvironment(player.Motion));
         _host.RelocatePlayer(standing, player.YawRadians, player.PitchRadians);
         return true;
     }
