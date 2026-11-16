@@ -309,14 +309,17 @@ public sealed class WorldBlockNormalizer
         {
             NormalizedVector3 position = MeshGeometry.ToRightHanded(flat.Point);
             (int width, int height) = TextureExtent(flat.Source.TextureArchive, flat.Source.TextureRecord);
-            if (DaggerfallInteriorLightFacts.TryProject($"light-flat/{scope}/{flat.Index}", flat.Source, position, RdbBlockContent.ToMetres(height), out NormalizedLightPlacement light))
-                lamps.Add(light);
+            bool sheds = DaggerfallInteriorLightFacts.TryProject($"light-flat/{scope}/{flat.Index}", flat.Source, position, RdbBlockContent.ToMetres(height),
+                out NormalizedLightPlacement light);
+            if (sheds) lamps.Add(light);
             billboards.Add(new($"billboard/{scope}/{flat.Index}", $"sprite/texture-{flat.Source.TextureArchive}-{flat.Source.TextureRecord}", position,
                 new(RdbBlockContent.ToMetres(width), RdbBlockContent.ToMetres(height)))
-            { Lamp = DaggerfallInteriorLightFacts.BurningLamp(flat.Source.TextureArchive, flat.Source.TextureRecord) });
+            { Lamp = DaggerfallInteriorLightFacts.BurningLamp(flat.Source.TextureArchive, flat.Source.TextureRecord), Light = sheds ? light.Id : null });
         }
-        IReadOnlyList<NormalizedLightPlacement> lights = DaggerfallInteriorLightFacts.OnePerLamp([.. content.Lights.Select(light =>
-            new NormalizedLightPlacement($"light/{scope}/{light.Index}", MeshGeometry.ToRightHanded(light.Point), light.Range, 1F, new(1F, 1F, 1F)))], lamps);
+        (IReadOnlyList<NormalizedLightPlacement> lights, IReadOnlyDictionary<string, string> lampLights) = DaggerfallInteriorLightFacts.OnePerLamp(
+            [.. content.Lights.Select(light =>
+                new NormalizedLightPlacement($"light/{scope}/{light.Index}", MeshGeometry.ToRightHanded(light.Point), light.Range, 1F, new(1F, 1F, 1F)))], lamps);
+        billboards = [.. billboards.Select(flat => flat.Light is { } own ? flat with { Light = lampLights.GetValueOrDefault(own) } : flat)];
 
         RdbBlockFlat? start = content.Flats.FirstOrDefault(flat => flat.Kind == RdbFlatKind.StartMarker);
         RdbBlockFlat? enter = content.Flats.FirstOrDefault(flat => flat.Kind == RdbFlatKind.EnterMarker);

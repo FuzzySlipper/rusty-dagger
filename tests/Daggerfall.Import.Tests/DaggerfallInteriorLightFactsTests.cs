@@ -63,12 +63,30 @@ public sealed class DaggerfallInteriorLightFactsTests
         NormalizedLightPlacement lone = Light("light/lone", 40F, 5F);
         NormalizedLightPlacement farLamp = Light("light-flat/far", 43F, 10F);
 
-        IReadOnlyList<NormalizedLightPlacement> lights = DaggerfallInteriorLightFacts.OnePerLamp(
+        (IReadOnlyList<NormalizedLightPlacement> lights, IReadOnlyDictionary<string, string> lampLights) = DaggerfallInteriorLightFacts.OnePerLamp(
             [torchRecord, candleRecord, lone], [torch, candle, otherCandle, farLamp]);
 
         // The torch outreaches its record and stands for both; the record outreaches its candles and lights them; a record
         // with no lamp within two metres, and a lamp three metres from it, each light alone.
         Assert.Equal(["light/candle-record", "light/lone", "light-flat/torch", "light-flat/far"], lights.Select(light => light.Id));
+        // Each lamp's light is its own or the record that outreached it, which stands for its nearer candle alone, so no two
+        // lanterns would carry one light.
+        Assert.Equal(["light-flat/candle=light/candle-record", "light-flat/far=light-flat/far", "light-flat/torch=light-flat/torch"],
+            lampLights.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}={pair.Value}"));
+    }
+
+    [Fact]
+    public void A_lamp_outreached_by_two_records_takes_the_nearer()
+    {
+        NormalizedLightPlacement lantern = Light("light-flat/lantern", 0F, 4F);
+        NormalizedLightPlacement near = Light("light/near", .5F, 8F);
+        NormalizedLightPlacement far = Light("light/far", -1.5F, 8F);
+
+        (IReadOnlyList<NormalizedLightPlacement> lights, IReadOnlyDictionary<string, string> lampLights) =
+            DaggerfallInteriorLightFacts.OnePerLamp([far, near], [lantern]);
+
+        Assert.Equal(["light/far", "light/near"], lights.Select(light => light.Id));
+        Assert.Equal("light/near", Assert.Single(lampLights).Value);
     }
 
     private static NormalizedLightPlacement Light(string id, float x, float range) => new(id, new(x, 2F, 0F), range, 1F, new(1F, 1F, 1F));

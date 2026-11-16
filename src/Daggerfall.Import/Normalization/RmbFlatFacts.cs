@@ -32,25 +32,25 @@ internal sealed class RmbFlatFacts(DungeonLogicalSourceSet sources)
             var at = MeshGeometry.ToRightHanded(point);
             var basePosition = at with { Y = at.Y + (interior is null ? -6f * .025f : 0f) };
             string suffix = $"{scope}/{flat.Source.SourceOffset}";
+            bool lampFlat = flat.TextureArchive == DaggerfallInteriorLightFacts.Archive;
+            NormalizedLightPlacement? light = null;
+            if (lampFlat && interior is not null && DaggerfallInteriorLightFacts.TryProject($"light-flat/{suffix}", flat.TextureArchive, flat.TextureRecord,
+                at with { Y = at.Y + size.HeightMeters / 2f }, size.HeightMeters, out var projected)) light = projected;
+            // A street's lamp is DFU's city light, white and reaching 18 m, but at its flame rather than above its sprite's top.
+            else if (lampFlat && interior is null && DaggerfallInteriorLightFacts.Lit(flat.TextureRecord))
+                light = new($"light-flat/{suffix}", basePosition with
+                {
+                    Y = basePosition.Y + (size.HeightMeters / 2f) + DaggerfallInteriorLightFacts.FlameAboveCentre(flat.TextureRecord, size.HeightMeters),
+                }, 18f, 1f, new(1f, 1f, 1f)) { CityLight = true };
+            if (light is not null) lights.Add(light);
             billboards.Add(new($"billboard/{suffix}", $"sprite/texture-{flat.TextureArchive}-{flat.TextureRecord}", basePosition,
                 new(size.WidthMeters, size.HeightMeters))
             {
                 BaseAligned = true,
                 ClimateNature = interior is null && flat.BuildingIndex is not null && flat.TextureArchive is >= 500 and <= 511,
                 Lamp = DaggerfallInteriorLightFacts.BurningLamp(flat.TextureArchive, flat.TextureRecord),
+                Light = light?.Id,
             });
-            if (flat.TextureArchive != DaggerfallInteriorLightFacts.Archive) continue;
-            if (interior is not null)
-            {
-                if (DaggerfallInteriorLightFacts.TryProject($"light-flat/{suffix}", flat.TextureArchive, flat.TextureRecord,
-                    at with { Y = at.Y + size.HeightMeters / 2f }, size.HeightMeters, out var light)) lights.Add(light);
-            }
-            // A street's lamp is DFU's city light, white and reaching 18 m, but at its flame rather than above its sprite's top.
-            else if (DaggerfallInteriorLightFacts.Lit(flat.TextureRecord))
-                lights.Add(new($"light-flat/{suffix}", basePosition with
-                {
-                    Y = basePosition.Y + (size.HeightMeters / 2f) + DaggerfallInteriorLightFacts.FlameAboveCentre(flat.TextureRecord, size.HeightMeters),
-                }, 18f, 1f, new(1f, 1f, 1f)) { CityLight = true });
         }
         if (interior is null)
             foreach (RmbBlockScenery plant in content.GroundScenery)

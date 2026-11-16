@@ -324,7 +324,7 @@ public sealed class DaggerfallHangingTests
             lighting.UpdateShadowSector(new Vector3(5, 0, 6), DaggerfallLampShadowChoice.Default);
             DaggerfallHangingActor near = new(1, new Vector3(5, 0, 6), .25F, 1.8F);
             hanging.Step(.1F, [near], true);
-            // At rest its own light, not the block's nearer one, flickers where it was authored, casting.
+            // At rest the light its flat names, not the block's nearer one, flickers where it was authored, casting.
             LightDescriptor rest = site.Graphics.LightUpdates[^1].Replacement.Descriptor;
             Assert.Equal(authored, rest.Position);
             Assert.Equal(LightShadowIntent.Requested, rest.ShadowIntent);
@@ -359,6 +359,35 @@ public sealed class DaggerfallHangingTests
         }
     }
 
+    [Fact]
+    public void A_lantern_carries_the_block_light_that_stands_for_it()
+    {
+        // The import let the block's light record, which outreaches the lantern's own, stand for it, and its flat names that light.
+        Site site = Compose(lantern: true, light: Site.Nearer.Id);
+        using (site)
+        {
+            using DaggerfallSiteLighting lighting = site.Lighting();
+            using DaggerfallHanging hanging = site.Hanging(lighting: lighting);
+            Vector3 authored = new(4, 2.1F, 6);
+            lighting.UpdateShadowSector(new Vector3(5, 0, 6), DaggerfallLampShadowChoice.Default);
+            DaggerfallHangingActor near = new(1, new Vector3(5, 0, 6), .25F, 1.8F);
+            hanging.Step(.1F, [near], true);
+            LightRequest rest = site.Graphics.LightUpdates[^1].Replacement;
+            Assert.Equal(authored, rest.Descriptor.Position);
+
+            hanging.Step(.1F, [near], true);
+            site.Appearance.Publish(site.Actors, new Dictionary<long, DaggerfallGroundContainer>());
+            AppearanceFact swinging = Assert.Single(site.Graphics.Snapshots[^1], fact => fact.Appearance == site.Animation.Created[0]);
+            Vector3 aside = new(.3F, 0, 0);
+            site.Animation.Live = [.. site.Animation.ModelPose(swinging.Transform).ToArray()
+                .Select(pose => pose with { World = pose.World with { Translation = pose.World.Translation + aside } })];
+            hanging.Step(.1F, [near], true);
+            LightRequest carried = site.Graphics.LightUpdates[^1].Replacement;
+            Assert.Equal(rest.LogicalId, carried.LogicalId);
+            Assert.True(Vector3.Distance(authored + aside, carried.Descriptor.Position) < 1e-4F);
+        }
+    }
+
     private static DaggerfallArtReplacements Art(string kind = "root", bool lantern = false) => DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes("""
         {"artReplacements": {"images": [],
           "meshes": [
@@ -378,8 +407,8 @@ public sealed class DaggerfallHangingTests
         internal required ActorsState Actors { get; init; }
         internal required EngineContextFake Engine { get; init; }
 
-        // A lantern's own light, placed half a metre above its flat as the importer places an interior lamp.
-        // The lantern's own light, named after its flat as the importer names it, and a block's light hung nearer it.
+        // The lantern's own light, half a metre above its flat as the importer places an interior lamp, and a block's light
+        // hung nearer it.
         internal static readonly DaggerfallSiteLight Lamp = new("light-flat/block/0/0/1", new WorldPoint(4, 2.6F, 6), 10, 1.4F, Vector3.One);
         internal static readonly DaggerfallSiteLight Nearer = new("light/block/0/0/9", new WorldPoint(4, 2.1F, 6), 10, 1.4F, Vector3.One);
 
@@ -400,7 +429,7 @@ public sealed class DaggerfallHangingTests
         }
     }
 
-    private static Site Compose(bool lantern = false, bool rigless = false, Action<string>? report = null)
+    private static Site Compose(bool lantern = false, bool rigless = false, Action<string>? report = null, string? light = null)
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -412,7 +441,8 @@ public sealed class DaggerfallHangingTests
         animation.Rest = lantern ? [.. RootRest, new(0, .5F, 0)] : RootRest;
         NormalizedBillboardSprite root = new("sprite/root.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(.85F, 1.875F));
         (int, int) source = lantern ? (210, 25) : (213, 8);
-        DaggerfallSiteDecoration placed = new("billboard/block/0/0/1", new WorldPoint(4, 3 - 1.875F / 2, 6), false, root, root, source, source, Lamp: lantern);
+        DaggerfallSiteDecoration placed = new("billboard/block/0/0/1", new WorldPoint(4, 3 - 1.875F / 2, 6), false, root, root, source, source, Lamp: lantern,
+            Light: lantern ? light ?? Site.Lamp.Id : null);
         AppearanceFake graphics = new(releases);
         DaggerfallSiteAppearance appearance = new(content, graphics, MediaInputs(decorations: [placed]));
         appearance.UseEffectArt(PresentationRecorder.Create().Service, animation.Service, Art(lantern: lantern), () => true, report);

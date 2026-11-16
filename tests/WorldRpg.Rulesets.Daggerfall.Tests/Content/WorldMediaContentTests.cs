@@ -218,7 +218,8 @@ public sealed class WorldMediaContentTests
 
     /// <summary>
     /// The importer marks each burning lamp the place draws, so its glow and its light have one source: the Hold's wall
-    /// torches burn, its extinguished lamp does not, and nothing outside the lights archive is a lamp.
+    /// torches burn, its extinguished lamp does not, and nothing outside the lights archive is a lamp; and each names the
+    /// light it sheds, its own or the light record that stands for it, so a swinging lantern carries that light.
     /// </summary>
     [Fact]
     public void The_assembled_hold_knows_its_burning_lamps_from_the_import()
@@ -231,6 +232,13 @@ public sealed class WorldMediaContentTests
         Assert.All(torches, flat => Assert.True(flat.Lamp));
         Assert.All(extinguished, flat => Assert.False(flat.Lamp));
         Assert.DoesNotContain(inputs.Decorations, flat => flat.Lamp && flat.Source.Archive != 210);
+        // Each flat names the light it sheds as its block was placed, among the hold's lights, and no two name one light.
+        string[] named = [.. inputs.Decorations.Select(flat => flat.Light).OfType<string>()];
+        Assert.NotEmpty(named);
+        Assert.Subset(inputs.Lights.Select(light => light.Id).ToHashSet(StringComparer.Ordinal), named.ToHashSet(StringComparer.Ordinal));
+        Assert.Equal(named.Length, named.Distinct(StringComparer.Ordinal).Count());
+        Assert.Contains(named, light => light.StartsWith("light/", StringComparison.Ordinal));
+        Assert.DoesNotContain(extinguished, flat => flat.Light is not null);
     }
 
     [Fact]

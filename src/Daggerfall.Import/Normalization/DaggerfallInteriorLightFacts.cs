@@ -32,19 +32,33 @@ public static class DaggerfallInteriorLightFacts
     /// stands for them. A torch's own light, in its record's colour at its flame, outreaches the record beside it; a
     /// record among candles outreaches them, and lights them as it did in the donor. A record with no lamp beside it lights
     /// alone. Both lit, a dungeon lit each lamp twice, and a lamp's shadow would be filled by its twin.
+    /// <para>
+    /// <c>LampLights</c> names, by each lamp's own light, the light that stands for it: its own, or the record that
+    /// outreached it, so a lantern that swings carries that light with it. Nearest pairs claim first and a record stands
+    /// for one lamp only, so no two lanterns carry one light; an outreached lamp left without a record has none.
+    /// </para>
     /// </summary>
-    internal static IReadOnlyList<NormalizedLightPlacement> OnePerLamp(IReadOnlyList<NormalizedLightPlacement> records, IReadOnlyList<NormalizedLightPlacement> lamps)
+    internal static (IReadOnlyList<NormalizedLightPlacement> Lights, IReadOnlyDictionary<string, string> LampLights) OnePerLamp(
+        IReadOnlyList<NormalizedLightPlacement> records, IReadOnlyList<NormalizedLightPlacement> lamps)
     {
         List<NormalizedLightPlacement> kept = [];
-        HashSet<string> outreached = new(StringComparer.Ordinal);
+        List<(NormalizedLightPlacement Lamp, NormalizedLightPlacement Record)> outreached = [];
         foreach (NormalizedLightPlacement record in records)
         {
             NormalizedLightPlacement[] beside = [.. lamps.Where(lamp => Distance(lamp.Position, record.Position) <= LampTwinMetres)];
             if (beside.Any(lamp => lamp.Range >= record.Range)) continue;
             kept.Add(record);
-            outreached.UnionWith(beside.Select(lamp => lamp.Id));
+            outreached.AddRange(beside.Select(lamp => (lamp, record)));
         }
-        return [.. kept, .. lamps.Where(lamp => !outreached.Contains(lamp.Id))];
+
+        Dictionary<string, string> lampLights = new(StringComparer.Ordinal);
+        HashSet<string> claimed = new(StringComparer.Ordinal);
+        foreach ((NormalizedLightPlacement lamp, NormalizedLightPlacement record) in outreached.OrderBy(pair => Distance(pair.Lamp.Position, pair.Record.Position)))
+            if (!lampLights.ContainsKey(lamp.Id) && claimed.Add(record.Id)) lampLights[lamp.Id] = record.Id;
+        HashSet<string> dropped = [.. outreached.Select(pair => pair.Lamp.Id)];
+        NormalizedLightPlacement[] own = [.. lamps.Where(lamp => !dropped.Contains(lamp.Id))];
+        foreach (NormalizedLightPlacement lamp in own) lampLights[lamp.Id] = lamp.Id;
+        return ([.. kept, .. own], lampLights);
     }
 
     /// <summary>

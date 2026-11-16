@@ -247,7 +247,8 @@ internal sealed partial class DaggerfallSiteAppearance
         .Where(flat => flat is { Hangs: not null, Mesh: not null, Model: not null })
         .Select(flat => new DaggerfallHangingPiece(flat.Definition.Id, $"{flat.Definition.Source.Archive}-{flat.Definition.Source.Record}", flat.Hangs!.Value.Kind,
             flat.Mesh!, DaggerfallPresentationObjectIds.LocationVisual(DaggerfallPresentationObjectIds.ActiveLocationSlot, flat.Ordinal), flat.Model!,
-            flat.Hangs.Value.Rig, flat.Hangs.Value.Height, MeshPose(flat), Compose(worldAppearance.Transform, new Transform(flat.Definition.Position.ToVector(), Quaternion.Identity, Vector3.One)).Translation));
+            flat.Hangs.Value.Rig, flat.Hangs.Value.Height, MeshPose(flat), Compose(worldAppearance.Transform, new Transform(flat.Definition.Position.ToVector(), Quaternion.Identity, Vector3.One)).Translation,
+            flat.Definition.Light));
 
     /// <summary>Hangs a hanging mesh where it was fitted clear of what is around it.</summary>
     internal void PlaceHanging(string id, Transform pose)

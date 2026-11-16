@@ -11,10 +11,11 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <summary>
 /// A hanging mesh the active site draws in place of a placed flat: its decoration's id, its record (<c>ARCHIVE-RECORD</c>),
 /// what it is, the appearance and object it is drawn as, its model, the bodies its rig names and how high it hangs from in
-/// its model's metres, where it stands (its foot, turned and scaled), and the flat's own position.
+/// its model's metres, where it stands (its foot, turned and scaled), the flat's own position, and the site light its flat
+/// sheds, if any.
 /// </summary>
 internal sealed record DaggerfallHangingPiece(string Id, string Name, DaggerfallHangingKind Kind, Appearance Look, ulong ObjectId,
-    RenderResource Model, DaggerfallHangingRig Rig, float Height, Transform Pose, Vector3 Position);
+    RenderResource Model, DaggerfallHangingRig Rig, float Height, Transform Pose, Vector3 Position, string? Light);
 
 /// <summary>An actor that pushes hanging pieces aside: its feet and the upright capsule it walks in.</summary>
 internal readonly record struct DaggerfallHangingActor(long Id, Vector3 Feet, float Radius, float Height);
@@ -70,9 +71,6 @@ internal sealed class DaggerfallHanging : IDisposable
 
     // Lanterns farther than this from every actor keep a steady light: nobody near sees it flicker.
     private const float FlickerReach = 20f;
-    // The importer names a light flat's own light after the flat: billboard/… lights as light-flat/….
-    private const string Billboard = "billboard/";
-    private const string LightFlat = "light-flat/";
     // How far a lantern's light must move before its light follows, in metres.
     private const float LampStill = .02f;
     // How often a lantern at rest changes its light's brightness, in seconds: a flame's flicker reads the same at this rate.
@@ -104,7 +102,7 @@ internal sealed class DaggerfallHanging : IDisposable
         internal float Phase { get; set; }
     }
 
-    /// <param name="lamps">The site's authored lights, among which each lantern finds its own, named after it.</param>
+    /// <param name="lamps">The site's authored lights, among which each lantern finds the one its flat sheds.</param>
     /// <param name="report">Says, once each, which pieces cannot hang clear of what is around them and so stay at rest.</param>
     internal DaggerfallHanging(IDynamicsService dynamics, IAnimationService animation, SpatialMovementSystem spatial, DaggerfallSiteAppearance site,
         DaggerfallSiteLighting lighting, IReadOnlyList<DaggerfallSiteLight> lamps, DaggerfallHangingTuning tuning, Action<string> report)
@@ -122,8 +120,7 @@ internal sealed class DaggerfallHanging : IDisposable
         {
             Piece piece = new(placed) { Phase = StableHash.Fnv1a64(placed.Id) % 1000 / 1000f };
             if (placed.Kind == DaggerfallHangingKind.Lantern && placed.Rig.Light is uint light
-                && placed.Id.StartsWith(Billboard, StringComparison.Ordinal)
-                && lampsById.TryGetValue(string.Concat(LightFlat, placed.Id.AsSpan(Billboard.Length)), out DaggerfallSiteLight? lamp))
+                && placed.Light is { } lampId && lampsById.TryGetValue(lampId, out DaggerfallSiteLight? lamp))
             {
                 piece.Lamp = lamp;
                 piece.LampRest = RestJoints(piece).Span[(int)light].World.Translation;
