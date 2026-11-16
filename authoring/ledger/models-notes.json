@@ -5,7 +5,7 @@
  },
  "41214": {
   "status": "accepted",
-  "note": "Cart: #10844's TRELLIS.2 mesh (Patch, #10844 47167: \"41214 trellis\"), refitted by hull so it faces the classic's way (handles to -z), reduced to 1,499 triangles as #10844 recommended (\"about 1,500\") and its colour baked again from the full 2,992-triangle mesh onto a fresh unwrap (#10851)."
+  "note": "Cart: #10844's TRELLIS.2 mesh (Patch, #10844 47167: \"41214 trellis\"), refitted by hull so it faces the classic's way (handles to -z), reduced to about 1,500 triangles as #10844 recommended, its colour baked again from the full mesh onto a fresh unwrap, and its handles, which the hull fit had split into slivers, built new as two straight poles along the classic's (#10851)."
  },
  "41220": {
   "status": "accepted",
@@ -21,7 +21,7 @@
  },
  "41239": {
   "status": "accepted",
-  "note": "Straw cart: TRELLIS.2 from #10844's 41214 redraw edited to an open box heaped with straw, so the three carts are one family. The straw, which TRELLIS made as loose sheets, is built new as a mound at the generated heap's height; the rest reduced to 3,000 triangles and its colour baked from the full mesh (#10851)."
+  "note": "Straw cart: TRELLIS.2 from #10844's 41214 redraw edited to an open box heaped with straw, so the three carts are one family; about 3,000 triangles by the seat's decision (at 1,500 the wheels tear). Only the straw, told by its baked colour, is cut from the generated mesh, so the box keeps its walls; the load is built new as a mound at the generated straw's height resting on the wall tops, with a rounded lip and a skirt over the rim (Patch saw the first version's torn rim), and the handles as two straight poles along the classic's. Colour baked from the full mesh (#10851)."
  },
  "41241": {
   "status": "accepted",
