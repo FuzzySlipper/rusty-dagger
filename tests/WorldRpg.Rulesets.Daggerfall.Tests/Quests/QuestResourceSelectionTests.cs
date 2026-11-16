@@ -34,6 +34,11 @@ public sealed class QuestResourceSelectionTests
                 Assert.Equal(selected.Text!.Name, selected.Text.Details);
                 if (item.TemplateIndex == 276)
                     Assert.Equal(item.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture), selected.Text.Name);
+                // The player is a male Breton: quest clothing keeps its catalog's gender, armor takes the player's, and
+                // no other item takes either.
+                IReadOnlyList<string> groups = definitions.ItemTemplateCatalog.Templates[item.TemplateIndex].Groups;
+                string? gender = groups.Contains("WomensClothing") ? "female" : groups.Contains("MensClothing") || groups.Contains("Armor") ? "male" : null;
+                Assert.Equal((gender is null ? null : "breton", gender), (item.Metadata.Race, item.Metadata.Gender));
             }
             else
             {
