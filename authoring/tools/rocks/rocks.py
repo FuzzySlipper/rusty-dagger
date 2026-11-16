@@ -1082,6 +1082,12 @@ def sprite(archive, record):
     return np.asarray(image.crop((f["x"], f["y"], f["x"] + f["width"], f["y"] + f["height"])))
 
 
+def wood(rgba):
+    """Which of a sprite's texels are its wood: those with no more green than red, where its moss or leaves would turn a
+    bark ramp olive. trees.py takes a mesh tree's trunk colours by it, and a woodpile its bark's."""
+    return rgba[..., 1] <= rgba[..., 0]
+
+
 def bark_colours(rgba):
     """A sprite's wood as a bark ramp: its drawn texels but its outline, in five bands by brightness."""
     colours = rgba[..., :3][rgba[..., 3] > 128]
@@ -1097,9 +1103,7 @@ def placed(archive, record):
     seed = archive * 100 + record
     if form == WOODPILE:
         # Painted in the sprite's wood alone: its moss would turn the whole bark olive.
-        wood = rgba.copy()
-        wood[(rgba[..., 1].astype(int) > rgba[..., 0].astype(int) + 6) & (rgba[..., 1] > rgba[..., 2]), 3] = 0
-        colours = bark_colours(wood)
+        colours = bark_colours(np.where(wood(rgba)[..., None], rgba, 0))
         tiles = {"bark": bark_steps(seed), "ends": end_steps(seed)}
         primitives = [(role, png(paint(tiles[role], colours)), None, p, n, uv) for role, (p, n, uv) in woodpile(variant).items()]
     else:

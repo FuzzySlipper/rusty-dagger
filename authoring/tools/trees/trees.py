@@ -199,7 +199,7 @@ def palette(rgba, m):
     for low, high, left, right in ((m["crown"] + int((m["foot"] - m["crown"]) * .3), m["foot"], m["centre"] - half, m["centre"] + half + 1),
                                    (m["top"], m["foot"], m["centre"] - half, m["centre"] + half + 1), (0, rgba.shape[0], 0, rgba.shape[1])):
         trunk = rgba[low:high, max(0, left):right]
-        trunk = trunk[(trunk[..., 3] > SOLID) & (trunk[..., 1] <= trunk[..., 0])][:, :3]
+        trunk = trunk[(trunk[..., 3] > SOLID) & rocks.wood(trunk)][:, :3]
         if len(trunk) >= 20:
             break
     else:
