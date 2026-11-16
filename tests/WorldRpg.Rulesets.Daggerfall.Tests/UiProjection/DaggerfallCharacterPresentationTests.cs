@@ -432,6 +432,29 @@ public sealed class DaggerfallCharacterPresentationTests
     }
 
     [Fact]
+    public void Inventory_draws_an_artifact_from_its_own_texture_where_its_template_has_an_icon_and_a_katana_from_the_next_record()
+    {
+        using Fixture f = new();
+        DaggerfallCharacterIdentity identity = new DaggerfallCharacterState(f.Definitions, f.Player.Stats, f.PlayerDefinition).Identity with { Gender = DaggerfallCharacterGender.Male };
+        DaggerfallItemDefinition Template(int index) => f.Definitions.TemplateItems.Values.First(item => item.Template?.Index == index);
+        (string, PaperDollTint?)? Image(int template, string? enchantment) => DaggerfallPaperDollPolicy.InventoryImage(f.Definitions, Template(template),
+            new DaggerfallItemInstanceMetadata(Template(template).Id.Value, "ebony", 0, 1, 1, true, false, null, null, enchantment, DaggerfallItemOwner.Player), identity, null);
+        (string, PaperDollTint?)? Artifact(int record) => (f.Definitions.CharacterPresentation.PaperDollItems[(432, record)].Dyes["unchanged"], null);
+
+        // Oghma Infinium, the 6th artifact template, is a book: it draws its artifact record 16 (GetInventoryTextureRecord),
+        // where an ordinary book draws the book template's icon.
+        Assert.Equal("Oghma Infinium", f.Definitions.Magic.MagicItems["magic-item.0005"].Name);
+        Assert.Equal(Artifact(16), Image(277, "magic-item.0005"));
+        Assert.Equal(("item.209.2", (PaperDollTint?)null), Image(277, null));
+
+        // The inventory draws a katana from its right-hand record (GetItemImage), an artifact's as well: the Ebony Blade's record 5 draws 6.
+        DaggerfallItemTemplateDefinition katana = Template(121).Template!;
+        Assert.Equal(Artifact(6), Image(121, "magic-item.0058"));
+        Assert.Equal((f.Definitions.CharacterPresentation.PaperDollItems[(katana.PlayerTextureArchive, katana.PlayerTextureRecord + 1)].Dyes["ebony"], (PaperDollTint?)null),
+            Image(121, null));
+    }
+
+    [Fact]
     public void Paper_doll_draws_a_vampire_head_and_background_and_only_the_beast_background_while_transformed_in_refreshed_art_too()
     {
         using Fixture f = new();

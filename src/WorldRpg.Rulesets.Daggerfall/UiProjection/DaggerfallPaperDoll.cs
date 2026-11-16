@@ -226,9 +226,10 @@ internal static class DaggerfallPaperDollPolicy
 
     /// <summary>
     /// The image the inventory draws an item with (<c>ItemHelper.GetItemImage</c> without <c>forPaperDoll</c>): a worn
-    /// item's paper-doll image in its dye or metal - a katana's from its right-hand record, as the donor draws it - or
-    /// another template's own image for its variant. With a refreshed art set, its replacement, tinted where the item is
-    /// dyed or in a metal, and for a held weapon its whole image rather than the doll's, which leaves a gap for the hand.
+    /// item's paper-doll image in its dye or metal - a katana's from its right-hand record, as the donor draws it - an
+    /// artifact's from its artifact record, or another template's own image for its variant. With a refreshed art set,
+    /// its replacement, tinted where the item is dyed or in a metal, and for a held weapon its whole image rather than
+    /// the doll's, which leaves a gap for the hand.
     /// Null when the item has no template, or its template no image.
     /// </summary>
     internal static (string MediaId, PaperDollTint? Tint)? InventoryImage(DaggerfallDefinitions definitions, DaggerfallItemDefinition definition,
@@ -240,16 +241,19 @@ internal static class DaggerfallPaperDollPolicy
         DaggerfallWornItem item = new(definition.Id.Value, string.Empty, definition, metadata, () => definition.Id.Value);
         if (item.Template(definitions) is not { } template) return null;
         DaggerfallCharacterPresentationSet presentation = definitions.CharacterPresentation;
-        if (presentation.ItemIcons.TryGetValue(template.Index, out IReadOnlyList<string>? icons))
+        // An artifact draws its own record whatever its template draws (GetInventoryTextureRecord), so a book or ring
+        // artifact is not drawn with its template's icon; a katana, an artifact's too, draws the record after its own.
+        int katana = template.Index == KatanaTemplate ? 1 : 0;
+        bool artifact = IsArtifact(definitions, item, out int? artifactRecord);
+        if (!artifact && presentation.ItemIcons.TryGetValue(template.Index, out IReadOnlyList<string>? icons))
         {
             string own = icons[Math.Clamp(metadata?.Variant ?? 0, 0, icons.Count - 1)];
             return (art?.Drawn(own) ?? own, null);
         }
 
-        PaperDollLayerPresentation? image = IsArtifact(definitions, item, out int? artifactRecord)
-            ? artifactRecord is int record ? Item(presentation, ArtifactArchive(item, wearer), record, UnchangedDye, art, clothing: false) : null
-            : Item(presentation, Archive(template, item, wearer), Record(template, item) + (template.Index == KatanaTemplate ? 1 : 0),
-                Dye(template, item), art, IsClothing(template), template.RefreshedArt);
+        PaperDollLayerPresentation? image = artifact
+            ? artifactRecord is int record ? Item(presentation, ArtifactArchive(item, wearer), record + katana, UnchangedDye, art, clothing: false) : null
+            : Item(presentation, Archive(template, item, wearer), Record(template, item) + katana, Dye(template, item), art, IsClothing(template), template.RefreshedArt);
         if (image is null) return null;
         // A held weapon's refreshed layer leaves a gap for the doll's hand; an icon has none, so it draws the whole weapon.
         if (art?.ByMediaId(image.MediaId)?.Icon is not { } whole) return (image.MediaId, image.Tint);
