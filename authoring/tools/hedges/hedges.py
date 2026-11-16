@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Build the hedges' remodels (art pack `models`): the classic's own faces as a stack of shells, so the ground cover's
-effect gives them depth.
+"""Build the hedges' and low stone walls' remodels (art pack `models`): the classic's own faces as a stack of shells, so
+the ground cover's effect gives them depth.
 
 Each classic model's faces, from the import's published mesh in its own frame, are drawn again in LAYERS layers, the
 outermost on the classic's faces and each lower one inset a step deeper, down to the stack's core DEPTH inside. A layer
 draws its classic texture's relief (`groundCover.relief`, whose alpha is each texel's height) cut where the texel falls short
-of it, the core all of it, so leaves stand out of the hedge in pixels and the remodel stays inside the classic.
+of it, the core all of it, so a hedge's leaves and a wall's stones stand out of it in pixels and the remodel stays inside
+the classic.
 
 - The inset is mitred: every face moves in by the layer's depth along its own normal, and each corner by the offset that
   keeps all its faces' planes, so the faces stay joined at every edge and a box shrinks to a smaller box.
@@ -27,10 +28,13 @@ CLASSIC = REPOSITORY / "local/build/import/staging/worldrpg/imports/shared/geome
 FINALS = REPOSITORY / "local/art/generated/models"
 
 LAYERS = 9
-# How deep the stack reaches into the hedge, in metres: its leaves about eight texels of 33-0.
-DEPTH = .12
-# The hedges, which all wear 33-0. The low walls 517, 518 and 520 that #10844 grouped with them stay classic.
-MODELS = [744, 745, 746, 747, 748, 749, 750, 751, 752, 753, 754, 905, 735, 736, 737]
+# How deep each classic texture archive's stack reaches into the model, in metres: a hedge's leaves (33) about eight
+# texels of 33-0, a dry-stone wall's stones (29, and the climates' 129 to 430 that swap for it) a hand's breadth proud of
+# their mortar.
+DEPTH = {33: .12, 29: .05}
+# The hedges, which wear 33-0, and the low stone walls 517, 518 and 520 #10844 grouped with them, which wear 29-0 and
+# their caps 29-1.
+MODELS = [744, 745, 746, 747, 748, 749, 750, 751, 752, 753, 754, 905, 735, 736, 737, 517, 518, 520]
 # Points nearer than this are one corner: the classic stores each face's corners apart.
 WELD = 1e-4
 
@@ -135,7 +139,7 @@ def layered(model):
     for texture in sorted(set(textures)):
         own = textures == texture
         for layer in range(LAYERS):
-            moved = corners[own] + inset[own] * DEPTH * (1 - layer / (LAYERS - 1))
+            moved = corners[own] + inset[own] * DEPTH[int(texture.split("-")[1])] * (1 - layer / (LAYERS - 1))
             parts.append((texture, layer, moved, normals[own], face_uvs(corners[own], uvs[own], moved)))
     return parts
 

@@ -92483,6 +92483,244 @@
      ],
      "glints": 0,
      "sinksUnderSnow": false
+    },
+    "29-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-029-0.png",
+     "byteLength": 18800,
+     "sha256": "7ef77d489b6e744ded4c13e73f896e3bc02e5f769db60cb549c477e3ee1b6f50",
+     "width": 128,
+     "height": 64,
+     "kind": "masonry",
+     "tallest": 0.8039,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "29-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-029-1.png",
+     "byteLength": 8985,
+     "sha256": "c721183b88aec541b25519055d95d045dad3d896277bbd77e693deb946d5b38a",
+     "width": 128,
+     "height": 32,
+     "kind": "masonry",
+     "tallest": 0.8,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "129-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-129-0.png",
+     "byteLength": 19339,
+     "sha256": "20996ba38bd192b3faa1143f1feb5b30cad0a716e09ca3890751bc7eb53808bf",
+     "width": 128,
+     "height": 64,
+     "kind": "masonry",
+     "tallest": 0.8314,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "129-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-129-1.png",
+     "byteLength": 10462,
+     "sha256": "0754c58e36dc7d495bc4afca30c7efb244d1bf684c7eb9f07910a7ec694a8dcd",
+     "width": 128,
+     "height": 32,
+     "kind": "masonry",
+     "tallest": 0.8118,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "130-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-130-0.png",
+     "byteLength": 15417,
+     "sha256": "fbb897daa4a513a56c76b18c1a83e1c067dc2c94e4be8072a8da2eb75d820846",
+     "width": 128,
+     "height": 64,
+     "kind": "masonry",
+     "tallest": 0.8078,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "130-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-130-1.png",
+     "byteLength": 5240,
+     "sha256": "361ebc3854dda827d5b30a7c8337e71090435a7ffe40239927d95dbc85bbf044",
+     "width": 128,
+     "height": 32,
+     "kind": "masonry",
+     "tallest": 0.702,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "329-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-329-0.png",
+     "byteLength": 20593,
+     "sha256": "611c76c135234542746644ddebdffef00861ad12a0ac96faa912a20f44d611ff",
+     "width": 128,
+     "height": 64,
+     "kind": "masonry",
+     "tallest": 0.8275,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "329-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-329-1.png",
+     "byteLength": 10308,
+     "sha256": "1e7beedebeb3f91016b91e701a3edba1b4295ccf6ae6f760210d2aa7cb148fcb",
+     "width": 128,
+     "height": 32,
+     "kind": "masonry",
+     "tallest": 0.8078,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "330-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-330-0.png",
+     "byteLength": 14187,
+     "sha256": "f4175f51ce98cf9cd2efbed97bab816a5bbdde5ef433d005a311b8ec51f7dc66",
+     "width": 128,
+     "height": 64,
+     "kind": "masonry",
+     "tallest": 0.8078,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "330-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-330-1.png",
+     "byteLength": 5298,
+     "sha256": "376e73c55162521ecc7ac21c580fa584bb708faabe2ce044d2deeead159ed876",
+     "width": 128,
+     "height": 32,
+     "kind": "masonry",
+     "tallest": 0.7686,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "429-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-429-0.png",
+     "byteLength": 20541,
+     "sha256": "9d560a7b3ceecd798df82e891645dd7bd7cf6b8dfbb622c9de7b63ebeca9d85e",
+     "width": 128,
+     "height": 64,
+     "kind": "masonry",
+     "tallest": 0.8078,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "429-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-429-1.png",
+     "byteLength": 10255,
+     "sha256": "9f43bc9afac6574d6a717b068a521a06eb4e4bc2d0349a862e4198c1bde0438b",
+     "width": 128,
+     "height": 32,
+     "kind": "masonry",
+     "tallest": 0.7882,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "430-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-430-0.png",
+     "byteLength": 14133,
+     "sha256": "fa730f356e39df581ccd262ae325009d607f89aec80f8f34027aadaeb84e7e51",
+     "width": 128,
+     "height": 64,
+     "kind": "masonry",
+     "tallest": 0.7882,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "430-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/groundcover/relief-430-1.png",
+     "byteLength": 5242,
+     "sha256": "21a413e4161a0c67466d572053dddb90a97052b9e6237e6c8045970973d1e1c7",
+     "width": 128,
+     "height": 32,
+     "kind": "masonry",
+     "tallest": 0.7294,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
     }
    }
   },
@@ -94752,6 +94990,462 @@
      {
       "slot": 7,
       "material": "material/texture-74-2"
+     }
+    ]
+   },
+   "517": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/517.rstatmsh",
+    "byteLength": 113475,
+    "sha256": "2b4750c7f3b372ee3fd08ca29dee544b1b84e387e4d900449dff4c90e226eaef",
+    "triangles": 1026,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 0,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 1,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 2,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 2,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 3,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 3,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 4,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 4,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 5,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 5,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 6,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 6,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 7,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 7,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 8,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 8,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 9,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 0,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 10,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 1,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 11,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 2,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 12,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 3,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 13,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 4,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 14,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 5,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 15,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 6,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 16,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 7,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 17,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 8,
+       "layers": 9
+      }
+     }
+    ]
+   },
+   "518": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/518.rstatmsh",
+    "byteLength": 49282,
+    "sha256": "ea02ee0a7355af233982eec0541703c3a165ebdbdaaeafff282dff7a29731593",
+    "triangles": 432,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 0,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 1,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 2,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 2,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 3,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 3,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 4,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 4,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 5,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 5,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 6,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 6,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 7,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 7,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 8,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 8,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 9,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 0,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 10,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 1,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 11,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 2,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 12,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 3,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 13,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 4,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 14,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 5,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 15,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 6,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 16,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 7,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 17,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 8,
+       "layers": 9
+      }
+     }
+    ]
+   },
+   "520": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/520.rstatmsh",
+    "byteLength": 53170,
+    "sha256": "1d84976ca45bfeba0c5a48c282cf8c5878a829292d9b9842cfead8c42455adb7",
+    "triangles": 468,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 0,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 1,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 2,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 2,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 3,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 3,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 4,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 4,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 5,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 5,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 6,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 6,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 7,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 7,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 8,
+      "material": "material/texture-29-0",
+      "shell": {
+       "layer": 8,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 9,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 0,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 10,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 1,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 11,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 2,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 12,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 3,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 13,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 4,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 14,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 5,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 15,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 6,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 16,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 7,
+       "layers": 9
+      }
+     },
+     {
+      "slot": 17,
+      "material": "material/texture-29-1",
+      "shell": {
+       "layer": 8,
+       "layers": 9
+      }
      }
     ]
    },

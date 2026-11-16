@@ -12,7 +12,8 @@
   dirt, pebbles on rock, ripples and plates on sand, drifts on snow, tall grass on a swamp's lush ground. Each kind sets
   how tall it stands and what in the texture rises: its lighter texels, its green ones and its broad clumps;
 - relief in the same way for the refreshed surfaces remodels draw as shell stacks (art pack `models`, hedges.py): the
-  hedges' leaves, their lit sprays standing out of the shade inside. A remodel's stack is its own depth, so its relief
+  hedges' leaves, their lit sprays standing out of the shade inside, and the low walls' stones standing out of their
+  mortar, in every climate and season the walls' 29-0 and 29-1 swap to. A remodel's stack is its own depth, so its relief
   reaches the top of it.
 
 Both images are greyscale, so the tint alone colours them. The textures are made in code from a fixed seed; run it again
@@ -49,6 +50,7 @@ KINDS = {
     "snow": dict(cap=.6, detail=.25, clump=.9, cell=32, bare=.2, green=.8),
     "lush": dict(cap=1, detail=.7, clump=.5, cell=10, bare=.1, green=0),
     "leaves": dict(cap=1, detail=.8, clump=.6, cell=12, bare=.12, green=0),
+    "masonry": dict(cap=1, detail=.9, clump=.3, cell=8, bare=.3, green=0),
 }
 # The open ground layers that grow relief, by ground archive and record (DaggerfallGroundLayers.Records): each climate's
 # dirt and rock, the desert's three sands, the snow its winter wears (a winter set's grass and dirt alike), and the swamp's
@@ -59,8 +61,10 @@ RELIEF = {(102, 1): "clods", (302, 1): "clods", (402, 1): "clods",
           (2, 1): "sand", (2, 2): "sand", (2, 3): "sand",
           (103, 2): "snow", (303, 2): "snow", (403, 2): "snow", (103, 1): "snow", (303, 1): "snow", (403, 1): "snow",
           (402, 3): "lush"}
-# The refreshed surfaces remodels stack in shells, by archive and record: the hedges' 33-0, which no climate swaps.
-SHELLED = {(33, 0): "leaves"}
+# The refreshed surfaces remodels stack in shells, by archive and record: the hedges' 33-0, which no climate swaps, and
+# the low walls' stones 29-0 and caps 29-1 in each climate's summer and winter (29 the desert's, 129/130 the mountains',
+# 329/330 the temperate lands', 429/430 the swamps').
+SHELLED = {(33, 0): "leaves"} | {(archive, record): "masonry" for archive in (29, 129, 130, 329, 330, 429, 430) for record in (0, 1)}
 SURFACES = "worldrpg/packs/daggerfall.art-replacements/media/surfaces"
 
 # How each kind of relief is drawn: how far its top sways in the wind, as a share of the shells' sway (tall grass bends,
@@ -73,6 +77,7 @@ LOOKS = {
     "snow": {"sway": .5, "shade": [.52, .62, .86], "glints": .012, "sinksUnderSnow": False},
     # A remodel's shells stand still; a hedge's inner leaves sit in its own shade.
     "leaves": {"sway": 0, "shade": [.45, .5, .45], "glints": 0, "sinksUnderSnow": False},
+    "masonry": {"sway": 0, "shade": [.55, .55, .55], "glints": 0, "sinksUnderSnow": False},
 }
 
 rng = np.random.default_rng(10647)

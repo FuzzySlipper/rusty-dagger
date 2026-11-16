@@ -702,5 +702,17 @@
  "60520": {
   "status": "accepted",
   "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rock pressed in from the classic's own surface into broad faces and hard edges, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "517": {
+  "status": "accepted",
+  "note": "Low stone wall in the ground cover's shell stack, as Patch chose from #10850's sheets (\"I like the stone wall effect too go ahead on it as well\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 5 cm inside, each drawing the relief of the stones the location draws (29-0 and its caps 29-1 in every climate and season) cut at its height, so the stones stand out of their mortar in pixels (hedges.py, #10850)."
+ },
+ "518": {
+  "status": "accepted",
+  "note": "Low stone wall in the ground cover's shell stack, as Patch chose from #10850's sheets (\"I like the stone wall effect too go ahead on it as well\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 5 cm inside, each drawing the relief of the stones the location draws (29-0 and its caps 29-1 in every climate and season) cut at its height, so the stones stand out of their mortar in pixels (hedges.py, #10850)."
+ },
+ "520": {
+  "status": "accepted",
+  "note": "Low stone wall in the ground cover's shell stack, as Patch chose from #10850's sheets (\"I like the stone wall effect too go ahead on it as well\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 5 cm inside, each drawing the relief of the stones the location draws (29-0 and its caps 29-1 in every climate and season) cut at its height, so the stones stand out of their mortar in pixels (hedges.py, #10850)."
  }
 }
