@@ -264,7 +264,7 @@ internal sealed class AssembledWorldRun : IDisposable
     }
 
     /// <summary>One update that admits no simulation step, as held time gives: the session publishes and plays nothing.</summary>
-    internal void Hold() => Session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, _step, _step, 60, 0, 0, 1d / 60d), []));
+    internal void Hold() => Session.Update(new ProductUpdate(OuterUpdate(_step) with { AdmittedStepCount = 0 }, []));
 
     /// <summary>Changes the activation mode as the mode buttons do.</summary>
     internal void SetMode(string mode) => Submit(new { action = "activation-mode", mode });
