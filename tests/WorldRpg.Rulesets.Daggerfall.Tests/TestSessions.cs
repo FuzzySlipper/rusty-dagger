@@ -407,8 +407,9 @@ internal static class TestSessions
 
     /// <summary>
     /// Every artifact a session at this profile resolves by path and digest: its collision and meshes, and
-    /// everything its appearance opens - materials, sprites, billboards, eager audio, the classic presentation,
-    /// missile visuals, doors, action models, city gates, decorations, the ground pile and the exterior terrain.
+    /// everything its appearance opens - materials with their season, glass and frame textures, sprites, billboards, eager
+    /// audio, the classic presentation, missile visuals, doors, action models, city gates, decorations, the ground pile and
+    /// the exterior terrain.
     /// </summary>
     internal static IEnumerable<(string Path, ContentSha256 Sha256)> PresentedArtifacts(DaggerfallSiteProfile inputs)
     {
@@ -421,6 +422,7 @@ internal static class TestSessions
             if (material.RainTexture is { } rain) yield return (rain.Path, rain.Sha256);
             foreach (ContentArtifact? glass in new[] { material.SummerGlass, material.WinterGlass, material.RainGlass })
                 if (glass is not null) yield return (glass.Path, glass.Sha256);
+            foreach (ContentArtifact frame in material.Frames?.Textures ?? []) yield return (frame.Path, frame.Sha256);
         }
         foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values.Concat(inputs.MobileSprites.Values))
         {
