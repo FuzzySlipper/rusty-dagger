@@ -80,8 +80,8 @@ internal sealed class DaggerfallWorldMedia : IDisposable
 
     /// <summary>
     /// Reads the product-wide media from admitted content. Content without the world media publication reads
-    /// as an empty instance, so a site that carries everything it names still reads; one that references the
-    /// publication then reports each missing reference by name.
+    /// as an empty instance, so content that names none of it still reads, and a location that draws from it
+    /// reports each missing artifact by name.
     /// </summary>
     internal static DaggerfallWorldMedia Read(DaggerfallData content)
     {
@@ -109,12 +109,7 @@ internal sealed class DaggerfallWorldMedia : IDisposable
                 }
             }
 
-            if (Optional(files, $"{Root}/{DungeonSidecarRelativePath}") is ReadOnlyMemory<byte> dungeonBytes)
-            {
-                dungeon = JsonDocument.Parse(dungeonBytes);
-                if (dungeon.RootElement.TryGetProperty("shared", out JsonElement selection) && selection.ValueKind != JsonValueKind.Null)
-                    diagnostics.Add("The world media dungeon sidecar must carry its own entries rather than reference another publication.");
-            }
+            if (Optional(files, $"{Root}/{DungeonSidecarRelativePath}") is ReadOnlyMemory<byte> dungeonBytes) dungeon = JsonDocument.Parse(dungeonBytes);
             else diagnostics.Add($"The world media publication carries no '{DungeonSidecarRelativePath}'.");
 
             ReadOnlyMemory<byte>? classic = Optional(files, $"{Root}/{ClassicSidecarRelativePath}");
