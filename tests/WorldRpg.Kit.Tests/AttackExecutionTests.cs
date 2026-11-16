@@ -97,6 +97,29 @@ public sealed class AttackExecutionTests
     }
 
     [Fact]
+    public void Steps_admitted_while_the_world_was_held_do_not_age_a_cooldown()
+    {
+        using ActorsState actors = Actors();
+        AttackExecution<TestFact> execution = new(actors, new RecordingRules(cooldown: 3d));
+        FactBuffer<TestFact> facts = new();
+        execution.ObserveTimeline(4, 10);
+        Assert.True(execution.Start(new AttackRequest(2, 3, 4, 10, 1d, Delayed: false), facts));
+        execution.ObserveTimeline(4, 11);
+
+        // Ready at 13: steps 12 to 111 were admitted while the world was held, so the world's next step, 112,
+        // stands where 12 would have, with one step still to run.
+        execution.ObserveTimeline(4, 112);
+        Assert.Equal(1UL, Assert.Single(execution.CaptureCooldowns(4, 112)).RemainingSteps);
+        Assert.False(execution.IsReady(2, 4, 112));
+        Assert.True(execution.IsReady(2, 4, 113));
+
+        // A step a tool names is a move along the timeline, not a hold.
+        Assert.True(execution.Start(new AttackRequest(2, 3, 4, 113, 1d, Delayed: false), facts));
+        execution.ObserveTimeline(4, 500, named: true);
+        Assert.True(execution.IsReady(2, 4, 500));
+    }
+
+    [Fact]
     public void An_untargeted_delayed_swing_waits_for_its_own_untargeted_impact_and_still_expires()
     {
         using ActorsState actors = Actors();

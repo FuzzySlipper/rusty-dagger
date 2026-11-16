@@ -1655,7 +1655,7 @@ internal sealed partial class DaggerfallSession
     {
         _latestUpdateGeneration = request.Generation;                                             // Session
         _latestSimulationStep = request.SimulationStep;                                           // Session
-        State.Kit.AttackExecution.ObserveTimeline(request.Generation, request.SimulationStep);    // Combat
+        State.Kit.AttackExecution.ObserveTimeline(request.Generation, request.SimulationStep, named: true);   // Combat
         _combat.ResolveExplicit(request, _facts);                                                 // Combat
         DeliverFacts();                                                                           // Session
         PublishPresentation();                                                                    // UiProjection
