@@ -62,8 +62,8 @@ public sealed class Arena2WorldTextureSelection
     public IReadOnlyList<Arena2WorldTextureRefusal> Refused { get; }
 
     /// <summary>
-    /// Selects every publishable record of every leaf the inventory decoded. A material is the record's
-    /// first frame; a billboard is every frame in one strip, so the frames must fit the atlas quota side by
+    /// Selects every publishable record of every leaf the inventory decoded. A material is each of the record's
+    /// frames, a texture apiece, which a surface cycles; a billboard is every frame in one strip, so the frames must fit the atlas quota side by
     /// side, exactly as a billboard atlas is packed.
     /// </summary>
     public static Arena2WorldTextureSelection Select(
@@ -123,7 +123,7 @@ public sealed class Arena2WorldTextureSelection
                 return false;
             }
 
-            _ = archive.DecodeFrame(record, 0);
+            for (int frame = 0; frame < info.FrameCount; frame++) _ = archive.DecodeFrame(record, frame);
             reason = null;
             return true;
         }

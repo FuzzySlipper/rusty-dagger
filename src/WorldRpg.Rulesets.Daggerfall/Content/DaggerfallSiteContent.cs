@@ -67,8 +67,26 @@ internal static partial class DaggerfallSiteContent
             else textures.Add(id, new ContentArtifact(path, hash));
         }
 
+        // A material whose record has several frames names each frame's texture, its own first, and the rate it cycles at.
+        Dictionary<string, DaggerfallMaterialFrames> animations = new(StringComparer.Ordinal);
+        foreach (string id in textures.Keys)
+        {
+            if (!product.TryGetAnimation(id, out JsonElement animation)) continue;
+            float rate = DaggerfallBaseContent.Number(animation, "framesPerSecond", diagnostics);
+            List<ContentArtifact> frames = [];
+            foreach (JsonElement frame in DaggerfallBaseContent.Array(animation, "frames", diagnostics))
+            {
+                string frameId = frame.GetString() ?? "";
+                if (textures.TryGetValue(frameId, out ContentArtifact? texture)) frames.Add(texture);
+                else diagnostics.Add($"World media material '{id}' cycles through '{frameId}', which the publication carries no texture for.");
+            }
+            if (frames.Count < 2 || frames[0] != textures[id] || !float.IsFinite(rate) || rate <= 0F)
+                diagnostics.Add($"World media material '{id}' cycles {frames.Count} frames at {rate} a second, its own not first: a cycle is two frames or more at a rate above zero.");
+            else animations.Add(id, new DaggerfallMaterialFrames(frames, rate));
+        }
+
         diagnostics.ThrowIfAny();
-        return new(sprites, groundContainer, billboards, terrain, audio, classic, textures);
+        return new(sprites, groundContainer, billboards, terrain, audio, classic, textures) { Animations = animations };
     }
 
     /// <summary>
@@ -1198,7 +1216,11 @@ internal sealed record DaggerfallProductMedia(
     IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> TerrainTextures,
     IReadOnlyList<NormalizedAudioClip> Audio,
     NormalizedClassicPresentation ClassicPresentation,
-    IReadOnlyDictionary<string, ContentArtifact> Textures);
+    IReadOnlyDictionary<string, ContentArtifact> Textures)
+{
+    /// <summary>The materials whose texture cycles through several frames, by material id.</summary>
+    internal IReadOnlyDictionary<string, DaggerfallMaterialFrames> Animations { get; init; } = new Dictionary<string, DaggerfallMaterialFrames>();
+}
 
 internal sealed class AdmittedFiles
 {
@@ -1228,6 +1250,18 @@ internal sealed record NormalizedMaterial(uint Slot, string TexturePath, Content
     internal ContentArtifact? SummerGlass { get; init; }
     internal ContentArtifact? WinterGlass { get; init; }
     internal ContentArtifact? RainGlass { get; init; }
+    /// <summary>The frames the texture cycles through, where its record has several.</summary>
+    internal DaggerfallMaterialFrames? Frames { get; init; }
+}
+
+/// <summary>
+/// A classic texture record of several frames, a texture apiece, the record's first first, which a surface drawing it
+/// cycles at <paramref name="FramesPerSecond"/>, as the donor's <c>AnimatedMaterial</c> does a hearth's fire.
+/// </summary>
+internal sealed record DaggerfallMaterialFrames(IReadOnlyList<ContentArtifact> Textures, float FramesPerSecond)
+{
+    /// <summary>The cycle as a flipbook, which steps on the same clock as a remodel's strip.</summary>
+    internal DaggerfallArtFlipbook Flipbook => new(Textures.Count, FramesPerSecond);
 }
 internal sealed record NormalizedAtlasFrame(uint Id, int X, int Y, int Width, int Height, Vector2? DisplaySize = null);
 internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Frames, float FramesPerSecond, bool Loops)

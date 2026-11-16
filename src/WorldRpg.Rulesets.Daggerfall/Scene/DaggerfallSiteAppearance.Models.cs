@@ -18,7 +18,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// </para>
 /// <para>
 /// A remodel's own texture that is a strip of frames, as a hearth's flames, shows one frame at a time, stepped on the held
-/// art's clock, so it pauses with the world; one drawn unlit keeps its own colours whatever the light.
+/// art's clock, so it pauses with the world; one drawn unlit keeps its own colours whatever the light. A classic surface
+/// of several frames steps on the same clock.
 /// </para>
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
@@ -174,21 +175,32 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     /// <summary>
-    /// Moves every remodel strip to the frame its rate reaches after this update's admitted steps, updating only a material
-    /// whose frame changes, and only while refreshed art, which draws the remodels, is drawn.
+    /// Moves every remodel strip, and every classic surface of several frames, to the frame its rate reaches after this
+    /// update's admitted steps, updating only a material whose frame changes: a strip only while refreshed art, which draws
+    /// the remodels, is drawn, and a classic surface only while it draws its classic frames.
     /// </summary>
     private void StepFlipbooks(ProductUpdateFacts update)
     {
         flipbookSeconds += update.FixedDeltaSeconds * update.AdmittedStepCount;
+        int season = SurfaceSeason;
+        foreach (SurfaceMaterial surface in surfaceMaterials)
+        {
+            if (surface.Frames is not { } frames) continue;
+            surface.Frame = FlipbookFrame(frames.Flipbook);
+            ApplySurface(surface, season);
+        }
         if (!drawRefreshedEffects()) return;
         foreach (RemodelFlipbook book in flipbooks)
         {
-            int frame = (int)(flipbookSeconds * book.Flipbook.FramesPerSecond % book.Flipbook.Frames);
+            int frame = FlipbookFrame(book.Flipbook);
             if (frame == book.Frame) continue;
             book.Frame = frame;
             appearance.UpdateMaterial(new MaterialUpdateRequest(book.Material, book.Request with { TextureOffset = new Vector2((float)frame / book.Flipbook.Frames, 0F) }));
         }
     }
+
+    /// <summary>The frame a flipbook shows at the held art's clock.</summary>
+    private int FlipbookFrame(DaggerfallArtFlipbook book) => (int)(flipbookSeconds * book.FramesPerSecond % book.Frames);
 
     /// <summary>What a placed model shows now: its remodel while refreshed art is drawn and it has one, else the classic.</summary>
     private static Appearance Drawn(Appearance classic, Appearance? remodel, bool refreshed) => refreshed && remodel is not null ? remodel : classic;

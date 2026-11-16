@@ -961,7 +961,12 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 return resource.Handle;
             }
             SurfaceMaterial surface = new(created, [material.TexturePath, material.WinterTexture?.Path ?? material.TexturePath, material.RainTexture?.Path ?? material.TexturePath],
-                [texture.Handle, Variant(material.WinterTexture), Variant(material.RainTexture)], texture.Handle, glass) { Level = glass[0] is null ? 0F : windowLevel };
+                [texture.Handle, Variant(material.WinterTexture), Variant(material.RainTexture)], texture.Handle, glass)
+            {
+                Level = glass[0] is null ? 0F : windowLevel,
+                // The first frame is the material's own texture; each later one opens as a texture of its own.
+                Frames = material.Frames is { } frames ? ([texture.Handle, .. frames.Textures.Skip(1).Select(Variant)], frames.Flipbook) : null,
+            };
             AttachRefreshedSurface(surface);
             surfaceMaterials.Add(surface);
         }

@@ -479,10 +479,15 @@ internal sealed class DaggerfallLocationAssembly
                 }
                 ContentArtifact? Glass(string? id) =>
                     key.Kind == DaggerfallWorldProfileKind.Exterior && _media.Textures.TryGetValue($"{id ?? material}-glass", out ContentArtifact? glass) ? glass : null;
+                DaggerfallMaterialFrames? frames = _media.Animations.GetValueOrDefault(material);
+                // A cycling surface draws its own frames in every season, so a season's variant would never show.
+                if (frames is not null && (winter is not null || rain is not null))
+                    diagnostics.Add($"Profile '{key.LogicalId}' draws texture '{material}', which cycles frames, with a season's variant.");
                 materials.Add(new NormalizedMaterial(slot, texture.Path, texture.Sha256, material)
                 {
                     WinterTexture = winter, RainTexture = rain,
                     SummerGlass = Glass(material), WinterGlass = Glass(winterId), RainGlass = Glass(rainId),
+                    Frames = frames,
                 });
             }
 

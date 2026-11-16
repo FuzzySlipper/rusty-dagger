@@ -36,6 +36,7 @@ internal sealed class DaggerfallWorldMedia : IDisposable
     private readonly IReadOnlyDictionary<string, JsonElement> _resources;
     private readonly IReadOnlyDictionary<string, JsonElement> _billboards;
     private readonly IReadOnlyDictionary<string, JsonElement> _actors;
+    private readonly IReadOnlyDictionary<string, JsonElement> _animatedMaterials;
 
     private DaggerfallWorldMedia(
         IReadOnlyDictionary<string, ContentSha256> shared,
@@ -50,6 +51,7 @@ internal sealed class DaggerfallWorldMedia : IDisposable
         Dictionary<string, JsonElement> resources = new(StringComparer.Ordinal);
         Dictionary<string, JsonElement> billboards = new(StringComparer.Ordinal);
         Dictionary<string, JsonElement> actors = new(StringComparer.Ordinal);
+        Dictionary<string, JsonElement> animatedMaterials = new(StringComparer.Ordinal);
         if (dungeon is not null)
         {
             JsonElement root = dungeon.RootElement;
@@ -59,11 +61,14 @@ internal sealed class DaggerfallWorldMedia : IDisposable
                 billboards.TryAdd(billboard.GetProperty("spriteResourceId").GetString()!, billboard);
             foreach (JsonElement actor in root.GetProperty("actors").EnumerateArray())
                 actors.TryAdd(actor.GetProperty("actorResourceId").GetString()!, actor);
+            foreach (JsonElement animation in root.GetProperty("animatedMaterials").EnumerateArray())
+                animatedMaterials.TryAdd(animation.GetProperty("mediaId").GetString()!, animation);
         }
 
         _resources = resources;
         _billboards = billboards;
         _actors = actors;
+        _animatedMaterials = animatedMaterials;
     }
 
     /// <summary>The world media publication's artifacts by content path.</summary>
@@ -141,6 +146,9 @@ internal sealed class DaggerfallWorldMedia : IDisposable
 
     /// <summary>Every product-wide actor entry, in sidecar order.</summary>
     internal IEnumerable<JsonElement> Actors => _actors.Values;
+
+    /// <summary>A material whose texture cycles through several frames, by the material's media id.</summary>
+    internal bool TryGetAnimation(string id, out JsonElement animation) => _animatedMaterials.TryGetValue(id, out animation);
 
     /// <summary>A product-wide dungeon descriptor by media id.</summary>
     internal bool TryGetResource(string id, out JsonElement resource) => _resources.TryGetValue(id, out resource);

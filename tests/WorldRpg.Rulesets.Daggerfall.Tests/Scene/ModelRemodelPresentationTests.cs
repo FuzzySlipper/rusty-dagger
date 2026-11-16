@@ -42,7 +42,7 @@ public sealed class ModelRemodelPresentationTests
             new DaggerfallSiteMesh("mesh/41209.rstatmsh", Hash, Trough, [new(0, 0), new(1, 1)]) { ModelId = "41209" },
             new DaggerfallSiteMesh("mesh/41209.rstatmsh", Hash, OtherTrough, [new(0, 0), new(1, 1)]) { ModelId = "41209" },
             new DaggerfallSiteMesh("mesh/41106.rstatmsh", Hash, Bench, [new(0, 0)]) { ModelId = "41106" },
-            new DaggerfallSiteMesh("mesh/41116.rstatmsh", Hash, Hearth, [new(0, 0)]) { ModelId = "41116" },
+            new DaggerfallSiteMesh("mesh/41116.rstatmsh", Hash, Hearth, [new(0, 2)]) { ModelId = "41116" },
         ])
         {
             Remodels = new Dictionary<string, DaggerfallSiteRemodel>(StringComparer.Ordinal)
@@ -59,7 +59,12 @@ public sealed class ModelRemodelPresentationTests
         return new DaggerfallSiteProfile(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()), geometry,
             new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
             new PlayerInitialLook(0, 0),
-            [new NormalizedMaterial(0, "texture/67-0.png", Hash, "material/texture-67-0"), new NormalizedMaterial(1, "texture/85-0.png", Hash, "material/texture-85-0")],
+            [new NormalizedMaterial(0, "texture/67-0.png", Hash, "material/texture-67-0"), new NormalizedMaterial(1, "texture/85-0.png", Hash, "material/texture-85-0"),
+                // The classic hearth's fire: four frames at the donor's twelve a second.
+                new NormalizedMaterial(2, "texture/87-0.png", Hash, "material/texture-87-0")
+                {
+                    Frames = new([new("texture/87-0.png", Hash), new("texture/87-0-frame-1.png", Hash), new("texture/87-0-frame-2.png", Hash), new("texture/87-0-frame-3.png", Hash)], 12F),
+                }],
             new Dictionary<long, NormalizedActorSprite>(), profileKind: DaggerfallWorldProfileKind.Dungeon) { CityGates = [Gate] };
     }
 
@@ -71,7 +76,8 @@ public sealed class ModelRemodelPresentationTests
         foreach (string path in new[] { "mesh/41209.rstatmsh", "mesh/41106.rstatmsh", "mesh/61027.rstatmsh", "remodel/41209.rstatmsh", "remodel/61027.rstatmsh",
                      "remodel/41209-0.png", "remodel/41209-1.png", "texture/67-0.png", "texture/85-0.png",
                      "mesh/446.rstatmsh", "mesh/447.rstatmsh", "remodel/446.rstatmsh", "remodel/447.rstatmsh",
-                     "mesh/41116.rstatmsh", "remodel/41116.rstatmsh", "remodel/41116-0.png" })
+                     "mesh/41116.rstatmsh", "remodel/41116.rstatmsh", "remodel/41116-0.png",
+                     "texture/87-0.png", "texture/87-0-frame-1.png", "texture/87-0-frame-2.png", "texture/87-0-frame-3.png" })
             content.Add(path, Hash);
         AppearanceFake graphics = new(releases);
         DaggerfallLocationParts parts = new(() => 0, () => [], gatesOpen ?? (() => false), () => [(Gate, new EntityId(7), Gate.Open.Visual, GatePose)],
@@ -159,6 +165,29 @@ public sealed class ModelRemodelPresentationTests
         refreshed = true;
         presentation.Advance(OuterUpdate(66));
         Assert.Equal(new Vector2(.5F, 0F), Offsets()[^1]);
+    }
+
+    [Fact]
+    public void A_classic_texture_of_several_frames_draws_each_in_turn_on_the_remodel_strips_clock()
+    {
+        bool refreshed = false;
+        var (presentation, graphics) = Compose(() => refreshed, () => new(Vector3.Zero, Quaternion.Identity, Vector3.One));
+        using DaggerfallSiteAppearance owned = presentation;
+        Material fire = Assert.Single(graphics.StaticMeshMaterials[graphics.StaticMeshByPath["mesh/41116.rstatmsh"]]).Material;
+        string? Opened(RenderResourceReference resource) =>
+            graphics.OpenedResourcePaths[Enumerable.Range(0, graphics.OpenedResourcePaths.Count).Single(at => resource == new RenderResourceReference((ulong)at + 1))];
+        Assert.Equal("texture/87-0.png", Opened(graphics.MaterialRequests[fire].Texture));
+        string?[] Drawn() => [.. graphics.MaterialUpdates.Where(update => update.Material == fire).Select(update => Opened(update.Replacement.Texture))];
+
+        // Twelve frames a second at sixty steps a second: a new frame every five steps, whole frames each, and nothing between.
+        for (ulong step = 1; step <= 4; step++) presentation.Advance(OuterUpdate(step));
+        Assert.Empty(Drawn());
+        for (ulong step = 5; step <= 20; step++) presentation.Advance(OuterUpdate(step));
+        Assert.Equal(["texture/87-0-frame-1.png", "texture/87-0-frame-2.png", "texture/87-0-frame-3.png", "texture/87-0.png"], Drawn());
+
+        // It pauses with the world: an update that admits no step leaves it on its frame.
+        presentation.Advance(OuterUpdate(20) with { AdmittedStepCount = 0 });
+        Assert.Equal(4, Drawn().Length);
     }
 
     [Fact]

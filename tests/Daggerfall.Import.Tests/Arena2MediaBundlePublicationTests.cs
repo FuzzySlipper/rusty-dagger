@@ -137,6 +137,19 @@ public sealed class Arena2MediaBundlePublicationTests
     }
 
     [Fact]
+    public void A_material_cycle_through_a_frame_the_media_does_not_carry_is_refused_by_name()
+    {
+        Arena2DungeonMediaPublication dungeon = CreateDungeonMedia();
+        Arena2DungeonMediaPublication animated = dungeon with
+        {
+            MaterialTextures = [dungeon.MaterialTextures[0] with { Animation = new(12F, ["material/texture-2-0", "material/texture-2-0-frame-1"]) }],
+        };
+
+        FormatException failure = Assert.Throws<FormatException>(() => CreateWorldMedia(CreateClassicMedia(), animated));
+        Assert.Contains("material/texture-2-0-frame-1", failure.InnerException!.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TheWorldMediaPublicationCarriesTheBodiesOnceWithASlotFreeSidecarAndReferencesTheClassicGroup()
     {
         Arena2ClassicMediaPublication classic = CreateClassicMedia();

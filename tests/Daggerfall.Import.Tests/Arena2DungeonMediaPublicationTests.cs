@@ -87,6 +87,33 @@ public sealed class Arena2DungeonMediaPublicationTests
     }
 
     [Fact]
+    public void A_material_record_of_several_frames_publishes_each_as_a_texture_cycled_at_the_donors_rate()
+    {
+        // Record 0 of TEXTURE.002 burns through three frames, as a hearth's fire does; the fire walls' archive 356 cycles slower.
+        Arena2DungeonMediaSource[] sources = CreateSources();
+        Replace(sources, "TEXTURE.002", CreateAnimatedTextureArchive(3));
+        Arena2DungeonMediaPublication publication = Arena2DungeonMediaPublication.Create(
+            Request(new Arena2DungeonMediaSourceSet([.. sources, new Arena2DungeonMediaSource("arena2/TEXTURE.356", CreateAnimatedTextureArchive(4))])) with
+            {
+                RuntimeMaterialResources = ["texture/2-0", "texture/2-1", "texture/356-0"],
+            });
+
+        DungeonMaterialTextureMedia fire = Assert.Single(publication.MaterialTextures, material => material.TextureResourceId == "texture/2-0");
+        Assert.Equal(12F, fire.Animation!.FramesPerSecond);
+        Assert.Equal(["material/texture-2-0", "material/texture-2-0-frame-1", "material/texture-2-0-frame-2"], fire.Animation.Frames);
+        // Each frame is its own whole texture, painted as the record paints that frame.
+        NormalizedMediaDescriptor[] frames = [.. fire.Animation.Frames.Select(id => Assert.Single(publication.MediaManifest.Resources, resource => resource.Id == id))];
+        Assert.All(frames, frame => Assert.Equal((NormalizedMediaKind.Texture, 2, 2), (frame.Kind, frame.SourceWidth, frame.SourceHeight)));
+        Assert.Equal(3, frames.Select(frame => frame.ContentDigest).Distinct().Count());
+        Assert.Equal("media/dungeon/materials/texture-2-0-frame-2.png", frames[2].RelativePath);
+
+        Assert.Equal(5F, Assert.Single(publication.MaterialTextures, material => material.TextureResourceId == "texture/356-0").Animation!.FramesPerSecond);
+        // A record of one frame is a still texture.
+        Assert.Null(Assert.Single(publication.MaterialTextures, material => material.TextureResourceId == "texture/2-1").Animation);
+        Assert.DoesNotContain(publication.MediaManifest.Resources, resource => resource.Id.StartsWith("material/texture-2-1-frame", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Publishes_runtime_terrain_texture_into_the_admitted_media_closure()
     {
         Arena2DungeonMediaPublication publication = Arena2DungeonMediaPublication.Create(CreateRequest() with
@@ -573,6 +600,45 @@ public sealed class Arena2DungeonMediaPublicationTests
         return bytes;
     }
 
+    /// <summary>
+    /// Two 2x2 records: record 0 of <paramref name="frames"/> frames, each painted its own colour, as an animated record
+    /// lays them out (a table of frame offsets, each frame its size then rows of transparent and opaque runs), and record 1 a
+    /// still one.
+    /// </summary>
+    private static byte[] CreateAnimatedTextureArchive(int frames)
+    {
+        const int headerBytes = 26;
+        const int tableEntryBytes = 20;
+        const int recordBytes = 28;
+        const int frameBytes = 4 + (2 * 4);
+        int animatedStart = headerBytes + (2 * tableEntryBytes);
+        int stillStart = animatedStart + recordBytes + (frames * 4) + (frames * frameBytes);
+        byte[] bytes = new byte[stillStart + recordBytes + 512];
+        BitConverter.GetBytes((short)2).CopyTo(bytes, 0);
+        foreach ((int record, int offset, int count) in new[] { (0, animatedStart, frames), (1, stillStart, 1) })
+        {
+            BitConverter.GetBytes(offset).CopyTo(bytes, headerBytes + (record * tableEntryBytes) + 2);
+            BitConverter.GetBytes((short)2).CopyTo(bytes, offset + 4);
+            BitConverter.GetBytes((short)2).CopyTo(bytes, offset + 6);
+            BitConverter.GetBytes((uint)recordBytes).CopyTo(bytes, offset + 14);
+            BitConverter.GetBytes((ushort)count).CopyTo(bytes, offset + 20);
+        }
+
+        int data = animatedStart + recordBytes;
+        for (int frame = 0; frame < frames; frame++)
+        {
+            int frameOffset = (frames * 4) + (frame * frameBytes);
+            BitConverter.GetBytes(frameOffset).CopyTo(bytes, data + (frame * 4));
+            int at = data + frameOffset;
+            BitConverter.GetBytes((short)2).CopyTo(bytes, at);
+            BitConverter.GetBytes((short)2).CopyTo(bytes, at + 2);
+            byte color = checked((byte)(frame + 10));
+            for (int row = 0; row < 2; row++) new byte[] { 0, 2, color, color }.CopyTo(bytes, at + 4 + (row * 4));
+        }
+
+        bytes[stillStart + recordBytes] = bytes[stillStart + recordBytes + 1] = bytes[stillStart + recordBytes + 256] = bytes[stillStart + recordBytes + 257] = 2;
+        return bytes;
+    }
 
     private static byte[] CreateAsymmetricTransparentTextureArchive(int recordCount)
     {

@@ -15,7 +15,14 @@ namespace Daggerfall.Import.Publication;
 public sealed record DungeonMediaManifestSidecar(
     NormalizedMediaManifest Media,
     IReadOnlyList<DungeonBillboardMediaManifest> Billboards,
-    IReadOnlyList<DungeonActorMediaManifest> Actors);
+    IReadOnlyList<DungeonActorMediaManifest> Actors,
+    IReadOnlyList<DungeonMaterialAnimationManifest> AnimatedMaterials);
+
+/// <summary>
+/// A material whose texture record has several frames, which a model surface drawing it cycles: the material's own media
+/// id, and each frame's texture media id in turn, that one first, at the donor's rate (<see cref="DungeonMaterialAnimation"/>).
+/// </summary>
+public sealed record DungeonMaterialAnimationManifest(string MediaId, float FramesPerSecond, IReadOnlyList<string> Frames);
 
 /// <summary>One generated dungeon billboard and its source-backed frame facts.</summary>
 public sealed record DungeonBillboardMediaManifest(
@@ -270,6 +277,28 @@ public static class Arena2MediaBundlePublication
                 || descriptor.Loop is not null && (billboard.Playback is null || descriptor.Loop != billboard.Playback.Loops))
             {
                 throw new InvalidOperationException("Persisted dungeon billboard presentation disagrees with its generated descriptor.");
+            }
+        }
+
+        ArgumentNullException.ThrowIfNull(sidecar.AnimatedMaterials);
+        if (sidecar.AnimatedMaterials.Select(value => value.MediaId).Distinct(StringComparer.Ordinal).Count() != sidecar.AnimatedMaterials.Count)
+        {
+            throw new InvalidOperationException("Persisted dungeon material animations must name each material once.");
+        }
+
+        foreach (DungeonMaterialAnimationManifest animation in sidecar.AnimatedMaterials)
+        {
+            // A cycle that names a frame no texture carries, or one frame, draws a surface that stops or fails to open.
+            if (animation.Frames is not { Count: > 1 } || animation.Frames[0] != animation.MediaId
+                || animation.Frames.Distinct(StringComparer.Ordinal).Count() != animation.Frames.Count
+                || !float.IsFinite(animation.FramesPerSecond) || animation.FramesPerSecond <= 0F)
+            {
+                throw new InvalidOperationException($"Persisted dungeon material animation '{animation.MediaId}' is not two or more frames, its own first, at a rate above zero.");
+            }
+
+            foreach (string frame in animation.Frames)
+            {
+                RequirePersistedDescriptor(media, frame, NormalizedMediaKind.Texture, "dungeon material frame");
             }
         }
 
@@ -553,6 +582,11 @@ public static class Arena2MediaBundlePublication
         publication.Actors
             .OrderBy(media => media.ActorResourceId, StringComparer.Ordinal)
             .Select(ActorSidecar)
+            .ToArray(),
+        publication.MaterialTextures
+            .Where(media => media.Animation is not null)
+            .OrderBy(media => media.Descriptor.Id, StringComparer.Ordinal)
+            .Select(media => new DungeonMaterialAnimationManifest(media.Descriptor.Id, media.Animation!.FramesPerSecond, [.. media.Animation.Frames]))
             .ToArray());
     }
 

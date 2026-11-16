@@ -471,7 +471,18 @@ public sealed record DungeonMaterialTextureMedia(
     {
         ArgumentNullException.ThrowIfNull(artifact);
     }
+
+    /// <summary>How the record cycles where it has more than one frame, as a model surface draws it; null for a still record.</summary>
+    public DungeonMaterialAnimation? Animation { get; init; }
 }
+
+/// <summary>
+/// A material texture record of more than one frame, which a model surface drawing it cycles as Daggerfall Unity's
+/// <c>AnimatedMaterial</c> does: <paramref name="Frames"/> are the media ids of each frame's own texture, the record's
+/// first frame (the material's own descriptor) first, shown in turn at <paramref name="FramesPerSecond"/>. Each frame is
+/// a texture of its own rather than a strip, since model faces tile a texture across their uvs.
+/// </summary>
+public sealed record DungeonMaterialAnimation(float FramesPerSecond, IReadOnlyList<string> Frames);
 
 /// <summary>One visible world billboard and its regenerated sprite atlas.</summary>
 public sealed record DungeonBillboardSpriteMedia(
@@ -537,6 +548,12 @@ public sealed record Arena2DungeonMediaPublication(
     private static readonly DungeonSpritePlaybackSource SourcePrimaryAttackPlayback = new(10F, false);
     private static readonly DungeonSpritePlaybackSource SourceRangedAttackPlayback = new(10F, false);
     private static readonly DungeonSpritePlaybackSource SourceHurtPlayback = new(4F, false);
+
+    // Daggerfall Unity's AnimatedMaterial cycles a model texture of several frames at 12 a second, and MaterialReader
+    // slows the fire walls' archive to 5.
+    private const float SourceMaterialFramesPerSecond = 12F;
+    private const float SourceFireWallFramesPerSecond = 5F;
+    private const ushort FireWallsArchive = 356;
 
     /// <summary>
     /// Converts the source-selected visual facts of a normalized dungeon to
@@ -643,6 +660,32 @@ public sealed record Arena2DungeonMediaPublication(
                     "image/png"));
             }
 
+            // A record of several frames publishes each further frame as a texture of its own, for a surface to cycle.
+            int frames = archive.GetRecordInfo(selection.Record).FrameCount;
+            DungeonMaterialAnimation? animation = null;
+            if (frames > 1)
+            {
+                List<string> frameIds = [id];
+                for (int index = 1; index < frames; index++)
+                {
+                    IndexedTextureFrame next = archive.DecodeFrame(selection.Record, index);
+                    byte[] framePng = DeterministicPngEncoder.EncodeRgba8(next.Width, next.Height, next.ToRgba(palette, PaletteAlphaMode.Opaque));
+                    RequireArtifactSize(framePng, quotas, $"frame {index} of material '{selection.TextureResourceId}'");
+                    frameIds.Add($"{id}-frame-{index}");
+                    generated.Add(new(
+                        frameIds[^1],
+                        NormalizedMediaKind.Texture,
+                        $"media/dungeon/materials/texture-{selection.Archive}-{selection.Record}-frame-{index}.png",
+                        framePng,
+                        next.Width,
+                        next.Height,
+                        null,
+                        "image/png"));
+                }
+
+                animation = new(selection.Archive == FireWallsArchive ? SourceFireWallFramesPerSecond : SourceMaterialFramesPerSecond, frameIds);
+            }
+
             ImportPublicationArtifact artifact = ToPublicationArtifact(generatedArtifact);
             materials.Add(new(
                 id,
@@ -652,7 +695,8 @@ public sealed record Arena2DungeonMediaPublication(
                 selection.Record,
                 frame.Width,
                 frame.Height,
-                artifact));
+                artifact,
+                animation));
         }
 
         return materials;
@@ -1186,7 +1230,8 @@ public sealed record Arena2DungeonMediaPublication(
         ushort TextureRecord,
         int Width,
         int Height,
-        ImportPublicationArtifact Artifact)
+        ImportPublicationArtifact Artifact,
+        DungeonMaterialAnimation? Animation)
     {
         public DungeonMaterialTextureMedia Finish(NormalizedMediaDescriptor descriptor) => new(
             TextureResourceId,
@@ -1196,7 +1241,7 @@ public sealed record Arena2DungeonMediaPublication(
             Width,
             Height,
             Artifact,
-            descriptor);
+            descriptor) { Animation = Animation };
     }
 
     private sealed record BillboardDraft(

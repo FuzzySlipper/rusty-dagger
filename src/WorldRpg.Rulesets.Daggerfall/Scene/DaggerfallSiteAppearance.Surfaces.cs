@@ -10,7 +10,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// rain, as the climate swap published them), or while refreshed art is drawn, that record's refreshed surface where the
 /// set has one. A season or art change updates only the materials whose texture changes. A window's glass mask stays
 /// bound to its material, so nightfall changes only the emission's level, in either art set: refreshed walls keep the
-/// classic's window layout, so the classic's mask covers their glass.
+/// classic's window layout, so the classic's mask covers their glass. A classic texture of several frames, as a hearth's
+/// fire, draws each in turn, stepped on the remodel strips' clock.
 /// <para>
 /// Outdoors, a refreshed surface whose record's relief has a depth (<see cref="DaggerfallGroundRelief.Depth"/>), a
 /// building's wall, door or roof, draws it with the set's surface shader near the camera, as deep as the player's relief
@@ -38,9 +39,12 @@ internal sealed partial class DaggerfallSiteAppearance
     /// variant repeats summer), the refreshed resource per season once the art set is admitted (the classic one where it
     /// has none), the resource it draws now, on a window the glass mask per season and the one it holds now, and outdoors
     /// the relief image and depth per season where that season's record has building relief, and the shader it draws now.
+    /// A classic texture of several frames holds each frame's resource, which it draws in every season, and the frame it shows.
     /// </summary>
     private sealed class SurfaceMaterial(Material material, string[] paths, RenderResource[] classic, RenderResource current, RenderResource?[] glass)
     {
+        internal (RenderResource[] Textures, DaggerfallArtFlipbook Flipbook)? Frames { get; init; }
+        internal int Frame { get; set; }
         internal Material Material { get; } = material;
         internal string[] Paths { get; } = paths;
         internal RenderResource[] Classic { get; } = classic;
@@ -122,18 +126,24 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         surfacesRefreshed = drawRefreshedEffects();
         surfacesStrength = reliefStrength();
-        int season = materialSeason switch { DaggerfallExteriorSeason.Winter => 1, DaggerfallExteriorSeason.Rain => 2, _ => 0 };
-        foreach (SurfaceMaterial surface in surfaceMaterials)
-        {
-            RenderResource wanted = (surfacesRefreshed && surface.Refreshed is { } refreshed ? refreshed : surface.Classic)[season];
-            RenderResource? glass = surface.Glass[season];
-            float level = glass is null ? 0F : windowLevel;
-            MaterialShader shader = surfacesRefreshed && surfacesStrength > 0 && surfaceShader is { } relief && surface.Relief[season] is { } height
-                ? reliefTuning.Shader(relief, height.Image, height.Depth, surfacesStrength) : default;
-            if (wanted == surface.Current && glass == surface.CurrentGlass && level == surface.Level && shader == surface.Shader) continue;
-            appearance.UpdateMaterial(new MaterialUpdateRequest(surface.Material, SurfaceRequest(wanted, glass, shader)));
-            (surface.Current, surface.CurrentGlass, surface.Level, surface.Shader) = (wanted, glass, level, shader);
-        }
+        int season = SurfaceSeason;
+        foreach (SurfaceMaterial surface in surfaceMaterials) ApplySurface(surface, season);
         ApplyShells(season, surfacesRefreshed);
+    }
+
+    private int SurfaceSeason => materialSeason switch { DaggerfallExteriorSeason.Winter => 1, DaggerfallExteriorSeason.Rain => 2, _ => 0 };
+
+    /// <summary>Draws one surface in a season, the current art set and relief strength, updating its material only where that changes it.</summary>
+    private void ApplySurface(SurfaceMaterial surface, int season)
+    {
+        RenderResource wanted = surfacesRefreshed && surface.Refreshed is { } refreshed ? refreshed[season]
+            : surface.Frames is { } frames ? frames.Textures[surface.Frame] : surface.Classic[season];
+        RenderResource? glass = surface.Glass[season];
+        float level = glass is null ? 0F : windowLevel;
+        MaterialShader shader = surfacesRefreshed && surfacesStrength > 0 && surfaceShader is { } relief && surface.Relief[season] is { } height
+            ? reliefTuning.Shader(relief, height.Image, height.Depth, surfacesStrength) : default;
+        if (wanted == surface.Current && glass == surface.CurrentGlass && level == surface.Level && shader == surface.Shader) return;
+        appearance.UpdateMaterial(new MaterialUpdateRequest(surface.Material, SurfaceRequest(wanted, glass, shader)));
+        (surface.Current, surface.CurrentGlass, surface.Level, surface.Shader) = (wanted, glass, level, shader);
     }
 }
