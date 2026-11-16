@@ -5,6 +5,7 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
@@ -142,6 +143,39 @@ public sealed class DaggerfallPlayerMovementTests
         Assert.False(step.SlowfallDescending);
     }
 
+    /// <summary>
+    /// The Engine refuses every step of a body it cannot free, and with no clear spot in reach the player is held: they are
+    /// told once as the hold begins, not again while it lasts, nor once a step goes through; a later hold is told again.
+    /// </summary>
+    [Fact]
+    public void A_player_held_in_collision_is_told_once_and_a_freed_one_no_more()
+    {
+        using Stage stage = new();
+        stage.Spatial.OverlapHit = _ => new SpatialHit { Present = true };
+        string[] Notices() => [.. stage.Presentation.Messages.Where(message => message == "You are stuck.")];
+        CharacterStepReceipt? Moved()
+        {
+            ProductUpdateState update = new(.05f);
+            DaggerfallPlayerStep step = Begun(stage, update);
+            stage.Movement.Move(ref step, update);
+            return step.Movement;
+        }
+
+        stage.Spatial.StepResult = (_, _) => throw new EngineCallException("Spatial", "ProposeCharacterStep", 1,
+            new[] { new EngineDiagnostic("unresolved-character-controller-penetration", "Wedged.", "test") });
+        for (int held = 0; held < 3; held++) Assert.Null(Moved());
+        Assert.Single(Notices());
+
+        stage.Spatial.StepResult = null;
+        for (int freed = 0; freed < 2; freed++) Assert.NotNull(Moved());
+        Assert.Single(Notices());
+
+        stage.Spatial.StepResult = (_, _) => throw new EngineCallException("Spatial", "ProposeCharacterStep", 1,
+            new[] { new EngineDiagnostic("unresolved-character-controller-penetration", "Wedged.", "test") });
+        Assert.Null(Moved());
+        Assert.Equal(2, Notices().Length);
+    }
+
     [Fact]
     public void One_trigger_request_carries_the_water_then_the_dungeon_actions_then_the_player()
     {
@@ -212,7 +246,7 @@ public sealed class DaggerfallPlayerMovementTests
             Movement = new DaggerfallPlayerMovement(Input, _spatial, new DaggerfallLocomotionPolicy(tuning.Locomotion, new DaggerfallControlSettings()),
                 new DaggerfallClimbingPolicy(tuning.Climbing), new DaggerfallLevitationPolicy(), new DaggerfallSwimmingPolicy(tuning.Swimming), Control,
                 Actors, character, new DaggerfallSkillUseReactions(Actors.Player.Progression, stats, definitions, () => character.Career),
-                Effects, new OnFoot(), RandomMinimum.Create(), tuning.Locomotion, tuning.Time.GameSecondsPerRealSecond);
+                Effects, new OnFoot(), RandomMinimum.Create(), tuning.Locomotion, tuning.Time.GameSecondsPerRealSecond, Presentation);
         }
 
         internal ActorsState Actors { get; } = new();
@@ -222,6 +256,7 @@ public sealed class DaggerfallPlayerMovementTests
         internal Effects Effects { get; } = new();
         internal Surface Water { get; } = new();
         internal DaggerfallPlayerMovement Movement { get; }
+        internal PresentationState Presentation { get; } = new("", 5d, 4);
 
         public void Dispose()
         {

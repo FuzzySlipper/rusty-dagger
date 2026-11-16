@@ -574,7 +574,8 @@ internal sealed partial class DaggerfallSession
                 dialogueWorld: new DaggerfallDialogueWorldState(saved?.DialogueWorld));
             _restPlaces = new DaggerfallRestPlaces(State.Lodging, State.Property, State.GuildMembership);
             _movement = new DaggerfallPlayerMovement(_input, _spatial, _locomotion, _climbing, _levitation, State.Swimming, State.PlayerControl,
-                State.Actors, State.Character, State.SkillUses, State.Effects, State.Transport, _random, _tuning.Locomotion, _tuning.Time.GameSecondsPerRealSecond);
+                State.Actors, State.Character, State.SkillUses, State.Effects, State.Transport, _random, _tuning.Locomotion, _tuning.Time.GameSecondsPerRealSecond,
+                Presentation);
             // An enemy hit on the player is in flight while Combat holds its impact or a site appearance still times it.
             _actTiming = new DaggerfallPlayerActTiming(() => _combat.HoldsImpactAt(DaggerfallActorIdentity.PlayerEntityId)
                 || _sites.Appearances.Any(appearance => appearance.HasPendingEnemyHitTarget(DaggerfallActorIdentity.PlayerEntityId)));

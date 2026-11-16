@@ -98,8 +98,14 @@ public sealed class SpatialMovementSystem : IDisposable
     private CharacterContinuationCheckpoint? _restoredCheckpoint;
     private readonly Dictionary<ulong, (string Scope, string Tag, int References, bool Active)> _registeredTriggers = [];
     private bool _verticalDriven;
-    // The player is held in collision with no clear spot in reach, and that has been reported (CharacterPenetration).
     private bool _heldInCollision;
+
+    /// <summary>
+    /// Whether the player is held where the Engine cannot step them free, with no clear spot in reach
+    /// (<see cref="CharacterPenetration"/>): set by the first such refused step, which reports it, and cleared when a
+    /// step is accepted or the player is relocated.
+    /// </summary>
+    public bool IsHeldInCollision => _heldInCollision;
 
     /// <summary>Whether the last accepted or restored Engine continuation used controlled vertical motion.</summary>
     public bool IsVerticalDriven => _verticalDriven;

@@ -4,6 +4,7 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
@@ -86,14 +87,17 @@ internal sealed class DaggerfallPlayerMovement
     private readonly DaggerfallLocomotionTuning _tuning;
     private readonly double _gameSecondsPerRealSecond;
     private readonly Action<DaggerfallSkillUse> _recordSkillUse;
+    private readonly PresentationState _presentation;
     // The water's trigger colliders, kept while the environment keeps its water.
     private (ReadOnlyMemory<CharacterWaterVolume> Water, SpatialEntityCollider[] Colliders) _waterColliders = (ReadOnlyMemory<CharacterWaterVolume>.Empty, []);
 
     /// <param name="gameSecondsPerRealSecond">How much game time a real second of play passes (Time's rate).</param>
+    /// <param name="presentation">The HUD's messages, which tell a player held in collision that they are stuck.</param>
     internal DaggerfallPlayerMovement(PlayerInputSystem input, SpatialMovementSystem spatial, DaggerfallLocomotionPolicy locomotion,
         DaggerfallClimbingPolicy climbing, DaggerfallLevitationPolicy levitation, DaggerfallSwimmingPolicy swimming, PlayerControlState control,
         ActorsState actors, DaggerfallCharacterState character, DaggerfallSkillUseReactions skillUses, IDaggerfallMovementEffects effects,
-        IDaggerfallRide ride, IRandomService random, DaggerfallLocomotionTuning tuning, double gameSecondsPerRealSecond)
+        IDaggerfallRide ride, IRandomService random, DaggerfallLocomotionTuning tuning, double gameSecondsPerRealSecond,
+        PresentationState presentation)
     {
         _input = input;
         _spatial = spatial;
@@ -110,6 +114,7 @@ internal sealed class DaggerfallPlayerMovement
         _tuning = tuning;
         _gameSecondsPerRealSecond = gameSecondsPerRealSecond;
         _recordSkillUse = use => skillUses.Record(use);
+        _presentation = presentation;
     }
 
     /// <summary>The step's observed input under the player's control restrictions; a load too heavy to move or death stops the feet.</summary>
@@ -215,9 +220,17 @@ internal sealed class DaggerfallPlayerMovement
         player.ReleasedVerticalDrive = _spatial.IsVerticalDriven && !player.Locomotion.Controls.VerticalVelocity.HasValue;
     }
 
-    /// <summary>The Engine's character step over the shaped controls.</summary>
-    internal void Move(ref DaggerfallPlayerStep player, ProductUpdateState update) =>
+    /// <summary>
+    /// The Engine's character step over the shaped controls. A player the Engine cannot step free, with no clear spot in
+    /// reach, is held where they are: they are told once as the hold begins, and again only after a step has gone through.
+    /// The classic game has no such message.
+    /// </summary>
+    internal void Move(ref DaggerfallPlayerStep player, ProductUpdateState update)
+    {
+        bool held = _spatial.IsHeldInCollision;
         player.Movement = _spatial.Step(_control, update, player.Environment, player.Locomotion.Controls);
+        if (!held && _spatial.IsHeldInCollision) _presentation.SetOutcome("You are stuck.");
+    }
 
     /// <summary>
     /// Swimming, the landing and climbing settle against the movement the Engine accepted. A fall measured after a

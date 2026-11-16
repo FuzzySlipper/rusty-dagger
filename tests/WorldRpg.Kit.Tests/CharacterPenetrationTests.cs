@@ -41,6 +41,7 @@ public sealed class CharacterPenetrationTests
             Assert.InRange(new Vector2(stood.X, stood.Z).Length(), .5f, 1f);
             Assert.Equal(StandingCentre, stood.Y, precision: 4);
             Assert.False(Overlaps(system, stood, environment));
+            Assert.False(system.IsHeldInCollision);
             Assert.NotNull(system.Step(player, Update(new Vector2(0, 1)), environment));
         });
     }
@@ -58,6 +59,7 @@ public sealed class CharacterPenetrationTests
                 Assert.Null(system.Step(player, Update(new Vector2(0, 1)), environment));
 
             Assert.Equal(buried, player.Position);
+            Assert.True(system.IsHeldInCollision);
         });
     }
 
