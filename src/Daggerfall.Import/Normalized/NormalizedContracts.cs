@@ -325,6 +325,8 @@ public sealed record NormalizedBillboardPlacement(string Id, string SpriteResour
 {
     public bool BaseAligned { get; init; }
     public bool ClimateNature { get; init; }
+    /// <summary>A burning lamp: it glows, and its light is among the place's lights. An extinguished one is a plain flat.</summary>
+    public bool Lamp { get; init; }
 }
 
 public sealed record NormalizedActorPlacement(string Id, string ActorResourceId, NormalizedVector3 Position,

@@ -412,7 +412,7 @@ public sealed class DaggerfallHangingTests
         animation.Rest = lantern ? [.. RootRest, new(0, .5F, 0)] : RootRest;
         NormalizedBillboardSprite root = new("sprite/root.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(.85F, 1.875F));
         (int, int) source = lantern ? (210, 25) : (213, 8);
-        DaggerfallSiteDecoration placed = new("billboard/block/0/0/1", new WorldPoint(4, 3 - 1.875F / 2, 6), false, root, root, source, source);
+        DaggerfallSiteDecoration placed = new("billboard/block/0/0/1", new WorldPoint(4, 3 - 1.875F / 2, 6), false, root, root, source, source, Lamp: lantern);
         AppearanceFake graphics = new(releases);
         DaggerfallSiteAppearance appearance = new(content, graphics, MediaInputs(decorations: [placed]));
         appearance.UseEffectArt(PresentationRecorder.Create().Service, animation.Service, Art(lantern: lantern), () => true, report);

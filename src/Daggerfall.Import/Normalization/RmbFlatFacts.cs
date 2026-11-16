@@ -37,6 +37,7 @@ internal sealed class RmbFlatFacts(DungeonLogicalSourceSet sources)
             {
                 BaseAligned = true,
                 ClimateNature = interior is null && flat.BuildingIndex is not null && flat.TextureArchive is >= 500 and <= 511,
+                Lamp = DaggerfallInteriorLightFacts.BurningLamp(flat.TextureArchive, flat.TextureRecord),
             });
             if (flat.TextureArchive != DaggerfallInteriorLightFacts.Archive) continue;
             if (interior is not null)

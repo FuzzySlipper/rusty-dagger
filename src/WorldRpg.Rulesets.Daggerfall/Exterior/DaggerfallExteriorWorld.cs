@@ -1812,6 +1812,16 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
         return light;
     }
 
+    /// <summary>
+    /// Lets the lamps of every location resident beside the active one ask for their shadows by the rule its own follow,
+    /// so a neighbouring town's street lamps near the player cast when outdoor lamp shadows are chosen.
+    /// </summary>
+    internal void UpdateResidentShadowSectors(Vector3 player, DaggerfallLampShadowChoice choice)
+    {
+        foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values)
+            if (!ReferenceEquals(resident.Projection, Projection)) resident.Projection.Lighting.UpdateShadowSector(player, choice);
+    }
+
     internal void UpdateResidentCityLights()
     {
         DaggerfallSkyTime sky = _time.Calendar.Sky;

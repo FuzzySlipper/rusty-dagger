@@ -216,6 +216,23 @@ public sealed class WorldMediaContentTests
         Assert.Equal(10F, imp.States["move"].EffectiveFramesPerSecond);
     }
 
+    /// <summary>
+    /// The importer marks each burning lamp the place draws, so its glow and its light have one source: the Hold's wall
+    /// torches burn, its extinguished lamp does not, and nothing outside the lights archive is a lamp.
+    /// </summary>
+    [Fact]
+    public void The_assembled_hold_knows_its_burning_lamps_from_the_import()
+    {
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
+        DaggerfallSiteDecoration[] torches = [.. inputs.Decorations.Where(flat => flat.Source == (210, 17))];
+        DaggerfallSiteDecoration[] extinguished = [.. inputs.Decorations.Where(flat => flat.Source == (210, 12))];
+        Assert.NotEmpty(torches);
+        Assert.NotEmpty(extinguished);
+        Assert.All(torches, flat => Assert.True(flat.Lamp));
+        Assert.All(extinguished, flat => Assert.False(flat.Lamp));
+        Assert.DoesNotContain(inputs.Decorations, flat => flat.Lamp && flat.Source.Archive != 210);
+    }
+
     [Fact]
     public void The_assembled_hold_reads_its_lights_materials_sprites_and_classic_presentation()
     {

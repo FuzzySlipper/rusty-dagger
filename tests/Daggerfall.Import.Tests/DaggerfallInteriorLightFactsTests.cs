@@ -16,6 +16,15 @@ public sealed class DaggerfallInteriorLightFactsTests
     public void An_extinguished_lamp_gives_no_light(int record) =>
         Assert.False(DaggerfallInteriorLightFacts.TryProject("light-flat/test/0", DaggerfallInteriorLightFacts.Archive, record, Centre, 1F, out _));
 
+    /// <summary>A place publishes each burning lamp for its glow: a lit lamp of the lights archive, not an extinguished one or another archive's flat.</summary>
+    [Fact]
+    public void A_burning_lamp_is_a_lit_record_of_the_lights_archive()
+    {
+        Assert.True(DaggerfallInteriorLightFacts.BurningLamp(DaggerfallInteriorLightFacts.Archive, 17));
+        Assert.False(DaggerfallInteriorLightFacts.BurningLamp(DaggerfallInteriorLightFacts.Archive, 12));
+        Assert.False(DaggerfallInteriorLightFacts.BurningLamp(211, 17));
+    }
+
     /// <summary>Where DFU left the offset to do, the light sits at the flame the art draws, not at the sprite's centre.</summary>
     [Theory]
     [InlineData(16, .2F)]

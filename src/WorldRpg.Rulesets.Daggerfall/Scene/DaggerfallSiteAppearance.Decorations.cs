@@ -48,9 +48,9 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         foreach (var flat in inputs.Decorations)
         {
-            var summer = CreateDecorationSprite(flat.Summer, flat.BaseAligned, Material(flat), GivesLight(flat.Source));
+            var summer = CreateDecorationSprite(flat.Summer, flat.BaseAligned, Material(flat), GivesLight(flat, flat.Source));
             var winter = flat.Summer == flat.Winter ? summer
-                : CreateDecorationSprite(flat.Winter, flat.BaseAligned, Material(flat), GivesLight(flat.WinterSource));
+                : CreateDecorationSprite(flat.Winter, flat.BaseAligned, Material(flat), GivesLight(flat, flat.WinterSource));
             DecorationVisual visual = new(flat, summer, winter, NextLocationVisualOrdinal());
             AttachDecorationMesh(visual);
             AttachDecorationFlats(visual);
@@ -59,18 +59,19 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     /// <summary>
-    /// The classic flats that give light, as the donor marks them emissive: the fireplace, lamps, lanterns, torches, candles,
-    /// braziers, the glowing statue, the brewing potion, the Mantellan Crux's fire and the magic decorations.
+    /// The classic flats besides the lamps that give light, as the donor marks them emissive: the fireplace, the glowing
+    /// statue, the brewing potion, the Mantellan Crux's fire and the magic decorations. The lamps (archive 210) that burn
+    /// are the importer's: it publishes each one beside the light it sheds.
     /// </summary>
     private static readonly IReadOnlyDictionary<int, int[]> LightFlats = new Dictionary<int, int[]>
     {
         [87] = [0], [101] = [2, 3, 5, 6, 7, 8, 9, 11, 12], [190] = [3, 4, 5], [200] = [7, 8, 9, 10], [202] = [2], [208] = [2],
-        [210] = [0, 1, 2, 3, 4, 5, 6, 8, 9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
         [253] = [10, 17, 18, 19, 22, 41, 48, 49, 50, 51, 52, 75, 77], [356] = [0, 2, 3], [380] = [3], [434] = [3],
     };
 
-    private static bool GivesLight((int Archive, int Record) source) =>
-        LightFlats.TryGetValue(source.Archive, out int[]? records) && records.Contains(source.Record);
+    /// <summary>Whether <paramref name="flat"/>, drawn as <paramref name="source"/>, gives light: a burning lamp, or a flat the donor marks emissive.</summary>
+    private static bool GivesLight(DaggerfallSiteDecoration flat, (int Archive, int Record) source) =>
+        flat.Lamp || LightFlats.TryGetValue(source.Archive, out int[]? records) && records.Contains(source.Record);
 
     /// <summary>
     /// A decoration takes the light around it and casts a shadow, except one that gives light. A tree or plant from the
@@ -78,7 +79,7 @@ internal sealed partial class DaggerfallSiteAppearance
     /// </summary>
     private SpriteMaterialDescriptor Material(DaggerfallSiteDecoration flat)
     {
-        SpriteMaterialDescriptor lit = GivesLight(flat.Source) ? LitSprite : CastingSprite;
+        SpriteMaterialDescriptor lit = GivesLight(flat, flat.Source) ? LitSprite : CastingSprite;
         return DaggerfallNatureArchives.Contains(flat.Source.Archive) ? flats.Flora(lit) : lit;
     }
 
@@ -118,10 +119,10 @@ internal sealed partial class DaggerfallSiteAppearance
         if (surfaceArt is null) return;
         DaggerfallSiteDecoration definition = flat.Definition;
         if (flat.RefreshedSummer is null && surfaceArt.Flats.TryGetValue(definition.Source, out DaggerfallArtFlat? summer))
-            flat.RefreshedSummer = CreateRefreshedDecorationSprite(definition.Summer, summer, definition.BaseAligned, Material(definition), GivesLight(definition.Source));
+            flat.RefreshedSummer = CreateRefreshedDecorationSprite(definition.Summer, summer, definition.BaseAligned, Material(definition), GivesLight(definition, definition.Source));
         if (flat.RefreshedWinter is null && surfaceArt.Flats.TryGetValue(definition.WinterSource, out DaggerfallArtFlat? winter))
             flat.RefreshedWinter = definition.WinterSource == definition.Source ? flat.RefreshedSummer
-                : CreateRefreshedDecorationSprite(definition.Winter, winter, definition.BaseAligned, Material(definition), GivesLight(definition.WinterSource));
+                : CreateRefreshedDecorationSprite(definition.Winter, winter, definition.BaseAligned, Material(definition), GivesLight(definition, definition.WinterSource));
     }
 
     /// <summary>

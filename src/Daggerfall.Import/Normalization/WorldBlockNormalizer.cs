@@ -312,7 +312,8 @@ public sealed class WorldBlockNormalizer
             if (DaggerfallInteriorLightFacts.TryProject($"light-flat/{scope}/{flat.Index}", flat.Source, position, RdbBlockContent.ToMetres(height), out NormalizedLightPlacement light))
                 lamps.Add(light);
             billboards.Add(new($"billboard/{scope}/{flat.Index}", $"sprite/texture-{flat.Source.TextureArchive}-{flat.Source.TextureRecord}", position,
-                new(RdbBlockContent.ToMetres(width), RdbBlockContent.ToMetres(height))));
+                new(RdbBlockContent.ToMetres(width), RdbBlockContent.ToMetres(height)))
+            { Lamp = DaggerfallInteriorLightFacts.BurningLamp(flat.Source.TextureArchive, flat.Source.TextureRecord) });
         }
         IReadOnlyList<NormalizedLightPlacement> lights = DaggerfallInteriorLightFacts.OnePerLamp([.. content.Lights.Select(light =>
             new NormalizedLightPlacement($"light/{scope}/{light.Index}", MeshGeometry.ToRightHanded(light.Point), light.Range, 1F, new(1F, 1F, 1F)))], lamps);

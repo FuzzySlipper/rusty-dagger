@@ -41,12 +41,13 @@ public sealed class ActorSpritePresentationTests
     public void A_classic_light_flat_takes_the_light_and_shines_through_its_own_texture_at_the_lamps_level()
     {
         List<string> releases = []; var graphics = new AppearanceFake(releases);
-        DaggerfallSiteDecoration Flat(string id, string path, (int, int) source)
+        DaggerfallSiteDecoration Flat(string id, string path, (int, int) source, bool lamp)
         {
             NormalizedBillboardSprite sprite = new(path, Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new(.5f, 0f), Vector2.One);
-            return new(id, new(0, 0, 0), true, sprite, sprite, source, source);
+            return new(id, new(0, 0, 0), true, sprite, sprite, source, source, lamp);
         }
-        DaggerfallSiteProfile profile = MediaInputs(decorations: [Flat("torch", "flat/torch.png", (210, 1)), Flat("barrel", "flat/barrel.png", (205, 0))]);
+        // The import marks the campfire a burning lamp; the barrel is a plain flat.
+        DaggerfallSiteProfile profile = MediaInputs(decorations: [Flat("torch", "flat/torch.png", (210, 1), lamp: true), Flat("barrel", "flat/barrel.png", (205, 0), lamp: false)]);
         ContentFake content = MediaContent(releases);
         content.Add("flat/torch.png", Hash);
         content.Add("flat/barrel.png", Hash);

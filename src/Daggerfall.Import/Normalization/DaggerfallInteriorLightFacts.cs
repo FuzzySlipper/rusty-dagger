@@ -17,6 +17,9 @@ public static class DaggerfallInteriorLightFacts
     /// </summary>
     internal static bool Lit(int record) => record is not (7 or 10 or 12);
 
+    /// <summary>Whether a flat is a burning lamp, which the place publishes for its glow beside the light it sheds.</summary>
+    internal static bool BurningLamp(int archive, int record) => archive == Archive && Lit(record);
+
     /// <summary>
     /// How near a dungeon's light record stands to a lit lamp flat when both are that lamp's light. The donor lights a
     /// dungeon by its records alone and a building by its flats alone; nearly every record stands this near a lamp, most
