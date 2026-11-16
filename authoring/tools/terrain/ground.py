@@ -197,7 +197,7 @@ def build_set(archive, pure, built):
     bases = built[archive] = {}
     for material, record in first.items():
         reference = classic(archive, record)
-        bases[material] = calm(reduce.crunch(OUT / "raw" / f"{material}.png", reference), reference)
+        bases[material] = calm(reduce.crunch(OUT / "raw" / f"{material}.png", reference, "enable"), reference)
         bases[material].save(folder / "bases" / f"{material}.png")
     for record in range(RECORDS):
         final = folder / f"texture-{archive:03d}-{record}.png"

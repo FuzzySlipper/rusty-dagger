@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Convert surface texture families (rusty-dagger #10497): every used record of the named families, from the
-export-surfaces reference set (local/art/reference/surfaces, usage.csv), to a refreshed final in local/art/generated/surfaces.
+"""Convert surface texture families (rusty-dagger #10497): every record of the named families a placed model draws
+(tiling.usage), from the export-surfaces reference set (local/art/reference/surfaces: the classic images, and usage.csv
+for each record's size and whether its planes lie flat), to a refreshed final in local/art/generated/surfaces.
 
 For each record, in order, each step skipped when its output exists:
   1. prepare  the classic record; a floor or ceiling (mostly flat planes) without its bevel frame (reduce.unframe).
@@ -15,7 +16,7 @@ For each record, in order, each step skipped when its output exists:
      (0.4 keeps a fine-grained floor's grit, which higher denoise paints as broad blotches).
   4. reduce   reduce.crunch: twice the classic's size, its colours, a strong unsharp mask, an ART_PAL subset.
 A winter record (a set's snow archive, one above its summer) is its refreshed summer under the classic winter's own
-snow (reduce.winter); its summer is converted first even when only the winter is used. A winter record the classic
+snow (reduce.winter); its summer is converted first even when only the winter is drawn. A winter record the classic
 redrew as another picture (not reduce.snowed) is converted like a summer one.
 
     batch.py --host den-m5 --family exterior-city-a --family exterior-roofs
@@ -60,11 +61,6 @@ NEGATIVE = ("text, letters, signature, watermark, border, frame, perspective, ho
 
 def records():
     return list(csv.DictReader(open(RAW / "usage.csv")))
-
-
-def used(row):
-    """Whether a block can draw the record and it has an image (TEXTURE.000 record 0 is the classic's no-texture sentinel)."""
-    return int(row["frames"]) > 0 and int(row["exterior_blocks"]) + int(row["interior_blocks"]) + int(row["dungeon_blocks"]) > 0
 
 
 def classic(row):
@@ -148,16 +144,19 @@ def main():
     sys.path.insert(0, str(AP / "tools/lora-training"))
     import comfy, generate  # noqa: E402,E401
 
-    rows = records()
+    # The records a placed model draws (tiling.usage), each with an image (TEXTURE.000 record 0 is the classic's
+    # no-texture sentinel), and where the game repeats them.
+    rows = [r for r in records() if int(r["frames"]) > 0]
+    repeats = tiling.usage({(int(r["archive"]), int(r["record"])): (int(r["width"]), int(r["height"])) for r in rows})
     by_key = {(int(r["archive"]), int(r["record"])): r for r in rows}
     family_of = lambda r: r["set"].removesuffix("-snow")
-    todo = [r for r in rows if used(r) and (family_of(r) in families or f"texture-{int(r['archive']):03d}-{r['record']}" in a.key)]
-    # A used winter record needs its summer converted first.
+    todo = [r for r in rows if (int(r["archive"]), int(r["record"])) in repeats
+            and (family_of(r) in families or f"texture-{int(r['archive']):03d}-{r['record']}" in a.key)]
+    # A drawn winter record needs its summer converted first.
     for r in list(todo):
         if r["set"].endswith("-snow") and (summer := by_key.get((int(r["archive"]) - 1, int(r["record"])))) and summer not in todo:
             todo.insert(0, summer)
     todo.sort(key=lambda r: r["set"].endswith("-snow"))
-    repeats = tiling.usage({(int(r["archive"]), int(r["record"])): (int(r["width"]), int(r["height"])) for r in todo})
     captions_path = OUT / "captions.json"
     OUT.mkdir(parents=True, exist_ok=True)
     cache = json.loads(captions_path.read_text()) if captions_path.exists() else {}

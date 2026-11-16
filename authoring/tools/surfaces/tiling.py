@@ -136,14 +136,16 @@ def placements():
 
 
 def usage(sizes):
-    """{(archive, record): {"x"|"y": planes repeating it, "models": Counter, "blocks": Counter}} for the records in
-    `sizes` ({(archive, record): classic (width, height)}), as the placed models draw them."""
+    """{(archive, record): {"x"|"y": planes repeating it, "models": Counter, "blocks": Counter}} for each record in `sizes`
+    ({(archive, record): classic (width, height)}) a placed model draws, repeated or not: which records the game draws, and
+    where it repeats them."""
     planes = meshes()
     swaps, remaps = reach()
     found = collections.defaultdict(lambda: {"x": 0, "y": 0, "models": collections.Counter(), "blocks": collections.Counter()})
     for block, kind, mesh in placements():
         for archive, record, u, v in planes.get(mesh, []):
-            archives = {archive} | (remaps.get(archive, set()) if kind == "rdb" else swaps.get((archive, record), set()))
+            # A dungeon table replaces the archives it remaps; a climate or season swap leaves the base where it draws itself.
+            archives = remaps.get(archive, {archive}) if kind == "rdb" else {archive} | swaps.get((archive, record), set())
             for drawn in archives:
                 if (drawn, record) not in sizes:
                     continue

@@ -8,9 +8,9 @@ namespace Daggerfall.Source.Tool.ReferenceExports;
 /// The surface textures walls, floors, ceilings, roofs and doors draw (TEXTURE.000-199 and 300-499; the 200s are item
 /// and paper-doll art and the 500s nature billboards), grouped by their classic texture set across climates, with each
 /// record's size and how many blocks can draw it: town exteriors and interiors (RMB) after the climate and season swap,
-/// and dungeons (RDB) after the classic dungeon texture tables. Usage is what a record's refresh is worth. How the
-/// models lay a record says how it must tile: the planes it covers (floors and ceilings lie flat, walls stand) and how
-/// far their texture coordinates run past the record on each axis, which is where it repeats.
+/// and dungeons (RDB) after the classic dungeon texture tables. Usage is what a record's refresh is worth. The planes a
+/// record covers say whether it lies flat (floors and ceilings) or stands (walls). Where the game repeats a record is
+/// authoring/tools/surfaces/tiling.py's, from the published meshes and tables.
 /// </summary>
 internal static class SurfaceReferenceExport
 {
@@ -44,13 +44,11 @@ internal static class SurfaceReferenceExport
 
     private sealed record Usage(HashSet<string> Exterior, HashSet<string> Interior, HashSet<string> Dungeon);
 
-    /// <summary>How the models lay one texture record: flat and standing planes, and the widest texture-coordinate span on each axis.</summary>
+    /// <summary>How the models lay one texture record: its flat and standing planes.</summary>
     private sealed class Layout
     {
         internal int Flat;
         internal int Standing;
-        internal int SpanU;
-        internal int SpanV;
     }
 
     private static Layout Layouts(Dictionary<int, Layout> layouts, int key)
@@ -83,8 +81,6 @@ internal static class SurfaceReferenceExport
                 if (normal.LengthSquared() == 0) continue;
                 if (Math.Abs(System.Numerics.Vector3.Normalize(normal).Y) > 0.7F) layout.Flat++;
                 else layout.Standing++;
-                layout.SpanU = Math.Max(layout.SpanU, plane.Points.Max(p => p.U) - plane.Points.Min(p => p.U));
-                layout.SpanV = Math.Max(layout.SpanV, plane.Points.Max(p => p.V) - plane.Points.Min(p => p.V));
             }
         }
 
@@ -135,7 +131,6 @@ internal static class SurfaceReferenceExport
             {
                 Layout target = Layouts(reached, key);
                 target.Flat += source.Flat; target.Standing += source.Standing;
-                target.SpanU = Math.Max(target.SpanU, source.SpanU); target.SpanV = Math.Max(target.SpanV, source.SpanV);
             }
         }
         foreach (int key in layouts.Keys.ToArray())
@@ -144,7 +139,7 @@ internal static class SurfaceReferenceExport
             Inherit(key, Swapped(archive, record, seasons: true).Concat(Tabled(archive, record)).Append(archive).Distinct().Select(a => a * 1000 + record));
         }
 
-        StringBuilder csv = new("archive,record,set,climate,width,height,frames,exterior_blocks,interior_blocks,dungeon_blocks,flat_planes,standing_planes,span_u,span_v\n");
+        StringBuilder csv = new("archive,record,set,climate,width,height,frames,exterior_blocks,interior_blocks,dungeon_blocks,flat_planes,standing_planes\n");
         int archives = 0, records = 0, used = 0;
         List<string> sources = [];
         foreach (string name in export.FileNames.Where(file => file.StartsWith("TEXTURE.", StringComparison.OrdinalIgnoreCase)))
@@ -166,8 +161,8 @@ internal static class SurfaceReferenceExport
                 int width = frames.FirstOrDefault()?.Width ?? 0, height = frames.FirstOrDefault()?.Height ?? 0;
                 rows.Add(new { record, width, height, frames = frames.Count, exteriorBlocks = counted.Exterior.Count,
                     interiorBlocks = counted.Interior.Count, dungeonBlocks = counted.Dungeon.Count,
-                    flatPlanes = laid.Flat, standingPlanes = laid.Standing, spanU = laid.SpanU, spanV = laid.SpanV });
-                csv.Append(CultureInfo.InvariantCulture, $"{archive},{record},{set},{climate},{width},{height},{frames.Count},{counted.Exterior.Count},{counted.Interior.Count},{counted.Dungeon.Count},{laid.Flat},{laid.Standing},{laid.SpanU},{laid.SpanV}\n");
+                    flatPlanes = laid.Flat, standingPlanes = laid.Standing });
+                csv.Append(CultureInfo.InvariantCulture, $"{archive},{record},{set},{climate},{width},{height},{frames.Count},{counted.Exterior.Count},{counted.Interior.Count},{counted.Dungeon.Count},{laid.Flat},{laid.Standing}\n");
                 records++;
                 if (counted.Exterior.Count + counted.Interior.Count + counted.Dungeon.Count > 0) used++;
             }
