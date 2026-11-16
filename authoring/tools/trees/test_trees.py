@@ -47,5 +47,26 @@ class Meshes(unittest.TestCase):
         self.assertGreater(mesh["height"], .8)
 
 
+class Placement(unittest.TestCase):
+    """A tree's placement is its own once written: a rebuild keeps it however its values were set, and only --recompute measures again."""
+    FLAT = {"placement": {"size": {"height": 4.0}}}
+    RGBA = np.zeros((100, 10, 4))
+    MEASURED = {"height": 90, "foot": 98}   # a sprite 100 rows tall drawing 90 of them, its foot on row 98
+
+    def test_a_new_tree_measures_its_height_and_foot_at_its_flats_size_and_marks_them_art(self):
+        self.assertEqual({"height": 3.6, "foot": .04, "from": {"height": "art", "foot": "art"}}, trees.placement(self.FLAT, self.RGBA, self.MEASURED, None))
+
+    def test_a_rebuild_keeps_every_value_the_payload_holds_whatever_set_it_and_fills_only_a_missing_one(self):
+        old = {"placement": {"height": 7.0, "foot": 1.0, "from": {"height": "art", "foot": "hand"}}}
+        # The sprite and its flat have changed since: nothing moves.
+        self.assertEqual({"height": 7.0, "foot": 1.0, "from": {"height": "art", "foot": "hand"}}, trees.placement(self.FLAT, self.RGBA, self.MEASURED, old))
+        partial = {"placement": {"height": 7.0, "from": {"height": "original"}}}
+        self.assertEqual({"height": 7.0, "foot": .04, "from": {"height": "original", "foot": "art"}}, trees.placement(self.FLAT, self.RGBA, self.MEASURED, partial))
+
+    def test_recompute_measures_every_value_again(self):
+        old = {"placement": {"height": 7.0, "foot": 1.0, "from": {"height": "art", "foot": "hand"}}}
+        self.assertEqual({"height": 3.6, "foot": .04, "from": {"height": "art", "foot": "art"}}, trees.placement(self.FLAT, self.RGBA, self.MEASURED, old, recompute=True))
+
+
 if __name__ == "__main__":
     unittest.main()
