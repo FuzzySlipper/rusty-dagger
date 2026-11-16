@@ -95,12 +95,13 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
                 [new NormalizedAtlasFrame(7, 0, 0, 16, 32)], 7, new Vector2(.5F, .5F), new Vector2(3F, 6F));
         DaggerfallSiteProfile profile = new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, [],
             new Dictionary<long, NormalizedActorSprite>(), billboardSprites: billboards, terrainTextures: textures);
-        string flats = string.Join(",", Enumerable.Range(1, 31).Select(record => $$$"""
+        string flats = string.Join(",", Enumerable.Range(1, 31).Append(41).Select(record => $$$"""
             {"replaces": {"archive": 504, "record": {{{record}}}}, "path": "refreshed/flats/504-{{{record}}}.png", "byteLength": 1,
              "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 64, "height": 64,
              "frames": [{"x": 0, "y": 0, "width": 64, "height": 64}], "placement": {"size": {"width": 5, "height": 10}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.25} } }
             """));
         for (int record = 1; record <= 31; record++) graphics.Content.Add($"refreshed/flats/504-{record}.png", TestSessions.Hash);
+        graphics.Content.Add("refreshed/flats/504-41.png", TestSessions.Hash);
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(
             $$$"""{"artReplacements": {"images": [], "flats": [{{{flats}}}]}}"""), "test.art");
         bool refreshed = false;
@@ -134,7 +135,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         });
 
         // Refreshed nature grows in the flora field instead: the cells keep their placements and draw no batches, and the
-        // field draws each record's refreshed art at its own size, hung from its own foot, whatever the classic sprite states.
+        // field draws each record's refreshed art at its own size, hung from its own foot, whatever the classic sprite states or lacks.
         refreshed = true;
         appearance.AppendFacts([]);
         Assert.Equal(0, appearance.ActiveNatureBatchCount);
@@ -145,6 +146,8 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         Assert.Equal(new Vector2(.5F, .25F), look.Pivot);
         Assert.Equal((Vector2.Zero, Vector2.One), (look.UvMin, look.UvMax));
         Assert.Null(appearance.FloraLook(504, 40));
+        // A record the art draws needs no classic billboard of the profile: record 41 has none, and draws from the art alone.
+        Assert.Equal((new Vector2(5F, 10F), new Vector2(.5F, .25F)), (appearance.FloraLook(504, 41)!.Size, appearance.FloraLook(504, 41)!.Pivot));
 
         refreshed = false;
         appearance.AppendFacts([]);

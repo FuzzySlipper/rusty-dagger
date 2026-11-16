@@ -117,8 +117,6 @@ classic image's size at the treasure piles' scale, the classic body's waist), ea
 after that, promotion keeps every value the payload holds, so a value changed on purpose survives a re-promotion.
 `--set ID NAME VALUE` sets one, marked `hand`; `--recompute ID` (or `all`) takes them from the original again. An entry's
 id is what it replaces (an effect or image), or `flat.ARCHIVE.RECORD`, `person.ARCHIVE.RECORD`, `mesh.ARCHIVE.RECORD` or `tree.ARCHIVE.RECORD`.
-`--place SECTION` (flats, people, meshes, trees, spell-tiles) gives every entry of the section the payload holds without a placement its own
-from the original, and promotes no file: for the entries a checkout without the finals cannot promote.
 
 Every area promotes the same way (promote_area). Its units are what an entry replaces, keyed as the area keys them: an
 art key (paper-doll, worn, spells, ui, surfaces, terrain), an item's media id (items), an effect's media id, a sprite
@@ -179,9 +177,15 @@ IMPORTED = REPOSITORY / "local/build/import/staging/worldrpg/payloads/daggerfall
 ITEM_IMAGE = re.compile(r"item\.(\d+)\.(\d+)")
 STAGED = REPOSITORY / "local/build/import/staging"
 SPELL_ICON = re.compile(r"icons--icon-(\d+)--icon")
-# The classic `spell.selectors` atlas (MASK04I0.IMG, donor SpellIconCollection) lays a 24x16 targeting tile and a 16x16 element
-# tile in a row each; a refreshed tile takes that shape as its aspect once.
-SPELL_TILE_SHAPE = {"spell.target": 24 / 16, "spell.element": 16 / 16}
+# The classic `spell.selectors` atlas (MASK04I0.IMG, donor SpellIconCollection) lays a targeting tile and an element tile in a row
+# each; their sizes are the ruleset's (DaggerfallSpellConstruction), the one home of that layout, so a refreshed tile's aspect,
+# taken from it once, is read there.
+def spell_tile_shape():
+    source = (REPOSITORY / "src/WorldRpg.Rulesets.Daggerfall/Magic/DaggerfallSpellConstruction.cs").read_text()
+    size = {name: int(re.search(rf"const int {name} = (\d+);", source)[1]) for name in ("TargetTileWidth", "ElementTileWidth", "SelectorHeight")}
+    return {"spell.target": size["TargetTileWidth"] / size["SelectorHeight"], "spell.element": size["ElementTileWidth"] / size["SelectorHeight"]}
+
+
 # The classic targeting tiles in range-type order and element tiles in element order (donor SpellIconCollection).
 SPELL_TILES = {**{f"targets--{name}--target-icon": f"spell.target.{index}" for index, name in enumerate(
     ("caster-only", "by-touch", "single-target-at-range", "area-around-caster", "area-at-range"))},
@@ -207,9 +211,9 @@ DOLL_UNIT = .01 / WORLD_PIXEL    # a paper-doll unit (1 cm on the body) in class
 DUNGEON_MANIFEST = REPOSITORY / "local/build/import/staging/worldrpg/imports/shared/media/dungeon/manifest.json"
 TREASURE = 216
 WAIST = 40                       # the doll row, from the classic clothed body's top, the donor splits it at
-# Where a placement value came from: taken from the classic original at promotion, measured from the refreshed art (a tree's
-# height against its flat's own size), or set by hand (--set).
-ORIGINAL, HAND, MEASURED = "original", "hand", "art"
+# Where a placement value came from: taken from the classic original at promotion, or set by hand (--set). A tree's, which
+# trees.py measures from the refreshed art against its flat's own size, are marked `art` there.
+ORIGINAL, HAND = "original", "hand"
 EFFECT_FRAME = 256               # pixels on an effect frame's longer side
 FLAT_CRUNCH = float(os.environ.get("FLAT_CRUNCH", "2"))   # a world billboard's pixels to a classic pixel
 PEOPLE_CRUNCH = 3   # a person's pixels to a classic pixel
@@ -365,7 +369,8 @@ def flat_placement(archive, record, classic, frames, person=False):
     """A flat's or person's own placement, from where the classic frame sits in the atlas frame (`classic`, fractions of the
     frame, top-down): the classic world size grows by the share that frame takes, and the classic pivot, and the point at the
     foot's middle (`foot`), move into the frame (fractions from its left and bottom). A person stands on the art's own base: a
-    painted hem or foot can reach below the classic frame, so its foot is the middle of the atlas frame's bottom. An atlas of
+    painted hem or foot can reach below the classic frame, so its foot is the classic frame's middle mapped into the atlas frame,
+    on the atlas frame's bottom row (y 0). An atlas of
     several frames states the rate the classic plays at, which only a flat plays."""
     sprite = billboard(archive, record)
     into = lambda x, y: {"x": round(classic["x"] + x * classic["width"], 6),
@@ -558,7 +563,7 @@ def item_units():
 
 def spell_tile(media):
     """`spell.target` or `spell.element` for a targeting or element tile's media id, else None."""
-    return media.rsplit(".", 1)[0] if media.rsplit(".", 1)[0] in SPELL_TILE_SHAPE else None
+    return media.rsplit(".", 1)[0] if media.rsplit(".", 1)[0] in ("spell.target", "spell.element") else None
 
 
 def spell_units():
@@ -568,7 +573,7 @@ def spell_units():
     def build(media, final):
         entry = icon_entry(media, icon(final.path, "spells"), f"spells/{final.key}")
         if tile := spell_tile(media):
-            entry["placement"] = own(media, ["aspect"], lambda: {"aspect": SPELL_TILE_SHAPE[tile]})
+            entry["placement"] = own(media, ["aspect"], lambda: {"aspect": spell_tile_shape()[tile]})
         return [("images", entry)]
     return {key: Unit([final], lambda media=media, final=final: build(media, final))
             for key, media in sorted(replaced.items()) for final in [generated("spells", key)]}
@@ -1072,61 +1077,6 @@ def placed_entries(payload):
     return found
 
 
-# The sections `--place` reaches, and the placement an entry of each takes from its `classic` rect and the original.
-PLACEABLE = {
-    "flats": lambda entry: flat_placement(entry["replaces"]["archive"], entry["replaces"]["record"], entry["classic"], len(entry["frames"])),
-    "people": lambda entry: flat_placement(entry["replaces"]["archive"], entry["replaces"]["record"], entry["classic"], 1, person=True),
-    "meshes": lambda entry: mesh_placement(entry["replaces"]["archive"], entry["replaces"]["record"]),
-}
-
-
-def place_trees(payload):
-    """Turns each tree's height and foot, shares of its flat's frame, into metres at that flat's own size, in a placement
-    marked as taken from the art: the tree is drawn at that height, with its foot that far up."""
-    art = payload["artReplacements"]
-    heights = {(flat["replaces"]["archive"], flat["replaces"]["record"]): flat["placement"]["size"]["height"] for flat in art["flats"] if "placement" in flat}
-    done = 0
-    for key, entry in art.get("trees", {}).items():
-        if "placement" in entry:
-            continue
-        height = heights.get(tuple(map(int, key.split("-"))))
-        if height is None:
-            raise SystemExit(f"Tree {key} stands over a flat with no placement: place the flats first.")
-        entry["placement"] = {"height": round(entry.pop("height") * height, 6), "foot": round(entry.pop("foot") * height, 6),
-                              "from": {"height": MEASURED, "foot": MEASURED}}
-        done += 1
-    print(f"trees: {done} of {len(art.get('trees', {}))} entries given their placement", flush=True)
-
-
-def place_spell_tiles(payload):
-    """Gives each targeting and element tile without a placement its aspect, from the classic atlas's tile."""
-    done = 0
-    for entry in payload["artReplacements"]["images"]:
-        if (tile := spell_tile(entry["replaces"])) and "placement" not in entry:
-            entry["placement"] = own(entry["replaces"], ["aspect"], lambda: {"aspect": SPELL_TILE_SHAPE[tile]})
-            done += 1
-    print(f"spell-tiles: {done} entries given their placement", flush=True)
-
-
-def place(payload, section):
-    """Gives each entry of `section` that has no placement its own, from the original, and a flat's or person's drops the rect
-    of the classic frame (`classic`) it was taken against. The files are not touched."""
-    if section == "trees":
-        return place_trees(payload)
-    if section == "spell-tiles":
-        return place_spell_tiles(payload)
-    kind = {"flats": "flat", "people": "person", "meshes": "mesh"}[section]
-    entries = [(f"{kind}.{entry['replaces']['archive']}.{entry['replaces']['record']}", entry) for entry in payload["artReplacements"].get(section, [])]
-    done = 0
-    for identity, entry in entries:
-        if "placement" not in entry:
-            names = ["size"] if section == "meshes" else ["size", "pivot", "foot", *(["framesPerSecond"] if len(entry["frames"]) > 1 and section == "flats" else [])]
-            entry["placement"] = own(identity, names, lambda: PLACEABLE[section](entry))
-            entry.pop("classic", None)
-            done += 1
-    print(f"{section}: {done} of {len(entries)} entries given their placement", flush=True)
-
-
 def main(argv=None):
     global STAGE
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -1139,12 +1089,9 @@ def main(argv=None):
     ap.add_argument("--set", action="append", nargs=3, default=[], metavar=("ID", "NAME", "VALUE"),
                     help="set placement value NAME (size.width, framesPerSecond, ground, waist, ...) of the entry replacing ID "
                     "to the JSON VALUE, marked as set by hand, after any --area")
-    ap.add_argument("--place", action="append", choices=[*PLACEABLE, "trees", "spell-tiles"], default=[],
-                    help="give every entry of this section that has no placement its own, taken from the original, and keep every "
-                    "file as it is (what a checkout without the finals does for the entries a new kind of placement reaches)")
     a = ap.parse_args(argv)
-    if not a.area and not a.set and not a.place:
-        ap.error("give an --area to promote, a --place or a --set")
+    if not a.area and not a.set:
+        ap.error("give an --area to promote or a --set")
     if a.key and not a.area:
         ap.error("--key promotes within the --area named")
     KEPT.clear(), KEPT_ART.clear(), RECOMPUTE.clear()
@@ -1153,8 +1100,6 @@ def main(argv=None):
     placed = lambda: [(identity, entry) for identity, entry in placed_entries(payload) if "placement" in entry]
     for identity, entry in placed():
         KEPT[identity], KEPT_ART[identity] = entry["placement"], entry.get("sha256")
-    for section in a.place:
-        place(payload, section)
     with tempfile.TemporaryDirectory() as stage:
         STAGE = Path(stage)
         stale, matched = set(), set()

@@ -419,8 +419,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (ActorVisual visual in actors.Values) { ClassicLive(visual); ClassicCorpse(visual); }
         foreach (NpcVisual visual in npcVisuals.Values) ClassicNpc(visual);
         foreach (NormalizedClassicEffect effect in classicEffects.Values) ClassicEffectTexture(effect);
-        // A candle burning now draws its classic sprite from the next update.
-        if (candleAppearance is not null && candleSprite is { } candle && !candleLooks.ContainsKey(false)) candleLooks.Add(false, CandleLook(candle, refreshed: false));
+        // A candle burning now draws its classic sprite from the next update, which needs the published billboard.
+        if (candleAppearance is not null && !candleLooks.ContainsKey(false))
+            candleLooks.Add(false, CandleLook(candleSprite ?? throw new InvalidOperationException("The published magic candle billboard 210/3 is missing, so classic art cannot draw the burning candle."), refreshed: false));
     }
 
     /// <summary>

@@ -107,7 +107,8 @@ export function spellSelector(selectors: SpellSelectors | null | undefined, kind
   const cell = selectors?.[kind][index];
   if (!selectors || !cell) return tile;
   const refreshed = image(cell.image);
-  tile.style.setProperty('--tile-aspect', String(cell.aspect ?? cell.width / cell.height));
+  // A refreshed tile keeps its own shape; the classic atlas's rect gives the shape of the tile cut from it.
+  tile.style.setProperty('--tile-aspect', String(refreshed !== null && cell.aspect ? cell.aspect : cell.width / cell.height));
   const source = image(selectors.media);
   if (refreshed !== null) {
     tile.style.backgroundImage = `url("${refreshed}")`;

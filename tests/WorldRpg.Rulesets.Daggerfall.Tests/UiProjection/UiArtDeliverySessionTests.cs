@@ -484,6 +484,9 @@ public sealed class UiArtDeliverySessionTests
             Tiles(hud, "targets").Cast<Dictionary<string, object?>>().Select(tile => tile["image"]));
         Assert.Equal(Enumerable.Range(0, DaggerfallSpellConstruction.SelectorCount).Select(index => $"refreshed.{DaggerfallSpellConstruction.ElementMedia(index)}"),
             Tiles(hud, "elements").Cast<Dictionary<string, object?>>().Select(tile => tile["image"]));
+        // Each refreshed tile is sent with its own shape, the pack's `aspect`: the targeting tiles are 24 wide to 16 high, the elements square.
+        Assert.All(Tiles(hud, "targets").Cast<Dictionary<string, object?>>(), tile => Assert.Equal(24d / 16, Assert.IsType<double>(tile["aspect"])));
+        Assert.All(Tiles(hud, "elements").Cast<Dictionary<string, object?>>(), tile => Assert.Equal(1d, Assert.IsType<double>(tile["aspect"])));
 
         // A weapon or armour in a metal draws the refreshed bare-steel image tinted in its metal through the steel's
         // mask, both demanded with the pack that shows them; classic art draws the classic metal image untinted.
@@ -545,6 +548,7 @@ public sealed class UiArtDeliverySessionTests
         Assert.Null(Cuirass(classic)["iconTint"]);
         Assert.Null(Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(classic["spells"])["icons"])["images"]);
         Assert.All(Tiles(classic, "targets").Concat(Tiles(classic, "elements")).Cast<Dictionary<string, object?>>(), tile => Assert.Null(tile["image"]));
+        Assert.All(Tiles(classic, "targets").Concat(Tiles(classic, "elements")).Cast<Dictionary<string, object?>>(), tile => Assert.Null(tile["aspect"]));
         // The glints follow the art choice: the classic atlas, its whole frame in the slot.
         Assert.Equal("effect.glint.magic", Glint(classic, "magic")["media"]);
         Assert.Equal("effect.glint.coins", Glint(classic, "coins")["media"]);

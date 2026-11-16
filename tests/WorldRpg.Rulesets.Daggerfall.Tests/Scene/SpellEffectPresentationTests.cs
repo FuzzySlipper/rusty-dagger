@@ -43,6 +43,9 @@ public sealed class SpellEffectPresentationTests
             {"replaces": {"archive": 213, "record": 3}, "path": "refreshed/torch.png", "byteLength": 1, "sha256": "HASH", "width": 96, "height": 32,
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}, {"x": 32, "y": 0, "width": 32, "height": 32}, {"x": 64, "y": 0, "width": 32, "height": 32}],
              "placement": {"size": {"width": 1.5, "height": 3}, "pivot": {"x": 0.5, "y": 0.4}, "foot": {"x": 0.5, "y": 0.1}, "framesPerSecond": 7}},
+            {"replaces": {"archive": 210, "record": 3}, "path": "refreshed/candle.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
+             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}],
+             "placement": {"size": {"width": 0.2, "height": 0.6}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.1}}},
             {"replaces": {"archive": 210, "record": 12}, "path": "refreshed/orb.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "placement": {"size": {"width": 4, "height": 6}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.25}}}]}}
         """)), "test.art");
@@ -62,6 +65,7 @@ public sealed class SpellEffectPresentationTests
         content.Add("sprite/lamp.png", Hash);
         content.Add("sprite/well.png", Hash);
         content.Add("refreshed/torch.png", Hash);
+        content.Add("refreshed/candle.png", Hash);
         content.Add("sprite/torch.png", Hash);
         content.Add("refreshed/well.png", Hash);
         content.Add("refreshed/lamp.png", Hash);
@@ -302,6 +306,26 @@ public sealed class SpellEffectPresentationTests
             Assert.Equal([0u, 1u, 2u], playback.Frames.Span.ToArray().Select(frame => frame.FrameId));
             Assert.All(playback.Frames.Span.ToArray(), frame => Assert.Equal(1D / 7, frame.DurationSeconds, 9));
         });
+    }
+
+    [Fact]
+    public void The_refreshed_magic_candle_draws_from_its_own_placement_and_classic_art_refuses_by_name_without_the_classic_billboard()
+    {
+        bool refreshed = true;
+        // This profile publishes no magic candle billboard (210/3).
+        var (presentation, graphics, _) = Compose(() => refreshed);
+        using DaggerfallSiteAppearance owned = presentation;
+
+        presentation.UpdateMagicCandle(Vector3.Zero);
+        SpriteFromAtlasRequest candle = graphics.SpriteRequests[^1];
+        Assert.Equal((new Vector2(.2F, .6F), new Vector2(.5F, .5F), 0u), (candle.Size, candle.Pivot, candle.FrameId));
+
+        refreshed = false;
+        Assert.Contains("magic candle billboard 210/3", Assert.Throws<InvalidOperationException>(() => presentation.UpdateMagicCandle(Vector3.Zero)).Message, StringComparison.Ordinal);
+        // The switch to classic art refuses the same way, before any update draws it.
+        refreshed = true;
+        presentation.UpdateMagicCandle(Vector3.Zero);
+        Assert.Contains("magic candle billboard 210/3", Assert.Throws<InvalidOperationException>(presentation.BuildClassic).Message, StringComparison.Ordinal);
     }
 
     /// <summary>

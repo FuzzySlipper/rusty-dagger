@@ -72,17 +72,17 @@ public sealed class DaggerfallHangingTests
     }
 
     [Fact]
-    public void A_hanging_mesh_hangs_from_its_sprites_top_at_its_sprites_height_turned_its_own_way()
+    public void A_hanging_mesh_hangs_at_its_own_placed_height_up_from_its_sprites_floor_turned_its_own_way()
     {
         Site site = Compose();
         using (site)
         {
             site.Appearance.Publish(site.Actors, new Dictionary<long, DaggerfallGroundContainer>());
             AppearanceFact hanging = Assert.Single(site.Graphics.Snapshots[^1], fact => fact.Appearance == site.Animation.Created[0]);
-            // The 1.875 m sprite stands centred on its position, its top at 3 m: the 2 m model stands on the sprite's foot, scaled to
-            // its height, so it hangs from that top.
+            // The 1.875 m classic sprite stands centred on its position, its top at 3 m, which puts the floor at 1.125 m: the 2 m model
+            // stands on that floor, scaled to its own placed 1.5 m, whatever height the classic sprite states.
             Assert.Equal(new Vector3(4, 3 - 1.875F, 6), hanging.Transform.Translation);
-            Assert.Equal(new Vector3(1.875F / 2), hanging.Transform.Scale);
+            Assert.Equal(new Vector3(1.5F / 2), hanging.Transform.Scale);
             Assert.NotEqual(Quaternion.Identity, hanging.Transform.Rotation);
         }
     }
@@ -267,8 +267,9 @@ public sealed class DaggerfallHangingTests
             site.Appearance.Publish(site.Actors, new Dictionary<long, DaggerfallGroundContainer>());
             AppearanceFact fitted = Assert.Single(site.Graphics.Snapshots[^1], fact => fact.Appearance == site.Animation.Created[0]);
             float top = fitted.Transform.Translation.Y + 2 * fitted.Transform.Scale.Y;
-            Assert.Equal(3, top, 3);
-            Assert.True(fitted.Transform.Scale.Y < 1.875F / 2);
+            // It hangs from its own height up from the classic floor (1.125 m), where the classic sprite's own top was 3 m.
+            Assert.Equal(1.125F + 1.5F, top, 3);
+            Assert.True(fitted.Transform.Scale.Y < 1.5F / 2);
         }
     }
 
@@ -287,7 +288,7 @@ public sealed class DaggerfallHangingTests
             site.Appearance.Publish(site.Actors, new Dictionary<long, DaggerfallGroundContainer>());
             AppearanceFact fitted = Assert.Single(site.Graphics.Snapshots[^1], fact => fact.Appearance == site.Animation.Created[0]);
             // Lowered whole, not shortened: it hangs from the beam at its full length.
-            Assert.Equal(1.875F / 2, fitted.Transform.Scale.Y, 3);
+            Assert.Equal(1.5F / 2, fitted.Transform.Scale.Y, 3);
             Assert.True(fitted.Transform.Translation.Y + 2 * fitted.Transform.Scale.Y <= 2.6F + 1e-3F);
             Assert.False(hanging.Describe().Contains("1 unfit", StringComparison.Ordinal));
         }
@@ -306,7 +307,7 @@ public sealed class DaggerfallHangingTests
 
             site.Appearance.Publish(site.Actors, new Dictionary<long, DaggerfallGroundContainer>());
             AppearanceFact fitted = Assert.Single(site.Graphics.Snapshots[^1], fact => fact.Appearance == site.Animation.Created[0]);
-            Assert.Equal(1.875F / 2, fitted.Transform.Scale.Y, 3);
+            Assert.Equal(1.5F / 2, fitted.Transform.Scale.Y, 3);
             Assert.Equal(.06F, MathF.Abs(fitted.Transform.Translation.X - 4) + MathF.Abs(fitted.Transform.Translation.Z - 6), 3);
         }
     }
@@ -391,7 +392,7 @@ public sealed class DaggerfallHangingTests
     private static DaggerfallArtReplacements Art(string kind = "root", bool lantern = false) => DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes("""
         {"artReplacements": {"images": [],
           "meshes": [
-            {"replaces": {"archive": ARCHIVE, "record": RECORD}, "path": "refreshed/hanging.glb", "byteLength": 1, "sha256": "HASH", "hangs": "KIND", "placement": {"size": {"width": 0.85, "height": 1.875}}},
+            {"replaces": {"archive": ARCHIVE, "record": RECORD}, "path": "refreshed/hanging.glb", "byteLength": 1, "sha256": "HASH", "hangs": "KIND", "placement": {"size": {"width": 0.85, "height": 1.5}}},
             {"replaces": {"archive": 205, "record": 0}, "path": "refreshed/barrel.glb", "byteLength": 1, "sha256": "HASH", "placement": {"size": {"width": 0.825, "height": 0.925}}}]}}
         """.Replace("ARCHIVE", lantern ? "210" : "213", StringComparison.Ordinal).Replace("RECORD", lantern ? "25" : "8", StringComparison.Ordinal)
         .Replace("KIND", lantern ? "lantern" : kind, StringComparison.Ordinal).Replace("HASH", HashHex, StringComparison.Ordinal)), "test.art");
