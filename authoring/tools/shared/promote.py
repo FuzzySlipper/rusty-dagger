@@ -89,7 +89,10 @@ materials named `texture-A-R` for the classic texture they draw or else carrying
 `model-mesh` writes it as the Engine static mesh the game draws in the classic's place, with the PNGs beside it, and
 refuses one standing out of the classic's convex hull, or, where its note states `"fit": "collision"` for an open
 classic, out of the classic's own faces. It reads the classic from local/inputs/arena2. A material with glTF's alphaMode
-MASK draws its PNG cut out at half its alpha (`"alpha": "mask"`). Each art session holds only its own finals, so
+MASK draws its PNG cut out at half its alpha (`"alpha": "mask"`); one whose glTF extras state `frames` and
+`framesPerSecond` is a strip of that many frames side by side that the game steps through, its faces' uvs covering one
+frame's width of [0, 1], as a hearth's flames are; and one under KHR_materials_unlit draws at its own colours whatever the
+light (`"unlit": true`). Each art session holds only its own finals, so
 `--key ID` promotes one, replacing that entry and its files and keeping the rest of the section; a whole-area run
 refuses while the ledger accepts a remodel this checkout has no final for, and names any entry it removes because the
 ledger no longer accepts it.

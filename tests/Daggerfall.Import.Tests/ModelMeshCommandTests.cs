@@ -97,7 +97,7 @@ public sealed class ModelMeshCommandTests
         Assert.Equal(new Vector3(0, 1, 0), parts[0].Corners[0].Position);
 
         (byte[] bytes, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> slots, int triangles,
-            IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) = ModelMeshCommand.Write("41209", parts, "packs/art/media/models");
+            IReadOnlyDictionary<string, (byte[] Png, bool Mask, RemodelStrip? Strip, bool Unlit)> textures) = ModelMeshCommand.Write("41209", parts, "packs/art/media/models");
         Assert.Equal(8, triangles);
         Assert.Equal([("material/texture-67-0", 0, null), ("material/texture-85-0", 1, null), ("packs/art/media/models/41209-0.png", 2, null), ("packs/art/media/models/41209-1.png", 3, null)],
             slots.Select(slot => (slot.Material, slot.Slot, slot.Shell)));
@@ -125,7 +125,7 @@ public sealed class ModelMeshCommandTests
         Assert.All(parts, part => Assert.StartsWith("material/texture-", part.ClassicMaterial, StringComparison.Ordinal));
         Assert.Equal([new RemodelShell(0, 3), new RemodelShell(1, 3), new RemodelShell(2, 3), null], parts.Select(part => part.Shell));
 
-        (byte[] bytes, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> slots, _, IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) =
+        (byte[] bytes, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> slots, _, IReadOnlyDictionary<string, (byte[] Png, bool Mask, RemodelStrip? Strip, bool Unlit)> textures) =
             ModelMeshCommand.Write("750", parts, "packs/art/media/models");
         Assert.Empty(textures);
         // Every layer is a slot of its own drawing the same classic texture, the mesh naming each by its layer.
@@ -155,7 +155,7 @@ public sealed class ModelMeshCommandTests
         Assert.Null(parts[1].Png);
         Assert.Equal(["material/texture-341-2", "material/texture-41-2"], parts[0].Drawn!.Keys.Order(StringComparer.Ordinal));
 
-        (_, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> slots, _, IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) =
+        (_, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> slots, _, IReadOnlyDictionary<string, (byte[] Png, bool Mask, RemodelStrip? Strip, bool Unlit)> textures) =
             ModelMeshCommand.Write("41723", parts, "media/models");
         // The painted slot is named by its own PNG, which the location draws for 141-2 itself; the classic one by its identity.
         Assert.Equal([("material/texture-122-2", 0), ("media/models/41723-0.png", 1)], slots.Select(slot => (slot.Material, slot.Slot)));
@@ -164,6 +164,38 @@ public sealed class ModelMeshCommandTests
         Assert.Null(slots[0].Paint);
         Assert.Equal(3, textures.Count);
         Assert.Equal([180, 180, 180, 255, 200, 200, 200, 255], DeterministicPngReader.ReadRgba8(textures[drawn["material/texture-41-2"]].Png, "pale").Rgba);
+    }
+
+    [Fact]
+    public void A_glb_flipbook_strip_carries_its_frames_rate_and_unlit_light_into_its_slot()
+    {
+        byte[] png = Png(6, [255, 140, 20, 255, 250, 200, 60, 128]);
+        byte[] glb = Glb([("flames", png, Square(0), "MASK", null), ("still", png, Square(1), "MASK", null)], more: new Dictionary<string, Dictionary<string, object>>
+        {
+            ["flames"] = new() { ["extras"] = new { frames = 2, framesPerSecond = 8F }, ["extensions"] = new { KHR_materials_unlit = new { } } },
+        });
+        IReadOnlyList<RemodelPart> parts = RemodelGlb.Read(glb, "41116.glb");
+        Assert.Equal((new RemodelStrip(2, 8F), true), (parts[0].Strip, parts[0].Unlit));
+        Assert.Equal((null, false), (parts[1].Strip, parts[1].Unlit));
+
+        (_, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> slots, _,
+            IReadOnlyDictionary<string, (byte[] Png, bool Mask, RemodelStrip? Strip, bool Unlit)> textures) = ModelMeshCommand.Write("41116", parts, "media/models");
+        // The same pixels drawn as a strip and as a still texture are two slots, each published once with how it is drawn.
+        Assert.Equal([(true, new RemodelStrip(2, 8F), true), (true, null, false)],
+            slots.OrderBy(slot => slot.Slot).Select(slot => (textures[slot.Material].Mask, textures[slot.Material].Strip, textures[slot.Material].Unlit)));
+    }
+
+    [Theory]
+    [InlineData("flames", 2, 0F, "a strip is two frames or more at a rate above zero")]
+    [InlineData("flames", 1, 8F, "a strip is two frames or more at a rate above zero")]
+    [InlineData("flames", 3, 8F, "a strip of 3 frames 2 pixels wide, which they do not divide")]
+    [InlineData("texture-87-0", 2, 8F, "animates or unlights a classic texture")]
+    public void A_glb_flipbook_the_game_cannot_step_through_is_refused(string name, int frames, float rate, string reason)
+    {
+        bool classic = name.StartsWith("texture-", StringComparison.Ordinal);
+        byte[] glb = Glb([(name, classic ? null : Png(6, [255, 140, 20, 255, 250, 200, 60, 128]), Square(0), null, null)],
+            more: new Dictionary<string, Dictionary<string, object>> { [name] = new() { ["extras"] = new { frames, framesPerSecond = rate } } });
+        Assert.Contains(reason, Assert.Throws<InvalidDataException>(() => RemodelGlb.Read(glb, "41116.glb")).Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -219,10 +251,10 @@ public sealed class ModelMeshCommandTests
     /// <summary>
     /// A GLB of one node, lifted 1 m, with a primitive per material; a material with a PNG carries it as its base colour,
     /// one with a shell layer states it in its extras, and one <paramref name="drawn"/> names carries its PNGs by identity
-    /// in its <c>extras.drawn</c>.
+    /// in its <c>extras.drawn</c>; each takes whatever else <paramref name="more"/> states for it by name.
     /// </summary>
     private static byte[] Glb(IReadOnlyList<(string Name, byte[]? Png, Vector3[] Corners, string? Alpha, RemodelShell? Shell)> materials,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<string, byte[]>>? drawn = null)
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, byte[]>>? drawn = null, IReadOnlyDictionary<string, Dictionary<string, object>>? more = null)
     {
         List<byte> binary = [];
         List<object> views = [], accessors = [], primitives = [], images = [], textures = [], materialList = [];
@@ -244,6 +276,7 @@ public sealed class ModelMeshCommandTests
             Dictionary<string, object> material = new() { ["name"] = name };
             if (alpha is not null) material["alphaMode"] = alpha;
             if (shell is not null) material["extras"] = new { shell = new { layer = shell.Layer, layers = shell.Layers } };
+            foreach ((string key, object value) in more?.GetValueOrDefault(name) ?? []) material[key] = value;
             if (png is not null)
             {
                 images.Add(new { bufferView = View(png), mimeType = "image/png" });

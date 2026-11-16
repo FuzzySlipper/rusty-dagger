@@ -58,8 +58,11 @@ internal sealed record DaggerfallSiteRemodel(string Path, ContentSha256 Sha256, 
     internal IReadOnlyDictionary<uint, DaggerfallArtShell> Shells { get; init; } = new Dictionary<uint, DaggerfallArtShell>();
 }
 
-/// <summary>A remodel's material slot that draws a texture the art pack ships, opaque or cut out by its alpha (<paramref name="Mask"/>).</summary>
-internal sealed record DaggerfallRemodelTexture(uint MeshSlot, string Path, ContentSha256 Sha256, bool Mask);
+/// <summary>
+/// A remodel's material slot that draws a texture the art pack ships, opaque or cut out by its alpha (<paramref name="Mask"/>),
+/// stepped through as a <paramref name="Flipbook"/> where it is one, and <paramref name="Unlit"/> where it shines.
+/// </summary>
+internal sealed record DaggerfallRemodelTexture(uint MeshSlot, string Path, ContentSha256 Sha256, bool Mask, DaggerfallArtFlipbook? Flipbook = null, bool Unlit = false);
 
 /// <summary>
 /// What a profile places in the world: one collision and navigation artifact per block, each beside its

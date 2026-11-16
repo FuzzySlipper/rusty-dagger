@@ -104,14 +104,22 @@ internal sealed record DaggerfallArtModel(DaggerfallArtFile File, IReadOnlyList<
 /// A classic texture may instead be drawn as one layer of a shell stack (<paramref name="Shell"/>). A slot with both an
 /// identity and a PNG is painted for that identity: it draws its own PNG, or, where the location draws the identity as
 /// another (a classic stone swapped by climate), the PNG <paramref name="Drawn"/> holds for that one, so a generated rock
-/// wears the town's stone as the classic it stands in for does.
+/// wears the town's stone as the classic it stands in for does. A PNG of the pack's own may be a <paramref name="Flipbook"/>
+/// the game steps through, and may be drawn <paramref name="Unlit"/>, at its own colours whatever the light, as a hearth's
+/// flames are.
 /// </summary>
 internal sealed record DaggerfallArtModelSlot(uint Slot, string? Material, DaggerfallArtFile? Texture, bool Mask = false, DaggerfallArtShell? Shell = null,
-    IReadOnlyDictionary<string, DaggerfallArtFile>? Drawn = null)
+    IReadOnlyDictionary<string, DaggerfallArtFile>? Drawn = null, DaggerfallArtFlipbook? Flipbook = null, bool Unlit = false)
 {
     /// <summary>What a painted slot draws where the location draws its identity as <paramref name="drawn"/>.</summary>
     internal DaggerfallArtFile Painted(string drawn) => Drawn?.GetValueOrDefault(drawn) ?? Texture!;
 }
+
+/// <summary>
+/// A texture that is a strip of <paramref name="Frames"/> equal frames side by side, left to right, shown one at a time at
+/// <paramref name="FramesPerSecond"/> on faces whose uvs cover one frame's width of [0, 1].
+/// </summary>
+internal sealed record DaggerfallArtFlipbook(int Frames, float FramesPerSecond);
 
 /// <summary>
 /// One layer of a remodel's shell stack, the ground cover's effect on a model's faces: the mesh draws its classic texture's
@@ -452,7 +460,16 @@ internal sealed class DaggerfallArtReplacements
                                     : throw new InvalidOperationException($"Content pack '{packId}' paints a slot of {subject} for '{other.Name}', which is no classic texture identity."),
                                     File(other.Value, $"A texture of {subject}"));
                         }
-                        return new DaggerfallArtModelSlot(slot.GetProperty("slot").GetUInt32(), material, texture, alpha == "mask", shell, drawn);
+                        bool own = texture is not null && material is null;
+                        DaggerfallArtFlipbook? flipbook = slot.TryGetProperty("frames", out JsonElement frames) | slot.TryGetProperty("framesPerSecond", out JsonElement rate)
+                            ? new(frames.ValueKind == JsonValueKind.Number ? frames.GetInt32() : 0, rate.ValueKind == JsonValueKind.Number ? rate.GetSingle() : 0F) : null;
+                        // A strip the game cannot step through would draw all its frames squeezed onto one face, or none.
+                        if (flipbook is not null && (!own || flipbook.Frames < 2 || !float.IsFinite(flipbook.FramesPerSecond) || flipbook.FramesPerSecond <= 0F))
+                            throw new InvalidOperationException($"Content pack '{packId}' states a slot of {subject} as {flipbook.Frames} frames at {flipbook.FramesPerSecond} a second: only a texture of its own is a strip, of two frames or more at a rate above zero.");
+                        bool unlit = slot.TryGetProperty("unlit", out JsonElement light) && light.GetBoolean();
+                        if (unlit && !own)
+                            throw new InvalidOperationException($"Content pack '{packId}' draws a slot of {subject} unlit: only a texture of its own is, as a classic identity draws as the location's lit surface.");
+                        return new DaggerfallArtModelSlot(slot.GetProperty("slot").GetUInt32(), material, texture, alpha == "mask", shell, drawn, flipbook, unlit);
                     })];
                     if (slots.Length == 0 || slots.DistinctBy(slot => slot.Slot).Count() != slots.Length)
                         throw new InvalidOperationException($"Content pack '{packId}' states {subject} without its slots, each once.");

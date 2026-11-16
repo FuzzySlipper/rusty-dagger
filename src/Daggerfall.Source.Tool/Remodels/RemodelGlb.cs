@@ -10,10 +10,18 @@ namespace Daggerfall.Source.Tool.Remodels;
 /// model's frame, and what it draws them with: a classic texture identity, or else the PNG the GLB carries for it, cut
 /// out where its alpha is under half when <paramref name="Mask"/>. A classic texture may be drawn as one layer of a
 /// shell stack (<paramref name="Shell"/>). With both an identity and a PNG it is painted for that identity, and
-/// <paramref name="Drawn"/> holds the PNG painted for each other identity a location may draw it as.
+/// <paramref name="Drawn"/> holds the PNG painted for each other identity a location may draw it as. A PNG of its own may
+/// be a <paramref name="Strip"/> of frames the game steps through, and may be drawn <paramref name="Unlit"/>, at its own
+/// colours whatever the light, as a hearth's flames are.
 /// </summary>
 internal sealed record RemodelPart(string? ClassicMaterial, byte[]? Png, IReadOnlyList<(Vector3 Position, Vector3 Normal, Vector2 Uv)> Corners, bool Mask = false,
-    RemodelShell? Shell = null, IReadOnlyDictionary<string, byte[]>? Drawn = null);
+    RemodelShell? Shell = null, IReadOnlyDictionary<string, byte[]>? Drawn = null, RemodelStrip? Strip = null, bool Unlit = false);
+
+/// <summary>
+/// A texture of a remodel's own that is a strip of <paramref name="Frames"/> equal frames side by side, left to right, which
+/// the game shows one at a time at <paramref name="FramesPerSecond"/> on faces whose uvs cover one frame's width of [0, 1].
+/// </summary>
+internal sealed record RemodelStrip(int Frames, float FramesPerSecond);
 
 /// <summary>
 /// One layer of a shell stack drawing a classic texture's relief, whose alpha is each texel's height: layer 0 is the
@@ -32,7 +40,9 @@ internal sealed record RemodelShell(int Layer, int Layers);
 /// identity: its PNG is drawn in place of the location's surface, and its <c>extras.drawn</c> names, by identity, the
 /// texture painted for each other identity the location may draw it as (a stone's climate swaps), the slot's own
 /// <c>drawn</c>. Any other material carries its own PNG base
-/// colour, opaque or, with glTF's <c>alphaMode</c> <c>MASK</c> at the default cutoff of half, cut out by its alpha. That PNG
+/// colour, opaque or, with glTF's <c>alphaMode</c> <c>MASK</c> at the default cutoff of half, cut out by its alpha, a strip of
+/// frames where its <c>extras</c> state <c>frames</c> and <c>framesPerSecond</c> (<see cref="RemodelStrip"/>), and unlit under
+/// glTF's <c>KHR_materials_unlit</c>. That PNG
 /// is written again as 8-bit RGBA, the only PNG the Engine admits as a texture, whatever 8-bit truecolour form the GLB
 /// carries it in. Only what an authoring tool writes for a static mesh is read; anything else is refused by name.
 /// </summary>
@@ -136,10 +146,18 @@ internal static class RemodelGlb
                 ? new(stack.GetProperty("layer").GetInt32(), stack.GetProperty("layers").GetInt32()) : null;
             if (shell is not null && (shell.Layers is < 2 or > 16 || shell.Layer < 0 || shell.Layer >= shell.Layers))
                 throw new InvalidDataException($"{label}'s material '{name}' is no layer of a shell stack of 2 to 16.");
+            RemodelStrip? strip = extras.ValueKind == JsonValueKind.Object && (extras.TryGetProperty("frames", out JsonElement frames) | extras.TryGetProperty("framesPerSecond", out JsonElement rate))
+                ? new(frames.ValueKind == JsonValueKind.Number ? frames.GetInt32() : 0, rate.ValueKind == JsonValueKind.Number ? rate.GetSingle() : 0F) : null;
+            if (strip is not null && (strip.Frames < 2 || !float.IsFinite(strip.FramesPerSecond) || strip.FramesPerSecond <= 0F))
+                throw new InvalidDataException($"{label}'s material '{name}' states {strip.Frames} frames at {strip.FramesPerSecond} a second: a strip is two frames or more at a rate above zero.");
+            bool unlit = material.TryGetProperty("extensions", out JsonElement extensions) && extensions.TryGetProperty("KHR_materials_unlit", out _);
             JsonElement texture = default;
             bool carries = material.TryGetProperty("pbrMetallicRoughness", out JsonElement pbr) && pbr.TryGetProperty("baseColorTexture", out texture);
             if (Identity(name) is { } classic)
             {
+                // A classic identity draws as the location's own lit surface, painted or not, where its climate swaps follow it.
+                if (strip is not null || unlit)
+                    throw new InvalidDataException($"{label}'s material '{name}' animates or unlights a classic texture, which draws as the location's own lit surface.");
                 if (alpha == "MASK")
                     throw new InvalidDataException($"{label}'s material '{name}' cuts out a classic texture, which draws the location's own opaque surface or its shells' own cut.");
                 if (!carries) return new(classic, null, corners, Shell: shell);
@@ -157,7 +175,11 @@ internal static class RemodelGlb
                 throw new InvalidDataException($"{label}'s material '{name}' stacks shells of a texture of its own: a shell stack draws a classic texture's relief.");
             if (!carries)
                 throw new InvalidDataException($"{label}'s material '{name}' names no classic texture (texture-A-R) and carries no base colour texture.");
-            return new(null, Png(texture.GetProperty("index").GetInt32(), name), corners, alpha == "MASK");
+            byte[] png = Png(texture.GetProperty("index").GetInt32(), name);
+            int width = BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(16));
+            if (strip is not null && width % strip.Frames != 0)
+                throw new InvalidDataException($"{label}'s material '{name}' is a strip of {strip.Frames} frames {width} pixels wide, which they do not divide.");
+            return new(null, png, corners, alpha == "MASK", Strip: strip, Unlit: unlit);
         }
 
         private static string? Identity(string name) =>

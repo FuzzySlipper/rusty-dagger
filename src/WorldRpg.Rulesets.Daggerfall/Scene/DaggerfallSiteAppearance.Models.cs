@@ -16,10 +16,16 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// relief for that texture, or classic art is drawn, each layer draws the surface whole, and the stack closes into the
 /// classic's faces.
 /// </para>
+/// <para>
+/// A remodel's own texture that is a strip of frames, as a hearth's flames, shows one frame at a time, stepped on the held
+/// art's clock, so it pauses with the world; one drawn unlit keeps its own colours whatever the light.
+/// </para>
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
     private readonly Dictionary<string, Appearance> remodels = new(StringComparer.Ordinal);
+    private readonly List<RemodelFlipbook> flipbooks = [];
+    private double flipbookSeconds;
     // One material for each layer of each location material a remodel stacks, shared by every remodel stacking it.
     private readonly Dictionary<(Material Surface, DaggerfallArtShell Shell), ShellMaterial> shellMaterials = [];
     // The location's relief images, by path: one texture's relief serves every layer of its stacks.
@@ -45,6 +51,15 @@ internal sealed partial class DaggerfallSiteAppearance
         internal (RenderResource Texture, DaggerfallGroundRelief? Relief)? Current { get; set; }
     }
 
+    /// <summary>A remodel material that steps through a strip: the request it was made with, and the frame it shows.</summary>
+    private sealed class RemodelFlipbook(Material material, MaterialRequest request, DaggerfallArtFlipbook flipbook)
+    {
+        internal Material Material { get; } = material;
+        internal MaterialRequest Request { get; } = request;
+        internal DaggerfallArtFlipbook Flipbook { get; } = flipbook;
+        internal int Frame { get; set; }
+    }
+
     /// <summary>
     /// The remodel of a placed model, created once for the location: its classic texture slots draw the location's
     /// materials for them, which follow the season and art set, and its own textures their own materials, opaque or cut
@@ -64,10 +79,14 @@ internal sealed partial class DaggerfallSiteAppearance
         {
             RenderResource resource = appearance.OpenTexture(content, texture.Path, texture.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate).Handle;
             locationResources.Add(resource);
-            MaterialRequest request = SurfaceRequest(resource, null);
-            Material material = appearance.CreateMaterial(texture.Mask ? request with { AlphaMode = MaterialAlphaMode.Mask, AlphaCutoff = RemodelAlphaCutoff } : request);
+            MaterialRequest request = SurfaceRequest(resource, null) with { Unlit = texture.Unlit };
+            if (texture.Mask) request = request with { AlphaMode = MaterialAlphaMode.Mask, AlphaCutoff = RemodelAlphaCutoff };
+            // A strip's faces cover one frame's width of [0, 1]: the texture is scaled to one frame, and stepping moves it along.
+            if (texture.Flipbook is { } strip) request = request with { TextureScale = new Vector2(1F / strip.Frames, 1F) };
+            Material material = appearance.CreateMaterial(request);
             locationMaterials.Add(material);
             materials.Add(material);
+            if (texture.Flipbook is { } book) flipbooks.Add(new RemodelFlipbook(material, request, book));
             bindings.Add(new MeshMaterialBinding(texture.MeshSlot, material));
         }
         appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, bindings.ToArray()));
@@ -151,6 +170,23 @@ internal sealed partial class DaggerfallSiteAppearance
             Shader = new MaterialShader(new RenderResourceReference(shellShader!), new Vector4(relief.Width, 0, 0, shell.Height),
                 new Vector4(shell.Cutoff, 0, shell.Layer >= shell.Layers / 2 ? relief.Glints : 0, relief.Width), default, default),
         };
+    }
+
+    /// <summary>
+    /// Moves every remodel strip to the frame its rate reaches after this update's admitted steps, updating only a material
+    /// whose frame changes, and only while refreshed art, which draws the remodels, is drawn.
+    /// </summary>
+    private void StepFlipbooks(ProductUpdateFacts update)
+    {
+        flipbookSeconds += update.FixedDeltaSeconds * update.AdmittedStepCount;
+        if (!drawRefreshedEffects()) return;
+        foreach (RemodelFlipbook book in flipbooks)
+        {
+            int frame = (int)(flipbookSeconds * book.Flipbook.FramesPerSecond % book.Flipbook.Frames);
+            if (frame == book.Frame) continue;
+            book.Frame = frame;
+            appearance.UpdateMaterial(new MaterialUpdateRequest(book.Material, book.Request with { TextureOffset = new Vector2((float)frame / book.Flipbook.Frames, 0F) }));
+        }
     }
 
     /// <summary>What a placed model shows now: its remodel while refreshed art is drawn and it has one, else the classic.</summary>

@@ -14,7 +14,8 @@ namespace Daggerfall.Source.Tool.Commands;
 /// (<see cref="ClassicVolume"/>). It writes <c>OUTPUT/MODEL.rstatmsh</c> and each texture the GLB carries as
 /// <c>OUTPUT/MODEL-N.png</c>, and prints the section's entry, its paths under <c>--content-path</c>, for
 /// <c>authoring/tools/shared/promote.py --area models</c> to record: a slot drawing one layer of a shell stack states it
-/// (<c>"shell": {"layer": K, "layers": N}</c>). A remodel that pokes out, or a stack missing a layer, is refused by name.
+/// (<c>"shell": {"layer": K, "layers": N}</c>), and one drawing a strip of frames or unlit states that (<c>"frames"</c>,
+/// <c>"framesPerSecond"</c>, <c>"unlit": true</c>). A remodel that pokes out, or a stack missing a layer, is refused by name.
 /// </summary>
 internal static class ModelMeshCommand
 {
@@ -42,21 +43,23 @@ internal static class ModelMeshCommand
         IReadOnlyList<RemodelPart> parts = RemodelGlb.Read(File.ReadAllBytes(args["--glb"]), args["--glb"]);
         ClassicVolume.Read(args["--arena2"], number).Require([.. parts.SelectMany(part => part.Corners.Chunk(3)).Select(face => (face[0].Position, face[1].Position, face[2].Position))], fit, model);
         (byte[] mesh, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> slots, int triangles,
-            IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) = Write(model, parts, args["--content-path"]);
+            IReadOnlyDictionary<string, (byte[] Png, bool Mask, RemodelStrip? Strip, bool Unlit)> textures) = Write(model, parts, args["--content-path"]);
 
         string output = args["--output"];
         Directory.CreateDirectory(output);
         File.WriteAllBytes(Path.Combine(output, $"{model}.rstatmsh"), mesh);
-        foreach ((string path, (byte[] png, bool _)) in textures) File.WriteAllBytes(Path.Combine(output, Path.GetFileName(path)), png);
+        foreach ((string path, (byte[] png, _, _, _)) in textures) File.WriteAllBytes(Path.Combine(output, Path.GetFileName(path)), png);
         Console.WriteLine(JsonSerializer.Serialize(new Dictionary<string, object>
         {
             ["path"] = $"{args["--content-path"]}/{model}.rstatmsh",
             ["byteLength"] = mesh.Length,
             ["sha256"] = Convert.ToHexStringLower(SHA256.HashData(mesh)),
             ["triangles"] = triangles,
-            ["slots"] = slots.Select(slot => textures.TryGetValue(slot.Material, out (byte[] Png, bool Mask) texture)
+            ["slots"] = slots.Select(slot => textures.TryGetValue(slot.Material, out (byte[] Png, bool Mask, RemodelStrip? Strip, bool Unlit) texture)
                 ? new Dictionary<string, object> { ["slot"] = slot.Slot, ["texture"] = Published(slot.Material) }
                     .Concat(texture.Mask ? [KeyValuePair.Create("alpha", (object)"mask")] : [])
+                    .Concat(texture.Strip is { } strip ? [KeyValuePair.Create("frames", (object)strip.Frames), KeyValuePair.Create("framesPerSecond", (object)strip.FramesPerSecond)] : [])
+                    .Concat(texture.Unlit ? [KeyValuePair.Create("unlit", (object)true)] : [])
                     .Concat(slot.Paint is { } paint ? [KeyValuePair.Create("material", (object)paint.Identity)] : [])
                     .Concat(slot.Paint is { Drawn.Count: > 0 } painted
                         ? [KeyValuePair.Create("drawn", (object)painted.Drawn.ToDictionary(pair => pair.Key, pair => Published(pair.Value)))] : [])
@@ -76,9 +79,10 @@ internal static class ModelMeshCommand
     /// identity (and a shell layer's by its layer too) and one the GLB carries by the content path of its PNG; its slots as
     /// the mesh numbers them, each with the classic texture or PNG it draws, the shell layer it is, and for a PNG painted
     /// for a classic identity that identity and the path of its PNG for each other identity it may be drawn as; and its
-    /// PNGs, each opaque or cut out. A classic texture drawn in shells has every layer of one stack.
+    /// PNGs, each opaque or cut out, still or a strip of frames, lit or not. A classic texture drawn in shells has every
+    /// layer of one stack.
     /// </summary>
-    internal static (byte[] Mesh, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> Slots, int Triangles, IReadOnlyDictionary<string, (byte[] Png, bool Mask)> Textures) Write(
+    internal static (byte[] Mesh, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> Slots, int Triangles, IReadOnlyDictionary<string, (byte[] Png, bool Mask, RemodelStrip? Strip, bool Unlit)> Textures) Write(
         string model, IReadOnlyList<RemodelPart> parts, string contentPath)
     {
         foreach (IGrouping<string, RemodelShell> stack in parts.Where(part => part.Shell is not null).GroupBy(part => part.ClassicMaterial!, part => part.Shell!, StringComparer.Ordinal))
@@ -88,7 +92,7 @@ internal static class ModelMeshCommand
                 throw new InvalidOperationException($"The remodel of ARCH3D model {model} draws {stack.Key} in shell layers {string.Join(", ", stack.Select(shell => $"{shell.Layer} of {shell.Layers}").Distinct())}: a stack has each of its layers.");
         }
 
-        Dictionary<string, (byte[] Png, bool Mask)> textures = new(StringComparer.Ordinal);
+        Dictionary<string, (byte[] Png, bool Mask, RemodelStrip? Strip, bool Unlit)> textures = new(StringComparer.Ordinal);
         List<NormalizedVector3> vertices = [], normals = [];
         List<NormalizedVector2> uvs = [];
         List<NormalizedTriangle> triangles = [];
@@ -120,7 +124,7 @@ internal static class ModelMeshCommand
         // for a classic identity, by its PNG, with the identity and its other PNGs beside it.
         string Material(RemodelPart part)
         {
-            string material = part.Png is null ? part.ClassicMaterial! : Texture(part.Png, part.Mask);
+            string material = part.Png is null ? part.ClassicMaterial! : Texture(part.Png, part.Mask, part.Strip, part.Unlit);
             if (part is { ClassicMaterial: { } identity, Png: not null })
                 painted.TryAdd(material, (identity, (part.Drawn ?? new Dictionary<string, byte[]>()).ToDictionary(pair => pair.Key, pair => Texture(pair.Value, false), StringComparer.Ordinal)));
             string name = part.Shell is { } shell ? string.Create(CultureInfo.InvariantCulture, $"{material}/shell-{shell.Layer}-of-{shell.Layers}") : material;
@@ -129,13 +133,13 @@ internal static class ModelMeshCommand
         }
 
         // A carried texture is published beside the mesh, numbered in the order the GLB's materials name them; one drawn
-        // both opaque and cut out is published once for each.
-        string Texture(byte[] png, bool mask)
+        // two ways (opaque and cut out, or as a strip and still) is published once for each.
+        string Texture(byte[] png, bool mask, RemodelStrip? strip = null, bool unlit = false)
         {
-            string? known = textures.FirstOrDefault(pair => pair.Value.Mask == mask && pair.Value.Png.AsSpan().SequenceEqual(png)).Key;
+            string? known = textures.FirstOrDefault(pair => (pair.Value.Mask, pair.Value.Strip, pair.Value.Unlit) == (mask, strip, unlit) && pair.Value.Png.AsSpan().SequenceEqual(png)).Key;
             if (known is not null) return known;
             string path = string.Create(CultureInfo.InvariantCulture, $"{contentPath}/{model}-{textures.Count}.png");
-            textures.Add(path, (png, mask));
+            textures.Add(path, (png, mask, strip, unlit));
             return path;
         }
     }

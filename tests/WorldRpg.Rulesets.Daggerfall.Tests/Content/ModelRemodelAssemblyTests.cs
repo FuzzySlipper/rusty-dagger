@@ -58,6 +58,16 @@ public sealed class ModelRemodelAssemblyTests
         Assert.Equal([false, false, false, true], model.Slots.Select(slot => slot.Mask));
     }
 
+    [Fact]
+    public void A_remodel_slot_may_be_a_strip_of_frames_drawn_unlit()
+    {
+        DaggerfallArtModel hearth = Art(("""{"41116": """ + Entry("""{"slot": 0, "material": "material/texture-87-1"}, """
+            + """{"slot": 1, "texture": {"path": "remodel/41116-0.png", "sha256": "HASH"}, "alpha": "mask", "frames": 4, "framesPerSecond": 8, "unlit": true}""") + "}")
+            .Replace("HASH", HashHex, StringComparison.Ordinal)).Models["41116"];
+        Assert.Equal([null, new DaggerfallArtFlipbook(4, 8F)], hearth.Slots.Select(slot => slot.Flipbook));
+        Assert.Equal([false, true], hearth.Slots.Select(slot => slot.Unlit));
+    }
+
     [Theory]
     [InlineData("""{"trough": ENTRY}""", "without an ARCH3D record id")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": []}}""", "without its slots, each once")]
@@ -69,6 +79,11 @@ public sealed class ModelRemodelAssemblyTests
     [InlineData("""{"750": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "shell": {"layer": 0, "layers": 2}}]}}""", "as no layer of a shell stack of 2 to 16 drawing a classic texture")]
     [InlineData("""{"750": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-33-0", "shell": {"layer": 2, "layers": 2}}]}}""", "as no layer of a shell stack of 2 to 16 drawing a classic texture")]
     [InlineData("""{"750": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-33-0", "shell": {"layer": 0, "layers": 1}}]}}""", "as no layer of a shell stack of 2 to 16 drawing a classic texture")]
+    [InlineData("""{"41116": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-87-0", "frames": 4, "framesPerSecond": 8}]}}""", "only a texture of its own is a strip")]
+    [InlineData("""{"41116": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-87-0", "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "frames": 4, "framesPerSecond": 8}]}}""", "only a texture of its own is a strip")]
+    [InlineData("""{"41116": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "frames": 4}]}}""", "of two frames or more at a rate above zero")]
+    [InlineData("""{"41116": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "frames": 1, "framesPerSecond": 8}]}}""", "of two frames or more at a rate above zero")]
+    [InlineData("""{"41116": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-87-0", "unlit": true}]}}""", "only a texture of its own is, as a classic identity draws as the location's lit surface")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "drawn": {"material/texture-41-2": {"path": "remodel/b.png", "sha256": "HASH"}}}]}}""", "not painted for a classic identity")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-141-2", "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "drawn": {"stone": {"path": "remodel/b.png", "sha256": "HASH"}}}]}}""", "which is no classic texture identity")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-141-2", "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "shell": {"layer": 1, "layers": 3}}]}}""", "no layer of a shell stack")]

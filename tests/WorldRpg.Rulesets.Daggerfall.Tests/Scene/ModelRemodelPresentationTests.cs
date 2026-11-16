@@ -21,6 +21,7 @@ public sealed class ModelRemodelPresentationTests
     private static readonly Transform Trough = new(new Vector3(4, 0, 6), Quaternion.Identity, Vector3.One);
     private static readonly Transform OtherTrough = new(new Vector3(9, 0, 2), Quaternion.CreateFromAxisAngle(Vector3.UnitY, 1F), Vector3.One);
     private static readonly Transform Bench = new(new Vector3(1, 0, 1), Quaternion.Identity, Vector3.One);
+    private static readonly Transform Hearth = new(new Vector3(3, 0, 8), Quaternion.Identity, Vector3.One);
 
     private static readonly DaggerfallDungeonActionModelDefinition Lever = new("action/lever", null, null, "lever", 0, 0,
         new DaggerfallDoorVisual("mesh/61027.rstatmsh", Hash, [new DaggerfallMeshMaterialBinding(0, 0)]),
@@ -41,6 +42,7 @@ public sealed class ModelRemodelPresentationTests
             new DaggerfallSiteMesh("mesh/41209.rstatmsh", Hash, Trough, [new(0, 0), new(1, 1)]) { ModelId = "41209" },
             new DaggerfallSiteMesh("mesh/41209.rstatmsh", Hash, OtherTrough, [new(0, 0), new(1, 1)]) { ModelId = "41209" },
             new DaggerfallSiteMesh("mesh/41106.rstatmsh", Hash, Bench, [new(0, 0)]) { ModelId = "41106" },
+            new DaggerfallSiteMesh("mesh/41116.rstatmsh", Hash, Hearth, [new(0, 0)]) { ModelId = "41116" },
         ])
         {
             Remodels = new Dictionary<string, DaggerfallSiteRemodel>(StringComparer.Ordinal)
@@ -48,6 +50,8 @@ public sealed class ModelRemodelPresentationTests
                 ["41209"] = new("remodel/41209.rstatmsh", Hash, [new(0, 1), new(1, 0)],
                     [new DaggerfallRemodelTexture(2, "remodel/41209-0.png", Hash, false), new DaggerfallRemodelTexture(3, "remodel/41209-1.png", Hash, true)]),
                 ["61027"] = new("remodel/61027.rstatmsh", Hash, [new(0, 0)], []),
+                // Flames: a strip of four frames at six a second, cut out and unlit.
+                ["41116"] = new("remodel/41116.rstatmsh", Hash, [], [new DaggerfallRemodelTexture(0, "remodel/41116-0.png", Hash, true, new DaggerfallArtFlipbook(4, 6F), Unlit: true)]),
                 ["446"] = new("remodel/446.rstatmsh", Hash, [new(0, 0)], []),
                 ["447"] = new("remodel/447.rstatmsh", Hash, [new(0, 0)], []),
             },
@@ -66,7 +70,8 @@ public sealed class ModelRemodelPresentationTests
         ContentFake content = MediaContent(releases);
         foreach (string path in new[] { "mesh/41209.rstatmsh", "mesh/41106.rstatmsh", "mesh/61027.rstatmsh", "remodel/41209.rstatmsh", "remodel/61027.rstatmsh",
                      "remodel/41209-0.png", "remodel/41209-1.png", "texture/67-0.png", "texture/85-0.png",
-                     "mesh/446.rstatmsh", "mesh/447.rstatmsh", "remodel/446.rstatmsh", "remodel/447.rstatmsh" })
+                     "mesh/446.rstatmsh", "mesh/447.rstatmsh", "remodel/446.rstatmsh", "remodel/447.rstatmsh",
+                     "mesh/41116.rstatmsh", "remodel/41116.rstatmsh", "remodel/41116-0.png" })
             content.Add(path, Hash);
         AppearanceFake graphics = new(releases);
         DaggerfallLocationParts parts = new(() => 0, () => [], gatesOpen ?? (() => false), () => [(Gate, new EntityId(7), Gate.Open.Visual, GatePose)],
@@ -125,6 +130,35 @@ public sealed class ModelRemodelPresentationTests
         // The cut-out layer is drawn where its alpha is at least half, as the ground cover and flora are.
         MaterialRequest cutout = graphics.MaterialRequests[Assert.Single(remodel, binding => binding.MaterialSlot == 3).Material];
         Assert.Equal((MaterialAlphaMode.Mask, .5F), (cutout.AlphaMode, cutout.AlphaCutoff));
+    }
+
+    [Fact]
+    public void A_remodel_strip_shows_one_frame_at_a_time_unlit_stepped_at_its_rate_while_refreshed_art_is_drawn()
+    {
+        bool refreshed = true;
+        var (presentation, graphics) = Compose(() => refreshed, () => new(Vector3.Zero, Quaternion.Identity, Vector3.One));
+        using DaggerfallSiteAppearance owned = presentation;
+        Material flames = Assert.Single(graphics.StaticMeshMaterials[graphics.StaticMeshByPath["remodel/41116.rstatmsh"]]).Material;
+        MaterialRequest made = graphics.MaterialRequests[flames];
+        // One frame of the four is drawn, at its own colours, cut out.
+        Assert.Equal((new Vector2(.25F, 1F), Vector2.Zero, true, MaterialAlphaMode.Mask), (made.TextureScale, made.TextureOffset, made.Unlit, made.AlphaMode));
+        Vector2[] Offsets() => [.. graphics.MaterialUpdates.Where(update => update.Material == flames).Select(update => update.Replacement.TextureOffset)];
+
+        // Six frames a second at sixty steps a second: a new frame every ten steps, and nothing in between.
+        for (ulong step = 1; step <= 5; step++) presentation.Advance(OuterUpdate(step));
+        Assert.Empty(Offsets());
+        for (ulong step = 6; step <= 15; step++) presentation.Advance(OuterUpdate(step));
+        Assert.Equal([new Vector2(.25F, 0F)], Offsets());
+        for (ulong step = 16; step <= 45; step++) presentation.Advance(OuterUpdate(step));
+        Assert.Equal([new Vector2(.25F, 0F), new Vector2(.5F, 0F), new Vector2(.75F, 0F), Vector2.Zero], Offsets());
+
+        // Classic art draws the classic hearth, so its remodel's strip is left where it is until refreshed art returns.
+        refreshed = false;
+        for (ulong step = 46; step <= 65; step++) presentation.Advance(OuterUpdate(step));
+        Assert.Equal(4, Offsets().Length);
+        refreshed = true;
+        presentation.Advance(OuterUpdate(66));
+        Assert.Equal(new Vector2(.5F, 0F), Offsets()[^1]);
     }
 
     [Fact]

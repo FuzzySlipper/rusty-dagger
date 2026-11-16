@@ -780,6 +780,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     {
         if (disposed) return;
         AdvanceDecorations();
+        StepFlipbooks(update);
         StepHeld(update);
         AppearanceOuterUpdate identity = new(update.Generation, update.ControlRevision, update.SimulationStep, update.AdmittedStepCount);
         foreach (ActorVisual visual in actors.Values)
@@ -1075,6 +1076,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         actionModelVisuals.Clear();
         retired.AddRange(remodels.Values.Reverse());
         remodels.Clear();
+        flipbooks.Clear();
         shellMaterials.Clear();
         reliefImages.Clear();
         foreach ((GateVisual open, GateVisual closed, ulong _) in gateVisuals.Values.Reverse()) retired.AddRange([closed.Classic, open.Classic]);

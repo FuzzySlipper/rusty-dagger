@@ -688,7 +688,7 @@ internal sealed class DaggerfallLocationAssembly
                 [.. art.Slots.Where(slot => slot.Texture is not null).Select(slot =>
                 {
                     DaggerfallArtFile file = slot.Material is null ? slot.Texture! : slot.Painted(Texture(slot.Material));
-                    return new DaggerfallRemodelTexture(slot.Slot, file.Path, file.Sha256, slot.Mask);
+                    return new DaggerfallRemodelTexture(slot.Slot, file.Path, file.Sha256, slot.Mask, slot.Flipbook, slot.Unlit);
                 })]));
         }
 
