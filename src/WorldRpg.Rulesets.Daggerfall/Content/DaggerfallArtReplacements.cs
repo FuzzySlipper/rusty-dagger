@@ -173,8 +173,8 @@ internal sealed record DaggerfallGroundCoverArt(DaggerfallArtFile Shell, int She
 
 /// <summary>
 /// A refreshed nature mesh standing in for a flora sprite: a prop mesh (bark, leaf and stone parts, its vertex alpha the
-/// share each vertex flutters) and its own height in metres; the sprite's drawn height and where its foot stands, as shares
-/// of its frame height, which the mesh is drawn to; its bark and leaves, which a bare tree has no leaves of; its stone,
+/// share each vertex flutters) and its own height in metres; the height it is drawn at and how high its foot stands, in
+/// metres; its bark and leaves, which a bare tree has no leaves of; its stone,
 /// which a rock wears and the wind does not move; and the snow a winter tree's leaves or a winter rock's stone carry: the
 /// share of their upward faces it covers, its linear colour and that texture's texels a side.
 /// </summary>
@@ -195,21 +195,14 @@ internal sealed record DaggerfallGroundRelief(DaggerfallArtFile File, float Tall
     float? Depth = null);
 
 /// <summary>
-/// A refreshed world billboard standing in for one classic texture record: a PNG atlas of its frames in classic order, each
-/// the same box, and where the classic frame sits in that box (fractions of the frame, top-down). A flat that gives light
-/// names its emission map, an atlas of the same layout holding only what glows.
+/// A refreshed world billboard standing in for one classic texture record: a PNG atlas of its frames, each the same box, and
+/// its own placement: a frame's size in the world in metres, its pivot and its foot (fractions of a frame, from its left and
+/// bottom: where the sprite stands on its position, and where it stands on the ground), and, for an atlas of several frames,
+/// the rate it plays them at, in order. A flat that gives light names its emission map, an atlas of the same layout holding
+/// only what glows.
 /// </summary>
-internal sealed record DaggerfallArtFlat(DaggerfallArtFile File, int Width, int Height, IReadOnlyList<DaggerfallArtRect> Frames, DaggerfallArtRect Classic,
-    DaggerfallArtFile? Emission = null)
-{
-    /// <summary>
-    /// The world size and pivot that draw this art where the classic sprite stands: the box is larger than the classic frame
-    /// it holds, so the classic size grows by the share that frame takes, and the classic pivot (from the frame's bottom) moves into the box.
-    /// </summary>
-    internal (Vector2 Size, Vector2 Pivot) Placed(Vector2 size, Vector2 pivot) =>
-        (size / new Vector2((float)Classic.Width, (float)Classic.Height),
-            new((float)(Classic.X + pivot.X * Classic.Width), (float)(1 - Classic.Y - Classic.Height + pivot.Y * Classic.Height)));
-}
+internal sealed record DaggerfallArtFlat(DaggerfallArtFile File, int Width, int Height, IReadOnlyList<DaggerfallArtRect> Frames, Vector2 Size,
+    Vector2 Pivot, Vector2 Foot, float FramesPerSecond, DaggerfallArtFile? Emission = null);
 
 /// <summary>
 /// How refreshed clothing, painted neutral, is drawn in one classic dye, or refreshed armour or a weapon, in bare
@@ -515,22 +508,32 @@ internal sealed class DaggerfallArtReplacements
                             DaggerfallContentHash.Parse(surface.GetProperty("sha256").GetString()!, $"The refreshed surface for {replaces.Item1}/{replaces.Item2}")), width, height)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two surfaces for {replaces.Item1}/{replaces.Item2}.");
                 }
-            foreach ((string name, Dictionary<(int Archive, int Record), DaggerfallArtFlat> sprites) in new[] { ("flats", flats), ("people", people) })
+            foreach ((string name, string kind, Dictionary<(int Archive, int Record), DaggerfallArtFlat> sprites) in new[] { ("flats", "flat", flats), ("people", "person", people) })
                 if (section.TryGetProperty(name, out JsonElement spriteArt))
                 foreach (JsonElement flat in spriteArt.EnumerateArray())
                 {
                     (int, int) replaces = (flat.GetProperty("replaces").GetProperty("archive").GetInt32(), flat.GetProperty("replaces").GetProperty("record").GetInt32());
                     int width = flat.GetProperty("width").GetInt32(), height = flat.GetProperty("height").GetInt32();
                     DaggerfallArtRect[] frames = [.. flat.GetProperty("frames").EnumerateArray().Select(Rect)];
-                    DaggerfallArtRect classic = Rect(flat.GetProperty("classic"));
-                    if (frames.Length == 0 || frames.Any(frame => frame.X < 0 || frame.Y < 0 || frame.Width <= 0 || frame.Height <= 0 || frame.X + frame.Width > width || frame.Y + frame.Height > height)
-                        || classic.Width <= 0 || classic.Height <= 0)
+                    if (frames.Length == 0 || frames.Any(frame => frame.X < 0 || frame.Y < 0 || frame.Width <= 0 || frame.Height <= 0 || frame.X + frame.Width > width || frame.Y + frame.Height > height))
                         throw new InvalidOperationException($"Content pack '{packId}' places the refreshed flat for {replaces.Item1}/{replaces.Item2} outside its atlas.");
+                    // A flat of several frames plays them at its own rate; a person shows the one frame.
+                    string subject = $"the refreshed {kind} for {replaces.Item1}/{replaces.Item2}";
+                    JsonElement placement = Placement(flat.TryGetProperty("placement", out JsonElement placed) ? placed : null, subject,
+                        ["size", "pivot", "foot", .. frames.Length > 1 && kind == "flat" ? ["framesPerSecond"] : Array.Empty<string>()]);
+                    JsonElement size = placement.GetProperty("size");
+                    Vector2 metres = new(size.GetProperty("width").GetSingle(), size.GetProperty("height").GetSingle());
+                    Vector2 pivot = Point(placement.GetProperty("pivot")), foot = Point(placement.GetProperty("foot"));
+                    float rate = placement.TryGetProperty("framesPerSecond", out JsonElement perSecond) ? perSecond.GetSingle() : 0F;
+                    if (!float.IsFinite(metres.X) || !float.IsFinite(metres.Y) || metres.X <= 0 || metres.Y <= 0 || !float.IsFinite(rate) || rate < 0
+                        || frames.Length > 1 && kind == "flat" && rate == 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' states an empty size or no rate for {subject}.");
                     DaggerfallArtFile? emission = flat.TryGetProperty("emission", out JsonElement map)
                         ? new(map.GetProperty("path").GetString()!, DaggerfallContentHash.Parse(map.GetProperty("sha256").GetString()!, $"The emission map for {replaces.Item1}/{replaces.Item2}"))
                         : null;
                     if (!sprites.TryAdd(replaces, new(new(flat.GetProperty("path").GetString()!,
-                            DaggerfallContentHash.Parse(flat.GetProperty("sha256").GetString()!, $"The refreshed flat for {replaces.Item1}/{replaces.Item2}")), width, height, frames, classic, emission)))
+                            DaggerfallContentHash.Parse(flat.GetProperty("sha256").GetString()!, $"The refreshed flat for {replaces.Item1}/{replaces.Item2}")),
+                            width, height, frames, metres, pivot, foot, rate, emission)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two flats for {replaces.Item1}/{replaces.Item2}.");
                 }
             if (section.TryGetProperty("peopleRig", out JsonElement rig)) peopleRig = PeopleRig(rig);
@@ -544,9 +547,12 @@ internal sealed class DaggerfallArtReplacements
                         throw new InvalidOperationException($"Content pack '{packId}' states tree '{tree.Name}' without an archive and record.");
                     DaggerfallArtFile? bark = t.TryGetProperty("bark", out JsonElement treeBark) ? File(treeBark, $"Tree {tree.Name}'s bark") : null;
                     DaggerfallArtFile? stone = t.TryGetProperty("stone", out JsonElement treeStone) ? File(treeStone, $"Tree {tree.Name}'s stone") : null;
+                    JsonElement placement = Placement(t.TryGetProperty("placement", out JsonElement placed) ? placed : null, $"tree '{tree.Name}'", "height", "foot");
+                    float treeHeight = placement.GetProperty("height").GetSingle(), foot = placement.GetProperty("foot").GetSingle(), meshHeight = mesh.GetProperty("height").GetSingle();
+                    if (!float.IsFinite(treeHeight) || treeHeight <= 0 || !float.IsFinite(foot) || foot < 0 || !float.IsFinite(meshHeight) || meshHeight <= 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' draws tree '{tree.Name}' {treeHeight} metres tall at a foot of {foot}, from a mesh {meshHeight} metres tall.");
                     trees.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
-                        new(File(mesh, $"Tree {tree.Name}'s mesh"), mesh.GetProperty("height").GetSingle(), t.GetProperty("height").GetSingle(),
-                            t.GetProperty("foot").GetSingle(), bark,
+                        new(File(mesh, $"Tree {tree.Name}'s mesh"), meshHeight, treeHeight, foot, bark,
                             t.TryGetProperty("leaves", out JsonElement treeLeaves) ? File(treeLeaves, $"Tree {tree.Name}'s leaves") : null,
                             t.TryGetProperty("snow", out JsonElement snow) ? (snow.GetProperty("share").GetSingle(), Tint(snow.GetProperty("colour")), snow.GetProperty("texels").GetInt32()) : null,
                             stone));
@@ -655,6 +661,8 @@ internal sealed class DaggerfallArtReplacements
                 throw new InvalidOperationException($"Content pack '{packId}' tints its ground cover by {value}.");
             return value;
         }
+
+        static Vector2 Point(JsonElement point) => new(point.GetProperty("x").GetSingle(), point.GetProperty("y").GetSingle());
 
         static DaggerfallArtRect Rect(JsonElement rect) => new(rect.GetProperty("x").GetDouble(), rect.GetProperty("y").GetDouble(),
             rect.GetProperty("width").GetDouble(), rect.GetProperty("height").GetDouble());

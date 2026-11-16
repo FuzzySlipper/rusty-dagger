@@ -184,7 +184,7 @@ public sealed class ActorSpritePresentationTests
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes("""
             {"artReplacements": {"images": [], "people": [{"replaces": {"archive": 182, "record": 0}, "path": "refreshed/people/texture-182-record-000.png",
               "byteLength": 1, "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 20, "height": 40,
-              "frames": [{"x": 0, "y": 0, "width": 20, "height": 40}], "classic": {"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5}}]}}
+              "frames": [{"x": 0, "y": 0, "width": 20, "height": 40}], "placement": {"size": {"width": 3, "height": 7}, "pivot": {"x": 0.5, "y": 0.4}, "foot": {"x": 0.45, "y": 0}}}]}}
             """), "test.art");
         NormalizedBillboardSprite billboard = new("person.png", Hash, 8, 8, [new NormalizedAtlasFrame(7, 0, 0, 8, 8)], 7, new Vector2(.5F, .5F), new Vector2(2F, 4F));
         using ActorsState actors = ActorsAt(new WorldPoint(0F, 0F, 0F));
@@ -200,8 +200,8 @@ public sealed class ActorSpritePresentationTests
         Appearance person = Drawn();
         Assert.Contains("refreshed/people/texture-182-record-000.png", graphics.OpenedResourcePaths);
         Assert.DoesNotContain("person.png", graphics.OpenedResourcePaths);
-        // Drawn at the classic billboard's size about its centre, which is where the person is placed.
-        Assert.Equal((new Vector2(4F, 8F), new Vector2(.5F, .5F)), (graphics.SpriteRequests[^1].Size, graphics.SpriteRequests[^1].Pivot));
+        // Drawn at its own size about its own pivot, which is where the person is placed, whatever the classic billboard states.
+        Assert.Equal((new Vector2(3F, 7F), new Vector2(.5F, .4F)), (graphics.SpriteRequests[^1].Size, graphics.SpriteRequests[^1].Pivot));
 
         presentation.BuildClassic();
         Assert.Contains("person.png", graphics.OpenedResourcePaths);
@@ -210,7 +210,7 @@ public sealed class ActorSpritePresentationTests
     }
 
     [Fact]
-    public void A_standing_person_draws_refreshed_art_at_the_classic_size_on_its_own_base_and_follows_the_art_choice()
+    public void A_standing_person_draws_refreshed_art_at_its_own_size_on_its_own_base_and_follows_the_art_choice()
     {
         List<string> releases = []; var graphics = new AppearanceFake(releases);
         ContentFake content = MediaContent(releases);
@@ -219,7 +219,7 @@ public sealed class ActorSpritePresentationTests
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes("""
             {"artReplacements": {"images": [], "people": [{"replaces": {"archive": 182, "record": 0}, "path": "refreshed/people/texture-182-record-000.png",
               "byteLength": 1, "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 20, "height": 40,
-              "frames": [{"x": 0, "y": 0, "width": 20, "height": 40}], "classic": {"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5}}]}}
+              "frames": [{"x": 0, "y": 0, "width": 20, "height": 40}], "placement": {"size": {"width": 3, "height": 7}, "pivot": {"x": 0.5, "y": 0.4}, "foot": {"x": 0.45, "y": 0}}}]}}
             """), "test.art");
         NormalizedBillboardSprite billboard = new("person.png", Hash, 8, 8, [new NormalizedAtlasFrame(7, 0, 0, 8, 8)], 7, new Vector2(.5F, .5F), new Vector2(2F, 4F));
         using ActorsState actors = ActorsAt(new WorldPoint(0F, 0F, 0F));
@@ -230,8 +230,8 @@ public sealed class ActorSpritePresentationTests
         presentation.AddActor(person, billboard.Standing((182, 0)));
 
         // The refreshed person stands on its own base, beside the classic sprite this run draws.
-        SpriteFromAtlasRequest drawn = Assert.Single(graphics.SpriteRequests, request => request.Size == new Vector2(4F, 8F));
-        Assert.Equal(new Vector2(.5F, 0F), drawn.Pivot);
+        SpriteFromAtlasRequest drawn = Assert.Single(graphics.SpriteRequests, request => request.Size == new Vector2(3F, 7F));
+        Assert.Equal(new Vector2(.45F, 0F), drawn.Pivot);
         Assert.Contains("refreshed/people/texture-182-record-000.png", graphics.OpenedResourcePaths);
         Appearance Chosen()
         {

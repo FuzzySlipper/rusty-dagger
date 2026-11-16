@@ -364,7 +364,7 @@ internal sealed class DaggerfallFloraField : IDisposable
                 }, tree, look));
                 owned.Add(leafMaterial);
             }
-            MeshResource mesh = _engine.Graphics.CreateMeshResource(DaggerfallTreeMesh.Read(_engine.Content, tree, look.Size.Y, barkMaterial, leafMaterial, stoneMaterial));
+            MeshResource mesh = _engine.Graphics.CreateMeshResource(DaggerfallTreeMesh.Read(_engine.Content, tree, barkMaterial, leafMaterial, stoneMaterial));
             owned.Add(mesh);
             Appearance appearance = _engine.Graphics.CreateMeshAppearance(mesh);
             owned.Add(appearance);

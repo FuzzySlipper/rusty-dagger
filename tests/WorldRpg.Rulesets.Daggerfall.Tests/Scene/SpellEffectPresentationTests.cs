@@ -36,12 +36,15 @@ public sealed class SpellEffectPresentationTests
             {"replaces": {"archive": 210, "record": 28}, "path": "refreshed/lamp-post.glb", "byteLength": 1, "sha256": "HASH", "glow": [1]}],
           "flats": [
             {"replaces": {"archive": 212, "record": 0}, "path": "refreshed/well.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
-             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}},
+             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "placement": {"size": {"width": 4, "height": 6}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.25}}},
             {"replaces": {"archive": 210, "record": 14}, "path": "refreshed/lamp.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
              "emission": {"path": "refreshed/lamp-glow.png", "byteLength": 1, "sha256": "HASH"},
-             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}},
+             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "placement": {"size": {"width": 4, "height": 6}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.25}}},
+            {"replaces": {"archive": 213, "record": 3}, "path": "refreshed/torch.png", "byteLength": 1, "sha256": "HASH", "width": 96, "height": 32,
+             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}, {"x": 32, "y": 0, "width": 32, "height": 32}, {"x": 64, "y": 0, "width": 32, "height": 32}],
+             "placement": {"size": {"width": 1.5, "height": 3}, "pivot": {"x": 0.5, "y": 0.4}, "foot": {"x": 0.5, "y": 0.1}, "framesPerSecond": 7}},
             {"replaces": {"archive": 210, "record": 12}, "path": "refreshed/orb.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
-             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}}]}}
+             "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "placement": {"size": {"width": 4, "height": 6}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.25}}}]}}
         """)), "test.art");
 
     private static (DaggerfallSiteAppearance Presentation, AppearanceFake Graphics, PresentationRecorder Particles) Compose(Func<bool> refreshed,
@@ -58,6 +61,8 @@ public sealed class SpellEffectPresentationTests
         content.Add("sprite/corpse.png", Hash);
         content.Add("sprite/lamp.png", Hash);
         content.Add("sprite/well.png", Hash);
+        content.Add("refreshed/torch.png", Hash);
+        content.Add("sprite/torch.png", Hash);
         content.Add("refreshed/well.png", Hash);
         content.Add("refreshed/lamp.png", Hash);
         content.Add("refreshed/lamp-glow.png", Hash);
@@ -272,6 +277,31 @@ public sealed class SpellEffectPresentationTests
         Publish(presentation, actors);
         Appearance classic = Assert.Single(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(4, .5F, 6)).Appearance;
         Assert.NotEqual(drawn, classic);
+    }
+
+    [Fact]
+    public void A_refreshed_flat_is_drawn_at_its_own_size_pivot_frames_and_rate_whatever_its_classic_sprite_states()
+    {
+        // The classic torch is one frame at another size, pivot and frame number, with no rate: nothing of it places the art.
+        NormalizedBillboardSprite classic = new("sprite/torch.png", Hash, 8, 8, [new NormalizedAtlasFrame(5, 0, 0, 8, 8)], 5, new Vector2(.5F, 1F), new Vector2(9F, 9F));
+        var (presentation, graphics, _) = Compose(() => true, decorations:
+        [
+            new("torch-1", new WorldPoint(4, .5F, 6), false, classic, classic, (213, 3), (213, 3), Lamp: false),
+            new("torch-2", new WorldPoint(5, .5F, 6), true, classic, classic, (213, 3), (213, 3), Lamp: false),
+        ]);
+        using DaggerfallSiteAppearance owned = presentation;
+        SpriteFromAtlasRequest[] drawn = [.. graphics.SpriteRequests.Where(request => request.Size == new Vector2(1.5F, 3F))];
+        // Hung from its own pivot, or from its own foot where the placement is base-aligned, from its first frame.
+        Assert.Equal([new Vector2(.5F, .4F), new Vector2(.5F, .1F)], drawn.Select(request => request.Pivot));
+        Assert.All(drawn, request => Assert.Equal(0u, request.FrameId));
+        // Its three frames play in order at its own rate, numbered from 0.
+        SpritePlaybackCreateRequest[] played = [.. graphics.PlaybackRequests.Where(playback => playback.Frames.Length == 3)];
+        Assert.Equal(2, played.Length);
+        Assert.All(played, playback =>
+        {
+            Assert.Equal([0u, 1u, 2u], playback.Frames.Span.ToArray().Select(frame => frame.FrameId));
+            Assert.All(playback.Frames.Span.ToArray(), frame => Assert.Equal(1D / 7, frame.DurationSeconds, 9));
+        });
     }
 
     /// <summary>

@@ -82,11 +82,12 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (position is null) return;
         }
         if (candleAppearance is not null) return;
-        var sprite = candleSprite ?? throw new InvalidOperationException("Normal light requires the published magic candle billboard 210/3.");
+        // The refreshed candle places itself; only the classic one needs the published billboard.
+        if (!refreshed && candleSprite is null) throw new InvalidOperationException("Normal light requires the published magic candle billboard 210/3.");
         candleVisualId = NextVisualEntityId();
-        if (!candleLooks.TryGetValue(refreshed, out var look)) candleLooks.Add(refreshed, look = CandleLook(sprite, refreshed));
+        if (!candleLooks.TryGetValue(refreshed, out var look)) candleLooks.Add(refreshed, look = CandleLook(candleSprite, refreshed));
         candleRefreshed = refreshed;
-        candleAppearance = appearance.CreateSpriteFromAtlas(new(look.Atlas, sprite.InitialFrameId, look.Pivot,
+        candleAppearance = appearance.CreateSpriteFromAtlas(new(look.Atlas, refreshed ? 0 : candleSprite!.InitialFrameId, look.Pivot,
             look.Size, flats.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), look.Material));
     }
 
@@ -94,20 +95,19 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// The candle as one art set draws it. It takes the light around it, and its flame shines over that at a lamp's level:
     /// a refreshed one through its emission map where it has one, else through its own colours, as the classic does.
     /// </summary>
-    private (SpriteAtlas, SpriteMaterialDescriptor, Vector2, Vector2) CandleLook(NormalizedBillboardSprite sprite, bool refreshed)
+    private (SpriteAtlas, SpriteMaterialDescriptor, Vector2, Vector2) CandleLook(NormalizedBillboardSprite? sprite, bool refreshed)
     {
         if (!refreshed)
         {
-            (SpriteAtlas atlas, RenderResource texture) = OpenActorAtlas(content, new NormalizedActorSprite(sprite.TexturePath,
+            (SpriteAtlas atlas, RenderResource texture) = OpenActorAtlas(content, new NormalizedActorSprite(sprite!.TexturePath,
                 sprite.TextureSha256, sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size));
             return (atlas, Glowing(LitSprite, texture, lighting.LampLevel), sprite.Size, sprite.Pivot);
         }
         // The candle lives with the site, not its location, so it opens its own rather than the decorations' resources.
         DaggerfallArtFlat art = surfaceArt!.Flats[(LightFlatArchive, 3)];
-        SpriteAtlasFrame[] frames = RefreshedFlatFrames(art, sprite);
         RenderResource image = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest).Handle;
         ownedResources.Add(image);
-        SpriteAtlas refreshedAtlas = appearance.CreateSpriteAtlas(new(image, frames));
+        SpriteAtlas refreshedAtlas = appearance.CreateSpriteAtlas(new(image, RefreshedFlatFrames(art)));
         atlases.Add(refreshedAtlas);
         RenderResource map = image;
         if (art.Emission is { } emission)
@@ -115,8 +115,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             map = appearance.OpenTexture(content, emission.Path, emission.Sha256, TextureFilter.Nearest).Handle;
             ownedResources.Add(map);
         }
-        (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, sprite.Pivot);
-        return (refreshedAtlas, Glowing(LitSprite, map, lighting.LampLevel), size, pivot);
+        return (refreshedAtlas, Glowing(LitSprite, map, lighting.LampLevel), art.Size, art.Pivot);
     }
 
     private Func<float> enemyAudibleRange = () => 16F;
@@ -1173,7 +1172,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     internal void AddNpc(long id, NormalizedBillboardSprite sprite, (int Archive, int Record) source)
     {
         if (npcVisuals.ContainsKey(id)) return;
-        NpcVisual visual = new(sprite) { Refreshed = RefreshedPerson(source, sprite.InitialFrameId, sprite.Size, sprite.Pivot, onBase: false) };
+        NpcVisual visual = new(sprite) { Refreshed = RefreshedPerson(source, onBase: false) };
         try { if (!drawRefreshedEffects() || visual.Refreshed is null) ClassicNpc(visual); }
         catch { visual.Dispose(); throw; }
         npcVisuals.Add(id, visual);

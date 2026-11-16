@@ -125,7 +125,7 @@ internal sealed partial class DaggerfallSiteAppearance
             givesLight ? Lamp(material, decorationTextures[sprite.TexturePath]) : material)));
         if (givesLight) glowingDecorations.Add(result.Visual);
         decorationSprites.Add(result);
-        StartDecorationPlayback(result, atlas, sprite);
+        StartDecorationPlayback(result, atlas, [.. sprite.Frames.Select(frame => frame.Id)], sprite.FramesPerSecond);
         return result;
     }
 
@@ -135,48 +135,41 @@ internal sealed partial class DaggerfallSiteAppearance
         if (surfaceArt is null) return;
         DaggerfallSiteDecoration definition = flat.Definition;
         if (flat.RefreshedSummer is null && surfaceArt.Flats.TryGetValue(definition.Source, out DaggerfallArtFlat? summer))
-            flat.RefreshedSummer = CreateRefreshedDecorationSprite(definition.Summer, summer, definition.BaseAligned, Material(definition), GivesLight(definition, definition.Source));
+            flat.RefreshedSummer = CreateRefreshedDecorationSprite(summer, definition.BaseAligned, Material(definition), GivesLight(definition, definition.Source));
         if (flat.RefreshedWinter is null && surfaceArt.Flats.TryGetValue(definition.WinterSource, out DaggerfallArtFlat? winter))
             flat.RefreshedWinter = definition.WinterSource == definition.Source ? flat.RefreshedSummer
-                : CreateRefreshedDecorationSprite(definition.Winter, winter, definition.BaseAligned, Material(definition), GivesLight(definition, definition.WinterSource));
+                : CreateRefreshedDecorationSprite(winter, definition.BaseAligned, Material(definition), GivesLight(definition, definition.WinterSource));
     }
 
     /// <summary>
-    /// A refreshed decoration's sprite. A light source shines through the emission map cut from its art, or, where the set
-    /// has none, through its own texture as a classic one does.
+    /// A refreshed decoration's sprite, at its own size and pivot (its foot's, when the placement is base-aligned), its frames
+    /// numbered from 0 and played in order at its own rate. A light source shines through the emission map cut from its art, or,
+    /// where the set has none, through its own texture as a classic one does.
     /// </summary>
-    private DecorationSprite CreateRefreshedDecorationSprite(NormalizedBillboardSprite sprite, DaggerfallArtFlat art, bool baseAligned, SpriteMaterialDescriptor material, bool givesLight)
+    private DecorationSprite CreateRefreshedDecorationSprite(DaggerfallArtFlat art, bool baseAligned, SpriteMaterialDescriptor material, bool givesLight)
     {
         if (!decorationAtlases.TryGetValue(art.File.Path, out var atlas))
         {
             var resource = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest);
             decorationResources.Add(resource.Handle);
             decorationTextures.Add(art.File.Path, resource.Handle);
-            atlas = appearance.CreateSpriteAtlas(new(resource.Handle, RefreshedFlatFrames(art, sprite)));
+            atlas = appearance.CreateSpriteAtlas(new(resource.Handle, RefreshedFlatFrames(art)));
             decorationAtlases.Add(art.File.Path, atlas);
         }
-        (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, baseAligned ? new Vector2(.5f, 0f) : sprite.Pivot);
-        var result = new DecorationSprite(appearance.CreateSpriteFromAtlas(new(atlas, sprite.InitialFrameId, pivot, size,
+        var result = new DecorationSprite(appearance.CreateSpriteFromAtlas(new(atlas, 0, baseAligned ? art.Foot : art.Pivot, art.Size,
             flats.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f),
             art.Emission is { } emission ? Lamp(material, GlowMap(emission))
                 : givesLight ? Lamp(material, decorationTextures[art.File.Path]) : material)));
         if (art.Emission is not null || givesLight) glowingDecorations.Add(result.Visual);
         decorationSprites.Add(result);
-        StartDecorationPlayback(result, atlas, sprite);
+        StartDecorationPlayback(result, atlas, [.. art.Frames.Select((_, index) => (uint)index)], art.FramesPerSecond);
         return result;
     }
 
-    /// <summary>
-    /// A refreshed flat's frames as its classic sprite's: each named by the classic frame identity it stands for, so the
-    /// classic sprite's playback steps through them.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">The refreshed flat does not have its classic sprite's frame count,
-    /// so the classic frame identities would name the wrong frames.</exception>
-    private static SpriteAtlasFrame[] RefreshedFlatFrames(DaggerfallArtFlat art, NormalizedBillboardSprite sprite) =>
-        art.Frames.Count != sprite.Frames.Count
-            ? throw new InvalidOperationException($"Refreshed flat '{art.File.Path}' has {art.Frames.Count} frames; its classic sprite has {sprite.Frames.Count}.")
-            : SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
-                art.Frames.Select((frame, index) => new NormalizedSpriteFrame(sprite.Frames[index].Id, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray());
+    /// <summary>A refreshed flat's frames, numbered from 0 in the order its art states them, which is the order it plays them.</summary>
+    private static SpriteAtlasFrame[] RefreshedFlatFrames(DaggerfallArtFlat art) =>
+        SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
+            art.Frames.Select((frame, index) => new NormalizedSpriteFrame((uint)index, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray());
 
     /// <summary>A refreshed lamp's emission map, opened once however many lamps share it.</summary>
     private RenderResource GlowMap(DaggerfallArtFile emission)
@@ -204,11 +197,11 @@ internal sealed partial class DaggerfallSiteAppearance
     private void LightMesh(Appearance mesh, IReadOnlyList<uint> slots) => meshes!.UpdateAnimatedMeshMaterialFactors(new(mesh,
         slots.Select(slot => new MeshMaterialFactors(slot, false, default, true, Vector3.One, lampLevel)).ToArray()));
 
-    private void StartDecorationPlayback(DecorationSprite result, SpriteAtlas atlas, NormalizedBillboardSprite sprite)
+    private void StartDecorationPlayback(DecorationSprite result, SpriteAtlas atlas, uint[] frames, float framesPerSecond)
     {
-        if (sprite.Frames.Count <= 1 || sprite.FramesPerSecond <= 0f) return;
+        if (frames.Length <= 1 || framesPerSecond <= 0f) return;
         result.Playback = appearance.CreateSpritePlayback(new(result.Visual, atlas,
-            SpriteAtlasAdapter.ToPlaybackFrames(sprite.Frames.Select(frame => frame.Id).ToArray(), sprite.FramesPerSecond),
+            SpriteAtlasAdapter.ToPlaybackFrames(frames, framesPerSecond),
             Array.Empty<SpritePlaybackMarker>(), SpritePlaybackLoopMode.Loop, 1d));
         appearance.ControlSpritePlayback(new(result.Playback, SpritePlaybackControl.Start));
     }

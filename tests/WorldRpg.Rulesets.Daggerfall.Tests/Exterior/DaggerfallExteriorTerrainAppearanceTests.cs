@@ -98,7 +98,7 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         string flats = string.Join(",", Enumerable.Range(1, 31).Select(record => $$$"""
             {"replaces": {"archive": 504, "record": {{{record}}}}, "path": "refreshed/flats/504-{{{record}}}.png", "byteLength": 1,
              "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 64, "height": 64,
-             "frames": [{"x": 0, "y": 0, "width": 64, "height": 64}], "classic": {"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5}}
+             "frames": [{"x": 0, "y": 0, "width": 64, "height": 64}], "placement": {"size": {"width": 5, "height": 10}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.25} } }
             """));
         for (int record = 1; record <= 31; record++) graphics.Content.Add($"refreshed/flats/504-{record}.png", TestSessions.Hash);
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(
@@ -134,14 +134,14 @@ public sealed class DaggerfallExteriorTerrainAppearanceTests
         });
 
         // Refreshed nature grows in the flora field instead: the cells keep their placements and draw no batches, and the
-        // field draws each record's refreshed art at the classic size, its pivot moved into the art's box.
+        // field draws each record's refreshed art at its own size, hung from its own foot, whatever the classic sprite states.
         refreshed = true;
         appearance.AppendFacts([]);
         Assert.Equal(0, appearance.ActiveNatureBatchCount);
         Assert.Equal(batches, graphics.BatchRequests.Count);
         DaggerfallFloraLook look = appearance.FloraLook(504, 1)!;
         Assert.Equal("refreshed/flats/504-1.png", look.Image.Path);
-        Assert.Equal(new Vector2(6F, 12F), look.Size);
+        Assert.Equal(new Vector2(5F, 10F), look.Size);
         Assert.Equal(new Vector2(.5F, .25F), look.Pivot);
         Assert.Equal((Vector2.Zero, Vector2.One), (look.UvMin, look.UvMax));
         Assert.Null(appearance.FloraLook(504, 40));

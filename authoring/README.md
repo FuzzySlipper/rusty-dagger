@@ -65,8 +65,9 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
   and keeps the rest. Only the shared checkout holds every final, so a whole-area run anywhere else refuses rather than
   drop what it lacks. The import must have run; effects, flats and people also read `local/art/reference`, which a
   worktree links from the main checkout.
-- Effects, item icons and the clothed bodies carry their own `placement` (an effect's size in metres, pivot, frames,
-  rate and loop; an icon's ground height in metres; a body's waist row). A new entry takes it from the classic once;
+- Effects, item icons, the clothed bodies, flats, people and trees carry their own `placement` (an effect's size in metres,
+  pivot, frames, rate and loop; an icon's ground height in metres; a body's waist row; a flat's or person's size, pivot and
+  foot, and a flat's rate; a tree's height and foot in metres, measured by `trees.py` at its flat's size, so promote the flat first). A new entry takes it from the classic once;
   after that, promotion keeps what the payload holds, so promote with `main` first. A redone effect with other frames
   is refused until its `sequence` fits: set it with `--set ID NAME VALUE` (a JSON value, marked set by hand), or
   take every value from the classic again with `--recompute ID`. Promotion says when new art kept an old placement.

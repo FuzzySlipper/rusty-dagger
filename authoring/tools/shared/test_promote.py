@@ -180,5 +180,51 @@ class WorldMesh(unittest.TestCase):
         return json.loads(data[20:20 + int.from_bytes(data[12:16], "little")]), data
 
 
+class Placements(unittest.TestCase):
+    """A flat, a person and a tree state their own placement, taken from the original once and kept after."""
+    CLASSIC = {"x": .25, "y": .5, "width": .5, "height": .25}
+
+    def setUp(self):
+        self.addCleanup(promote.BILLBOARDS.clear)
+        promote.BILLBOARDS.update({
+            (210, 3): {"worldSize": {"x": 2, "y": 3}, "pivot": {"x": .5, "y": .5}, "playback": {"framesPerSecond": 5}},
+            (210, 4): {"worldSize": {"x": 1, "y": 2}, "pivot": {"x": .5, "y": 0}, "playback": None}})
+        self.addCleanup(promote.KEPT.clear)
+
+    def test_a_flat_takes_its_size_pivot_foot_and_rate_from_the_classic_frame_in_its_atlas_frame(self):
+        placement = promote.flat_placement(210, 3, self.CLASSIC, 3)
+        self.assertEqual({"size": {"width": 4, "height": 12}, "pivot": {"x": .5, "y": .375}, "foot": {"x": .5, "y": .25}, "framesPerSecond": 5}, placement)
+        # A person has no rate, and stands on the middle of its atlas frame's bottom.
+        self.assertEqual({"x": .5, "y": 0}, promote.flat_placement(210, 3, self.CLASSIC, 3, person=True)["foot"])
+        self.assertNotIn("framesPerSecond", promote.flat_placement(210, 3, self.CLASSIC, 3, person=True))
+        with self.assertRaisesRegex(SystemExit, "no playback"):
+            promote.flat_placement(210, 4, self.CLASSIC, 2)
+
+    def test_place_gives_each_entry_its_placement_and_a_tree_its_height_in_metres(self):
+        payload = {"artReplacements": {
+            "flats": [{"replaces": {"archive": 210, "record": 3}, "frames": [{}, {}], "classic": self.CLASSIC},
+                      {"replaces": {"archive": 210, "record": 4}, "frames": [{}], "classic": self.CLASSIC}],
+            "trees": {"210-3": {"height": .5, "foot": .25}}}}
+        with redirect_stdout(StringIO()):
+            promote.place(payload, "flats")
+            promote.place(payload, "trees")
+        flat, other = payload["artReplacements"]["flats"]
+        self.assertNotIn("classic", flat)
+        self.assertEqual({"size": "original", "pivot": "original", "foot": "original", "framesPerSecond": "original"}, flat["placement"]["from"])
+        self.assertNotIn("framesPerSecond", other["placement"])
+        self.assertEqual({"placement": {"height": 6, "foot": 3, "from": {"height": "art", "foot": "art"}}}, payload["artReplacements"]["trees"]["210-3"])
+
+    def test_a_promotion_keeps_the_values_an_entry_has_and_a_recompute_takes_them_again(self):
+        kept = {"size": {"width": 9, "height": 9}, "pivot": {"x": 0, "y": 0}, "foot": {"x": 0, "y": 0}, "from": {"size": "hand", "pivot": "original", "foot": "original"}}
+        promote.KEPT["flat.210.4"] = kept
+        names = ["size", "pivot", "foot"]
+        self.assertIs(kept, promote.own("flat.210.4", names, lambda: promote.flat_placement(210, 4, self.CLASSIC, 1)))
+        promote.RECOMPUTE.add("flat.210.4")
+        self.addCleanup(promote.RECOMPUTE.clear)
+        again = promote.own("flat.210.4", names, lambda: promote.flat_placement(210, 4, self.CLASSIC, 1))
+        self.assertEqual(8, again["size"]["height"])   # the classic 2 m over the .25 of the frame it takes
+        self.assertEqual({"size": "original", "pivot": "original", "foot": "original"}, again["from"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -69,9 +69,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
             foreach (DaggerfallExteriorNaturePlacement placement in cell.Source
                 .DistinctBy(placement => (placement.SpriteArchive, placement.SpriteRecord)))
             {
-                // Keyed by the classic file, as a cell drawn in classic art looks it up.
-                (_, NormalizedBillboardSprite sprite) = ResolveNatureSprite(placement);
-                GetNatureSprite(new(placement.SpriteArchive, placement.SpriteRecord, sprite.TexturePath), sprite, null);
+                (NatureSpriteKey key, NormalizedBillboardSprite sprite) = ResolveNatureSprite(placement);
+                GetNatureSprite(key, sprite);
             }
     }
 
@@ -287,13 +286,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         if (_profile is null
             || !_profile.BillboardSprites.TryGetValue((placement.SpriteArchive, placement.SpriteRecord), out sprite))
             return false;
-        key = new(placement.SpriteArchive, placement.SpriteRecord, Art(placement)?.File.Path ?? sprite.TexturePath);
+        key = new(placement.SpriteArchive, placement.SpriteRecord, sprite.TexturePath);
         return true;
     }
-
-    /// <summary>The refreshed art a nature placement draws now, if any.</summary>
-    private DaggerfallArtFlat? Art(DaggerfallExteriorNaturePlacement placement) =>
-        _refreshedDrawn && _art?.Flats.GetValueOrDefault((placement.SpriteArchive, placement.SpriteRecord)) is { } art ? art : null;
 
     private (NatureSpriteKey Key, NormalizedBillboardSprite Sprite) ResolveNatureSprite(
         DaggerfallExteriorNaturePlacement placement)
@@ -326,9 +321,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 .OrderBy(group => group.Key.Record).ThenBy(group => group.Key.Archive))
             {
                 (NatureSpriteKey key, NormalizedBillboardSprite sprite) = ResolveNatureSprite(group.First());
-                DaggerfallArtFlat? art = Art(group.First());
-                NatureSprite admitted = GetNatureSprite(key, sprite, art);
-                (Vector2 size, Vector2 pivot) = art?.Placed(sprite.Size, NatureFoot) ?? (sprite.Size, NatureFoot);
+                NatureSprite admitted = GetNatureSprite(key, sprite);
                 SpriteBatchInstance[] instances = [.. group.Select(placement =>
                     new SpriteBatchInstance(placement.LocalPosition, 1F, sprite.InitialFrameId))];
                 ulong objectId = NatureBatchObjectId(cell, key.Record);
@@ -337,8 +330,8 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
                 Appearance appearance = _graphics.CreateSpriteBatch(new SpriteBatchRequest(
                     admitted.Atlas,
                     instances,
-                    pivot,
-                    size,
+                    NatureFoot,
+                    sprite.Size,
                     _flats.Nature,
                     0,
                     SpriteDepthPolicy.Default,
@@ -361,22 +354,22 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     /// </summary>
     internal DaggerfallFloraLook? FloraLook(int archive, int record)
     {
-        if (_profile is null || !_profile.BillboardSprites.TryGetValue((archive, record), out NormalizedBillboardSprite? sprite)) return null;
-        int frame = sprite.Frames.Select((value, index) => (value, index)).First(pair => pair.value.Id == sprite.InitialFrameId).index;
-        if (_art?.Flats.GetValueOrDefault((archive, record)) is not { } art)
+        // The set's own art places itself: its size and foot are its own, and its first frame its first.
+        if (_art?.Flats.GetValueOrDefault((archive, record)) is { } art)
         {
-            NormalizedAtlasFrame classic = sprite.Frames[frame];
-            return new(new(sprite.TexturePath, sprite.TextureSha256), Uv(classic.X, classic.Y, sprite.AtlasWidth, sprite.AtlasHeight),
-                Uv(classic.X + classic.Width, classic.Y + classic.Height, sprite.AtlasWidth, sprite.AtlasHeight), sprite.Size, NatureFoot);
+            DaggerfallArtRect rect = art.Frames[0];
+            return new(art.File, Uv(rect.X, rect.Y, art.Width, art.Height), Uv(rect.X + rect.Width, rect.Y + rect.Height, art.Width, art.Height), art.Size, art.Foot)
+            {
+                Tree = _art.Trees.GetValueOrDefault((archive, record)),
+                TreeSnow = _art.TreeSnow,
+            };
         }
 
-        DaggerfallArtRect rect = art.Frames[frame];
-        (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, NatureFoot);
-        return new(art.File, Uv(rect.X, rect.Y, art.Width, art.Height), Uv(rect.X + rect.Width, rect.Y + rect.Height, art.Width, art.Height), size, pivot)
-        {
-            Tree = _art.Trees.GetValueOrDefault((archive, record)),
-            TreeSnow = _art.TreeSnow,
-        };
+        if (_profile is null || !_profile.BillboardSprites.TryGetValue((archive, record), out NormalizedBillboardSprite? sprite)) return null;
+        int frame = sprite.Frames.Select((value, index) => (value, index)).First(pair => pair.value.Id == sprite.InitialFrameId).index;
+        NormalizedAtlasFrame classic = sprite.Frames[frame];
+        return new(new(sprite.TexturePath, sprite.TextureSha256), Uv(classic.X, classic.Y, sprite.AtlasWidth, sprite.AtlasHeight),
+            Uv(classic.X + classic.Width, classic.Y + classic.Height, sprite.AtlasWidth, sprite.AtlasHeight), sprite.Size, NatureFoot);
     }
 
     private static Vector2 Uv(double x, double y, int width, int height) => new((float)(x / width), (float)(y / height));
@@ -384,7 +377,7 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     /// <summary>A nature placement is a point on the ground, so the sprite hangs from its foot, not the published centre.</summary>
     private static readonly Vector2 NatureFoot = new(.5F, 0F);
 
-    private NatureSprite GetNatureSprite(NatureSpriteKey key, NormalizedBillboardSprite sprite, DaggerfallArtFlat? art)
+    private NatureSprite GetNatureSprite(NatureSpriteKey key, NormalizedBillboardSprite sprite)
     {
         if (_natureSprites.TryGetValue(key, out NatureSprite? existing)) return existing;
 
@@ -392,13 +385,9 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
         SpriteAtlas? atlas = null;
         try
         {
-            resource = art is null ? _graphics.OpenTexture(_content, sprite.TexturePath, sprite.TextureSha256).Handle
-                : _graphics.OpenTexture(_content, art.File.Path, art.File.Sha256, TextureFilter.Nearest).Handle;
-            SpriteAtlasFrame[] frames = art is null
-                ? SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames.Select(frame => new NormalizedSpriteFrame(
-                    frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray())
-                : SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height, art.Frames.Select((frame, index) => new NormalizedSpriteFrame(
-                    sprite.Frames[index].Id, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray());
+            resource = _graphics.OpenTexture(_content, sprite.TexturePath, sprite.TextureSha256).Handle;
+            SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames.Select(frame =>
+                new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
             atlas = _graphics.CreateSpriteAtlas(new SpriteAtlasCreateRequest(resource, frames));
             NatureSprite created = new(key, resource, atlas);
             _natureSprites.Add(key, created);

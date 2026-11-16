@@ -16,8 +16,10 @@ are its branch skeleton built old and heaped, their bark painted as a tree's; a 
 drawn as `stone`, which the wind does not move, in a generated stone tile painted from the sprite's own rock colours, a
 winter rock's snow laid on its upward faces as a winter crown's is.
 
-The game draws a mesh at the sprite's drawn height (DaggerfallTreeMesh), so this records that height as a share of the
-sprite's frame, with where its foot stands. It takes each mesh's normals as written, so a mesh with one not of unit length
+The game draws a mesh at the sprite's drawn height (DaggerfallTreeMesh), so each entry's `placement` states that height in
+metres, with how high its foot stands: the shares of the sprite's frame measured here, at its flat's own size
+(`placement.size.height` of the flat in the payload), so a flat is promoted before its tree. A rebuilt tree measures them
+again, except a value set by hand (promote.py --set), which it keeps. It takes each mesh's normals as written, so a mesh with one not of unit length
 or not finite is refused here by name (the Engine refuses a non-finite one, faulting the update that grows it; #10871).
 
     trees.py                  every tree, the whole section and its media written anew
@@ -268,7 +270,17 @@ def publish(name, path):
     return {"path": f"{MEDIA}/{name}", "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
 
 
-def rock(rgba, archive, record, form, stones, folder):
+def placement(flat, rgba, m, old):
+    """A tree's own placement: the sprite's drawn height and where its foot stands, as shares of its frame height, in metres
+    at its flat's own size; a value set by hand is kept."""
+    h, metres = rgba.shape[0], flat["placement"]["size"]["height"]
+    measured = {"height": round(m["height"] / h * metres, 6), "foot": round((h - 1 - m["foot"]) / h * metres, 6)}
+    kept = {name for name, source in (old or {}).get("placement", {}).get("from", {}).items() if source == "hand"}
+    return {**{name: old["placement"][name] if name in kept else value for name, value in measured.items()},
+            "from": {name: "hand" if name in kept else "art" for name in measured}}
+
+
+def rock(flat, rgba, archive, record, form, stones, folder, old):
     """One rock's mesh, shaped to its sprite's outline, and its stone in the sprite's colours, with the snow it carries."""
     m = measures(rgba)
     # Sprites drawn alike (a rock several climates share) give one mesh and one stone.
@@ -277,19 +289,18 @@ def rock(rgba, archive, record, form, stones, folder):
     mesh_name, stone_name = f"rock-{seed:08x}.prop-mesh.json", f"rock-{seed:08x}-stone.png"
     write_mesh(folder / mesh_name, mesh)
     Image.fromarray(stone, "RGBA").save(folder / stone_name)
-    h = rgba.shape[0]
-    entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]}, "height": round(m["height"] / h, 4),
-             "foot": round((h - 1 - m["foot"]) / h, 4), "stone": publish(stone_name, folder / stone_name)}
+    entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]}, "placement": placement(flat, rgba, m, old),
+             "stone": publish(stone_name, folder / stone_name)}
     if snow := snowfall(rgba[rgba[..., 3] > SOLID][:, :3]):
         entry["snow"] = snow | {"texels": rocks.TILE}
     return entry
 
 
-def tree(flat, archive, record, species, variant, folder):
+def tree(flat, archive, record, species, variant, folder, old=None):
     """One tree's mesh, trimmed under its sprite's crown, and its textures in the sprite's colours."""
     rgba = frame(flat)
     if species in ROCKS:
-        return rock(rgba, archive, record, species, variant, folder)
+        return rock(flat, rgba, archive, record, species, variant, folder, old)
     m = measures(rgba)
     crown, trunk, snow = palette(rgba, m)
     if species in (GNARLED, LOGS):
@@ -309,13 +320,7 @@ def tree(flat, archive, record, species, variant, folder):
         write_mesh(folder / mesh_name, outward(trim(mesh, base)))
     leaves, bark = TEXTURES[species]
     name = f"tree-{archive:03d}-{record:02d}"
-    h = rgba.shape[0]
-    entry = {
-        "mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]},
-        # The sprite's drawn height and where its foot stands, as shares of its frame height.
-        "height": round(m["height"] / h, 4),
-        "foot": round((h - 1 - m["foot"]) / h, 4),
-    }
+    entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]}, "placement": placement(flat, rgba, m, old)}
     if leaves and snow:
         entry["snow"] = snow | {"texels": Image.open(CRAFTSURVIVE / f"textures/trees/{leaves}-leaves.png").width}
     if leaves:
@@ -350,7 +355,7 @@ def main():
         built = Path(built)
         for key in keys or wanted:
             archive, record, (species, variant) = wanted[key]
-            trees[key] = tree(flats[(archive, record)], archive, record, species, variant, built)
+            trees[key] = tree(flats[(archive, record)], archive, record, species, variant, built, payload["artReplacements"]["trees"].get(key))
         if keys:
             # A file another entry names too (a rock several climates share) changes under it unless that entry is rebuilt.
             written = {f"{MEDIA}/{file.name}" for file in built.iterdir()}

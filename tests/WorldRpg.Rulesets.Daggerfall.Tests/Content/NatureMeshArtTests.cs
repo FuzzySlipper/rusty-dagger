@@ -18,7 +18,7 @@ public sealed class NatureMeshArtTests
         DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes("""{"artReplacements": {"images": [], "trees": """ + trees.Replace("HASH", Hash, StringComparison.Ordinal) + "}}"),
             "test.art");
 
-    private const string Mesh = """ "mesh": {"path": "trees/rock.prop-mesh.json", "sha256": "HASH", "height": 0.9}, "height": 0.7, "foot": 0.05""";
+    private const string Mesh = """ "mesh": {"path": "trees/rock.prop-mesh.json", "sha256": "HASH", "height": 0.9}, "placement": {"height": 0.7, "foot": 0.05}""";
 
     [Fact]
     public void A_rock_names_its_stone_and_no_bark_and_a_winter_one_its_snow()
@@ -39,10 +39,10 @@ public sealed class NatureMeshArtTests
         ContentFake content = new([]);
         content.Add("trees/rock.prop-mesh.json", mesh);
         DaggerfallTreeArt art = new(new DaggerfallArtFile("trees/rock.prop-mesh.json", DaggerfallContentHash.Parse(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(mesh)), "rock")),
-            1, 1, 0, null, null, Stone: new DaggerfallArtFile("trees/rock-stone.png", DaggerfallContentHash.Parse(Hash, "stone")));
+            1, 2, 0, null, null, Stone: new DaggerfallArtFile("trees/rock-stone.png", DaggerfallContentHash.Parse(Hash, "stone")));
         Material stone = new(new MaterialHandle(7), () => { });
 
-        MeshResourceCreateRequest request = DaggerfallTreeMesh.Read(content, art, 2, null, null, stone);
+        MeshResourceCreateRequest request = DaggerfallTreeMesh.Read(content, art, null, null, stone);
         Assert.Equal(stone, Assert.Single(request.Bindings.ToArray()).Material);
         Assert.Equal(2F, request.Positions.Span[2].Y);
 
@@ -50,6 +50,6 @@ public sealed class NatureMeshArtTests
         content.Add("trees/rock.prop-mesh.json", bark);
         DaggerfallTreeArt barked = art with { Mesh = new DaggerfallArtFile("trees/rock.prop-mesh.json", DaggerfallContentHash.Parse(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bark)), "bark")) };
         Assert.Contains("has bark, but its art names no bark texture",
-            Assert.Throws<InvalidDataException>(() => DaggerfallTreeMesh.Read(content, barked, 2, null, null, stone)).Message, StringComparison.Ordinal);
+            Assert.Throws<InvalidDataException>(() => DaggerfallTreeMesh.Read(content, barked, null, null, stone)).Message, StringComparison.Ordinal);
     }
 }

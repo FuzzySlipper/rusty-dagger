@@ -7,24 +7,23 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 
 /// <summary>
 /// A nature mesh (<see cref="DaggerfallTreeArt"/>) as the flora field draws it: a prop mesh of bark, leaf and stone parts,
-/// each with positions, normals, uvs, colours (alpha the share a vertex flutters) and triangles, drawn at its sprite's
-/// drawn height with its foot where the sprite's stands. Its normals are taken as written, which authoring holds to unit
+/// each with positions, normals, uvs, colours (alpha the share a vertex flutters) and triangles, drawn at the height and
+/// foot its art states in metres. Its normals are taken as written, which authoring holds to unit
 /// length (trees.py refuses any other by name): normalizing one of no length here made it no number at all, which the
 /// Engine refuses, faulting the update that grew the mesh (#10871).
 /// </summary>
 internal static class DaggerfallTreeMesh
 {
-    /// <param name="spriteHeight">The sprite's world height, of which the art's height and foot are shares.</param>
     /// <param name="bark">The bark's material, none for a rock.</param>
     /// <param name="leaves">The leaves' material, none for a bare tree.</param>
     /// <param name="stone">The stone's material, none for a tree.</param>
-    internal static MeshResourceCreateRequest Read(IContentService content, DaggerfallTreeArt art, float spriteHeight, Material? bark, Material? leaves,
+    internal static MeshResourceCreateRequest Read(IContentService content, DaggerfallTreeArt art, Material? bark, Material? leaves,
         Material? stone = null)
     {
         using ContentReference reference = content.ResolveReference(new ContentResolveRequest(art.Mesh.Path, art.Mesh.Sha256));
         using JsonDocument document = JsonDocument.Parse(ReadAll(content, reference));
-        float scale = art.Height * spriteHeight / art.MeshHeight;
-        Vector3 lift = new(0, art.Foot * spriteHeight, 0);
+        float scale = art.Height / art.MeshHeight;
+        Vector3 lift = new(0, art.Foot, 0);
         List<Vector3> positions = [], normals = [];
         List<Vector2> uvs = [];
         List<Color> colours = [];

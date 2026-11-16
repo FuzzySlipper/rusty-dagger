@@ -119,20 +119,19 @@ internal sealed partial class DaggerfallSiteAppearance
         LightMesh(flat.Mesh, glow);
     }
 
-    /// <summary>Gives a standing person the set has art for a refreshed sprite, at the classic size.</summary>
+    /// <summary>Gives a standing person the set has art for a refreshed sprite, at the art's own size, on its own base.</summary>
     private void AttachRefreshedPerson(ActorVisual visual)
     {
-        NormalizedActorSprite sprite = visual.Sprite;
         if (visual.Refreshed is not null || visual.Defeated) return;
         // A painted hem or foot can reach below the classic frame, so the person stands on the art's own base.
-        visual.Refreshed = RefreshedPerson(sprite.SourceTexture, sprite.InitialFrameId, sprite.Size, sprite.Pivot, onBase: true);
+        visual.Refreshed = RefreshedPerson(visual.Sprite.SourceTexture, onBase: true);
     }
 
     /// <summary>
-    /// The refreshed sprite of a person cut from <paramref name="source"/> at the classic sprite's size and pivot, or on
-    /// its art's own base where <paramref name="onBase"/> says; null where the set has none.
+    /// The refreshed sprite of a person cut from <paramref name="source"/> at the art's own size, hung from its own pivot or,
+    /// where <paramref name="onBase"/> says, from its foot; null where the set has none.
     /// </summary>
-    private Appearance? RefreshedPerson((int Archive, int Record)? source, uint initialFrame, Vector2 classicSize, Vector2 classicPivot, bool onBase)
+    private Appearance? RefreshedPerson((int Archive, int Record)? source, bool onBase)
     {
         if (source is not { } key || surfaceArt?.People.GetValueOrDefault(key) is not { } art) return null;
         if (!personAtlases.TryGetValue(art.File.Path, out SpriteAtlas? atlas))
@@ -141,12 +140,11 @@ internal sealed partial class DaggerfallSiteAppearance
             ownedResources.Add(texture.Handle);
             DaggerfallArtRect frame = art.Frames[0];
             atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
-                [new NormalizedSpriteFrame(initialFrame, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)])));
+                [new NormalizedSpriteFrame(0, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)])));
             atlases.Add(atlas);
             personAtlases.Add(art.File.Path, atlas);
         }
-        (Vector2 size, Vector2 pivot) = art.Placed(classicSize, classicPivot);
-        return appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, initialFrame, onBase ? pivot with { Y = 0F } : pivot, size,
+        return appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, 0, onBase ? art.Foot : art.Pivot, art.Size,
             BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
     }
 

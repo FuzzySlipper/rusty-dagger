@@ -68,14 +68,17 @@ The `terrain` area does the same into `surfaces` for the ground tiles, from loca
 record has one entry: a ground tile models also draw is marked superseded in the surfaces ledger.
 
 The `flats` area promotes the world's placed billboards and terrain nature (`flats`): each record in local/art/reference/flats/usage.csv
-whose every frame has an accepted final becomes one PNG atlas, as an effect does, and the game draws it at the classic
-sprite's size and anchor. A record an item also draws takes its accepted `items` final unless the area has its own.
+whose every frame has an accepted final becomes one PNG atlas, as an effect does, with its own placement: a frame's size in
+metres, its pivot and its foot (fractions of the frame, from its left and bottom: where the sprite hangs from its position, and
+where it stands on the ground), and for several frames the rate they play at, in order. The game draws the flat from these
+alone, and so a nature flat, whose tree meshes (`trees`, tools/trees) state their height and foot in metres at the flat's own size.
+A record an item also draws takes its accepted `items` final unless the area has its own.
 
 The `people` area promotes the placed static people (`people`): each record in local/art/reference/people/usage.csv with a placement
 becomes a one-frame atlas of its standing figure, the only frame a static person shows, crunched at PEOPLE_CRUNCH pixels to
 a classic pixel on the whole of ART_PAL, whose small accents a smaller palette loses. Records with the same frame share the
 atlas of whichever has an accepted final, since only one of them was painted. A record without one stays classic. The game
-draws each at the classic sprite's size, standing on the atlas's own base.
+draws each at its own size (`placement`, as a flat's), standing on the atlas's own base (its `foot`).
 
 The `people-rig` area exports the walking test figure (`peopleRig`) from a Workbench directional rig publication
 (PEOPLE_RIG, or $PEOPLE_RIG): each view's compiled model and the pages beside it go to people-rigs/FIGURE/VIEW/ as
@@ -110,7 +113,10 @@ body's states the row it is split at for clothing worn above and below (`waist`,
 A placement is the entry's own. A new entry takes its values from the classic original once (the classic effect, the
 classic image's size at the treasure piles' scale, the classic body's waist), each marked `original` in its `from`;
 after that, promotion keeps every value the payload holds, so a value changed on purpose survives a re-promotion.
-`--set ID NAME VALUE` sets one, marked `hand`; `--recompute ID` (or `all`) takes them from the original again.
+`--set ID NAME VALUE` sets one, marked `hand`; `--recompute ID` (or `all`) takes them from the original again. An entry's
+id is what it replaces (an effect or image), or `flat.ARCHIVE.RECORD`, `person.ARCHIVE.RECORD` or `tree.ARCHIVE.RECORD`.
+`--place SECTION` (flats, people, trees) gives every entry of the section the payload holds without a placement its own
+from the original, and promotes no file: for the entries a checkout without the finals cannot promote.
 
 Every area promotes the same way (promote_area). Its units are what an entry replaces, keyed as the area keys them: an
 art key (paper-doll, worn, spells, ui, surfaces, terrain), an item's media id (items), an effect's media id, a sprite
@@ -196,8 +202,9 @@ DOLL_UNIT = .01 / WORLD_PIXEL    # a paper-doll unit (1 cm on the body) in class
 DUNGEON_MANIFEST = REPOSITORY / "local/build/import/staging/worldrpg/imports/shared/media/dungeon/manifest.json"
 TREASURE = 216
 WAIST = 40                       # the doll row, from the classic clothed body's top, the donor splits it at
-# Where a placement value came from: taken from the classic original at promotion, or set by hand (--set).
-ORIGINAL, HAND = "original", "hand"
+# Where a placement value came from: taken from the classic original at promotion, measured from the refreshed art (a tree's
+# height against its flat's own size), or set by hand (--set).
+ORIGINAL, HAND, MEASURED = "original", "hand", "art"
 EFFECT_FRAME = 256               # pixels on an effect frame's longer side
 FLAT_CRUNCH = float(os.environ.get("FLAT_CRUNCH", "2"))   # a world billboard's pixels to a classic pixel
 PEOPLE_CRUNCH = 3   # a person's pixels to a classic pixel
@@ -335,6 +342,48 @@ def metres_per_classic_pixel():
     manifest = json.load(open(DUNGEON_MANIFEST))
     pile = min((billboard for billboard in manifest["billboards"] if billboard["textureArchive"] == TREASURE), key=lambda billboard: billboard["textureRecord"])
     return pile["worldSize"]["y"] / pile["frames"][0]["atlasFrame"]["height"]
+
+
+BILLBOARDS = {}
+
+
+def billboard(archive, record):
+    """A classic billboard sprite as the import publishes it (its world size, pivot, frames and playback), by texture record."""
+    if not BILLBOARDS:
+        BILLBOARDS.update({(b["textureArchive"], b["textureRecord"]): b for b in json.load(open(DUNGEON_MANIFEST))["billboards"]})
+    if (archive, record) not in BILLBOARDS:
+        raise SystemExit(f"The import publishes no billboard {archive}/{record}: run the import first.")
+    return BILLBOARDS[archive, record]
+
+
+def flat_placement(archive, record, classic, frames, person=False):
+    """A flat's or person's own placement, from where the classic frame sits in the atlas frame (`classic`, fractions of the
+    frame, top-down): the classic world size grows by the share that frame takes, and the classic pivot, and the point at the
+    foot's middle (`foot`), move into the frame (fractions from its left and bottom). A person stands on the art's own base: a
+    painted hem or foot can reach below the classic frame, so its foot is the middle of the atlas frame's bottom. An atlas of
+    several frames states the rate the classic plays at, which only a flat plays."""
+    sprite = billboard(archive, record)
+    into = lambda x, y: {"x": round(classic["x"] + x * classic["width"], 6),
+                         "y": round(1 - classic["y"] - classic["height"] + y * classic["height"], 6)}
+    values = {"size": {"width": round(sprite["worldSize"]["x"] / classic["width"], 6),
+                       "height": round(sprite["worldSize"]["y"] / classic["height"], 6)},
+              "pivot": into(sprite["pivot"]["x"], sprite["pivot"]["y"]), "foot": into(.5, 0)}
+    if person:
+        values["foot"]["y"] = 0
+    if frames > 1 and not person:
+        if not sprite["playback"]:
+            raise SystemExit(f"Billboard {archive}/{record} has {frames} frames but the import publishes no playback to take its rate from.")
+        values["framesPerSecond"] = sprite["playback"]["framesPerSecond"]
+    return values
+
+
+def with_placement(identity, entry, original):
+    """An atlas entry whose `classic` rect (where the classic frame sits in its frames) is turned into its own placement,
+    taken from the original once (`original(classic)`) and kept after, so the entry no longer states the rect."""
+    classic = entry.pop("classic")
+    names = ["size", "pivot", "foot", *(["framesPerSecond"] if len(entry["frames"]) > 1 and identity.startswith("flat.") else [])]
+    entry["placement"] = own(identity, names, lambda: original(classic))
+    return entry
 
 
 def classic_effect(media):
@@ -736,9 +785,10 @@ def flat_units():
         return generated("flats" if own_final else "items", key)
 
     def build(archive, record, stem, sources, finals):
-        return [("flats", {"replaces": {"archive": archive, "record": record},
-                           **frame_atlas(stem, sources, [final.path for final in finals], f"{MEDIA}/flats/{stem}.png", crunch=FLAT_CRUNCH,
-                                         glow=glow_of(archive, record))})]
+        entry = {"replaces": {"archive": archive, "record": record},
+                 **frame_atlas(stem, sources, [final.path for final in finals], f"{MEDIA}/flats/{stem}.png", crunch=FLAT_CRUNCH,
+                               glow=glow_of(archive, record))}
+        return [("flats", with_placement(f"flat.{archive}.{record}", entry, lambda classic: flat_placement(archive, record, classic, len(entry["frames"]))))]
     units = {}
     for row in csv.DictReader(open(ART / "reference/flats/usage.csv")):
         archive, record = int(row["archive"]), int(row["record"])
@@ -772,7 +822,8 @@ def people_units():
         if stem not in atlases:
             atlases[stem] = frame_atlas(stem, [source], [ART / "generated/people" / f"{stem}-frame-000.png"], f"{MEDIA}/people/{stem}.png",
                                         crunch=PEOPLE_CRUNCH, colours=None)
-        return [("people", {"replaces": {"archive": archive, "record": record}, **atlases[stem]})]
+        entry = {"replaces": {"archive": archive, "record": record}, **atlases[stem]}
+        return [("people", with_placement(f"person.{archive}.{record}", entry, lambda classic: flat_placement(archive, record, classic, 1, person=True)))]
     return {stem: Unit([generated("people", f"{by[0]}-frame-000")], lambda archive=archive, record=record, by=by: build(archive, record, *by))
             for archive, record, stem, source, frame in placed_people for by in [painted.get(frame, (stem, source))]}
 
@@ -987,6 +1038,60 @@ def commit(stale, folders):
                 directory.rmdir()
 
 
+def placed_entries(payload):
+    """Every entry of the pack that may state a placement, with the id `--set` and `--recompute` name it by: what it replaces
+    for an image or effect, `flat.ARCHIVE.RECORD`, `person.ARCHIVE.RECORD`."""
+    art = payload["artReplacements"]
+    named = {"flats": "flat", "people": "person"}
+    found = [(entry["replaces"], entry) for section in ("images", "effects") for entry in art.get(section, [])]
+    for section, kind in named.items():
+        found += [(f"{kind}.{entry['replaces']['archive']}.{entry['replaces']['record']}", entry) for entry in art.get(section, [])]
+    found += [(f"tree.{key.replace('-', '.')}", entry) for key, entry in art.get("trees", {}).items()]
+    return found
+
+
+# The sections `--place` reaches, and the placement an entry of each takes from its `classic` rect and the original.
+PLACEABLE = {
+    "flats": lambda entry: flat_placement(entry["replaces"]["archive"], entry["replaces"]["record"], entry["classic"], len(entry["frames"])),
+    "people": lambda entry: flat_placement(entry["replaces"]["archive"], entry["replaces"]["record"], entry["classic"], 1, person=True),
+}
+
+
+def place_trees(payload):
+    """Turns each tree's height and foot, shares of its flat's frame, into metres at that flat's own size, in a placement
+    marked as taken from the art: the tree is drawn at that height, with its foot that far up."""
+    art = payload["artReplacements"]
+    heights = {(flat["replaces"]["archive"], flat["replaces"]["record"]): flat["placement"]["size"]["height"] for flat in art["flats"] if "placement" in flat}
+    done = 0
+    for key, entry in art.get("trees", {}).items():
+        if "placement" in entry:
+            continue
+        height = heights.get(tuple(map(int, key.split("-"))))
+        if height is None:
+            raise SystemExit(f"Tree {key} stands over a flat with no placement: place the flats first.")
+        entry["placement"] = {"height": round(entry.pop("height") * height, 6), "foot": round(entry.pop("foot") * height, 6),
+                              "from": {"height": MEASURED, "foot": MEASURED}}
+        done += 1
+    print(f"trees: {done} of {len(art.get('trees', {}))} entries given their placement", flush=True)
+
+
+def place(payload, section):
+    """Gives each entry of `section` that still has the rect of the classic frame (`classic`) its placement, from the original,
+    and drops the rect. The files are not touched."""
+    if section == "trees":
+        return place_trees(payload)
+    kind = {"flats": "flat", "people": "person"}[section]
+    entries = [(f"{kind}.{entry['replaces']['archive']}.{entry['replaces']['record']}", entry) for entry in payload["artReplacements"].get(section, [])]
+    done = 0
+    for identity, entry in entries:
+        if "classic" in entry:
+            names = ["size", "pivot", "foot", *(["framesPerSecond"] if len(entry["frames"]) > 1 and section == "flats" else [])]
+            entry["placement"] = own(identity, names, lambda: PLACEABLE[section](entry))
+            del entry["classic"]
+            done += 1
+    print(f"{section}: {done} of {len(entries)} entries given their placement", flush=True)
+
+
 def main(argv=None):
     global STAGE
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -999,18 +1104,22 @@ def main(argv=None):
     ap.add_argument("--set", action="append", nargs=3, default=[], metavar=("ID", "NAME", "VALUE"),
                     help="set placement value NAME (size.width, framesPerSecond, ground, waist, ...) of the entry replacing ID "
                     "to the JSON VALUE, marked as set by hand, after any --area")
+    ap.add_argument("--place", action="append", choices=[*PLACEABLE, "trees"], default=[],
+                    help="give every entry of this section that has no placement its own, taken from the original, and keep every "
+                    "file as it is (what a checkout without the finals does for the entries a new kind of placement reaches)")
     a = ap.parse_args(argv)
-    if not a.area and not a.set:
-        ap.error("give an --area to promote or a --set")
+    if not a.area and not a.set and not a.place:
+        ap.error("give an --area to promote, a --place or a --set")
     if a.key and not a.area:
         ap.error("--key promotes within the --area named")
     KEPT.clear(), KEPT_ART.clear(), RECOMPUTE.clear()
     RECOMPUTE.update(a.recompute)
     payload = json.loads(PAYLOAD.read_text()) if PAYLOAD.exists() else {"artReplacements": {"images": []}}
-    placed = lambda: [entry for entry in [*payload["artReplacements"].get("images", []), *payload["artReplacements"].get("effects", [])]
-                      if "placement" in entry]
-    for entry in placed():
-        KEPT[entry["replaces"]], KEPT_ART[entry["replaces"]] = entry["placement"], entry["sha256"]
+    placed = lambda: [(identity, entry) for identity, entry in placed_entries(payload) if "placement" in entry]
+    for identity, entry in placed():
+        KEPT[identity], KEPT_ART[identity] = entry["placement"], entry.get("sha256")
+    for section in a.place:
+        place(payload, section)
     with tempfile.TemporaryDirectory() as stage:
         STAGE = Path(stage)
         stale, matched = set(), set()
@@ -1023,11 +1132,11 @@ def main(argv=None):
         records = [(entry["replaces"]["archive"], entry["replaces"]["record"]) for entry in payload["artReplacements"].get("surfaces", [])]
         if len(set(records)) != len(records):
             raise SystemExit(f"Two areas replace one record: {sorted(r for r in set(records) if records.count(r) > 1)}.")
-        for entry in placed():
-            if entry["replaces"] in KEPT_ART and entry["sha256"] != KEPT_ART[entry["replaces"]] and entry["placement"] is KEPT[entry["replaces"]]:
-                print(f"{entry['replaces']}: new art kept its placement; check it, or --recompute {entry['replaces']}", flush=True)
+        for identity, entry in placed():
+            if KEPT_ART.get(identity) and entry["sha256"] != KEPT_ART[identity] and entry["placement"] is KEPT[identity]:
+                print(f"{identity}: new art kept its placement; check it, or --recompute {identity}", flush=True)
         for media, name, value in a.set:
-            entry = next((entry for entry in placed() if entry["replaces"] == media), None)
+            entry = next((entry for identity, entry in placed() if identity == media), None)
             if entry is None:
                 raise SystemExit(f"No promoted entry replacing {media} has a placement.")
             *path, last = name.split(".")
