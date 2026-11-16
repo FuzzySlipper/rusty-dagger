@@ -35,7 +35,7 @@ public sealed class DaggerfallLocomotionPolicyTests
         Assert.Equal(((50f + 150f) / 39.5f) * (1.35f + (40f / 200f)), run.Controls.ForwardSpeed);
 
         _ = policy.BeginStep([Key(KeyboardControl.ShiftLeft, InputEdge.Released), Key(KeyboardControl.ControlLeft, InputEdge.Pressed)], 1f / 60f, stats, canMove: true);
-        DaggerfallLocomotionStep crouch = policy.BeginStep([], 1f / 60f, stats, canMove: true);
+        DaggerfallLocomotionStep crouch = policy.BeginStep([], 1f / 60f, stats, canMove: true, stance: CharacterStance.Crouched);
         Assert.True(crouch.Controls.CrouchRequested);
         Assert.Equal((50f + 50f) / 39.5f, crouch.Controls.ForwardSpeed);
         Assert.Equal(4.5f * (1f + ((50f * .5f) / 100f)) * .8f, crouch.Controls.JumpSpeed);
@@ -46,6 +46,87 @@ public sealed class DaggerfallLocomotionPolicyTests
         Assert.True(rebound.Running);
         policy.Neutralize();
         Assert.False(policy.BeginStep([], 1f / 60f, stats, canMove: true).Running);
+    }
+
+    /// <summary>
+    /// Crouch is a toggle, as the donor's PlayerHeightChanger has it: a press asks for the stance the body is not in, and
+    /// a step with no press asks for the one it is in, so a crouch outlasts the key and the next press stands.
+    /// </summary>
+    [Fact]
+    public void A_press_crouches_the_crouch_outlasts_the_key_and_the_next_press_stands()
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, fatigue: 200);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+
+        Assert.True(policy.BeginStep(Tap(), 1f / 60f, stats, canMove: true).Controls.CrouchRequested);
+        DaggerfallLocomotionStep crouched = policy.BeginStep([], 1f / 60f, stats, canMove: true, stance: CharacterStance.Crouched);
+        Assert.True(crouched.Controls.CrouchRequested);
+        Assert.Equal((50f + 50f) / 39.5f, crouched.Controls.ForwardSpeed);
+
+        Assert.False(policy.BeginStep([Key(KeyboardControl.ControlLeft, InputEdge.Pressed)], 1f / 60f, stats, canMove: true,
+            stance: CharacterStance.Crouched).Controls.CrouchRequested);
+        // The key still held asks nothing more of the body that stood.
+        Assert.False(policy.BeginStep([], 1f / 60f, stats, canMove: true, stance: CharacterStance.Standing).Controls.CrouchRequested);
+    }
+
+    /// <summary>
+    /// A stand the Engine refused for want of headroom is not asked again: the body stays crouched until the next press, as
+    /// the donor drops a DoStanding that CanStand refuses.
+    /// </summary>
+    [Fact]
+    public void A_refused_stand_is_dropped_and_the_body_stays_crouched_until_the_next_press()
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, fatigue: 200);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+
+        Assert.False(policy.BeginStep(Tap(), 1f / 60f, stats, canMove: true, stance: CharacterStance.Crouched).Controls.CrouchRequested);
+        Assert.True(policy.BeginStep([], 1f / 60f, stats, canMove: true, stance: CharacterStance.Crouched).Controls.CrouchRequested);
+        Assert.False(policy.BeginStep(Tap(), 1f / 60f, stats, canMove: true, stance: CharacterStance.Crouched).Controls.CrouchRequested);
+    }
+
+    /// <summary>A press observed between steps is kept for the next one, and one before a focus change is dropped with the keys.</summary>
+    [Fact]
+    public void A_press_between_steps_toggles_the_next_one_and_a_focus_change_drops_it()
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, fatigue: 200);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+
+        policy.Observe(Tap());
+        Assert.True(policy.HasPendingStanceChange);
+        policy.Observe([]);
+        Assert.True(policy.BeginStep([], 1f / 60f, stats, canMove: true).Controls.CrouchRequested);
+
+        policy.Observe(Tap());
+        policy.Neutralize();
+        Assert.False(policy.HasPendingStanceChange);
+        Assert.True(policy.BeginStep([], 1f / 60f, stats, canMove: true, stance: CharacterStance.Crouched).Controls.CrouchRequested);
+    }
+
+    /// <summary>Running keeps a crouch, at the donor's crouched running speed (PlayerSpeedChanger.GetRunSpeed's crouch base).</summary>
+    [Fact]
+    public void Running_while_crouched_stays_crouched_at_the_crouched_running_speed()
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, fatigue: 200);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+
+        DaggerfallLocomotionStep run = policy.BeginStep([Key(KeyboardControl.ShiftLeft, InputEdge.Pressed)], 1f / 60f, stats, canMove: true,
+            stance: CharacterStance.Crouched);
+
+        Assert.True(run.Running);
+        Assert.True(run.Controls.CrouchRequested);
+        Assert.Equal(((50f + 50f) / 39.5f) * (1.35f + (40f / 200f)), run.Controls.ForwardSpeed);
+    }
+
+    /// <summary>A mount drops the crouch, as the donor's mounting stands the rider, and a press while mounted asks nothing.</summary>
+    [Fact]
+    public void Riding_drops_the_crouch()
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, fatigue: 200);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+        Mount horse = new();
+
+        Assert.False(policy.BeginStep([], 1f / 60f, stats, canMove: true, horse, stance: CharacterStance.Crouched).Controls.CrouchRequested);
+        Assert.False(policy.BeginStep(Tap(), 1f / 60f, stats, canMove: true, horse).Controls.CrouchRequested);
     }
 
     [Fact]
@@ -284,6 +365,16 @@ public sealed class DaggerfallLocomotionPolicyTests
         stats.AddStat(StatId.Parse(DaggerfallMechanicsIds.Jumping.Value), new Stat(50));
         stats.AddTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value), new Track(Math.Max(200, fatigue), fatigue));
         return stats;
+    }
+
+    /// <summary>The crouch key pressed and let go within one update.</summary>
+    private static ProductInputEvent[] Tap() => [Key(KeyboardControl.ControlLeft, InputEdge.Pressed), Key(KeyboardControl.ControlLeft, InputEdge.Released)];
+
+    private sealed class Mount : IDaggerfallRide
+    {
+        public bool IsOnFoot => false;
+        public bool OnShip => false;
+        public double MovementSpeed(double liveSpeed, double classicToEngineRatio) => 1d;
     }
 
     private static ProductInputEvent Key(KeyboardControl key, InputEdge edge) => new(

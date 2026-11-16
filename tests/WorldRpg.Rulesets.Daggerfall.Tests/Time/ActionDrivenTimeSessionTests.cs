@@ -86,7 +86,10 @@ public sealed class ActionDrivenTimeSessionTests
         // The fake leaves stance unchanged, like a controller unable to perform the requested change.
         // A blocked stance request consumes one attempt rather than keeping time running forever.
         Assert.True(f.Session.PlayerTimeHeld);
+        // Crouch is a toggle: letting the key go asks nothing, so time stays held; the next press wakes it again.
         f.Observe(Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.ControlLeft));
+        Assert.True(f.Session.PlayerTimeHeld);
+        f.Observe(Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.ControlLeft));
         Assert.False(f.Session.PlayerTimeHeld);
         f.Step();
         Assert.True(f.Session.PlayerTimeHeld);

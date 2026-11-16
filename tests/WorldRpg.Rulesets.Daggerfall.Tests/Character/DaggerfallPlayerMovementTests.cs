@@ -119,6 +119,47 @@ public sealed class DaggerfallPlayerMovementTests
         Assert.Equal(climbed, step.Locomotion.Climbing);
     }
 
+    /// <summary>
+    /// Paralysis stops the feet but leaves the crouch toggle alone: a paralysed crouched player stays crouched, as the
+    /// donor's PlayerHeightChanger never reads paralysis, rather than standing and staying stood once it ends.
+    /// </summary>
+    [Fact]
+    public void A_paralysed_crouched_player_stays_crouched()
+    {
+        using Stage stage = new();
+        stage.Effects.Restrictions = new ActorControlRestrictions { Movement = true };
+        DaggerfallPlayerStep step = Begun(stage, new ProductUpdateState(.05f));
+        step.Locomotion = step.Locomotion with { Controls = step.Locomotion.Controls with { CrouchRequested = true, PlanarIntent = Vector2.UnitY } };
+
+        stage.Movement.ConstrainLocomotion(ref step);
+
+        Assert.True(step.Locomotion.Controls.CrouchRequested);
+        Assert.Equal(Vector2.Zero, step.Locomotion.Controls.PlanarIntent);
+    }
+
+    /// <summary>A climb stands a crouched player, as the donor's PlayerHeightChanger forces a climber standing; the crouch toggle stays otherwise.</summary>
+    [Theory]
+    [InlineData(.05f, false)]
+    [InlineData(.07f, true)]
+    public void A_climb_stands_a_crouched_player(float normalY, bool crouchKept)
+    {
+        using Stage stage = new();
+        stage.Spatial.FloorHit = _ => new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh,
+            Normal = Vector3.Normalize(new Vector3(0f, normalY, 1f)), Distance = .2f };
+        ProductUpdateState update = new(DaggerfallTuning.Defaults.Climbing.StartCheckSeconds);
+        DaggerfallPlayerStep step = Begun(stage, update);
+        step.Locomotion = step.Locomotion with
+        {
+            ForwardIntent = 1f,
+            Controls = step.Locomotion.Controls with { CrouchRequested = true },
+        };
+
+        stage.Movement.ShapeLocomotion(ref step, update, 1, 1, stage.Water);
+
+        Assert.Equal(!crouchKept, step.Climb.Climbing);
+        Assert.Equal(crouchKept, step.Locomotion.Controls.CrouchRequested);
+    }
+
     [Fact]
     public void Slowfall_holds_a_falling_player_to_its_descent_but_not_one_rising_or_held_up()
     {

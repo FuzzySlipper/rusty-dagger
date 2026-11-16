@@ -35,7 +35,7 @@ public sealed class CrouchedRelocationTests
             system.Relocate(player, under);
             Assert.Equal(CharacterStance.Crouched, player.Motion.Stance);
 
-            // A relocation drops held keys, so the step asks to stand; the Engine refuses for want of headroom, and the body moves.
+            // Asked to stand, as a second crouch press asks, the Engine refuses for want of headroom, and the body moves on crouched.
             Assert.NotNull(system.Step(player, Update(new Vector2(0, 1)), covered));
             Assert.Equal(CharacterStance.Crouched, player.Motion.Stance);
             Vector3 moved = player.Position!.Value.ToVector() - under.ToVector();

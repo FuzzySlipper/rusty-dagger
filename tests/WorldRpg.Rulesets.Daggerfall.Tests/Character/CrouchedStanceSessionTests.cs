@@ -10,14 +10,48 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// A crouched player stays crouched through a save, a recall and a relocation, as the donor saves crouch with the pose
-/// (<c>SerializablePlayer.isCrouching</c>), restores it with a recalled anchor and leaves it alone on every other arrival.
-/// The stand-in Engine crouches the body on request and stands it only where it is told there is headroom, so each step
-/// shows the stance the session kept; the real Engine's refusal to stand a body without headroom is the Kit's
+/// Crouch is a toggle, as the donor's <c>PlayerHeightChanger</c> has it, and a crouched player stays crouched through a
+/// save, a recall and a relocation, as the donor saves crouch with the pose (<c>SerializablePlayer.isCrouching</c>),
+/// restores it with a recalled anchor and leaves it alone on every other arrival. The toggle reads the body's stance, so
+/// a restored crouch is the toggle's state. The stand-in Engine crouches the body on request and stands it only where it
+/// is told there is headroom; the real Engine's refusal to stand a body without headroom is the Kit's
 /// <c>CrouchedRelocationTests</c>.
 /// </summary>
 public sealed class CrouchedStanceSessionTests
 {
+    [Fact]
+    public void A_tap_crouches_the_crouch_outlasts_the_key_and_the_next_tap_stands()
+    {
+        using Fixture f = new();
+        DaggerfallSession s = f.Session;
+        Crouch(s, 1);
+
+        Walk(s, 2);
+        Assert.True(s.Spatial().StepRequests.Last().Command.CrouchRequested);
+        Assert.Equal(CharacterStance.Crouched, s.State.PlayerControl.Motion.Stance);
+
+        Stand(s, 3);
+    }
+
+    /// <summary>Standing is refused under a low ceiling, and the tap is dropped rather than tried again, as the donor drops a stand <c>CanStand</c> refuses.</summary>
+    [Fact]
+    public void A_tap_to_stand_under_a_low_ceiling_is_refused_and_not_tried_again()
+    {
+        using Fixture f = new();
+        DaggerfallSession s = f.Session;
+        Crouch(s, 1);
+
+        s.Update(new ProductUpdate(OuterUpdate(2), Tap()));
+        Assert.False(s.Spatial().StepRequests.Last().Command.CrouchRequested);
+        Assert.Equal(CharacterStance.Crouched, s.State.PlayerControl.Motion.Stance);
+
+        Engine(s, headroom: true);
+        Walk(s, 3);
+        Assert.True(s.Spatial().StepRequests.Last().Command.CrouchRequested);
+        Assert.Equal(CharacterStance.Crouched, s.State.PlayerControl.Motion.Stance);
+        Stand(s, 4);
+    }
+
     [Fact]
     public void A_crouched_player_comes_back_crouched_from_a_save_and_steps_on_crouched()
     {
@@ -32,12 +66,14 @@ public sealed class CrouchedStanceSessionTests
         Assert.Equal(saved, restored.State.PlayerControl.Position);
         Assert.Equal(CharacterStance.Crouched, restored.State.PlayerControl.Motion.Stance);
 
-        // Under a low ceiling the crouch key is no longer held after the load, and the body the Engine steps is crouched.
-        Engine(restored, headroom: false);
-        restored.Update(new ProductUpdate(OuterUpdate(2), [Key(KeyboardControl.KeyW, InputEdge.Pressed)]));
+        // The restored crouch is the toggle's state: with headroom and no tap, the body steps on crouched.
+        Engine(restored, headroom: true);
+        Walk(restored, 2);
         Assert.Equal(CharacterStance.Crouched, restored.Spatial().StepRequests.Last().Motion.Stance);
+        Assert.True(restored.Spatial().StepRequests.Last().Command.CrouchRequested);
         Assert.Equal(CharacterStance.Crouched, restored.State.PlayerControl.Motion.Stance);
         Assert.True(DaggerfallSavePayload.Read(restored.CaptureSave()).Player.Crouched);
+        Stand(restored, 3);
     }
 
     [Fact]
@@ -109,23 +145,36 @@ public sealed class CrouchedStanceSessionTests
         Assert.Null(restored.TeleportChoice.Anchor);
         Assert.Equal(anchored, restored.State.PlayerControl.Position);
         Assert.Equal(CharacterStance.Crouched, restored.State.PlayerControl.Motion.Stance);
+
+        // The recalled crouch is the toggle's state too: it stays with headroom until the next tap.
+        Engine(restored, headroom: true);
+        Walk(restored, 3);
+        Assert.Equal(CharacterStance.Crouched, restored.State.PlayerControl.Motion.Stance);
+        Stand(restored, 4);
     }
 
-    /// <summary>Holds the crouch key for a step, which crouches the body.</summary>
+    /// <summary>Taps crouch under a low ceiling, which crouches the body.</summary>
     private static void Crouch(DaggerfallSession s, ulong step)
     {
         Engine(s, headroom: false);
-        s.Update(new ProductUpdate(OuterUpdate(step), [Key(KeyboardControl.ControlLeft, InputEdge.Pressed)]));
+        s.Update(new ProductUpdate(OuterUpdate(step), Tap()));
         Assert.Equal(CharacterStance.Crouched, s.State.PlayerControl.Motion.Stance);
     }
 
-    /// <summary>Lets the crouch key go where there is headroom, which stands the body.</summary>
+    /// <summary>Taps crouch again where there is headroom, which stands the body.</summary>
     private static void Stand(DaggerfallSession s, ulong step)
     {
         Engine(s, headroom: true);
-        s.Update(new ProductUpdate(OuterUpdate(step), [Key(KeyboardControl.ControlLeft, InputEdge.Released)]));
+        s.Update(new ProductUpdate(OuterUpdate(step), Tap()));
         Assert.Equal(CharacterStance.Standing, s.State.PlayerControl.Motion.Stance);
     }
+
+    /// <summary>Walks forward for a step with no crouch input.</summary>
+    private static void Walk(DaggerfallSession s, ulong step) =>
+        s.Update(new ProductUpdate(OuterUpdate(step), [Key(KeyboardControl.KeyW, InputEdge.Pressed)]));
+
+    /// <summary>The crouch key pressed and let go within one update.</summary>
+    private static ProductInputEvent[] Tap() => [Key(KeyboardControl.ControlLeft, InputEdge.Pressed), Key(KeyboardControl.ControlLeft, InputEdge.Released)];
 
     /// <summary>The stand-in Engine crouches a body on request and stands it again only with <paramref name="headroom"/>.</summary>
     private static void Engine(DaggerfallSession s, bool headroom) => s.Spatial().StepResult = (request, result) => result with

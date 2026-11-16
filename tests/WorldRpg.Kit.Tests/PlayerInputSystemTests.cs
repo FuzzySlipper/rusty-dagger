@@ -22,7 +22,7 @@ public sealed class PlayerInputSystemTests
         Assert.Equal(new Vector2(0,1), released.PlanarIntent);
         var controls = restrictions.Restrict(new(JumpPressed:true, JumpHeld:true, CrouchRequested:true, VerticalVelocity:3f));
         Assert.Equal(Vector2.Zero, controls.PlanarIntent); Assert.Null(controls.VerticalVelocity);
-        Assert.False(controls.JumpPressed); Assert.False(controls.JumpHeld); Assert.False(controls.CrouchRequested);
+        Assert.False(controls.JumpPressed); Assert.False(controls.JumpHeld); Assert.True(controls.CrouchRequested);
     }
 
     [Fact]

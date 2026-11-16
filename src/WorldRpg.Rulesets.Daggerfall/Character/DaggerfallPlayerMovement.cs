@@ -137,15 +137,16 @@ internal sealed class DaggerfallPlayerMovement
         player.Slowfall = _effects.GrantsSlowfall(DaggerfallActorIdentity.PlayerEntityId);
         player.Locomotion = _locomotion.BeginStep([], update.DeltaSeconds,
             _actors.Player.Stats, player.CanMove, _ride,
-            _effects.EnhancesJumping(DaggerfallActorIdentity.PlayerEntityId), player.Slowfall);
+            _effects.EnhancesJumping(DaggerfallActorIdentity.PlayerEntityId), player.Slowfall, _control.Motion.Stance);
         player.MotionBefore = _control.Motion;
         player.PositionBefore = _control.Position;
     }
 
     /// <summary>
     /// The water the player is in, a wall to climb and levitation, each reshaping the step's locomotion: a climb or
-    /// levitation drives the vertical, levitation stops running, jumping and crouching, and water the player swims in
-    /// replaces the controls with a swimming stroke.
+    /// levitation drives the vertical, levitation stops running and jumping, levitation and a climb stand a crouched
+    /// player (the donor's <c>PlayerHeightChanger</c> stands both), and water the player swims in replaces the controls
+    /// with a swimming stroke.
     /// </summary>
     /// <param name="water">Where the water really is (the exterior's surface).</param>
     internal void ShapeLocomotion(ref DaggerfallPlayerStep player, ProductUpdateState update, ulong generation, ulong simulationStep,
@@ -182,7 +183,7 @@ internal sealed class DaggerfallPlayerMovement
             Controls = player.Locomotion.Controls with
             {
                 VerticalVelocity = player.Climb.VerticalVelocity ?? player.Levitation.VerticalVelocity,
-                CrouchRequested = !player.Levitation.IsLevitating && player.Locomotion.Controls.CrouchRequested,
+                CrouchRequested = !player.Levitation.IsLevitating && !player.Climb.Climbing && player.Locomotion.Controls.CrouchRequested,
             },
             Climbing = player.Climb.Climbing,
             Running = !player.Levitation.IsLevitating && player.Locomotion.Running,

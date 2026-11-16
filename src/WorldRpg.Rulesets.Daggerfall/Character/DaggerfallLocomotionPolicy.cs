@@ -27,7 +27,8 @@ internal sealed class DaggerfallLocomotionPolicy
     private FpsInput _input;
     private bool _jumpInFlight;
     private bool _pendingJump;
-    internal bool HasPendingStanceChange { get; private set; }
+    // A crouch press observed since the last step: each press flips it, and the next step turns the body's stance by it.
+    private bool _pendingCrouchToggle;
     internal FpsInputFrame ObservedInput { get; private set; }
     private double _runningGameSeconds;
     private double _climbingGameSeconds;
@@ -49,40 +50,47 @@ internal sealed class DaggerfallLocomotionPolicy
     }
 
     /// <summary>Focus and product-mode changes must not leave an unseen physical release driving a later movement step.</summary>
-    internal void Neutralize() { _input.Physical.Clear(); _pendingJump = false; HasPendingStanceChange = false; ObservedInput = default; }
+    internal void Neutralize() { _input.Physical.Clear(); _pendingJump = false; _pendingCrouchToggle = false; ObservedInput = default; }
 
     internal void Observe(ReadOnlySpan<ProductInputEvent> inputs)
     {
         foreach (var input in inputs) if (input.Kind == InputEventKind.Clear) _pendingJump = false;
-        FpsInputFrame previous = ObservedInput;
         ObservedInput = _input.Consume(inputs, 0f);
-        HasPendingStanceChange |= previous.CrouchHeld != ObservedInput.CrouchHeld
-            || (ObservedInput.CrouchHeld && previous.SprintHeld != ObservedInput.SprintHeld);
+        _pendingCrouchToggle ^= CrouchPressed();
         _pendingJump |= ObservedInput.JumpPressed;
     }
 
     internal bool HasPendingJump => _pendingJump;
 
-    /// <summary>Builds one Engine command from the current physical controls and live player mechanics.</summary>
+    /// <summary>A crouch press waits for a step to turn the body's stance.</summary>
+    internal bool HasPendingStanceChange => _pendingCrouchToggle;
+
+    /// <summary>
+    /// Builds one Engine command from the current physical controls and live player mechanics. Crouch is a toggle, as the
+    /// donor's <c>PlayerHeightChanger</c> has it: a press asks for the stance the body (in <paramref name="stance"/>) is not
+    /// in, and a step with no press asks for the one it is in. So a crouch outlasts the key, a restored or kept stance is
+    /// the toggle's state, and a stand the Engine refused for want of headroom is dropped, not asked again, as the donor
+    /// drops a <c>DoStanding</c> that <c>CanStand</c> refuses. A mount drops the crouch, as the donor's mounting stands the rider.
+    /// </summary>
     internal DaggerfallLocomotionStep BeginStep(ReadOnlySpan<ProductInputEvent> inputs, float seconds, StatsComponent stats, bool canMove,
-        IDaggerfallRide? ride = null, bool enhancedJumping = false, bool slowfall = false)
+        IDaggerfallRide? ride = null, bool enhancedJumping = false, bool slowfall = false, CharacterStance stance = CharacterStance.Standing)
     {
         ArgumentNullException.ThrowIfNull(stats);
         FpsInputFrame frame = _input.Consume(inputs, seconds);
         frame = frame with { JumpPressed = frame.JumpPressed || _pendingJump };
         _pendingJump = false;
-        HasPendingStanceChange = false;
+        bool toggled = _pendingCrouchToggle ^ CrouchPressed();
+        _pendingCrouchToggle = false;
         // The donor never refuses a run or a jump for fatigue; an empty pool is the exhaustion owner's.
         bool onFoot = ride?.IsOnFoot ?? true;
         bool running = canMove && onFoot && frame.SprintHeld;
-        bool crouching = !running && frame.CrouchHeld;
-        if (!onFoot) crouching = false;
+        bool crouching = onFoot && (stance == CharacterStance.Crouched) != toggled;
         int speed = stats.GetStat(Speed).ValueInt;
         int runningSkill = stats.GetStat(Running).ValueInt;
         int jumpingSkill = stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Jumping.Value)).ValueInt;
         float groundSpeed = !onFoot
             ? (float)ride!.MovementSpeed(speed, _tuning.ClassicToEngineSpeedRatio)
-            : running ? RunSpeed(speed, runningSkill) : crouching ? CrouchSpeed(speed) : WalkSpeed(speed);
+            : running ? RunSpeed(speed, runningSkill, crouching) : crouching ? CrouchSpeed(speed) : WalkSpeed(speed);
         CharacterStepControls controls = new(
             JumpPressed: canMove && onFoot && !slowfall && frame.JumpPressed,
             JumpHeld: canMove && onFoot && !slowfall && frame.JumpHeld,
@@ -202,8 +210,9 @@ internal sealed class DaggerfallLocomotionPolicy
 
     internal float CrouchSpeed(int liveSpeed) => (liveSpeed + _tuning.CrouchBase) / _tuning.ClassicToEngineSpeedRatio;
 
-    internal float RunSpeed(int liveSpeed, int runningSkill) =>
-        ((liveSpeed + _tuning.WalkBase) / _tuning.ClassicToEngineSpeedRatio)
+    /// <summary>A run, from the crouched base when crouched: the donor's crouched player runs crouched (PlayerSpeedChanger.GetRunSpeed).</summary>
+    internal float RunSpeed(int liveSpeed, int runningSkill, bool crouching = false) =>
+        ((liveSpeed + (crouching ? _tuning.CrouchBase : _tuning.WalkBase)) / _tuning.ClassicToEngineSpeedRatio)
         * (_tuning.RunBaseMultiplier + (runningSkill / _tuning.RunningSkillDivisor));
 
     internal float JumpSpeed(int jumpingSkill, bool crouching, bool enhancedJumping = false)
@@ -224,6 +233,9 @@ internal sealed class DaggerfallLocomotionPolicy
         _swimmingGameSeconds = saved.SwimmingGameSeconds;
         _jumpInFlight = false;
     }
+
+    // Locomotion reads no pad button (CreateInput), so crouch is its key alone.
+    private bool CrouchPressed() => _input.Physical.Pressed(_input.Config.Bindings.CrouchKey);
 
     private static FpsInput CreateInput(DaggerfallControlSettings controls)
     {

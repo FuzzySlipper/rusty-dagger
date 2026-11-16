@@ -8,10 +8,13 @@ public readonly record struct ActorControlRestrictions(bool Movement = false, bo
     public ActorControlRestrictions Combine(ActorControlRestrictions other) =>
         new(Movement || other.Movement, PhysicalAttacks || other.PhysicalAttacks);
 
-    /// <summary>Suppresses voluntary drive while the ordinary Engine character proposal retains support and gravity.</summary>
+    /// <summary>
+    /// Suppresses voluntary drive while the ordinary Engine character proposal retains support and gravity. The stance
+    /// asked for is kept: it holds the body as it is rather than driving it, so a paralysed crouched body stays crouched.
+    /// </summary>
     public CharacterStepControls Restrict(CharacterStepControls controls) => !Movement ? controls : controls with
     {
-        PlanarIntent = Vector2.Zero, JumpPressed = false, JumpHeld = false, CrouchRequested = false,
+        PlanarIntent = Vector2.Zero, JumpPressed = false, JumpHeld = false,
         VerticalVelocity = null,
     };
 }
