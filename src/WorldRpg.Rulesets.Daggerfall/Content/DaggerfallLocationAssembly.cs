@@ -88,8 +88,8 @@ internal sealed class DaggerfallLocationAssembly
         DaggerfallWorldBlockKey[] blocks = key.Kind switch
         {
             DaggerfallWorldProfileKind.Exterior => [.. PlacedBlocks(record.Exterior!).Select(ExteriorBlockKey)],
-            DaggerfallWorldProfileKind.Interior => [InteriorBlockKey(record, building!.Value)],
-            _ => [.. record.DungeonBlocks.Select(block => new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.Rdb, block.SourceKey))],
+            DaggerfallWorldProfileKind.Interior => [InteriorBlockKey(BuildingBlock(record.Exterior!, building!.Value)!, building.Value)],
+            _ => [.. record.DungeonBlocks.Select(DungeonBlockKey)],
         };
         // A block a location places twice is counted twice.
         IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> documents = _blocks.Read(blocks);
@@ -123,8 +123,7 @@ internal sealed class DaggerfallLocationAssembly
             DaggerfallWorldProfileKind.Dungeon => record!.DungeonBlocks.Count > 0,
             DaggerfallWorldProfileKind.Interior => record!.Exterior is { } exterior && building is { } placed
                 && exterior.Buildings.ContainsKey(placed)
-                && exterior.Blocks.SingleOrDefault(block => block.X == placed.BlockX && block.Y == placed.BlockY) is { } source
-                && _blocks.Contains(new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.RmbInterior, source.SourceName, placed.Index)),
+                && BuildingBlock(exterior, placed) is { } source && _blocks.Contains(InteriorBlockKey(source, placed)),
             _ => false,
         };
     }
@@ -177,9 +176,15 @@ internal sealed class DaggerfallLocationAssembly
 
     private static DaggerfallWorldBlockKey ExteriorBlockKey(DaggerfallSiteBlock block) => new(DaggerfallWorldBlockKind.RmbExterior, block.SourceName);
 
-    /// <summary>The interior block of a building its location's exterior places.</summary>
-    private static DaggerfallWorldBlockKey InteriorBlockKey(DaggerfallSiteRecord record, DaggerfallSiteBuildingId building) =>
-        new(DaggerfallWorldBlockKind.RmbInterior, record.Exterior!.Blocks.Single(block => block.X == building.BlockX && block.Y == building.BlockY).SourceName, building.Index);
+    /// <summary>The exterior block a building stands in, or null where its location places none there.</summary>
+    private static DaggerfallSiteBlock? BuildingBlock(DaggerfallSiteExterior exterior, DaggerfallSiteBuildingId building) =>
+        exterior.Blocks.SingleOrDefault(block => block.X == building.BlockX && block.Y == building.BlockY);
+
+    /// <summary>The interior block of a building standing in <paramref name="block"/>.</summary>
+    private static DaggerfallWorldBlockKey InteriorBlockKey(DaggerfallSiteBlock block, DaggerfallSiteBuildingId building) =>
+        new(DaggerfallWorldBlockKind.RmbInterior, block.SourceName, building.Index);
+
+    private static DaggerfallWorldBlockKey DungeonBlockKey(DaggerfallSiteDungeonBlock block) => new(DaggerfallWorldBlockKind.Rdb, block.SourceKey);
 
     /// <summary>Where an RMB block's own frame sits in its location's exterior: blocks run east along +X and north along -Z.</summary>
     private static Vector3 RmbBlockOrigin(DaggerfallSiteBlock block) => new(block.X * RmbBlockSide, 0F, -(block.Y * RmbBlockSide));
@@ -325,9 +330,9 @@ internal sealed class DaggerfallLocationAssembly
         internal void Interior(DaggerfallSiteBuildingId building)
         {
             DaggerfallSiteExterior exterior = record.Exterior!;
-            DaggerfallSiteBlock placed = exterior.Blocks.SingleOrDefault(block => block.X == building.BlockX && block.Y == building.BlockY)
+            DaggerfallSiteBlock placed = BuildingBlock(exterior, building)
                 ?? throw new InvalidOperationException($"Location {key.Site} places no block at ({building.BlockX}, {building.BlockY}).");
-            DaggerfallWorldBlockKey blockKey = new(DaggerfallWorldBlockKind.RmbInterior, placed.SourceName, building.Index);
+            DaggerfallWorldBlockKey blockKey = InteriorBlockKey(placed, building);
             DaggerfallWorldBlockDocument document = owner._blocks.Read([blockKey])[blockKey];
             Place(document, "block", 0, 0);
             foreach (DaggerfallWorldBlockModel model in DrawnModels(key.Kind, document)) Draw(model, Vector3.Zero);
@@ -390,12 +395,12 @@ internal sealed class DaggerfallLocationAssembly
             _remaps = record.DungeonTextureRemaps;
             DaggerfallSiteDungeonBlock[] placed = [.. record.DungeonBlocks.OrderBy(block => block.X).ThenBy(block => block.Z).ThenBy(block => block.SourceKey, StringComparer.Ordinal)];
             IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> blocks = owner._blocks.Read(
-                placed.Select(block => new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.Rdb, block.SourceKey)));
+                placed.Select(DungeonBlockKey));
             float minimumY = float.PositiveInfinity, maximumY = float.NegativeInfinity;
             List<(string Id, string Kind, int X, int Z)> zones = [];
             foreach (DaggerfallSiteDungeonBlock block in placed)
             {
-                DaggerfallWorldBlockDocument document = blocks[new(DaggerfallWorldBlockKind.Rdb, block.SourceKey)];
+                DaggerfallWorldBlockDocument document = blocks[DungeonBlockKey(block)];
                 Vector3 origin = new(block.X * RdbBlockSide, 0F, -(block.Z * RdbBlockSide));
                 string Placed(string id) => PlaceId(id, block.X, block.Z);
                 // Named by its source block as well as its grid position: the catalog places two blocks on one cell of

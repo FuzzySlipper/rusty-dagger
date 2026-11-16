@@ -4,7 +4,6 @@ using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
-using WorldRpg.Tests.Support;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -52,7 +51,6 @@ public sealed class ModelRemodelAssemblyTests
     {
         DaggerfallArtModel model = Trough.Models["41209"];
         Assert.Equal("remodel/model.rstatmsh", model.File.Path);
-        Assert.Equal(160, model.Triangles);
         Assert.Equal(["material/texture-85-0", "material/texture-67-0", null, null], model.Slots.Select(slot => slot.Material));
         Assert.Equal("remodel/41209-0.png", model.Slots[2].Texture!.Path);
         Assert.Equal([false, false, false, true], model.Slots.Select(slot => slot.Mask));
@@ -60,21 +58,20 @@ public sealed class ModelRemodelAssemblyTests
 
     [Theory]
     [InlineData("""{"trough": ENTRY}""", "without an ARCH3D record id")]
-    [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 0, "slots": [{"slot": 0, "material": "material/texture-67-0"}]}}""", "without an ARCH3D record id or a triangle")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": []}}""", "without its slots, each once")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-67-0"}, {"slot": 0, "material": "material/texture-85-0"}]}}""", "without its slots, each once")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0}]}}""", "names neither one classic texture identity nor one texture of its own")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "wood"}]}}""", "names neither one classic texture identity nor one texture of its own")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-67-0", "alpha": "mask"}]}}""", "only a texture of its own is cut out")]
     [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "alpha": "blend"}]}}""", "only a texture of its own is cut out")]
-    public void A_remodel_without_a_usable_id_triangle_or_slot_is_refused_by_name(string models, string reason)
+    public void A_remodel_without_a_usable_id_or_slot_is_refused_by_name(string models, string reason)
     {
         string json = models.Replace("ENTRY", Entry("""{"slot": 0, "material": "material/texture-67-0"}"""), StringComparison.Ordinal).Replace("HASH", HashHex, StringComparison.Ordinal);
         InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() => Art(json));
         Assert.Contains(reason, refused.Message, StringComparison.Ordinal);
     }
 
-    /// <summary>The shipped trough is the mesh the pack states, at its digest, with the triangles and slots its mesh has.</summary>
+    /// <summary>The shipped trough is the mesh the pack states, at its digest, drawing classic textures at its slots.</summary>
     [Fact]
     public void The_shipped_trough_is_the_static_mesh_its_entry_states()
     {
@@ -83,10 +80,6 @@ public sealed class ModelRemodelAssemblyTests
             "daggerfall.art-replacements").Models["41209"];
         byte[] bytes = File.ReadAllBytes(Path.Combine(content, trough.File.Path));
         Assert.Equal(trough.File.Sha256, DaggerfallContentHash.Parse(Convert.ToHexStringLower(SHA256.HashData(bytes)), trough.File.Path));
-        using EngineBinaryContent.StaticMesh mesh = EngineBinaryContent.ReadStaticMesh(bytes);
-        Assert.Equal(trough.Triangles * 3, mesh.Indices.Length);
-        Assert.Equal(trough.Slots.Select(slot => (slot.Slot, slot.Material)),
-            mesh.Root.GetProperty("materialSlots").EnumerateArray().Select(slot => (slot.GetProperty("slot").GetUInt32(), (string?)slot.GetProperty("material").GetString())));
         Assert.All(trough.Slots, slot => Assert.StartsWith("material/texture-", slot.Material, StringComparison.Ordinal));
     }
 

@@ -94,9 +94,8 @@ internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, double Footprin
 /// classic model's own frame, drawn at the classic's pose while refreshed art is drawn. It is render-only: promotion holds it
 /// inside the classic's volume, whose mesh still serves the automap, collision and navigation.
 /// </summary>
-/// <param name="Triangles">Its triangle count, as promotion wrote it.</param>
 /// <param name="Slots">What each of its material slots draws, every slot once.</param>
-internal sealed record DaggerfallArtModel(DaggerfallArtFile File, int Triangles, IReadOnlyList<DaggerfallArtModelSlot> Slots);
+internal sealed record DaggerfallArtModel(DaggerfallArtFile File, IReadOnlyList<DaggerfallArtModelSlot> Slots);
 
 /// <summary>
 /// One material slot of a remodel: a classic texture identity (<c>material/texture-A-R</c>), drawn as the location's own
@@ -386,9 +385,9 @@ internal sealed class DaggerfallArtReplacements
                 foreach (JsonProperty model in modelArt.EnumerateObject())
                 {
                     string subject = $"the remodel of ARCH3D model {model.Name}";
-                    int triangles = model.Value.GetProperty("triangles").GetInt32();
-                    if (!uint.TryParse(model.Name, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out _) || triangles <= 0)
-                        throw new InvalidOperationException($"Content pack '{packId}' states {subject} without an ARCH3D record id or a triangle.");
+                    // A key that is no ARCH3D record id would never meet a placed model, so the remodel would never draw.
+                    if (!uint.TryParse(model.Name, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out _))
+                        throw new InvalidOperationException($"Content pack '{packId}' states {subject} without an ARCH3D record id.");
                     DaggerfallArtModelSlot[] slots = [.. model.Value.GetProperty("slots").EnumerateArray().Select(slot =>
                     {
                         string? material = slot.TryGetProperty("material", out JsonElement named) ? named.GetString() : null;
@@ -402,7 +401,7 @@ internal sealed class DaggerfallArtReplacements
                     })];
                     if (slots.Length == 0 || slots.DistinctBy(slot => slot.Slot).Count() != slots.Length)
                         throw new InvalidOperationException($"Content pack '{packId}' states {subject} without its slots, each once.");
-                    models.Add(model.Name, new(File(model.Value, $"The mesh of {subject}"), triangles, slots));
+                    models.Add(model.Name, new(File(model.Value, $"The mesh of {subject}"), slots));
                 }
             if (section.TryGetProperty("surfaces", out JsonElement surfaceArt))
                 foreach (JsonElement surface in surfaceArt.EnumerateArray())

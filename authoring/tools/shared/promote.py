@@ -89,8 +89,8 @@ refuses one standing out of the classic's convex hull, or, where its note states
 classic, out of the classic's own faces. It reads the classic from local/inputs/arena2. A material with glTF's alphaMode
 MASK draws its PNG cut out at half its alpha (`"alpha": "mask"`). Each art session holds only its own finals, so
 `--key ID` promotes one, replacing that entry and its files and keeping the rest of the section; a whole-area run
-refuses while the section or ledger holds a remodel this checkout has no final for, and names any it removes because
-the ledger no longer accepts it.
+refuses while the ledger accepts a remodel this checkout has no final for, and names any entry it removes because the
+ledger no longer accepts it.
 
 A held weapon's layer leaves a gap where the doll's hand holds it; its whole image (whole.py, in local/art/generated/worn/whole/)
 is published beside it as its `icon`, which the inventory, shops and the ground draw instead.
