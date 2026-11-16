@@ -102,6 +102,26 @@ public sealed class DaggerfallLocomotionPolicyTests
         Assert.True(policy.BeginStep([], 1f / 60f, stats, canMove: true, stance: CharacterStance.Crouched).Controls.CrouchRequested);
     }
 
+    /// <summary>
+    /// An input clear drops a press waiting for a step, as it drops a pending jump, so a cleared focus or capture neither
+    /// wakes time nor turns the stance; a press after the clear in the same batch still counts.
+    /// </summary>
+    [Fact]
+    public void An_input_clear_drops_a_pending_press_but_not_one_after_it()
+    {
+        StatsComponent stats = Stats(speed: 50, running: 40, fatigue: 200);
+        DaggerfallLocomotionPolicy policy = new(DaggerfallLocomotionTuning.Classic, new DaggerfallControlSettings());
+
+        policy.Observe(Tap());
+        policy.Observe([Clear()]);
+        Assert.False(policy.HasPendingStanceChange);
+        Assert.False(policy.BeginStep([], 1f / 60f, stats, canMove: true).Controls.CrouchRequested);
+
+        policy.Observe([Key(KeyboardControl.ControlLeft, InputEdge.Pressed), Clear(), .. Tap()]);
+        Assert.True(policy.HasPendingStanceChange);
+        Assert.True(policy.BeginStep([], 1f / 60f, stats, canMove: true).Controls.CrouchRequested);
+    }
+
     /// <summary>Running keeps a crouch, at the donor's crouched running speed (PlayerSpeedChanger.GetRunSpeed's crouch base).</summary>
     [Fact]
     public void Running_while_crouched_stays_crouched_at_the_crouched_running_speed()
@@ -369,6 +389,8 @@ public sealed class DaggerfallLocomotionPolicyTests
 
     /// <summary>The crouch key pressed and let go within one update.</summary>
     private static ProductInputEvent[] Tap() => [Key(KeyboardControl.ControlLeft, InputEdge.Pressed), Key(KeyboardControl.ControlLeft, InputEdge.Released)];
+
+    private static ProductInputEvent Clear() => Key(KeyboardControl.None, InputEdge.None) with { Kind = InputEventKind.Clear };
 
     private sealed class Mount : IDaggerfallRide
     {

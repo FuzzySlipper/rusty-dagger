@@ -54,7 +54,8 @@ internal sealed class DaggerfallLocomotionPolicy
 
     internal void Observe(ReadOnlySpan<ProductInputEvent> inputs)
     {
-        foreach (var input in inputs) if (input.Kind == InputEventKind.Clear) _pendingJump = false;
+        // A clear drops what waits for a step; a press after it in the batch still counts (Consume keeps it).
+        foreach (var input in inputs) if (input.Kind == InputEventKind.Clear) { _pendingJump = false; _pendingCrouchToggle = false; }
         ObservedInput = _input.Consume(inputs, 0f);
         _pendingCrouchToggle ^= CrouchPressed();
         _pendingJump |= ObservedInput.JumpPressed;
