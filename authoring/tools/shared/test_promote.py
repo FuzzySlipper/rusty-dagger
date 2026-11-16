@@ -137,21 +137,21 @@ if __name__ == "__main__":
 
 
 class WorldMesh(unittest.TestCase):
-    def test_a_sprite_mesh_states_its_width_and_the_slots_that_carry_an_emissive_map(self):
+    def test_a_sprite_mesh_states_the_slots_that_carry_an_emissive_map_and_leaves_its_width_to_the_glb(self):
         root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, root)
         self.addCleanup(setattr, promote, "STAGE", promote.STAGE)
         promote.STAGE = root / "stage"
 
         def glb(name, materials):
-            text = json.dumps({"asset": {"version": "2.0"}, "materials": materials,
-                               "meshes": [{"primitives": [{"attributes": {"POSITION": 0}}]}],
-                               "accessors": [{"min": [-0.35, 0, -0.3], "max": [0.36, 3.9, 0.3]}]}).encode()
+            text = json.dumps({"asset": {"version": "2.0"}, "materials": materials}).encode()
             text += b" " * (-len(text) % 4)
             (root / name).write_bytes(b"glTF" + (2).to_bytes(4, "little") + (20 + len(text)).to_bytes(4, "little")
                                       + len(text).to_bytes(4, "little") + b"JSON" + text)
             return promote.Final(None, name, root / name)
         lamp = promote.world_mesh_entry(glb("lamp.glb", [{"name": "post"}, {"name": "glass", "emissiveTexture": {"index": 0}}]), 210, 28)
-        self.assertEqual(({"archive": 210, "record": 28}, 0.71, [1]), (lamp["replaces"], lamp["footprint"], lamp["glow"]))
+        self.assertEqual(({"archive": 210, "record": 28}, [1]), (lamp["replaces"], lamp["glow"]))
+        # The game draws a mesh at its sprite's width from the GLB's own width, as the Engine admits it.
+        self.assertNotIn("footprint", lamp)
         self.assertEqual((root / "lamp.glb").read_bytes(), (promote.STAGE / lamp["path"]).read_bytes())
         self.assertNotIn("glow", promote.world_mesh_entry(glb("cart.glb", [{"name": "wood"}]), 205, 27))

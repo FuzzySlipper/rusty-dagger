@@ -15,6 +15,8 @@ internal class AnimationRecorder : DispatchProxy
     /// <summary>The joints and clips an opened model reports.</summary>
     internal AnimationJointInfo[] Joints { get; set; } = [];
     internal AnimationClipInfo[] Clips { get; set; } = [];
+    /// <summary>The bounds an opened model reports: a metre cube standing on its floor, unless a test states its own.</summary>
+    internal AnimatedMeshInfo MeshInfo { get; set; } = new(new(-.5F, 0, -.5F), new(.5F, 1, .5F), 0, 0, 0);
     internal static AnimationRecorder Create()
     {
         var service = Create<IAnimationService, AnimationRecorder>();
@@ -27,6 +29,7 @@ internal class AnimationRecorder : DispatchProxy
         nameof(IAnimationService.CreateAnimatedMeshAppearance) => NewAppearance(),
         nameof(IAnimationService.ReadJoints) => new ReadOnlyMemory<AnimationJointInfo>(Joints),
         nameof(IAnimationService.ReadClips) => new ReadOnlyMemory<AnimationClipInfo>(Clips),
+        nameof(IAnimationService.ReadMeshInfo) => MeshInfo,
         nameof(IAnimationService.SampleModelJointPose) or nameof(IAnimationService.SampleJointPose) => new ReadOnlyMemory<JointPose>(new JointPose[Joints.Length]),
         nameof(IAnimationService.CreateInstance) => new AnimationInstance(new AnimationInstanceHandle(7000 + (ulong)++Instances), () => { }),
         nameof(IAnimationService.UpdateAnimatedMeshMaterialFactors) => Factors((AnimatedMeshMaterialFactorsRequest)args![0]!),

@@ -31,9 +31,9 @@ public sealed class SpellEffectPresentationTests
              "placement": {"size": {"width": 0.8, "height": 0.8}, "pivot": {"x": 0.5, "y": 0.5}, "sequence": [0, 1], "framesPerSecond": 15, "loops": false}}],
           "effectGlow": {"path": "refreshed/glow.png", "byteLength": 1, "sha256": "HASH"},
           "meshes": [
-            {"replaces": {"archive": 380, "record": 1}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15},
-            {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15},
-            {"replaces": {"archive": 210, "record": 28}, "path": "refreshed/lamp-post.glb", "byteLength": 1, "sha256": "HASH", "footprint": 0.7, "glow": [1]}],
+            {"replaces": {"archive": 380, "record": 1}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH"},
+            {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH"},
+            {"replaces": {"archive": 210, "record": 28}, "path": "refreshed/lamp-post.glb", "byteLength": 1, "sha256": "HASH", "glow": [1]}],
           "flats": [
             {"replaces": {"archive": 212, "record": 0}, "path": "refreshed/well.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}},
@@ -229,7 +229,9 @@ public sealed class SpellEffectPresentationTests
     public void A_placed_bone_pile_draws_as_the_mesh_at_its_sprite_width_on_its_floor_in_refreshed_art()
     {
         bool refreshed = true;
+        // The bone pile's GLB is 2.15 m across, twice its sprite's width.
         AnimationRecorder animation = AnimationRecorder.Create();
+        animation.MeshInfo = new(new(-1.075F, 0, -.6F), new(1.075F, .4F, .6F), 0, 0, 0);
         NormalizedBillboardSprite bones = new("sprite/corpse.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(1.075F, .725F));
         DaggerfallSiteDecoration pile = new("flat-1", new WorldPoint(4, .5F, 6), false, bones, bones, (380, 4), (380, 4));
         var (presentation, graphics, _) = Compose(() => refreshed, animation: animation, decorations: [pile]);
@@ -241,7 +243,7 @@ public sealed class SpellEffectPresentationTests
 
         Publish(presentation, actors);
         AppearanceFact lying = Assert.Single(graphics.Snapshots[^1], fact => fact.Appearance == mesh);
-        // The sprite stands centred on its position, so the mesh rests half its height lower, at half the footprint's width.
+        // The sprite stands centred on its position, so the mesh rests half its height lower, at half the GLB's width.
         Assert.Equal(new Vector3(4, .5F - .3625F, 6), lying.Transform.Translation);
         Assert.Equal(new Vector3(.5F), lying.Transform.Scale);
 
@@ -298,7 +300,7 @@ public sealed class SpellEffectPresentationTests
     {
         InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() => DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes(WithHash("""
             {"artReplacements": {"images": [], "meshes": [
-              {"replaces": {"archive": 210, "record": 28}, "path": "refreshed/lamp-post.glb", "byteLength": 1, "sha256": "HASH", "footprint": 0.7, "glow": [1, 1]}]}}
+              {"replaces": {"archive": 210, "record": 28}, "path": "refreshed/lamp-post.glb", "byteLength": 1, "sha256": "HASH", "glow": [1, 1]}]}}
             """)), "test.art"));
         Assert.Contains("glowing slot twice", refused.Message, StringComparison.Ordinal);
     }

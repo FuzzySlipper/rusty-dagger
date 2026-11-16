@@ -166,6 +166,32 @@ public sealed class ModelMeshCommandTests
         Assert.Equal([180, 180, 180, 255, 200, 200, 200, 255], DeterministicPngReader.ReadRgba8(textures[drawn["material/texture-41-2"]].Png, "pale").Rgba);
     }
 
+    /// <summary>The same pixels painted for one classic identity, for another, or drawn as the remodel's own are a slot each.</summary>
+    [Fact]
+    public void Pixels_painted_for_a_classic_identity_are_a_slot_apart_from_the_same_pixels_drawn_any_other_way()
+    {
+        byte[] grey = Png(2, [90, 90, 90, 120, 120, 120]);
+        byte[] glb = Glb([("texture-141-2", grey, Square(0), null, null), ("rock", grey, Square(1), null, null), ("texture-0-75", grey, Square(2), null, null)]);
+        (_, var slots, _, var textures) = ModelMeshCommand.Write("41723", RemodelGlb.Read(glb, "41723.glb"), "media/models");
+        Assert.Equal(3, slots.Select(slot => slot.Material).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal([null, "material/texture-0-75", "material/texture-141-2"], slots.Select(slot => slot.Paint?.Identity).Order(StringComparer.Ordinal));
+        Assert.Equal(3, textures.Count);
+    }
+
+    [Theory]
+    [InlineData("texture-141-2", false, """{"texture-41-2": 0}""", "states textures by drawn identity but carries no base colour texture of its own")]
+    [InlineData("rock", true, """{"texture-41-2": 0}""", "states textures by drawn identity but names no classic texture")]
+    [InlineData("texture-141-2", true, """[0]""", "states its drawn textures as no map")]
+    [InlineData("texture-141-2", true, """{"texture-41-2": {"index": 0}}""", "names its texture for 'texture-41-2' by no texture index")]
+    [InlineData("texture-141-2", true, """{"texture-41-2": 9}""", "names texture 9, which the GLB does not carry")]
+    [InlineData("texture-141-2", true, """{"texture-41-2": 0, "material/texture-41-2": 0}""", "is painted twice for 'material/texture-41-2'")]
+    public void A_glb_material_s_drawn_textures_stated_in_a_way_the_game_could_not_draw_are_refused_by_name(string name, bool png, string drawn, string reason)
+    {
+        byte[] glb = Glb([(name, png ? Png(6, [1, 2, 3, 4, 5, 6, 7, 8]) : null, Square(0), null, null)],
+            more: new Dictionary<string, Dictionary<string, object>> { [name] = new() { ["extras"] = new { drawn = JsonDocument.Parse(drawn).RootElement } } });
+        Assert.Contains(reason, Assert.Throws<InvalidDataException>(() => RemodelGlb.Read(glb, "41723.glb")).Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void A_glb_flipbook_strip_carries_its_frames_rate_and_unlit_light_into_its_slot()
     {

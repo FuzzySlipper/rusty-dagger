@@ -30,13 +30,6 @@ public sealed class NatureMeshArtTests
         Assert.Equal((0.4F, 64), (rock.Snow!.Value.Share, rock.Snow.Value.Texels));
     }
 
-    [Fact]
-    public void A_nature_mesh_of_neither_bark_nor_stone_is_refused_by_name()
-    {
-        InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() => Art("{\"504-3\": {" + Mesh + "}}"));
-        Assert.Contains("states tree '504-3' with neither bark nor stone", refused.Message, StringComparison.Ordinal);
-    }
-
     /// <summary>The mesh's stone part draws with the stone's material, and a part the art has no texture for is refused by name.</summary>
     [Fact]
     public void A_rock_mesh_s_stone_part_draws_its_stone_and_bark_it_has_no_texture_for_is_refused()

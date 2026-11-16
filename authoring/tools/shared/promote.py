@@ -54,10 +54,10 @@ frame stays classic. The area also writes the soft white glow (`effectGlow`) the
 in each element's colour, and the world meshes (`meshes`): the `effects` final `corpse-bones.glb`, a skull-free bone
 pile resting on the floor, stands in for TEXTURE.380 record 1 (the corpse every human enemy class shares, men and
 women alike, so it is no one in particular) and record 4 (the bone pile placed in dungeons). WORLD_MESHES names each such
-sprite mesh, which naming accepts; each entry is keyed by the record it replaces (`380-4`) and states the mesh's footprint,
-its width across (x) in metres, measured from the GLB, so the game draws it at the width of the classic sprite it
-replaces, and the GLB material slots that carry an emissive map (`glow`), which the game lights at the lamps' level as
-it does a refreshed lamp's emission map: a lamp post's glass and flame.
+sprite mesh, which naming accepts; each entry is keyed by the record it replaces (`380-4`) and states the GLB material
+slots that carry an emissive map (`glow`), which the game lights at the lamps' level as it does a refreshed lamp's
+emission map: a lamp post's glass and flame. The game draws the mesh at the width of the classic sprite it replaces from
+the GLB's own width across (x), as the Engine admits it.
 
 The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
 its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
@@ -610,22 +610,12 @@ WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)]),
                 ("handcart.glb", [(205, 27)])]
 
 
-def glb_width(path):
-    """A GLB's width across, x, in its own metres: the extent of its meshes' positions (glTF states each accessor's bounds)."""
-    data = path.read_bytes()
-    document = json.loads(data[20:20 + int.from_bytes(data[12:16], "little")])
-    bounds = [document["accessors"][primitive["attributes"]["POSITION"]] for mesh in document["meshes"] for primitive in mesh["primitives"]]
-    return round(max(b["max"][0] for b in bounds) - min(b["min"][0] for b in bounds), 3)
-
-
 def world_mesh_entry(final, archive, record):
-    """A sprite mesh's entry: the GLB as it is, its width as its footprint, and its material slots with an emissive map
-    (`glow`)."""
+    """A sprite mesh's entry: the GLB as it is and its material slots with an emissive map (`glow`)."""
     data = final.path.read_bytes()
     gltf = json.loads(data[20:20 + int.from_bytes(data[12:16], "little")])
     glow = [slot for slot, material in enumerate(gltf.get("materials", [])) if "emissiveTexture" in material]
-    return {"replaces": {"archive": archive, "record": record}, **write(f"{MEDIA}/effects/{final.key}", data),
-            "footprint": glb_width(final.path), **({"glow": glow} if glow else {})}
+    return {"replaces": {"archive": archive, "record": record}, **write(f"{MEDIA}/effects/{final.key}", data), **({"glow": glow} if glow else {})}
 
 
 def effect_units():

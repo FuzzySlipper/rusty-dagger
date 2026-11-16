@@ -151,8 +151,9 @@ internal static class RemodelGlb
             if (strip is not null && (strip.Frames < 2 || !float.IsFinite(strip.FramesPerSecond) || strip.FramesPerSecond <= 0F))
                 throw new InvalidDataException($"{label}'s material '{name}' states {strip.Frames} frames at {strip.FramesPerSecond} a second: a strip is two frames or more at a rate above zero.");
             bool unlit = material.TryGetProperty("extensions", out JsonElement extensions) && extensions.TryGetProperty("KHR_materials_unlit", out _);
-            JsonElement texture = default;
+            JsonElement texture = default, others = default;
             bool carries = material.TryGetProperty("pbrMetallicRoughness", out JsonElement pbr) && pbr.TryGetProperty("baseColorTexture", out texture);
+            bool paints = extras.ValueKind == JsonValueKind.Object && extras.TryGetProperty("drawn", out others);
             if (Identity(name) is { } classic)
             {
                 // A classic identity draws as the location's own lit surface, painted or not, where its climate swaps follow it.
@@ -160,19 +161,31 @@ internal static class RemodelGlb
                     throw new InvalidDataException($"{label}'s material '{name}' animates or unlights a classic texture, which draws as the location's own lit surface.");
                 if (alpha == "MASK")
                     throw new InvalidDataException($"{label}'s material '{name}' cuts out a classic texture, which draws the location's own opaque surface or its shells' own cut.");
-                if (!carries) return new(classic, null, corners, Shell: shell);
+                // Textures by drawn identity with none of its own would be lost, and the location's own surface drawn.
+                if (!carries)
+                    return paints ? throw new InvalidDataException($"{label}'s material '{name}' states textures by drawn identity but carries no base colour texture of its own.")
+                        : new(classic, null, corners, Shell: shell);
                 // Painted for its identity: a shell stack draws the location's relief, never a texture of the pack's own.
                 if (shell is not null)
                     throw new InvalidDataException($"{label}'s material '{name}' stacks shells of a texture of its own: a shell stack draws a classic texture's relief.");
                 Dictionary<string, byte[]> drawn = new(StringComparer.Ordinal);
-                if (extras.ValueKind == JsonValueKind.Object && extras.TryGetProperty("drawn", out JsonElement others))
+                if (paints && others.ValueKind != JsonValueKind.Object)
+                    throw new InvalidDataException($"{label}'s material '{name}' states its drawn textures as no map of classic texture to texture index.");
+                if (paints)
                     foreach (JsonProperty other in others.EnumerateObject())
-                        drawn.Add(Identity(other.Name) ?? throw new InvalidDataException($"{label}'s material '{name}' is painted for '{other.Name}', which is no classic texture (texture-A-R)."),
-                            Png(other.Value.GetInt32(), $"{name}' for '{other.Name}"));
+                    {
+                        string identity = Identity(other.Name) ?? throw new InvalidDataException($"{label}'s material '{name}' is painted for '{other.Name}', which is no classic texture (texture-A-R).");
+                        if (other.Value.ValueKind != JsonValueKind.Number || !other.Value.TryGetInt32(out int at))
+                            throw new InvalidDataException($"{label}'s material '{name}' names its texture for '{other.Name}' by no texture index.");
+                        if (!drawn.TryAdd(identity, Png(at, $"{name}' for '{other.Name}")))
+                            throw new InvalidDataException($"{label}'s material '{name}' is painted twice for '{identity}'.");
+                    }
                 return new(classic, Png(texture.GetProperty("index").GetInt32(), name), corners, Drawn: drawn);
             }
             if (shell is not null)
                 throw new InvalidDataException($"{label}'s material '{name}' stacks shells of a texture of its own: a shell stack draws a classic texture's relief.");
+            if (paints)
+                throw new InvalidDataException($"{label}'s material '{name}' states textures by drawn identity but names no classic texture (texture-A-R) to be painted for.");
             if (!carries)
                 throw new InvalidDataException($"{label}'s material '{name}' names no classic texture (texture-A-R) and carries no base colour texture.");
             byte[] png = Png(texture.GetProperty("index").GetInt32(), name);
@@ -189,7 +202,9 @@ internal static class RemodelGlb
         /// <summary>The PNG a texture of the GLB carries, written again as 8-bit RGBA.</summary>
         private byte[] Png(int index, string name)
         {
-            JsonElement image = root.GetProperty("images")[root.GetProperty("textures")[index].GetProperty("source").GetInt32()];
+            if (!root.TryGetProperty("textures", out JsonElement textures) || index < 0 || index >= textures.GetArrayLength())
+                throw new InvalidDataException($"{label}'s material '{name}' names texture {index}, which the GLB does not carry.");
+            JsonElement image = root.GetProperty("images")[textures[index].GetProperty("source").GetInt32()];
             if (!image.TryGetProperty("bufferView", out JsonElement view) || image.GetProperty("mimeType").GetString() != "image/png")
                 throw new InvalidDataException($"{label}'s material '{name}' carries a texture that is not a PNG inside the GLB.");
             DeterministicPngImage pixels = DeterministicPngReader.ReadRgba8(View(view.GetInt32()).ToArray(), $"{label}'s material '{name}' texture");

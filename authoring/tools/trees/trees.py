@@ -105,8 +105,6 @@ LEAF_DARKEN = 1.2
 OUTLINE = .06
 # The most of a crown's leaves its other hues (blossoms, a summer tree's autumn touches) may colour.
 ACCENT = .1
-# A texel this bright in every channel is snow.
-SNOW = 170
 # A crown with less snow than this carries none.
 SNOW_LEAST = .03
 # Snow lies only on what faces up, a part of a crown's cards, so its share there is this many times the sprite's.
@@ -160,7 +158,7 @@ def hues(rgb):
 def snowfall(crown):
     """The snow a crown carries: the share of it that is snow, scaled to the share of a card that faces up, and the
     snow's mean linear colour; none for a crown with hardly any."""
-    white = crown.min(1) >= SNOW
+    white = crown.min(1) >= rocks.SNOW
     share = white.mean() if len(crown) else 0
     if share < SNOW_LEAST:
         return None
@@ -178,7 +176,7 @@ def palette(rgba, m):
     # A leaf is one flat tone, so a colour the sprite only dabs (its blossoms, the branches in its crown, its snow) would
     # paint whole leaves. Leaves take the colours of the crown's own hue (green, or an autumn tree's orange) and its
     # shadows, then the other hues only their own share up to ACCENT, as the brightest; snow is left to the weather.
-    crown = crown[crown.min(1) < SNOW]
+    crown = crown[crown.min(1) < rocks.SNOW]
     hue, saturation = hues(crown)
     coloured = saturation > .12
     if coloured.sum() >= 20:
@@ -244,16 +242,11 @@ def trim(mesh, below):
 
 
 def outward(mesh):
-    """Turns each bark triangle to face the way its vertices' normals point. rusty-craftsurvive winds its tubes inward,
-    which this Engine culls as their outside, so a trunk showed its far wall from within."""
+    """Turns each bark triangle to face the way its vertices' normals point (rocks.turned_out). rusty-craftsurvive winds
+    its tubes inward, which this Engine culls as their outside, so a trunk showed its far wall from within."""
     for part in mesh["parts"]:
-        if part["role"] != "bark":
-            continue
-        p, n, idx = np.array(part["positions"]).reshape(-1, 3), np.array(part["normals"]).reshape(-1, 3), part["indices"]
-        for t in range(0, len(idx), 3):
-            a, b, c = idx[t:t + 3]
-            if np.dot(np.cross(p[b] - p[a], p[c] - p[a]), n[a] + n[b] + n[c]) < 0:
-                idx[t + 1], idx[t + 2] = c, b
+        if part["role"] == "bark":
+            rocks.turned_out(part)
     return mesh
 
 

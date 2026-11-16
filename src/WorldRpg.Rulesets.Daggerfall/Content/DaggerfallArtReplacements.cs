@@ -84,12 +84,12 @@ internal sealed record DaggerfallPeopleRigDirection(string Label, float Angle, s
 internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 
 /// <summary>
-/// A refreshed mesh standing in for the classic sprite cut from one texture record: a GLB resting on the floor, and its
-/// footprint (its width across, x, in metres), from which it is drawn at the width of the sprite it replaces.
+/// A refreshed mesh standing in for the classic sprite cut from one texture record: a GLB resting on the floor, drawn at
+/// the width of the sprite it replaces from its own width across (x), as the Engine admits it.
 /// </summary>
 /// <param name="Glow">The GLB material slots whose emissive maps shine at the lamps' level, as a refreshed flat's
 /// emission map does: a lamp's glass and flame.</param>
-internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, double Footprint, IReadOnlyList<uint> Glow);
+internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, IReadOnlyList<uint> Glow);
 
 /// <summary>
 /// A remodel standing in for one classic ARCH3D model wherever an assembled location places it: an Engine static mesh in the
@@ -425,15 +425,12 @@ internal sealed class DaggerfallArtReplacements
                 foreach (JsonElement mesh in meshArt.EnumerateArray())
                 {
                     (int, int) replaces = (mesh.GetProperty("replaces").GetProperty("archive").GetInt32(), mesh.GetProperty("replaces").GetProperty("record").GetInt32());
-                    double footprint = mesh.GetProperty("footprint").GetDouble();
-                    if (!double.IsFinite(footprint) || footprint <= 0)
-                        throw new InvalidOperationException($"Content pack '{packId}' states no usable footprint for the mesh replacing {replaces.Item1}/{replaces.Item2}.");
                     uint[] glowing = mesh.TryGetProperty("glow", out JsonElement slots) ? [.. slots.EnumerateArray().Select(slot => slot.GetUInt32())] : [];
                     // The Engine takes one set of factors per slot, so a slot named twice would fault the site that lights it.
                     if (glowing.Distinct().Count() != glowing.Length)
                         throw new InvalidOperationException($"Content pack '{packId}' names a glowing slot twice for the mesh replacing {replaces.Item1}/{replaces.Item2}.");
                     if (!meshes.TryAdd(replaces, new(new(mesh.GetProperty("path").GetString()!,
-                            DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), footprint, glowing)))
+                            DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), glowing)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two meshes for {replaces.Item1}/{replaces.Item2}.");
                 }
             if (section.TryGetProperty("models", out JsonElement modelArt))
@@ -451,7 +448,7 @@ internal sealed class DaggerfallArtReplacements
                         if (material is null && texture is null || material is not null && !material.StartsWith("material/texture-", StringComparison.Ordinal))
                             throw new InvalidOperationException($"Content pack '{packId}' states a slot of {subject} that names neither one classic texture identity nor one texture of its own.");
                         string? alpha = slot.TryGetProperty("alpha", out JsonElement cut) ? cut.GetString() : null;
-                        if (alpha is not (null or "mask") || alpha is not null && (texture is null || material is not null))
+                        if (alpha is not (null or "mask") || alpha is not null && texture is null)
                             throw new InvalidOperationException($"Content pack '{packId}' cuts out a slot of {subject} by '{alpha}': only a texture of its own is cut out, by \"mask\".");
                         DaggerfallArtShell? shell = slot.TryGetProperty("shell", out JsonElement stack)
                             ? new(stack.GetProperty("layer").GetInt32(), stack.GetProperty("layers").GetInt32()) : null;
@@ -524,9 +521,6 @@ internal sealed class DaggerfallArtReplacements
                         throw new InvalidOperationException($"Content pack '{packId}' states tree '{tree.Name}' without an archive and record.");
                     DaggerfallArtFile? bark = t.TryGetProperty("bark", out JsonElement treeBark) ? File(treeBark, $"Tree {tree.Name}'s bark") : null;
                     DaggerfallArtFile? stone = t.TryGetProperty("stone", out JsonElement treeStone) ? File(treeStone, $"Tree {tree.Name}'s stone") : null;
-                    // A mesh of neither would draw nothing its parts could be bound to.
-                    if (bark is null && stone is null)
-                        throw new InvalidOperationException($"Content pack '{packId}' states tree '{tree.Name}' with neither bark nor stone.");
                     trees.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
                         new(File(mesh, $"Tree {tree.Name}'s mesh"), mesh.GetProperty("height").GetSingle(), t.GetProperty("height").GetSingle(),
                             t.GetProperty("foot").GetSingle(), bark,

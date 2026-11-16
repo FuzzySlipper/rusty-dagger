@@ -28,15 +28,15 @@ identity, which the location draws. Finals go to local/art/generated/models/ID.g
 Nature flats: trees.py draws them in the flora field, taking their shapes from `nature_rock`, `gnarled` and `logs`
 here, each painted from its refreshed sprite. Placed flats (`placed`): the decoration flats blocks place, as GLBs in
 local/art/generated/effects/ for the art pack's `meshes` (promote.py's WORLD_MESHES, `--area effects --key A-R`), each
-built across its sprite's width, which promotion measures as its footprint.
+built across its sprite's width, which the game draws it at from the GLB's own width.
 
     rocks.py models [ID ...]
     rocks.py placed [ARCHIVE-RECORD ...]
 
-It reads the import's staged classic meshes and the imported climate table, the art pack's refreshed surfaces and
-sprites, and rusty-craftsurvive's flora generator (CRAFTSURVIVE, default ~/dev/rusty-craftsurvive).
+It reads the import's staged classic meshes and, through surfaces/tiling.py, the identities the import's climate and
+dungeon tables draw a classic texture as, the art pack's refreshed surfaces and sprites, and rusty-craftsurvive's flora generator (CRAFTSURVIVE, default ~/dev/rusty-craftsurvive).
 """
-import argparse, colorsys, io, json, math, os, struct
+import argparse, colorsys, io, json, math, os, struct, sys
 from pathlib import Path
 
 import numpy as np
@@ -44,6 +44,8 @@ from PIL import Image
 from scipy.spatial import ConvexHull
 
 REPOSITORY = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPOSITORY / "authoring/tools/surfaces"))
+import tiling  # noqa: E402
 CONTENT = REPOSITORY / "content"
 ART = REPOSITORY / "local/art"
 GEOMETRY = REPOSITORY / "local/build/import/staging/worldrpg/imports/shared/geometry"
@@ -520,15 +522,13 @@ MODELS = {
 }
 # The classic textures a remodel paints with its generated stone; any other keeps the classic's identity.
 PAINTED = ("texture-141-",)
-IMPORTED = REPOSITORY / "local/build/import/staging/worldrpg/payloads/daggerfall.imported.json"
 
 
 def drawn_as(identity):
-    """The other identities a location may draw a classic texture as: its climate swaps, from the imported climate table."""
+    """The other identities a location may draw a classic texture as: its climate swaps and the dungeons' remaps."""
     archive, record = map(int, identity.split("-")[1:])
-    swaps = json.loads(IMPORTED.read_text())["climate"]["swaps"]
-    return sorted({f"texture-{s['targetArchive']}-{record}" for s in swaps if s["archive"] == archive and s["firstRecord"] <= record
-                   and (s["lastRecord"] is None or record <= s["lastRecord"]) and s["targetArchive"] != archive})
+    swaps, remaps = tiling.reach()
+    return sorted({f"texture-{other}-{record}" for other in swaps.get((archive, record), set()) | remaps.get(archive, set()) if other != archive})
 
 
 # Metres a face's distance counts against turning fully away from a classic face, choosing the material: a cap takes the
@@ -879,7 +879,8 @@ def nature_rock(form, seed, rgba, stones=1):
     return mesh, paint(stone_steps(seed), palette_of(rgba))
 
 
-# A texel this bright in every channel is snow, which the flora field's shader lays on the rock instead.
+# A texel this bright in every channel is the sprites' snow, which the flora field's shader lays on a winter tree's
+# leaves and a winter rock's stone instead.
 SNOW = 170
 
 
@@ -923,7 +924,7 @@ LOG_SINK = .05
 
 def turned_out(part):
     """generate-flora.py winds its tubes inward, which the Engine culls as their outside: each triangle is turned to face
-    the way its corners' normals point, as trees.py turns the mesh trees' bark."""
+    the way its corners' normals point. trees.py turns the mesh trees' bark with it too."""
     p, n, idx = np.array(part["positions"]).reshape(-1, 3), np.array(part["normals"]).reshape(-1, 3), part["indices"]
     for t in range(0, len(idx), 3):
         a, b, c = idx[t:t + 3]
@@ -1017,7 +1018,7 @@ def bark_colours(rgba):
 
 
 def placed(archive, record):
-    """A placed flat's mesh as a GLB, and its footprint: its width across, which the game scales to the sprite's."""
+    """A placed flat's mesh as a GLB, which the game draws at its sprite's width from the GLB's own width across (x)."""
     form, variant = PLACED[(archive, record)]
     rgba = sprite(archive, record)
     seed = archive * 100 + record
@@ -1035,9 +1036,7 @@ def placed(archive, record):
     folder.mkdir(parents=True, exist_ok=True)
     name = f"{'logs' if form == LOGS_FORM else 'stalagmite'}-{archive}-{record}.glb"
     write_glb(folder / name, [(part["role"], texture, None, p[idx], n[idx], uv[idx])])
-    footprint = round(float(np.ptp(p[:, 0])), 3)
-    print(f"{archive}-{record}: {name}, {len(idx) // 3} triangles, footprint {footprint}")
-    return name, footprint
+    print(f"{archive}-{record}: {name}, {len(idx) // 3} triangles, {float(np.ptp(p[:, 0])):.3f} m across")
 
 
 def main():

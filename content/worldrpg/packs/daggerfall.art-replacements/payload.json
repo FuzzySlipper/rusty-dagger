@@ -50255,8 +50255,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/corpse-bones.glb",
     "byteLength": 855396,
-    "sha256": "b68046217c9e27fc273f3c22d44fee84f18c2465d07e0268b90eaf8c6fca5411",
-    "footprint": 2.15
+    "sha256": "b68046217c9e27fc273f3c22d44fee84f18c2465d07e0268b90eaf8c6fca5411"
    },
    {
     "replaces": {
@@ -50265,8 +50264,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/corpse-bones.glb",
     "byteLength": 855396,
-    "sha256": "b68046217c9e27fc273f3c22d44fee84f18c2465d07e0268b90eaf8c6fca5411",
-    "footprint": 2.15
+    "sha256": "b68046217c9e27fc273f3c22d44fee84f18c2465d07e0268b90eaf8c6fca5411"
    },
    {
     "replaces": {
@@ -50275,8 +50273,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/logs-213-11.glb",
     "byteLength": 39564,
-    "sha256": "6cfb4f209a7a4321ead8b57ea7f488326d8e1e19f1485e2deaafedfba4bc61b2",
-    "footprint": 1.954
+    "sha256": "6cfb4f209a7a4321ead8b57ea7f488326d8e1e19f1485e2deaafedfba4bc61b2"
    },
    {
     "replaces": {
@@ -50285,8 +50282,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/logs-213-12.glb",
     "byteLength": 41400,
-    "sha256": "7e41e294b8d5456061c942212581aae79fa282151b6a96d10c560feedef98e1f",
-    "footprint": 2.129
+    "sha256": "7e41e294b8d5456061c942212581aae79fa282151b6a96d10c560feedef98e1f"
    },
    {
     "replaces": {
@@ -50295,8 +50291,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/stalagmite-300-6.glb",
     "byteLength": 37264,
-    "sha256": "a52ba934423437749634c4dd7890d7f2ae6aeea59c7b75caecfc3063ec07f04c",
-    "footprint": 0.337
+    "sha256": "a52ba934423437749634c4dd7890d7f2ae6aeea59c7b75caecfc3063ec07f04c"
    },
    {
     "replaces": {
@@ -50305,8 +50300,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/stalagmite-300-7.glb",
     "byteLength": 37268,
-    "sha256": "94e4bc284a50a75cd6c763a7fd2302ab472fa10998d369265ae736bb7ef8cc09",
-    "footprint": 0.781
+    "sha256": "94e4bc284a50a75cd6c763a7fd2302ab472fa10998d369265ae736bb7ef8cc09"
    },
    {
     "replaces": {
@@ -50315,8 +50309,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/stalagmite-300-8.glb",
     "byteLength": 37336,
-    "sha256": "54e530e7c9d12199dacf5f25a3264adba00687a735deb1b4bd2a99974954808c",
-    "footprint": 0.616
+    "sha256": "54e530e7c9d12199dacf5f25a3264adba00687a735deb1b4bd2a99974954808c"
    },
    {
     "replaces": {
@@ -50325,8 +50318,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/stalagmite-300-9.glb",
     "byteLength": 37324,
-    "sha256": "5119073ebd84653657c1bcd070304c067dcbbe5f9ee45e8af9d8f272bb8fef5f",
-    "footprint": 0.572
+    "sha256": "5119073ebd84653657c1bcd070304c067dcbbe5f9ee45e8af9d8f272bb8fef5f"
    },
    {
     "replaces": {
@@ -50335,8 +50327,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/stalagmite-300-10.glb",
     "byteLength": 37228,
-    "sha256": "25bfa6dedafe2a7a74ab9f254306fb3aeff0fb7b240797ae98b820ab7732f154",
-    "footprint": 0.428
+    "sha256": "25bfa6dedafe2a7a74ab9f254306fb3aeff0fb7b240797ae98b820ab7732f154"
    },
    {
     "replaces": {
@@ -50345,8 +50336,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/stalagmite-300-11.glb",
     "byteLength": 37320,
-    "sha256": "f75d179f5667a5ace962e2ba1a12b63029d23867391e70270bc9e774c1e6c1c3",
-    "footprint": 1.178
+    "sha256": "f75d179f5667a5ace962e2ba1a12b63029d23867391e70270bc9e774c1e6c1c3"
    },
    {
     "replaces": {
@@ -50355,8 +50345,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/stalagmite-300-12.glb",
     "byteLength": 37164,
-    "sha256": "19bea257e42bf2650ddb798a285dab611e0984bcd963d43b1d3d5b61979beda7",
-    "footprint": 0.585
+    "sha256": "19bea257e42bf2650ddb798a285dab611e0984bcd963d43b1d3d5b61979beda7"
    },
    {
     "replaces": {
@@ -50365,8 +50354,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/stalagmite-300-13.glb",
     "byteLength": 37312,
-    "sha256": "ab3b09fae46f0e1e5513b3bc3a53ac81eb1c40fbe107ce8dbd674aa241b06602",
-    "footprint": 1.544
+    "sha256": "ab3b09fae46f0e1e5513b3bc3a53ac81eb1c40fbe107ce8dbd674aa241b06602"
    },
    {
     "replaces": {
@@ -50375,8 +50363,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/stalagmite-300-14.glb",
     "byteLength": 37168,
-    "sha256": "ab4b57f06de34a99d6af52f0eb939316a45e72245d9b882c7dd88685516040e9",
-    "footprint": 0.672
+    "sha256": "ab4b57f06de34a99d6af52f0eb939316a45e72245d9b882c7dd88685516040e9"
    },
    {
     "replaces": {
@@ -50385,8 +50372,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/stalagmite-300-15.glb",
     "byteLength": 37324,
-    "sha256": "953dccf022cc3dc29268af1b3e671333f1b29ebb55dee5332abe5794f77bd357",
-    "footprint": 0.694
+    "sha256": "953dccf022cc3dc29268af1b3e671333f1b29ebb55dee5332abe5794f77bd357"
    },
    {
     "replaces": {
@@ -50395,8 +50381,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/barrel-205-0.glb",
     "byteLength": 49224,
-    "sha256": "6574e287e594b41da2abcc7daf6a3e85fdb6c75f901fb60953d76cc27fbcc807",
-    "footprint": 1.016
+    "sha256": "6574e287e594b41da2abcc7daf6a3e85fdb6c75f901fb60953d76cc27fbcc807"
    },
    {
     "replaces": {
@@ -50406,7 +50391,6 @@
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/lamp-wooden-lantern.glb",
     "byteLength": 24588,
     "sha256": "b79b85d403d66c23bfe9130c3027ed13bfa4e2c85bf34ddad09123966045dc0e",
-    "footprint": 0.35,
     "glow": [
      0
     ]
@@ -50419,7 +50403,6 @@
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/lamp-copper-globe.glb",
     "byteLength": 35628,
     "sha256": "cfe6a2935582a9e243021a0ed76d8cf1b195edace32d55f15d31f96a8545c0d8",
-    "footprint": 0.328,
     "glow": [
      0
     ]
@@ -50432,7 +50415,6 @@
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/lamp-iron-globe.glb",
     "byteLength": 42696,
     "sha256": "9bca78368093c96ff310e0fb672464648a1c12d9772d5ef74d637f9e82a640b0",
-    "footprint": 0.712,
     "glow": [
      0
     ]
@@ -50445,7 +50427,6 @@
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/lamp-iron-lantern.glb",
     "byteLength": 31272,
     "sha256": "61c54efc6fdb5317dbd14836328aaa2766cbbf0f47620e0578a15461e177acf6",
-    "footprint": 0.524,
     "glow": [
      0
     ]
@@ -50457,8 +50438,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/well.glb",
     "byteLength": 52424,
-    "sha256": "db750e4e1e5c87909536535e97a8ff871db29abcecd039d741b6b7e360dfc2ce",
-    "footprint": 1.97
+    "sha256": "db750e4e1e5c87909536535e97a8ff871db29abcecd039d741b6b7e360dfc2ce"
    },
    {
     "replaces": {
@@ -50467,8 +50447,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/haystack.glb",
     "byteLength": 59432,
-    "sha256": "659b3e7f5bf54833dff04dad1c5347ba54286b625fadf9e8a9363ce8b47839bc",
-    "footprint": 1.922
+    "sha256": "659b3e7f5bf54833dff04dad1c5347ba54286b625fadf9e8a9363ce8b47839bc"
    },
    {
     "replaces": {
@@ -50477,8 +50456,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/fountain-spire.glb",
     "byteLength": 1981532,
-    "sha256": "39df944eba9ac878bae86abb8e7722e27799fb02cdd2954b195cc338883c00fc",
-    "footprint": 1.95
+    "sha256": "39df944eba9ac878bae86abb8e7722e27799fb02cdd2954b195cc338883c00fc"
    },
    {
     "replaces": {
@@ -50487,8 +50465,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/fountain-column.glb",
     "byteLength": 1788396,
-    "sha256": "d036b1481867fb1051af8c0620f31925184348cf6841640e9de17e66d99c0413",
-    "footprint": 1.961
+    "sha256": "d036b1481867fb1051af8c0620f31925184348cf6841640e9de17e66d99c0413"
    },
    {
     "replaces": {
@@ -50497,8 +50474,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/pump-green.glb",
     "byteLength": 198216,
-    "sha256": "befebf96a49f58c9f7ea8e64fd1f9ec44708a4e7e05d95ebb7b040ed7859b83b",
-    "footprint": 0.67
+    "sha256": "befebf96a49f58c9f7ea8e64fd1f9ec44708a4e7e05d95ebb7b040ed7859b83b"
    },
    {
     "replaces": {
@@ -50507,8 +50483,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/pump-iron.glb",
     "byteLength": 209016,
-    "sha256": "152e3d6230f9c276d1c5f8c6cf231f07c241b29ae904396d7b53183f8e3ca688",
-    "footprint": 0.673
+    "sha256": "152e3d6230f9c276d1c5f8c6cf231f07c241b29ae904396d7b53183f8e3ca688"
    },
    {
     "replaces": {
@@ -50517,8 +50492,7 @@
     },
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/handcart.glb",
     "byteLength": 1327348,
-    "sha256": "8f0001a4eaeda80a50d98da38727aa5ae15f3b4e9c9e1f0288c2f0522980ef8d",
-    "footprint": 3.673
+    "sha256": "8f0001a4eaeda80a50d98da38727aa5ae15f3b4e9c9e1f0288c2f0522980ef8d"
    }
   ],
   "surfaces": [

@@ -24,7 +24,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private IPresentationService? particles;
     private RenderResource? particleGlow;
     private IAnimationService? meshes;
-    private readonly Dictionary<(int Archive, int Record), (RenderResource Model, DaggerfallArtMesh Art)> worldMeshes = [];
+    private readonly Dictionary<(int Archive, int Record), (RenderResource Model, float Width, IReadOnlyList<uint> Glow)> worldMeshes = [];
 
     /// <summary>
     /// Admits the refreshed set's world effects and particle glow, drawn whenever <paramref name="refreshed"/> answers
@@ -48,17 +48,20 @@ internal sealed partial class DaggerfallSiteAppearance
             ownedResources.Add(texture.Handle);
             particleGlow = texture.Handle;
         }
-        Dictionary<string, RenderResource> models = new(StringComparer.Ordinal);
+        // Each model is drawn at its sprite's width from its width across (x), as the Engine admitted it.
+        Dictionary<string, (RenderResource Model, float Width)> models = new(StringComparer.Ordinal);
         foreach (var ((archive, record), mesh) in art.Meshes)
         {
-            if (!models.TryGetValue(mesh.File.Path, out RenderResource? model))
+            if (!models.TryGetValue(mesh.File.Path, out var model))
             {
                 using ContentReference reference = content.ResolveReference(new ContentResolveRequest(mesh.File.Path, mesh.File.Sha256));
-                model = animation.OpenAnimatedMeshFromContent(new(reference));
-                ownedResources.Add(model);
+                RenderResource opened = animation.OpenAnimatedMeshFromContent(new(reference));
+                ownedResources.Add(opened);
+                AnimatedMeshInfo info = animation.ReadMeshInfo(opened);
+                model = (opened, info.BoundsMax.X - info.BoundsMin.X);
                 models.Add(mesh.File.Path, model);
             }
-            worldMeshes.Add((archive, record), (model, mesh));
+            worldMeshes.Add((archive, record), (model.Model, model.Width, mesh.Glow));
         }
         foreach (ActorVisual visual in actors.Values) AttachCorpseMesh(visual);
         foreach (DecorationVisual flat in decorations) AttachDecorationMesh(flat);
@@ -71,7 +74,7 @@ internal sealed partial class DaggerfallSiteAppearance
     /// </summary>
     private (Appearance Appearance, float Scale, IReadOnlyList<uint> Glow)? WorldMesh((int Archive, int Record)? source, float width) =>
         source is { } key && meshes is not null && worldMeshes.TryGetValue(key, out var mesh)
-            ? (meshes.CreateAnimatedMeshAppearance(new(mesh.Model)), (float)(width / mesh.Art.Footprint), mesh.Art.Glow) : null;
+            ? (meshes.CreateAnimatedMeshAppearance(new(mesh.Model)), width / mesh.Width, mesh.Glow) : null;
 
     /// <summary>Gives an actor whose corpse sprite has a refreshed mesh its own appearance of that mesh.</summary>
     private void AttachCorpseMesh(ActorVisual visual)

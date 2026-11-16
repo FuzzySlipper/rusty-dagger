@@ -124,7 +124,7 @@ internal static class ModelMeshCommand
         // for a classic identity, by its PNG, with the identity and its other PNGs beside it.
         string Material(RemodelPart part)
         {
-            string material = part.Png is null ? part.ClassicMaterial! : Texture(part.Png, part.Mask, part.Strip, part.Unlit);
+            string material = part.Png is null ? part.ClassicMaterial! : Texture(part.Png, part.Mask, part.Strip, part.Unlit, part.ClassicMaterial);
             if (part is { ClassicMaterial: { } identity, Png: not null })
                 painted.TryAdd(material, (identity, (part.Drawn ?? new Dictionary<string, byte[]>()).ToDictionary(pair => pair.Key, pair => Texture(pair.Value, false), StringComparer.Ordinal)));
             string name = part.Shell is { } shell ? string.Create(CultureInfo.InvariantCulture, $"{material}/shell-{shell.Layer}-of-{shell.Layers}") : material;
@@ -133,10 +133,12 @@ internal static class ModelMeshCommand
         }
 
         // A carried texture is published beside the mesh, numbered in the order the GLB's materials name them; one drawn
-        // two ways (opaque and cut out, or as a strip and still) is published once for each.
-        string Texture(byte[] png, bool mask, RemodelStrip? strip = null, bool unlit = false)
+        // two ways (opaque and cut out, as a strip and still, or painted for a classic identity, another or none) is
+        // published once for each, so each way is a slot of its own.
+        string Texture(byte[] png, bool mask, RemodelStrip? strip = null, bool unlit = false, string? paint = null)
         {
-            string? known = textures.FirstOrDefault(pair => (pair.Value.Mask, pair.Value.Strip, pair.Value.Unlit) == (mask, strip, unlit) && pair.Value.Png.AsSpan().SequenceEqual(png)).Key;
+            string? known = textures.FirstOrDefault(pair => (pair.Value.Mask, pair.Value.Strip, pair.Value.Unlit, painted.GetValueOrDefault(pair.Key).Identity) == (mask, strip, unlit, paint)
+                && pair.Value.Png.AsSpan().SequenceEqual(png)).Key;
             if (known is not null) return known;
             string path = string.Create(CultureInfo.InvariantCulture, $"{contentPath}/{model}-{textures.Count}.png");
             textures.Add(path, (png, mask, strip, unlit));
