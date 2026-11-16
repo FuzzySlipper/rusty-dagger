@@ -364,6 +364,12 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <summary>Grows trees with meshes as meshes or as their sprites for this run.</summary>
     internal void UseTreeMeshes(bool meshes) => _flora.UseTreeMeshes(meshes);
 
+    /// <summary>Grows the nature the drawn locations place among the flora, where its record grows as a mesh.</summary>
+    internal void PlaceNature(IReadOnlyList<DaggerfallPlacedNature> placed) => _flora.Place(placed);
+
+    /// <summary>Whether flora grows placed nature of a record now, so its location leaves it out.</summary>
+    internal bool GrowsPlaced((int Archive, int Record) record) => _flora.GrowsPlaced(record);
+
     /// <summary>For tuning by eye: a new lift and haze, every tile sampled again.</summary>
     internal void Adjust(double lift, double fogDensity)
     {

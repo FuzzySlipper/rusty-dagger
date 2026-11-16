@@ -11,7 +11,8 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// record is a sprite layer that grows on its own climate's ground, as often as the others, where the ground's look keeps the
 /// donor's chance, and shrinks away before its reach, so nothing pops at the edge. Its units are the map's, (0, 0) at map
 /// pixel (0, 0), so the same ground grows the same plants whichever way the player arrived; it stands in near ground's
-/// session and is made again when that frame moves. Classic art keeps the donor's placement in the walked cells instead.
+/// session and is made again when that frame moves. Nature a location places (<see cref="Place"/>) grows here too where its
+/// record grows as a mesh, as its record's own copies. Classic art keeps the donor's placement in the walked cells instead.
 /// </summary>
 internal sealed class DaggerfallFloraField : IDisposable
 {
@@ -48,6 +49,18 @@ internal sealed class DaggerfallFloraField : IDisposable
     private int _winter = -1;
     /// <summary>The nature archives the workers have found ground of, a bit each from the first.</summary>
     private int _found;
+    /// <summary>
+    /// The nature the drawn locations place, and its summer and winter archives, a bit each from the first: the season's
+    /// grow wherever the ground is.
+    /// </summary>
+    private IReadOnlyList<DaggerfallPlacedNature> _placed = [];
+    private (int Summer, int Winter) _placedArchives;
+    /// <summary>
+    /// The placed nature whose records grow as meshes, as copies of their layers: what the workers add to each tile. Set
+    /// again when the placed nature or the layers change.
+    /// </summary>
+    private PlacedCopy[] _copies = [];
+    private bool _copiesStale;
     private bool _disposed;
 
     /// <param name="grass">
@@ -108,11 +121,78 @@ internal sealed class DaggerfallFloraField : IDisposable
         int underfoot = _ground.NatureArchive(local.X + (frame.MapX * DaggerfallExteriorCellResidency.CellSize),
             local.Z + (frame.MapY * DaggerfallExteriorCellResidency.CellSize), winter) - DaggerfallNatureArchives.First;
         Interlocked.Or(ref _found, 1 << underfoot);
-        int found = Volatile.Read(ref _found);
+        int found = Volatile.Read(ref _found) | (winter ? _placedArchives.Winter : _placedArchives.Summer);
         for (int index = 0; index < DaggerfallNatureArchives.Count; index++)
             if ((found & (1 << index)) != 0 && _grown.Add(index)) Grow(DaggerfallNatureArchives.First + index, looks);
+        if (_copiesStale) Copy();
         _streamer!.Update();
     }
+
+    /// <summary>
+    /// Grows the nature the drawn locations place where they place it, as its season's record: one that grows as a mesh
+    /// is a copy of its layer there, with the layer's card, shade, wind and snow, and the location draws the rest
+    /// (<see cref="GrowsPlaced"/>). The season's archives grow whether or not the workers have found their ground.
+    /// </summary>
+    internal void Place(IReadOnlyList<DaggerfallPlacedNature> placed)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        _placed = placed ?? throw new ArgumentNullException(nameof(placed));
+        _placedArchives = placed.Aggregate((Summer: 0, Winter: 0),
+            (bits, nature) => (bits.Summer | Bit(nature.Summer.Archive), bits.Winter | Bit(nature.Winter.Archive)));
+        _copiesStale = true;
+    }
+
+    private static int Bit(int archive) => DaggerfallNatureArchives.Contains(archive)
+        ? 1 << (archive - DaggerfallNatureArchives.First)
+        : throw new ArgumentException($"Placed nature names archive {archive}, which is no nature archive.");
+
+    /// <summary>
+    /// Whether placed nature of a record grows in the field now, so its location leaves it out: the field is shown and grows
+    /// the record as a mesh.
+    /// </summary>
+    internal bool GrowsPlaced((int Archive, int Record) record) =>
+        _field is not null && _seen && _layers.TryGetValue(Layer(record.Archive, record.Record), out Grown? grown) && grown.Mesh;
+
+    /// <summary>
+    /// Sets the copies the workers add for placed nature from the layers grown now, with each mesh layer's budget, and has
+    /// each tile whose copies changed sampled again, and no other: a town arriving beside another resamples its own ground.
+    /// </summary>
+    private void Copy()
+    {
+        _copiesStale = false;
+        foreach (int index in _grown)
+        for (int record = 1; record <= Records; record++)
+        {
+            uint layer = Layer(DaggerfallNatureArchives.First + index, record);
+            if (_layers.TryGetValue(layer, out Grown? grown) && grown.Mesh) Set(DaggerfallNatureArchives.First + index, layer, grown);
+        }
+        PlacedCopy[] old = _copies;
+        PlacedCopy[] copies = [.. _placed
+            .Select(nature => new PlacedCopy(nature.X, nature.Height, nature.Z, MeshLayer(nature.Summer), MeshLayer(nature.Winter), Yaw(nature)))
+            .Where(copy => copy.Summer is not null || copy.Winter is not null)];
+        Volatile.Write(ref _copies, copies);
+        const double tile = TileCells * CellMetres;
+        foreach (PlacedCopy moved in old.Except(copies).Concat(copies.Except(old)).DistinctBy(copy => (Math.Floor(copy.X / tile), Math.Floor(copy.Z / tile))))
+            _engine.Vegetation.Invalidate(new(_field!, moved.X, moved.Z, moved.X, moved.Z));
+    }
+
+    private uint? MeshLayer((int Archive, int Record) record) =>
+        _layers.TryGetValue(Layer(record.Archive, record.Record), out Grown? grown) && grown.Mesh ? Layer(record.Archive, record.Record) : null;
+
+    /// <summary>
+    /// How far placed nature turns about the vertical, as a wild copy turns its own way: a hash of the metre it stands in,
+    /// so it stands the same way on every visit, whatever frame its point was measured in.
+    /// </summary>
+    private static float Yaw(DaggerfallPlacedNature nature)
+    {
+        ulong key = unchecked(((ulong)(long)Math.Round(nature.X) * 0x9E3779B97F4A7C15UL) ^ ((ulong)(long)Math.Round(nature.Z) * 0xC2B2AE3D27D4EB4FUL));
+        key = unchecked((key ^ (key >> 33)) * 0xFF51AFD7ED558CCDUL);
+        key ^= key >> 33;
+        return (float)((key >> 11) * (1.0 / (1UL << 53)) * Math.Tau);
+    }
+
+    /// <summary>One piece of placed nature as the workers copy it: its field point, its summer and winter layers (none where that record is no mesh) and its turn.</summary>
+    private readonly record struct PlacedCopy(double X, float Height, double Z, uint? Summer, uint? Winter, float Yaw);
 
     /// <summary>
     /// Where the field's (0, 0, 0) stands in near ground's frame at map pixel <paramref name="frame"/>: at the map's own
@@ -154,6 +234,8 @@ internal sealed class DaggerfallFloraField : IDisposable
         _layers.Clear();
         _grown.Clear();
         Volatile.Write(ref _found, 0);
+        Volatile.Write(ref _copies, []);
+        _copiesStale = true;
     }
 
     /// <summary>
@@ -173,7 +255,6 @@ internal sealed class DaggerfallFloraField : IDisposable
     /// </summary>
     private void Grow(int archive, Func<int, int, DaggerfallFloraLook?> looks)
     {
-        float density = _density * _archiveDensity.GetValueOrDefault(archive, 1) / TileArea / Records;
         for (int record = 1; record <= Records; record++)
         {
             uint layer = Layer(archive, record);
@@ -182,24 +263,34 @@ internal sealed class DaggerfallFloraField : IDisposable
                 if (looks(archive, record) is not { } look) continue;
                 grown = _treeMeshes && look.Tree is { } tree ? Tree(tree, look) : Sprite(look);
                 _layers.Add(layer, grown);
+                _copiesStale |= grown.Mesh;
             }
 
-            float reach = _tuning.ReachOf(grown.Height);
-            _engine.Vegetation.SetLayer(new VegetationLayerRequest(_field!, layer, grown.Look, default, density, reach) with
-            {
-                Grounds = VegetationLayerRequest.Ground((uint)(archive - DaggerfallNatureArchives.First)),
-                SlopeLimitDegrees = _tuning.SlopeLimitDegrees,
-                // The Engine wants a fade short of the reach; a short record's reach is all fade otherwise.
-                Fade = Math.Min(_tuning.Fade, reach / 2),
-                Seed = layer,
-                MaximumInstances = (uint)Math.Min(uint.MaxValue, Math.Ceiling(MathF.PI * reach * reach * density * Headroom)),
-                // A tree in the round casts its shade; a billboard can cast none.
-                CastsShadows = grown.Mesh,
-            });
+            Set(archive, layer, grown);
             // Far enough out to be small on screen, a tree mesh is a card the renderer bakes of it, as cheap as its sprite.
             if (grown.Mesh) _engine.Vegetation.SetLayerDetail(new VegetationLayerDetailRequest(_field!, layer,
                 new[] { VegetationLod.ImpostorOf(grown.Look, _tuning.TreeImpostorHeights * grown.Height) }, ImpostorBand, ReadOnlyMemory<VegetationThinningPoint>.Empty, 1));
         }
+    }
+
+    /// <summary>Sets a record's layer as it grows now; the Engine keeps a layer set again unchanged as it is.</summary>
+    private void Set(int archive, uint layer, Grown grown)
+    {
+        float density = _density * _archiveDensity.GetValueOrDefault(archive, 1) / TileArea / Records;
+        float reach = _tuning.ReachOf(grown.Height);
+        _engine.Vegetation.SetLayer(new VegetationLayerRequest(_field!, layer, grown.Look, default, density, reach) with
+        {
+            Grounds = VegetationLayerRequest.Ground((uint)(archive - DaggerfallNatureArchives.First)),
+            SlopeLimitDegrees = _tuning.SlopeLimitDegrees,
+            // The Engine wants a fade short of the reach; a short record's reach is all fade otherwise.
+            Fade = Math.Min(_tuning.Fade, reach / 2),
+            Seed = layer,
+            // Placed copies count against the budget as grown ones do, so they are added to it, however thin the wild growth.
+            MaximumInstances = (uint)Math.Min(uint.MaxValue, Math.Ceiling(MathF.PI * reach * reach * density * Headroom)
+                + (grown.Mesh ? _placed.Count(nature => Layer(nature.Summer.Archive, nature.Summer.Record) == layer || Layer(nature.Winter.Archive, nature.Winter.Record) == layer) : 0)),
+            // A tree in the round casts its shade; a billboard can cast none.
+            CastsShadows = grown.Mesh,
+        });
     }
 
     /// <summary>How far a tree mesh and its card overlap, dithered, as one gives way to the other.</summary>
@@ -358,15 +449,29 @@ internal sealed class DaggerfallFloraField : IDisposable
         Drop();
     }
 
-    /// <summary>Samples flora's ground on the streamer's workers, noting each climate's archive it finds.</summary>
+    /// <summary>Samples flora's ground on the streamer's workers, noting each climate's archive it finds, and copies the placed nature standing on it.</summary>
     private sealed class Sampler(DaggerfallFloraField owner) : IVegetationSampler
     {
         public void Sample(VegetationTileRequest tile, VegetationTileSamples samples)
         {
-            owner._ground.SampleFlora(tile, samples, Volatile.Read(ref owner._winter) == 1, owner._tuning, owner._grass);
+            bool winter = Volatile.Read(ref owner._winter) == 1;
+            owner._ground.SampleFlora(tile, samples, winter, owner._tuning, owner._grass);
             int found = 0;
             foreach (uint ground in samples.Grounds ?? []) found |= 1 << (int)ground;
             Interlocked.Or(ref owner._found, found);
+            double size = tile.TileCells * tile.CellSize;
+            foreach (PlacedCopy copy in Volatile.Read(ref owner._copies))
+            {
+                double x = copy.X - tile.OriginX, z = copy.Z - tile.OriginZ;
+                if (x >= 0 && x < size && z >= 0 && z < size && (winter ? copy.Winter : copy.Summer) is uint layer)
+                    samples.Records.Add(new VegetationRecord(layer, new Vector3((float)x, copy.Height, (float)z), copy.Yaw, 1));
+            }
         }
     }
 }
+
+/// <summary>
+/// Nature a location places, as the flora field grows it: its foot as a point of the field (map metres, and near ground's
+/// height), and the record it is in summer and in winter.
+/// </summary>
+internal readonly record struct DaggerfallPlacedNature(double X, float Height, double Z, (int Archive, int Record) Summer, (int Archive, int Record) Winter);

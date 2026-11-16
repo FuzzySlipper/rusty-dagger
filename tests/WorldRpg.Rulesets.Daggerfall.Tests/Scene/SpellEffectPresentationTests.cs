@@ -62,6 +62,7 @@ public sealed class SpellEffectPresentationTests
         content.Add("refreshed/lamp.png", Hash);
         content.Add("refreshed/lamp-glow.png", Hash);
         content.Add("refreshed/orb.png", Hash);
+        content.Add("sprite/tree.png", Hash);
         AppearanceFake graphics = new(releases);
         DaggerfallSiteAppearance presentation = new(content, graphics, MediaInputs(classic: ClassicEffects(fireSpell: true), corpse: corpse, decorations: decorations));
         PresentationRecorder particles = PresentationRecorder.Create();
@@ -271,6 +272,43 @@ public sealed class SpellEffectPresentationTests
         Publish(presentation, actors);
         Appearance classic = Assert.Single(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(4, .5F, 6)).Appearance;
         Assert.NotEqual(drawn, classic);
+    }
+
+    /// <summary>
+    /// A placed tree whose drawn season's record the flora field grows is left to the field, which draws it as its record's
+    /// mesh where the site says it stands; a record the field does not grow, or a season it does not, draws as the sprite.
+    /// </summary>
+    [Fact]
+    public void A_placed_tree_the_flora_field_grows_is_left_to_it_in_the_season_it_grows()
+    {
+        NormalizedBillboardSprite tree = new("sprite/tree.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, 0F), new Vector2(3F, 6F));
+        NormalizedBillboardSprite well = new("sprite/well.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(2F, 3F));
+        DaggerfallSiteDecoration placed = new("flat-1", new WorldPoint(4, 2, 6), true, tree, tree, (504, 3), (505, 3));
+        DaggerfallSiteDecoration street = new("flat-2", new WorldPoint(9, .5F, 6), false, well, well, (212, 0), (212, 0));
+        var (presentation, graphics, _) = Compose(() => true, decorations: [placed, street]);
+        using DaggerfallSiteAppearance owned = presentation;
+        using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
+        HashSet<(int, int)> grown = [(504, 3)];
+        presentation.UseNatureField(grown.Contains);
+
+        // Only nature from the nature archives is the field's to grow, from the floor its sprite stands on.
+        Assert.Equal([(new Vector3(4, 2, 6), (504, 3), (505, 3))], presentation.PlacedNature());
+        Publish(presentation, actors);
+        Assert.DoesNotContain(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(4, 2, 6));
+        Assert.Contains(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(9, .5F, 6));
+
+        // Winter draws the winter record, which the field does not grow here, so the site draws its sprite.
+        presentation.SetExteriorSeason(World.DaggerfallExteriorSeason.Winter);
+        Publish(presentation, actors);
+        Assert.Contains(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(4, 2, 6));
+        grown.Add((505, 3));
+        Publish(presentation, actors);
+        Assert.DoesNotContain(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(4, 2, 6));
+
+        // Classic art, a hidden field or one growing sprites grows none, and the site draws the tree again.
+        grown.Clear();
+        Publish(presentation, actors);
+        Assert.Contains(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(4, 2, 6));
     }
 
     [Fact]

@@ -1235,6 +1235,27 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
     internal IEnumerable<DaggerfallSiteAppearance> ResidentAppearances =>
         _residentExteriorLocations.Values.Select(resident => resident.Projection.Appearance);
 
+    /// <summary>The locations whose placed nature flora was last given.</summary>
+    private DaggerfallSiteAppearance[] _placingNature = [];
+
+    /// <summary>
+    /// The nature the drawn locations place (the active one while its location is loaded, and every resident neighbour),
+    /// as points of flora's field in <paramref name="origin"/>'s frame, when those locations are not the ones it was last
+    /// given for; null when they are. A point of the field is a map point, so a rebase or a new frame leaves it as it was.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallPlacedNature>? PlacedNatureIfChanged(DaggerfallExteriorWorldOrigin origin)
+    {
+        IEnumerable<DaggerfallSiteAppearance> drawn = (ActiveLocationLoaded ? [Projection.Appearance] : Array.Empty<DaggerfallSiteAppearance>())
+            .Concat(ResidentAppearances);
+        if (drawn.SequenceEqual(_placingNature)) return null;
+        _placingNature = [.. drawn];
+        return [.. _placingNature.SelectMany(location => location.PlacedNature()).Select(nature =>
+        {
+            (double x, double y, double z) = DaggerfallFloraField.FieldPoint((origin.MapPixelX, origin.MapPixelY), nature.Foot - origin.Compensation);
+            return new DaggerfallPlacedNature(x, (float)y, z, nature.Summer, nature.Winter);
+        })];
+    }
+
     /// <summary>
     /// Completes the active appearance's snapshot with the exterior window: every resident neighbour's meshes,
     /// doors, gates, action models and actors under its own location slot, then the terrain and its nature batches.

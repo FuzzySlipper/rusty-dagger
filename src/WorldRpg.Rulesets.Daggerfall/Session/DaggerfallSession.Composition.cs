@@ -1254,6 +1254,7 @@ internal sealed partial class DaggerfallSession
         appearance.UseViewLight(_engine.Tween, _viewLight);
         appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
         appearance.UsePeopleRigs(() => _peopleRigs?.Crowd);
+        appearance.UseNatureField(record => _horizon.GrowsPlaced(record));
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
             appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem, HeldShield, equipment => HeldArms(art, equipment));
         if (_composition.ArtReplacements is { } refreshed)

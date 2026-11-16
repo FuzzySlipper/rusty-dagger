@@ -85,6 +85,12 @@ internal class EngineContextFake : DispatchProxy
     internal bool FloraVisible => ((VegetationServiceFake)(object)vegetation).Visible;
     /// <summary>The flora layers set, in order.</summary>
     internal IReadOnlyList<VegetationLayerRequest> FloraLayers => ((VegetationServiceFake)(object)vegetation).Layers;
+    /// <summary>The tiles flora's field asks to be sampled at its next reading, which a test lays out.</summary>
+    internal Queue<VegetationTileRequest> FloraRequests => ((VegetationServiceFake)(object)vegetation).Requests;
+    /// <summary>The flora tiles committed, in order.</summary>
+    internal IReadOnlyList<VegetationTileCommit> FloraCommits => ((VegetationServiceFake)(object)vegetation).Commits;
+    /// <summary>The flora rectangles sampled again, in order.</summary>
+    internal IReadOnlyList<VegetationInvalidateRequest> FloraInvalidated => ((VegetationServiceFake)(object)vegetation).Invalidated;
     private IAuthoredContentService authored = ServiceProxy<IAuthoredContentService, AuthoredContentFake>.Create();
     // A content source that answers nothing: the held workbench's tunables page is built over it and never saves here.
     private readonly IContentSourceService contentSource = ServiceProxy<IContentSourceService, ServiceProxy<IContentSourceService, DispatchProxy>>.Create();
@@ -181,11 +187,14 @@ internal class EngineContextFake : DispatchProxy
         }
     }
 
-    /// <summary>A vegetation field that asks for no tiles unless told to: it records what is made, set and shown.</summary>
+    /// <summary>A vegetation field that asks for no tiles unless told to: it records what is made, set, shown, committed and sampled again.</summary>
     private class VegetationServiceFake : DispatchProxy
     {
         internal bool Visible { get; private set; }
         internal List<VegetationLayerRequest> Layers { get; } = [];
+        internal Queue<VegetationTileRequest> Requests { get; } = [];
+        internal List<VegetationTileCommit> Commits { get; } = [];
+        internal List<VegetationInvalidateRequest> Invalidated { get; } = [];
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments)
         {
@@ -201,7 +210,15 @@ internal class EngineContextFake : DispatchProxy
                     Layers.Add((VegetationLayerRequest)arguments![0]!);
                     break;
                 case nameof(IVegetationService.ReadRequests):
-                    return ReadOnlyMemory<VegetationTileRequest>.Empty;
+                    VegetationTileRequest[] asked = [.. Requests];
+                    Requests.Clear();
+                    return new ReadOnlyMemory<VegetationTileRequest>(asked);
+                case nameof(IVegetationService.CommitTile):
+                    Commits.Add((VegetationTileCommit)arguments![0]!);
+                    return new VegetationCommitReceipt(true);
+                case nameof(IVegetationService.Invalidate):
+                    Invalidated.Add((VegetationInvalidateRequest)arguments![0]!);
+                    break;
             }
             return method!.ReturnType.IsValueType && method.ReturnType != typeof(void) ? Activator.CreateInstance(method.ReturnType) : null;
         }

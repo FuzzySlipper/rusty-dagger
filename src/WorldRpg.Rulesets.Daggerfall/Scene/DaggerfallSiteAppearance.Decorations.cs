@@ -17,6 +17,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private readonly List<Appearance> glowingDecorations = [];
     private readonly List<(Appearance Mesh, IReadOnlyList<uint> Slots)> glowingMeshes = [];
     private float lampLevel;
+    private Func<(int Archive, int Record), bool> grownInField = _ => false;
 
     private sealed record DecorationVisual(DaggerfallSiteDecoration Definition, DecorationSprite Summer,
         DecorationSprite Winter, ulong Ordinal)
@@ -180,6 +181,22 @@ internal sealed partial class DaggerfallSiteAppearance
         appearance.ControlSpritePlayback(new(result.Playback, SpritePlaybackControl.Start));
     }
 
+    /// <summary>
+    /// Leaves to the flora field each placed nature decoration whose drawn record <paramref name="grown"/> answers the field
+    /// grows, as its record's mesh, where <see cref="PlacedNature"/> says it stands; the site draws the others itself.
+    /// </summary>
+    internal void UseNatureField(Func<(int Archive, int Record), bool> grown) => grownInField = grown;
+
+    /// <summary>Where each placed nature decoration stands in the world, its foot, with its summer and winter records.</summary>
+    internal IEnumerable<(Vector3 Foot, (int Archive, int Record) Summer, (int Archive, int Record) Winter)> PlacedNature() => decorations
+        .Where(flat => DaggerfallNatureArchives.Contains(flat.Definition.Source.Archive))
+        .Select(flat => (Compose(worldAppearance.Transform, new Transform(Foot(flat.Definition), Quaternion.Identity, Vector3.One)).Translation,
+            flat.Definition.Source, flat.Definition.WinterSource));
+
+    /// <summary>The floor a decoration's sprite stands on: its position less its pivot's share of its height.</summary>
+    private static Vector3 Foot(DaggerfallSiteDecoration flat) =>
+        flat.Position.ToVector() - (Vector3.UnitY * (flat.BaseAligned ? 0f : flat.Summer.Pivot.Y * flat.Summer.Size.Y));
+
     /// <summary>The sprite a decoration draws now: its refreshed one while refreshed art is drawn and the set has it, else its classic one.</summary>
     private DecorationSprite DrawnDecoration(DecorationVisual flat) => winterMaterials
         ? (drawRefreshedEffects() ? flat.RefreshedWinter : null) ?? flat.Winter
@@ -190,13 +207,12 @@ internal sealed partial class DaggerfallSiteAppearance
         bool refreshed = drawRefreshedEffects();
         foreach (var flat in decorations)
         {
+            if (grownInField(winterMaterials ? flat.Definition.WinterSource : flat.Definition.Source)) continue;
             if (refreshed && flat.Mesh is { } mesh)
             {
-                // The mesh rests on the floor its sprite stands on: the sprite's position less its pivot's share of its height.
-                NormalizedBillboardSprite sprite = flat.Definition.Summer;
-                float lift = flat.Definition.BaseAligned ? 0f : sprite.Pivot.Y * sprite.Size.Y;
+                // The mesh rests on the floor its sprite stands on.
                 facts.Add(new(DaggerfallPresentationObjectIds.LocationVisual(slot, flat.Ordinal), false, 0,
-                    Compose(worldAppearance.Transform, new Transform(flat.Definition.Position.ToVector() - Vector3.UnitY * lift, Quaternion.Identity, new Vector3(flat.MeshScale))),
+                    Compose(worldAppearance.Transform, new Transform(Foot(flat.Definition), Quaternion.Identity, new Vector3(flat.MeshScale))),
                     mesh, worldAppearance.Visible, worldAppearance.Layer));
                 continue;
             }
