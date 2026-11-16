@@ -42,13 +42,9 @@ public sealed class WorldMediaContentTests
     [Fact]
     public void Every_supported_weapon_and_unarmed_has_complete_normalized_presentation()
     {
-        string root = TestData.RepositoryRoot;
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         NormalizedClassicPresentation classic = inputs.ClassicPresentation;
         Assert.Equal(17, classic.Weapons.Count);
-        Assert.Equal("weapon.longblade", classic.CompatibleItemVisuals["iron-longsword"]);
-        Assert.Equal("weapon.dagger.steel", classic.CompatibleItemVisuals["iron-dagger"]);
         Assert.Equal("weapon.unarmed", classic.UnarmedVisual);
         // The two spare archives and the werecreature form keep stable identities no item selects:
         // the donor names no consumer for the spares, and the form is not an item.
@@ -57,8 +53,6 @@ public sealed class WorldMediaContentTests
         Assert.DoesNotContain("weapon.werecreature", classic.CompatibleItemVisuals.Values);
         Assert.Equal("center", classic.Weapons["weapon.werecreature"].Actions["idle"].Alignment);
         Assert.Equal([0, 1, 2, 3, 4, 5, 6], classic.Weapons["weapon.werecreature"].Actions.Values.Select(action => action.SourceRecordOrdinal).Order());
-        Assert.All(definitions.Items.Values.Where(item => item.Weapon is not null), item =>
-            Assert.True(classic.Weapons.ContainsKey(classic.CompatibleItemVisuals[item.Id.Value])));
         Assert.All(classic.Weapons.Values, weapon =>
         {
             Assert.True(weapon.Actions["idle"].Loops);
@@ -333,26 +327,6 @@ public sealed class WorldMediaContentTests
             Vector2 expected = new(sourceSize.X * worldSize.X / sourceWorldSize.X, sourceSize.Y * worldSize.Y / sourceWorldSize.Y);
             Assert.Equal(expected, Assert.Single(sprite.Frames, frame => frame.Id == frameId).DisplaySize);
         }
-    }
-
-    /// <summary>The base payload's classic selection must select weapon art for weapons: an effect sprite is refused.</summary>
-    [Fact]
-    public void Rejects_a_classic_selection_that_selects_a_non_weapon_sprite()
-    {
-        DaggerfallDefinitions selection = DaggerfallBaseContent.Read(TestPayload.Replaced(
-            ("{ \"itemId\": \"iron-dagger\", \"resource\": \"weapon.dagger.steel\" }", "{ \"itemId\": \"iron-dagger\", \"resource\": \"effect.blood.0\" }")));
-        Assert.Throws<DaggerfallContentException>(() => NormalizedMediaValidationTests.Read(FullContent(TestData.RepositoryRoot), selection));
-    }
-
-    [Fact]
-    public void Rejects_duplicate_weapon_mappings_and_missing_unarmed_media()
-    {
-        DaggerfallDefinitions duplicate = DaggerfallBaseContent.Read(TestPayload.Replaced(
-            ("{ \"itemId\": \"iron-dagger\",", "{ \"itemId\": \"iron-longsword\",")));
-        Assert.Throws<DaggerfallContentException>(() => NormalizedMediaValidationTests.Read(FullContent(TestData.RepositoryRoot), duplicate));
-        DaggerfallDefinitions unarmed = DaggerfallBaseContent.Read(TestPayload.Replaced(
-            ("\"unarmedVisual\": \"weapon.unarmed\"", "\"unarmedVisual\": \"weapon.missing\"")));
-        Assert.Throws<DaggerfallContentException>(() => NormalizedMediaValidationTests.Read(FullContent(TestData.RepositoryRoot), unarmed));
     }
 
     private static Vector2 Vector(JsonElement value) => new(value.GetProperty("x").GetSingle(), value.GetProperty("y").GetSingle());

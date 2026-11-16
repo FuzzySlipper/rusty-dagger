@@ -293,6 +293,62 @@ public sealed class PlayerViewmodelTests
     }
 
     [Fact]
+    public void Every_weapon_item_draws_the_classic_art_its_template_names_and_bare_hands_the_unarmed_art()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        using DaggerfallSiteAppearance presentation = StartSiteAppearance();
+        // The authored weapons, and those made from a template in a material or enchanted, as a merchant or a loot pile hands them over.
+        DaggerfallItemDefinition[] weapons = [.. definitions.Items.Values.Concat(definitions.TemplateItems.Values).Where(item => item.Weapon is not null)];
+        Assert.Contains(weapons, item => item.Template?.Index == 288 && item.Id.Value.Contains("-magic-", StringComparison.Ordinal));
+        foreach (DaggerfallItemDefinition item in weapons)
+        {
+            presentation.UpdateRightHandEquipment(RightHand(item.Id.Value), weaponDrawn: true);
+            Assert.Equal((item.Id.Value, definitions.SourceTemplateFor(item)!.WeaponMediaId), (item.Id.Value, Viewmodel(presentation).Weapon.ResourceId));
+        }
+
+        presentation.UpdateRightHandEquipment(new WorldRpg.Kit.Inventory.EquipmentRead([], 2, 2), weaponDrawn: true);
+        Assert.Equal("weapon.unarmed", Viewmodel(presentation).Weapon.ResourceId);
+    }
+
+    /// <summary>
+    /// Each authored weapon draws the art the base payload's list of classic art per item gave it before that list made
+    /// way for the templates. The club, the ruleset's own template made from the mace's, draws the mace.
+    /// </summary>
+    [Fact]
+    public void The_authored_weapons_draw_the_classic_art_they_drew_when_the_base_payload_listed_it()
+    {
+        using DaggerfallSiteAppearance presentation = StartSiteAppearance();
+        (string Item, string Art)[] drawn =
+        [
+            ("iron-dagger", "weapon.dagger.steel"), ("iron-tanto", "weapon.longblade"), ("iron-wakazashi", "weapon.longblade"),
+            ("iron-shortsword", "weapon.longblade"), ("iron-broadsword", "weapon.longblade"), ("iron-saber", "weapon.longblade"),
+            ("iron-katana", "weapon.longblade"), ("iron-longsword", "weapon.longblade"), ("iron-mace", "weapon.mace"),
+            ("iron-club", "weapon.mace"), ("iron-battle-axe", "weapon.axe"), ("iron-claymore", "weapon.longblade"),
+            ("iron-dai-katana", "weapon.longblade"), ("iron-staff", "weapon.staff"), ("iron-flail", "weapon.flail"),
+            ("iron-warhammer", "weapon.warhammer"), ("iron-war-axe", "weapon.axe"), ("iron-short-bow", "weapon.bow"),
+            ("iron-long-bow", "weapon.bow"),
+        ];
+        foreach ((string item, string art) in drawn)
+        {
+            presentation.UpdateRightHandEquipment(RightHand(item), weaponDrawn: true);
+            Assert.Equal((item, art), (item, Viewmodel(presentation).Weapon.ResourceId));
+        }
+    }
+
+    /// <summary>
+    /// A site drawing the player's hands with the session's classic presentation, read from the shipped content, as
+    /// every site does wherever a game starts.
+    /// </summary>
+    private static DaggerfallSiteAppearance StartSiteAppearance()
+    {
+        DaggerfallSiteProfile start = ReadInputs(TestData.RepositoryRoot);
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        foreach ((string path, ContentSha256 sha256) in PresentedArtifacts(start)) content.Add(path, sha256);
+        return new(content, new AppearanceFake(releases), MediaInputs(), sessionPresentation: start.ClassicPresentation);
+    }
+
+    [Fact]
     public void A_cast_draws_the_elements_hand_over_the_resting_weapon_until_the_rules_rest()
     {
         List<string> releases = [];
