@@ -53,8 +53,8 @@ internal enum DaggerfallWorldBlockTransitionKind { BuildingExit, DungeonEntrance
 internal sealed record DaggerfallWorldBlockTransitionDoor(string Id, DaggerfallWorldBlockTransitionKind Kind, Vector3 Position, Vector3 Normal,
     (Vector3 Minimum, Vector3 Maximum) Bounds);
 
-/// <summary>One state of a city gate: its mesh and its model-local bounds and collision.</summary>
-internal sealed record DaggerfallWorldBlockGateState(string MeshArtifactId, (Vector3 Minimum, Vector3 Maximum) LocalBounds,
+/// <summary>One state of a city gate: its ARCH3D model and mesh, and its model-local bounds and collision.</summary>
+internal sealed record DaggerfallWorldBlockGateState(string ModelId, string MeshArtifactId, (Vector3 Minimum, Vector3 Maximum) LocalBounds,
     Vector3[] CollisionVertices, Triangle[] CollisionTriangles);
 
 /// <summary>One RMB city gate placement in its block's frame, with its open and closed states.</summary>
@@ -375,7 +375,7 @@ internal sealed class DaggerfallWorldBlocks
     {
         (Vector3[] vertices, Triangle[] triangles) = Collision(DaggerfallBaseContent.Property(value, "collision", diagnostics), name, diagnostics);
         if (triangles.Length == 0) diagnostics.Add($"{name} states no collision.");
-        return new(DaggerfallBaseContent.Text(value, "meshArtifactId", diagnostics),
+        return new(DaggerfallBaseContent.Text(value, "modelId", diagnostics), DaggerfallBaseContent.Text(value, "meshArtifactId", diagnostics),
             RequiredBounds(value, "localBounds", name, diagnostics), vertices, triangles);
     }
 

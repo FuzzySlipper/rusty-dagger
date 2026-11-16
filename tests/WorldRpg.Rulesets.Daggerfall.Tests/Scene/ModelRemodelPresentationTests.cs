@@ -12,9 +12,9 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// A remodelled ARCH3D model in a site: every placement of it, and a moving model of it, draws its remodel at the classic's
-/// pose while refreshed art is drawn and the classic otherwise, switched live; the remodel's classic texture slots draw the
-/// location's own materials for them, and a texture the pack ships draws a material of its own.
+/// A remodelled ARCH3D model in a site: every placement of it, a moving model of it and a city gate state of it draws its
+/// remodel at the classic's pose while refreshed art is drawn and the classic otherwise, switched live; the remodel's classic
+/// texture slots draw the location's own materials for them, and a texture the pack ships draws a material of its own.
 /// </summary>
 public sealed class ModelRemodelPresentationTests
 {
@@ -25,6 +25,14 @@ public sealed class ModelRemodelPresentationTests
     private static readonly DaggerfallDungeonActionModelDefinition Lever = new("action/lever", null, null, "lever", 0, 0,
         new DaggerfallDoorVisual("mesh/61027.rstatmsh", Hash, [new DaggerfallMeshMaterialBinding(0, 0)]),
         new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), -Vector3.One, Vector3.One, [], []) { ModelId = "61027" };
+
+    private static readonly Transform GatePose = new(new Vector3(30, 0, -12), Quaternion.CreateFromAxisAngle(Vector3.UnitY, -MathF.PI / 2), Vector3.One);
+
+    private static DaggerfallCityGateState GateState(string model) =>
+        new(new DaggerfallDoorVisual($"mesh/{model}.rstatmsh", Hash, [new DaggerfallMeshMaterialBinding(0, 0)]), -Vector3.One, Vector3.One,
+            [Vector3.Zero, Vector3.UnitX, Vector3.UnitY], [new Triangle(0, 1, 2)]) { ModelId = model };
+
+    private static readonly DaggerfallCityGateDefinition Gate = new("gate/wallaa11-rmb/0", GatePose, GateState("446"), GateState("447"));
 
     private static DaggerfallSiteProfile Profile()
     {
@@ -40,25 +48,29 @@ public sealed class ModelRemodelPresentationTests
                 ["41209"] = new("remodel/41209.rstatmsh", Hash, [new(0, 1), new(1, 0)],
                     [new DaggerfallRemodelTexture(2, "remodel/41209-0.png", Hash, false), new DaggerfallRemodelTexture(3, "remodel/41209-1.png", Hash, true)]),
                 ["61027"] = new("remodel/61027.rstatmsh", Hash, [new(0, 0)], []),
+                ["446"] = new("remodel/446.rstatmsh", Hash, [new(0, 0)], []),
+                ["447"] = new("remodel/447.rstatmsh", Hash, [new(0, 0)], []),
             },
         };
         return new DaggerfallSiteProfile(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()), geometry,
             new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
             new PlayerInitialLook(0, 0),
             [new NormalizedMaterial(0, "texture/67-0.png", Hash, "material/texture-67-0"), new NormalizedMaterial(1, "texture/85-0.png", Hash, "material/texture-85-0")],
-            new Dictionary<long, NormalizedActorSprite>(), profileKind: DaggerfallWorldProfileKind.Dungeon);
+            new Dictionary<long, NormalizedActorSprite>(), profileKind: DaggerfallWorldProfileKind.Dungeon) { CityGates = [Gate] };
     }
 
-    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Graphics) Compose(Func<bool> refreshed, Func<Transform> leverPose)
+    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Graphics) Compose(Func<bool> refreshed, Func<Transform> leverPose,
+        Func<bool>? gatesOpen = null)
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
         foreach (string path in new[] { "mesh/41209.rstatmsh", "mesh/41106.rstatmsh", "mesh/61027.rstatmsh", "remodel/41209.rstatmsh", "remodel/61027.rstatmsh",
-                     "remodel/41209-0.png", "remodel/41209-1.png", "texture/67-0.png", "texture/85-0.png" })
+                     "remodel/41209-0.png", "remodel/41209-1.png", "texture/67-0.png", "texture/85-0.png",
+                     "mesh/446.rstatmsh", "mesh/447.rstatmsh", "remodel/446.rstatmsh", "remodel/447.rstatmsh" })
             content.Add(path, Hash);
         AppearanceFake graphics = new(releases);
-        DaggerfallLocationParts parts = new(() => 0, () => [], () => false, () => [], () => [(Lever, new EntityId(5))],
-            (string action, out Transform pose) => { pose = leverPose(); return action == Lever.ActionId; });
+        DaggerfallLocationParts parts = new(() => 0, () => [], gatesOpen ?? (() => false), () => [(Gate, new EntityId(7), Gate.Open.Visual, GatePose)],
+            () => [(Lever, new EntityId(5))], (string action, out Transform pose) => { pose = leverPose(); return action == Lever.ActionId; });
         DaggerfallSiteAppearance presentation = new(content, graphics, Profile(), parts: parts);
         presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service,
             DaggerfallArtReplacements.Read("""{"artReplacements": {"images": []}}"""u8.ToArray(), "test.art"), refreshed);
@@ -142,5 +154,35 @@ public sealed class ModelRemodelPresentationTests
         AppearanceFact still = Assert.Single(graphics.Snapshots[^1], fact => fact.Appearance == classic);
         Assert.Equal(identity, still.ObjectId);
         Assert.Equal(pose.Translation, still.Transform.Translation);
+    }
+
+    [Fact]
+    public void A_city_gate_draws_the_remodel_of_its_open_or_closed_model_at_its_pose_while_refreshed_art_is_drawn()
+    {
+        bool refreshed = true, open = true;
+        var (presentation, graphics) = Compose(() => refreshed, () => new(Vector3.Zero, Quaternion.Identity, Vector3.One), () => open);
+        using DaggerfallSiteAppearance owned = presentation;
+        using var actors = EmptyActors();
+        Appearance[] classic = [graphics.StaticMeshByPath["mesh/446.rstatmsh"], graphics.StaticMeshByPath["mesh/447.rstatmsh"]];
+        Appearance[] remodel = [graphics.StaticMeshByPath["remodel/446.rstatmsh"], graphics.StaticMeshByPath["remodel/447.rstatmsh"]];
+        AppearanceFact Gate() => Assert.Single(graphics.Snapshots[^1], fact => classic.Contains(fact.Appearance) || remodel.Contains(fact.Appearance));
+
+        presentation.Publish(actors);
+        AppearanceFact drawn = Gate();
+        Assert.Equal(remodel[0], drawn.Appearance);
+        Assert.Equal((GatePose.Translation, GatePose.Rotation), (drawn.Transform.Translation, drawn.Transform.Rotation));
+        var identity = drawn.ObjectId;
+
+        // It closes at dusk and draws the closed model's remodel under the same identity.
+        open = false;
+        presentation.Publish(actors);
+        Assert.Equal((remodel[1], identity), (Gate().Appearance, Gate().ObjectId));
+
+        refreshed = false;
+        presentation.Publish(actors);
+        Assert.Equal((classic[1], identity), (Gate().Appearance, Gate().ObjectId));
+        open = true;
+        presentation.Publish(actors);
+        Assert.Equal(classic[0], Gate().Appearance);
     }
 }

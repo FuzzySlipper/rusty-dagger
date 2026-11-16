@@ -9,6 +9,12 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 internal sealed record DaggerfallCityGateState(DaggerfallDoorVisual Visual, Vector3 LocalBoundsMin, Vector3 LocalBoundsMax,
     Vector3[] CollisionVertices, Triangle[] CollisionTriangles)
 {
+    /// <summary>
+    /// The ARCH3D record id of the model this state draws (446 open, 447 closed), by which its visual takes a remodel
+    /// (<see cref="DaggerfallSiteGeometry.Remodels"/>).
+    /// </summary>
+    internal string? ModelId { get; init; }
+
     internal DaggerfallCityGateState Validate()
     {
         Visual.Validate();

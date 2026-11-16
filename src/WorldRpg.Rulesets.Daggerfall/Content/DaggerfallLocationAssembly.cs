@@ -770,7 +770,8 @@ internal sealed class DaggerfallLocationAssembly
 
         /// <summary>
         /// A city gate: its placement's pose, as its model is drawn, with its open and closed models, each textured
-        /// through the location's climate and carrying its own collision. Its model is not drawn as a static mesh.
+        /// through the location's climate, tagged with its ARCH3D id for its remodel, and carrying its own collision. Its
+        /// model is not drawn as a static mesh.
         /// </summary>
         private void CityGate(DaggerfallWorldBlockGate gate, Vector3 origin, Func<string, string> place)
         {
@@ -783,8 +784,9 @@ internal sealed class DaggerfallLocationAssembly
                 }
 
                 _visualMaterials[mesh.Path] = Textures(mesh);
+                Remodel(state.ModelId);
                 return new DaggerfallCityGateState(new DaggerfallDoorVisual(mesh.Path, mesh.Sha256, [new DaggerfallMeshMaterialBinding(0, 0)]),
-                    state.LocalBounds.Minimum, state.LocalBounds.Maximum, state.CollisionVertices, state.CollisionTriangles);
+                    state.LocalBounds.Minimum, state.LocalBounds.Maximum, state.CollisionVertices, state.CollisionTriangles) { ModelId = state.ModelId };
             }
 
             if (State(gate.Open) is not { } open || State(gate.Closed) is not { } closed) return;

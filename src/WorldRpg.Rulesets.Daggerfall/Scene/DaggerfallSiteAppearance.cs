@@ -185,9 +185,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private (int Revision, int Slot, AppearanceFact[] Facts)? doorFacts;
     // Each action model's classic visual, its remodel where the profile has one, and its ordinal.
     private readonly Dictionary<string, (Appearance Visual, Appearance? Remodel, ulong Ordinal)> actionModelVisuals = new(StringComparer.Ordinal);
-    // Each city gate draws its open or its closed model; both are created with the location and the
-    // current state's is published under the gate's one ordinal.
-    private readonly Dictionary<string, (Appearance Open, Appearance Closed, ulong Ordinal)> gateVisuals = new(StringComparer.Ordinal);
+    // Each city gate draws its open or its closed model, or that state's remodel; all are created with the location
+    // and the current state's is published under the gate's one ordinal.
+    private readonly Dictionary<string, (GateVisual Open, GateVisual Closed, ulong Ordinal)> gateVisuals = new(StringComparer.Ordinal);
     // Door, gate and action model visuals are drawn under ordinals of the location's identity slot rather than
     // their source or Engine entity identities, which other owners' visuals may share.
     private ulong nextLocationVisualOrdinal;
@@ -511,9 +511,12 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         facts.AddRange(held.Facts);
         bool gatesOpen = parts.GatesOpen();
         foreach ((DaggerfallCityGateDefinition gate, EntityId _, DaggerfallDoorVisual _, Transform pose) in parts.Gates())
-            if (gateVisuals.TryGetValue(gate.Id, out (Appearance Open, Appearance Closed, ulong Ordinal) visual))
+            if (gateVisuals.TryGetValue(gate.Id, out (GateVisual Open, GateVisual Closed, ulong Ordinal) visual))
+            {
+                GateVisual state = gatesOpen ? visual.Open : visual.Closed;
                 facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, visual.Ordinal), false, 0, pose,
-                    gatesOpen ? visual.Open : visual.Closed, true, RenderLayer.Scene));
+                    Drawn(state.Classic, state.Remodel, refreshed), true, RenderLayer.Scene));
+            }
         foreach ((DaggerfallDungeonActionModelDefinition model, EntityId _) in parts.ActionModels())
             if (actionModelVisuals.TryGetValue(model.ActionId, out (Appearance Visual, Appearance? Remodel, ulong Ordinal) visual)
                 && parts.ActionModelPose(model.ActionId, out Transform transform))
@@ -1002,8 +1005,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (visual.LocalPose is { } local) doorVisualPoses.Add(door.Id, local);
         }
         foreach (DaggerfallCityGateDefinition gate in inputs.CityGates)
-            gateVisuals.Add(gate.Id, (StaticVisual(gate.Open.Visual, $"City gate '{gate.Id}'"), StaticVisual(gate.Closed.Visual, $"City gate '{gate.Id}'"),
-                NextLocationVisualOrdinal()));
+            gateVisuals.Add(gate.Id, (new(StaticVisual(gate.Open.Visual, $"City gate '{gate.Id}'"), Remodel(gate.Open.ModelId)),
+                new(StaticVisual(gate.Closed.Visual, $"City gate '{gate.Id}'"), Remodel(gate.Closed.ModelId)), NextLocationVisualOrdinal()));
         if (parts is null) return;
         foreach ((DaggerfallDungeonActionModelDefinition model, _) in parts.ActionModels())
         {
@@ -1072,7 +1075,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         actionModelVisuals.Clear();
         retired.AddRange(remodels.Values.Reverse());
         remodels.Clear();
-        foreach ((Appearance open, Appearance closed, ulong _) in gateVisuals.Values.Reverse()) retired.AddRange([closed, open]);
+        foreach ((GateVisual open, GateVisual closed, ulong _) in gateVisuals.Values.Reverse()) retired.AddRange([closed.Classic, open.Classic]);
         gateVisuals.Clear();
         retired.AddRange(locationMaterials.AsEnumerable().Reverse());
         foreach (Material material in locationMaterials) materials.Remove(material);

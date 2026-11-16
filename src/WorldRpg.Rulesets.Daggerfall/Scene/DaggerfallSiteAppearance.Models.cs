@@ -5,9 +5,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>
 /// The remodels of classic ARCH3D models. Each model the profile places that the art pack remodels has one appearance of
-/// its remodel, shared by every placement and moving model of it, created beside the classic's. While refreshed art is
-/// drawn the remodel is drawn in the classic's place at the classic's pose, so <c>world.classic-art</c> switches them live;
-/// the automap, collision and navigation read the classic mesh and never these.
+/// its remodel, shared by every placement, moving model and city gate state of it, created beside the classic's. While
+/// refreshed art is drawn the remodel is drawn in the classic's place at the classic's pose, so <c>world.classic-art</c>
+/// switches them live; the automap, collision and navigation read the classic mesh and never these.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
@@ -44,6 +44,9 @@ internal sealed partial class DaggerfallSiteAppearance
         appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, bindings.ToArray()));
         return created;
     }
+
+    /// <summary>One state of a city gate as drawn: its classic model and that model's remodel, where the profile has one.</summary>
+    private readonly record struct GateVisual(Appearance Classic, Appearance? Remodel);
 
     /// <summary>What a placed model shows now: its remodel while refreshed art is drawn and it has one, else the classic.</summary>
     private static Appearance Drawn(Appearance classic, Appearance? remodel, bool refreshed) => refreshed && remodel is not null ? remodel : classic;

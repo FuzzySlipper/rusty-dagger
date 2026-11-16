@@ -104,6 +104,23 @@ public sealed class ModelRemodelAssemblyTests
         Assert.Equal([(2U, "remodel/41209-0.png", false), (3U, "remodel/41209-1.png", true)], remodel.Textures.Select(own => (own.MeshSlot, own.Path, own.Mask)));
     }
 
+    /// <summary>
+    /// Charing's walls end in city gates, drawn by their own part rather than as static meshes: each gate's open and closed
+    /// states carry their ARCH3D ids, and the profile carries the remodels of both.
+    /// </summary>
+    [Fact]
+    public void An_assembled_towns_city_gates_carry_their_states_ids_and_remodels()
+    {
+        DaggerfallArtReplacements walls = Art(("""{"446": """ + Entry("""{"slot": 0, "material": "material/texture-317-0"}""")
+            + """, "447": """ + Entry("""{"slot": 0, "material": "material/texture-317-0"}""") + "}").Replace("HASH", HashHex, StringComparison.Ordinal));
+        DaggerfallSiteProfile charing = AssemblyWith(walls).Assemble(DaggerfallWorldProfileIds.Exterior(Charing));
+        Assert.NotEmpty(charing.CityGates);
+        Assert.All(charing.CityGates, gate => Assert.Equal(("446", "447"), (gate.Open.ModelId, gate.Closed.ModelId)));
+        Assert.Equal(["446", "447"], charing.Geometry.Remodels.Keys.Order(StringComparer.Ordinal));
+        // The gates are not drawn as static meshes, so the remodels reach them only through their states.
+        Assert.DoesNotContain(charing.Geometry.Meshes, mesh => mesh.ModelId is "446" or "447");
+    }
+
     [Fact]
     public void An_assembled_dungeon_s_moving_model_carries_its_id_and_its_remodel()
     {
