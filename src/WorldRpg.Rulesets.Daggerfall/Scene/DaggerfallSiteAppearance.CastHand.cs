@@ -39,7 +39,7 @@ internal sealed partial class DaggerfallSiteAppearance
         DrawCastArms();
         if (held is not null && !heldViewed && held.Moves(DaggerfallAttackIds.Cast))
         {
-            held.Attack(DaggerfallAttackIds.Cast, timing, CastReleaseFrame);
+            held.Attack(DaggerfallAttackIds.Cast, timing);
             StartCastGlow(element);
         }
         else PlayCastHand(element, timing);

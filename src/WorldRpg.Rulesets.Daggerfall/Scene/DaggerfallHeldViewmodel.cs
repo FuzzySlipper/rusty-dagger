@@ -237,11 +237,11 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
 
     /// <summary>
     /// Starts an attack's clip to the rules' <paramref name="timing"/>; it fades in over what the arms play now, which is
-    /// also how a chained attack cuts the last one's recovery. <paramref name="hitFrame"/> sets the retro style's cadence.
+    /// also how a chained attack cuts the last one's recovery. The family's own hit frame for the attack sets the retro style's cadence.
     /// </summary>
-    internal void Attack(string action, DaggerfallAttackTiming timing, int hitFrame) =>
+    internal void Attack(string action, DaggerfallAttackTiming timing) =>
         Play(action, new PhaseTiming((float)timing.Windup, MathF.Max((float)timing.Commit, MinimumPhase), MathF.Max((float)timing.Recovery, MinimumPhase)),
-            (float)(timing.Windup / hitFrame), 1);
+            (float)(timing.Windup / family.Hit(action)), 1);
 
     /// <summary>Raises the guard or lowers it, for a drawing that has one.</summary>
     internal void Guard(bool raised)
@@ -271,6 +271,9 @@ internal sealed class DaggerfallHeldViewmodel : IDisposable
         strike = (action, timing, frame, pausedAt ?? 0);
         rate = pausedAt is null ? speed : 0;
     }
+
+    /// <summary>Ends any strike: the arms loop the idle clip, sampled by the retro style once per frame of the family's own idle.</summary>
+    internal void Rest() => Rest(family.Idle.FrameSeconds!.Value);
 
     /// <summary>Ends any strike: the arms loop the idle clip, sampled once per <paramref name="frame"/> seconds by the retro style.</summary>
     internal void Rest(float frame)

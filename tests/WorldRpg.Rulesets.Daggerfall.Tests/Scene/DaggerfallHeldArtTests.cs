@@ -74,6 +74,23 @@ public sealed class DaggerfallHeldArtTests
         Assert.True((dagger with { LeftHand = ["fastA"] }).MovesLeft("fastA"));
     }
 
+    /// <summary>
+    /// A held weapon times itself by what its family states: the frame an attack's blow lands on (the donor's frame 2 for a
+    /// swing, 5 for a cast and a bow's draw and release) and the length of one idle frame the retro style samples at (a
+    /// classic frame, a tenth of a second; none for the reins), copied once from the classic weapon art.
+    /// </summary>
+    [Fact]
+    public void A_family_states_its_own_hit_frames_and_idle_frame()
+    {
+        DaggerfallHeldArt art = Read(Document());
+        Assert.All(art.Document.Families.Values, family => Assert.Equal(2, family.Hit("fastA")));
+        Assert.Equal([5, 5, 5], new[] { "cast", "cast", "cast" }.Select((action, index) => art.Document.Families[new[] { "dagger", "sns", "unarmed" }[index]].Hit(action)));
+        DaggerfallHeldFamily bow = art.Document.Families["bow"];
+        Assert.Equal([5, 5, 2], [bow.Hit(DaggerfallAttackIds.ShotDraw), bow.Hit(DaggerfallAttackIds.Shot), bow.Hit("kick")]);
+        Assert.Equal(.1F, art.Document.Families["longsword"].Idle.FrameSeconds);
+        Assert.Equal(0F, art.Document.Families["reins"].Idle.FrameSeconds);
+    }
+
     [Theory]
     [InlineData("strikes", "families.dagger.strikes.thrust")]
     [InlineData("hold", "families.dagger.strikes.powerHold: is not an attack with a timed clip")]
@@ -82,6 +99,9 @@ public sealed class DaggerfallHeldArtTests
     [InlineData("weapons", "families.longsword.weapons: 'weapon.dagger.steel' is drawn by another family too")]
     [InlineData("leftHand", "families.dagger.leftHand: 'fastB' has no strike clip here")]
     [InlineData("idle", "families.dagger.idle.seconds")]
+    [InlineData("frameSeconds", "families.dagger.idle.frameSeconds: must state how long one frame of the idle plays")]
+    [InlineData("hitFrame", "families.dagger.hitFrame: must state the frame a strike's blow lands on")]
+    [InlineData("hitFrames", "families.dagger.hitFrames: 'thrust' is no attack with a timed clip")]
     public void What_cannot_be_drawn_is_refused_by_field(string broken, string field)
     {
         JsonObject document = Document();
@@ -96,6 +116,9 @@ public sealed class DaggerfallHeldArtTests
             case "weapons": document["families"]!["longsword"]!["weapons"]!.AsArray().Add("weapon.dagger.steel"); break;
             case "leftHand": strikes.Remove("fastB"); dagger["leftHand"] = new JsonArray("fastB"); break;
             case "idle": dagger["idle"]!["seconds"] = 0; break;
+            case "frameSeconds": dagger["idle"]!.AsObject().Remove("frameSeconds"); break;
+            case "hitFrame": dagger.Remove("hitFrame"); break;
+            case "hitFrames": dagger["hitFrames"] = new JsonObject { ["thrust"] = 3 }; break;
         }
 
         InvalidDataException refusal = Assert.Throws<InvalidDataException>(() => Read(document));
@@ -437,7 +460,7 @@ public sealed class DaggerfallHeldArtTests
                 if (!enchanted) continue;
                 Assert.Equal(2, Lightning().Count(fact => fact.Visible));
 
-                weapon.Attack("fastA", new(.2d, .1d, .1d), 3);
+                weapon.Attack("fastA", new(.2d, .1d, .1d));
                 weapon.Step(.05F);
                 presentation.Publish(EmptyActors());
                 Assert.All(Lightning(), fact => Assert.True(fact.Visible));
@@ -485,7 +508,7 @@ public sealed class DaggerfallHeldArtTests
             Assert.True(held.HasParentObject);
             Assert.False(Arrow().Visible);
 
-            bow.Attack(DaggerfallAttackIds.ShotDraw, new(.6d, 0d, 0d), 5);
+            bow.Attack(DaggerfallAttackIds.ShotDraw, new(.6d, 0d, 0d));
             bow.Step(.1F);
             presentation.Publish(EmptyActors());
             Assert.True(Arrow().Visible);
@@ -495,7 +518,7 @@ public sealed class DaggerfallHeldArtTests
             presentation.Publish(EmptyActors());
             Assert.True(Arrow().Visible);
 
-            bow.Attack(DaggerfallAttackIds.Shot, new(.02d, .02d, .45d), 5);
+            bow.Attack(DaggerfallAttackIds.Shot, new(.02d, .02d, .45d));
             bow.Step(.01F);
             presentation.Publish(EmptyActors());
             Assert.True(Arrow().Visible);

@@ -153,13 +153,13 @@ internal sealed partial class DaggerfallSiteAppearance
         }
         if (held is { } shown && shown.Drawing == Drawing(weapon.Weapon))
         {
-            shown.Rest(IdleFrame(weapon.Weapon));
+            shown.Rest();
             heldShowing = true;
             return;
         }
         RetireHeld();
         CreateHeld(weapon.Weapon);
-        held?.Rest(IdleFrame(weapon.Weapon));
+        held?.Rest();
     }
 
     private void RetireHeld()
@@ -173,21 +173,22 @@ internal sealed partial class DaggerfallSiteAppearance
     // An action starts on the sprite: the arms loop their idle for idle and play a strike's clip, timed to the sprite's
     // frames and hit frame; a strike without a clip shows the sprite.
     // The arms return to the idle loop with the sprite.
-    private void RestHeldAction(NormalizedClassicWeaponAction idle)
+    private void RestHeldAction()
     {
         if (held is null || heldViewed) return;
-        held.Rest(1F / idle.FramesPerSecond);
+        held.Rest();
         heldShowing = true;
     }
 
     // Plays an attack's clip to the rules' timing, or shows the sprite for an attack the family has no clip for. The retro
-    // style samples a frame of the windup's own length, so the hit shows the strike mark.
-    private void PlayHeldAction(string attack, DaggerfallAttackTiming timing, int hitFrame)
+    // style samples a frame of the windup's own length, so the hit shows the strike mark: by the family's own hit frame, or,
+    // for the sprite shown, the classic sprite's (classicHit).
+    private void PlayHeldAction(string attack, DaggerfallAttackTiming timing, int classicHit)
     {
         if (held is null || heldViewed) return;
         heldShowing = held.Moves(attack);
-        if (heldShowing) held.Attack(attack, timing, hitFrame);
-        else held.Rest((float)(timing.Windup / hitFrame));
+        if (heldShowing) held.Attack(attack, timing);
+        else held.Rest((float)(timing.Windup / classicHit));
     }
 
     // Keeps the charged power attack where the family holds it.
@@ -197,10 +198,6 @@ internal sealed partial class DaggerfallSiteAppearance
         heldShowing = true;
         held.Hold();
     }
-
-    // One classic frame of a weapon's idle, at which the retro style samples the idle loop.
-    private static float IdleFrame(NormalizedClassicWeapon weapon) =>
-        weapon.Actions.TryGetValue("idle", out NormalizedClassicWeaponAction? idle) ? 1F / idle.FramesPerSecond : 0;
 
     // The world seconds this update admitted, on which the arms' clips and the mount's gaits play.
     private void StepHeld(ProductUpdateFacts update)

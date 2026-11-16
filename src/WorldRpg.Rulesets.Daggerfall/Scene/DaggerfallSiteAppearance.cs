@@ -1426,19 +1426,24 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// </summary>
     private void PlayAttackMotion(string attack, DaggerfallAttackTiming? timing)
     {
-        if (viewmodel is null || !viewmodel.Weapon.Actions.TryGetValue(NormalizedClassicWeapon.PlayedStrike, out NormalizedClassicWeaponAction? strike)) return;
+        if (viewmodel is null) return;
+        // The classic sprite's own strike and hit frame; the arms of a held weapon time themselves by their family's (PlayHeldAction).
+        NormalizedClassicWeaponAction? strike = viewmodel.Weapon.Actions.GetValueOrDefault(NormalizedClassicWeapon.PlayedStrike);
         int hit = attack is DaggerfallAttackIds.ShotDraw or DaggerfallAttackIds.Shot ? NormalizedClassicWeapon.BowWeaponHitFrame : NormalizedClassicWeapon.MeleeWeaponHitFrame;
         // Admission refuses art whose strikes end before the hit frame the rules use, so a strike that cannot reach it
         // is a broken composition.
-        if (hit >= strike.PlayedFrameCount)
+        if (strike is not null && hit >= strike.PlayedFrameCount)
             throw new InvalidOperationException($"Classic weapon '{viewmodel.Weapon.ResourceId}' strike '{NormalizedClassicWeapon.PlayedStrike}' plays {strike.PlayedFrameCount} frames and cannot reach the hit frame {hit}.");
         if (timing is not { } phases) { HoldHeldAction(); return; }
-        double afterHit = (phases.Commit + phases.Recovery) / (strike.PlayedFrameCount - hit);
-        double[] follow = [.. Enumerable.Repeat(afterHit, strike.PlayedFrameCount - hit)];
-        double[] windup = [.. Enumerable.Repeat(phases.Windup / hit, hit)];
-        if (attack is DaggerfallAttackIds.PowerIn or DaggerfallAttackIds.ShotDraw) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, frameLengths: windup);
-        else if (attack is DaggerfallAttackIds.PowerOut or DaggerfallAttackIds.Shot) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, firstFrame: hit - 1, frameLengths: [phases.Windup, .. follow]);
-        else StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, frameLengths: [.. windup, .. follow]);
+        if (strike is not null)
+        {
+            double afterHit = (phases.Commit + phases.Recovery) / (strike.PlayedFrameCount - hit);
+            double[] follow = [.. Enumerable.Repeat(afterHit, strike.PlayedFrameCount - hit)];
+            double[] windup = [.. Enumerable.Repeat(phases.Windup / hit, hit)];
+            if (attack is DaggerfallAttackIds.PowerIn or DaggerfallAttackIds.ShotDraw) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, frameLengths: windup);
+            else if (attack is DaggerfallAttackIds.PowerOut or DaggerfallAttackIds.Shot) StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, firstFrame: hit - 1, frameLengths: [phases.Windup, .. follow]);
+            else StartWeaponAction(NormalizedClassicWeapon.PlayedStrike, frameLengths: [.. windup, .. follow]);
+        }
         PlayHeldAction(attack, phases, hit);
     }
 
@@ -1459,7 +1464,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start));
             SpritePlayback? old = viewmodel.Playback;
             viewmodel.Playback = staged;
-            if (name == "idle") RestHeldAction(action);
+            if (name == "idle") RestHeldAction();
             // Imported cells retain classic placement; Engine fits the complete
             // canvas to the viewport and advances the selected sequence.
             viewmodel.Strike = name != "idle";

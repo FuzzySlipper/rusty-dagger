@@ -296,7 +296,8 @@
       },
       "idle": {
         "clip": "FPP_Dag_Idle",
-        "seconds": 5.8
+        "seconds": 5.8,
+        "frameSeconds": 0.1
       },
       "powerHold": {
         "clip": "FPP_Dag_AttackHeavyD_Start",
@@ -401,7 +402,11 @@
           "fade": 0.1
         }
       },
-      "class": "short-blade"
+      "class": "short-blade",
+      "hitFrame": 2,
+      "hitFrames": {
+        "cast": 5
+      }
     },
     "longsword": {
       "weapons": [
@@ -426,7 +431,8 @@
       "twoHanded": true,
       "idle": {
         "clip": "FPP_Longs_Idle",
-        "seconds": 4.4333
+        "seconds": 4.4333,
+        "frameSeconds": 0.1
       },
       "powerHold": {
         "clip": "FPP_Longs_AttackHeavy_D_Idle",
@@ -531,7 +537,11 @@
           "fade": 0.1
         }
       },
-      "class": "long-blade"
+      "class": "long-blade",
+      "hitFrame": 2,
+      "hitFrames": {
+        "cast": 5
+      }
     },
     "sns": {
       "weapons": [
@@ -552,7 +562,8 @@
       },
       "idle": {
         "clip": "FPP_sns_Idle",
-        "seconds": 4.6333
+        "seconds": 4.6333,
+        "frameSeconds": 0.1
       },
       "powerHold": {
         "clip": "FPP_sns_AttackHeavyU_Loop",
@@ -657,7 +668,11 @@
           "fade": 0.1
         }
       },
-      "class": "long-blade"
+      "class": "long-blade",
+      "hitFrame": 2,
+      "hitFrames": {
+        "cast": 5
+      }
     },
     "halberd": {
       "weapons": [
@@ -678,7 +693,8 @@
       },
       "idle": {
         "clip": "FPP_Halb_Idle",
-        "seconds": 6.0333
+        "seconds": 6.0333,
+        "frameSeconds": 0.1
       },
       "twoHanded": true,
       "powerHold": {
@@ -784,7 +800,11 @@
           "fade": 0.1
         }
       },
-      "class": "blunt-weapon"
+      "class": "blunt-weapon",
+      "hitFrame": 2,
+      "hitFrames": {
+        "cast": 5
+      }
     },
     "claws": {
       "weapons": [
@@ -792,6 +812,10 @@
       ],
       "twoHanded": true,
       "class": "hand-to-hand",
+      "hitFrame": 2,
+      "hitFrames": {
+        "cast": 5
+      },
       "look": {
         "model": null,
         "grip": [
@@ -807,7 +831,8 @@
       },
       "idle": {
         "clip": "CHANM_FPArms_Unarmed_Idle",
-        "seconds": 2.8167
+        "seconds": 2.8167,
+        "frameSeconds": 0.1
       },
       "powerHold": {
         "clip": "FPP_Dag_AttackHeavyD_Start",
@@ -948,6 +973,11 @@
         "pullFrom": 0.35
       },
       "class": "hand-to-hand",
+      "hitFrame": 2,
+      "hitFrames": {
+        "shotDraw": 5,
+        "shot": 5
+      },
       "look": {
         "model": null,
         "grip": [
@@ -963,7 +993,8 @@
       },
       "idle": {
         "clip": "BOW_Idle",
-        "seconds": 2
+        "seconds": 2,
+        "frameSeconds": 0.1
       },
       "powerHold": {
         "clip": "BOW_Hold",
@@ -1008,6 +1039,10 @@
       ],
       "twoHanded": true,
       "class": "hand-to-hand",
+      "hitFrame": 2,
+      "hitFrames": {
+        "cast": 5
+      },
       "look": {
         "model": null,
         "grip": [
@@ -1023,7 +1058,8 @@
       },
       "idle": {
         "clip": "RIDE_Idle",
-        "seconds": 2
+        "seconds": 2,
+        "frameSeconds": 0
       },
       "powerHold": {
         "clip": "RIDE_Idle",
@@ -1048,6 +1084,10 @@
       ],
       "twoHanded": true,
       "class": "hand-to-hand",
+      "hitFrame": 2,
+      "hitFrames": {
+        "cast": 5
+      },
       "look": {
         "model": null,
         "grip": [0, 0, 0],
@@ -1055,7 +1095,8 @@
       },
       "idle": {
         "clip": "CHANM_FPArms_Unarmed_Idle",
-        "seconds": 2.8167
+        "seconds": 2.8167,
+        "frameSeconds": 0.1
       },
       "powerHold": {
         "clip": "CHANM_FPArms_Unarmed_Punch",

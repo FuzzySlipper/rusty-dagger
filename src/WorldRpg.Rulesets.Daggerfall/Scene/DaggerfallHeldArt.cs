@@ -209,6 +209,10 @@ internal sealed class DaggerfallHeldArt
                 problems.Add($"{at}.weapons: '{weapon}' is drawn by another family too.");
             if (family.Idle.Clip.Length == 0) problems.Add($"{at}.idle.clip: must name a clip.");
             if (!(family.Idle.Seconds > 0)) problems.Add($"{at}.idle.seconds: must be positive.");
+            if (family.Idle.FrameSeconds is not >= 0F) problems.Add($"{at}.idle.frameSeconds: must state how long one frame of the idle plays (0 samples none).");
+            if (family.HitFrame is not > 0) problems.Add($"{at}.hitFrame: must state the frame a strike's blow lands on (over 0).");
+            foreach (string action in (family.HitFrames ?? []).Where(own => own.Value <= 0 || !DaggerfallAttackIds.Held.Contains(own.Key)).Select(own => own.Key))
+                problems.Add($"{at}.hitFrames: '{action}' is no attack with a timed clip, or its frame is not over 0.");
             if (family.Strikes.Count == 0) problems.Add($"{at}.strikes: names no strike clip.");
             foreach (var (action, clip) in family.Strikes)
             {
@@ -407,6 +411,16 @@ internal sealed record DaggerfallHeldFamily(IReadOnlyList<string> Weapons, Dagge
     public string[]? LeftHand { get; init; }
     /// <summary>The weapon class the workbench times this family's attacks by, as play times them.</summary>
     public string Class { get; init; } = DaggerfallSkills.ShortBlade;
+    /// <summary>
+    /// The frame of the family's own timing at which a strike's blow lands, which the retro style's cadence counts the windup
+    /// in: <see cref="HitFrame"/> for every strike but those <see cref="HitFrames"/> names, which a bow's draw and release hit later.
+    /// </summary>
+    public int? HitFrame { get; init; }
+    public Dictionary<string, int>? HitFrames { get; init; }
+
+    /// <summary>The frame of <paramref name="action"/>'s clip its blow lands on.</summary>
+    internal int Hit(string action) => HitFrames?.GetValueOrDefault(action) is { } own and > 0 ? own : HitFrame!.Value;
+
     /// <summary>Where a charged power attack waits for release; without one its sprite shows the hold.</summary>
     public DaggerfallPowerHold? PowerHold { get; init; }
     /// <summary>How the arms raise the weapon to guard; without one the guard shows on nothing.</summary>
@@ -422,10 +436,14 @@ internal sealed record DaggerfallHeldFamily(IReadOnlyList<string> Weapons, Dagge
 /// </summary>
 internal sealed record DaggerfallPowerHold(string Clip, float? Seconds = null, float? At = null);
 
-/// <summary>A clip the arms loop at rest, once every <see cref="Seconds"/> of world time.</summary>
+/// <summary>
+/// A clip the arms loop at rest, once every <see cref="Seconds"/> of world time. The retro style samples it once every
+/// <see cref="FrameSeconds"/>, the length of one frame of the idle it shows; none, for an idle it samples at every moment.
+/// </summary>
 internal sealed record DaggerfallIdleClip(string Clip, float Seconds)
 {
     public float Seconds { get; set; } = Seconds;
+    public float? FrameSeconds { get; init; }
 }
 
 /// <summary>

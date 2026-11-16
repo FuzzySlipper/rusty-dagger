@@ -657,9 +657,6 @@ internal static class DaggerfallFormulaPolicy
         return (10 * (100 - liveSpeed) + 800) / ClassicFrameUpdate;
     }
 
-    /// <summary>The classic animation frame a player attack's impact leaves on, by whether a bow looses it.</summary>
-    internal static int WeaponHitFrame(bool bow) => bow ? NormalizedClassicWeapon.BowWeaponHitFrame : NormalizedClassicWeapon.MeleeWeaponHitFrame;
-
     /// <summary>
     /// The donor's item-condition display unit. Items without condition use are complete rather than
     /// dividing by zero; otherwise the classic integer percentage truncates toward zero.
