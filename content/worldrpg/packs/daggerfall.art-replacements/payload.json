@@ -50574,6 +50574,168 @@
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/cage-pole.glb",
     "byteLength": 237204,
     "sha256": "ad707dead113c1caec3553ad34fc9eb287312f243f3406f9eacc613c33f332a2"
+   },
+   {
+    "replaces": {
+     "archive": 213,
+     "record": 7
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-213-7.glb",
+    "byteLength": 13500,
+    "sha256": "11475ca3784e3895b520442555eea41290c7cb831f0efad2206efd211c8e0a4c",
+    "hangs": "root"
+   },
+   {
+    "replaces": {
+     "archive": 213,
+     "record": 8
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-213-8.glb",
+    "byteLength": 17552,
+    "sha256": "bdf78cb3bdab03e7805c277076d2efef96e7ec924cb189d47657de28c1ce13e8",
+    "hangs": "root"
+   },
+   {
+    "replaces": {
+     "archive": 213,
+     "record": 9
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-213-9.glb",
+    "byteLength": 19348,
+    "sha256": "2c457cb6aa9a9caef48d2c14971a6d94699a6829e1a0aa09dcb83e82ff64b4fb",
+    "hangs": "root"
+   },
+   {
+    "replaces": {
+     "archive": 213,
+     "record": 10
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-213-10.glb",
+    "byteLength": 16344,
+    "sha256": "d0d022368e15254dbc649396e2289aea62ad9410706f7add4922aa56919163d3",
+    "hangs": "root"
+   },
+   {
+    "replaces": {
+     "archive": 100,
+     "record": 20
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-100-20.glb",
+    "byteLength": 17552,
+    "sha256": "0f6cbc1fa2eaecf781fc58b093ca60d24972ff7d43327505bd009bd9d7b389e9",
+    "hangs": "root"
+   },
+   {
+    "replaces": {
+     "archive": 100,
+     "record": 21
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-100-21.glb",
+    "byteLength": 19348,
+    "sha256": "673e32cab677613bf7af54cf8501d66cbd3c80b044b7a316629736c5563f289a",
+    "hangs": "root"
+   },
+   {
+    "replaces": {
+     "archive": 211,
+     "record": 4
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-211-4.glb",
+    "byteLength": 55380,
+    "sha256": "a3bd524f280e638e9c2b276f842db6053da7a4a63cfd19e0b046b5898f49cccc",
+    "hangs": "chain"
+   },
+   {
+    "replaces": {
+     "archive": 211,
+     "record": 5
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-211-5.glb",
+    "byteLength": 180880,
+    "sha256": "c688306fab05ada5c036690153e589dd8f57c1b304c1c11871a4ced300d280e7",
+    "hangs": "chain"
+   },
+   {
+    "replaces": {
+     "archive": 211,
+     "record": 6
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-211-6.glb",
+    "byteLength": 130276,
+    "sha256": "f7225b012483eef4b2c82a2fccf551d0d0389f14b79b4f0c0ce5a4922eba6375",
+    "hangs": "chain"
+   },
+   {
+    "replaces": {
+     "archive": 211,
+     "record": 7
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-211-7.glb",
+    "byteLength": 81244,
+    "sha256": "56954de9b4bd33b2674b9431081b0e895b842f0581c183da41e7a04ac69d2ec6",
+    "hangs": "chain"
+   },
+   {
+    "replaces": {
+     "archive": 211,
+     "record": 34
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-211-34.glb",
+    "byteLength": 131348,
+    "sha256": "9509ee31d637c6b225d86b5a639c16393ebcc4825254cd983504f922ff250d61",
+    "hangs": "cage"
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 22
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-210-22.glb",
+    "byteLength": 79016,
+    "sha256": "382927ad45e74b6efe12b365e56ec44e3169bd28d020e328c998b181e89e6516",
+    "glow": [
+     1
+    ],
+    "hangs": "lantern"
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 24
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-210-24.glb",
+    "byteLength": 282064,
+    "sha256": "425d07b7ba532a1201ec0962a0a0b945d9ec377a870d342ec7121cdbab5460c0",
+    "glow": [
+     1
+    ],
+    "hangs": "lantern"
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 25
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-210-25.glb",
+    "byteLength": 164604,
+    "sha256": "a062f6ed0161171d1fbc55c09fb81e39328bc5f4ae691366f7d0adf956b0ac1f",
+    "glow": [
+     1
+    ],
+    "hangs": "lantern"
+   },
+   {
+    "replaces": {
+     "archive": 210,
+     "record": 26
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/hanging-210-26.glb",
+    "byteLength": 87004,
+    "sha256": "7678039d57bca2d9644f9cb82fb01753867dfa27d7889c875050399e04c50d23",
+    "glow": [
+     1
+    ],
+    "hangs": "lantern"
    }
   ],
   "surfaces": [

@@ -44,6 +44,9 @@ public interface IDeveloperSceneCommands : IDebugCommandModule
     [DebugCommand("world.farforest", Description = "Developer: grow forest on the far hills for this run: on or off.")]
     DebugCommandResult FarForest(string state);
 
+    [DebugCommand("world.hanging", Description = "Developer: the hanging roots, chains, cage and lanterns here: how many hang and swing, their bodies, and what their steps cost.")]
+    DebugCommandResult Hanging();
+
     [DebugCommand("world.classic-art", Description = "Developer: draw the classic art in place of the refreshed art for this run, to compare them: on or off.")]
     DebugCommandResult ClassicArt(string state);
 

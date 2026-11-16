@@ -21,6 +21,8 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private readonly long _instance;
     private readonly string _profileId;
     private readonly List<(Light Light, LightRequest Request)> _points = [];
+    // The shadow each lamp carried off its place held when it left, given back when it returns (PlaceLamp).
+    private readonly Dictionary<ulong, LightShadowIntent> _carriedShadows = [];
     private readonly List<LightRequest> _suspendedPoints = [];
     /// <summary>The player's shadow sector and the choice the lamps last asked by; null until the player stands in one.</summary>
     private (int X, int Z)? _shadowSector;
@@ -87,7 +89,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                     new LightDescriptor(
                         LightKind.Point,
                         light.Color,
-                        light.Intensity * LampScale,
+                        LampIntensity(light),
                         true,
                         light.Position.ToVector(),
                         Vector3.Zero,
@@ -100,7 +102,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                 request = request with { Descriptor = request.Descriptor with { ShadowResolution = _tuning.LampShadowResolution } };
                 if (light.CityLight)
                 {
-                    _cityIntensities.Add(lightId, light.Intensity * LampScale);
+                    _cityIntensities.Add(lightId, LampIntensity(light));
                     request = CityRequest(request, sky);
                 }
                 Light point = graphics.CreateLight(request);
@@ -152,6 +154,12 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             bool asks = reach is float minimum && lamp.Range >= minimum && lamp.Intensity > 0
                 && (side <= 0 || ShadowSector(lamp.Position, side) is var at && Math.Abs(at.X - sector.X) <= 1 && Math.Abs(at.Z - sector.Z) <= 1);
             LightShadowIntent intent = asks ? LightShadowIntent.Requested : LightShadowIntent.Disabled;
+            // A lamp carried off its place casts none while away and takes this choice when it returns (PlaceLamp).
+            if (_carriedShadows.ContainsKey(request.LogicalId))
+            {
+                _carriedShadows[request.LogicalId] = intent;
+                continue;
+            }
             if (lamp.ShadowIntent == intent) continue;
             request = request with { Descriptor = lamp with { ShadowIntent = intent } };
             _graphics.UpdateLight(new LightUpdateRequest(light, request));
@@ -161,6 +169,31 @@ internal sealed class DaggerfallSiteLighting : IDisposable
 
     /// <summary>The ground plan's square of side <paramref name="side"/> holding <paramref name="at"/>, at every height.</summary>
     private static (int X, int Z) ShadowSector(Vector3 at, float side) => ((int)MathF.Floor(at.X / side), (int)MathF.Floor(at.Z / side));
+
+    /// <summary>
+    /// Carries authored lamp <paramref name="lamp"/> to <paramref name="position"/> at <paramref name="level"/> times its
+    /// authored intensity, as a swinging, flickering lantern does; placed at its own position at level 1 it is as authored.
+    /// It casts no shadow while away from its own position.
+    /// </summary>
+    internal void PlaceLamp(DaggerfallSiteLight lamp, Vector3 position, float level)
+    {
+        if (_disposed || _suspended) return;
+        ulong id = LogicalLightId(_profileId, _instance, $"authored:{lamp.Id}");
+        int index = _points.FindIndex(point => point.Request.LogicalId == id);
+        (Light light, LightRequest request) = _points[index];
+        // Away from its place it casts no shadow, which would be drawn again every frame it moves; back in place it casts
+        // the shadow it held when it left.
+        bool away = position != lamp.Position.ToVector();
+        if (away) _carriedShadows.TryAdd(id, request.Descriptor.ShadowIntent);
+        LightShadowIntent shadow = away ? LightShadowIntent.Disabled
+            : _carriedShadows.Remove(id, out LightShadowIntent held) ? held : request.Descriptor.ShadowIntent;
+        LightRequest placed = request with
+        {
+            Descriptor = request.Descriptor with { Position = position, Intensity = LampIntensity(lamp) * level, ShadowIntent = shadow },
+        };
+        _graphics.UpdateLight(new(light, placed));
+        _points[index] = (light, placed);
+    }
 
     /// <summary>The share of the night's ambient the moons give tonight, from the next ambient update on. Under classic art it stays whole.</summary>
     internal void LightNightBy(float share) => _nightShare = share;
@@ -491,6 +524,9 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             daylight * _tuning.ExteriorSun, true, Vector3.Zero, direction, true, _tuning.SunShadowRange, 0f, 0f, 0f,
             LightShadowIntent.Requested) with { ShadowResolution = _tuning.SunShadowResolution });
     }
+
+    /// <summary>An authored lamp's light at its own level.</summary>
+    private float LampIntensity(DaggerfallSiteLight light) => light.Intensity * LampScale;
 
     /// <summary>What this kind of place multiplies its lamps by.</summary>
     private float LampScale => _profileKind switch

@@ -57,7 +57,9 @@ women alike, so it is no one in particular) and record 4 (the bone pile placed i
 sprite mesh, which naming accepts; each entry is keyed by the record it replaces (`380-4`) and states the GLB material
 slots that carry an emissive map (`glow`), which the game lights at the lamps' level as it does a refreshed lamp's
 emission map: a lamp post's glass and flame. The game draws the mesh at the width of the classic sprite it replaces from
-the GLB's own width across (x), as the Engine admits it.
+the GLB's own width across (x), as the Engine admits it. A hanging root, chain, cage or lantern (tools/hanging/hanging.py)
+also states what it hangs as (`hangs`, as its GLB's scene states it): the game draws it from its sprite's top at the sprite's height and swings it when
+an actor walks through it.
 
 The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
 its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
@@ -591,6 +593,11 @@ def effect_glow():
     return write(f"{MEDIA}/effects/glow.png", buffer.getvalue())
 
 
+# The hanging roots, chains, cage and lanterns hanging.py builds, which the game hangs from their sprites' tops and swings
+# when an actor walks through them; each GLB states what it hangs as (its scene's `hangs`), which its entry carries.
+HANGING = [(213, 7), (213, 8), (213, 9), (213, 10), (100, 20), (100, 21), (211, 4), (211, 5), (211, 6), (211, 7), (211, 34),
+           (210, 22), (210, 24), (210, 25), (210, 26)]
+
 # The sprite meshes: each final in local/art/generated/effects and the classic TEXTURE records it stands in for, each
 # built across its sprite's width. Naming a final here is what accepts it.
 WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)]),
@@ -612,15 +619,22 @@ WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)]),
                 # cages built from parts measured off their sprites (town_flats.py in the task's evidence)
                 ("woodpile-212-11.glb", [(212, 11)]), ("woodpile-212-12.glb", [(212, 12)]),
                 ("signpost-ivy.glb", [(212, 4)]), ("signpost.glb", [(212, 5)]), ("fingerpost.glb", [(212, 6)]),
-                ("post.glb", [(212, 13)]), ("post-grass.glb", [(212, 14)]), ("cage.glb", [(212, 15)]), ("cage-pole.glb", [(212, 16)])]
+                ("post.glb", [(212, 13)]), ("post-grass.glb", [(212, 14)]), ("cage.glb", [(212, 15)]), ("cage-pole.glb", [(212, 16)]),
+                # hanging.py's roots, chains, cage and lanterns (#10865), which swing as an actor walks through them
+                *((f"hanging-{archive}-{record}.glb", [(archive, record)]) for archive, record in HANGING)]
 
 
 def world_mesh_entry(final, archive, record):
-    """A sprite mesh's entry: the GLB as it is and its material slots with an emissive map (`glow`)."""
+    """A sprite mesh's entry: the GLB as it is, its material slots with an emissive map (`glow`), and what a hanging
+    piece hangs as (`hangs`), as its scene states."""
     data = final.path.read_bytes()
     gltf = json.loads(data[20:20 + int.from_bytes(data[12:16], "little")])
     glow = [slot for slot, material in enumerate(gltf.get("materials", [])) if "emissiveTexture" in material]
-    return {"replaces": {"archive": archive, "record": record}, **write(f"{MEDIA}/effects/{final.key}", data), **({"glow": glow} if glow else {})}
+    hangs = gltf.get("scenes", [{}])[gltf.get("scene", 0)].get("extras", {}).get("hangs")
+    if ((archive, record) in HANGING) != (hangs is not None):
+        sys.exit(f"{final.path} is {'a hanging piece whose scene states no' if hangs is None else 'no hanging piece, yet its scene states'} `hangs`.")
+    return {"replaces": {"archive": archive, "record": record}, **write(f"{MEDIA}/effects/{final.key}", data), **({"glow": glow} if glow else {}),
+            **({"hangs": hangs} if hangs is not None else {})}
 
 
 def effect_units():

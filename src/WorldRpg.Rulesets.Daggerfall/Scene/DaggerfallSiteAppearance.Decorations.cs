@@ -1,6 +1,7 @@
 using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Kit.Presentation;
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 
@@ -25,6 +26,13 @@ internal sealed partial class DaggerfallSiteAppearance
         /// <summary>The refreshed mesh drawn in place of its sprite while refreshed art is drawn, when the refreshed set has one.</summary>
         internal Appearance? Mesh { get; set; }
         internal float MeshScale { get; set; } = 1f;
+        /// <summary>How its mesh hangs and swings, and the model it is drawn from, when it is a hanging root, chain, cage or lantern.</summary>
+        internal (DaggerfallHangingKind Kind, DaggerfallHangingRig Rig, float Height)? Hangs { get; set; }
+        internal RenderResource? Model { get; set; }
+        /// <summary>Where a hanging mesh hangs once <see cref="DaggerfallHanging"/> has fitted it clear of what is around it.</summary>
+        internal Transform? HangingPose { get; set; }
+        /// <summary>Whether it swings now, when it casts no shadow.</summary>
+        internal bool Swinging { get; set; }
         /// <summary>The refreshed sprites drawn in place of its classic ones while refreshed art is drawn, where the refreshed set has them.</summary>
         internal DecorationSprite? RefreshedSummer { get; set; }
         internal DecorationSprite? RefreshedWinter { get; set; }
@@ -210,16 +218,48 @@ internal sealed partial class DaggerfallSiteAppearance
             if (grownInField(winterMaterials ? flat.Definition.WinterSource : flat.Definition.Source)) continue;
             if (refreshed && flat.Mesh is { } mesh)
             {
-                // The mesh rests on the floor its sprite stands on.
-                facts.Add(new(DaggerfallPresentationObjectIds.LocationVisual(slot, flat.Ordinal), false, 0,
-                    Compose(worldAppearance.Transform, new Transform(Foot(flat.Definition), Quaternion.Identity, new Vector3(flat.MeshScale))),
-                    mesh, worldAppearance.Visible, worldAppearance.Layer));
+                facts.Add(new(DaggerfallPresentationObjectIds.LocationVisual(slot, flat.Ordinal), false, 0, MeshPose(flat), mesh,
+                    worldAppearance.Visible, worldAppearance.Layer, flat.Swinging ? ShadowCasting.None : ShadowCasting.Cast));
                 continue;
             }
             facts.Add(new(DaggerfallPresentationObjectIds.LocationVisual(slot, flat.Ordinal), false, 0,
                 Compose(worldAppearance.Transform, new Transform(flat.Definition.Position.ToVector(), Quaternion.Identity, Vector3.One)),
                 DrawnDecoration(flat).Visual, worldAppearance.Visible, worldAppearance.Layer));
         }
+    }
+
+    /// <summary>
+    /// Where a decoration's mesh stands: on the floor its sprite stands on, the sprite's position less its pivot's share of its
+    /// height, across the sprite's width. A hanging mesh so hangs from the sprite's top; each turns its own way about the
+    /// vertical, so a room of them do not all face alike, and stands where it was fitted once fitted.
+    /// </summary>
+    private Transform MeshPose(DecorationVisual flat)
+    {
+        if (flat.HangingPose is { } fitted) return fitted;
+        Quaternion turn = flat.Hangs is null ? Quaternion.Identity
+            : Quaternion.CreateFromAxisAngle(Vector3.UnitY, StableHash.Fnv1a64(flat.Definition.Id) % 360 * MathF.PI / 180);
+        return Compose(worldAppearance.Transform, new Transform(Foot(flat.Definition), turn, new Vector3(flat.MeshScale)));
+    }
+
+    /// <summary>The active site's hanging meshes, drawn in place of their sprites while refreshed art is drawn: what <see cref="DaggerfallHanging"/> swings.</summary>
+    internal IEnumerable<DaggerfallHangingPiece> HangingPieces() => decorations
+        .Where(flat => flat is { Hangs: not null, Mesh: not null, Model: not null })
+        .Select(flat => new DaggerfallHangingPiece(flat.Definition.Id, $"{flat.Definition.Source.Archive}-{flat.Definition.Source.Record}", flat.Hangs!.Value.Kind,
+            flat.Mesh!, DaggerfallPresentationObjectIds.LocationVisual(DaggerfallPresentationObjectIds.ActiveLocationSlot, flat.Ordinal), flat.Model!,
+            flat.Hangs.Value.Rig, flat.Hangs.Value.Height, MeshPose(flat), Compose(worldAppearance.Transform, new Transform(flat.Definition.Position.ToVector(), Quaternion.Identity, Vector3.One)).Translation));
+
+    /// <summary>Hangs a hanging mesh where it was fitted clear of what is around it.</summary>
+    internal void PlaceHanging(string id, Transform pose)
+    {
+        foreach (DecorationVisual flat in decorations)
+            if (flat.Definition.Id == id) flat.HangingPose = pose;
+    }
+
+    /// <summary>Marks a hanging mesh swinging or at rest: swinging, it casts no shadow, which would be drawn again every frame it moves.</summary>
+    internal void SwingHanging(string id, bool swinging)
+    {
+        foreach (DecorationVisual flat in decorations)
+            if (flat.Definition.Id == id) flat.Swinging = swinging;
     }
 
     private void AdvanceDecorations()
@@ -229,8 +269,15 @@ internal sealed partial class DaggerfallSiteAppearance
                 appearance.AdvanceSpritePlayback(new(playback));
     }
 
+    /// <summary>
+    /// Told as the decorations' meshes are retired, before any is let go, so whatever swings them lets go of the
+    /// instances and ragdolls it made of them first: no instance may outlive its appearance.
+    /// </summary>
+    internal Action? DecorationsRetiring { get; set; }
+
     private IEnumerable<IDisposable> TakeDecorationResources()
     {
+        DecorationsRetiring?.Invoke();
         List<IDisposable> values = [];
         foreach (var sprite in decorationSprites)
         {

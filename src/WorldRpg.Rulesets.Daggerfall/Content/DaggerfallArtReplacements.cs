@@ -89,7 +89,17 @@ internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 /// </summary>
 /// <param name="Glow">The GLB material slots whose emissive maps shine at the lamps' level, as a refreshed flat's
 /// emission map does: a lamp's glass and flame.</param>
-internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, IReadOnlyList<uint> Glow);
+internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, IReadOnlyList<uint> Glow)
+{
+    /// <summary>
+    /// How it hangs from its sprite's top and swings when an actor walks through it, for a mesh that does: its rig names the
+    /// point it hangs from and the bodies that swing below it.
+    /// </summary>
+    internal DaggerfallHangingKind? Hangs { get; init; }
+}
+
+/// <summary>What a hanging mesh is, which sets how its bodies weigh and turn: a root, a chain, a cage or a lantern on a chain.</summary>
+internal enum DaggerfallHangingKind { Root, Chain, Cage, Lantern }
 
 /// <summary>
 /// A remodel standing in for one classic ARCH3D model wherever an assembled location places it: an Engine static mesh in the
@@ -244,7 +254,8 @@ internal sealed class DaggerfallArtReplacements
 
     /// <summary>
     /// The meshes drawn in place of classic world sprites, by the texture archive and record each replaces: the bone pile
-    /// for the corpse every human enemy class shares (so it is no one in particular) and for the bone piles placed in dungeons.
+    /// for the corpse every human enemy class shares (so it is no one in particular) and for the bone piles placed in dungeons,
+    /// the placed rocks, logs and barrel, and the roots, chains, cage and lanterns that hang and swing.
     /// </summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> Meshes { get; }
 
@@ -426,8 +437,17 @@ internal sealed class DaggerfallArtReplacements
                 {
                     (int, int) replaces = (mesh.GetProperty("replaces").GetProperty("archive").GetInt32(), mesh.GetProperty("replaces").GetProperty("record").GetInt32());
                     uint[] glowing = mesh.TryGetProperty("glow", out JsonElement slots) ? [.. slots.EnumerateArray().Select(slot => slot.GetUInt32())] : [];
+                    DaggerfallHangingKind? hangs = mesh.TryGetProperty("hangs", out JsonElement kind) ? kind.GetString() switch
+                    {
+                        "root" => DaggerfallHangingKind.Root,
+                        "chain" => DaggerfallHangingKind.Chain,
+                        "cage" => DaggerfallHangingKind.Cage,
+                        "lantern" => DaggerfallHangingKind.Lantern,
+                        var other => throw new InvalidOperationException(
+                            $"Content pack '{packId}' hangs the mesh replacing {replaces.Item1}/{replaces.Item2} as '{other}', which is no root, chain, cage or lantern."),
+                    } : null;
                     if (!meshes.TryAdd(replaces, new(new(mesh.GetProperty("path").GetString()!,
-                            DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), glowing)))
+                            DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), glowing) { Hangs = hangs }))
                         throw new InvalidOperationException($"Content pack '{packId}' names two meshes for {replaces.Item1}/{replaces.Item2}.");
                 }
             if (section.TryGetProperty("models", out JsonElement modelArt))

@@ -11,7 +11,8 @@ Each tool's usage is in its own header.
 authoring/
   tools/    shared/ (what every 2D area runs: batches, cut-out, finals, matte, ledger, promote), paper-doll/ (bodies,
             heads, worn layers, doll preview), flats/, surfaces/, terrain/, groundcover/, trees/, rocks/ (rocks, logs and
-            dead trees, models and flats), ui/ (screen export, UI art kit), weapons/, mounts/, fp-arms/ (first-person.rpak)
+            dead trees, models and flats), hanging/ (the roots, chains, cage and lanterns that swing), ui/ (screen
+            export, UI art kit), weapons/, mounts/, fp-arms/ (first-person.rpak)
   specs/    tracked contract specs: items, worn, paper-doll, spells, effects, flats, people, ui, weapons
   ledger/   <area>-notes.json: status and notes per image key, the only hand-edited tracking input
 

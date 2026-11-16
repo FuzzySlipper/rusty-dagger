@@ -24,7 +24,10 @@ internal sealed partial class DaggerfallSiteAppearance
     private IPresentationService? particles;
     private RenderResource? particleGlow;
     private IAnimationService? meshes;
-    private readonly Dictionary<(int Archive, int Record), (RenderResource Model, float Width, IReadOnlyList<uint> Glow)> worldMeshes = [];
+    // Each sprite mesh's model, its width across, its glowing slots, and for a hanging one what it hangs as, the bodies
+    // its rig names and the height it hangs from: a rig that could not hang is refused here, as its art is admitted.
+    private readonly Dictionary<(int Archive, int Record), (RenderResource Model, float Width, IReadOnlyList<uint> Glow,
+        (DaggerfallHangingKind Kind, DaggerfallHangingRig Rig, float Height)? Hangs)> worldMeshes = [];
 
     /// <summary>
     /// Admits the refreshed set's world effects and particle glow, drawn whenever <paramref name="refreshed"/> answers
@@ -61,7 +64,10 @@ internal sealed partial class DaggerfallSiteAppearance
                 model = (opened, info.BoundsMax.X - info.BoundsMin.X);
                 models.Add(mesh.File.Path, model);
             }
-            worldMeshes.Add((archive, record), (model.Model, model.Width, mesh.Glow));
+            worldMeshes.Add((archive, record), (model.Model, model.Width, mesh.Glow, mesh.Hangs is { } kind
+                ? (kind, DaggerfallHangingRig.Read(animation.ReadJoints(model.Model).Span, $"{archive}-{record}"),
+                    DaggerfallHangingRig.Height(animation, model.Model, $"{archive}-{record}"))
+                : null));
         }
         foreach (ActorVisual visual in actors.Values) AttachCorpseMesh(visual);
         foreach (DecorationVisual flat in decorations) AttachDecorationMesh(flat);
@@ -91,6 +97,9 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (flat.Mesh is not null || WorldMesh(flat.Definition.Source, flat.Definition.Summer.Size.X) is not { } mesh) return;
         (flat.Mesh, flat.MeshScale, IReadOnlyList<uint> glow) = mesh;
+        // A hanging mesh hangs from its sprite's top, so it is drawn at its sprite's height rather than its width.
+        if (worldMeshes[flat.Definition.Source] is { Hangs: { } hangs } hanging)
+            (flat.Hangs, flat.Model, flat.MeshScale) = (hangs, hanging.Model, flat.Definition.Summer.Size.Y / hangs.Height);
         if (glow.Count == 0) return;
         glowingMeshes.Add((flat.Mesh, glow));
         LightMesh(flat.Mesh, glow);

@@ -185,6 +185,7 @@ internal sealed partial class DaggerfallSession
             && facts.AdmittedStepCount > 0)
         {
             foreach (var appearance in _sites.Appearances) appearance.Advance(facts);            // Scene
+            StepHanging(facts);                                                                   // Scene: the hanging pieces' list, below
             _appearance.AdvanceMobileFeedback(facts, State.Actors, State.PlayerControl.Position, _soundCover.Blocks);   // Scene
             // A held value is recomputed before anything this update can read it: impacts resolve, the
             // flight advances and presentation publishes against what the player is wearing now.
@@ -1495,6 +1496,7 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     void IDaggerfallSiteTransitionHost.RetireDepartingProjection(DaggerfallSiteProjection source)
     {
+        if (_hanging?.Site == source.Appearance) { _hanging.Dispose(); _hanging = null; }       // Scene
         source.DeactivateWaterTriggers(_latestSimulationStep ?? 0UL);                             // Exterior
         if (_latestUpdateGeneration is ulong swinging) PlayerAttack.Retire(swinging);            // Combat
         IReadOnlyList<AttackImpactNotice> departing = source.Appearance.TakeAttackImpacts();      // Scene
@@ -1505,6 +1507,38 @@ internal sealed partial class DaggerfallSession
         DungeonText.CancelOnUnload();                                                             // Text
         // The destination is committed; restored item lifetimes settle before any presentation.
         ExpireConjuredItems();                                                                    // Session: the conjured items' list, below
+    }
+
+    /// <summary>
+    /// The active dungeon's or interior's hanging roots, chains, cage and lanterns swing aside as the player and the enemies
+    /// walk through them. Outdoors none hang: the exterior's origin moves under them.
+    /// </summary>
+    private void StepHanging(ProductUpdateFacts facts)
+    {
+        if (_sites.ActiveProfile.Kind == DaggerfallWorldProfileKind.Exterior)
+        {
+            _hanging?.Dispose();
+            _hanging = null;
+            return;
+        }
+        if (_hanging is not { Stale: false } || _hanging.Site != _appearance)
+        {
+            _hanging?.Dispose();
+            _hanging = new DaggerfallHanging(_engine.Dynamics, _engine.Animation, _spatial, _appearance, _sites.Projection.Lighting,
+                _sites.Projection.Inputs.Lights, _tuning.Hanging,
+                message => _engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
+                    "daggerfall.hanging", "hanging.unfit", message, string.Empty)));                          // Scene
+        }
+        if (!_hanging.Hangs) return;
+        List<DaggerfallHangingActor> actors = [];
+        if (State.PlayerControl.Position is { } feet)
+            actors.Add(new(State.Actors.Player.DurableId, feet.ToVector(), _spatial.CurrentController.Shape.Radius,
+                _spatial.CurrentController.Shape.StandingHeight));                                        // Actors: the player's controller
+        foreach (ActorState actor in State.Actors.All)
+            if (!actor.IsDefeated && actor.DurableId != State.Actors.Player.DurableId)
+                actors.Add(new(actor.DurableId, actor.Position.ToVector(), DaggerfallContactBody.Envelope.HalfWidth,
+                    DaggerfallContactBody.Envelope.Height));                                              // Combat: every actor's body
+        _hanging.Step((float)(facts.FixedDeltaSeconds * facts.AdmittedStepCount), [.. actors], DrawnArt is not null);   // Scene
     }
 
     /// <summary>

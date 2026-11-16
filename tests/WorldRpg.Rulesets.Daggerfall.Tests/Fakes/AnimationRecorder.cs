@@ -14,6 +14,11 @@ internal class AnimationRecorder : DispatchProxy
     internal List<AnimatedMeshMaterialFactorsRequest> FactorUpdates { get; } = [];
     /// <summary>The joints and clips an opened model reports.</summary>
     internal AnimationJointInfo[] Joints { get; set; } = [];
+    /// <summary>Where each of <see cref="Joints"/> stands in its model at rest, which a model sample places in the scene; none puts every joint at its origin.</summary>
+    internal System.Numerics.Vector3[] Rest { get; set; } = [];
+    internal int ReleasedInstances { get; private set; }
+    /// <summary>The pose every instance reports it was drawn in; none reports it unposed.</summary>
+    internal JointPose[]? Live { get; set; }
     internal AnimationClipInfo[] Clips { get; set; } = [];
     /// <summary>The bounds an opened model reports: a metre cube standing on its floor, unless a test states its own.</summary>
     internal AnimatedMeshInfo MeshInfo { get; set; } = new(new(-.5F, 0, -.5F), new(.5F, 1, .5F), 0, 0, 0);
@@ -30,13 +35,24 @@ internal class AnimationRecorder : DispatchProxy
         nameof(IAnimationService.ReadJoints) => new ReadOnlyMemory<AnimationJointInfo>(Joints),
         nameof(IAnimationService.ReadClips) => new ReadOnlyMemory<AnimationClipInfo>(Clips),
         nameof(IAnimationService.ReadMeshInfo) => MeshInfo,
-        nameof(IAnimationService.SampleModelJointPose) or nameof(IAnimationService.SampleJointPose) => new ReadOnlyMemory<JointPose>(new JointPose[Joints.Length]),
-        nameof(IAnimationService.CreateInstance) => new AnimationInstance(new AnimationInstanceHandle(7000 + (ulong)++Instances), () => { }),
+        nameof(IAnimationService.SampleModelJointPose) => ModelPose(((AnimationModelPoseSampleRequest)args![0]!).Placement),
+        nameof(IAnimationService.SampleJointPose) => new ReadOnlyMemory<JointPose>(new JointPose[Joints.Length]),
+        nameof(IAnimationService.CreateInstance) => new AnimationInstance(new AnimationInstanceHandle(7000 + (ulong)++Instances), () => ReleasedInstances++),
         nameof(IAnimationService.UpdateAnimatedMeshMaterialFactors) => Factors((AnimatedMeshMaterialFactorsRequest)args![0]!),
-        nameof(IAnimationService.ReadJointPose) => Activator.CreateInstance(method.ReturnType),
+        nameof(IAnimationService.ReadJointPose) => Live is { } live
+            ? new AnimationJointPoseResult(live, ReadOnlyMemory<IkChainReach>.Empty, default, 0, true) : default(AnimationJointPoseResult),
         nameof(IAnimationService.SetPlayback) or nameof(IAnimationService.SetPose) or nameof(IAnimationService.SetLayers) => null,
         _ => throw new NotSupportedException(method?.Name),
     };
+    /// <summary>Its joints at rest, placed at <paramref name="placement"/>, as a model sample places them.</summary>
+    internal ReadOnlyMemory<JointPose> ModelPose(Transform placement) => Joints.Select((_, joint) =>
+    {
+        System.Numerics.Vector3 local = joint < Rest.Length ? Rest[joint] : default;
+        Transform model = new(local, System.Numerics.Quaternion.Identity, System.Numerics.Vector3.One);
+        System.Numerics.Vector3 world = placement.Translation + System.Numerics.Vector3.Transform(local * placement.Scale, placement.Rotation);
+        return new JointPose(model, new Transform(world, placement.Rotation, placement.Scale));
+    }).ToArray();
+
     private object? Factors(AnimatedMeshMaterialFactorsRequest request)
     {
         FactorUpdates.Add(request);

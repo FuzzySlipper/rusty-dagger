@@ -99,6 +99,7 @@ internal class EngineContextFake : DispatchProxy
     internal void UseAuthoredContent(IAuthoredContentService service) => authored = service;
     /// <summary>The parts rigs the product loads, shows and plays.</summary>
     internal PartsRigsRecorder PartsRigs { get; } = PartsRigsRecorder.Create();
+    internal DynamicsRecorder Dynamics { get; } = DynamicsRecorder.Create();
 
     internal bool HeightfieldVisible => ((HeightfieldServiceFake)(object)heightfield).Visible;
     internal bool NearGroundVisible => ((HeightfieldServiceFake)(object)heightfield).NearVisible;
@@ -154,6 +155,7 @@ internal class EngineContextFake : DispatchProxy
         "get_Vegetation" => vegetation,
         "get_AuthoredContent" => authored,
         "get_PartsRigs" => PartsRigs.Service,
+        "get_Dynamics" => Dynamics.Service,
         "get_ContentSource" => contentSource,
         _ => throw new NotSupportedException(method?.Name),
     };

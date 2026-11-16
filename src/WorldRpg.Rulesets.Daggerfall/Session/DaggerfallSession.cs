@@ -184,6 +184,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <c>world.classic-art</c>, never offered to a player nor kept past the run.
     /// </summary>
     private bool _classicArt;
+    /// <summary>The active dungeon's or interior's hanging pieces, while one is active; none outdoors.</summary>
+    private DaggerfallHanging? _hanging;
 
     /// <summary>The refreshed art set the session draws, or null when a developer switched to classic art or the bundle carries none.</summary>
     private DaggerfallArtReplacements? DrawnArt => _classicArt ? null : _composition.ArtReplacements;
@@ -551,6 +553,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         try { _exterior.DropGroundCollider(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _exterior.RetireResidentExteriorLocations(capture: false); }
+        catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
+        // The hanging pieces' ragdolls hold the site appearance's instances, so they go before the projection.
+        try { _hanging?.Dispose(); }                                                              // Scene
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, .. _atlasTiles is null ? Array.Empty<IDisposable>() : new IDisposable[] { _atlasTiles }, _hud, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.Interiors.ActionTriggers, Infections, _horizon, _weatherPresentation]); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }

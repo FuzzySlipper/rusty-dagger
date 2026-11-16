@@ -16,9 +16,15 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </summary>
 /// <param name="passTime">Lets this many game seconds pass (the session's AdvanceElapsedTime, without idle fatigue).</param>
 /// <param name="useClassicArt">Draws the classic art in place of the refreshed art (true) or the refreshed art (false).</param>
+/// <param name="hanging">The active site's hanging pieces, when it has an owner for them.</param>
 internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<long> passTime, DaggerfallHorizon horizon,
-    DaggerfallSiteCrossing sites, DaggerfallWeather weather, PlayerControlState player, DaggerfallDefinitions definitions, Action<bool> useClassicArt) : IDeveloperSceneCommands
+    DaggerfallSiteCrossing sites, DaggerfallWeather weather, PlayerControlState player, DaggerfallDefinitions definitions, Action<bool> useClassicArt,
+    Func<DaggerfallHanging?> hanging) : IDeveloperSceneCommands
 {
+    public DebugCommandResult Hanging() => hanging() is { } pieces
+        ? DebugCommandResult.Success(pieces.Describe())
+        : DebugCommandResult.Success("Nothing hangs here: hanging pieces swing only in dungeons and interiors.");
+
     public DebugCommandResult Hour(int hour)
     {
         if (hour is < 0 or > 23) return Refused("An hour is from 0 to 23.");
