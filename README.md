@@ -153,7 +153,11 @@ the one ignored folder. Its folders say what may be deleted:
   container, so it runs exactly what a player has and can still compare.
 - `local/data/first-person.rpak` is optional: 3D first-person arms built from
   purchased art by `authoring/tools/fp-arms/build.sh`. Without it a 3D `viewmodel.style`
-  draws the classic weapon sprites, with a warning.
+  draws the classic weapon sprites, with a warning. It ships with the game packed,
+  never as the raw art in `local/inputs/fp-melee`, so it is the one file in the
+  store's `ship/` root (beside `lan/`), which holds what ships but lives outside
+  GitHub, finals only. `pull` and `link` take it from there; after a rebuild,
+  `scripts/data-sync.sh ship` replaces it there for every checkout.
 - The values the import takes from Daggerfall Unity are tables of our own in
   `src/Daggerfall.Import.Tool/inputs/`, the quest scripts among them as quest
   documents, each naming the Daggerfall Unity file and commit it was taken

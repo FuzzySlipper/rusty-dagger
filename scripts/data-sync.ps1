@@ -60,8 +60,8 @@ function Report {
 if ($Status) { Report; exit 0 }
 if (-not (Test-Path $Store)) { throw "data-sync: $Store is not reachable" }
 if ($checkout -notmatch '^[0-9a-f]{64}$') { throw "data-sync: cannot tell which data this checkout needs: $checkout" }
-# A cache keeps REVISION\data and a store root revisions\REVISION, each with first-person.rpak once at the root; a
-# checkout's local\data holds one revision.
+# A cache keeps REVISION\data with first-person.rpak once at its root; a store's lan root keeps revisions\REVISION, with
+# first-person.rpak in the ship root beside it; a checkout's local\data holds one revision.
 $source = $Store
 if (Test-Path (Join-Path $Store 'revisions')) { $source = Join-Path $Store "revisions\$checkout" }
 elseif (Test-Path (Join-Path $Store "$checkout\data")) { $source = Join-Path $Store "$checkout\data" }
@@ -71,9 +71,11 @@ if ($revision -ne $checkout -or -not $whole) { Write-Output $missing; exit 1 }
 # The developer's classic-art container, for world.classic-art, where the revision has one (every one since #10763).
 robocopy $source $data daggerfall-data.rpak music.rpak classic-art.rpak /FFT /NP /NFL /NDL /R:2 /W:2
 if ($LASTEXITCODE -ge 8) { throw "data-sync: robocopy failed ($LASTEXITCODE)" }
-# first-person.rpak is not an import output: it sits beside the containers in a checkout and at a store's root.
-if (Test-Path (Join-Path $Store 'first-person.rpak')) {
-    robocopy $Store $data first-person.rpak /FFT /NP /NFL /NDL /R:2 /W:2
+# first-person.rpak is not an import output: it sits beside the containers in a checkout, at a cache's root, and in a
+# store's ship root.
+$shipped = if (Test-Path (Join-Path $Store 'revisions')) { Join-Path (Split-Path -Parent $Store) 'ship' } else { $Store }
+if (Test-Path (Join-Path $shipped 'first-person.rpak')) {
+    robocopy $shipped $data first-person.rpak /FFT /NP /NFL /NDL /R:2 /W:2
     if ($LASTEXITCODE -ge 8) { throw "data-sync: robocopy failed ($LASTEXITCODE)" }
 }
 Report
