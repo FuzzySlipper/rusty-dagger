@@ -31,9 +31,9 @@ public sealed class SpellEffectPresentationTests
              "placement": {"size": {"width": 0.8, "height": 0.8}, "pivot": {"x": 0.5, "y": 0.5}, "sequence": [0, 1], "framesPerSecond": 15, "loops": false}}],
           "effectGlow": {"path": "refreshed/glow.png", "byteLength": 1, "sha256": "HASH"},
           "meshes": [
-            {"replaces": {"archive": 380, "record": 1}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH"},
-            {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH"},
-            {"replaces": {"archive": 210, "record": 28}, "path": "refreshed/lamp-post.glb", "byteLength": 1, "sha256": "HASH", "glow": [1]}],
+            {"replaces": {"archive": 380, "record": 1}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "placement": {"size": {"width": 2.15, "height": 0.9}}},
+            {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "placement": {"size": {"width": 1.075, "height": 0.725}}},
+            {"replaces": {"archive": 210, "record": 28}, "path": "refreshed/lamp-post.glb", "byteLength": 1, "sha256": "HASH", "glow": [1], "placement": {"size": {"width": 0.7, "height": 3.8}}}],
           "flats": [
             {"replaces": {"archive": 212, "record": 0}, "path": "refreshed/well.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "placement": {"size": {"width": 4, "height": 6}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.25}}},
@@ -234,13 +234,13 @@ public sealed class SpellEffectPresentationTests
     }
 
     [Fact]
-    public void A_placed_bone_pile_draws_as_the_mesh_at_its_sprite_width_on_its_floor_in_refreshed_art()
+    public void A_placed_bone_pile_draws_as_the_mesh_at_its_own_width_on_its_floor_in_refreshed_art()
     {
         bool refreshed = true;
-        // The bone pile's GLB is 2.15 m across, twice its sprite's width.
+        // The bone pile's GLB is 2.15 m across, twice the 1.075 m its placement gives it, whatever width its classic sprite states.
         AnimationRecorder animation = AnimationRecorder.Create();
         animation.MeshInfo = new(new(-1.075F, 0, -.6F), new(1.075F, .4F, .6F), 0, 0, 0);
-        NormalizedBillboardSprite bones = new("sprite/corpse.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(1.075F, .725F));
+        NormalizedBillboardSprite bones = new("sprite/corpse.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(2F, .725F));
         DaggerfallSiteDecoration pile = new("flat-1", new WorldPoint(4, .5F, 6), false, bones, bones, (380, 4), (380, 4), Lamp: false);
         var (presentation, graphics, _) = Compose(() => refreshed, animation: animation, decorations: [pile]);
         using DaggerfallSiteAppearance owned = presentation;

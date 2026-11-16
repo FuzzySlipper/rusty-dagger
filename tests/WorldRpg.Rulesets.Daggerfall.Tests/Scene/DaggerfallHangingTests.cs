@@ -391,8 +391,8 @@ public sealed class DaggerfallHangingTests
     private static DaggerfallArtReplacements Art(string kind = "root", bool lantern = false) => DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes("""
         {"artReplacements": {"images": [],
           "meshes": [
-            {"replaces": {"archive": ARCHIVE, "record": RECORD}, "path": "refreshed/hanging.glb", "byteLength": 1, "sha256": "HASH", "hangs": "KIND"},
-            {"replaces": {"archive": 205, "record": 0}, "path": "refreshed/barrel.glb", "byteLength": 1, "sha256": "HASH"}]}}
+            {"replaces": {"archive": ARCHIVE, "record": RECORD}, "path": "refreshed/hanging.glb", "byteLength": 1, "sha256": "HASH", "hangs": "KIND", "placement": {"size": {"width": 0.85, "height": 1.875}}},
+            {"replaces": {"archive": 205, "record": 0}, "path": "refreshed/barrel.glb", "byteLength": 1, "sha256": "HASH", "placement": {"size": {"width": 0.825, "height": 0.925}}}]}}
         """.Replace("ARCHIVE", lantern ? "210" : "213", StringComparison.Ordinal).Replace("RECORD", lantern ? "25" : "8", StringComparison.Ordinal)
         .Replace("KIND", lantern ? "lantern" : kind, StringComparison.Ordinal).Replace("HASH", HashHex, StringComparison.Ordinal)), "test.art");
 

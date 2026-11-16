@@ -46,6 +46,14 @@ public sealed class ArtPlacementTests
     }
 
     [Fact]
+    public void A_sprite_mesh_states_the_size_it_stands_at_or_is_refused_by_name()
+    {
+        const string mesh = "\"meshes\": [{\"replaces\": {\"archive\": 212, \"record\": 0}, \"path\": \"well.glb\", \"byteLength\": 1, \"sha256\": \"HASH\"";
+        Assert.Equal(new Vector2(1.9F, 2.6F), Read(mesh + ", \"placement\": {\"size\": {\"width\": 1.9, \"height\": 2.6}}}]").Meshes[(212, 0)].Size);
+        Assert.Contains("states no placement for the refreshed mesh for 212/0", Assert.Throws<InvalidOperationException>(() => Read(mesh + "}]")).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_tree_states_its_height_and_foot_in_metres_or_is_refused_by_name()
     {
         const string mesh = "\"mesh\": {\"path\": \"m.json\", \"sha256\": \"HASH\", \"height\": 9}";

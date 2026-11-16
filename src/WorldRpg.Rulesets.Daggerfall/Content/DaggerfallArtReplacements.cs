@@ -85,11 +85,13 @@ internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 
 /// <summary>
 /// A refreshed mesh standing in for the classic sprite cut from one texture record: a GLB resting on the floor, drawn at
-/// the width of the sprite it replaces from its own width across (x), as the Engine admits it.
+/// its own placed width in the world from its own width across (x), as the Engine admits it, or, hung from its sprite's top,
+/// at its placed height.
 /// </summary>
+/// <param name="Size">Its size in the world, in metres: the width it is drawn across and, for a hanging mesh, the height it hangs.</param>
 /// <param name="Glow">The GLB material slots whose emissive maps shine at the lamps' level, as a refreshed flat's
 /// emission map does: a lamp's glass and flame.</param>
-internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, IReadOnlyList<uint> Glow)
+internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, Vector2 Size, IReadOnlyList<uint> Glow)
 {
     /// <summary>
     /// How it hangs from its sprite's top and swings when an actor walks through it, for a mesh that does: its rig names the
@@ -445,8 +447,13 @@ internal sealed class DaggerfallArtReplacements
                         var other => throw new InvalidOperationException(
                             $"Content pack '{packId}' hangs the mesh replacing {replaces.Item1}/{replaces.Item2} as '{other}', which is no root, chain, cage or lantern."),
                     } : null;
+                    JsonElement size = Placement(mesh.TryGetProperty("placement", out JsonElement placed) ? placed : null,
+                        $"the refreshed mesh for {replaces.Item1}/{replaces.Item2}", "size").GetProperty("size");
+                    Vector2 metres = new(size.GetProperty("width").GetSingle(), size.GetProperty("height").GetSingle());
+                    if (!float.IsFinite(metres.X) || !float.IsFinite(metres.Y) || metres.X <= 0 || metres.Y <= 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' draws the mesh replacing {replaces.Item1}/{replaces.Item2} {metres.X} by {metres.Y} metres.");
                     if (!meshes.TryAdd(replaces, new(new(mesh.GetProperty("path").GetString()!,
-                            DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), glowing) { Hangs = hangs }))
+                            DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), metres, glowing) { Hangs = hangs }))
                         throw new InvalidOperationException($"Content pack '{packId}' names two meshes for {replaces.Item1}/{replaces.Item2}.");
                 }
             if (section.TryGetProperty("models", out JsonElement modelArt))

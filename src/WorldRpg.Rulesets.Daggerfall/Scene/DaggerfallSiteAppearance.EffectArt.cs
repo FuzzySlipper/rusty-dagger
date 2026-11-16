@@ -26,7 +26,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private IAnimationService? meshes;
     // Each sprite mesh's model, its width across, its glowing slots, and for a hanging one what it hangs as, the bodies
     // its rig names and the height it hangs from, read as its art is admitted.
-    private readonly Dictionary<(int Archive, int Record), (RenderResource Model, float Width, IReadOnlyList<uint> Glow,
+    private readonly Dictionary<(int Archive, int Record), (RenderResource Model, float Width, Vector2 Size, IReadOnlyList<uint> Glow,
         (DaggerfallHangingKind Kind, DaggerfallHangingRig Rig, float Height)? Hangs)> worldMeshes = [];
 
     /// <summary>
@@ -54,7 +54,7 @@ internal sealed partial class DaggerfallSiteAppearance
             ownedResources.Add(texture.Handle);
             particleGlow = texture.Handle;
         }
-        // Each model is drawn at its sprite's width from its width across (x), as the Engine admitted it.
+        // Each model is drawn at its placed width from its width across (x), as the Engine admitted it.
         Dictionary<string, (RenderResource Model, float Width)> models = new(StringComparer.Ordinal);
         foreach (var ((archive, record), mesh) in art.Meshes)
         {
@@ -81,7 +81,7 @@ internal sealed partial class DaggerfallSiteAppearance
                     continue;
                 }
             }
-            worldMeshes.Add((archive, record), (model.Model, model.Width, mesh.Glow, hangs));
+            worldMeshes.Add((archive, record), (model.Model, model.Width, mesh.Size, mesh.Glow, hangs));
         }
         foreach (ActorVisual visual in actors.Values) AttachCorpseMesh(visual);
         foreach (DecorationVisual flat in decorations) AttachDecorationMesh(flat);
@@ -89,18 +89,18 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     /// <summary>
-    /// A refreshed mesh standing in for a classic sprite cut from <paramref name="source"/>, the scale that draws it at
-    /// <paramref name="width"/>, the sprite's world width, and its glowing slots; null when the refreshed set has no mesh for it.
+    /// A refreshed mesh standing in for a classic sprite cut from <paramref name="source"/>, the scale that draws it at its own
+    /// placed width, and its glowing slots; null when the refreshed set has no mesh for it.
     /// </summary>
-    private (Appearance Appearance, float Scale, IReadOnlyList<uint> Glow)? WorldMesh((int Archive, int Record)? source, float width) =>
+    private (Appearance Appearance, float Scale, IReadOnlyList<uint> Glow)? WorldMesh((int Archive, int Record)? source) =>
         source is { } key && meshes is not null && worldMeshes.TryGetValue(key, out var mesh)
-            ? (meshes.CreateAnimatedMeshAppearance(new(mesh.Model)), width / mesh.Width, mesh.Glow) : null;
+            ? (meshes.CreateAnimatedMeshAppearance(new(mesh.Model)), mesh.Size.X / mesh.Width, mesh.Glow) : null;
 
     /// <summary>Gives an actor whose corpse sprite has a refreshed mesh its own appearance of that mesh.</summary>
     private void AttachCorpseMesh(ActorVisual visual)
     {
         if (visual.CorpseMesh is not null || visual.Sprite.Corpse is not { } corpse) return;
-        if (WorldMesh(corpse.SourceTexture, corpse.Size.X) is { } mesh) (visual.CorpseMesh, visual.CorpseMeshScale, _) = mesh;
+        if (WorldMesh(corpse.SourceTexture) is { } mesh) (visual.CorpseMesh, visual.CorpseMeshScale, _) = mesh;
     }
 
     /// <summary>
@@ -109,11 +109,11 @@ internal sealed partial class DaggerfallSiteAppearance
     /// </summary>
     private void AttachDecorationMesh(DecorationVisual flat)
     {
-        if (flat.Mesh is not null || WorldMesh(flat.Definition.Source, flat.Definition.Summer.Size.X) is not { } mesh) return;
+        if (flat.Mesh is not null || WorldMesh(flat.Definition.Source) is not { } mesh) return;
         (flat.Mesh, flat.MeshScale, IReadOnlyList<uint> glow) = mesh;
         // A hanging mesh hangs from its sprite's top, so it is drawn at its sprite's height rather than its width.
         if (worldMeshes[flat.Definition.Source] is { Hangs: { } hangs } hanging)
-            (flat.Hangs, flat.Model, flat.MeshScale) = (hangs, hanging.Model, flat.Definition.Summer.Size.Y / hangs.Height);
+            (flat.Hangs, flat.Model, flat.MeshScale) = (hangs, hanging.Model, hanging.Size.Y / hangs.Height);
         if (glow.Count == 0) return;
         glowingMeshes.Add((flat.Mesh, glow));
         LightMesh(flat.Mesh, glow);

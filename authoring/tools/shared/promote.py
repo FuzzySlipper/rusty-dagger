@@ -56,10 +56,12 @@ pile resting on the floor, stands in for TEXTURE.380 record 1 (the corpse every 
 women alike, so it is no one in particular) and record 4 (the bone pile placed in dungeons). WORLD_MESHES names each such
 sprite mesh, which naming accepts; each entry is keyed by the record it replaces (`380-4`) and states the GLB material
 slots that carry an emissive map (`glow`), which the game lights at the lamps' level as it does a refreshed lamp's
-emission map: a lamp post's glass and flame. The game draws the mesh at the width of the classic sprite it replaces from
-the GLB's own width across (x), as the Engine admits it. A hanging root, chain, cage or lantern (tools/hanging/hanging.py)
-also states what it hangs as (`hangs`, as its GLB's scene states it): the game draws it from its sprite's top at the sprite's height and swings it when
-an actor walks through it.
+emission map: a lamp post's glass and flame. Its placement states the world size in metres it stands at (`size`, which the
+classic sprite it replaces gave once), and the game draws the mesh that wide from the GLB's own width across (x), as the Engine
+admits it. A hanging root, chain, cage or lantern (tools/hanging/hanging.py) also states what it hangs as (`hangs`, as its GLB's
+scene states it): the game draws it from its sprite's top at its `size`'s height and swings it when an actor walks through it.
+Where the mesh stands on the floor is the world's, not the art's: the import places a sprite at its pivot, and the game lowers the
+mesh by the classic pivot's share of the sprite's height.
 
 The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
 its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
@@ -114,8 +116,8 @@ A placement is the entry's own. A new entry takes its values from the classic or
 classic image's size at the treasure piles' scale, the classic body's waist), each marked `original` in its `from`;
 after that, promotion keeps every value the payload holds, so a value changed on purpose survives a re-promotion.
 `--set ID NAME VALUE` sets one, marked `hand`; `--recompute ID` (or `all`) takes them from the original again. An entry's
-id is what it replaces (an effect or image), or `flat.ARCHIVE.RECORD`, `person.ARCHIVE.RECORD` or `tree.ARCHIVE.RECORD`.
-`--place SECTION` (flats, people, trees) gives every entry of the section the payload holds without a placement its own
+id is what it replaces (an effect or image), or `flat.ARCHIVE.RECORD`, `person.ARCHIVE.RECORD`, `mesh.ARCHIVE.RECORD` or `tree.ARCHIVE.RECORD`.
+`--place SECTION` (flats, people, meshes, trees) gives every entry of the section the payload holds without a placement its own
 from the original, and promotes no file: for the entries a checkout without the finals cannot promote.
 
 Every area promotes the same way (promote_area). Its units are what an entry replaces, keyed as the area keys them: an
@@ -375,6 +377,13 @@ def flat_placement(archive, record, classic, frames, person=False):
             raise SystemExit(f"Billboard {archive}/{record} has {frames} frames but the import publishes no playback to take its rate from.")
         values["framesPerSecond"] = sprite["playback"]["framesPerSecond"]
     return values
+
+
+def mesh_placement(archive, record):
+    """A sprite mesh's own placement: the world size, in metres, of the classic sprite it stands in for, which draws it across
+    that width (x), or, hung from the top of its sprite, to that height (y)."""
+    size = billboard(archive, record)["worldSize"]
+    return {"size": {"width": round(size["x"], 6), "height": round(size["y"], 6)}}
 
 
 def with_placement(identity, entry, original):
@@ -701,7 +710,7 @@ def world_mesh_entry(final, archive, record):
     if ((archive, record) in HANGING) != (hangs is not None):
         sys.exit(f"{final.path} is {'a hanging piece whose scene states no' if hangs is None else 'no hanging piece, yet its scene states'} `hangs`.")
     return {"replaces": {"archive": archive, "record": record}, **write(f"{MEDIA}/effects/{final.key}", data), **({"glow": glow} if glow else {}),
-            **({"hangs": hangs} if hangs is not None else {})}
+            **({"hangs": hangs} if hangs is not None else {}), "placement": own(f"mesh.{archive}.{record}", ["size"], lambda: mesh_placement(archive, record))}
 
 
 def effect_units():
@@ -1042,7 +1051,7 @@ def placed_entries(payload):
     """Every entry of the pack that may state a placement, with the id `--set` and `--recompute` name it by: what it replaces
     for an image or effect, `flat.ARCHIVE.RECORD`, `person.ARCHIVE.RECORD`."""
     art = payload["artReplacements"]
-    named = {"flats": "flat", "people": "person"}
+    named = {"flats": "flat", "people": "person", "meshes": "mesh"}
     found = [(entry["replaces"], entry) for section in ("images", "effects") for entry in art.get(section, [])]
     for section, kind in named.items():
         found += [(f"{kind}.{entry['replaces']['archive']}.{entry['replaces']['record']}", entry) for entry in art.get(section, [])]
@@ -1054,6 +1063,7 @@ def placed_entries(payload):
 PLACEABLE = {
     "flats": lambda entry: flat_placement(entry["replaces"]["archive"], entry["replaces"]["record"], entry["classic"], len(entry["frames"])),
     "people": lambda entry: flat_placement(entry["replaces"]["archive"], entry["replaces"]["record"], entry["classic"], 1, person=True),
+    "meshes": lambda entry: mesh_placement(entry["replaces"]["archive"], entry["replaces"]["record"]),
 }
 
 
@@ -1076,18 +1086,18 @@ def place_trees(payload):
 
 
 def place(payload, section):
-    """Gives each entry of `section` that still has the rect of the classic frame (`classic`) its placement, from the original,
-    and drops the rect. The files are not touched."""
+    """Gives each entry of `section` that has no placement its own, from the original, and a flat's or person's drops the rect
+    of the classic frame (`classic`) it was taken against. The files are not touched."""
     if section == "trees":
         return place_trees(payload)
-    kind = {"flats": "flat", "people": "person"}[section]
+    kind = {"flats": "flat", "people": "person", "meshes": "mesh"}[section]
     entries = [(f"{kind}.{entry['replaces']['archive']}.{entry['replaces']['record']}", entry) for entry in payload["artReplacements"].get(section, [])]
     done = 0
     for identity, entry in entries:
-        if "classic" in entry:
-            names = ["size", "pivot", "foot", *(["framesPerSecond"] if len(entry["frames"]) > 1 and section == "flats" else [])]
+        if "placement" not in entry:
+            names = ["size"] if section == "meshes" else ["size", "pivot", "foot", *(["framesPerSecond"] if len(entry["frames"]) > 1 and section == "flats" else [])]
             entry["placement"] = own(identity, names, lambda: PLACEABLE[section](entry))
-            del entry["classic"]
+            entry.pop("classic", None)
             done += 1
     print(f"{section}: {done} of {len(entries)} entries given their placement", flush=True)
 
