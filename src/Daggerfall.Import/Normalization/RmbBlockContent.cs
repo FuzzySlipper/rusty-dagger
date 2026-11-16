@@ -36,29 +36,75 @@ internal enum RmbModelParent
 /// <summary>
 /// The exact nested transform one RMB model placement applies inside its block, in the order the donor
 /// composes it: the model's own yaw and origin, then its parent's. A site applies its block's grid origin
-/// after this, so the block's own frame and a placed site compute the same source arithmetic.
+/// after this, so the block's own frame and a placed site compute the same source arithmetic. The model's
+/// origin follows the donor's rule for its parent and object type, and every drawn, colliding, navigated or
+/// searched point of the placement is placed through here.
 /// </summary>
-internal sealed record RmbModelFrame(
-    RmbModelPlacement Model,
-    RmbModelParent Parent,
-    Arena2ImportPoint ParentOrigin,
-    float ParentYawDegrees)
+internal sealed class RmbModelFrame
 {
-    private readonly RmbYaw modelYaw = RmbYaw.Degrees(Arena2SourceTransform.ToRmbYawDegrees(Model.YRotation));
-    private readonly RmbYaw parentYaw = RmbYaw.Degrees(ParentYawDegrees);
-    private readonly Arena2ImportPoint modelOrigin = Arena2SourceTransform.ToRmbImportPoint(Model.X, Model.Y, Model.Z);
+    /// <summary>The object type an interior's props carry (DaggerfallInterior's <c>propModelType</c>).</summary>
+    private const byte PropObjectType = 3;
+
+    /// <summary>How far RMBLayout.AddProps lowers a block's own models: its <c>propsOffsetY</c>, four raw units.</summary>
+    private const float BlockModelOffsetMetres = -4F * Arena2SourceTransform.SourceUnitMetres;
+
+    private readonly RmbModelParent parent;
+    private readonly Arena2ImportPoint parentOrigin;
+    private readonly RmbYaw parentYaw;
+    private readonly Arena2ImportPoint modelOrigin;
+    private readonly RmbYaw modelYaw;
+
+    private RmbModelFrame(RmbModelPlacement model, RmbModelParent parent, Arena2ImportPoint parentOrigin, float parentYawDegrees, Arena2ImportPoint origin)
+    {
+        Model = model;
+        ParentYawDegrees = parentYawDegrees;
+        this.parent = parent;
+        this.parentOrigin = parentOrigin;
+        parentYaw = RmbYaw.Degrees(parentYawDegrees);
+        modelOrigin = origin;
+        modelYaw = RmbYaw.Degrees(ModelYawDegrees);
+    }
+
+    public RmbModelPlacement Model { get; }
+
+    /// <summary>The parent's yaw in source Euler degrees.</summary>
+    public float ParentYawDegrees { get; }
 
     /// <summary>The model's own yaw in source Euler degrees.</summary>
     public float ModelYawDegrees => Arena2SourceTransform.ToRmbYawDegrees(Model.YRotation);
+
+    /// <summary>A model a building sub-record's outside half places, at its source point in the sub-record's frame.</summary>
+    public static RmbModelFrame Building(RmbModelPlacement model, Arena2ImportPoint origin, float yawDegrees) =>
+        new(model, RmbModelParent.Building, origin, yawDegrees, Arena2SourceTransform.ToRmbImportPoint(model.X, model.Y, model.Z));
+
+    /// <summary>One of the block's own models, which the donor alone lowers by <see cref="BlockModelOffsetMetres"/>.</summary>
+    public static RmbModelFrame Block(RmbModelPlacement model, Arena2ImportPoint origin)
+    {
+        Arena2ImportPoint source = Arena2SourceTransform.ToRmbImportPoint(model.X, model.Y, model.Z);
+        return new(model, RmbModelParent.Block, origin, 0F, source with { YMetres = source.YMetres + BlockModelOffsetMetres });
+    }
+
+    /// <summary>
+    /// A model of a building's inside half. DaggerfallInterior.AddModels stands a prop at +YPos rather than the
+    /// -YPos every other model takes, then lifts it by the lowest vertex of its mesh in the Y-up frame, so that
+    /// vertex rests at +YPos whatever the model's own origin.
+    /// </summary>
+    public static RmbModelFrame Interior(RmbModelPlacement model, Arch3dMesh mesh)
+    {
+        Arena2ImportPoint source = Arena2SourceTransform.ToRmbImportPoint(model.X, model.Y, model.Z);
+        if (model.ObjectType != PropObjectType) return new(model, RmbModelParent.Interior, default, 0F, source);
+        float lowest = mesh.Planes.SelectMany(plane => plane.Points).Min(point => Arena2SourceTransform.ToImportPoint(point).YMetres);
+        return new(model, RmbModelParent.Interior, default, 0F, source with { YMetres = -source.YMetres - lowest });
+    }
 
     /// <summary>Places one model-local importer point into the block's frame.</summary>
     public Arena2ImportPoint Place(Arena2ImportPoint point)
     {
         Arena2ImportPoint local = RmbBlockContent.Add(modelOrigin, modelYaw.Transform(point));
-        return Parent switch
+        return parent switch
         {
-            RmbModelParent.Building => RmbBlockContent.Add(ParentOrigin, parentYaw.Transform(local)),
-            RmbModelParent.Block => RmbBlockContent.Add(ParentOrigin, local),
+            RmbModelParent.Building => RmbBlockContent.Add(parentOrigin, parentYaw.Transform(local)),
+            RmbModelParent.Block => RmbBlockContent.Add(parentOrigin, local),
             _ => local,
         };
     }
@@ -140,7 +186,7 @@ internal sealed class RmbBlockContent
                 flats.Add(new(ordinal, flat.TextureArchive, flat.TextureRecord,
                     Add(slotOrigin, rotation.Transform(Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z))), flat, index));
             foreach ((RmbModelPlacement model, int ordinal) in exterior.Models.Select((model, ordinal) => (model, ordinal)))
-                models.Add(new(new(model, RmbModelParent.Building, slotOrigin, slotYaw), index, ordinal, slot.Quality / 2, $"{slug}/{index}"));
+                models.Add(new(RmbModelFrame.Building(model, slotOrigin, slotYaw), index, ordinal, slot.Quality / 2, $"{slug}/{index}"));
             foreach ((RmbPeoplePlacement person, int personIndex) in exterior.People.Select((person, personIndex) => (person, personIndex)))
                 people.Add(new(person, index, personIndex,
                     Add(slotOrigin, rotation.Transform(Arena2SourceTransform.ToRmbImportPoint(person.X, person.Y, person.Z))), slot));
@@ -149,7 +195,7 @@ internal sealed class RmbBlockContent
         // The donor offsets the block's own objects to the far edge of its grid square.
         Arena2ImportPoint miscOrigin = Arena2SourceTransform.ToRmbImportPoint(0, 0, 4096);
         foreach ((RmbModelPlacement model, int ordinal) in placements.MiscModels.Select((model, ordinal) => (model, ordinal)))
-            models.Add(new(new(model, RmbModelParent.Block, miscOrigin, 0F), null, ordinal, 0, $"{slug}/misc"));
+            models.Add(new(RmbModelFrame.Block(model, miscOrigin), null, ordinal, 0, $"{slug}/misc"));
         foreach ((RmbFlatPlacement flat, int ordinal) in placements.MiscFlats.Select((flat, ordinal) => (flat, ordinal)))
             flats.Add(new(ordinal, flat.TextureArchive, flat.TextureRecord,
                 Add(miscOrigin, Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z)), flat));
@@ -219,13 +265,16 @@ internal sealed class RmbBlockContent
         return new(sourceKey, summary, RmbPlacementReader.Read(bytes, 0, summary, blocks.Source));
     }
 
-    /// <summary>One building's inside half: its models in the donor interior's own frame.</summary>
-    public IReadOnlyList<RmbBlockModel> InteriorModels(int buildingIndex)
+    /// <summary>
+    /// One building's inside half: its models in the donor interior's own frame, each prop stood on the lowest
+    /// vertex of its mesh, which <paramref name="mesh"/> decodes from a model number and the identity a refusal names.
+    /// </summary>
+    public IReadOnlyList<RmbBlockModel> InteriorModels(int buildingIndex, Func<string, string, Arch3dMesh> mesh)
     {
         RequireBuilding(buildingIndex);
         string identity = $"{PublishedIds.Slug(SourceKey)}/{buildingIndex}/interior";
-        return [.. Placements.Buildings[buildingIndex].Interior.Models
-            .Select((model, ordinal) => new RmbBlockModel(new(model, RmbModelParent.Interior, default, 0F), null, ordinal, 0, identity))];
+        return [.. Placements.Buildings[buildingIndex].Interior.Models.Select((model, ordinal) =>
+            new RmbBlockModel(RmbModelFrame.Interior(model, mesh(model.ModelId, identity)), null, ordinal, 0, identity))];
     }
 
     /// <summary>One building's inside-half flats in the interior's own frame.</summary>
@@ -403,11 +452,14 @@ internal sealed class RmbBlockContent
         $"population/{PublishedIds.Slug(sourceKey)}/{buildingIndex}/{personIndex}";
 
     /// <summary>Decodes one placement's ARCH3D mesh, refusing a model number the archive does not serve.</summary>
-    public static Arch3dMesh Mesh(BsaArchive arch, RmbBlockModel model)
+    public static Arch3dMesh Mesh(BsaArchive arch, RmbBlockModel model) => Mesh(arch, model.ModelId, model.Identity);
+
+    /// <summary>Decodes an RMB model number's ARCH3D mesh, refusing one the archive does not serve and naming who placed it.</summary>
+    public static Arch3dMesh Mesh(BsaArchive arch, string modelId, string identity)
     {
-        if (!uint.TryParse(model.ModelId, NumberStyles.None, CultureInfo.InvariantCulture, out uint id)
+        if (!uint.TryParse(modelId, NumberStyles.None, CultureInfo.InvariantCulture, out uint id)
             || !arch.TryGetByNumericId(id, out BsaRecord? record) || record is null)
-            throw new InvalidOperationException($"ARCH3D.BSA has no RMB model '{model.ModelId}' named by '{model.Identity}'.");
+            throw new InvalidOperationException($"ARCH3D.BSA has no RMB model '{modelId}' named by '{identity}'.");
         return Arch3dDecoder.Decode(arch.GetPayload(record).Span, arch.Source, id);
     }
 

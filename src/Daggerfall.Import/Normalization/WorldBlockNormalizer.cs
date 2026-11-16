@@ -167,7 +167,7 @@ public sealed class WorldBlockNormalizer
     internal WorldBlockNormalization RmbInterior(RmbBlockContent content, int buildingIndex)
     {
         string key = RmbInteriorKey(content.SourceKey, buildingIndex);
-        IReadOnlyList<RmbBlockModel> interiorModels = content.InteriorModels(buildingIndex);
+        IReadOnlyList<RmbBlockModel> interiorModels = content.InteriorModels(buildingIndex, RmbMesh);
         RmbBuildingSlot slot = content.Summary.Buildings[buildingIndex];
         List<DaggerfallWorldBlockModel> models = [];
         List<NormalizedPropertyContainer> containers = [];
@@ -181,7 +181,7 @@ public sealed class WorldBlockNormalizer
                 .SelectMany(plane => plane.Points).Select(point => MeshGeometry.ToRightHanded(model.Frame.Place(Arena2SourceTransform.ToImportPoint(point)))).ToArray();
             models.Add(RmbModel(modelId, model) with
             { Bounds = MeshGeometry.Bounds(mapVertices), SamplePoints = MeshGeometry.SelectSurfaceSamples(mapVertices) });
-            NormalizedPropertyContainer? container = RmbPropertyContainerFacts.Read(model.Frame.Model, model.Ordinal, slot.BuildingType);
+            NormalizedPropertyContainer? container = RmbPropertyContainerFacts.Read(model, slot.BuildingType);
             List<NormalizedVector3> interactionPoints = [];
             foreach ((Arch3dPlane plane, int planeIndex) in mesh.Planes.Select((plane, index) => (plane, index)).Where(value => value.plane.Points.Count >= 3))
             {
@@ -404,11 +404,13 @@ public sealed class WorldBlockNormalizer
     }
 
     /// <summary>Decodes an RMB placement's mesh once, refusing a model number the archive does not serve, as a site does.</summary>
-    private Arch3dMesh RmbMesh(RmbBlockModel model)
+    private Arch3dMesh RmbMesh(RmbBlockModel model) => RmbMesh(model.ModelId, model.Identity);
+
+    private Arch3dMesh RmbMesh(string modelId, string identity)
     {
-        if (rmbMeshes.TryGetValue(model.ModelId, out Arch3dMesh? cached)) return cached;
-        Arch3dMesh mesh = RmbBlockContent.Mesh(arch, model);
-        rmbMeshes.Add(model.ModelId, mesh);
+        if (rmbMeshes.TryGetValue(modelId, out Arch3dMesh? cached)) return cached;
+        Arch3dMesh mesh = RmbBlockContent.Mesh(arch, modelId, identity);
+        rmbMeshes.Add(modelId, mesh);
         return mesh;
     }
 

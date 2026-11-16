@@ -95,7 +95,11 @@ public sealed class RmbExteriorNormalizerTests
         {
             int ordinal = int.Parse(container.Id.Split('/')[1]);
             var model = rawPlacements.Buildings[0].Interior.Models[ordinal];
-            Assert.Equal(new NormalizedVector3(model.X * .025f, -model.Y * .025f, -model.Z * .025f), container.Position);
+            // A container stands at its furniture's origin, a prop the donor lifts until its lowest vertex rests at +YPos.
+            NormalizedBounds furniture = Assert.Single(interior.Document.World.GeometryPlacements, value => value.Id == $"model/{ordinal}").Bounds;
+            Assert.Equal(((byte)3, model.X * .025f, -model.Z * .025f), (model.ObjectType, container.Position.X, container.Position.Z));
+            Assert.Equal(model.Y * .025f, furniture.Minimum.Y, 3);
+            Assert.InRange(container.Position.Y, furniture.Minimum.Y, furniture.Maximum.Y);
             Assert.NotEmpty(container.ItemGroups);
             Assert.NotEmpty(container.InteractionPoints);
             Assert.DoesNotContain(container.Position, container.InteractionPoints);

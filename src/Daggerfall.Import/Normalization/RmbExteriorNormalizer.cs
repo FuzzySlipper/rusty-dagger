@@ -212,7 +212,7 @@ public static class RmbExteriorNormalizer
             var decoration = flatFacts.Read(content, buildingIndex);
             billboards.AddRange(decoration.Billboards);
             lights.AddRange(decoration.Lights);
-            IReadOnlyList<RmbBlockModel> models = content.InteriorModels(buildingIndex);
+            IReadOnlyList<RmbBlockModel> models = content.InteriorModels(buildingIndex, (modelId, identity) => RmbBlockContent.Mesh(arch, modelId, identity));
             RmbBuildingSlot selected = content.Summary.Buildings[buildingIndex];
             interiorBuilding = new(reference.X, reference.Y, reference.SourceName, buildingIndex, selected.BuildingType, selected.FactionId)
             { EntryFrame = content.InteriorEntryFrame(buildingIndex) };
@@ -220,7 +220,7 @@ public static class RmbExteriorNormalizer
             // exterior block or building-subrecord transform into the interior scene.
             foreach (RmbBlockModel model in models)
             {
-                var container = RmbPropertyContainerFacts.Read(model.Frame.Model, model.Ordinal, selected.BuildingType);
+                var container = RmbPropertyContainerFacts.Read(model, selected.BuildingType);
                 List<NormalizedVector3>? interactionPoints = container is null ? null : [];
                 AddMesh(model, point => point, reference, null, 0, interactionPoints);
                 if (container is not null) propertyContainers.Add(container with { InteractionPoints = interactionPoints! });

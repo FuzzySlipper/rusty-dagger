@@ -269,6 +269,81 @@ public sealed class WorldBlockTests
     }
 
     /// <summary>
+    /// DaggerfallInterior.AddModels stands an interior prop (object type 3) at +YPos, lifted so its lowest vertex
+    /// rests there, where the room shells take -YPos as the exterior does. The tavern TVRNGL02 #9 has its ground
+    /// floor at 0 and its upper floor at 3.225, and its props stand 5 cm above the floor their source names.
+    /// </summary>
+    [CorpusFact("BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT", "PAL.PAL")]
+    public void An_interior_prop_rests_its_lowest_vertex_at_its_source_height()
+    {
+        DungeonLogicalSourceSet sources = Sources();
+        IReadOnlyList<RmbModelPlacement> source = SourcePlacements(sources, "TVRNGL02.RMB").Buildings[9].Interior.Models;
+        DaggerfallWorldBlock tavern = new WorldBlockNormalizer(sources).RmbInterior("TVRNGL02.RMB", 9).Block;
+        (DaggerfallWorldBlockModel Model, RmbModelPlacement Source)[] placed = [.. tavern.Models.Select(model => (model, source[Ordinal(model.Id)]))];
+        Assert.All(placed.Where(value => value.Source.ObjectType != 3),
+            value => Assert.Equal(-value.Source.Y * Arena2SourceTransform.SourceUnitMetres, value.Model.Position.Y, 3));
+        Assert.All(placed.Where(value => value.Source.ObjectType == 3),
+            value => Assert.Equal(value.Source.Y * Arena2SourceTransform.SourceUnitMetres, value.Model.Bounds!.Minimum.Y, 3));
+
+        // The chest's lowest vertex lies 0.3 m below its origin, which the lift raises to 0.35.
+        DaggerfallWorldBlockModel chest = Assert.Single(tavern.Models, model => model.ModelId == "41827");
+        Assert.Equal(-0.3, LowestVertex(sources, "41827"), 3);
+        Assert.Equal((0.35, 0.05), (Math.Round(chest.Position.Y, 3), Math.Round(chest.Bounds!.Minimum.Y, 3)));
+        float[] Lowest(params string[] models) => [.. tavern.Models.Where(model => models.Contains(model.ModelId)).Select(model => model.Bounds!.Minimum.Y)];
+        Assert.All(Lowest("41108", "41112", "41827", "41831", "41116", "41117"), lowest => Assert.Equal(0.05, lowest, 3));
+        Assert.All(Lowest("41001", "41002", "41003", "41004"), lowest => Assert.Equal(3.275, lowest, 3));
+
+        // A property container stands where its furniture is placed.
+        Assert.NotEmpty(tavern.PropertyContainers);
+        Assert.All(tavern.PropertyContainers, container => Assert.Equal(
+            Assert.Single(tavern.Models, model => model.Id == $"model/{Ordinal(container.Id)}").Position, container.Position));
+    }
+
+    /// <summary>
+    /// RMBLayout.AddProps lowers a block's own models by four raw units (its <c>propsOffsetY</c>), so the bank
+    /// BANKAL01's fountain, signs and benches stand on the street rather than 0.1 m above it. Models a building
+    /// places take no offset.
+    /// </summary>
+    [CorpusFact("BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT", "PAL.PAL")]
+    public void A_blocks_own_models_stand_a_tenth_of_a_metre_below_their_source_height()
+    {
+        DungeonLogicalSourceSet sources = Sources();
+        RmbBlockPlacements source = SourcePlacements(sources, "BANKAL01.RMB");
+        DaggerfallWorldBlock bank = new WorldBlockNormalizer(sources).RmbExterior("BANKAL01.RMB").Block;
+        DaggerfallWorldBlockModel[] own = [.. bank.Models.Where(model => model.BuildingIndex is null)];
+        Assert.Equal(source.MiscModels.Count, own.Length);
+        Assert.All(own, model => Assert.Equal(
+            (-source.MiscModels[Ordinal(model.Id)].Y * Arena2SourceTransform.SourceUnitMetres) - 0.1, model.Position.Y, 3));
+        Assert.All(bank.Models.Where(model => model.BuildingIndex is int), model => Assert.Equal(
+            -source.Buildings[model.BuildingIndex!.Value].Exterior.Models[Ordinal(model.Id)].Y * Arena2SourceTransform.SourceUnitMetres, model.Position.Y, 3));
+
+        DaggerfallWorldBlockModel fountain = Assert.Single(own, model => model.ModelId == "41221");
+        Assert.InRange(fountain.Position.Y + LowestVertex(sources, "41221"), -0.02F, 0.02F);
+    }
+
+    private static RmbBlockPlacements SourcePlacements(DungeonLogicalSourceSet sources, string block)
+    {
+        BsaArchive archive = BsaArchive.Parse(sources.Require("BLOCKS.BSA").Bytes.Span, "BLOCKS.BSA");
+        Assert.True(archive.TryGetByName(block, out BsaRecord? record));
+        byte[] bytes = archive.GetPayload(record!).ToArray();
+        Assert.True(RmbBlockSummaryReader.TryRead(bytes, archive.Source, 0, bytes.Length, out RmbBlockSummary? summary, out _));
+        return RmbPlacementReader.Read(bytes, 0, summary!, archive.Source);
+    }
+
+    /// <summary>A model's lowest vertex in its own Y-up frame.</summary>
+    private static float LowestVertex(DungeonLogicalSourceSet sources, string modelId)
+    {
+        BsaArchive arch = BsaArchive.Parse(sources.Require("ARCH3D.BSA").Bytes.Span, "ARCH3D.BSA");
+        uint id = uint.Parse(modelId, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.True(arch.TryGetByNumericId(id, out BsaRecord? record));
+        return Arch3dDecoder.Decode(arch.GetPayload(record!).Span, arch.Source, id).Planes
+            .SelectMany(plane => plane.Points).Min(point => Arena2SourceTransform.ToImportPoint(point).YMetres);
+    }
+
+    /// <summary>The ordinal that ends a block model's or container's identity.</summary>
+    private static int Ordinal(string id) => int.Parse(id[(id.LastIndexOf('/') + 1)..], System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
     /// Privateer's Hold assembled from its RDB blocks' facts, with the catalog's start block, dungeon type and
     /// texture table, carries the dungeon closure's lights, billboards, actors, treasure, quest markers, doors,
     /// actions and start marker exactly.

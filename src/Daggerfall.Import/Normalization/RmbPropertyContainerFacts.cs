@@ -1,4 +1,3 @@
-using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
 
 namespace Daggerfall.Import.Normalization;
@@ -145,7 +144,8 @@ internal static class RmbPropertyContainerFacts
         ],
     ];
 
-    internal static NormalizedPropertyContainer? Read(RmbModelPlacement model, int ordinal, int buildingType)
+    /// <summary>The container a piece of furniture holds, standing at the furniture's placed origin; null when it holds none.</summary>
+    internal static NormalizedPropertyContainer? Read(RmbBlockModel model, int buildingType)
     {
         int id = int.Parse(model.ModelId, System.Globalization.CultureInfo.InvariantCulture);
         // Shop shelves use the existing merchant stock; library/guild/temple bookshelves are not private loot.
@@ -155,6 +155,6 @@ internal static class RmbPropertyContainerFacts
         int family = index < 2 ? 0 : index < 4 ? 1 : index < 11 ? 2 : index < 15 ? 3 : 4;
         string[] groups = buildingType is >= 0 and <= 23
             ? Pools[family][buildingType].Select(value => Groups[value]).ToArray() : [];
-        return new($"furniture/{ordinal}", MeshGeometry.ToRightHanded(Arena2SourceTransform.ToRmbImportPoint(model.X, model.Y, model.Z)), groups, []);
+        return new($"furniture/{model.Ordinal}", MeshGeometry.ToRightHanded(model.Frame.Place(default)), groups, []);
     }
 }
