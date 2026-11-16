@@ -96651,48 +96651,48 @@
    },
    "41000": {
     "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41000.rstatmsh",
-    "byteLength": 69639,
-    "sha256": "2ce97585042cac2272a6f86bce7be8f7b3eab5200c4bad3bce38ad60e5c5842c",
-    "triangles": 636,
+    "byteLength": 68775,
+    "sha256": "8230eb6e5a4ed1770a3e564236aac4d069f134b443b1e0e38eb7f82bd1021efe",
+    "triangles": 628,
     "slots": [
      {
       "slot": 0,
       "texture": {
        "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41000-0.png",
-       "byteLength": 91231,
-       "sha256": "0704464be40b855893d40469e1b70e9960302f87fa26c9b7ab5ad429497c77a6"
+       "byteLength": 90555,
+       "sha256": "69bf37019c23881e94fed73c8f2b9cfe0f6a678f83826d4d0f8ac6f3e5abee8e"
       }
      }
     ]
    },
    "41001": {
     "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41001.rstatmsh",
-    "byteLength": 16493,
-    "sha256": "92e86617c5d1c95f99967f78f60eee3d52b9aa697aaab6ec31ec2c634398144d",
-    "triangles": 144,
+    "byteLength": 15628,
+    "sha256": "f4a43547f568ef0227f6c2713bffcc654bbb17432470e179f2e3f720be8b046c",
+    "triangles": 136,
     "slots": [
      {
       "slot": 0,
       "texture": {
        "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41001-0.png",
-       "byteLength": 43573,
-       "sha256": "97b43234415e2f63adb81ed6dad90b0fe9880e4e6e652ef7567178a2e1a3590a"
+       "byteLength": 39680,
+       "sha256": "d1a02be477bdb7e4e5ddbfaf059f84f11ade7411878797a510a36cc106abfa9f"
       }
      }
     ]
    },
    "41002": {
     "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41002.rstatmsh",
-    "byteLength": 177635,
-    "sha256": "bf5c67ef359506dcf37675a6702735674001118a3d88aeceb87973c656e6d3a1",
-    "triangles": 1636,
+    "byteLength": 176771,
+    "sha256": "e15c18bab5b89944c5c602c7b8422ee312d4e348b745a55521f72a29692b6c56",
+    "triangles": 1628,
     "slots": [
      {
       "slot": 0,
       "texture": {
        "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41002-0.png",
-       "byteLength": 198141,
-       "sha256": "5487496b458eec20dced746a16b483af2211f5e1889b02f0bf648de991adf62f"
+       "byteLength": 200069,
+       "sha256": "2e313229cfdbac1a720b2ac19a1603d2bd8d2ae8525a583de04685f35b89725d"
       }
      }
     ]
