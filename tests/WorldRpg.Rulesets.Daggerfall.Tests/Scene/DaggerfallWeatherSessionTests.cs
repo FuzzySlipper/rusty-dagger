@@ -4,6 +4,7 @@ using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using Rusty.Engine.Heightfields;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -147,6 +148,44 @@ public sealed class DaggerfallWeatherSessionTests
         Assert.Equal(FogMode.Linear, fixture.Engine.Fogs.Last().Mode);
         Assert.Equal(tuning.Ambient.ClearFogEnd, fixture.Engine.Fogs.Last().End);
         Assert.Equal(0, fixture.Engine.Clouds.Last().Coverage);
+    }
+
+    [Fact]
+    public void Far_ground_hidden_across_a_relocation_centres_on_the_arrival_when_it_shows_again()
+    {
+        var definitions = TestPayload.Definitions;
+        var exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        var interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
+        var fixture = Engine(exterior, interior);
+        using var session = DaggerfallSession.StartNew(fixture.Engine.Context, new DaggerfallSessionComposition(definitions, exterior, DaggerfallTuning.Defaults)
+            {Profiles = new([exterior, interior])});
+        session.ApplyProductMode(ProductMode.Playing);
+        session.PublishInitial();
+        session.Update(Update(1));
+        (double X, double Z) FarCentre()
+        {
+            HeightfieldFocus focus = fixture.Engine.FarFocus;
+            return (focus.X, focus.Z);
+        }
+        (double X, double Z) Player() => DaggerfallHorizon.MapPoint(session.Exterior.ActiveExteriorOrigin!.Value, session.State.PlayerControl.Position!.Value.ToVector());
+        double follow = DaggerfallTuning.Defaults.Horizon.FollowMetres;
+        Assert.InRange(Math.Abs(FarCentre().X - Player().X), 0, follow);
+
+        // Classic art hides far ground, and the player is recalled six map pixels east while it is hidden.
+        session.Commands<IDeveloperSceneCommands>().ClassicArt("on");
+        session.Update(Update(2));
+        Assert.False(fixture.Engine.BackdropLinked);
+        Vector3 here = session.Exterior.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector());
+        Assert.True(session.Sites.TryRelocatePlayer(exterior.ProfileKey, new("recall", new(here.X + (6 * DaggerfallExteriorCellResidency.CellSize), here.Y, here.Z), 0, 0)));
+        Assert.True(session.AwaitArrivalGround().Done);
+        session.Update(Update(3));
+
+        // Shown again, its rings stand about the arrival, not the place it was last drawn.
+        session.Commands<IDeveloperSceneCommands>().ClassicArt("off");
+        session.Update(Update(4));
+        Assert.True(fixture.Engine.BackdropLinked);
+        Assert.InRange(Math.Abs(FarCentre().X - Player().X), 0, follow);
+        Assert.InRange(Math.Abs(FarCentre().Z - Player().Z), 0, follow);
     }
 
     [Fact]

@@ -53,6 +53,8 @@ internal sealed class DaggerfallHorizon : IDisposable
     private Heightfield? _near;
     private HeightfieldStreamer? _nearStreamer;
     private HeightfieldMaterial[]? _bound;
+    /// <summary>The frame far ground's tiles were last focused and sampled for, which a frame moved while it was hidden leaves behind.</summary>
+    private DaggerfallHorizonGround.Frame? _farFrame;
     private (int MapX, int MapY) _nearFrame;
     private (SpatialSession Session, int MapX, int MapY)? _link;
     private Vector3 _sky = Vector3.One;
@@ -140,6 +142,7 @@ internal sealed class DaggerfallHorizon : IDisposable
                 _bound!, RenderLayer.Backdrop, Vector3.Zero, 1 / Scale, HeightfieldFocus.At(_ground.Current.CentreX, _ground.Current.CentreZ))
                 with { ShadowCasting = ShadowCasting.None });
             _streamer = new HeightfieldStreamer(_engine, _heightfield, _ground, FarCommitsPerUpdate);
+            _farFrame = _ground.Current;
         }
 
         if (_link is not { } link || link.Session != session || link.MapX != origin.MapPixelX || link.MapY != origin.MapPixelY)
@@ -484,21 +487,30 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <summary>
     /// Moves the lift's centre once the player has left it, and the rings with it, in steps small enough that tiles sampled
     /// either side of one barely differ. The frame changes first, so nothing invalidated is sampled by the old one. A move
-    /// changes only what lies inside the fade about either centre; a new lift or season changes every tile.
+    /// changes only what lies inside the fade about either centre; a new lift or season changes every tile. Far ground
+    /// follows from the frame it was last sampled for, so a frame that moved while it was hidden (a travel under classic art)
+    /// moves it the whole way when it shows again, as an ordinary travel does in one step.
     /// </summary>
     private void Follow(double x, double z, bool winter, bool far)
     {
         DaggerfallHorizonGround.Frame frame = _ground.Current;
         bool everywhere = !double.IsFinite(frame.CentreX) || frame.Lift != _lift || frame.Winter != winter;
         bool moved = Math.Max(Math.Abs(x - frame.CentreX), Math.Abs(z - frame.CentreZ)) >= _tuning.FollowMetres;
-        if (!everywhere && !moved) return;
-        _ground.Current = new(x, z, _lift, winter);
-        // A season changes near ground too; the lift's centre only moves far ground.
-        if (frame.Winter != winter && _near is not null) _engine.Heightfield.Invalidate(new HeightfieldInvalidateRequest(_near, -NearEverywhere, -NearEverywhere, NearEverywhere, NearEverywhere));
-        if (_heightfield is null || !far) return;
+        if (everywhere || moved)
+        {
+            _ground.Current = new(x, z, _lift, winter);
+            // A season changes near ground too; the lift's centre only moves far ground.
+            if (frame.Winter != winter && _near is not null) _engine.Heightfield.Invalidate(new HeightfieldInvalidateRequest(_near, -NearEverywhere, -NearEverywhere, NearEverywhere, NearEverywhere));
+        }
+
+        if (_heightfield is null || !far || _farFrame == _ground.Current) return;
+        DaggerfallHorizonGround.Frame from = _farFrame!, to = _ground.Current;
+        _farFrame = to;
+        (x, z) = (to.CentreX, to.CentreZ);
         _engine.Heightfield.SetFocus(new HeightfieldFocusRequest(_heightfield, HeightfieldFocus.At(x, z)));
-        double reach = everywhere ? DaggerfallHorizonGround.CoarseReachMetres * 2 : _tuning.LiftFullMetres;
-        double fromX = double.IsFinite(frame.CentreX) ? frame.CentreX : x, fromZ = double.IsFinite(frame.CentreZ) ? frame.CentreZ : z;
+        bool all = !double.IsFinite(from.CentreX) || from.Lift != to.Lift || from.Winter != to.Winter;
+        double reach = all ? DaggerfallHorizonGround.CoarseReachMetres * 2 : _tuning.LiftFullMetres;
+        double fromX = double.IsFinite(from.CentreX) ? from.CentreX : x, fromZ = double.IsFinite(from.CentreZ) ? from.CentreZ : z;
         _engine.Heightfield.Invalidate(new HeightfieldInvalidateRequest(_heightfield, Math.Min(x, fromX) - reach, Math.Min(z, fromZ) - reach,
             Math.Max(x, fromX) + reach, Math.Max(z, fromZ) + reach));
         // The far forest stands on far ground's lifted heights, so it is sampled again where they changed.

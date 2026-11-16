@@ -103,6 +103,8 @@ internal class EngineContextFake : DispatchProxy
 
     internal bool HeightfieldVisible => ((HeightfieldServiceFake)(object)heightfield).Visible;
     internal bool NearGroundVisible => ((HeightfieldServiceFake)(object)heightfield).NearVisible;
+    /// <summary>Where far ground's rings centre, as it was made or last focused.</summary>
+    internal HeightfieldFocus FarFocus => ((HeightfieldServiceFake)(object)heightfield).FarFocus;
     private IWorldOriginService worldOrigin = null!;
     internal IReadOnlyList<WorldOriginCommitReceipt> OriginCommits => ((WorldOriginFake)(object)worldOrigin).Commits;
 
@@ -169,9 +171,11 @@ internal class EngineContextFake : DispatchProxy
         internal bool Visible { get; private set; } = true;
         /// <summary>Whether near ground has been made and stands.</summary>
         internal bool NearVisible { get; private set; }
+        internal HeightfieldFocus FarFocus { get; private set; }
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments)
         {
+            if (method?.Name == nameof(IHeightfieldService.SetFocus) && arguments![0] is HeightfieldFocusRequest { Heightfield.Handle.Value: Far } focus) FarFocus = focus.Focus;
             if (method?.Name == nameof(IHeightfieldService.SetVisible))
             {
                 HeightfieldVisibilityRequest request = (HeightfieldVisibilityRequest)arguments![0]!;
@@ -182,6 +186,7 @@ internal class EngineContextFake : DispatchProxy
             {
                 HeightfieldCreateRequest request = (HeightfieldCreateRequest)arguments![0]!;
                 if (request.Layer == RenderLayer.Scene) NearVisible = true;
+                else FarFocus = request.Focus;
                 return new Heightfield(new HeightfieldHandle(request.Layer == RenderLayer.Scene ? Near : Far), () => { });
             }
             if (method?.Name == nameof(IHeightfieldService.Read)) return new HeightfieldReadout(true, 0, 0, 0, 0, 0, true, true, 0, 0, 0, 0, 0, 0);
