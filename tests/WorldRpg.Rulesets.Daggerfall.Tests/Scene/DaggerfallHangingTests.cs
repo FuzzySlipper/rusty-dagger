@@ -237,6 +237,22 @@ public sealed class DaggerfallHangingTests
     }
 
     [Fact]
+    public void A_hanging_mesh_whose_rig_cannot_hang_is_reported_and_its_sprite_drawn_in_its_place()
+    {
+        List<string> reported = [];
+        Site site = Compose(rigless: true, report: reported.Add);
+        using (site)
+        {
+            // It loses only its swinging: said once as its art is admitted, and nothing hangs.
+            Assert.Contains("names no joint 'anchor", Assert.Single(reported), StringComparison.Ordinal);
+            using DaggerfallHanging hanging = site.Hanging();
+            Assert.False(hanging.Hangs);
+            site.Appearance.Publish(site.Actors, new Dictionary<long, DaggerfallGroundContainer>());
+            Assert.DoesNotContain(site.Graphics.Snapshots[^1], fact => site.Animation.Created.Contains(fact.Appearance));
+        }
+    }
+
+    [Fact]
     public void A_piece_whose_foot_meets_something_is_shortened_toward_its_hang_point()
     {
         Site site = Compose();
@@ -384,7 +400,7 @@ public sealed class DaggerfallHangingTests
         }
     }
 
-    private static Site Compose(bool lantern = false)
+    private static Site Compose(bool lantern = false, bool rigless = false, Action<string>? report = null)
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -392,14 +408,14 @@ public sealed class DaggerfallHangingTests
         content.Add("refreshed/barrel.glb", Hash);
         content.Add("sprite/root.png", Hash);
         AnimationRecorder animation = AnimationRecorder.Create();
-        animation.Joints = lantern ? [.. RootJoints, new("light", 2)] : RootJoints;
+        animation.Joints = rigless ? [] : lantern ? [.. RootJoints, new("light", 2)] : RootJoints;
         animation.Rest = lantern ? [.. RootRest, new(0, .5F, 0)] : RootRest;
         NormalizedBillboardSprite root = new("sprite/root.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, .5F), new Vector2(.85F, 1.875F));
         (int, int) source = lantern ? (210, 25) : (213, 8);
         DaggerfallSiteDecoration placed = new("billboard/block/0/0/1", new WorldPoint(4, 3 - 1.875F / 2, 6), false, root, root, source, source);
         AppearanceFake graphics = new(releases);
         DaggerfallSiteAppearance appearance = new(content, graphics, MediaInputs(decorations: [placed]));
-        appearance.UseEffectArt(PresentationRecorder.Create().Service, animation.Service, Art(lantern: lantern), () => true);
+        appearance.UseEffectArt(PresentationRecorder.Create().Service, animation.Service, Art(lantern: lantern), () => true, report);
         SpatialFake spatial = SpatialFake.Create(Hash, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, graphics);
         return new Site

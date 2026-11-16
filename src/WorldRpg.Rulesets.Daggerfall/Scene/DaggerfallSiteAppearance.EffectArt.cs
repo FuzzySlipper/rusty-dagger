@@ -25,7 +25,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private RenderResource? particleGlow;
     private IAnimationService? meshes;
     // Each sprite mesh's model, its width across, its glowing slots, and for a hanging one what it hangs as, the bodies
-    // its rig names and the height it hangs from: a rig that could not hang is refused here, as its art is admitted.
+    // its rig names and the height it hangs from, read as its art is admitted.
     private readonly Dictionary<(int Archive, int Record), (RenderResource Model, float Width, IReadOnlyList<uint> Glow,
         (DaggerfallHangingKind Kind, DaggerfallHangingRig Rig, float Height)? Hangs)> worldMeshes = [];
 
@@ -33,7 +33,10 @@ internal sealed partial class DaggerfallSiteAppearance
     /// Admits the refreshed set's world effects and particle glow, drawn whenever <paramref name="refreshed"/> answers
     /// that the run does not draw classic art.
     /// </summary>
-    internal void UseEffectArt(IPresentationService presentation, IAnimationService animation, DaggerfallArtReplacements art, Func<bool> refreshed)
+    /// <param name="report">Told, once each, of a hanging mesh whose rig could not hang: it loses only its swinging, so its
+    /// sprite is drawn in its place.</param>
+    internal void UseEffectArt(IPresentationService presentation, IAnimationService animation, DaggerfallArtReplacements art, Func<bool> refreshed,
+        Action<string>? report = null)
     {
         particles = presentation;
         meshes = animation;
@@ -64,10 +67,21 @@ internal sealed partial class DaggerfallSiteAppearance
                 model = (opened, info.BoundsMax.X - info.BoundsMin.X);
                 models.Add(mesh.File.Path, model);
             }
-            worldMeshes.Add((archive, record), (model.Model, model.Width, mesh.Glow, mesh.Hangs is { } kind
-                ? (kind, DaggerfallHangingRig.Read(animation.ReadJoints(model.Model).Span, $"{archive}-{record}"),
-                    DaggerfallHangingRig.Height(animation, model.Model, $"{archive}-{record}"))
-                : null));
+            (DaggerfallHangingKind, DaggerfallHangingRig, float)? hangs = null;
+            if (mesh.Hangs is { } kind)
+            {
+                try
+                {
+                    hangs = (kind, DaggerfallHangingRig.Read(animation.ReadJoints(model.Model).Span, $"{archive}-{record}"),
+                        DaggerfallHangingRig.Height(animation, model.Model, $"{archive}-{record}"));
+                }
+                catch (InvalidDataException refused)
+                {
+                    report?.Invoke($"{refused.Message} Its sprite is drawn in its place.");
+                    continue;
+                }
+            }
+            worldMeshes.Add((archive, record), (model.Model, model.Width, mesh.Glow, hangs));
         }
         foreach (ActorVisual visual in actors.Values) AttachCorpseMesh(visual);
         foreach (DecorationVisual flat in decorations) AttachDecorationMesh(flat);

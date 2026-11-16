@@ -1260,7 +1260,9 @@ internal sealed partial class DaggerfallSession
             appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem, HeldShield, equipment => HeldArms(art, equipment));
         appearance.UseSurfaceRelief(_tuning.SurfaceRelief, () => _controls.Settings.SurfaceRelief);
         if (_composition.ArtReplacements is { } refreshed)
-            appearance.UseEffectArt(_engine.Presentation, _engine.Animation, refreshed, () => DrawnArt is not null);
+            appearance.UseEffectArt(_engine.Presentation, _engine.Animation, refreshed, () => DrawnArt is not null,
+                message => _engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
+                    "daggerfall.hanging", "hanging.rig", message, string.Empty)));
     }
 
     /// <summary>
