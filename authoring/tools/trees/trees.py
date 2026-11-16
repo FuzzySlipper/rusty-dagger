@@ -10,6 +10,12 @@ from its trunk (leaving out its darkest, the outline), so the tree wears the pai
 light and dark; leaves lean toward the darks, which lit cards lose, and each leaf's edge is darkened a step, as the
 sprites outline theirs.
 
+The dead trees, rocks and logs among the same sprites are made by authoring/tools/rocks/rocks.py (#10849), in the same
+manner: the slender bare trees are rusty-craftsurvive's dead tree as above; the great gnarled trunks and the fallen logs
+are its branch skeleton built old and heaped, their bark painted as a tree's; a rock is shaped to its sprite's outline and
+drawn as `stone`, which the wind does not move, in a generated stone tile painted from the sprite's own rock colours, a
+winter rock's snow laid on its upward faces as a winter crown's is.
+
 The game draws a mesh at the sprite's drawn height (DaggerfallTreeMesh), so this records that height as a share of the
 sprite's frame, with where its foot stands.
 
@@ -18,23 +24,33 @@ sprite's frame, with where its foot stands.
 import hashlib, json
 from pathlib import Path
 
+import sys
+
 import numpy as np
 from PIL import Image
 from scipy import ndimage, stats
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "rocks"))
+import rocks  # noqa: E402
 
 REPOSITORY = Path(__file__).resolve().parents[3]
 CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/packs/daggerfall.art-replacements/media/trees"
 PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
-CRAFTSURVIVE = REPOSITORY.parent / "rusty-craftsurvive/content/game"
+CRAFTSURVIVE = rocks.CRAFTSURVIVE / "content/game"
 
 # The trees with meshes, by nature archive and record: every big tree of every climate but the few whose shapes are their
-# own (the swamps' vine-wrapped and bulb-trunked plants, the desert's cacti, the rainforest's mossy hollow tree, every
-# massive gnarled bare tree), which stay sprites, as do bushes, rocks and small plants. Each names the rusty-craftsurvive tree drawn for it by form:
-# conifers a fir or pine, layered flat-topped trees a cork oak, round crowns a beech or chestnut, palms a palm, bare
-# slender bare trees the dead tree; a winter set's tree is its summer one's, in its snowy colours. Variants (p1 to p3) differ from
-# record to record, so a stand is not one tree repeated.
+# own (the swamps' vine-wrapped and bulb-trunked plants, the desert's cacti, the rainforest's mossy hollow tree), which stay
+# sprites, as do bushes and small plants. Each names the rusty-craftsurvive tree drawn for it by form: conifers a fir or
+# pine, layered flat-topped trees a cork oak, round crowns a beech or chestnut, palms a palm, slender bare trees the dead
+# tree; a winter set's tree is its summer one's, in its snowy colours. Variants (p1 to p3) differ from record to record, so
+# a stand is not one tree repeated.
+# Then rocks.py's (#10849): the great gnarled dead trunks, the heaped fallen logs, and every rock but those a plant grows
+# from: boulders lying together (the variant their count), a standing shard or spire, or a cairn of stacked stones.
 FIR, PINE, CORK, BEECH, CHESTNUT, PALM, DEAD = "fir", "pine", "cork-oak", "beech", "chestnut", "palm", "dead"
+GNARLED, LOGS = rocks.GNARLED, rocks.LOGS_FORM
+BOULDERS, SLAB, CAIRN = rocks.BOULDERS, rocks.SLAB, rocks.CAIRN
+ROCKS = (BOULDERS, SLAB, CAIRN)
 FORMS = {
     500: {12: (PALM, 1), 14: (PALM, 2), 15: (PALM, 3), 30: (CHESTNUT, 1)},
     501: {11: (PALM, 1), 12: (PALM, 2), 13: (PALM, 3), 16: (PALM, 1), 30: (PALM, 2)},
@@ -52,10 +68,35 @@ FORMS = {
     510: {11: (FIR, 2), 12: (FIR, 3), 13: (FIR, 1), 15: (CORK, 1), 24: (DEAD, 1), 25: (PINE, 2), 30: (PINE, 1)},
     511: {11: (FIR, 2), 13: (FIR, 1), 24: (DEAD, 1), 25: (PINE, 2)},
 }
+DEAD_WOOD_AND_ROCKS = {
+    500: {4: (SLAB, 1), 17: (SLAB, 1), 31: (BOULDERS, 4)},
+    501: {3: (BOULDERS, 4), 4: (BOULDERS, 4), 5: (BOULDERS, 3), 6: (BOULDERS, 3), 23: (BOULDERS, 3)},
+    502: {4: (CAIRN, 5), 5: (CAIRN, 4), 6: (CAIRN, 5), 10: (CAIRN, 4), 11: (BOULDERS, 4), 15: (DEAD, 2), 30: (DEAD, 3)},
+    503: {2: (BOULDERS, 1), 3: (BOULDERS, 3), 4: (SLAB, 1), 12: (DEAD, 2), 18: (SLAB, 1), 19: (BOULDERS, 2), 20: (BOULDERS, 2),
+          21: (BOULDERS, 1), 22: (BOULDERS, 1), 28: (DEAD, 3), 30: (DEAD, 2)},
+    504: {3: (BOULDERS, 4), 4: (BOULDERS, 4), 5: (SLAB, 1), 6: (BOULDERS, 3), 19: (GNARLED, 1), 20: (GNARLED, 2), 30: (DEAD, 2),
+          31: (LOGS, 1)},
+    505: {3: (BOULDERS, 4), 4: (BOULDERS, 4), 5: (SLAB, 1), 6: (BOULDERS, 3), 19: (GNARLED, 1), 20: (GNARLED, 2), 30: (DEAD, 2),
+          31: (LOGS, 1)},
+    506: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 6: (SLAB, 1), 17: (SLAB, 1), 18: (SLAB, 1), 19: (GNARLED, 1), 20: (GNARLED, 2),
+          28: (SLAB, 1)},
+    507: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 6: (SLAB, 1), 17: (SLAB, 1), 18: (SLAB, 1), 19: (GNARLED, 1), 20: (GNARLED, 2),
+          28: (SLAB, 1)},
+    508: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 5: (SLAB, 1), 6: (SLAB, 1), 16: (DEAD, 3), 17: (DEAD, 1), 18: (DEAD, 2),
+          19: (GNARLED, 1), 20: (GNARLED, 2), 25: (GNARLED, 3), 30: (DEAD, 2), 31: (LOGS, 1)},
+    509: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 5: (SLAB, 1), 6: (SLAB, 1), 16: (DEAD, 3), 17: (DEAD, 1), 18: (DEAD, 2),
+          19: (GNARLED, 1), 20: (GNARLED, 2), 25: (GNARLED, 3), 30: (DEAD, 2), 31: (LOGS, 1)},
+    510: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 6: (SLAB, 1), 14: (SLAB, 1), 16: (GNARLED, 3), 17: (SLAB, 1), 18: (SLAB, 1),
+          19: (GNARLED, 1), 20: (GNARLED, 2), 27: (SLAB, 1), 28: (SLAB, 1), 31: (DEAD, 1)},
+    511: {1: (SLAB, 1), 3: (SLAB, 1), 4: (SLAB, 1), 6: (SLAB, 1), 14: (SLAB, 1), 16: (GNARLED, 3), 17: (SLAB, 1), 18: (SLAB, 1),
+          19: (GNARLED, 1), 20: (GNARLED, 2), 27: (SLAB, 1), 28: (SLAB, 1), 31: (DEAD, 1)},
+}
+for archive, forms in DEAD_WOOD_AND_ROCKS.items():
+    FORMS.setdefault(archive, {}).update(forms)
 # Each rusty-craftsurvive tree's leaves and bark textures. Every tree wears the oak's bark, whose vertical furrows are
 # what the sprites paint, but the palm, whose rings are its own.
 TEXTURES = {FIR: ("fir", "oak"), PINE: ("pine", "oak"), CORK: ("cork", "oak"), BEECH: ("beech", "oak"),
-            CHESTNUT: ("chestnut", "oak"), PALM: ("palm", "palm"), DEAD: (None, "oak")}
+            CHESTNUT: ("chestnut", "oak"), PALM: ("palm", "palm"), DEAD: (None, "oak"), GNARLED: (None, "oak"), LOGS: (None, "oak")}
 SOLID = 128
 # How far the leaves' colours lean toward the sprite's darks: a rank is raised to this power, so the painted crown's deep
 # shadow, which lit cards would otherwise lose, comes back.
@@ -221,16 +262,41 @@ def publish(name, path):
     return {"path": f"{MEDIA}/{name}", "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
 
 
+def rock(rgba, archive, record, form, stones, folder):
+    """One rock's mesh, shaped to its sprite's outline, and its stone in the sprite's colours, with the snow it carries."""
+    m = measures(rgba)
+    # Sprites drawn alike (a rock several climates share) give one mesh and one stone.
+    seed = int(hashlib.sha256(rgba.tobytes()).hexdigest()[:8], 16)
+    mesh, stone = rocks.nature_rock(form, seed, rgba.astype(np.uint8), stones)
+    mesh_name, stone_name = f"rock-{seed:08x}.prop-mesh.json", f"rock-{seed:08x}-stone.png"
+    (folder / mesh_name).write_text(json.dumps(mesh, separators=(",", ":")))
+    Image.fromarray(stone, "RGBA").save(folder / stone_name)
+    h = rgba.shape[0]
+    entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]}, "height": round(m["height"] / h, 4),
+             "foot": round((h - 1 - m["foot"]) / h, 4), "stone": publish(stone_name, folder / stone_name)}
+    if snow := snowfall(rgba[rgba[..., 3] > SOLID][:, :3]):
+        entry["snow"] = snow | {"texels": rocks.TILE}
+    return entry
+
+
 def tree(flat, archive, record, species, variant, folder):
     """One tree's mesh, trimmed under its sprite's crown, and its textures in the sprite's colours."""
     rgba = frame(flat)
+    if species in ROCKS:
+        return rock(rgba, archive, record, species, variant, folder)
     m = measures(rgba)
     crown, trunk, snow = palette(rgba, m)
-    model = f"{species}-p{variant}"
-    mesh = json.loads((CRAFTSURVIVE / f"models/trees/{model}.prop-mesh.json").read_text())
+    if species in (GNARLED, LOGS):
+        # Drawn as wide for its height as its sprite, so a mesh serves only sprites of the same shape.
+        aspect = round((rgba[..., 3] > SOLID).any(0).sum() / m["height"], 2)
+        model = f"{species}-p{variant}-{aspect:g}"
+        mesh = (rocks.gnarled if species == GNARLED else rocks.logs)(variant, aspect)
+    else:
+        model = f"{species}-p{variant}"
+        mesh = json.loads((CRAFTSURVIVE / f"models/trees/{model}.prop-mesh.json").read_text())
     # The sprite's crown begins this far up its drawn height; the mesh's leaves start no lower, a little short of it. A
     # bare tree keeps its low branches, as its sprite does.
-    base = 0 if species == DEAD else round((m["foot"] - m["crown"]) / m["height"] * mesh["height"] * .85, 1)
+    base = 0 if species in (DEAD, GNARLED, LOGS) else round((m["foot"] - m["crown"]) / m["height"] * mesh["height"] * .85, 1)
     # Trees trimmed alike share one file.
     mesh_name = f"{model}-from-{base:g}.prop-mesh.json"
     if not (folder / mesh_name).exists():
