@@ -1,0 +1,7 @@
+scripts/route.py main: FAILED (product): scripts/verify.sh failed
+rusty-dagger verify at 6469c08ba68ea99059070e8cba62133599b82f4d FAILED in 1.5 min
+verify on den-nimo, 1.5 min, FAIL: /home/agent/dev/rusty-dagger/local/build/route/main-6469c08ba68e-20261116T043034/verify.log
+    lane: run f3bf52314773a1916481de1f5625a25a of verify on den-nimo at 6469c08ba68ea99059070e8cba62133599b82f4d (0 s)
+    lane: tooling took 11 s, peak memory 38 MiB
+    lane: verify took 36 s, peak memory 2597 MiB
+    lane: verify failed (exit 1)
