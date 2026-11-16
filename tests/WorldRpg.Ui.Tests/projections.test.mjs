@@ -3846,10 +3846,10 @@ test('the spell seller and spellbook redraw their tiles when only the art choice
   const f=fixture();
   try {
     art.adopt({revision:'tiles',images:[{id:'spell.selectors',image:'data:image/png;base64,AA=='},{id:'refreshed.spell.target.0',image:'data:image/webp;base64,AA==',smooth:true}]});
-    const tile=(x,y,width,image=null)=>({x,y,width,height:16,image});
+    const tile=(x,y,width,image=null,aspect=null)=>({x,y,width,height:16,image,aspect});
     // Both art sets are delivered together, so choosing one changes only which image a tile names.
     const selectors=refreshed=>({media:'spell.selectors',width:40,height:80,
-      targets:[0,1,2,3,4].map(index=>tile(0,index*16,24,refreshed && index===0 ? 'refreshed.spell.target.0' : null)),elements:[0,1,2,3,4].map(index=>tile(24,index*16,16))});
+      targets:[0,1,2,3,4].map(index=>tile(0,index*16,24,refreshed && index===0 ? 'refreshed.spell.target.0' : null,refreshed && index===0 ? 2 : null)),elements:[0,1,2,3,4].map(index=>tile(24,index*16,16))});
     const publish=refreshed=>f.publish({spells:{available:[{key:'spell.023',name:'Heal',cost:15}],ready:'spell.023',result:'',selectors:selectors(refreshed),
       sale:{revision:'seller-1',provider:'Mage',offers:[{key:'spell.023',name:'Heal',castingCost:15,price:60,known:true}]},
       information:{key:'spell.023',name:'Heal',target:'Self',element:'Magic',rangeType:0,elementType:4,details:[]}},
@@ -3858,7 +3858,10 @@ test('the spell seller and spellbook redraw their tiles when only the art choice
     publish(true);f.openService('spells');
     const sales=f.root.querySelector('.dagger-dialogue-spells');
     assert.match(target(sales),/image\/webp/);
+    const aspect=root=>root.querySelector('.dagger-spell-selectors .dagger-spell-tile-target').style.getPropertyValue('--tile-aspect');
+    assert.equal(aspect(sales),'2','A refreshed tile keeps its own shape, not the classic tile\'s.');
     publish(false);assert.match(target(sales),/image\/png/,'Choosing classic art redraws the seller\'s tile from the atlas.');
+    assert.equal(aspect(sales),String(24/16),'A classic tile keeps the shape of its rect of the atlas.');
     publish(true);assert.match(target(sales),/image\/webp/,'Choosing refreshed art again redraws it refreshed.');
     f.root.querySelector('[data-action="spells"]').click();
     const book=f.root.querySelector('.dagger-spells-root');
@@ -4365,7 +4368,7 @@ test('spellmaker draws its fields from the published limits, picks an icon, keep
     const elements=['Fire','Cold','Poison','Shock','Magic'].map((label,value)=>({value,label}));
     const limits={nameLength:31,icons:69,effects:3,duration:60,chance:100,magnitude:100,perLevels:20};
     // The tiles: one atlas, a refreshed image for the first targeting tile and the atlas for the rest.
-    const tile=(x,y,width,image=null)=>({x,y,width,height:16,image});
+    const tile=(x,y,width,image=null,aspect=null)=>({x,y,width,height:16,image,aspect});
     const selectors={media:'spell.selectors',width:40,height:80,
       targets:[0,1,2,3,4].map(index=>tile(0,index*16,24,index===0 ? 'refreshed.spell.target.0' : null)),elements:[0,1,2,3,4].map(index=>tile(24,index*16,16))};
     art.adopt({revision:'tiles',images:[{id:'spell.selectors',image:'data:image/png;base64,AA=='},{id:'refreshed.spell.target.0',image:'data:image/webp;base64,AA==',smooth:true}]});

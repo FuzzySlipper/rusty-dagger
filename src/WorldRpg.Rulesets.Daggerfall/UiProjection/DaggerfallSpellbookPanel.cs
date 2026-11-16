@@ -177,15 +177,19 @@ internal sealed record DaggerfallSpellbookView(DaggerfallKnownSpellView[] Availa
     DaggerfallSpellSaleView? Sale = null, DaggerfallSpellInformation? Information = null, DaggerfallSpellMakerView? Maker = null, DaggerfallPotionMakerView? PotionMaker = null, DaggerfallItemMakerView? ItemMaker = null, DaggerfallSummoningView? Summoning = null,
     DaggerfallSpellArt? Art = null);
 
-/// <summary>Each classic spell icon atlas cell's, targeting tile's and element tile's replacement image, null where it has none.</summary>
-internal sealed record DaggerfallSpellArt(IReadOnlyList<string?> Icons, IReadOnlyList<string?> Targets, IReadOnlyList<string?> Elements)
+/// <summary>A refreshed targeting or element tile: its image and its own shape, width over height.</summary>
+internal sealed record DaggerfallSpellTile(string Image, double Aspect);
+
+/// <summary>Each classic spell icon atlas cell's, targeting tile's and element tile's replacement, null where it has none.</summary>
+internal sealed record DaggerfallSpellArt(IReadOnlyList<string?> Icons, IReadOnlyList<DaggerfallSpellTile?> Targets, IReadOnlyList<DaggerfallSpellTile?> Elements)
 {
     internal static DaggerfallSpellArt From(DaggerfallArtReplacements art)
     {
-        string?[] Images(int count, Func<int, string> media) => [.. Enumerable.Range(0, count).Select(index => art.For(media(index))?.MediaId)];
-        return new(Images(DaggerfallSpellConstruction.IconCount, DaggerfallSpellConstruction.IconMedia),
-            Images(DaggerfallSpellConstruction.SelectorCount, DaggerfallSpellConstruction.TargetMedia),
-            Images(DaggerfallSpellConstruction.SelectorCount, DaggerfallSpellConstruction.ElementMedia));
+        DaggerfallSpellTile?[] Tiles(int count, Func<int, string> media) => [.. Enumerable.Range(0, count).Select(index =>
+            art.For(media(index)) is { Aspect: { } aspect } tile ? new DaggerfallSpellTile(tile.MediaId, aspect) : null)];
+        return new([.. Enumerable.Range(0, DaggerfallSpellConstruction.IconCount).Select(index => art.For(DaggerfallSpellConstruction.IconMedia(index))?.MediaId)],
+            Tiles(DaggerfallSpellConstruction.SelectorCount, DaggerfallSpellConstruction.TargetMedia),
+            Tiles(DaggerfallSpellConstruction.SelectorCount, DaggerfallSpellConstruction.ElementMedia));
     }
 }
 

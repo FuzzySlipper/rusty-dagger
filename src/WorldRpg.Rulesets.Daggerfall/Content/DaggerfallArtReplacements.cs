@@ -32,6 +32,9 @@ internal sealed record DaggerfallArtReplacement(string Replaces, string MediaId,
     /// <summary>For an item icon, its height standing on the ground, in metres; a worn image stands at its doll height.</summary>
     internal double? Ground { get; init; }
 
+    /// <summary>For a targeting or element tile of the spell makers, its shape: its width over its height.</summary>
+    internal double? Aspect { get; init; }
+
     /// <summary>For the clothed body, the row it is split at for clothing worn above and below, in doll units from its top.</summary>
     internal double? Waist { get; init; }
 
@@ -371,6 +374,8 @@ internal sealed class DaggerfallArtReplacements
                 double? ground = world is not null && doll is null ? Positive(Placement(placement, $"the world image of '{mediaId}'", "ground"), "ground", $"the world image of '{mediaId}'") : null;
                 double? waist = replaces.StartsWith("character.body-clothed.", StringComparison.Ordinal)
                     ? Placement(placement, $"the clothed body '{mediaId}'", "waist").GetProperty("waist").GetDouble() : null;
+                double? aspect = replaces.StartsWith("spell.target.", StringComparison.Ordinal) || replaces.StartsWith("spell.element.", StringComparison.Ordinal)
+                    ? Positive(Placement(placement, $"the spell tile '{mediaId}'", "aspect"), "aspect", $"the spell tile '{mediaId}'") : null;
                 if (waist is { } row && (!double.IsFinite(row) || row < 0 || row > doll?.Height))
                     throw new InvalidOperationException($"Content pack '{packId}' splits the clothed body '{mediaId}' at row {row}, outside its doll rect.");
                 if (dyeMask?.World is { } maskWorld && (world is null || maskWorld.Width != world.Width || maskWorld.Height != world.Height))
@@ -381,7 +386,7 @@ internal sealed class DaggerfallArtReplacements
                 // The icon is drawn in the layer's tint, so it needs a dye mask exactly when the layer has one.
                 if (icon is not null && (icon.DyeMask is null) != (dyeMask is null))
                     throw new InvalidOperationException($"Content pack '{packId}' states an icon for '{mediaId}' that is not dyed as its layer is.");
-                return new(replaces, mediaId, path, byteLength, doll, dyeMask, world, icon) { Ground = ground, Waist = waist };
+                return new(replaces, mediaId, path, byteLength, doll, dyeMask, world, icon) { Ground = ground, Waist = waist, Aspect = aspect };
             }
 
             foreach (JsonElement image in document.RootElement.GetProperty("artReplacements").GetProperty("images").EnumerateArray())

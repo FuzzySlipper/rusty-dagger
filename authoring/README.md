@@ -67,7 +67,7 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
   worktree links from the main checkout.
 - Effects, item icons, the clothed bodies, flats, people, sprite meshes and trees carry their own `placement` (an effect's size in metres,
   pivot, frames, rate and loop; an icon's ground height in metres; a body's waist row; a flat's or person's size, pivot and
-  foot, and a flat's rate; a sprite mesh's world size in metres; a tree's height and foot in metres, measured by `trees.py` at its flat's size, so promote the flat first). A new entry takes it from the classic once;
+  foot, and a flat's rate; a sprite mesh's world size in metres; a spell tile's aspect; a tree's height and foot in metres, measured by `trees.py` at its flat's size, so promote the flat first). A new entry takes it from the classic once;
   after that, promotion keeps what the payload holds, so promote with `main` first. A redone effect with other frames
   is refused until its `sequence` fits: set it with `--set ID NAME VALUE` (a JSON value, marked set by hand), or
   take every value from the classic again with `--recompute ID`. Promotion says when new art kept an old placement.

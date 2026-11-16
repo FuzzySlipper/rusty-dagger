@@ -14,7 +14,7 @@ internal static class DaggerfallUiArtChoice
     {
         DaggerfallSpellArt spells = DaggerfallSpellArt.From(art);
         bool icons = spells.Icons.All(image => image is not null);
-        bool selectors = spells.Targets.Concat(spells.Elements).All(image => image is not null);
+        bool selectors = spells.Targets.Concat(spells.Elements).All(tile => tile is not null);
         return id => art.For(id) is not null || art.Effects.ContainsKey(id)
             || icons && id == DaggerfallSpellConstruction.IconAtlasMedia || selectors && id == DaggerfallSpellConstruction.SelectorAtlasMedia;
     }

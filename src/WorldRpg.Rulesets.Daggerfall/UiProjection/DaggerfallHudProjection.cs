@@ -599,14 +599,15 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
 
     /// <summary>
     /// Where the targeting and element tiles are drawn from: the classic atlas, its size, each tile's rect in it by
-    /// range type and by element, and with refreshed art drawn, each tile's own replacement image.
+    /// range type and by element, and with refreshed art drawn, each tile's own replacement image and shape.
     /// </summary>
     private static uint SpellSelectors(UiValueBuilder builder, DaggerfallSpellArt? art)
     {
-        uint Tiles(int x, int width, IReadOnlyList<string?>? images) => builder.Array([.. Enumerable.Range(0, DaggerfallSpellConstruction.SelectorCount)
+        uint Tiles(int x, int width, IReadOnlyList<DaggerfallSpellTile?>? tiles) => builder.Array([.. Enumerable.Range(0, DaggerfallSpellConstruction.SelectorCount)
             .Select(index => builder.Object(("x", builder.Number(x)), ("y", builder.Number(index * DaggerfallSpellConstruction.SelectorHeight)),
                 ("width", builder.Number(width)), ("height", builder.Number(DaggerfallSpellConstruction.SelectorHeight)),
-                ("image", images?[index] is { } image ? builder.String(image) : builder.Null())))]);
+                ("image", tiles?[index] is { } tile ? builder.String(tile.Image) : builder.Null()),
+                ("aspect", tiles?[index] is { } shaped ? builder.Number(shaped.Aspect) : builder.Null())))]);
         return builder.Object(("media", builder.String(DaggerfallSpellConstruction.SelectorAtlasMedia)),
             ("width", builder.Number(DaggerfallSpellConstruction.TargetTileWidth + DaggerfallSpellConstruction.ElementTileWidth)),
             ("height", builder.Number(DaggerfallSpellConstruction.SelectorCount * DaggerfallSpellConstruction.SelectorHeight)),

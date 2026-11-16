@@ -46,6 +46,19 @@ public sealed class ArtPlacementTests
     }
 
     [Fact]
+    public void A_spell_tile_states_its_shape_which_the_spell_art_hands_the_page_or_is_refused_by_name()
+    {
+        static DaggerfallArtReplacements Tile(string placement) => DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes(
+            "{\"artReplacements\": {\"images\": [{\"replaces\": \"spell.target.0\", \"mediaId\": \"refreshed.spell.target.0\", \"path\": \"t.webp\", \"byteLength\": 1, \"width\": 96, \"height\": 64"
+            + placement + "}]}}"), "test.art");
+        DaggerfallSpellArt art = DaggerfallSpellArt.From(Tile(", \"placement\": {\"aspect\": 1.5}"));
+        Assert.Equal(new DaggerfallSpellTile("refreshed.spell.target.0", 1.5), art.Targets[0]);
+        Assert.Null(art.Targets[1]);
+        Assert.Contains("states no placement for the spell tile 'refreshed.spell.target.0'",
+            Assert.Throws<InvalidOperationException>(() => Tile("")).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_sprite_mesh_states_the_size_it_stands_at_or_is_refused_by_name()
     {
         const string mesh = "\"meshes\": [{\"replaces\": {\"archive\": 212, \"record\": 0}, \"path\": \"well.glb\", \"byteLength\": 1, \"sha256\": \"HASH\"";

@@ -34,7 +34,7 @@ Two areas promote icons rather than their own finals, each standing in for a cla
     image, which the `worn` area already replaces. An icon whose record has no accepted final stays classic.
   - `spells`: each accepted spell icon `icons--icon-NNN--icon` as `spell.icon.N`, cell N of the classic
     `spell.icons` atlas, and each accepted targeting and element tile as `spell.target.N` and `spell.element.N`, tile N
-    of the classic `spell.selectors` atlas.
+    of the classic `spell.selectors` atlas, whose placement states the tile's shape (`aspect`, width over height).
 
 The `ui` area promotes the screens and escort portraits the game draws whole (wiki/rusty-dagger/art-conversion): a screen
 `screens--NAME--...` stands in for `screen.NAME` (the title, character creation's `screen.character-generation` and
@@ -117,7 +117,7 @@ classic image's size at the treasure piles' scale, the classic body's waist), ea
 after that, promotion keeps every value the payload holds, so a value changed on purpose survives a re-promotion.
 `--set ID NAME VALUE` sets one, marked `hand`; `--recompute ID` (or `all`) takes them from the original again. An entry's
 id is what it replaces (an effect or image), or `flat.ARCHIVE.RECORD`, `person.ARCHIVE.RECORD`, `mesh.ARCHIVE.RECORD` or `tree.ARCHIVE.RECORD`.
-`--place SECTION` (flats, people, meshes, trees) gives every entry of the section the payload holds without a placement its own
+`--place SECTION` (flats, people, meshes, trees, spell-tiles) gives every entry of the section the payload holds without a placement its own
 from the original, and promotes no file: for the entries a checkout without the finals cannot promote.
 
 Every area promotes the same way (promote_area). Its units are what an entry replaces, keyed as the area keys them: an
@@ -179,6 +179,9 @@ IMPORTED = REPOSITORY / "local/build/import/staging/worldrpg/payloads/daggerfall
 ITEM_IMAGE = re.compile(r"item\.(\d+)\.(\d+)")
 STAGED = REPOSITORY / "local/build/import/staging"
 SPELL_ICON = re.compile(r"icons--icon-(\d+)--icon")
+# The classic `spell.selectors` atlas (MASK04I0.IMG, donor SpellIconCollection) lays a 24x16 targeting tile and a 16x16 element
+# tile in a row each; a refreshed tile takes that shape as its aspect once.
+SPELL_TILE_SHAPE = {"spell.target": 24 / 16, "spell.element": 16 / 16}
 # The classic targeting tiles in range-type order and element tiles in element order (donor SpellIconCollection).
 SPELL_TILES = {**{f"targets--{name}--target-icon": f"spell.target.{index}" for index, name in enumerate(
     ("caster-only", "by-touch", "single-target-at-range", "area-around-caster", "area-at-range"))},
@@ -553,11 +556,21 @@ def item_units():
             for final in [generated("items", f"texture-{archive}-record-{record:03d}-frame-000")]}
 
 
+def spell_tile(media):
+    """`spell.target` or `spell.element` for a targeting or element tile's media id, else None."""
+    return media.rsplit(".", 1)[0] if media.rsplit(".", 1)[0] in SPELL_TILE_SHAPE else None
+
+
 def spell_units():
     """The `spells` area's units: each spell icon, targeting tile and element tile final."""
     notes = ledger("spells")
     replaced = {key: f"spell.icon.{int(m[1])}" for key in notes if (m := SPELL_ICON.fullmatch(key))} | {key: media for key, media in SPELL_TILES.items() if key in notes}
-    return {key: Unit([final], lambda media=media, final=final: [("images", icon_entry(media, icon(final.path, "spells"), f"spells/{final.key}"))])
+    def build(media, final):
+        entry = icon_entry(media, icon(final.path, "spells"), f"spells/{final.key}")
+        if tile := spell_tile(media):
+            entry["placement"] = own(media, ["aspect"], lambda: {"aspect": SPELL_TILE_SHAPE[tile]})
+        return [("images", entry)]
+    return {key: Unit([final], lambda media=media, final=final: build(media, final))
             for key, media in sorted(replaced.items()) for final in [generated("spells", key)]}
 
 
@@ -1085,11 +1098,23 @@ def place_trees(payload):
     print(f"trees: {done} of {len(art.get('trees', {}))} entries given their placement", flush=True)
 
 
+def place_spell_tiles(payload):
+    """Gives each targeting and element tile without a placement its aspect, from the classic atlas's tile."""
+    done = 0
+    for entry in payload["artReplacements"]["images"]:
+        if (tile := spell_tile(entry["replaces"])) and "placement" not in entry:
+            entry["placement"] = own(entry["replaces"], ["aspect"], lambda: {"aspect": SPELL_TILE_SHAPE[tile]})
+            done += 1
+    print(f"spell-tiles: {done} entries given their placement", flush=True)
+
+
 def place(payload, section):
     """Gives each entry of `section` that has no placement its own, from the original, and a flat's or person's drops the rect
     of the classic frame (`classic`) it was taken against. The files are not touched."""
     if section == "trees":
         return place_trees(payload)
+    if section == "spell-tiles":
+        return place_spell_tiles(payload)
     kind = {"flats": "flat", "people": "person", "meshes": "mesh"}[section]
     entries = [(f"{kind}.{entry['replaces']['archive']}.{entry['replaces']['record']}", entry) for entry in payload["artReplacements"].get(section, [])]
     done = 0
@@ -1114,7 +1139,7 @@ def main(argv=None):
     ap.add_argument("--set", action="append", nargs=3, default=[], metavar=("ID", "NAME", "VALUE"),
                     help="set placement value NAME (size.width, framesPerSecond, ground, waist, ...) of the entry replacing ID "
                     "to the JSON VALUE, marked as set by hand, after any --area")
-    ap.add_argument("--place", action="append", choices=[*PLACEABLE, "trees"], default=[],
+    ap.add_argument("--place", action="append", choices=[*PLACEABLE, "trees", "spell-tiles"], default=[],
                     help="give every entry of this section that has no placement its own, taken from the original, and keep every "
                     "file as it is (what a checkout without the finals does for the entries a new kind of placement reaches)")
     a = ap.parse_args(argv)

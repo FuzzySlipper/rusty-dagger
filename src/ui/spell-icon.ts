@@ -57,13 +57,17 @@ export function spellIconsReady(atlas: SpellIconAtlas | null | undefined): boole
   return (!fromAtlas || image(atlas.media) !== null) && own.every(cell => cell === null || image(cell) !== null);
 }
 
-/** One targeting or element tile: its rect in the tile atlas and, with refreshed art, its own image. */
+/**
+ * One targeting or element tile: its rect in the tile atlas and, with refreshed art, its own image and its own shape
+ * (width over height), which the classic rect gives where it has none.
+ */
 export interface SpellSelectorTile {
   readonly x: number;
   readonly y: number;
   readonly width: number;
   readonly height: number;
   readonly image: string | null;
+  readonly aspect?: number | null;
 }
 
 /** Where the targeting and element tiles are drawn from: one atlas image, its size, and each tile by index. */
@@ -79,7 +83,8 @@ const isTile = (tile: unknown): tile is SpellSelectorTile => {
   if (!tile || typeof tile !== 'object') return false;
   const value = tile as Partial<SpellSelectorTile>;
   return [value.x, value.y, value.width, value.height].every(number => Number.isSafeInteger(number) && number! >= 0)
-    && value.width! > 0 && value.height! > 0 && (value.image === null || typeof value.image === 'string');
+    && value.width! > 0 && value.height! > 0 && (value.image === null || typeof value.image === 'string')
+    && (value.aspect == null || typeof value.aspect === 'number' && Number.isFinite(value.aspect) && value.aspect > 0);
 };
 
 export function isSpellSelectors(value: unknown): value is SpellSelectors {
@@ -101,8 +106,8 @@ export function spellSelector(selectors: SpellSelectors | null | undefined, kind
   tile.setAttribute('aria-hidden', 'true');
   const cell = selectors?.[kind][index];
   if (!selectors || !cell) return tile;
-  tile.style.setProperty('--tile-aspect', String(cell.width / cell.height));
   const refreshed = image(cell.image);
+  tile.style.setProperty('--tile-aspect', String(cell.aspect ?? cell.width / cell.height));
   const source = image(selectors.media);
   if (refreshed !== null) {
     tile.style.backgroundImage = `url("${refreshed}")`;
