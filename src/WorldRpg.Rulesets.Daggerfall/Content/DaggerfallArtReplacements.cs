@@ -483,14 +483,14 @@ internal sealed class DaggerfallArtReplacements
                                     : throw new InvalidOperationException($"Content pack '{packId}' paints a slot of {subject} for '{other.Name}', which is no classic texture identity."),
                                     File(other.Value, $"A texture of {subject}"));
                         }
-                        bool own = texture is not null && material is null;
                         DaggerfallArtFlipbook? flipbook = slot.TryGetProperty("frames", out JsonElement frames) | slot.TryGetProperty("framesPerSecond", out JsonElement rate)
                             ? new(frames.ValueKind == JsonValueKind.Number ? frames.GetInt32() : 0, rate.ValueKind == JsonValueKind.Number ? rate.GetSingle() : 0F) : null;
-                        // A strip the game cannot step through would draw all its frames squeezed onto one face, or none.
-                        if (flipbook is not null && (!own || flipbook.Frames < 2 || !float.IsFinite(flipbook.FramesPerSecond) || flipbook.FramesPerSecond <= 0F))
-                            throw new InvalidOperationException($"Content pack '{packId}' states a slot of {subject} as {flipbook.Frames} frames at {flipbook.FramesPerSecond} a second: only a texture of its own is a strip, of two frames or more at a rate above zero.");
+                        // A slot drawing only a classic identity takes the location's own surface, which would drop a strip or
+                        // unlit stated for it unseen; a strip of no frames draws none, and one at no rate never steps.
+                        if (flipbook is not null && (texture is null || flipbook.Frames < 1 || !float.IsFinite(flipbook.FramesPerSecond) || flipbook.FramesPerSecond <= 0F))
+                            throw new InvalidOperationException($"Content pack '{packId}' states a slot of {subject} as {flipbook.Frames} frames at {flipbook.FramesPerSecond} a second: only a texture of its own is a strip, of a frame or more at a rate above zero.");
                         bool unlit = slot.TryGetProperty("unlit", out JsonElement light) && light.GetBoolean();
-                        if (unlit && !own)
+                        if (unlit && texture is null)
                             throw new InvalidOperationException($"Content pack '{packId}' draws a slot of {subject} unlit: only a texture of its own is, as a classic identity draws as the location's lit surface.");
                         return new DaggerfallArtModelSlot(slot.GetProperty("slot").GetUInt32(), material, texture, alpha == "mask", shell, drawn, flipbook, unlit);
                     })];
