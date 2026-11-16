@@ -50,21 +50,27 @@ public static class DaggerfallInteriorLightFacts
     internal static bool TryProject(string id, RdbFlatSource flat, NormalizedVector3 position, float billboardHeight, out NormalizedLightPlacement light)
         => TryProject(id, flat.TextureArchive, flat.TextureRecord, position, billboardHeight, out light);
 
+    /// <summary>
+    /// How far above its sprite's centre a lamp's flame burns, where its light sits. DFU's offsets, and where its switch
+    /// says "todo" or sets the light at a standing lantern's top, the flame as the art draws it (#10867 measured each
+    /// refreshed sprite's glow against the classic frame, and #10852's lamp-post meshes keep their flames where their
+    /// sprites do): the wall torches 16 and 18 hold theirs a fifth of a metre up, the pillar 19 its bowl near its top, the
+    /// short-chained lantern 26 hangs its flame half a metre below the centre, where the chain would otherwise take the
+    /// light, and the lamp posts 14, 15, 28 and 29 carry theirs in the globe or lantern below their tops.
+    /// </summary>
+    internal static float FlameAboveCentre(int record, float billboardHeight) => record switch
+    {
+        0 => -.1F, 2 or 3 => .1F, 5 => .15F, 6 or 20 => .6F, 9 => .4F, 11 => -.4F,
+        13 => -.35F, 14 => .7F, 15 => .75F, 16 or 17 or 18 => .2F, 19 => .45F, 21 => billboardHeight / 2.4F,
+        22 or 26 => -.5F, 24 => -1.85F, 25 => -1F, 27 => -.02F, 28 => 1.6F, 29 => 1.5F, _ => 0F,
+    };
+
     internal static bool TryProject(string id, int archive, int record, NormalizedVector3 position, float billboardHeight, out NormalizedLightPlacement light)
     {
         light = default!;
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         if (archive != Archive || !Lit(record)) return false;
-        // DFU's offsets, and where its switch says "todo" the flame's height above the sprite's centre as the art draws
-        // it (#10867 measured each refreshed sprite's glow against the classic frame): the wall torches 16 and 18 hold
-        // theirs a fifth of a metre up, the pillar 19 its bowl near its top, and the short-chained lantern 26 hangs its
-        // flame half a metre below the centre, where the chain would otherwise take the light.
-        float offset = record switch
-        {
-            0 => -.1F, 2 or 3 => .1F, 5 => .15F, 6 or 20 => .6F, 9 => .4F, 11 => -.4F,
-            13 => -.35F, 14 or 15 => billboardHeight / 2F, 16 or 17 or 18 => .2F, 19 => .45F, 21 => billboardHeight / 2.4F,
-            22 or 26 => -.5F, 24 => -1.85F, 25 => -1F, 27 => -.02F, _ => 0F,
-        };
+        float offset = FlameAboveCentre(record, billboardHeight);
         (float range, float intensity, NormalizedVector3 color) = ((float Range, float Intensity, NormalizedVector3 Color))(record switch
         {
             0 => (20F, 1.1F, new(.95F, .91F, .63F)),

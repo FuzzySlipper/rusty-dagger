@@ -22,6 +22,10 @@ public sealed class DaggerfallInteriorLightFactsTests
     [InlineData(18, .2F)]
     [InlineData(19, .45F)]
     [InlineData(26, -.5F)]
+    [InlineData(14, .7F)]
+    [InlineData(15, .75F)]
+    [InlineData(28, 1.6F)]
+    [InlineData(29, 1.5F)]
     public void A_lamp_lights_from_its_flame(int record, float aboveCentre)
     {
         Assert.True(DaggerfallInteriorLightFacts.TryProject("light-flat/test/0", DaggerfallInteriorLightFacts.Archive, record, Centre, 1.9F, out NormalizedLightPlacement light));

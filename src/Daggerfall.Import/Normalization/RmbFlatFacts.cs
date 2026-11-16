@@ -39,10 +39,17 @@ internal sealed class RmbFlatFacts(DungeonLogicalSourceSet sources)
                 ClimateNature = interior is null && flat.BuildingIndex is not null && flat.TextureArchive is >= 500 and <= 511,
             });
             if (flat.TextureArchive != DaggerfallInteriorLightFacts.Archive) continue;
-            if (interior is null)
-                lights.Add(new($"light-flat/{suffix}", at with { Y = at.Y + size.HeightMeters }, 18f, 1f, new(1f, 1f, 1f)) { CityLight = true });
-            else if (DaggerfallInteriorLightFacts.TryProject($"light-flat/{suffix}", flat.TextureArchive, flat.TextureRecord,
-                at with { Y = at.Y + size.HeightMeters / 2f }, size.HeightMeters, out var light)) lights.Add(light);
+            if (interior is not null)
+            {
+                if (DaggerfallInteriorLightFacts.TryProject($"light-flat/{suffix}", flat.TextureArchive, flat.TextureRecord,
+                    at with { Y = at.Y + size.HeightMeters / 2f }, size.HeightMeters, out var light)) lights.Add(light);
+            }
+            // A street's lamp is DFU's city light, white and reaching 18 m, but at its flame rather than above its sprite's top.
+            else if (DaggerfallInteriorLightFacts.Lit(flat.TextureRecord))
+                lights.Add(new($"light-flat/{suffix}", basePosition with
+                {
+                    Y = basePosition.Y + (size.HeightMeters / 2f) + DaggerfallInteriorLightFacts.FlameAboveCentre(flat.TextureRecord, size.HeightMeters),
+                }, 18f, 1f, new(1f, 1f, 1f)) { CityLight = true });
         }
         if (interior is null)
             foreach (RmbBlockScenery plant in content.GroundScenery)
