@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""trees.py's checks: a prop mesh is written only with sound normals, and the winter rock 507-4 (whose sprite is painted
-with see-through pockets) is built whole, on its foot (#10871).
+"""trees.py's checks: a prop mesh is written only with sound normals, and rocks whose sprites are painted with
+see-through pockets are built whole: the winter rock 507-4 on its foot (#10871), 506-3 in its sprite's proportions (#10874).
 
     python3 test_trees.py
 """
@@ -34,6 +34,17 @@ class Meshes(unittest.TestCase):
         self.assertTrue(np.allclose(np.linalg.norm(normals, axis=1), 1, atol=1e-3))
         # It sinks into the ground at its foot, as every rock does, where it had stood a fifth of its height off it.
         self.assertLess(min(part["positions"][1::3]), 0)
+
+    def test_a_rock_painted_with_a_pocket_stands_in_its_sprite_s_proportions(self):
+        # 506-3's sprite is an arch: shaped round its opening, the rock stood squat at 55% of the sprite's height (#10874).
+        flat = next(f for f in json.loads(trees.PAYLOAD.read_text())["artReplacements"]["flats"] if f["replaces"] == {"archive": 506, "record": 3})
+        rgba = trees.frame(flat)
+        species, variant = trees.FORMS[506][3]
+        mesh, _ = trees.rocks.nature_rock(species, int(hashlib.sha256(rgba.tobytes()).hexdigest()[:8], 16), rgba.astype(np.uint8), variant)
+        positions = np.array(mesh["parts"][0]["positions"]).reshape(-1, 3)
+        solid = trees.rocks.outline(rgba.astype(np.uint8))
+        self.assertAlmostEqual((positions[:, 0].max() - positions[:, 0].min()) / mesh["height"], solid.shape[1] / solid.shape[0], delta=.1)
+        self.assertGreater(mesh["height"], .8)
 
 
 if __name__ == "__main__":

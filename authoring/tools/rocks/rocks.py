@@ -851,7 +851,11 @@ def nature_rock(form, seed, rgba, stones=1):
     """A nature sprite's rock as a prop mesh of one `stone` part, in metres with its foot at 0 and the sprite's drawn
     height 1; and its stone texture painted from the sprite's own rock colours (snow left to the flora field's shader)."""
     rng = np.random.default_rng(seed)
-    solid = outline(rgba)
+    # A pocket painted see-through inside the outline is stone behind it, as the sprites paint it solid in other seasons
+    # and climates: shaped round it, a rock was carved to its centre wherever a direction ran into a pocket, standing at a
+    # share of its sprite's height (506-3 at 55%), or, where every direction below did, folded its underside into a point
+    # off the ground with normals of no length (507-4's winter sprite, #10871; #10874).
+    solid = ndimage.binary_fill_holes(outline(rgba))
     rows, cols = solid.shape
     height = 1.0
     metre = height / rows
@@ -876,12 +880,6 @@ def nature_rock(form, seed, rgba, stones=1):
         pieces = pile(rng, solid, metre, stones)
     else:
         centre, reach = reached(solid, form, sphere, height)
-        if reach.min() <= 0:
-            # Every direction the outline leaves at once falls back to the centre, so where see-through pockets are painted
-            # about it the rock's underside folded into a point, its faces there of no size and their normals none, and it
-            # stood off the ground: 507-4's winter sprite, whose summer one is solid there (#10871). Such a rock is shaped
-            # with its pockets taken as stone.
-            centre, reach = reached(ndimage.binary_fill_holes(solid), form, sphere, height)
         points = centre + sphere * reach[:, None]
         if form == SPIRE:
             points = press(points, faces, rng, 1, 0, facets=6, cut_depth=(.05, .15), tilt=.2, wobble=.01)

@@ -99204,9 +99204,9 @@
    "500-4": {
     "mesh": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/rock-d76bbfa1.prop-mesh.json",
-     "byteLength": 78291,
-     "sha256": "fc1c524627aeddaf96ff263077e1bca7c3564ae7cb149dc5b810234eb8207e24",
-     "height": 0.8302
+     "byteLength": 78434,
+     "sha256": "b978d9447a6c583f19c5e27e7faaf34ea9c1b936265dc5d6e0cc325b1652b518",
+     "height": 0.8232
     },
     "height": 1.0,
     "foot": 0.0,
@@ -99219,9 +99219,9 @@
    "500-17": {
     "mesh": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/rock-625dcb54.prop-mesh.json",
-     "byteLength": 80460,
-     "sha256": "9c4a075d00c692e2d512ac6321708967488428cef1eba71d541fa9582287f54a",
-     "height": 0.6898
+     "byteLength": 78764,
+     "sha256": "c5f2a3f03ef82cdc6bae851ae6a8118c5594212166320df491211ceae9152862",
+     "height": 0.7158
     },
     "height": 1.0,
     "foot": 0.0,
@@ -99787,9 +99787,9 @@
    "503-21": {
     "mesh": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/rock-ab406627.prop-mesh.json",
-     "byteLength": 77914,
-     "sha256": "0340dafbfd42b907066189ea499eb8ba3573f54280d7f19f93b099fe23388bee",
-     "height": 0.8678
+     "byteLength": 77913,
+     "sha256": "11f5b8be223d39a436744110e570cd3aecb8ce6c47e5d73ad0edb11db269c474",
+     "height": 0.8679
     },
     "height": 1.0,
     "foot": 0.0,
@@ -100072,8 +100072,8 @@
    "504-5": {
     "mesh": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/rock-5f876157.prop-mesh.json",
-     "byteLength": 78901,
-     "sha256": "79453141db2aaa1252e9bfdecee8b0a3d8d2cdae5675b8d77d63b344c4e2bde7",
+     "byteLength": 78878,
+     "sha256": "6de77abeee6b259dc499a46119926e83d9af91157d9d63c2fa043c320fd8f883",
      "height": 0.8606
     },
     "height": 1.0,
