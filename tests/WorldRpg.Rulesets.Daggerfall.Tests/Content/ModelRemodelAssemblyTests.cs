@@ -12,7 +12,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>
 /// The art pack's <c>models</c> section, and an assembled location's use of it: each model a block places is tagged with its
 /// ARCH3D id, and a remodelled one's remodel draws the location's own textures (its climate, season and dungeon remaps) at
-/// its classic texture slots. A site closure's pre-combined mesh names no model, so what it would remodel is reported.
+/// its classic texture slots.
 /// </summary>
 public sealed class ModelRemodelAssemblyTests
 {
@@ -110,18 +110,5 @@ public sealed class ModelRemodelAssemblyTests
         Assert.NotEmpty(levers);
         Assert.All(hold.DungeonActionModels, model => Assert.NotNull(model.ModelId));
         Assert.Contains("61027", hold.Geometry.Remodels.Keys);
-    }
-
-    /// <summary>
-    /// Charing's exterior is published as a site closure, whose combined mesh names no model: the remodelled models its
-    /// own blocks place are what that closure draws classic.
-    /// </summary>
-    [Fact]
-    public void What_a_closure_would_remodel_is_the_remodelled_models_its_location_s_blocks_place()
-    {
-        Assert.Equal(new Dictionary<string, int> { ["41209"] = 3 }, Assembly.Value.Remodelled(DaggerfallWorldProfileIds.Exterior(Charing)));
-        IReadOnlyDictionary<string, int> hold = Assembly.Value.Remodelled(DaggerfallWorldProfileIds.Dungeon(PrivateersHold));
-        Assert.Equal(["61027"], hold.Keys);
-        Assert.Equal(Assembly.Value.Assemble(DaggerfallWorldProfileIds.Dungeon(PrivateersHold)).DungeonActionModels.Count(model => model.ModelId == "61027"), hold["61027"]);
     }
 }

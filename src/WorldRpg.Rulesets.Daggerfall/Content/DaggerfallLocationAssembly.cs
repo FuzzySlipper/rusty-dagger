@@ -76,28 +76,6 @@ internal sealed class DaggerfallLocationAssembly
     }
 
     /// <summary>
-    /// The remodelled models this profile's own blocks place, each with its number of placements: what an authored site
-    /// closure of the profile draws classic, since its pre-combined mesh names no model to swap. Only the profile's block
-    /// documents are read, and only when the art pack has remodels.
-    /// </summary>
-    internal IReadOnlyDictionary<string, int> Remodelled(DaggerfallWorldProfileKey key)
-    {
-        if (_models.Count == 0 || !Places(key)) return new Dictionary<string, int>();
-        DaggerfallSiteRecord record = _records.Value[key.Site];
-        DaggerfallWorldProfileIds.TryParse(key.LogicalId, out _, out DaggerfallSiteBuildingId? building);
-        DaggerfallWorldBlockKey[] blocks = key.Kind switch
-        {
-            DaggerfallWorldProfileKind.Exterior => [.. PlacedBlocks(record.Exterior!).Select(ExteriorBlockKey)],
-            DaggerfallWorldProfileKind.Interior => [InteriorBlockKey(BuildingBlock(record.Exterior!, building!.Value)!, building.Value)],
-            _ => [.. record.DungeonBlocks.Select(DungeonBlockKey)],
-        };
-        // A block a location places twice is counted twice.
-        IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> documents = _blocks.Read(blocks);
-        return blocks.SelectMany(block => DrawnModels(key.Kind, documents[block])).Where(model => model.MeshArtifactId is not null && _models.ContainsKey(model.ModelId))
-            .GroupBy(model => model.ModelId, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
-    }
-
-    /// <summary>
     /// The models a block draws as static meshes or moving models in a profile of this kind. An exterior's city gates and a
     /// dungeon's still doors are drawn by their own parts, which keep the classic mesh.
     /// </summary>
