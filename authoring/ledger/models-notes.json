@@ -347,6 +347,106 @@
   "status": "accepted",
   "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: boards along the length with gaps, a nosing board along each open edge, battens under, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
  },
+ "41400": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a log of rusty-craftsurvive's branch tubes along the classic's own axis, its flat end capped and the other sharpened to the classic's point, worn in generate-flora.py's fissured bark painted from the classic's wood, its caps the classic's surface (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41704": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41705": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41706": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41707": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41708": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41709": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41710": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41711": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41712": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41713": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41714": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41715": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41716": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41717": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41719": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a heap of stones pressed in from the classic's pyramid over its own footprint, sunk where stone meets stone and cut flat across each stone's top, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41722": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rough standing stone pressed in from the classic's own surface, its masonry cap still the classic's surface, the stone worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41723": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rough standing stone pressed in from the classic's own surface, its masonry cap still the classic's surface, the stone worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41731": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rough standing stone pressed in from the classic's own surface, its masonry cap still the classic's surface, the stone worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41732": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rough standing stone pressed in from the classic's own surface, its masonry cap still the classic's surface, the stone worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41733": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rough standing stone pressed in from the classic's own surface, its masonry cap still the classic's surface, the stone worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41734": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a fallen dead tree of rusty-craftsurvive's branch tubes: a trunk from the classic's cut root to its fork, and limbs to the tips the classic reaches, worn in generate-flora.py's fissured bark painted from the classic's wood, its caps the classic's surface (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41735": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a fallen dead tree of rusty-craftsurvive's branch tubes: a trunk from the classic's cut root to its fork, and limbs to the tips the classic reaches, worn in generate-flora.py's fissured bark painted from the classic's wood, its caps the classic's surface (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41736": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a fallen dead tree of rusty-craftsurvive's branch tubes: a trunk from the classic's cut root to its fork, and limbs to the tips the classic reaches, worn in generate-flora.py's fissured bark painted from the classic's wood, its caps the classic's surface (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "41737": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a fallen dead tree of rusty-craftsurvive's branch tubes: a trunk from the classic's cut root to its fork, and limbs to the tips the classic reaches, worn in generate-flora.py's fissured bark painted from the classic's wood, its caps the classic's surface (authoring/tools/rocks/rocks.py, #10849)."
+ },
  "41800": {
   "status": "accepted",
   "note": "Direction B, as Patch chose (#10847: \"Yeah B looks the best on all of them without the extra chunkier pixels\"): an armoire with frame-and-panel doors, strap hinges, bracket feet and a cornice stepped under the classic's slope, built inside the classic's volume and worn in its own pixel atlas, baked from the refreshed wood and iron with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10847)."
@@ -562,5 +662,45 @@
  "737": {
   "status": "accepted",
   "note": "Hedge in the ground cover's shell stack, as Patch asked (#10842 47165: \"Maybe hedge could use the effect we do for ground cover to have a bit more depth?\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 12 cm inside, each drawing 33-0's relief cut at its height, so its leaves stand out of the hedge in pixels (hedges.py, #10850)."
+ },
+ "60511": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rock pressed in from the classic's own surface into broad faces and hard edges, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "60512": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rock pressed in from the classic's own surface into broad faces and hard edges, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "60513": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rock pressed in from the classic's own surface into broad faces and hard edges, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "60514": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rock pressed in from the classic's own surface into broad faces and hard edges, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "60515": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rock pressed in from the classic's own surface into broad faces and hard edges, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "60516": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rock pressed in from the classic's own surface into broad faces and hard edges, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "60517": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rock pressed in from the classic's own surface into broad faces and hard edges, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "60518": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rock pressed in from the classic's own surface into broad faces and hard edges, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "60519": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rock pressed in from the classic's own surface into broad faces and hard edges, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
+ },
+ "60520": {
+  "status": "accepted",
+  "note": "Procedural, as Patch chose for the rocks and stones (#10844: \"a procedural approach in a manner similar to how we did mesh trees. So generated texture palette used against offline recipe/script driven simple but not quite as low poly as dagger original meshes\") and for #10842's dead trees, rocks and logs (\"should match our mesh trees a bit better in style\"): a rock pressed in from the classic's own surface into broad faces and hard edges, worn in a generated stone tile of few tones painted from the refreshed surface the classic wears, with that surface's lichen, and once more for each stone the classic's climate swap draws it as (authoring/tools/rocks/rocks.py, #10849)."
  }
 }
