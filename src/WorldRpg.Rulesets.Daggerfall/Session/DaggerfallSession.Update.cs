@@ -251,6 +251,9 @@ internal sealed partial class DaggerfallSession
         LocalWeather.State.Advance(_time.Calendar, (minuteAfter - minuteBefore) / 60d);                // Exterior
         _sites.Projection.Lighting.UpdateAmbient(_time.Calendar.Sky, _tuning.Weather.Daylight(_time.Calendar, LocalWeather.Current));   // Scene
         _exterior.UpdateResidentCityLights();                                                     // Exterior
+        // The gates follow the clock as the lights do, whatever moved it, so an hour that passes while the world is
+        // held (resting, world.hour, a held playtest) swaps them at once rather than at the next playing step.
+        _exterior.SyncCityGates();                                                                // Exterior
         State.Quests.AdvanceClocks(State.Variables, before, _time.Calendar);                      // Quests
         // Daily conditions and ordinary source-order operations observe the same admitted calendar
         // after rest, travel, prison, or another interval, including an interval with no clock expiry.
@@ -420,7 +423,6 @@ internal sealed partial class DaggerfallSession
         _movement.BeginLocomotion(ref player, update);                                            // Character
         _doors.Advance(update.DeltaSeconds);                                                      // Interiors
         _sites.Projection.AdvanceMotion(update.DeltaSeconds);                                     // Exterior
-        _exterior.SyncCityGates();                                                                // Exterior
         player.Environment = _exterior.CharacterEnvironment(State.PlayerControl.Motion);         // Exterior
         ReconcileTriggers(player.Environment, simulationStep, actionGraph);                       // Session: the triggers' list, below
         _movement.ShapeLocomotion(ref player, update, generation, simulationStep, _exterior);    // Character: water (Exterior's surface), climbing, levitation

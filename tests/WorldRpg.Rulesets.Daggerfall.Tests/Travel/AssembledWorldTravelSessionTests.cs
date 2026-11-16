@@ -160,8 +160,10 @@ public sealed class AssembledWorldTravelSessionTests
 
     /// <summary>
     /// A walled city's gates are drawn and collide as their open model by day and their closed model at night,
-    /// swapping as the calendar crosses dusk and dawn (DaggerfallCityGate); the gate models are not part of the
-    /// static meshes, and the state is not saved but follows the restored calendar.
+    /// swapping as the calendar crosses dusk and dawn (DaggerfallCityGate) whatever moves it: an hour passed while the
+    /// world is held, as resting, world.hour or a held playtest pass it, swaps them in the next frame drawn, as it does
+    /// the sky, before any playing step. The gate models are not part of the static meshes, and the state is not saved
+    /// but follows the restored calendar.
     /// </summary>
     [Fact]
     public void A_walled_city_s_gates_close_at_dusk_and_open_at_dawn()
@@ -183,12 +185,16 @@ public sealed class AssembledWorldTravelSessionTests
         Assert.Equal(walled.CityGates.Count, gates.Visuals.Count());
         Dictionary<ulong, ulong> before = new(run.Spatial.ResidentCollisionInstances);
         Assert.Equal(walled.CityGates.Count, gates.CharacterEnvironment().MeshInstances.Length);
+        run.Hold();
+        AppearanceFact[] drawn = GateFacts(run, gates);
 
-        // Cross the next dusk or dawn: every gate swaps to its other model and collision.
-        run.Session.AdvanceElapsedTime(12 * 60 * 60);
-        run.Step();
+        // Cross the next dusk or dawn by world.hour while the world is held: every gate swaps to its other model and
+        // collision in the next frame drawn.
+        Assert.True(run.Session.Commands<IDeveloperSceneCommands>().Hour((Calendar(run.Session).Hour + 12) % 24).Succeeded);
+        run.Hold();
         Assert.Equal(!day, Calendar(run.Session).IsDay);
         Assert.Equal(!day, run.Session.Sites.Projection.CityGates.Open);
+        Assert.All(GateFacts(run, gates).Zip(drawn), pair => Assert.NotEqual(pair.Second.Appearance, pair.First.Appearance));
         IReadOnlyDictionary<ulong, ulong> after = run.Spatial.ResidentCollisionInstances;
         Assert.Equal(walled.CityGates.Count, before.Keys.Except(after.Keys).Count());
         Assert.Equal(walled.CityGates.Count, after.Keys.Except(before.Keys).Count());
@@ -275,6 +281,10 @@ public sealed class AssembledWorldTravelSessionTests
 
     private static int BuildingType(DaggerfallSiteRecord site, DaggerfallSiteBuildingId building) =>
         site.Exterior!.Buildings[building].Source.BuildingType;
+
+    /// <summary>The fact each gate is drawn by in the last frame published, at the gate's pose.</summary>
+    private static AppearanceFact[] GateFacts(AssembledWorldRun run, DaggerfallCityGates gates) =>
+        [.. gates.Visuals.Select(gate => Assert.Single(run.Appearance.Snapshots[^1], fact => fact.Transform == gate.Pose))];
 
     private static DaggerfallCalendar Calendar(DaggerfallSession session)
     {
