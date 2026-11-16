@@ -41,6 +41,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from scipy import ndimage
 from scipy.spatial import ConvexHull
 
 REPOSITORY = Path(__file__).resolve().parents[3]
@@ -833,6 +834,19 @@ def pile(rng, solid, metre, stones):
     return pieces
 
 
+def reached(solid, form, sphere, height):
+    """A rock's centre, the drawn texel low in the outline's middle nearest to where its weight sits, and how far the
+    outline reaches from it along each of the sphere's directions."""
+    rows = solid.shape[0]
+    metre = height / rows
+    lower = np.argwhere(solid[int(rows * .6):])
+    want = np.array([rows - 1 - height * {BOULDERS: .3, SPIRE: .12}.get(form, .35) / metre, np.median(lower[:, 1])])
+    drawn = np.argwhere(solid)
+    row, col = drawn[np.argmin(np.linalg.norm(drawn - want, axis=1))]
+    centre = np.array([(col + .5) * metre, (rows - row - .5) * metre, 0])
+    return centre, silhouette_reach(solid, centre, sphere, height, 1.0 if form == SPIRE else DEPTH)
+
+
 def nature_rock(form, seed, rgba, stones=1):
     """A nature sprite's rock as a prop mesh of one `stone` part, in metres with its foot at 0 and the sprite's drawn
     height 1; and its stone texture painted from the sprite's own rock colours (snow left to the flora field's shader)."""
@@ -861,13 +875,13 @@ def nature_rock(form, seed, rgba, stones=1):
     elif form == BOULDERS and stones > 1:
         pieces = pile(rng, solid, metre, stones)
     else:
-        # The shape is found from a drawn texel low in the outline's middle, the nearest to where its weight sits.
-        lower = np.argwhere(solid[int(rows * .6):])
-        want = np.array([rows - 1 - height * {BOULDERS: .3, SPIRE: .12}.get(form, .35) / metre, np.median(lower[:, 1])])
-        drawn = np.argwhere(solid)
-        row, col = drawn[np.argmin(np.linalg.norm(drawn - want, axis=1))]
-        centre = np.array([(col + .5) * metre, (rows - row - .5) * metre, 0])
-        reach = silhouette_reach(solid, centre, sphere, height, 1.0 if form == SPIRE else DEPTH)
+        centre, reach = reached(solid, form, sphere, height)
+        if reach.min() <= 0:
+            # Every direction the outline leaves at once falls back to the centre, so where see-through pockets are painted
+            # about it the rock's underside folded into a point, its faces there of no size and their normals none, and it
+            # stood off the ground: 507-4's winter sprite, whose summer one is solid there (#10871). Such a rock is shaped
+            # with its pockets taken as stone.
+            centre, reach = reached(ndimage.binary_fill_holes(solid), form, sphere, height)
         points = centre + sphere * reach[:, None]
         if form == SPIRE:
             points = press(points, faces, rng, 1, 0, facets=6, cut_depth=(.05, .15), tilt=.2, wobble=.01)

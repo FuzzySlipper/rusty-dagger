@@ -8,7 +8,9 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// <summary>
 /// A nature mesh (<see cref="DaggerfallTreeArt"/>) as the flora field draws it: a prop mesh of bark, leaf and stone parts,
 /// each with positions, normals, uvs, colours (alpha the share a vertex flutters) and triangles, drawn at its sprite's
-/// drawn height with its foot where the sprite's stands.
+/// drawn height with its foot where the sprite's stands. Its normals are taken as written, which authoring holds to unit
+/// length (trees.py refuses any other by name): normalizing one of no length here made it no number at all, which the
+/// Engine refuses, faulting the update that grew the mesh (#10871).
 /// </summary>
 internal static class DaggerfallTreeMesh
 {
@@ -44,7 +46,7 @@ internal static class DaggerfallTreeMesh
             for (int i = 0; i < p.Length / 3; i++)
             {
                 positions.Add((new Vector3(p[3 * i], p[(3 * i) + 1], p[(3 * i) + 2]) * scale) + lift);
-                normals.Add(Vector3.Normalize(new Vector3(n[3 * i], n[(3 * i) + 1], n[(3 * i) + 2])));
+                normals.Add(new Vector3(n[3 * i], n[(3 * i) + 1], n[(3 * i) + 2]));
                 uvs.Add(new Vector2(uv[2 * i], uv[(2 * i) + 1]));
                 colours.Add(new Color(c[4 * i], c[(4 * i) + 1], c[(4 * i) + 2], c[(4 * i) + 3]));
             }

@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Testing;
 using WorldRpg.Kit.Controls;
@@ -103,25 +104,45 @@ public sealed class DaggerfallFloraFieldTests
     /// the desert's ground grows it.
     /// </summary>
     [Fact]
-    public void The_desert_s_smallest_mesh_grows_its_card_in_the_real_Engine()
+    public void The_desert_s_smallest_mesh_grows_its_card_in_the_real_Engine() =>
+        GrowsInTheRealEngine((503, 22), climate: 224, winter: false, new Vector2(.15F, .148F));
+
+    /// <summary>
+    /// Charing's winter rock (#10871): 507-4's mesh shipped with 216 normals of no length, which the reader normalized to
+    /// no number at all, and the Engine refused the mesh, faulting the update in winter in Charing's climate. Grown in the
+    /// real Engine from the art pack as it ships, it stands with every normal of unit length.
+    /// </summary>
+    [Fact]
+    public void Charing_s_winter_rock_grows_in_the_real_Engine_with_sound_normals()
     {
-        string content = Path.Combine(TestData.RepositoryRoot, "content");
+        DaggerfallTreeArt rock = GrowsInTheRealEngine((507, 4), climate: 230, winter: true, new Vector2(1.5F, 2.3F));
+        using JsonDocument mesh = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(Content, rock.Mesh.Path)));
+        float[] normals = [.. mesh.RootElement.GetProperty("parts")[0].GetProperty("normals").EnumerateArray().Select(value => value.GetSingle())];
+        Assert.All(normals.Chunk(3), n => Assert.InRange(new Vector3(n[0], n[1], n[2]).Length(), .999F, 1.001F));
+    }
+
+    private static readonly string Content = Path.Combine(TestData.RepositoryRoot, "content");
+
+    /// <summary>Grows one nature record's mesh from the art pack as it ships on a climate's ground, in the real Engine.</summary>
+    private static DaggerfallTreeArt GrowsInTheRealEngine((int Archive, int Record) record, int climate, bool winter, Vector2 size)
+    {
         DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(
-            File.ReadAllBytes(Path.Combine(content, "worldrpg", "packs", "daggerfall.art-replacements", "payload.json")), "daggerfall.art-replacements");
-        DaggerfallTreeArt plant = art.Trees[(503, 22)];
-        DaggerfallArtFlat flat = art.Flats[(503, 22)];
-        DaggerfallArtFile[] files = [plant.Mesh, flat.File, .. new[] { plant.Bark, plant.Leaves, plant.Stone }.OfType<DaggerfallArtFile>()];
-        Dictionary<string, ReadOnlyMemory<byte>> served = files.ToDictionary(file => file.Path, file => (ReadOnlyMemory<byte>)File.ReadAllBytes(Path.Combine(content, file.Path)));
-        DaggerfallFloraLook look = new(flat.File, Vector2.Zero, Vector2.One, new Vector2(.15F, .148F), new Vector2(.5F, 0)) { Tree = plant };
+            File.ReadAllBytes(Path.Combine(Content, "worldrpg", "packs", "daggerfall.art-replacements", "payload.json")), "daggerfall.art-replacements");
+        DaggerfallTreeArt tree = art.Trees[record];
+        DaggerfallArtFlat flat = art.Flats[record];
+        DaggerfallArtFile[] files = [tree.Mesh, flat.File, .. new[] { tree.Bark, tree.Leaves, tree.Stone, art.TreeSnow }.OfType<DaggerfallArtFile>()];
+        Dictionary<string, ReadOnlyMemory<byte>> served = files.ToDictionary(file => file.Path, file => (ReadOnlyMemory<byte>)File.ReadAllBytes(Path.Combine(Content, file.Path)));
+        DaggerfallFloraLook look = new(flat.File, Vector2.Zero, Vector2.One, size, new Vector2(.5F, 0)) { Tree = tree, TreeSnow = art.TreeSnow };
 
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = served });
         host.Call(engine =>
         {
             using SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, null, DaggerfallTuning.Defaults.Spatial);
-            using DaggerfallFloraField field = new(engine, Ground(climate: 224), DaggerfallFloraTuning.Default, DaggerfallFlatsTuning.Default, new Dictionary<int, float>());
-            field.Show(spatial.Session, Frame, new Vector3(100, 0, 100), false, (archive, record) => (archive, record) == (503, 22) ? look : null);
-            Assert.True(field.GrowsPlaced((503, 22)));
+            using DaggerfallFloraField field = new(engine, Ground(climate), DaggerfallFloraTuning.Default, DaggerfallFlatsTuning.Default, new Dictionary<int, float>());
+            field.Show(spatial.Session, Frame, new Vector3(100, 0, 100), winter, (archive, number) => (archive, number) == record ? look : null);
+            Assert.True(field.GrowsPlaced(record));
         });
+        return tree;
     }
 
     private static void Show(DaggerfallFloraField field, bool winter) =>
@@ -192,7 +213,8 @@ public sealed class DaggerfallFloraFieldTests
         {
             Materials = new(0, new Dictionary<int, DaggerfallHorizonGround.ArchiveMaterials>
             {
-                [2] = new(1, 1, 2, 3, false, false), [302] = new(1, 1, 2, 3, true, false), [303] = new(4, 4, 5, 6, false, false), [402] = new(7, 8, 9, 10, false, true),
+                [2] = new(1, 1, 2, 3, false, false), [102] = new(1, 1, 2, 3, false, false), [103] = new(4, 4, 5, 6, false, false),
+                [302] = new(1, 1, 2, 3, true, false), [303] = new(4, 4, 5, 6, false, false), [402] = new(7, 8, 9, 10, false, true),
             }),
         };
     }

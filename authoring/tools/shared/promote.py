@@ -624,11 +624,29 @@ WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)]),
                 *((f"hanging-{archive}-{record}.glb", [(archive, record)]) for archive, record in HANGING)]
 
 
+def glb_normals(gltf, data):
+    """Every normal a GLB's meshes carry, a row each."""
+    start = 20 + int.from_bytes(data[12:16], "little")
+    binary = data[start + 8:start + 8 + int.from_bytes(data[start:start + 4], "little")]
+    rows = [np.zeros((0, 3), np.float32)]
+    for primitive in (primitive for mesh in gltf.get("meshes", []) for primitive in mesh["primitives"]):
+        if (index := primitive["attributes"].get("NORMAL")) is not None:
+            accessor = gltf["accessors"][index]
+            view = gltf["bufferViews"][accessor["bufferView"]]
+            rows.append(np.ndarray((accessor["count"], 3), np.float32, binary, view.get("byteOffset", 0) + accessor.get("byteOffset", 0),
+                                   (view.get("byteStride", 12), 4)))
+    return np.concatenate(rows)
+
+
 def world_mesh_entry(final, archive, record):
     """A sprite mesh's entry: the GLB as it is, its material slots with an emissive map (`glow`), and what a hanging
-    piece hangs as (`hangs`), as its scene states."""
+    piece hangs as (`hangs`), as its scene states. A normal not of unit length or not finite is refused by name: the
+    Engine draws the GLB's normals as they are, and refuses a non-finite one, faulting the site that places it (#10871)."""
     data = final.path.read_bytes()
     gltf = json.loads(data[20:20 + int.from_bytes(data[12:16], "little")])
+    normals = glb_normals(gltf, data)
+    if (wrong := ~np.isfinite(normals).all(1) | (np.abs(np.linalg.norm(normals, axis=1) - 1) > .01)).any():
+        raise SystemExit(f"{final.path.name}: {int(wrong.sum())} of its normals are not of unit length or not finite")
     glow = [slot for slot, material in enumerate(gltf.get("materials", [])) if "emissiveTexture" in material]
     hangs = gltf.get("scenes", [{}])[gltf.get("scene", 0)].get("extras", {}).get("hangs")
     if ((archive, record) in HANGING) != (hangs is not None):

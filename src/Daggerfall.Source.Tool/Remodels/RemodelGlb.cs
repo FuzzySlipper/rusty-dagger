@@ -121,6 +121,10 @@ internal static class RemodelGlb
                     throw new InvalidDataException($"{label} draws mesh {index} without a material.");
                 Vector3[] positions = [.. Floats(attributes.GetProperty("POSITION").GetInt32(), 3).Select(value => Vector3.Transform(new Vector3(value[0], value[1], value[2]), world))];
                 Vector3[] facing = [.. Floats(normal.GetInt32(), 3).Select(value => Vector3.Normalize(Vector3.TransformNormal(new Vector3(value[0], value[1], value[2]), normals)))];
+                // A normal of no length comes out of its normalizing as no number at all, which the Engine refuses in the
+                // static mesh, faulting the location that draws it (#10871).
+                if (Array.FindIndex(facing, n => !float.IsFinite(n.X) || !float.IsFinite(n.Y) || !float.IsFinite(n.Z)) is int wrong and >= 0)
+                    throw new InvalidDataException($"{label} draws mesh {index} with a normal of no length or not finite, at vertex {wrong}.");
                 Vector2[] uvs = [.. Floats(uv.GetInt32(), 2).Select(value => new Vector2(value[0], value[1]))];
                 uint[] indices = primitive.TryGetProperty("indices", out JsonElement indexAccessor) ? Indices(indexAccessor.GetInt32()) : [.. Enumerable.Range(0, positions.Length).Select(i => (uint)i)];
                 if (indices.Length % 3 != 0 || indices.Any(corner => corner >= positions.Length))

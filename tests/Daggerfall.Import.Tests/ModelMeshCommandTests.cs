@@ -224,6 +224,20 @@ public sealed class ModelMeshCommandTests
         Assert.Contains(reason, Assert.Throws<InvalidDataException>(() => RemodelGlb.Read(glb, "41116.glb")).Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A normal of no length or not finite is refused by name (#10871): it would come out of its normalizing as no number,
+    /// which the Engine refuses in the static mesh, faulting the location that draws it.
+    /// </summary>
+    [Theory]
+    [InlineData(0F)]
+    [InlineData(float.NaN)]
+    public void A_glb_normal_of_no_length_or_not_finite_is_refused_by_name(float z)
+    {
+        byte[] glb = Glb([("texture-67-0", null, Square(0), null, null)], normal: new Vector3(0, 0, z));
+        Assert.Contains("41000.glb draws mesh 0 with a normal of no length or not finite, at vertex 0",
+            Assert.Throws<InvalidDataException>(() => RemodelGlb.Read(glb, "41000.glb")).Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void A_glb_texture_that_is_not_8_bit_truecolour_is_refused_with_its_format()
     {
@@ -277,11 +291,14 @@ public sealed class ModelMeshCommandTests
     /// <summary>
     /// A GLB of one node, lifted 1 m, with a primitive per material; a material with a PNG carries it as its base colour,
     /// one with a shell layer states it in its extras, and one <paramref name="drawn"/> names carries its PNGs by identity
-    /// in its <c>extras.drawn</c>; each takes whatever else <paramref name="more"/> states for it by name.
+    /// in its <c>extras.drawn</c>; each takes whatever else <paramref name="more"/> states for it by name. Every corner
+    /// faces <paramref name="normal"/>, up the square's z by default.
     /// </summary>
     private static byte[] Glb(IReadOnlyList<(string Name, byte[]? Png, Vector3[] Corners, string? Alpha, RemodelShell? Shell)> materials,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<string, byte[]>>? drawn = null, IReadOnlyDictionary<string, Dictionary<string, object>>? more = null)
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, byte[]>>? drawn = null, IReadOnlyDictionary<string, Dictionary<string, object>>? more = null,
+        Vector3? normal = null)
     {
+        Vector3 facing = normal ?? Vector3.UnitZ;
         List<byte> binary = [];
         List<object> views = [], accessors = [], primitives = [], images = [], textures = [], materialList = [];
         int View(byte[] data)
@@ -325,7 +342,7 @@ public sealed class ModelMeshCommandTests
                 attributes = new Dictionary<string, int>
                 {
                     ["POSITION"] = Floats(corners.SelectMany(corner => new[] { corner.X, corner.Y, corner.Z }), corners.Length, "VEC3"),
-                    ["NORMAL"] = Floats(corners.SelectMany(_ => new[] { 0F, 0F, 1F }), corners.Length, "VEC3"),
+                    ["NORMAL"] = Floats(corners.SelectMany(_ => new[] { facing.X, facing.Y, facing.Z }), corners.Length, "VEC3"),
                     ["TEXCOORD_0"] = Floats(corners.SelectMany(corner => new[] { corner.X, corner.Y }), corners.Length, "VEC2"),
                 },
                 material = materialList.Count - 1,

@@ -95185,9 +95185,9 @@
    "507-4": {
     "mesh": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/rock-21136c6e.prop-mesh.json",
-     "byteLength": 71437,
-     "sha256": "3a926cbd171b1fa8dd62a7c859957ce2c9e5562886335677341baffe7c39c05a",
-     "height": 0.8101
+     "byteLength": 78709,
+     "sha256": "96c7031babc0ab878398459023b7eb2fa52a4242d56e561d50390e38b1b71a45",
+     "height": 0.9314
     },
     "height": 0.9938,
     "foot": 0.0,
@@ -96311,9 +96311,9 @@
    "511-4": {
     "mesh": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/rock-21136c6e.prop-mesh.json",
-     "byteLength": 71437,
-     "sha256": "3a926cbd171b1fa8dd62a7c859957ce2c9e5562886335677341baffe7c39c05a",
-     "height": 0.8101
+     "byteLength": 78709,
+     "sha256": "96c7031babc0ab878398459023b7eb2fa52a4242d56e561d50390e38b1b71a45",
+     "height": 0.9314
     },
     "height": 0.9938,
     "foot": 0.0,

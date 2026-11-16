@@ -17,11 +17,13 @@ drawn as `stone`, which the wind does not move, in a generated stone tile painte
 winter rock's snow laid on its upward faces as a winter crown's is.
 
 The game draws a mesh at the sprite's drawn height (DaggerfallTreeMesh), so this records that height as a share of the
-sprite's frame, with where its foot stands.
+sprite's frame, with where its foot stands. It takes each mesh's normals as written, so a mesh with one not of unit length
+or not finite is refused here by name (the Engine refuses a non-finite one, faulting the update that grows it; #10871).
 
-    trees.py
+    trees.py                  every tree, the whole section and its media written anew
+    trees.py --key A-R ...    those entries alone, every other entry and file left as it is
 """
-import hashlib, json, shutil, tempfile
+import argparse, hashlib, json, shutil, tempfile
 from pathlib import Path
 
 import sys
@@ -250,6 +252,17 @@ def outward(mesh):
     return mesh
 
 
+def write_mesh(path, mesh):
+    """Writes a prop mesh, refusing one with a normal not of unit length or not finite, by name: the game draws its normals
+    as written."""
+    for part in mesh["parts"]:
+        normals = np.array(part["normals"], np.float64).reshape(-1, 3)
+        wrong = ~np.isfinite(normals).all(1) | (np.abs(np.linalg.norm(normals, axis=1) - 1) > .01)
+        if wrong.any():
+            raise SystemExit(f"{path.name}: {int(wrong.sum())} of its {part['role']} normals are not of unit length or not finite")
+    path.write_text(json.dumps(mesh, separators=(",", ":")))
+
+
 def publish(name, path):
     data = path.read_bytes()
     return {"path": f"{MEDIA}/{name}", "byteLength": len(data), "sha256": hashlib.sha256(data).hexdigest()}
@@ -262,7 +275,7 @@ def rock(rgba, archive, record, form, stones, folder):
     seed = int(hashlib.sha256(rgba.tobytes()).hexdigest()[:8], 16)
     mesh, stone = rocks.nature_rock(form, seed, rgba.astype(np.uint8), stones)
     mesh_name, stone_name = f"rock-{seed:08x}.prop-mesh.json", f"rock-{seed:08x}-stone.png"
-    (folder / mesh_name).write_text(json.dumps(mesh, separators=(",", ":")))
+    write_mesh(folder / mesh_name, mesh)
     Image.fromarray(stone, "RGBA").save(folder / stone_name)
     h = rgba.shape[0]
     entry = {"mesh": publish(mesh_name, folder / mesh_name) | {"height": mesh["height"]}, "height": round(m["height"] / h, 4),
@@ -293,7 +306,7 @@ def tree(flat, archive, record, species, variant, folder):
     # Trees trimmed alike share one file.
     mesh_name = f"{model}-from-{base:g}.prop-mesh.json"
     if not (folder / mesh_name).exists():
-        (folder / mesh_name).write_text(json.dumps(outward(trim(mesh, base)), separators=(",", ":")))
+        write_mesh(folder / mesh_name, outward(trim(mesh, base)))
     leaves, bark = TEXTURES[species]
     name = f"tree-{archive:03d}-{record:02d}"
     h = rgba.shape[0]
@@ -313,29 +326,48 @@ def tree(flat, archive, record, species, variant, folder):
     return entry
 
 
+def paths(entry):
+    """The content paths an entry names."""
+    return [value["path"] for value in entry.values() if isinstance(value, dict) and "path" in value]
+
+
 def main():
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--key", action="append", default=[], help="ARCHIVE-RECORD: rebuild this entry alone (repeatable)")
+    keys = ap.parse_args().key
     payload = json.loads(PAYLOAD.read_text())
     flats = {(f["replaces"]["archive"], f["replaces"]["record"]): f for f in payload["artReplacements"]["flats"]}
     folder = CONTENT / MEDIA
+    wanted = {f"{archive}-{record}": (archive, record, form) for archive, forms in FORMS.items() for record, form in forms.items()}
+    if unknown := [key for key in keys if key not in wanted]:
+        raise SystemExit(f"no tree is made for {', '.join(unknown)}")
     # The shader that lays the winter trees' snow on their leaves, written by hand beside them.
     snow = (folder / "snow.wgsl").read_text()
-    trees = {}
+    trees = dict(payload["artReplacements"]["trees"]) if keys else {}
     # Built whole apart first and moved in only then, so a run that fails (a sprite it cannot read, rusty-craftsurvive
-    # not at CRAFTSURVIVE) leaves the trees as they were rather than deleted.
+    # not at CRAFTSURVIVE, a mesh refused) leaves the trees as they were rather than deleted.
     with tempfile.TemporaryDirectory() as built:
         built = Path(built)
-        for archive, forms in FORMS.items():
-            for record, (species, variant) in forms.items():
-                trees[f"{archive}-{record}"] = tree(flats[(archive, record)], archive, record, species, variant, built)
-        (built / "snow.wgsl").write_text(snow)
-        payload["artReplacements"]["treeSnow"] = publish("snow.wgsl", built / "snow.wgsl")
+        for key in keys or wanted:
+            archive, record, (species, variant) = wanted[key]
+            trees[key] = tree(flats[(archive, record)], archive, record, species, variant, built)
+        if keys:
+            # A file another entry names too (a rock several climates share) changes under it unless that entry is rebuilt.
+            written = {f"{MEDIA}/{file.name}" for file in built.iterdir()}
+            if sharing := sorted(key for key, entry in trees.items() if key not in keys and written & set(paths(entry))):
+                raise SystemExit(f"{', '.join(keys)} write files that {', '.join(sharing)} also name: give those keys too")
+        else:
+            (built / "snow.wgsl").write_text(snow)
+            payload["artReplacements"]["treeSnow"] = publish("snow.wgsl", built / "snow.wgsl")
+        named = {Path(path).name for entry in trees.values() for path in paths(entry)} | {"snow.wgsl"}
         for old in folder.glob("*"):
-            old.unlink()
+            if not keys or old.name not in named:
+                old.unlink()
         for file in built.iterdir():
             shutil.copyfile(file, folder / file.name)
     payload["artReplacements"]["trees"] = trees
     PAYLOAD.write_text(json.dumps(payload, indent=1) + "\n")
-    print(f"{len(trees)} trees, {len(list(folder.glob('*.prop-mesh.json')))} meshes")
+    print(f"{len(keys) or len(trees)} trees, {len(list(folder.glob('*.prop-mesh.json')))} meshes")
 
 if __name__ == "__main__":
     main()

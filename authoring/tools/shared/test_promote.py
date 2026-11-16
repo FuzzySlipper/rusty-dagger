@@ -10,6 +10,8 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
+import numpy as np
+
 import promote
 
 AREA = "stand-in"
@@ -151,6 +153,31 @@ class WorldMesh(unittest.TestCase):
         self.assertNotIn("footprint", lamp)
         self.assertEqual((root / "lamp.glb").read_bytes(), (promote.STAGE / lamp["path"]).read_bytes())
         self.assertNotIn("glow", promote.world_mesh_entry(glb("cart.glb", [{"name": "wood"}]), 205, 27))
+
+    def test_a_sprite_mesh_with_a_normal_of_no_length_or_not_finite_is_refused_by_name(self):
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root)
+
+        def glb(name, normals):
+            binary = np.array(normals, np.float32).tobytes()
+            gltf = {"asset": {"version": "2.0"}, "buffers": [{"byteLength": len(binary)}],
+                    "bufferViews": [{"buffer": 0, "byteLength": len(binary)}],
+                    "accessors": [{"bufferView": 0, "componentType": 5126, "count": len(normals), "type": "VEC3"}],
+                    "meshes": [{"primitives": [{"attributes": {"NORMAL": 0}}]}]}
+            text = json.dumps(gltf).encode()
+            text += b" " * (-len(text) % 4)
+            chunks = len(text).to_bytes(4, "little") + b"JSON" + text + len(binary).to_bytes(4, "little") + b"BIN\0" + binary
+            (root / name).write_bytes(b"glTF" + (2).to_bytes(4, "little") + (12 + len(chunks)).to_bytes(4, "little") + chunks)
+            return promote.Final(None, name, root / name)
+        for normal in ([0, 0, 0], [0, float("nan"), 1], [0, .5, 0]):
+            with self.assertRaisesRegex(SystemExit, r"rock\.glb: 1 of its normals are not of unit length or not finite"):
+                promote.world_mesh_entry(glb("rock.glb", [[0, 1, 0], normal]), 213, 11)
+        self.assertEqual(2, len(promote.glb_normals(*self.read(root / "rock.glb"))))
+
+    @staticmethod
+    def read(path):
+        data = path.read_bytes()
+        return json.loads(data[20:20 + int.from_bytes(data[12:16], "little")]), data
 
 
 if __name__ == "__main__":
