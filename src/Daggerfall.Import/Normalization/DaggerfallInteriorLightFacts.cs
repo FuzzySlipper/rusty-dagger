@@ -3,10 +3,49 @@ using Daggerfall.Import.Normalized;
 
 namespace Daggerfall.Import.Normalization;
 
-/// <summary>DFU's interior-light flat policy, expressed as normalized source facts without Unity prefabs.</summary>
+/// <summary>
+/// DFU's interior-light flat policy, expressed as normalized source facts without Unity prefabs: each lamp's light
+/// above its sprite's centre, its reach, strength and colour.
+/// </summary>
 public static class DaggerfallInteriorLightFacts
 {
     public const ushort Archive = 210;
+
+    /// <summary>
+    /// The lamps that burn. Records 7 and 10 are chandeliers with their candles out and 12 an extinguished lamp: their
+    /// art shows no flame, yet DFU's switch has no case for them, so its prefab's light shone from them anyway.
+    /// </summary>
+    internal static bool Lit(int record) => record is not (7 or 10 or 12);
+
+    /// <summary>
+    /// How near a dungeon's light record stands to a lit lamp flat when both are that lamp's light. The donor lights a
+    /// dungeon by its records alone and a building by its flats alone; nearly every record stands this near a lamp, most
+    /// within a metre, and most of the rest far from any.
+    /// </summary>
+    private const float LampTwinMetres = 2F;
+
+    /// <summary>
+    /// A dungeon block's lights, one for each lamp: of a light record and the lamp flats beside it, the farther-reaching
+    /// stands for them. A torch's own light, in its record's colour at its flame, outreaches the record beside it; a
+    /// record among candles outreaches them, and lights them as it did in the donor. A record with no lamp beside it lights
+    /// alone. Both lit, a dungeon lit each lamp twice, and a lamp's shadow would be filled by its twin.
+    /// </summary>
+    internal static IReadOnlyList<NormalizedLightPlacement> OnePerLamp(IReadOnlyList<NormalizedLightPlacement> records, IReadOnlyList<NormalizedLightPlacement> lamps)
+    {
+        List<NormalizedLightPlacement> kept = [];
+        HashSet<string> outreached = new(StringComparer.Ordinal);
+        foreach (NormalizedLightPlacement record in records)
+        {
+            NormalizedLightPlacement[] beside = [.. lamps.Where(lamp => Distance(lamp.Position, record.Position) <= LampTwinMetres)];
+            if (beside.Any(lamp => lamp.Range >= record.Range)) continue;
+            kept.Add(record);
+            outreached.UnionWith(beside.Select(lamp => lamp.Id));
+        }
+        return [.. kept, .. lamps.Where(lamp => !outreached.Contains(lamp.Id))];
+    }
+
+    private static float Distance(NormalizedVector3 a, NormalizedVector3 b) =>
+        MathF.Sqrt(((a.X - b.X) * (a.X - b.X)) + ((a.Y - b.Y) * (a.Y - b.Y)) + ((a.Z - b.Z) * (a.Z - b.Z)));
 
     internal static bool TryProject(string id, RdbFlatSource flat, NormalizedVector3 position, float billboardHeight, out NormalizedLightPlacement light)
         => TryProject(id, flat.TextureArchive, flat.TextureRecord, position, billboardHeight, out light);
@@ -15,12 +54,16 @@ public static class DaggerfallInteriorLightFacts
     {
         light = default!;
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        if (archive != Archive) return false;
+        if (archive != Archive || !Lit(record)) return false;
+        // DFU's offsets, and where its switch says "todo" the flame's height above the sprite's centre as the art draws
+        // it (#10867 measured each refreshed sprite's glow against the classic frame): the wall torches 16 and 18 hold
+        // theirs a fifth of a metre up, the pillar 19 its bowl near its top, and the short-chained lantern 26 hangs its
+        // flame half a metre below the centre, where the chain would otherwise take the light.
         float offset = record switch
         {
             0 => -.1F, 2 or 3 => .1F, 5 => .15F, 6 or 20 => .6F, 9 => .4F, 11 => -.4F,
-            13 => -.35F, 14 or 15 => billboardHeight / 2F, 17 => .2F, 21 => billboardHeight / 2.4F,
-            22 => -.5F, 24 => -1.85F, 25 => -1F, 27 => -.02F, _ => 0F,
+            13 => -.35F, 14 or 15 => billboardHeight / 2F, 16 or 17 or 18 => .2F, 19 => .45F, 21 => billboardHeight / 2.4F,
+            22 or 26 => -.5F, 24 => -1.85F, 25 => -1F, 27 => -.02F, _ => 0F,
         };
         (float range, float intensity, NormalizedVector3 color) = ((float Range, float Intensity, NormalizedVector3 Color))(record switch
         {

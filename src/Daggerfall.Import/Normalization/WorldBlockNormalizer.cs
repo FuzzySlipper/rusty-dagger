@@ -298,18 +298,19 @@ public sealed class WorldBlockNormalizer
             }
         }
 
-        List<NormalizedLightPlacement> lights = [.. content.Lights.Select(light =>
-            new NormalizedLightPlacement($"light/{scope}/{light.Index}", MeshGeometry.ToRightHanded(light.Point), light.Range, 1F, new(1F, 1F, 1F)))];
+        List<NormalizedLightPlacement> lamps = [];
         List<NormalizedBillboardPlacement> billboards = [];
         foreach (RdbBlockFlat flat in content.Flats.Where(flat => flat.Kind == RdbFlatKind.Billboard && !StaticNpcNormalization.IsDungeonNpc(flat.Source.TextureArchive)))
         {
             NormalizedVector3 position = MeshGeometry.ToRightHanded(flat.Point);
             (int width, int height) = TextureExtent(flat.Source.TextureArchive, flat.Source.TextureRecord);
             if (DaggerfallInteriorLightFacts.TryProject($"light-flat/{scope}/{flat.Index}", flat.Source, position, RdbBlockContent.ToMetres(height), out NormalizedLightPlacement light))
-                lights.Add(light);
+                lamps.Add(light);
             billboards.Add(new($"billboard/{scope}/{flat.Index}", $"sprite/texture-{flat.Source.TextureArchive}-{flat.Source.TextureRecord}", position,
                 new(RdbBlockContent.ToMetres(width), RdbBlockContent.ToMetres(height))));
         }
+        IReadOnlyList<NormalizedLightPlacement> lights = DaggerfallInteriorLightFacts.OnePerLamp([.. content.Lights.Select(light =>
+            new NormalizedLightPlacement($"light/{scope}/{light.Index}", MeshGeometry.ToRightHanded(light.Point), light.Range, 1F, new(1F, 1F, 1F)))], lamps);
 
         RdbBlockFlat? start = content.Flats.FirstOrDefault(flat => flat.Kind == RdbFlatKind.StartMarker);
         RdbBlockFlat? enter = content.Flats.FirstOrDefault(flat => flat.Kind == RdbFlatKind.EnterMarker);
