@@ -94594,6 +94594,150 @@
       "material": "material/texture-85-0"
      }
     ]
+   },
+   "41214": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41214.rstatmsh",
+    "byteLength": 324083,
+    "sha256": "a96f788cdb4ca57aca7b911fb463bb4cefa5d62f319f4349c96bacb4ef84fb00",
+    "triangles": 2992,
+    "slots": [
+     {
+      "slot": 0,
+      "texture": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41214-0.png",
+       "byteLength": 1424761,
+       "sha256": "4085ff36645acf94d06ac92bf2c4052cebec685e1c652d21ab950517b64b4567"
+      }
+     }
+    ]
+   },
+   "41220": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41220.rstatmsh",
+    "byteLength": 27967,
+    "sha256": "a232b99f31cb978246a1d10cfd59e6cd7d17f830c27a538009bc3b713969fdb5",
+    "triangles": 249,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-141-1"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-85-0"
+     },
+     {
+      "slot": 2,
+      "material": "material/texture-92-11"
+     }
+    ]
+   },
+   "41221": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41221.rstatmsh",
+    "byteLength": 35531,
+    "sha256": "a1a0f645be86ab5cbab7a6cffccfbc9591e0e8db80d1556489ecd84bd49570bb",
+    "triangles": 319,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-341-0"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-85-0"
+     },
+     {
+      "slot": 2,
+      "material": "material/texture-92-11"
+     }
+    ]
+   },
+   "41222": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41222.rstatmsh",
+    "byteLength": 35619,
+    "sha256": "830901f0d56023c8fa71b6c1da9e1f120b1fe86403e8887a9480388a7301dd9a",
+    "triangles": 319,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-141-3"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-41-0"
+     },
+     {
+      "slot": 2,
+      "material": "material/texture-85-0"
+     },
+     {
+      "slot": 3,
+      "material": "material/texture-85-2"
+     }
+    ]
+   },
+   "41239": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41239.rstatmsh",
+    "byteLength": 324415,
+    "sha256": "9e43c8c1f2fa4734793bef99196d37f5f9c6c5fef620af64ccb71e4672195945",
+    "triangles": 2995,
+    "slots": [
+     {
+      "slot": 0,
+      "texture": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41239-0.png",
+       "byteLength": 1273690,
+       "sha256": "4b133a390da8b46bd8255247fae6e82cef313410b78f81c85ec5b9e395abd4b0"
+      }
+     }
+    ]
+   },
+   "41241": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41241.rstatmsh",
+    "byteLength": 324415,
+    "sha256": "c94fbfce82d9e9433fc03cd6325af661d8c7607365c67f396ce348ead5637f3b",
+    "triangles": 2995,
+    "slots": [
+     {
+      "slot": 0,
+      "texture": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41241-0.png",
+       "byteLength": 1273690,
+       "sha256": "4b133a390da8b46bd8255247fae6e82cef313410b78f81c85ec5b9e395abd4b0"
+      }
+     }
+    ]
+   },
+   "43061": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/43061.rstatmsh",
+    "byteLength": 38685,
+    "sha256": "ebb22072ad19171dcbd857d82134a32dba4ad53030afb44cedf01a2a8fd65686",
+    "triangles": 349,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-141-2"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-73-2"
+     }
+    ]
+   },
+   "43073": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/43073.rstatmsh",
+    "byteLength": 38685,
+    "sha256": "a214cdf4b703c557b495983de06a07418f7abb55c2e1064e7ed9789dcf52c7e8",
+    "triangles": 349,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-141-2"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-73-2"
+     }
+    ]
    }
   }
  }

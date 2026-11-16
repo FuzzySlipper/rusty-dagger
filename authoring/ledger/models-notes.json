@@ -2,5 +2,37 @@
  "41209": {
   "status": "accepted",
   "note": "Trough: #10844's hand-built prototype (Patch, #10844: \"41209 I like the hand built so keep it\"), tapered onto the classic's sloped sides so it stays inside the classic's hull (#10846)."
+ },
+ "41214": {
+  "status": "accepted",
+  "note": "Cart: #10844's TRELLIS.2 mesh (Patch, #10844 47167: \"41221 hand built, 41214 trellis, 41239/41241 make a trellis version, 43061/43073 trellis reduced building new one where needed\"), refitted by hull so it faces the classic's way (handles to -z), its texture the one TRELLIS baked onto these 2,992 triangles (#10851)."
+ },
+ "41220": {
+  "status": "accepted",
+  "note": "Fountain with a spike: hand-built with the other two, as #10844 recommended \"the three fountains\" (Patch kept what he did not change, #10501 47170). The classic basin, wall top and water level, a plinth, corner piers and coping, and an obelisk on a stepped plinth reaching the spike's point; classic slots at the classic's texel size (#10851)."
+ },
+ "41221": {
+  "status": "accepted",
+  "note": "Fountain with a stone tazza: hand-built (Patch, #10844 47167: \"41221 hand built, 41214 trellis, 41239/41241 make a trellis version, 43061/43073 trellis reduced building new one where needed\"). The classic pentagonal basin, wall top and water level, a plinth, corner piers and coping, a stepped base, an eight-sided shaft and a bowl whose rim is the classic's top slab with its corners cut; classic slots at the classic's texel size (#10851)."
+ },
+ "41222": {
+  "status": "accepted",
+  "note": "Fountain with a cobble basin: hand-built as 41221, which #10844 recommended for both (#10851). The cobbles keep the classic's texel size, twice the wall stone's."
+ },
+ "41239": {
+  "status": "accepted",
+  "note": "Straw cart: TRELLIS.2 from #10844's 41214 redraw edited to an open box heaped with straw, so the three carts are one family. The straw, which TRELLIS made as loose sheets, is built new as a mound at the generated heap's height; the rest reduced to 3,000 triangles and its colour baked from the full mesh (#10851)."
+ },
+ "41241": {
+  "status": "accepted",
+  "note": "Straw cart: the same classic as 41239, plane for plane, and the same final (#10851)."
+ },
+ "43061": {
+  "status": "accepted",
+  "note": "Gravestone: #10844's TRELLIS.2 mesh reduced to 349 triangles (Patch, #10844 47167: \"41221 hand built, 41214 trellis, 41239/41241 make a trellis version, 43061/43073 trellis reduced building new one where needed\"), worn in the classic slots at the classic's texel size, the inscribed tablet 73/2 drawn whole across the panel the classic gives it, so the granite keeps its colour and the graveyard its climate and season swaps (#10851)."
+ },
+ "43073": {
+  "status": "accepted",
+  "note": "Obelisk: TRELLIS.2 from a Qwen redraw of the classic, reduced to 349 triangles and worn in the classic slots as 43061 (#10851)."
  }
 }
