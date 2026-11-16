@@ -345,6 +345,112 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.True(releases.IndexOf("material") < releases.IndexOf("resource"));
     }
 
+    /// <summary>
+    /// Under a roof the lamps that light a room cast near the player: those in the player's sector of the ground plan and
+    /// the eight around it ask for their shadows, re-chosen as the player crosses into another sector. Every lamp stays
+    /// lit; candles never ask, nor do the lamps outdoors.
+    /// </summary>
+    [Fact]
+    public void Lamps_ask_for_shadows_in_the_players_sector_and_its_neighbours()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, appearance);
+        DaggerfallSiteLightingTuning tuning = DaggerfallTuning.Defaults.SiteLighting;
+        float sector = tuning.ShadowSectorMetres;
+        DaggerfallSiteLight Lamp(string id, float x, float range) => new(id, new WorldPoint(x, 2F, -1F), range, 1F, Vector3.One);
+        DaggerfallSiteProfile dungeon = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
+            FixtureGeometry("spatial/dungeon.json", Hash, 1, "mesh/dungeon.json", Hash),
+            new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
+            site: new DaggerfallSiteId(17, 179), profileKind: DaggerfallWorldProfileKind.Dungeon, logicalProfileId: "worldrpg/test/dungeon",
+            lights: [Lamp("here", 1F, 12F), Lamp("next", sector + 1F, 12F), Lamp("far", (3 * sector) + 1F, 12F), Lamp("candle", 2F, 10F / 3F)]);
+        using DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, dungeon, tuning, DaggerfallCalendar.Start.Sky);
+        LightRequest Latest(string id)
+        {
+            ulong logical = appearance.LightRequests.Single(request => request.Descriptor.Kind == LightKind.Point
+                && request.Descriptor.Position.X == dungeon.Lights.Single(light => light.Id == id).Position.X).LogicalId;
+            LightUpdateRequest[] updates = [.. appearance.LightUpdates.Where(update => update.Replacement.LogicalId == logical)];
+            return updates.Length == 0 ? appearance.LightRequests.Single(request => request.LogicalId == logical) : updates[^1].Replacement;
+        }
+
+        Assert.All(["here", "next", "far", "candle"], id => Assert.Equal(LightShadowIntent.Disabled, Latest(id).Descriptor.ShadowIntent));
+        lighting.UpdateShadowSector(new Vector3(1F, 0F, -1F), DaggerfallLampShadowChoice.Default);
+        Assert.Equal(LightShadowIntent.Requested, Latest("here").Descriptor.ShadowIntent);
+        Assert.Equal(LightShadowIntent.Requested, Latest("next").Descriptor.ShadowIntent);
+        Assert.Equal(LightShadowIntent.Disabled, Latest("far").Descriptor.ShadowIntent);
+        Assert.Equal(LightShadowIntent.Disabled, Latest("candle").Descriptor.ShadowIntent);
+
+        // Within a sector nothing is asked again; crossing two sectors on, the far lamp asks and the near one lets go.
+        int updates = appearance.LightUpdates.Count;
+        lighting.UpdateShadowSector(new Vector3(sector - 1F, 0F, -1F), DaggerfallLampShadowChoice.Default);
+        Assert.Equal(updates, appearance.LightUpdates.Count);
+        lighting.UpdateShadowSector(new Vector3((2 * sector) + 1F, 0F, -1F), DaggerfallLampShadowChoice.Default);
+        Assert.Equal(LightShadowIntent.Disabled, Latest("here").Descriptor.ShadowIntent);
+        Assert.Equal(LightShadowIntent.Requested, Latest("next").Descriptor.ShadowIntent);
+        Assert.Equal(LightShadowIntent.Requested, Latest("far").Descriptor.ShadowIntent);
+        Assert.All(["here", "next", "far"], id => Assert.Equal(1F * tuning.DungeonLampScale, Latest(id).Descriptor.Intensity));
+    }
+
+    /// <summary>
+    /// The player's lamp shadow choice picks which lamps ask: none, the big lamps alone, every lamp of the place when
+    /// sectors are off, and outdoors only when asked for, and then only a lit lamp.
+    /// </summary>
+    [Fact]
+    public void The_lamp_shadow_choice_picks_which_lamps_ask()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, appearance);
+        DaggerfallSiteLightingTuning tuning = DaggerfallTuning.Defaults.SiteLighting;
+        float sector = tuning.ShadowSectorMetres;
+        DaggerfallSiteProfile Place(DaggerfallWorldProfileKind kind, params DaggerfallSiteLight[] lights) => new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
+            FixtureGeometry("spatial/place.json", Hash, 1, "mesh/place.json", Hash),
+            new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
+            site: new DaggerfallSiteId(17, 179), profileKind: kind, logicalProfileId: $"worldrpg/test/{kind}", lights: lights);
+        DaggerfallSiteLight Lamp(string id, float x, float range, bool city = false) => new(id, new WorldPoint(x, 2F, -1F), range, 1F, Vector3.One) { CityLight = city };
+        LightShadowIntent Intent(DaggerfallSiteProfile place, string id)
+        {
+            ulong logical = appearance.LightRequests.Last(request => request.Descriptor.Kind == LightKind.Point
+                && request.Descriptor.Position.X == place.Lights.Single(light => light.Id == id).Position.X).LogicalId;
+            LightUpdateRequest[] updates = [.. appearance.LightUpdates.Where(update => update.Replacement.LogicalId == logical)];
+            return (updates.Length == 0 ? appearance.LightRequests.Last(request => request.LogicalId == logical) : updates[^1].Replacement).Descriptor.ShadowIntent;
+        }
+
+        DaggerfallSiteProfile dungeon = Place(DaggerfallWorldProfileKind.Dungeon,
+            Lamp("brazier", 1F, 20F), Lamp("lantern", 2F, 10F), Lamp("far", (3 * sector) + 1F, 10F));
+        using (DaggerfallSiteLighting lighting = new(appearance, engine.Context.CameraView, dungeon, tuning, DaggerfallCalendar.Start.Sky))
+        {
+            Vector3 player = new(1F, 0F, -1F);
+            lighting.UpdateShadowSector(player, DaggerfallLampShadowChoice.Default with { Lamps = DaggerfallLampShadowLamps.Big });
+            Assert.Equal(LightShadowIntent.Requested, Intent(dungeon, "brazier"));
+            Assert.Equal(LightShadowIntent.Disabled, Intent(dungeon, "lantern"));
+            lighting.UpdateShadowSector(player, DaggerfallLampShadowChoice.Default with { SectorShare = 0F });
+            Assert.All(["brazier", "lantern", "far"], id => Assert.Equal(LightShadowIntent.Requested, Intent(dungeon, id)));
+            lighting.UpdateShadowSector(player, DaggerfallLampShadowChoice.Default with { Lamps = DaggerfallLampShadowLamps.Off });
+            Assert.All(["brazier", "lantern", "far"], id => Assert.Equal(LightShadowIntent.Disabled, Intent(dungeon, id)));
+        }
+
+        // Outdoors at midnight a street lamp is lit and asks only when the player wants outdoor lamp shadows; by day it is
+        // dark and asks for none.
+        DaggerfallSiteProfile town = Place(DaggerfallWorldProfileKind.Exterior, Lamp("street", 1F, 18F, city: true));
+        using DaggerfallSiteLighting street = new(appearance, engine.Context.CameraView, town, tuning, DaggerfallCalendar.Start.Sky);
+        street.UpdateShadowSector(new Vector3(1F, 0F, -1F), DaggerfallLampShadowChoice.Default);
+        Assert.Equal(LightShadowIntent.Disabled, Intent(town, "street"));
+        street.UpdateShadowSector(new Vector3(1F, 0F, -1F), DaggerfallLampShadowChoice.Default with { Outdoors = true });
+        Assert.Equal(LightShadowIntent.Requested, Intent(town, "street"));
+        street.UpdateAmbient((DaggerfallCalendar.Start with { Hour = 12 }).Sky);
+        street.UpdateShadowSector(new Vector3(1F, 0F, -1F), DaggerfallLampShadowChoice.Default with { Outdoors = true });
+        Assert.Equal(LightShadowIntent.Disabled, Intent(town, "street"));
+    }
+
     [Fact]
     public void Site_projection_owns_normalized_lights_and_clears_the_inside_background()
     {
@@ -370,7 +476,9 @@ public sealed class SiteAppearanceLifecycleTests
             Assert.Equal(Vector3.One, first.Descriptor.Color);
             Assert.Equal(7.5F, first.Descriptor.Range);
             Assert.Equal(1F, first.Descriptor.Intensity);
+            // A lamp that lights the room is made ready to cast at the tuned detail, and asks once the player stands near it.
             Assert.Equal(LightShadowIntent.Disabled, first.Descriptor.ShadowIntent);
+            Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.LampShadowResolution, first.Descriptor.ShadowResolution);
         }
 
         Assert.Equal(inputs.Lights.Count + 1, appearance.DisposedLights);
@@ -378,9 +486,13 @@ public sealed class SiteAppearanceLifecycleTests
         DaggerfallSiteProfile exterior = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
             FixtureGeometry("spatial/exterior.json", Hash, 1, "mesh/exterior.json", Hash),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
-            site: new DaggerfallSiteId(17, 4), profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "worldrpg/test/exterior");
+            site: new DaggerfallSiteId(17, 4), profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "worldrpg/test/exterior",
+            lights: [new DaggerfallSiteLight("street-lamp", new WorldPoint(0F, 4F, 0F), 18F, 1F, Vector3.One) { CityLight = true }]);
         using DaggerfallSiteLighting exteriorLighting = new(appearance, engine.Context.CameraView, exterior,
             DaggerfallTuning.Defaults.SiteLighting, DaggerfallCalendar.Start.Sky);
+        // A street's lamp lights without a shadow, however far it reaches: the sun casts outdoors.
+        Assert.Equal(LightShadowIntent.Disabled, appearance.LightRequests.Single(request => request.Descriptor.Kind == LightKind.Point
+            && request.Descriptor.Position == new Vector3(0F, 4F, 0F)).Descriptor.ShadowIntent);
         Assert.Equal(2, engine.ClearedSkyBackgrounds);
         Assert.Equal(DaggerfallTuning.Defaults.SiteLighting.ExteriorNight * DaggerfallTuning.Defaults.SiteLighting.ExteriorScale,
             appearance.LightRequests.Last().Descriptor.Intensity);

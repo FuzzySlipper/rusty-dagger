@@ -295,6 +295,18 @@
     "invertVertical": true,
     "uiScale": null,
     "groundCover": null,
+    "lampShadows": {
+      "lamps": "main",
+      "sectors": 1,
+      "outdoors": false,
+      "sectorShares": [
+        0,
+        0.5,
+        1,
+        2,
+        4
+      ]
+    },
     "uiScaleRange": {
       "minimum": 0.5,
       "maximum": 3,

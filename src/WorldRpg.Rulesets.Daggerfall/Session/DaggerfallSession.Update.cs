@@ -572,6 +572,8 @@ internal sealed partial class DaggerfallSession
         _sites.Projection.Lighting.UpdateSpellLights(spellFlights);                              // Scene
         _sites.Projection.Lighting.UpdateMagicCandle(candlePosition, _tuning.NormalLight);       // Scene
         _appearance.UpdateMagicCandle(candlePosition);                                            // Scene
+        if (State.PlayerControl.Position is { } shadowFeet)
+            _sites.Projection.Lighting.UpdateShadowSector(shadowFeet.ToVector(), _controls.Settings.LampShadows);   // Scene: the lamps near the player cast
         if (State.PlayerControl.Position is { } eyeFeet)
             _viewLight.Update(() => _exterior.ViewLight(eyeFeet.ToVector() + Vector3.UnitY * _tuning.Camera.EyeHeight));   // Scene, Exterior
         foreach (var appearance in _sites.Appearances) appearance.UpdateDirections(State.Actors, _camera.Viewpoint);   // Scene

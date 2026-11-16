@@ -22,7 +22,7 @@ internal sealed record DaggerfallPlayerUiAction(string Action, string? Revision 
 internal enum DaggerfallUiActionKind
 {
     Begin, CinematicSkip, MapNoteAdd, MapNoteEdit, MapNoteRemove, ArtRequest, SpellReady, SpellUnready, SpellCast, SpellBuy, SpellDelete, SpellInfo, SpellSwap, SpellSort, SpellMakerDraft, SpellMakerBuy, PotionMix, ItemMakerDraft, ItemMakerBuy, DaedraSummon, DaedraAnswer,
-    ControlsRebind, ControlsRebindButton, ControlsVolume, ControlsReset, ControlsLook, ControlsUiScale, ControlsGroundCover, ControlsClutterDistance, ActionDrivenTime,
+    ControlsRebind, ControlsRebindButton, ControlsVolume, ControlsReset, ControlsLook, ControlsUiScale, ControlsGroundCover, ControlsClutterDistance, ControlsLampShadows, ActionDrivenTime,
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel, CharacterQuickStart,
     CharacterLevelAllocate, CharacterLevelCommit,
@@ -152,6 +152,7 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.ControlsUiScale, "controls-ui-scale", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsGroundCover, "controls-ground-cover", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsClutterDistance, "controls-clutter-distance", DaggerfallUiPhases.Live),
+        new(DaggerfallUiActionKind.ControlsLampShadows, "controls-lamp-shadows", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ActionDrivenTime, "action-driven-time", DaggerfallUiPhases.Live),
         new(DaggerfallUiActionKind.ControlsReset, "controls-reset", DaggerfallUiPhases.Live),
         // Character creation checks the entry screen itself, so a refusal is reported rather than dropped.
@@ -545,6 +546,9 @@ internal static class DaggerfallUiAction
                     return fields.SetEquals(["action", "container"]) && !string.IsNullOrWhiteSpace(container)
                         ? new(action, Container: container) : null;
                 case DaggerfallUiActionKind.ControlsClutterDistance: return fields.SetEquals(["action", "scale"]) && scale.HasValue ? new(action, Scale: scale) : null;
+                // Which lamps cast (item), in sectors of what share of the tuned side (scale), and whether outdoors too (enabled).
+                case DaggerfallUiActionKind.ControlsLampShadows: return fields.SetEquals(["action", "item", "scale", "enabled"])
+                    && !string.IsNullOrWhiteSpace(item) && scale.HasValue && enabled.HasValue ? new(action, Item: item, Scale: scale, Enabled: enabled) : null;
                 case DaggerfallUiActionKind.ActionDrivenTime or DaggerfallUiActionKind.ControlsGroundCover: return fields.SetEquals(["action", "enabled"])
                     && enabled.HasValue ? new(action, Enabled: enabled) : null;
                 case DaggerfallUiActionKind.ControlsLook: return fields.SetEquals(["action", "sensitivity", "invert"])

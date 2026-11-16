@@ -3,6 +3,7 @@ using System.Xml.Linq;
 using System.Text;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -187,6 +188,27 @@ public sealed class DaggerfallControlSettingsTests
         Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetClutterDistance(2.1f));
         Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetClutterDistance(.4f));
         Assert.Equal(1.6f, settings.ClutterDistance, 4);
+    }
+
+    /// <summary>
+    /// Lamp shadows start where Patch chose (the main lamps, standard sectors, indoors only); the player's choice
+    /// round-trips, and a sector size off its list is refused without changing the one in force.
+    /// </summary>
+    [Fact]
+    public void Lamp_shadows_default_to_main_lamps_in_standard_sectors_and_round_trip()
+    {
+        DaggerfallControlSettings settings = new();
+        Assert.Equal(DaggerfallLampShadowChoice.Default, settings.LampShadows);
+        Assert.Equal(new DaggerfallLampShadowChoice(DaggerfallLampShadowLamps.Main, 1f, false), settings.LampShadows);
+        Assert.Equal(DaggerfallLampShadowChoice.Default, DaggerfallControlSettings.Parse(PersistedBindings(new("attack", "Primary"))).LampShadows);
+
+        DaggerfallLampShadowChoice chosen = new(DaggerfallLampShadowLamps.Big, 0f, true);
+        settings.SetLampShadows(chosen);
+        Assert.Equal(chosen, DaggerfallControlSettings.Parse(settings.Serialize()).LampShadows);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetLampShadows(chosen with { SectorShare = 3f }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetLampShadows(chosen with { Lamps = (DaggerfallLampShadowLamps)9 }));
+        Assert.Equal(chosen, settings.LampShadows);
     }
 
     private static string PersistedBindings(KeyValuePair<string, string?> replacement)

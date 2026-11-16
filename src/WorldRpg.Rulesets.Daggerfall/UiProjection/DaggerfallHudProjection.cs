@@ -264,6 +264,12 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("minimum", builder.Number(DaggerfallControlSettings.MinimumClutterDistance)),
                 ("maximum", builder.Number(DaggerfallControlSettings.MaximumClutterDistance)),
                 ("step", builder.Number(DaggerfallControlSettings.ClutterDistanceStep))) : builder.Null()),
+            // Which lamps cast shadows near the player, in sectors of what share of the game's side (0 for none), and outdoors.
+            ("lampShadows", builder.Object(
+                ("lamps", builder.String(controlSettings.LampShadows.Lamps.ToString().ToLowerInvariant())),
+                ("sectors", builder.Number(controlSettings.LampShadows.SectorShare)),
+                ("outdoors", builder.Boolean(controlSettings.LampShadows.Outdoors)),
+                ("sectorShares", builder.Array(DaggerfallLampShadowChoice.SectorShares.Select(share => builder.Number(share)).ToArray())))),
             ("uiScaleRange", builder.Object(
                 ("minimum", builder.Number(DaggerfallControlSettings.MinimumUiScale)),
                 ("maximum", builder.Number(DaggerfallControlSettings.MaximumUiScale)),

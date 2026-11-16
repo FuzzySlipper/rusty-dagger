@@ -280,6 +280,7 @@ public sealed class DaggerfallUiActionTests
         [DaggerfallUiActionKind.ControlsUiScale] = "\"scale\":1.25",
         [DaggerfallUiActionKind.ControlsGroundCover] = "\"enabled\":true",
         [DaggerfallUiActionKind.ControlsClutterDistance] = "\"scale\":2",
+        [DaggerfallUiActionKind.ControlsLampShadows] = "\"item\":\"big\",\"scale\":0.5,\"enabled\":true",
         [DaggerfallUiActionKind.ActionDrivenTime] = "\"enabled\":false",
         [DaggerfallUiActionKind.CharacterClassQuestions] = Draft,
         [DaggerfallUiActionKind.CharacterClassAnswer] = "\"question\":1,\"answer\":2",

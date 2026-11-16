@@ -22,6 +22,9 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private readonly string _profileId;
     private readonly List<(Light Light, LightRequest Request)> _points = [];
     private readonly List<LightRequest> _suspendedPoints = [];
+    /// <summary>The player's shadow sector and the choice the lamps last asked by; null until the player stands in one.</summary>
+    private (int X, int Z)? _shadowSector;
+    private DaggerfallLampShadowChoice _shadowChoice;
     private readonly Dictionary<ulong, float> _cityIntensities = [];
     private bool? _lastCityLightsOn;
     private readonly IGraphicsService _graphics;
@@ -84,7 +87,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                     new LightDescriptor(
                         LightKind.Point,
                         light.Color,
-                        light.Intensity * Scale,
+                        light.Intensity * LampScale,
                         true,
                         light.Position.ToVector(),
                         Vector3.Zero,
@@ -94,9 +97,10 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                         0F,
                         0F,
                         LightShadowIntent.Disabled));
+                request = request with { Descriptor = request.Descriptor with { ShadowResolution = _tuning.LampShadowResolution } };
                 if (light.CityLight)
                 {
-                    _cityIntensities.Add(lightId, light.Intensity * Scale);
+                    _cityIntensities.Add(lightId, light.Intensity * LampScale);
                     request = CityRequest(request, sky);
                 }
                 Light point = graphics.CreateLight(request);
@@ -116,6 +120,48 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     }
 
     internal int Count => _lights.Count;
+
+    /// <summary>
+    /// Lets the lamps near <paramref name="player"/> ask for their shadows, by the player's <paramref name="choice"/>. A
+    /// lit lamp whose light reaches as far as the chosen lamps' reach (<see cref="DaggerfallSiteLightingTuning.LampShadowReach"/>
+    /// for the main lamps, <see cref="DaggerfallSiteLightingTuning.BigLampShadowReach"/> for the big ones) may cast, under a
+    /// roof, and outdoors too if the choice says so. It asks while it stands in the player's sector of the ground plan or one
+    /// of the eight around it, re-chosen as the player crosses into another sector, so a big dungeon's far lamps never ask
+    /// while each lamp near the player always does; without sectors every one of the site's may. Every lamp stays lit: only
+    /// far shadows go, where their toggling would not show. Of the lamps that ask, the Engine's shadow budget (the Shadow
+    /// budget video option, whose default the Host's manifest sets) keeps the nearest the camera.
+    /// </summary>
+    internal void UpdateShadowSector(Vector3 player, DaggerfallLampShadowChoice choice)
+    {
+        if (_disposed || _suspended) return;
+        float side = choice.SectorShare * _tuning.ShadowSectorMetres;
+        (int X, int Z) sector = side > 0 ? ShadowSector(player, side) : default;
+        if (sector == _shadowSector && choice == _shadowChoice) return;
+        _shadowSector = sector;
+        _shadowChoice = choice;
+        float? reach = _profileKind == DaggerfallWorldProfileKind.Exterior && !choice.Outdoors ? null : choice.Lamps switch
+        {
+            DaggerfallLampShadowLamps.Off => null,
+            DaggerfallLampShadowLamps.Big => _tuning.BigLampShadowReach,
+            DaggerfallLampShadowLamps.Main => _tuning.LampShadowReach,
+            _ => 0f,
+        };
+        for (int index = 0; index < _points.Count; index++)
+        {
+            (Light light, LightRequest request) = _points[index];
+            LightDescriptor lamp = request.Descriptor;
+            bool asks = reach is float minimum && lamp.Range >= minimum && lamp.Intensity > 0
+                && (side <= 0 || ShadowSector(lamp.Position, side) is var at && Math.Abs(at.X - sector.X) <= 1 && Math.Abs(at.Z - sector.Z) <= 1);
+            LightShadowIntent intent = asks ? LightShadowIntent.Requested : LightShadowIntent.Disabled;
+            if (lamp.ShadowIntent == intent) continue;
+            request = request with { Descriptor = lamp with { ShadowIntent = intent } };
+            _graphics.UpdateLight(new LightUpdateRequest(light, request));
+            _points[index] = (light, request);
+        }
+    }
+
+    /// <summary>The ground plan's square of side <paramref name="side"/> holding <paramref name="at"/>, at every height.</summary>
+    private static (int X, int Z) ShadowSector(Vector3 at, float side) => ((int)MathF.Floor(at.X / side), (int)MathF.Floor(at.Z / side));
 
     /// <summary>The share of the night's ambient the moons give tonight, from the next ambient update on. Under classic art it stays whole.</summary>
     internal void LightNightBy(float share) => _nightShare = share;
@@ -296,6 +342,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         bool on = CityLightsOn(sky);
         if (_cityIntensities.Count == 0 || _lastCityLightsOn == on) return;
         _lastCityLightsOn = on;
+        _shadowSector = null;
         for (int index = 0; index < _points.Count; index++)
         {
             var (light, prior) = _points[index];
@@ -355,6 +402,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             _lights.AddRange(created);
             _suspendedPoints.Clear();
             _suspended = false;
+            _shadowSector = null;
             // A sky that stood through the suspension still has its panorama up: a location loading ahead of the player would blink it out.
             if (_carriesSky && !_skyKept) ApplyBackground();
         }
@@ -445,7 +493,15 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             LightShadowIntent.Requested) with { ShadowResolution = _tuning.SunShadowResolution });
     }
 
-    /// <summary>What this kind of place multiplies its lights by.</summary>
+    /// <summary>What this kind of place multiplies its lamps by.</summary>
+    private float LampScale => _profileKind switch
+    {
+        DaggerfallWorldProfileKind.Exterior => _tuning.ExteriorLampScale,
+        DaggerfallWorldProfileKind.Interior => _tuning.InteriorLampScale,
+        _ => _tuning.DungeonLampScale,
+    };
+
+    /// <summary>What this kind of place multiplies its ambient by.</summary>
     private float Scale => _profileKind switch
     {
         DaggerfallWorldProfileKind.Exterior => _tuning.ExteriorScale,

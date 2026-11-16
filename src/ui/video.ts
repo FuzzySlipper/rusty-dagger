@@ -1,16 +1,17 @@
 import { mountVideoOptions, type ProductVideoOption, type VideoOptionsMount } from '@rusty-engine/video-options';
-import type { ControlAction, GroundCoverChoice } from './controls.js';
+import type { ControlAction, GroundCoverChoice, LampShadowChoice } from './controls.js';
 
 /**
  * Settings' video section: the Engine's video options panel, drawn beside the controls. The Engine owns its
  * catalogue, applies a choice at once and keeps it for the install, so no Engine video setting is game state. The game
- * adds its own rows beside them, ground cover and its distance, which it keeps with the player's other preferences. The
+ * adds its own rows beside them, ground cover and its distance, and beside the Engine's shadow budget which lamps cast
+ * shadows, in what sectors and whether outdoors, which it keeps with the player's other preferences. The
  * panel mounts the first time Settings opens and reads the catalogue again each time after, since presets and other
  * pages change it.
  */
 export interface VideoSettings {
   show(): void;
-  update(groundCover: GroundCoverChoice | null | undefined): void;
+  update(groundCover: GroundCoverChoice | null | undefined, lampShadows: LampShadowChoice | null | undefined): void;
   dispose(): void;
 }
 
@@ -20,7 +21,32 @@ const HIDDEN = ['clusteredLighting', 'gpuCulling', 'occlusionCulling'];
 export function mountVideoSettings(root: HTMLElement, send: (action: ControlAction) => void): VideoSettings {
   let panel: Promise<VideoOptionsMount> | null = null;
   let ground: GroundCoverChoice | null = null;
-  const options = (): ProductVideoOption[] => ground ? [
+  let lamps: LampShadowChoice | null = null;
+  const shadows = (change: Partial<Pick<LampShadowChoice, 'lamps' | 'sectors' | 'outdoors'>>) => {
+    if (!lamps) return;
+    const next = { ...lamps, ...change };
+    send({ action: 'controls-lamp-shadows', item: next.lamps, scale: next.sectors, enabled: next.outdoors });
+  };
+  const lampOptions = (): ProductVideoOption[] => lamps ? [
+    {
+      id: 'lampShadows', label: 'Lamp shadows', group: 'Quality', kind: 'choice', value: lamps.lamps,
+      choices: [{ value: 'off', label: 'Off' }, { value: 'big', label: 'Big lamps' }, { value: 'main', label: 'Main lamps' }, { value: 'all', label: 'All lamps' }],
+      description: 'Which lamps near you cast shadows: hearths, braziers and big lamps; every lamp that lights a room; or candles too. The shadow budget keeps the nearest.',
+      onChange: value => shadows({ lamps: String(value) }),
+    },
+    {
+      id: 'shadowSectors', label: 'Shadow sectors', group: 'Quality', kind: 'choice', value: String(lamps.sectors),
+      choices: lamps.sectorShares.map(share => ({ value: String(share), label: share === 0 ? 'None' : share === 1 ? 'Standard' : `${share}× standard` })),
+      description: 'Lamps cast only in your part of a place and the parts around it. Larger parts let more far lamps cast; None lets every lamp of the place.',
+      onChange: value => shadows({ sectors: Number(value) }),
+    },
+    {
+      id: 'outdoorLampShadows', label: 'Outdoor lamp shadows', group: 'Quality', kind: 'toggle', value: lamps.outdoors,
+      description: 'Street lamps and lamps outdoors cast shadows too, near you, beside the sun\'s.',
+      onChange: value => shadows({ outdoors: value === true }),
+    },
+  ] : [];
+  const groundOptions = (): ProductVideoOption[] => ground ? [
     {
       id: 'groundCover', label: 'Ground cover', group: 'Ground', kind: 'toggle', value: ground.grows,
       description: 'Grass, tufts and relief that lift the ground near you.',
@@ -33,14 +59,16 @@ export function mountVideoSettings(root: HTMLElement, send: (action: ControlActi
       onChange: value => send({ action: 'controls-clutter-distance', scale: Number(value) }),
     },
   ] : [];
+  const options = (): ProductVideoOption[] => [...lampOptions(), ...groundOptions()];
   return {
     show() {
       if (panel) void panel.then(mounted => mounted.refresh());
       else panel = mountVideoOptions(root, { hide: HIDDEN, productOptions: options() });
     },
-    update(next) {
-      const changed = JSON.stringify(next ?? null) !== JSON.stringify(ground);
+    update(next, nextLamps) {
+      const changed = JSON.stringify([next ?? null, nextLamps ?? null]) !== JSON.stringify([ground, lamps]);
       ground = next ?? null;
+      lamps = nextLamps ?? null;
       if (changed) void panel?.then(mounted => mounted.setProductOptions(options()));
     },
     dispose() {

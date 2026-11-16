@@ -1,6 +1,7 @@
 using Rusty.Engine;
 using System.Text;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -228,6 +229,10 @@ public sealed class DaggerfallControlSettings
         ClutterDistance = MathF.Round(share / ClutterDistanceStep) * ClutterDistanceStep;
     }
 
+    /// <summary>Which lamps cast shadows near the player, in what sectors, and whether outdoors too: a video preference.</summary>
+    internal DaggerfallLampShadowChoice LampShadows { get; private set; } = DaggerfallLampShadowChoice.Default;
+    internal void SetLampShadows(DaggerfallLampShadowChoice choice) => LampShadows = choice.Validate();
+
     /// <summary>The sound buses the player sets levels for, in the order the settings show them, with their names.</summary>
     public static readonly IReadOnlyList<(string Id, string Label)> SoundBuses =
         [("music", "Music"), ("ambient", "Ambience"), ("effects", "Sound effects"), ("interface", "Interface sounds")];
@@ -269,6 +274,9 @@ public sealed class DaggerfallControlSettings
         SetUiScale(preferences.UiScale);
         GroundCover = preferences.GroundCover;
         SetClutterDistance(preferences.ClutterDistance);
+        SetLampShadows(new(Enum.TryParse(preferences.LampShadows, ignoreCase: true, out DaggerfallLampShadowLamps lamps) ? lamps
+            : throw new ArgumentOutOfRangeException(nameof(preferences), preferences.LampShadows, "No lamp shadow choice carries this name."),
+            preferences.ShadowSectors, preferences.OutdoorLampShadows));
         _controller = preferences.Controller?.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.Ordinal);
         foreach ((string bus, float level) in preferences.Volumes ?? []) SetVolume(bus, level);
     }
@@ -337,7 +345,8 @@ public sealed class DaggerfallControlSettings
     public void Reset() { ReplaceBindings(CreateDefaultBindings()); _controller = null; SetLook(1, DaggerfallInput.Look.InvertVertical); }
 
     /// <summary>Serializes the bindings for the settings holder.</summary>
-    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale, _controller, _volumes, GroundCover, ClutterDistance), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
+    public string Serialize() => JsonSerializer.Serialize(new DaggerfallControlPreferences(_bindings, LookSensitivity, InvertVertical, ActionDrivenTime, UiScale, _controller, _volumes, GroundCover, ClutterDistance,
+        LampShadows.Lamps.ToString().ToLowerInvariant(), LampShadows.SectorShare, LampShadows.Outdoors), DaggerfallControlSettingsJsonContext.Default.DaggerfallControlPreferences);
 
     /// <summary>Parses a complete persisted binding set after validating every action and control.</summary>
     public static DaggerfallControlSettings Parse(string json)
@@ -509,7 +518,10 @@ internal sealed record DaggerfallControlPreferences(
     Dictionary<string, List<int>>? Controller = null,
     Dictionary<string, float>? Volumes = null,
     bool GroundCover = true,
-    float ClutterDistance = 1);
+    float ClutterDistance = 1,
+    string LampShadows = "main",
+    float ShadowSectors = 1,
+    bool OutdoorLampShadows = false);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(DaggerfallControlPreferences))]

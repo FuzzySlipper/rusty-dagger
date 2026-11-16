@@ -94,10 +94,18 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// <summary>The light a flying spell carries in its element's colour (the donor's missile light).</summary>
     internal float SpellLightRange { get; init; } = 6f;
     internal float SpellLightIntensity { get; init; } = 1f;
-    /// <summary>What the ambient and lamps of each kind of place are multiplied by.</summary>
+    /// <summary>What the ambient of each kind of place is multiplied by.</summary>
     internal float ExteriorScale { get; init; } = 3f;
     internal float InteriorScale { get; init; } = 1.3f;
     internal float DungeonScale { get; init; } = 1f;
+    /// <summary>
+    /// What the lamps of each kind of place are multiplied by. They carry the light where they burn, well above the
+    /// ambient, so a room has pools, dark corners and visible lamp shadows: the donor's intensities, made for Unity's
+    /// gentler falloff, light barely two metres against the ambient by the Engine's inverse square.
+    /// </summary>
+    internal float ExteriorLampScale { get; init; } = 3f;
+    internal float InteriorLampScale { get; init; } = 1.3f;
+    internal float DungeonLampScale { get; init; } = 1f;
     /// <summary>
     /// The sun at full daylight. The day's ambient and the sun together light level ground under a high sun near its
     /// texture's own value; the sun carries most of it, as a clear day's direct light does, so what its shadow covers
@@ -116,6 +124,21 @@ internal sealed record DaggerfallSiteLightingTuning(
     /// </summary>
     internal float SunShadowRange { get; init; } = 150f;
     internal uint SunShadowResolution { get; init; } = 2048;
+    /// <summary>
+    /// How far, in metres, a lamp under a roof must light for it to cast a shadow, and the texels on a side of each of its
+    /// six faces. Candles and small lanterns reach less and never cast; of the lamps that may, the Engine's shadow budget
+    /// keeps the nearest.
+    /// </summary>
+    internal float LampShadowReach { get; init; } = 6f;
+    /// <summary>How far a big lamp lights (a hearth, brazier, chandelier, skull or standing torch, round lamp), when only those cast.</summary>
+    internal float BigLampShadowReach { get; init; } = 12f;
+    internal uint LampShadowResolution { get; init; } = 512;
+    /// <summary>
+    /// The side, in metres, of the ground plan's squares that choose which lamps may cast: those in the player's square
+    /// and the eight around it. Half a dungeon block keeps every lamp within this of the player asking, and a big
+    /// dungeon's far lamps, which would otherwise all cast on the Engine's unlimited budget, from asking.
+    /// </summary>
+    internal float ShadowSectorMetres { get; init; } = 25.6f;
     /// <summary>The sun's colour on the horizon, easing to white as it climbs, so dawn and dusk warm what they light.</summary>
     internal Vector3 LowSunColor { get; init; } = new(1f, .68f, .42f);
     /// <summary>The colour of the sky's ambient at night, easing to white by noon. A lamp's warmth stands out against it.</summary>
@@ -142,7 +165,7 @@ internal sealed record DaggerfallSiteLightingTuning(
     {
         if (!float.IsFinite(ViewFull) || ViewFull <= 0 || !float.IsFinite(ViewFloor) || ViewFloor is < 0 or > 1)
             throw new ArgumentOutOfRangeException(nameof(ViewFull), "The view's full light is finite and positive, and its floor a normalized tint.");
-        foreach (float scale in new[] { ExteriorScale, ExteriorSun, InteriorScale, DungeonScale })
+        foreach (float scale in new[] { ExteriorScale, ExteriorSun, InteriorScale, DungeonScale, ExteriorLampScale, InteriorLampScale, DungeonLampScale })
             if (!float.IsFinite(scale) || scale <= 0) throw new ArgumentOutOfRangeException(nameof(ExteriorScale), "A site's light scale is finite and positive.");
         if (!float.IsFinite(LowSunColor.X + LowSunColor.Y + LowSunColor.Z) || LowSunColor.X < 0 || LowSunColor.Y < 0 || LowSunColor.Z < 0)
             throw new ArgumentOutOfRangeException(nameof(LowSunColor), "The low sun's colour is finite and not negative.");
@@ -152,6 +175,11 @@ internal sealed record DaggerfallSiteLightingTuning(
             throw new ArgumentOutOfRangeException(nameof(SunTiltDegrees), "The sun's path leans from 0 up to but not including 90 degrees.");
         if (!float.IsFinite(SunShadowRange) || SunShadowRange <= 0 || SunShadowResolution is not (256 or 512 or 1024 or 2048))
             throw new ArgumentOutOfRangeException(nameof(SunShadowRange), "The sun's shadow reaches a finite positive range, at 256, 512, 1024 or 2048 texels.");
+        if (!float.IsFinite(LampShadowReach) || LampShadowReach < 0 || !float.IsFinite(BigLampShadowReach) || BigLampShadowReach < LampShadowReach
+            || LampShadowResolution is not (256 or 512 or 1024 or 2048))
+            throw new ArgumentOutOfRangeException(nameof(LampShadowReach), "A lamp casts from a finite reach, not negative, at 256, 512, 1024 or 2048 texels.");
+        if (!float.IsFinite(ShadowSectorMetres) || ShadowSectorMetres <= 0)
+            throw new ArgumentOutOfRangeException(nameof(ShadowSectorMetres), "A shadow sector is a finite positive side.");
         if (!float.IsFinite(Bloom) || Bloom < 0) throw new ArgumentOutOfRangeException(nameof(Bloom), "The bloom is finite and not negative.");
         if (!float.IsFinite(WindowColor.X + WindowColor.Y + WindowColor.Z + WindowLevel)
             || WindowColor.X < 0 || WindowColor.Y < 0 || WindowColor.Z < 0 || WindowLevel < 0)
@@ -185,8 +213,15 @@ internal sealed record DaggerfallSiteLightingTuning(
         SunTiltDegrees = section.GetProperty("sunTiltDegrees").GetSingle(),
         SunShadowRange = section.GetProperty("sunShadowRange").GetSingle(),
         SunShadowResolution = section.GetProperty("sunShadowResolution").GetUInt32(),
+        LampShadowReach = section.GetProperty("lampShadowReach").GetSingle(),
+        BigLampShadowReach = section.GetProperty("bigLampShadowReach").GetSingle(),
+        LampShadowResolution = section.GetProperty("lampShadowResolution").GetUInt32(),
+        ShadowSectorMetres = section.GetProperty("shadowSectorMetres").GetSingle(),
         InteriorScale = section.GetProperty("interiorScale").GetSingle(),
         DungeonScale = section.GetProperty("dungeonScale").GetSingle(),
+        ExteriorLampScale = section.GetProperty("exteriorLampScale").GetSingle(),
+        InteriorLampScale = section.GetProperty("interiorLampScale").GetSingle(),
+        DungeonLampScale = section.GetProperty("dungeonLampScale").GetSingle(),
         ViewFull = section.GetProperty("viewFull").GetSingle(),
         ViewFloor = section.GetProperty("viewFloor").GetSingle(),
         LowSunColor = ReadColor(section.GetProperty("lowSunColor")),

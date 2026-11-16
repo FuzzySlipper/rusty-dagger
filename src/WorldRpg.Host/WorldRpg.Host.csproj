@@ -14,8 +14,12 @@
     <RustyEngineProductId>rusty-dagger-worldrpg</RustyEngineProductId>
     <RustyEngineProductTitle>Rusty Dagger / WorldRpg</RustyEngineProductTitle>
     <RustyEngineProductDefaultWorldLights>disabled</RustyEngineProductDefaultWorldLights>
-    <!-- The sun's shadow draws by default: it is the only light that asks for one. -->
+    <!-- Shadows draw by default: the sun's, and under a roof the shadows of the lamps that light the room. The Engine
+         keeps 32 shadow layers at once, the nearest lights first: the sun's eight outdoors, five lamps indoors (a lamp
+         takes six). Without a budget every lamp of a dungeon would cast, about 2 GiB of shadow maps. The player's
+         Shadow budget video option overrides it. -->
     <RustyEngineProductSceneShadows>enabled</RustyEngineProductSceneShadows>
+    <RustyEngineProductShadowBudget>32</RustyEngineProductShadowBudget>
     <RustyEngineProductUiRoot>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)', 'product-ui'))</RustyEngineProductUiRoot>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
     <!-- The containers converted from the player's Daggerfall files (daggerfall-data.rpak, music.rpak) are

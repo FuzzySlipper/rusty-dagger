@@ -11,6 +11,8 @@ export interface ControlsProjection {
   readonly uiScaleRange?: UiScaleRange;
   /** Ground cover's video choices, offered only with a refreshed art set: whether it grows, and how far, as a share of its reach. */
   readonly groundCover?: GroundCoverChoice | null;
+  /** Lamp shadows' video choices: which lamps cast near the player, in sectors of what share of the game's side, and outdoors too. */
+  readonly lampShadows?: LampShadowChoice | null;
   readonly bindings: readonly ControlBinding[];
   /** The categories in the order the screen groups the bindings, with their headings. */
   readonly categories?: readonly { readonly id: string; readonly label: string }[];
@@ -25,6 +27,15 @@ export interface GroundCoverChoice {
   readonly minimum: number;
   readonly maximum: number;
   readonly step: number;
+}
+
+export interface LampShadowChoice {
+  /** off, big, main or all. */
+  readonly lamps: string;
+  /** The sectors' side as a share of the game's; 0 for none, every lamp of the place asking. */
+  readonly sectors: number;
+  readonly outdoors: boolean;
+  readonly sectorShares: readonly number[];
 }
 
 export interface ControlBinding {
