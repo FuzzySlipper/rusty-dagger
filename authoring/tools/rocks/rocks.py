@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Make refreshed rocks, stones, logs and dead trees procedurally, in the mesh trees' manner (#10849).
+"""Make refreshed rocks, stones, logs, woodpiles and dead trees procedurally, in the mesh trees' manner (#10849).
 
 Shapes are scripted, as rusty-craftsurvive's scatter rocks and deadwood are, and every surface wears a small generated
 tile painted in the colours of the art it replaces, as trees.py paints the mesh trees.
@@ -328,6 +328,23 @@ def bark_steps(seed):
                 steps[y, x % w] = 0
             if rng.random() < .35:
                 steps[y, (x + 1) % w] = 4
+    return steps, np.zeros(steps.shape)
+
+
+def end_steps(seed):
+    """A log's sawn end, a tile one cut face spans: growth rings in two steps of tone round a dark pith, a dark band of
+    bark round its edge, and a few checks split out from the middle (0)."""
+    rng = np.random.default_rng(seed)
+    y, x = (np.mgrid[:BARK_AROUND, :BARK_AROUND] + .5) / BARK_AROUND * 2 - 1
+    r = np.hypot(x, y) * (1 + .1 * (wrap_noise(rng, BARK_AROUND, 4) - .5))
+    steps = np.where(np.sin(r * 24 + 2 * wrap_noise(rng, BARK_AROUND, 8)) > .3, 2, 3)
+    steps[r < .1] = 1
+    steps[r > .8] = 1
+    steps[r > .92] = 0
+    angle = np.arctan2(y, x)
+    for check in rng.uniform(-np.pi, np.pi, 3):
+        off = np.abs((angle - check + np.pi) % (2 * np.pi) - np.pi) * r
+        steps[(off < .05) & (r > .15) & (r < .75)] = 0
     return steps, np.zeros(steps.shape)
 
 
@@ -989,11 +1006,67 @@ def logs(seed, aspect):
     p = np.array(out["positions"]).reshape(-1, 3)
     return {"height": round(float(p[:, 1].max()), 4), "parts": [turned_out(out)]}
 
+
+WOODPILE = "woodpile"
+# A stacked woodpile, as the town flats 212-11 and 212-12 paint theirs: split logs a little over a metre long, side by
+# side in rows of PILE_ROWS from the ground up, each row in the hollows of the one below and the logs' ends ragged; the
+# stack is turned PILE_TURN degrees so its sawn ends face the viewer's right and its long side the left, as the sprites
+# draw it. The logs are generate-flora.py's tubes and caps, as the heaped logs above are, lying at LOG_SINK.
+PILE_ROWS = (5, 4, 5, 4)
+PILE_RADIUS, PILE_LENGTH, PILE_RAGGED, PILE_TURN = .1, 1.05, .07, 45
+
+
+def woodpile(seed):
+    """A woodpile's two parts, each its corners' positions, normals and uvs, three corners a triangle: the logs' bark
+    (uvs in the bark tile) and their sawn ends (each spanning the end tile once)."""
+    lib = flora()
+    rng = np.random.default_rng(seed)
+    turn = math.radians(PILE_TURN)
+    spin = np.array([[math.cos(turn), 0, -math.sin(turn)], [0, 1, 0], [math.sin(turn), 0, math.cos(turn)]])
+    parts = {"bark": ([], [], []), "ends": ([], [], [])}
+    step = 2 * PILE_RADIUS
+    for row, count in enumerate(PILE_ROWS):
+        # The top row is one log short at one end or the other, as a stack being burned down is.
+        gone = int(rng.choice((0, count - 1))) if row == len(PILE_ROWS) - 1 else None
+        for i in range(count):
+            if i == gone:
+                continue
+            radius = PILE_RADIUS * rng.uniform(.8, 1.12)
+            # Each log rests where a log of the stack's radius would, lower by as much as it is thinner.
+            height = PILE_RADIUS * (1 - 2 * LOG_SINK) + row * step * math.sqrt(3) / 2 - (PILE_RADIUS - radius)
+            across = (i - (count - 1) / 2) * step + rng.uniform(-.012, .012)
+            drift = rng.uniform(-.02, .02)
+            ends = (-PILE_LENGTH / 2 + rng.uniform(-PILE_RAGGED, PILE_RAGGED), PILE_LENGTH / 2 + rng.uniform(-PILE_RAGGED, PILE_RAGGED))
+            branch = lib.Branch([np.array([ends[0], height, across - drift]), np.array([ends[1], height, across + drift])],
+                                [radius, radius * rng.uniform(.92, 1)], 0, int(rng.integers(5, 8)))
+            p, n, uv, idx = lib.tube(branch, 2.0)
+            p, n, uv = np.array(p), np.array(n), np.array(uv)
+            for t in range(0, len(idx), 3):
+                corner = list(idx[t:t + 3])
+                if np.cross(p[corner[1]] - p[corner[0]], p[corner[2]] - p[corner[0]]) @ n[corner].sum(0) < 0:
+                    corner[1], corner[2] = corner[2], corner[1]
+                parts["bark"][0].extend(p[corner] @ spin.T); parts["bark"][1].extend(n[corner] @ spin.T); parts["bark"][2].extend(uv[corner])
+            rim = [(.5, .5)] + [(.5 + .47 * math.cos(2 * math.pi * j / branch.sides), .5 + .47 * math.sin(2 * math.pi * j / branch.sides))
+                                for j in range(branch.sides)]
+            for end in ("base", "tip"):
+                cp, cn, _, cidx = lib.cap(branch, list(p), end)
+                cp, normal = np.array(cp), np.array(cn[0])
+                for t in range(0, len(cidx), 6):
+                    corner = list(cidx[t:t + 3])
+                    if np.cross(cp[corner[1]] - cp[corner[0]], cp[corner[2]] - cp[corner[0]]) @ normal < 0:
+                        corner[1], corner[2] = corner[2], corner[1]
+                    parts["ends"][0].extend(cp[corner] @ spin.T); parts["ends"][1].extend([normal @ spin.T] * 3)
+                    parts["ends"][2].extend(rim[c] for c in corner)
+    return {role: tuple(np.array(values) for values in part) for role, part in parts.items()}
+
+
 # ---- placed flats ---------------------------------------------------------------------------------------------------
 
 # The decoration flats blocks place that are rock or deadwood, drawn as meshes in the sprites' place (the art pack's
-# `meshes` section, scaled to each sprite's width): the fallen logs towns lay about, and the dungeons' stalagmites.
-PLACED = {(213, 11): (LOGS_FORM, 1), (213, 12): (LOGS_FORM, 2), **{(300, record): (SPIRE, 1) for record in range(6, 16)}}
+# `meshes` section, scaled to each sprite's width): the fallen logs towns lay about, the woodpiles stacked in their
+# streets, and the dungeons' stalagmites.
+PLACED = {(213, 11): (LOGS_FORM, 1), (213, 12): (LOGS_FORM, 2), (212, 11): (WOODPILE, 1), (212, 12): (WOODPILE, 2),
+          **{(300, record): (SPIRE, 1) for record in range(6, 16)}}
 PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
 
 
@@ -1022,21 +1095,31 @@ def placed(archive, record):
     form, variant = PLACED[(archive, record)]
     rgba = sprite(archive, record)
     seed = archive * 100 + record
-    if form == LOGS_FORM:
-        solid = outline(rgba)
-        mesh = logs(variant, solid.shape[1] / solid.shape[0])
-        texture = png(paint(bark_steps(seed), bark_colours(rgba)))
+    if form == WOODPILE:
+        # Painted in the sprite's wood alone: its moss would turn the whole bark olive.
+        wood = rgba.copy()
+        wood[(rgba[..., 1].astype(int) > rgba[..., 0].astype(int) + 6) & (rgba[..., 1] > rgba[..., 2]), 3] = 0
+        colours = bark_colours(wood)
+        tiles = {"bark": bark_steps(seed), "ends": end_steps(seed)}
+        primitives = [(role, png(paint(tiles[role], colours)), None, p, n, uv) for role, (p, n, uv) in woodpile(variant).items()]
     else:
-        mesh, stone = nature_rock(form, seed, rgba)
-        texture = png(stone)
-    part = mesh["parts"][0]
-    p, n = np.array(part["positions"]).reshape(-1, 3), np.array(part["normals"]).reshape(-1, 3)
-    uv, idx = np.array(part["uvs"]).reshape(-1, 2), np.array(part["indices"])
+        if form == LOGS_FORM:
+            solid = outline(rgba)
+            mesh = logs(variant, solid.shape[1] / solid.shape[0])
+            texture = png(paint(bark_steps(seed), bark_colours(rgba)))
+        else:
+            mesh, stone = nature_rock(form, seed, rgba)
+            texture = png(stone)
+        part = mesh["parts"][0]
+        p, n = np.array(part["positions"]).reshape(-1, 3), np.array(part["normals"]).reshape(-1, 3)
+        uv, idx = np.array(part["uvs"]).reshape(-1, 2), np.array(part["indices"])
+        primitives = [(part["role"], texture, None, p[idx], n[idx], uv[idx])]
     folder = ART / "generated/effects"
     folder.mkdir(parents=True, exist_ok=True)
-    name = f"{'logs' if form == LOGS_FORM else 'stalagmite'}-{archive}-{record}.glb"
-    write_glb(folder / name, [(part["role"], texture, None, p[idx], n[idx], uv[idx])])
-    print(f"{archive}-{record}: {name}, {len(idx) // 3} triangles, {float(np.ptp(p[:, 0])):.3f} m across")
+    name = f"{({LOGS_FORM: 'logs', WOODPILE: 'woodpile'}).get(form, 'stalagmite')}-{archive}-{record}.glb"
+    write_glb(folder / name, primitives)
+    corners = np.concatenate([primitive[3] for primitive in primitives])
+    print(f"{archive}-{record}: {name}, {len(corners) // 3} triangles, {float(np.ptp(corners[:, 0])):.3f} m across")
 
 
 def main():

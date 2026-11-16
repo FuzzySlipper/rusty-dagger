@@ -607,7 +607,12 @@ WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)]),
                 ("lamp-iron-globe.glb", [(210, 28)]), ("lamp-iron-lantern.glb", [(210, 29)]),
                 ("well.glb", [(212, 0)]), ("haystack.glb", [(212, 1)]), ("fountain-spire.glb", [(212, 2)]),
                 ("fountain-column.glb", [(212, 3)]), ("pump-green.glb", [(212, 8)]), ("pump-iron.glb", [(212, 9)]),
-                ("handcart.glb", [(205, 27)])]
+                ("handcart.glb", [(205, 27)]),
+                # the remaining town flats (#10869): the woodpiles stacked from rocks.py's logs; the signposts, posts and
+                # cages built from parts measured off their sprites (town_flats.py in the task's evidence)
+                ("woodpile-212-11.glb", [(212, 11)]), ("woodpile-212-12.glb", [(212, 12)]),
+                ("signpost-ivy.glb", [(212, 4)]), ("signpost.glb", [(212, 5)]), ("fingerpost.glb", [(212, 6)]),
+                ("post.glb", [(212, 13)]), ("post-grass.glb", [(212, 14)]), ("cage.glb", [(212, 15)]), ("cage-pole.glb", [(212, 16)])]
 
 
 def world_mesh_entry(final, archive, record):

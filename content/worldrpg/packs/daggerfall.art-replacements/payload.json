@@ -50493,6 +50493,87 @@
     "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/handcart.glb",
     "byteLength": 1327348,
     "sha256": "8f0001a4eaeda80a50d98da38727aa5ae15f3b4e9c9e1f0288c2f0522980ef8d"
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 11
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/woodpile-212-11.glb",
+    "byteLength": 48400,
+    "sha256": "da49255e08f7ff3aa4586ac86415fc464dac2d87b3fd6a1465ab520d04607949"
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 12
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/woodpile-212-12.glb",
+    "byteLength": 48412,
+    "sha256": "5444b67079372813f5129268c0274271f3a2116c95d237fe9ff047494a02c851"
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 4
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/signpost-ivy.glb",
+    "byteLength": 171184,
+    "sha256": "971a831c2649c8bed4354e78298c57e778c9ce9495034f0fea1aaa860f644b89"
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 5
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/signpost.glb",
+    "byteLength": 141804,
+    "sha256": "09889abcf92a6cc5e5f4ed67cb30de053d38db06fd9f2a1b7a925c694f13df95"
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 6
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/fingerpost.glb",
+    "byteLength": 121492,
+    "sha256": "844e9c347958fb127f2af13af4ec783f57a5582062c3b78d4158d83d5143b51b"
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 13
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/post.glb",
+    "byteLength": 9168,
+    "sha256": "aa4f7b231c084c82aeb5103066e43d2a9224b2cf63b49c9541eab7f5adb6ddf6"
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 14
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/post-grass.glb",
+    "byteLength": 11980,
+    "sha256": "10520c1cca03d4150ff5bc89a8cbe45b6d4c15a744feb100ec273b3d870d6791"
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 15
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/cage.glb",
+    "byteLength": 217272,
+    "sha256": "001fa3a8bffd04bd25b7b15a6e4e48ad882fabb437e46ed685733997b98c20ff"
+   },
+   {
+    "replaces": {
+     "archive": 212,
+     "record": 16
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/cage-pole.glb",
+    "byteLength": 237204,
+    "sha256": "ad707dead113c1caec3553ad34fc9eb287312f243f3406f9eacc613c33f332a2"
    }
   ],
   "surfaces": [
