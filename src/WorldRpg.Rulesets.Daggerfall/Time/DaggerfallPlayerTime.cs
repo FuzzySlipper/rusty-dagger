@@ -11,8 +11,10 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 internal readonly record struct DaggerfallPlayerTimeDemand(bool Presentation, bool Playing, bool Moving, bool Acting);
 
 /// <summary>
-/// Action-driven play: with it chosen, the world runs only while the player moves or acts (or a presentation
-/// plays) and holds still otherwise; without it the world runs at its ordinary rate. It also keeps the world
+/// The world's Engine time. A world held by a screen, an offer, a pending choice, a pause or a defeat admits no step,
+/// so nothing counted in steps (a cooldown, an enemy's wind-up) ages behind it. Action-driven play: with it chosen,
+/// the world runs only while the player moves or acts (or a presentation plays) and holds still otherwise; without it
+/// the open world runs at its ordinary rate. It also keeps the world
 /// action a panel asked for while no step was due, so the next playing update spends one. The session reads what
 /// the world needs time for into a <see cref="DaggerfallPlayerTimeDemand"/>; this owner selects the Engine's
 /// gameplay rate from it and never advances a clock.
@@ -39,14 +41,16 @@ internal sealed class DaggerfallPlayerTime(IGameplayTimeService time)
     internal void Select(bool actionDriven) => _time.Select(actionDriven);
 
     /// <summary>
-    /// Selects the world's rate for this update: running at <paramref name="rate"/> while presentation plays or
-    /// play is moving or acting, held otherwise. True when that changed whether the world is held.
+    /// Selects the world's rate for this update: held while neither presentation nor play needs time; otherwise
+    /// running at <paramref name="rate"/>, or under action-driven play only while presentation plays or play is
+    /// moving or acting. True when that changed whether action-driven play holds the world.
     /// </summary>
     internal bool Update(bool actionDriven, DaggerfallPlayerTimeDemand demand, double rate)
     {
         bool wasHeld = _time.Held;
         _time.Select(actionDriven);
-        _time.Update(demand.Presentation || demand.Playing && (demand.Moving || demand.Acting), rate);
+        _time.Update(demand.Presentation || demand.Playing && (demand.Moving || demand.Acting), rate,
+            worldHeld: !demand.Presentation && !demand.Playing);
         return wasHeld != _time.Held;
     }
 }

@@ -17,11 +17,13 @@ public sealed class ActionDrivenTime(IGameplayTimeService time)
 
     /// <summary>
     /// The product decides whether movement, a live action, or presentation needs time, and whether
-    /// that time runs slowed, as a heavy blow slows it for an instant.
+    /// that time runs slowed, as a heavy blow slows it for an instant. A world the product holds
+    /// (<paramref name="worldHeld"/>: a screen over it, a pause, a defeat) admits no step whether or not
+    /// action-driven play is chosen, so nothing counted in steps ages behind it.
     /// </summary>
-    public void Update(bool active, double slowedTo = 1d)
+    public void Update(bool active, double slowedTo = 1d, bool worldHeld = false)
     {
-        double rate = !Enabled || active ? slowedTo : 0d;
+        double rate = worldHeld ? 0d : !Enabled || active ? slowedTo : 0d;
         if (_selectedRate == rate) return;
         time.SetRate(rate);
         _selectedRate = rate;

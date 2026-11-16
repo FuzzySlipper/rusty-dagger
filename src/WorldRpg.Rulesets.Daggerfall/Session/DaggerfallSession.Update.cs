@@ -1156,7 +1156,7 @@ internal sealed partial class DaggerfallSession
     /// </summary>
     private void UpdatePlayerTime(ProductUpdateFacts facts)
     {
-        bool presentation = _mode == ProductMode.Title || _openingCinematics.IsActive || Cinematics?.ActiveSource is not null;
+        bool presentation = PresentationNeedsTime;
         bool playing = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen
             && !State.Actors.Player.IsDefeated && !Law.ModalOpen && !Summoning.PendingOffer
             && State.Quests.PendingOffer is null && DispelChoice.Pending is null
@@ -1176,9 +1176,7 @@ internal sealed partial class DaggerfallSession
             || falling || new Vector2(motion.ControlledVelocity.X, motion.ControlledVelocity.Z).LengthSquared() > .0001f
             || motion.ExternalVelocity.LengthSquared() > .0001f;
         bool action = _playerTime.WorldActionPending || _input.HasPendingActions || _guard.WantsTime || PlayerAttack.Clock.Busy || !_combat.PlayerWeaponReady
-            // Measured from the last step the world took: the Engine's count runs on through a pause, and the held
-            // steps are added to the cooldown only when the world next takes one.
-            || State.Actors.Player.Attack.ReadyAtStep > (_latestSimulationStep is ulong taken ? taken + 1 : facts.SimulationStep)
+            || State.Actors.Player.Attack.ReadyAtStep > facts.SimulationStep
             || _combat.HasPlayerRangedFlight
             || Casting.PendingRangedFlights.Any(flight => flight.CasterId == DaggerfallActorIdentity.PlayerEntityId)
             || _doors.AnyMoving
@@ -1187,6 +1185,9 @@ internal sealed partial class DaggerfallSession
                 StrikeFeel.TimeRate))                                                             // Time
             PublishPresentation();                                                                // UiProjection
     }
+
+    /// <summary>The title or a cinematic plays on world time, whatever holds play.</summary>
+    private bool PresentationNeedsTime => _mode == ProductMode.Title || _openingCinematics.IsActive || Cinematics?.ActiveSource is not null;
 
     /// <summary>Condition's swimming roll for the player as the session holds them now.</summary>
     private bool SwimmingFatigueApplies(long minute) =>
@@ -1458,6 +1459,10 @@ internal sealed partial class DaggerfallSession
         ApplyDeathMode(mode);                                                                     // Session: death's list, above
         _modeLine.Say(mode, _condition.ModeLine(mode) ?? _interactions.ModeMessage(_mode));      // UiProjection, an exhaustion death's line Condition's
         _condition.EnterMode(mode);                                                               // Condition
+        // A mode other than play holds the world from the change itself: a host pause forwards no later update that
+        // could ask for the hold, and the Engine must stop admitting steps for the world it no longer runs.
+        if (mode != ProductMode.Playing)
+            _playerTime.Update(ActionDrivenPlay, new(PresentationNeedsTime, false, false, false), StrikeFeel.TimeRate);   // Time
         PublishPresentation();                                                                    // UiProjection
     }
 
@@ -1657,7 +1662,7 @@ internal sealed partial class DaggerfallSession
     {
         _latestUpdateGeneration = request.Generation;                                             // Session
         _latestSimulationStep = request.SimulationStep;                                           // Session
-        State.Kit.AttackExecution.ObserveTimeline(request.Generation, request.SimulationStep, named: true);   // Combat
+        State.Kit.AttackExecution.ObserveTimeline(request.Generation, request.SimulationStep);    // Combat
         _combat.ResolveExplicit(request, _facts);                                                 // Combat
         DeliverFacts();                                                                           // Session
         PublishPresentation();                                                                    // UiProjection

@@ -39,8 +39,11 @@ public sealed class ActionDrivenTimeSessionTests
         f.Observe(Ui("""{"action":"menu","open":true}"""));
         f.Observe(Ui("""{"action":"action-driven-time","enabled":false}"""));
         Assert.False(f.Session.PlayerTimeHeld);
-        Assert.Equal(1, f.Engine.GameplayTime.Read().Rate);
+        // Action-driven play no longer holds the world, but the open menu still does.
+        Assert.Equal(0, f.Engine.GameplayTime.Read().Rate);
         Assert.False(DaggerfallControlSettings.Parse(f.Session.CapturePlayerPreferences()).ActionDrivenTime);
+        f.Observe(Ui("""{"action":"menu","open":false}"""));
+        Assert.Equal(1, f.Engine.GameplayTime.Read().Rate);
     }
 
     [Fact]

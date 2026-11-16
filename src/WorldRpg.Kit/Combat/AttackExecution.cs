@@ -51,7 +51,6 @@ public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFac
     Func<DeferredAttackImpact, FactBuffer<TFact>, bool>? deferImpact = null, bool impactsOutliveTheirTarget = false,
     Action<long, ulong>? interrupted = null) where TFact : IWorldRpgFact
 {
-    private (ulong Generation, ulong Step)? _taken;
     private AttackState State(long actor) => actors.Get(actor).Actor.Get<AttackState>();
     private bool Exists(long actor) => actors.Entities.TryResolve(ActorsState.Identity(actor), out _);
     private bool Defeated(long actor) => actor == actors.Player.DurableId ? actors.Player.IsDefeated : actors.Get(actor).IsDefeated;
@@ -115,24 +114,11 @@ public sealed class AttackExecution<TFact>(ActorsState actors, IAttackRules<TFac
     {
         foreach (AttackCooldown value in values) State(value.AttackerId).RestoredRemainingSteps = value.RemainingSteps;
     }
-    /// <summary>
-    /// The world takes <paramref name="step"/>. The Engine goes on admitting steps while the product holds the world
-    /// (a pause, or a screen open over it), so steps it admitted after the last one the world took and before this one
-    /// were held, and a charged cooldown moves on by them rather than running out behind the screen. A step a tool
-    /// names outside the stepped timeline (<paramref name="named"/>) holds nothing, and moves the timeline only forward,
-    /// so a later step the world takes is not measured from a step behind it.
-    /// </summary>
-    public void ObserveTimeline(ulong generation, ulong step, bool named = false)
+    public void ObserveTimeline(ulong generation, ulong step)
     {
-        ulong held = !named && _taken is (ulong takenGeneration, ulong taken) && takenGeneration == generation && step > taken + 1
-            ? step - taken - 1 : 0;
-        if (!named || _taken is not (ulong lastGeneration, ulong last) || lastGeneration != generation || step > last)
-            _taken = (generation, step);
         foreach (long id in AllActors())
         {
             AttackState state = State(id);
-            if (held != 0 && state.Generation == generation && state.ReadyAtStep > step - held)
-                state.ReadyAtStep = checked(state.ReadyAtStep + held);
             if (state.RestoredRemainingSteps == 0) continue;
             state.Generation = generation;
             state.ReadyAtStep = checked(step + state.RestoredRemainingSteps);
