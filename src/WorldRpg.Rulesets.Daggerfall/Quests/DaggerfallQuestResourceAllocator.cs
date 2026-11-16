@@ -85,12 +85,13 @@ internal sealed class DaggerfallQuestResourceAllocator(
                     template = group.Values[selected];
                 }
                 bool clothing = groupId is 6 or 12;
+                bool appearance = DaggerfallItemFactory.TakesAppearance(group.Name);
                 int? potion = template is 83 or 278
                     ? options.Key ?? definitions.Magic.ChoosePotionRecipe((low, high) => Draw(key + "/recipe", low, high)) : null;
                 request = new(group.Name, key, DaggerfallItemOwner.Player, Quantity: 1, TemplateIndex: template, Variant: 0,
                     Material: groupId == 2 ? "leather" : groupId == 3 && template != 131 ? "iron" : null, Level: context.Level,
-                    Race: clothing || groupId == 2 ? context.Race : null,
-                    Gender: groupId == 6 ? "male" : groupId == 12 ? "female" : groupId == 2 ? context.Gender : null,
+                    Race: appearance ? context.Race : null,
+                    Gender: groupId == 6 ? "male" : groupId == 12 ? "female" : appearance ? context.Gender : null,
                     RandomizeClothingDye: clothing && options.Template is null,
                     BookId: groupId == 7 ? options.Key : null, PotionRecipeKey: potion,
                     QuestId: instanceId, QuestSymbol: declaration.CanonicalId);

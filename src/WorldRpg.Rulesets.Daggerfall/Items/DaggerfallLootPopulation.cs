@@ -98,9 +98,7 @@ internal sealed class DaggerfallLootPopulation
         DaggerfallItemDefinition item = _catalog.RequireItem(new DaggerfallItemId(drop.ItemId));
         if (item.Template is DaggerfallItemTemplateDefinition template)
         {
-            bool appearance = template.Groups.Contains("Armor", StringComparer.Ordinal)
-                || template.Groups.Contains("MensClothing", StringComparer.Ordinal)
-                || template.Groups.Contains("WomensClothing", StringComparer.Ordinal);
+            bool appearance = DaggerfallItemFactory.TakesAppearance(template);
             DaggerfallCreatedItem created = _items.Create(new DaggerfallItemCreateRequest(
                 template.Groups[0], $"loot.{request.Id.Scope}.{request.Id.Value}.{request.Sequence}.{ordinal}.{template.Index}", request.Owner,
                 TemplateIndex: template.Index, Level: request.PlayerLevel,

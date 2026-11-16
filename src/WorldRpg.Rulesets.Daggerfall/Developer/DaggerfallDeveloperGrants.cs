@@ -259,7 +259,7 @@ internal sealed class DaggerfallDeveloperGrants(DaggerfallDeveloperHold hold, Da
     {
         DaggerfallItemFactory factory = new(definitions, random);
         string group = template.Groups[0];
-        bool appearance = group is "Armor" or "MensClothing" or "WomensClothing";
+        bool appearance = DaggerfallItemFactory.TakesAppearance(template);
         DaggerfallItemCreateRequest Request(ulong? quantity) => new(group, $"developer.{++_grants}", DaggerfallItemOwner.Player,
             Quantity: quantity, TemplateIndex: template.Index, Material: material, Level: Math.Max(1, actors.Player.Progression.Level),
             Race: appearance ? character.Identity.RaceId : null,

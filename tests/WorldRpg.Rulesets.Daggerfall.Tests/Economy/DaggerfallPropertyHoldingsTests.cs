@@ -119,16 +119,29 @@ public sealed class DaggerfallPropertyHoldingsTests
     /// <summary>
     /// StockHouseContainer gives the player's race and gender only to the clothing, armor and magic items it draws. Furniture
     /// drawing any other group stocks its goods without them, where the factory refuses an item they cannot dress. A magic
-    /// item hands them to the base it enchants, and the minimum draw enchants leather armor.
+    /// item hands them to the base it enchants, and the minimum draw enchants leather armor. The rows are every group the
+    /// donor's private property tables let furniture draw, so none of them throws on stocking.
     /// </summary>
     [Theory]
+    [InlineData("Armor", true)]
+    [InlineData("Weapons", false)]
+    [InlineData("Magic", true)]
+    [InlineData("MensClothing", true)]
+    [InlineData("WomensClothing", true)]
+    [InlineData("Books", false)]
     [InlineData("UselessItems2", false)]
     [InlineData("ReligiousItems", false)]
-    [InlineData("Books", false)]
-    [InlineData("Weapons", false)]
-    [InlineData("MensClothing", true)]
-    [InlineData("Armor", true)]
-    [InlineData("Magic", true)]
+    [InlineData("Maps", false)]
+    [InlineData("Paintings", false)]
+    [InlineData("Gems", false)]
+    [InlineData("PlantIngredients1", false)]
+    [InlineData("PlantIngredients2", false)]
+    [InlineData("CreatureIngredients1", false)]
+    [InlineData("CreatureIngredients2", false)]
+    [InlineData("CreatureIngredients3", false)]
+    [InlineData("MiscellaneousIngredients1", false)]
+    [InlineData("MetalIngredients", false)]
+    [InlineData("Jewellery", false)]
     public void A_property_container_gives_race_and_gender_only_to_the_goods_that_wear_them(string group, bool worn)
     {
         using Holdings h = new();

@@ -50,7 +50,7 @@ internal sealed class DaggerfallCreateItem(DaggerfallDefinitions definitions, IR
         { presentation.SetOutcome("Create Item choice is no longer current."); return; }
         var option = Options().SingleOrDefault(choice => choice.Id == key);
         if (option is null) { presentation.SetOutcome("Choose one of the offered items."); return; }
-        bool appearance = option.Category != "Weapons";
+        bool appearance = DaggerfallItemFactory.TakesAppearance(option.Category);
         var factory = new DaggerfallItemFactory(definitions, random);
         var created = factory.Create(new(option.Category, request.Instance, DaggerfallItemOwner.Player,
             TemplateIndex: option.Template, Material: option.Material,

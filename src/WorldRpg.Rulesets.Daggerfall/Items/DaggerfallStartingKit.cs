@@ -62,7 +62,7 @@ internal sealed class DaggerfallStartingKit
         {
             var definition = definitions.RequireItem(new DaggerfallItemId(grant.ItemId));
             var template = definition.Template ?? throw new ArgumentException($"Starting grant '{grant.ItemId}' has no normalized template.");
-            bool appearance = template.Groups.Any(group => group is "Armor" or "MensClothing" or "WomensClothing");
+            bool appearance = DaggerfallItemFactory.TakesAppearance(template);
             yield return new(template.Groups[0], $"new-game.background.{index}", DaggerfallItemOwner.Player,
                 Quantity: grant.Quantity, TemplateIndex: template.Index, Material: definition.Weapon?.Material ?? definition.Armor?.Material,
                 Race: appearance ? choices.RaceId : null, Gender: appearance ? gender : null);

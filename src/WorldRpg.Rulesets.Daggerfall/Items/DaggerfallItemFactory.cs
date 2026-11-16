@@ -15,11 +15,20 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
     private readonly DaggerfallDefinitions _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
     private readonly IRandomService _random = random ?? throw new ArgumentNullException(nameof(random));
 
+    /// <summary>The template groups whose items wear a race, a gender and a dye: ItemBuilder dresses only clothing and armor.</summary>
+    private static readonly string[] AppearanceGroups = ["Armor", "MensClothing", "WomensClothing"];
+
+    /// <summary>Whether a template's items wear a race, a gender and a dye. Create refuses them for any other template.</summary>
+    internal static bool TakesAppearance(DaggerfallItemTemplateDefinition template) => template.Groups.Any(IsAppearanceGroup);
+
     /// <summary>
-    /// Whether a category's items take the player's race and gender: clothing and armor wear them, and a magic item hands
-    /// them to the base it enchants. Create refuses them for any other item.
+    /// Whether a request in a category takes the player's race and gender. A category draws only the templates of the
+    /// group it names, so a clothing or armor category does; a magic request does too, because its draw chooses the
+    /// player's clothing by gender and hands both to its base only when that base wears them.
     /// </summary>
-    internal static bool TakesAppearance(string category) => category is "Armor" or "MensClothing" or "WomensClothing" or "Magic";
+    internal static bool TakesAppearance(string category) => category == "Magic" || IsAppearanceGroup(category);
+
+    private static bool IsAppearanceGroup(string group) => AppearanceGroups.Contains(group, StringComparer.Ordinal);
 
     internal DaggerfallCreatedItem Create(DaggerfallItemCreateRequest request)
     {
@@ -65,7 +74,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
                 ? regular[Draw(request.Key + ".magic-template", 0, regular.Length - 1)]
                 : throw new InvalidOperationException("The selected content publishes no regular magic templates.");
         (string category, int? template, string? material) = MagicBase(magic, request);
-        bool appearance = category is "Armor" or "MensClothing" or "WomensClothing";
+        bool appearance = TakesAppearance(category);
         DaggerfallCreatedItem baseItem = Create(request with
         {
             Category = category,
@@ -205,15 +214,14 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
 
     private (string? Race, string? Gender, string? Dye) SelectAppearance(DaggerfallItemTemplateDefinition template, DaggerfallItemCreateRequest request, string material)
     {
-        bool mens = template.Groups.Contains("MensClothing", StringComparer.Ordinal);
-        bool womens = template.Groups.Contains("WomensClothing", StringComparer.Ordinal);
-        bool armor = template.Groups.Contains("Armor", StringComparer.Ordinal);
-        if (!mens && !womens && !armor)
+        if (!TakesAppearance(template))
         {
             if (request.Race is not null || request.Gender is not null || request.Dye is not null)
                 throw new ArgumentException($"Template {template.Index} has no race, gender, or dye appearance.", nameof(request));
             return (null, null, null);
         }
+        bool mens = template.Groups.Contains("MensClothing", StringComparer.Ordinal);
+        bool womens = template.Groups.Contains("WomensClothing", StringComparer.Ordinal);
         string race = request.Race ?? throw new ArgumentException($"Template {template.Index} requires an explicit published race.", nameof(request));
         if (!_definitions.CharacterPresentation.Races.ContainsKey(race))
             throw new ArgumentException($"Race '{race}' is not published by the selected character presentation.", nameof(request));

@@ -114,8 +114,9 @@ internal static class DaggerfallClassEnemyEquipmentPolicy
         long actorId, string key, int template, int level, string race, string gender, string[] slots)
     {
         string category = template is >= 102 and <= 112 ? "Armor" : "Weapons";
+        bool appearance = DaggerfallItemFactory.TakesAppearance(category);
         DaggerfallCreatedItem created = factory.Create(new DaggerfallItemCreateRequest(category, $"actor:{actorId}:{key}", DaggerfallItemOwner.Actor(actorId),
-            TemplateIndex: template, Level: level, Race: category == "Armor" ? race : null, Gender: category == "Armor" ? gender : null));
+            TemplateIndex: template, Level: level, Race: appearance ? race : null, Gender: appearance ? gender : null));
         if (created.Stackable) throw new InvalidOperationException("Class enemy equipment must materialize as unique equipped items.");
         DurableIdentityReference identity = identities.AllocateReference();
         KitUniqueInventoryItem unique = equipment.Materialize(identity, created.Item);
