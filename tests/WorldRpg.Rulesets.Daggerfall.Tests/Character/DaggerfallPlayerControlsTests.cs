@@ -7,7 +7,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>The control settings owner, constructed without the session over the Engine's input and audio fakes.</summary>
 public sealed class DaggerfallPlayerControlsTests
 {
-    private sealed class Fixture
+    internal sealed class Fixture
     {
         internal readonly EngineContextFake Engine = EngineContextFake.Create(null!, null!, null!);
         internal readonly List<string> Told = [];

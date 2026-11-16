@@ -301,11 +301,11 @@ public sealed class DaggerfallMusicDirector : IDisposable
     private bool Start(AudioClip? clip)
     {
         if (_audio is null || clip is null) return false;
-        // The score uses a global 2D emitter. Keep a valid positive distance even
-        // though the Engine applies spatial falloff only to spatial sources.
+        // The score uses a global 2D emitter on the Music bus, whose level the player's Music control sets. Keep a
+        // valid positive distance even though the Engine applies spatial falloff only to spatial sources.
         _voice = _audio.CreateVoice(new AudioSourceDescriptor(
             clip,
-            AudioBus.Ambient,
+            AudioBus.Music,
             0.8f,
             1.0f,
             true,

@@ -24,6 +24,22 @@ public sealed class DaggerfallMusicDirectorTests
     }
 
     [Fact]
+    public void The_score_plays_on_the_bus_the_music_control_sets_and_not_the_ambient_one()
+    {
+        IAudioService service = AudioFake.Create(out AudioFake audio);
+        using DaggerfallMusicDirector music = new(service, _ => new AudioClip(new AudioClipHandle(1), static () => { }), audio.Retire);
+        music.Update(DaggerfallMusicContext.Dungeon);
+        AudioBus score = Assert.Single(audio.Descriptors).Bus;
+
+        DaggerfallPlayerControlsTests.Fixture controls = new();
+        controls.Controls.Change(settings => settings.SetVolume("music", .35f));
+        controls.Controls.Change(settings => settings.SetVolume("ambient", .6f));
+        Assert.Equal(.35f, controls.Engine.BusVolumes[score], 3);
+        Assert.Equal(.6f, controls.Engine.BusVolumes[AudioBus.Ambient], 3);
+        Assert.NotEqual(AudioBus.Ambient, score);
+    }
+
+    [Fact]
     public void Selects_donor_songs_and_keeps_one_loop()
     {
         IAudioService service = AudioFake.Create(out AudioFake audio);
