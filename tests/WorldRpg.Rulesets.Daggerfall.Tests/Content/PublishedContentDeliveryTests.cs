@@ -925,9 +925,16 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(16, art.Effects.Count);
         Assert.All(art.Effects.Keys, id => Assert.Contains(id, classic));
         Assert.NotNull(art.EffectGlow);
-        // The bone pile stands in for the corpse every human class shares and for the bone pile flat, and rocks.py's
-        // meshes for the fallen logs towns lay about and the dungeons' stalagmites (#10849).
-        Assert.Equal([(213, 11), (213, 12), .. Enumerable.Range(6, 10).Select(record => (300, record)), (380, 1), (380, 4)], art.Meshes.Keys.Order());
+        // Each sprite mesh stands in for a billboard the world media publishes, so the classic sprite stays its fallback,
+        // and is drawn at that sprite's width: its footprint is its GLB's width across (x), as its positions' bounds state.
+        HashSet<string> sprites = [.. JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/shared/media/dungeon/manifest.json")))
+            .RootElement.GetProperty("billboards").EnumerateArray().Select(billboard => billboard.GetProperty("spriteResourceId").GetString()!)];
+        Assert.NotEmpty(art.Meshes);
+        Assert.All(art.Meshes, mesh =>
+        {
+            Assert.Contains($"sprite/texture-{mesh.Key.Archive}-{mesh.Key.Record}", sprites);
+            Assert.Equal(GlbWidth(content.ReadBytes(mesh.Value.File.Path).ToArray()), mesh.Value.Footprint, 3);
+        });
 
         // Every item image a dropped item can stand as has a world PNG, crunched as a world flat is at two pixels to a
         // classic world pixel of 2.5 cm: an icon is its stated ground height tall, a worn item's doll rect is in doll
@@ -1019,6 +1026,16 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(
             [.. ContentFiles(content, DaggerfallArtReplacements.Folder + "/media").Order(StringComparer.Ordinal)],
             [.. files.Select(file => file.GetProperty("path").GetString()!).Order(StringComparer.Ordinal)]);
+    }
+
+    /// <summary>A GLB's width across (x): the extent of its meshes' positions, which glTF states as each accessor's bounds.</summary>
+    private static double GlbWidth(byte[] glb)
+    {
+        using JsonDocument document = JsonDocument.Parse(glb.AsMemory(20, BinaryPrimitives.ReadInt32LittleEndian(glb.AsSpan(12))));
+        JsonElement root = document.RootElement;
+        JsonElement[] bounds = [.. root.GetProperty("meshes").EnumerateArray().SelectMany(mesh => mesh.GetProperty("primitives").EnumerateArray())
+            .Select(primitive => root.GetProperty("accessors")[primitive.GetProperty("attributes").GetProperty("POSITION").GetInt32()])];
+        return bounds.Max(accessor => accessor.GetProperty("max")[0].GetDouble()) - bounds.Min(accessor => accessor.GetProperty("min")[0].GetDouble());
     }
 
     private static ProductContent AdmittedContent()

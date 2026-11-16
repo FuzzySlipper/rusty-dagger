@@ -55,9 +55,8 @@ in each element's colour, and the world meshes (`meshes`): the `effects` final `
 pile resting on the floor, stands in for TEXTURE.380 record 1 (the corpse every human enemy class shares, men and
 women alike, so it is no one in particular) and record 4 (the bone pile placed in dungeons). WORLD_MESHES names each such
 sprite mesh, which naming accepts; each entry is keyed by the record it replaces (`380-4`) and states the mesh's footprint,
-its longest side in metres, so the game draws it at the width of the classic sprite it replaces. A mesh built across its
-sprite's width (rocks.py's placed logs and stalagmites, #10849) names no footprint: it is measured from the GLB, its
-width across (x).
+its width across (x) in metres, measured from the GLB, so the game draws it at the width of the classic sprite it
+replaces.
 
 The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
 its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
@@ -591,12 +590,12 @@ def effect_glow():
     return write(f"{MEDIA}/effects/glow.png", buffer.getvalue())
 
 
-# The sprite meshes: each final in local/art/generated/effects, the classic TEXTURE records it stands in for, and its
-# footprint (longest side, metres), or None for one measured across its width. Naming a final here is what accepts it.
-WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)], 2.15),
+# The sprite meshes: each final in local/art/generated/effects and the classic TEXTURE records it stands in for, each
+# built across its sprite's width. Naming a final here is what accepts it.
+WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)]),
                 # rocks.py's placed flats (#10849): the fallen logs towns lay about, and the dungeons' stalagmites.
-                ("logs-213-11.glb", [(213, 11)], None), ("logs-213-12.glb", [(213, 12)], None),
-                *((f"stalagmite-300-{record}.glb", [(300, record)], None) for record in range(6, 16))]
+                ("logs-213-11.glb", [(213, 11)]), ("logs-213-12.glb", [(213, 12)]),
+                *((f"stalagmite-300-{record}.glb", [(300, record)]) for record in range(6, 16))]
 
 
 def glb_width(path):
@@ -617,12 +616,12 @@ def effect_units():
             raise SystemExit(f"effects: no classic frames of {media} under local/art/reference/{raw}: export or link the reference.")
         finals = [generated(area, f"{key}-frame-{frame:03d}") for frame in range(len(sources))]
         units[media] = Unit(finals, lambda media=media, sources=sources, finals=finals: [("effects", effect_entry(media, sources, [final.path for final in finals]))])
-    for name, records, footprint in WORLD_MESHES:
+    for name, records in WORLD_MESHES:
         final = Final(None, name, ART / "generated" / "effects" / name)
         for archive, record in records:
-            units[f"{archive}-{record}"] = Unit([final], lambda final=final, archive=archive, record=record, footprint=footprint: [
+            units[f"{archive}-{record}"] = Unit([final], lambda final=final, archive=archive, record=record: [
                 ("meshes", {"replaces": {"archive": archive, "record": record}, **write(f"{MEDIA}/effects/{final.key}", final.path.read_bytes()),
-                            "footprint": footprint if footprint is not None else glb_width(final.path)})])
+                            "footprint": glb_width(final.path)})])
     units["effectGlow"] = Unit([], lambda: [("effectGlow", effect_glow())])
     return units
 

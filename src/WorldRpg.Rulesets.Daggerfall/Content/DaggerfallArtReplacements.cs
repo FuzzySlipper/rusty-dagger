@@ -85,7 +85,7 @@ internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 
 /// <summary>
 /// A refreshed mesh standing in for the classic sprite cut from one texture record: a GLB resting on the floor, and its
-/// footprint (its longest side in metres), from which it is drawn at the width of the sprite it replaces.
+/// footprint (its width across, x, in metres), from which it is drawn at the width of the sprite it replaces.
 /// </summary>
 internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, double Footprint);
 
