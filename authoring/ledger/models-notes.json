@@ -15,6 +15,18 @@
   "status": "accepted",
   "note": "Battlements, as Patch chose from #10856's A/B sheets (\"Yeah go for B it looks better anyway actually\"): crenels cut 0.8 m into the classic parapet, inside its hull. Each wall run's knife-edged wedge parapet becomes a 0.4 m block on the wedge's footprint, merlons keeping the classic top at 8.05 m and crenel sills at 7.25 m, 0.8 m merlons and crenels with half merlons at each piece's ends so pieces meet in whole ones; the tower stays classic: its top is a solid roof at the top of the hull, which a notch could not open to the sky; the closed gate. The classic faces keep their uvs where no crenel cuts them, and new faces wear the parapet's classic stone at its repeat, so the climate and season swaps reach them (#10856)."
  },
+ "41000": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a bed with turned corner posts, rails, a head- and footboard, the mattress, and the blanket draped in the classic's own paint with its turned-down sheet, a pillow, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41001": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a low bed: a frame on stout legs, a headboard, the mattress, the blanket draped in the classic's own paint, a pillow, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41002": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a four-poster with turned posts, a frame, the mattress and blanket in the classic's paint, a pillow, and a tester: a cornice, a pleated valance and curtains tied back at the posts, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
  "41003": {
   "status": "accepted",
   "note": "Direction B, as Patch chose (#10847: \"Yeah B looks the best on all of them without the extra chunkier pixels\"): an armoire with frame-and-panel doors, strap hinges, bracket feet and a cornice stepped under the classic's slope, built inside the classic's volume and worn in its own pixel atlas, baked from the refreshed wood and iron with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10847)."
@@ -79,6 +91,14 @@
   "status": "accepted",
   "note": "The goods stand in front of the shelf back, as Patch chose (#10847: \"Shelves staggered thickness edge painted looks great\"): each goods texture split into the empty back, carrying the goods' painted shade, and the goods, standing 12 cm in front as cutouts at their own depths with darker slices behind for a thickness edge; boards at the painted rows, the classic's other faces kept (#10847)."
  },
+ "41020": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a slant-top desk: its lid sunk between the box's sides with a book ledge, aprons, four legs and a shelf, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41021": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a lectern: a framed and panelled pedestal on a plinth, its book rest sunk in the slope with a ledge, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
  "41022": {
   "status": "accepted",
   "note": "Direction B, as Patch chose (#10847: \"Yeah B looks the best on all of them without the extra chunkier pixels\"): a writing bureau whose frame-and-panel lid lies on the classic's slope, two drawers below, built inside the classic's volume and worn in its own pixel atlas, baked from the refreshed wood and iron with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10847)."
@@ -86,6 +106,10 @@
  "41023": {
   "status": "accepted",
   "note": "Direction B, as Patch chose (#10847: \"Yeah B looks the best on all of them without the extra chunkier pixels\"): a writing bureau whose frame-and-panel lid lies on the classic's slope, two drawers below, built inside the classic's volume and worn in its own pixel atlas, baked from the refreshed wood and iron with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10847)."
+ },
+ "41024": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a lectern: a framed and panelled pedestal on a plinth, its book rest sunk in the slope with a ledge, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
  },
  "41025": {
   "status": "accepted",
@@ -106,6 +130,10 @@
  "41029": {
   "status": "accepted",
   "note": "The goods stand in front of the shelf back, as Patch chose (#10847: \"Shelves staggered thickness edge painted looks great\"): each goods texture split into the empty back, carrying the goods' painted shade, and the goods, standing 12 cm in front as cutouts at their own depths with darker slices behind for a thickness edge; boards at the painted rows, the classic's other faces kept (#10847)."
+ },
+ "41030": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: an open shelf: sides with a face frame, a top over a cornice rail, a back of upright boards, shelves on cleats at the classic's heights and one more on the kick rail, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
  },
  "41031": {
   "status": "accepted",
@@ -187,9 +215,105 @@
   "status": "accepted",
   "note": "Direction B, as Patch chose (#10847: \"Yeah B looks the best on all of them without the extra chunkier pixels\"): a dresser: a counter cabinet below and a two-door cupboard above, inside the classic's stepped shape, built inside the classic's volume and worn in its own pixel atlas, baked from the refreshed wood and iron with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10847)."
  },
+ "41100": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a chair of seat boards on splayed legs with aprons and stretchers, its framed back in the classic's slope with a panel and muntin, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41101": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a ladder-back chair: seat boards on splayed legs with aprons and stretchers, its stiles following the classic's narrowing back, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41102": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: an armchair: seat boards on splayed legs with stretchers, a slatted back in the classic's slope and open arms on posts, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41103": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a chair of seat boards on splayed legs with aprons and stretchers, its framed back in the classic's slope with slats, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41104": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a throne: framed and panelled base and arms with arm-rest caps, a cushion, and a framed back with a gabled crest inside the classic's outline, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41105": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: the box bench opened up: seat boards on slab ends with arched feet, scalloped aprons and a stretcher, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41106": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a bench of two thick seat boards on splayed slab legs with V-cut feet, bearers and a stretcher, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41107": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a plank on two shaped end brackets, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41108": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a table of boards with breadboard ends on tapering legs, aprons and an H stretcher, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41109": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a table of boards with breadboard ends on tapering legs, aprons and an H stretcher, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41110": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a table of boards with breadboard ends on tapering legs, aprons and an H stretcher, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41111": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a trestle table: boards on two trestles of foot, post and bearer, a stretcher wedged between the posts, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41112": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a table of boards with breadboard ends on tapering legs, aprons and an H stretcher, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41113": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a stool of two seat boards on splayed legs with aprons and a box of stretchers, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41114": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a stool of two seat boards on splayed legs with aprons and a box of stretchers, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41119": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a chair of seat boards on splayed legs with aprons and stretchers, its framed back in the classic's slope with slats, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41121": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a long table of boards with breadboard ends on tapering legs, aprons, an H stretcher and a middle pair of legs, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41122": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a throne: framed and panelled base and arms with arm-rest caps, a seat, and a framed back with a gabled crest inside the classic's outline, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41123": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a throne: framed and panelled base and arms with arm-rest caps, a cushion, and a framed back with a gabled crest inside the classic's outline, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
  "41124": {
   "status": "accepted",
   "note": "The goods stand in front of the shelf back, as Patch chose (#10847: \"Shelves staggered thickness edge painted looks great\"): each goods texture split into the empty back, carrying the goods' painted shade, and the goods, standing 12 cm in front as cutouts at their own depths with darker slices behind for a thickness edge; boards at the painted rows, the classic's other faces kept (#10847)."
+ },
+ "41126": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a settle: a framed and panelled base, seat boards, a back of upright boards in a frame with a cap rail, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41127": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: boards along the length with gaps, a nosing board along each open edge, battens under, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41128": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: boards along the length with gaps, a nosing board along each open edge, battens under, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41129": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a ladder-back chair: seat boards on splayed legs with aprons and stretchers, its stiles following the classic's narrowing back, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
+ },
+ "41130": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a table of boards with breadboard ends on tapering legs, aprons and an H stretcher, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
  },
  "41209": {
   "status": "accepted",
@@ -218,6 +342,10 @@
  "41241": {
   "status": "accepted",
   "note": "Straw cart: the same classic as 41239, plane for plane, and the same final (#10851)."
+ },
+ "41242": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: boards along the length with gaps, a nosing board along each open edge, battens under, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
  },
  "41800": {
   "status": "accepted",
@@ -366,6 +494,10 @@
  "43073": {
   "status": "accepted",
   "note": "Obelisk: TRELLIS.2 from a Qwen redraw of the classic, reduced to 349 triangles and worn in the classic slots as 43061 (#10851)."
+ },
+ "51109": {
+  "status": "accepted",
+  "note": "Hand-built relief, as #10841 recommended for the open furniture (Patch, #10841 47164: \"if I didn't mention something its because I was agreeing to the rec\"), in #10847's direction B so it sits beside the containers as one family: a bench of two thick seat boards on splayed slab legs with V-cut feet, bearers and a stretcher, built inside the classic's convex hull and worn in its own pixel atlas at 128 px/m, baked from the refreshed surfaces the classic draws with the occlusion, top light and outlines the flat interior light cannot give, in those surfaces' palette (#10855)."
  },
  "51128": {
   "status": "accepted",
