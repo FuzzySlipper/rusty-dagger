@@ -28,6 +28,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly DaggerfallFlatsTuning flats;
     private readonly DaggerfallSiteLightingTuning lighting;
     private readonly DaggerfallSiteProfile inputs;
+
+    /// <summary>The profile this appearance draws.</summary>
+    internal DaggerfallSiteProfile Profile => inputs;
     private readonly Dictionary<string, AudioClip> audioClips = new(StringComparer.Ordinal);
     private readonly HashSet<AudioSignalHandle> oneShotSignals = [];
     private readonly Dictionary<AudioVoiceHandle, EnemyVoice> enemyVoices = [];
@@ -180,7 +183,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly Dictionary<DaggerfallRdbDoorId, Transform> doorVisualPoses = [];
     // The door facts last appended, kept while the doors' revision, the slot and the door visuals stand.
     private (int Revision, int Slot, AppearanceFact[] Facts)? doorFacts;
-    private readonly Dictionary<string, (Appearance Visual, ulong Ordinal)> actionModelVisuals = new(StringComparer.Ordinal);
+    // Each action model's classic visual, its remodel where the profile has one, and its ordinal.
+    private readonly Dictionary<string, (Appearance Visual, Appearance? Remodel, ulong Ordinal)> actionModelVisuals = new(StringComparer.Ordinal);
     // Each city gate draws its open or its closed model; both are created with the location and the
     // current state's is published under the gate's one ordinal.
     private readonly Dictionary<string, (Appearance Open, Appearance Closed, ulong Ordinal)> gateVisuals = new(StringComparer.Ordinal);
@@ -198,8 +202,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly List<IDisposable> nextRetired = [];
     private bool completesUpdates;
     // Each static mesh the profile draws, with its pose in the profile frame and its index in the profile geometry, and
-    // the appearance it shows: placements of one model share it.
-    private readonly List<(Appearance Appearance, Transform Pose, int Index)> world = [];
+    // the appearance it shows, with its model's remodel where the profile has one: placements of one model share them.
+    private readonly List<(Appearance Appearance, Appearance? Remodel, Transform Pose, int Index)> world = [];
     // While the location's geometry is admitted for one arriving on the road: its meshes and textures prepare off the update.
     private bool admittingOffUpdate;
     // A resident neighbour's appearance never publishes: the active site's snapshot draws its location.
@@ -492,9 +496,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         ArgumentNullException.ThrowIfNull(facts);
         if (disposed) return;
         AppendDecorationFacts(facts, slot);
-        foreach ((Appearance staticWorld, Transform pose, int index) in world)
+        bool refreshed = drawRefreshedEffects();
+        foreach ((Appearance staticWorld, Appearance? remodel, Transform pose, int index) in world)
             facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.WorldMesh(slot, index), false, 0,
-                Compose(worldAppearance.Transform, pose), staticWorld, worldAppearance.Visible, worldAppearance.Layer));
+                Compose(worldAppearance.Transform, pose), Drawn(staticWorld, remodel, refreshed), worldAppearance.Visible, worldAppearance.Layer));
         if (parts is null) return;
         // A city has thousands of doors, nearly all of them still: their facts are read again only once one moves.
         int revision = parts.DoorRevision();
@@ -510,10 +515,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, visual.Ordinal), false, 0, pose,
                     gatesOpen ? visual.Open : visual.Closed, true, RenderLayer.Scene));
         foreach ((DaggerfallDungeonActionModelDefinition model, EntityId _) in parts.ActionModels())
-            if (actionModelVisuals.TryGetValue(model.ActionId, out (Appearance Visual, ulong Ordinal) visual)
+            if (actionModelVisuals.TryGetValue(model.ActionId, out (Appearance Visual, Appearance? Remodel, ulong Ordinal) visual)
                 && parts.ActionModelPose(model.ActionId, out Transform transform))
                 facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, visual.Ordinal), false, 0,
-                    transform, visual.Visual, true, RenderLayer.Scene));
+                    transform, Drawn(visual.Visual, visual.Remodel, refreshed), true, RenderLayer.Scene));
     }
 
     /// <summary>
@@ -877,7 +882,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         doorVisualOrdinals.Clear();
         doorVisualPoses.Clear();
         doorFacts = null;
-        foreach ((Appearance visual, ulong _) in actionModelVisuals.Values.Reverse()) Dispose(visual, ref failures);
+        foreach ((Appearance visual, Appearance? _, ulong _) in actionModelVisuals.Values.Reverse()) Dispose(visual, ref failures);
         actionModelVisuals.Clear();
         // Sprite atlases borrow textures that location materials may also use. Retire every
         // atlas before releasing the location material/resource closure so dependents observe a
@@ -965,11 +970,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             var model = (mesh.Path, mesh.Sha256, mesh.Materials is null ? "" : string.Join(',', mesh.Materials));
             if (models.TryGetValue(model, out Appearance? shown))
             {
-                world.Add((shown, mesh.Pose, index));
+                world.Add((shown, Remodel(mesh.ModelId), mesh.Pose, index));
                 continue;
             }
             Appearance created = appearance.CreateStaticMesh(content, mesh.Path, mesh.Sha256, worldAppearance.Tint, admittingOffUpdate);
-            world.Add((created, mesh.Pose, index));
+            world.Add((created, Remodel(mesh.ModelId), mesh.Pose, index));
             models.Add(model, created);
             // A published closure's combined mesh is drawn with every material at its own slot; an assembled
             // block model binds each of its slots to the profile slot its (climate-swapped) texture has.
@@ -1013,7 +1018,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                         ? new MeshMaterialBinding(binding.MeshSlot, material)
                         : throw new InvalidOperationException($"Action model '{model.ActionId}' refers to missing world material slot {binding.WorldMaterialSlot}."))
                     .ToArray()));
-                actionModelVisuals.Add(model.ActionId, (created, NextLocationVisualOrdinal()));
+                actionModelVisuals.Add(model.ActionId, (created, Remodel(model.ModelId), NextLocationVisualOrdinal()));
             }
             catch
             {
@@ -1068,6 +1073,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         doorFacts = null;
         retired.AddRange(actionModelVisuals.Values.Select(value => value.Visual).Reverse());
         actionModelVisuals.Clear();
+        retired.AddRange(remodels.Values.Reverse());
+        remodels.Clear();
         foreach ((Appearance open, Appearance closed, ulong _) in gateVisuals.Values.Reverse()) retired.AddRange([closed, open]);
         gateVisuals.Clear();
         retired.AddRange(locationMaterials.AsEnumerable().Reverse());

@@ -31,6 +31,9 @@ internal sealed record DaggerfallSiteSpatialPart(string Id, string Path, Content
 /// </summary>
 internal sealed record DaggerfallSiteMesh(string Path, ContentSha256 Sha256, Transform Pose, IReadOnlyList<DaggerfallMeshMaterialBinding>? Materials)
 {
+    /// <summary>The ARCH3D record id of the model an assembled block places here; a closure's combined mesh has none.</summary>
+    internal string? ModelId { get; init; }
+
     internal DaggerfallSiteMesh Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(Path);
@@ -44,9 +47,21 @@ internal sealed record DaggerfallSiteMesh(string Path, ContentSha256 Sha256, Tra
 }
 
 /// <summary>
+/// The remodel a profile draws in place of one classic ARCH3D model while refreshed art is drawn: the art pack's static
+/// mesh, its slots that name classic texture identities bound to the profile's material slots for them (so they take the
+/// location's climate, season and dungeon remaps), and the rest bound to the textures the pack ships for them.
+/// </summary>
+internal sealed record DaggerfallSiteRemodel(string Path, ContentSha256 Sha256, IReadOnlyList<DaggerfallMeshMaterialBinding> Materials,
+    IReadOnlyList<DaggerfallRemodelTexture> Textures);
+
+/// <summary>A remodel's material slot that draws a texture the art pack ships, opaque or cut out by its alpha (<paramref name="Mask"/>).</summary>
+internal sealed record DaggerfallRemodelTexture(uint MeshSlot, string Path, ContentSha256 Sha256, bool Mask);
+
+/// <summary>
 /// What a profile places in the world: its collision and navigation artifacts and the static meshes it
 /// draws. A published site closure is one artifact and one combined mesh; a location assembled from its
-/// blocks places one artifact per block and draws each block's models from the product-wide meshes.
+/// blocks places one artifact per block and draws each block's models from the product-wide meshes, with
+/// the remodel of each model the art pack has one for.
 /// </summary>
 internal sealed class DaggerfallSiteGeometry
 {
@@ -85,6 +100,12 @@ internal sealed class DaggerfallSiteGeometry
 
     /// <summary>The navigation grid every part shares.</summary>
     internal ulong NavigationGridId { get; }
+
+    /// <summary>
+    /// The remodels this profile draws, by the ARCH3D record id of the model each replaces: every remodelled model its
+    /// meshes and action models place. A closure's combined mesh names no model, so it has none.
+    /// </summary>
+    internal IReadOnlyDictionary<string, DaggerfallSiteRemodel> Remodels { get; init; } = new Dictionary<string, DaggerfallSiteRemodel>();
 
     internal IReadOnlyList<DaggerfallSiteSpatialPart> Spatial { get; }
 

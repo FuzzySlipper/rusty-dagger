@@ -987,6 +987,9 @@ public sealed class PublishedContentDeliveryTests
                 // Trees trimmed alike share a mesh.
                 .DistinctBy(file => file.GetProperty("path").GetString()),
             section.GetProperty("treeSnow"),
+            .. section.GetProperty("models").EnumerateObject().SelectMany(model => model.Value.GetProperty("slots").EnumerateArray()
+                .Where(slot => slot.TryGetProperty("texture", out _)).Select(slot => slot.GetProperty("texture")).Prepend(model.Value))
+                .DistinctBy(file => file.GetProperty("path").GetString()),
             .. section.GetProperty("peopleRig").GetProperty("views").EnumerateObject()
                 .SelectMany(view => view.Value.GetProperty("pages").EnumerateArray().Prepend(view.Value.GetProperty("model")))];
         foreach (JsonElement file in files)

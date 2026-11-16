@@ -88,7 +88,15 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
         });
         return value;
     }
-    public Material CreateMaterial(MaterialRequest request) => new(new MaterialHandle(1), () => releases.Add("material"));
+    public Material CreateMaterial(MaterialRequest request)
+    {
+        Material material = new(new MaterialHandle(nextHandle++), () => releases.Add("material"));
+        MaterialRequests[material] = request;
+        return material;
+    }
+
+    /// <summary>The request each material was created by.</summary>
+    internal Dictionary<Material, MaterialRequest> MaterialRequests { get; } = new(ReferenceEqualityComparer.Instance);
     public Material CreateTerrainLayerMaterial(TerrainLayerMaterialRequest request)
     {
         TerrainLayerMaterialRequests.Add(request);
@@ -121,7 +129,14 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     }
     public Appearance ReplaceStaticMesh(Appearance appearance, StaticMeshAppearanceRequest request) => CreateAppearance();
     public Appearance ReplaceStaticMeshFromContent(Appearance appearance, StaticMeshContentAppearanceRequest request) => CreateAppearance();
-    public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request) => StaticMeshBindings.AddRange(request.Bindings.ToArray());
+    public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request)
+    {
+        StaticMeshBindings.AddRange(request.Bindings.ToArray());
+        StaticMeshMaterials[request.Appearance] = request.Bindings.ToArray();
+    }
+
+    /// <summary>The bindings each static mesh appearance was last given, by appearance.</summary>
+    internal Dictionary<Appearance, MeshMaterialBinding[]> StaticMeshMaterials { get; } = new(ReferenceEqualityComparer.Instance);
     public void UpdateStaticMeshMaterialFactors(StaticMeshMaterialFactorsRequest request) => StaticMeshFactorUpdates.Add(request);
     public Appearance CreateSprite(SpriteAppearanceRequest request) => CreateAppearance();
     public Appearance CreateSpriteBatch(SpriteBatchRequest request) { BatchRequests.Add(request); return CreateAppearance(); }

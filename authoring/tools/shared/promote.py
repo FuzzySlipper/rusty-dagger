@@ -81,6 +81,17 @@ clips every view holds, its layer stack (`layers.json`, parts-rig-layers/1) and 
 
 Icons are written at their area's ICON pixels on the longer side and carry no doll rect.
 
+The `models` area promotes the remodels of classic ARCH3D models (`models`, keyed by ARCH3D record id): each final
+local/art/generated/models/ID.glb that ledger/models-notes.json accepts, in the classic model's own frame, with its
+materials named `texture-A-R` for the classic texture they draw or else carrying their own PNG. The source tool's
+`model-mesh` writes it as the Engine static mesh the game draws in the classic's place, with the PNGs beside it, and
+refuses one standing out of the classic's convex hull, or, where its note states `"fit": "collision"` for an open
+classic, out of the classic's own faces. It reads the classic from local/inputs/arena2. A material with glTF's alphaMode
+MASK draws its PNG cut out at half its alpha (`"alpha": "mask"`). Each art session holds only its own finals, so
+`--key ID` promotes one, replacing that entry and its files and keeping the rest of the section; a whole-area run
+refuses while the section or ledger holds a remodel this checkout has no final for, and names any it removes because
+the ledger no longer accepts it.
+
 A held weapon's layer leaves a gap where the doll's hand holds it; its whole image (whole.py, in local/art/generated/worn/whole/)
 is published beside it as its `icon`, which the inventory, shops and the ground draw instead.
 
@@ -103,7 +114,7 @@ The import must have run (local/build/import/staging), and a paper-doll or worn 
 
     promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces --area terrain
 """
-import argparse, csv, hashlib, io, json, os, re, shutil, sys
+import argparse, csv, hashlib, io, json, os, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 
 import numpy as np
@@ -121,7 +132,8 @@ CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/packs/daggerfall.art-replacements/media"
 PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
 QUALITY = 90
-AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain", "flats", "people", "people-rig", "ui")
+AREAS = ("paper-doll", "worn", "items", "spells", "effects", "surfaces", "terrain", "flats", "people", "people-rig", "ui", "models")
+ARENA2 = REPOSITORY / "local/inputs/arena2"
 PEOPLE_RIG = Path(os.environ.get("PEOPLE_RIG", "/home/agent/dev/asset-pipeline/live-evidence/publications/w453-walk-20261109"))
 PEOPLE_RIG_FIGURE = "w453"
 # The figure's height in rig units, ground to crown: the front view's walk at 24 fps (rigc render, one pixel a unit)
@@ -592,6 +604,24 @@ def world_meshes():
     return entries
 
 
+def models(written, keys):
+    """Writes the accepted remodels `keys` into the folder `written` through the source tool's model-mesh, which holds
+    each to the classic's volume, and returns their entries by ARCH3D record id."""
+    entries = {}
+    notes = ledger("models")
+    for key in sorted(keys, key=int):
+        note = notes[key]
+        final = ART / "generated" / "models" / f"{key}.glb"
+        run = subprocess.run(["dotnet", "run", "--project", str(REPOSITORY / "src/Daggerfall.Source.Tool"), "--", "model-mesh",
+                              "--arena2", str(ARENA2), "--model", key, "--glb", str(final), "--output", str(written),
+                              "--content-path", f"{MEDIA}/models", "--fit", note.get("fit", "hull")], capture_output=True, text=True)
+        if run.returncode:
+            raise SystemExit(f"models: {key}: {(run.stderr or run.stdout).strip()}")
+        entries[key] = json.loads(run.stdout.strip().splitlines()[-1])
+        print(f"models: {key}, {entries[key]['triangles']} triangles", flush=True)
+    return entries
+
+
 def classic_size(media):
     """The opaque box of the classic image the game draws for an icon, in classic pixels, read from the import's
     published media: a template's image under the paper doll's, an icon of the classic media by its inventory. On the
@@ -717,8 +747,8 @@ def icon_entry(replaces, image, name, placement=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--area", action="append", choices=AREAS, default=[])
-    ap.add_argument("--key", action="append", help="promote only this accepted final of a paper-doll or worn --area, "
-                    "leaving the area's other files and its tints as they are; a whole area deletes and rewrites its media")
+    ap.add_argument("--key", action="append", help="promote only this accepted final of a paper-doll, worn or models --area, "
+                    "leaving the area's other files (and the worn tints) as they are; a whole area deletes and rewrites its media")
     ap.add_argument("--recompute", action="append", default=[], metavar="ID",
                     help="take the placement of the entry replacing ID (or every promoted entry, with `all`) from the original again")
     ap.add_argument("--set", action="append", nargs=3, default=[], metavar=("ID", "NAME", "VALUE"),
@@ -734,6 +764,38 @@ def main():
     for entry in placed():
         KEPT[entry["replaces"]], KEPT_ART[entry["replaces"]] = entry["placement"], entry["sha256"]
     for area in a.area:
+        if area == "models":
+            section = payload["artReplacements"].get("models", {})
+            accepted = {key for key, note in ledger("models").items() if note.get("status") == "accepted"}
+            here = {key for key in accepted if (ART / "generated" / "models" / f"{key}.glb").exists()}
+            removed = []
+            if a.key:
+                for key in a.key:
+                    if key not in here:
+                        raise SystemExit(f"models: {key} is not accepted in ledger/models-notes.json, or has no final in local/art/generated/models.")
+                keys = set(a.key)
+            else:
+                elsewhere = sorted(accepted - here, key=int)
+                if elsewhere:
+                    raise SystemExit(f"models: this checkout has no final for {', '.join(elsewhere)}, which a whole-area run would drop; "
+                                     "promote this checkout's own finals with --key.")
+                removed = sorted(set(section) - accepted, key=int)
+                if removed:
+                    print(f"models: removes {', '.join(removed)}, which the ledger no longer accepts", flush=True)
+                keys = here
+            # Written apart and moved in once every remodel passes, so a refused one leaves the area as it was.
+            target = CONTENT / MEDIA / "models"
+            with tempfile.TemporaryDirectory() as written:
+                entries = models(Path(written), keys)
+                target.mkdir(exist_ok=True)
+                for key in [*keys, *removed]:
+                    for old in [target / f"{key}.rstatmsh", *target.glob(f"{key}-*.png")]:
+                        old.unlink(missing_ok=True)
+                for file in Path(written).iterdir():
+                    shutil.copyfile(file, target / file.name)
+            kept = {key: entry for key, entry in section.items() if key not in keys and key not in removed}
+            payload["artReplacements"]["models"] = dict(sorted({**kept, **entries}.items(), key=lambda item: int(item[0])))
+            continue
         if a.key:
             notes = ledger(area)
             for key in a.key:

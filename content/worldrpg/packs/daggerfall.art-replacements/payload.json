@@ -94577,6 +94577,24 @@
      }
     ]
    }
+  },
+  "models": {
+   "41209": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41209.rstatmsh",
+    "byteLength": 18254,
+    "sha256": "d31c3f379c92fe6cd932535b4663dfaf2affebd4e729a29d74767695bae1fa5a",
+    "triangles": 160,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-67-0"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-85-0"
+     }
+    ]
+   }
   }
  }
 }

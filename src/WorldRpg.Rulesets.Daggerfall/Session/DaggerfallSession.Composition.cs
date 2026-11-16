@@ -1257,7 +1257,26 @@ internal sealed partial class DaggerfallSession
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
             appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem, HeldShield, equipment => HeldArms(art, equipment));
         if (_composition.ArtReplacements is { } refreshed)
+        {
             appearance.UseEffectArt(_engine.Presentation, _engine.Animation, refreshed, () => DrawnArt is not null);
+            ReportClassicRemodels(appearance.Profile);
+        }
+    }
+
+    /// <summary>
+    /// Says once per site closure which remodelled models it draws classic, rather than drawing them silently: its
+    /// pre-combined mesh names no model for the art pack's remodels to replace.
+    /// </summary>
+    private void ReportClassicRemodels(DaggerfallSiteProfile profile)
+    {
+        if (!profile.Geometry.IsClosure || _composition.Profiles is not { } profiles || !_closuresReported.Add(profile.ProfileKey)) return;
+        IReadOnlyDictionary<string, int> classic = profiles.Remodelled(profile.ProfileKey);
+        if (classic.Count == 0) return;
+        _engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
+            "daggerfall.art", "models.closure",
+            $"Site closure '{profile.ProfileKey.LogicalId}' draws one combined mesh that names no model, so the remodelled models it places draw classic there "
+                + $"(model: placements): {string.Join(", ", classic.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}: {pair.Value}"))}.",
+            string.Empty));
     }
 
     /// <summary>

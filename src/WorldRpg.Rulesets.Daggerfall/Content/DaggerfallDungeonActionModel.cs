@@ -23,6 +23,12 @@ internal sealed record DaggerfallDungeonActionModelDefinition(
     Vector3[] CollisionVertices,
     Triangle[] CollisionTriangles)
 {
+    /// <summary>
+    /// The ARCH3D record id of the model an assembled block moves here, by which its visual takes a remodel
+    /// (<see cref="DaggerfallSiteGeometry.Remodels"/>); a closure's action model takes none.
+    /// </summary>
+    internal string? ModelId { get; init; }
+
     internal DaggerfallDungeonActionModelDefinition Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ActionId);

@@ -90,6 +90,22 @@ internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, double Footprint);
 
 /// <summary>
+/// A remodel standing in for one classic ARCH3D model wherever an assembled location places it: an Engine static mesh in the
+/// classic model's own frame, drawn at the classic's pose while refreshed art is drawn. It is render-only: promotion holds it
+/// inside the classic's volume, whose mesh still serves the automap, collision and navigation.
+/// </summary>
+/// <param name="Triangles">Its triangle count, as promotion wrote it.</param>
+/// <param name="Slots">What each of its material slots draws, every slot once.</param>
+internal sealed record DaggerfallArtModel(DaggerfallArtFile File, int Triangles, IReadOnlyList<DaggerfallArtModelSlot> Slots);
+
+/// <summary>
+/// One material slot of a remodel: a classic texture identity (<c>material/texture-A-R</c>), drawn as the location's own
+/// surface for it with its refreshed art, climate, season and dungeon remaps, or else a PNG the art pack ships, opaque or,
+/// with <paramref name="Mask"/>, cut out where its alpha is under half, as a cutout layer of goods before a shelf's back.
+/// </summary>
+internal sealed record DaggerfallArtModelSlot(uint Slot, string? Material, DaggerfallArtFile? Texture, bool Mask = false);
+
+/// <summary>
 /// A refreshed surface texture standing in for one classic texture record that walls, floors and ceilings draw: an RGBA
 /// PNG the renderer repeats over the same faces the classic record covers.
 /// </summary>
@@ -191,6 +207,9 @@ internal sealed class DaggerfallArtReplacements
     /// </summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallArtMesh> Meshes { get; }
 
+    /// <summary>The remodels drawn in place of classic ARCH3D models, by the ARCH3D record id each replaces.</summary>
+    internal IReadOnlyDictionary<string, DaggerfallArtModel> Models { get; private init; } = new Dictionary<string, DaggerfallArtModel>();
+
     /// <summary>The refreshed grass that covers open ground near the player, when the set has it.</summary>
     internal DaggerfallGroundCoverArt? GroundCover { get; private init; }
 
@@ -263,6 +282,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallArtFile? treeSnow = null;
         DaggerfallPeopleRig? peopleRig = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
+        Dictionary<string, DaggerfallArtModel> models = new(StringComparer.Ordinal);
         Dictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces = [];
         Dictionary<(int Archive, int Record), DaggerfallArtFlat> flats = [], people = [];
         try
@@ -362,6 +382,28 @@ internal sealed class DaggerfallArtReplacements
                             DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), footprint)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two meshes for {replaces.Item1}/{replaces.Item2}.");
                 }
+            if (section.TryGetProperty("models", out JsonElement modelArt))
+                foreach (JsonProperty model in modelArt.EnumerateObject())
+                {
+                    string subject = $"the remodel of ARCH3D model {model.Name}";
+                    int triangles = model.Value.GetProperty("triangles").GetInt32();
+                    if (!uint.TryParse(model.Name, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out _) || triangles <= 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' states {subject} without an ARCH3D record id or a triangle.");
+                    DaggerfallArtModelSlot[] slots = [.. model.Value.GetProperty("slots").EnumerateArray().Select(slot =>
+                    {
+                        string? material = slot.TryGetProperty("material", out JsonElement named) ? named.GetString() : null;
+                        DaggerfallArtFile? texture = slot.TryGetProperty("texture", out JsonElement shipped) ? File(shipped, $"A texture of {subject}") : null;
+                        if ((material is null) == (texture is null) || material is not null && !material.StartsWith("material/texture-", StringComparison.Ordinal))
+                            throw new InvalidOperationException($"Content pack '{packId}' states a slot of {subject} that names neither one classic texture identity nor one texture of its own.");
+                        string? alpha = slot.TryGetProperty("alpha", out JsonElement cut) ? cut.GetString() : null;
+                        if (alpha is not (null or "mask") || alpha is not null && texture is null)
+                            throw new InvalidOperationException($"Content pack '{packId}' cuts out a slot of {subject} by '{alpha}': only a texture of its own is cut out, by \"mask\".");
+                        return new DaggerfallArtModelSlot(slot.GetProperty("slot").GetUInt32(), material, texture, alpha == "mask");
+                    })];
+                    if (slots.Length == 0 || slots.DistinctBy(slot => slot.Slot).Count() != slots.Length)
+                        throw new InvalidOperationException($"Content pack '{packId}' states {subject} without its slots, each once.");
+                    models.Add(model.Name, new(File(model.Value, $"The mesh of {subject}"), triangles, slots));
+                }
             if (section.TryGetProperty("surfaces", out JsonElement surfaceArt))
                 foreach (JsonElement surface in surfaceArt.EnumerateArray())
                 {
@@ -441,7 +483,7 @@ internal sealed class DaggerfallArtReplacements
         }
 
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people)
-        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, PeopleRig = peopleRig };
+        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, PeopleRig = peopleRig, Models = models };
 
         DaggerfallPeopleRig PeopleRig(JsonElement rig)
         {

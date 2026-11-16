@@ -59,9 +59,12 @@ internal sealed class DaggerfallLocationAssembly
     private readonly DaggerfallWorldBlocks _blocks;
     private readonly Func<DaggerfallProductMedia> _media;
     private readonly Func<IReadOnlyDictionary<string, DaggerfallWorldMesh>> _meshes;
+    private readonly IReadOnlyDictionary<string, DaggerfallArtModel> _models;
 
+    /// <param name="models">The art pack's remodels by ARCH3D record id (<see cref="DaggerfallArtReplacements.Models"/>), none without one.</param>
     internal DaggerfallLocationAssembly(DaggerfallDefinitions definitions, DaggerfallWorldBlocks blocks,
-        Func<DaggerfallProductMedia> media, Func<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes)
+        Func<DaggerfallProductMedia> media, Func<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes,
+        IReadOnlyDictionary<string, DaggerfallArtModel>? models = null)
     {
         _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
         // Streaming asks whether each location in the exterior window places an exterior on every window change.
@@ -69,6 +72,40 @@ internal sealed class DaggerfallLocationAssembly
         _blocks = blocks ?? throw new ArgumentNullException(nameof(blocks));
         _media = media ?? throw new ArgumentNullException(nameof(media));
         _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
+        _models = models ?? new Dictionary<string, DaggerfallArtModel>();
+    }
+
+    /// <summary>
+    /// The remodelled models this profile's own blocks place, each with its number of placements: what an authored site
+    /// closure of the profile draws classic, since its pre-combined mesh names no model to swap. Only the profile's block
+    /// documents are read, and only when the art pack has remodels.
+    /// </summary>
+    internal IReadOnlyDictionary<string, int> Remodelled(DaggerfallWorldProfileKey key)
+    {
+        if (_models.Count == 0 || !Places(key)) return new Dictionary<string, int>();
+        DaggerfallSiteRecord record = _records.Value[key.Site];
+        DaggerfallWorldProfileIds.TryParse(key.LogicalId, out _, out DaggerfallSiteBuildingId? building);
+        DaggerfallWorldBlockKey[] blocks = key.Kind switch
+        {
+            DaggerfallWorldProfileKind.Exterior => [.. PlacedBlocks(record.Exterior!).Select(ExteriorBlockKey)],
+            DaggerfallWorldProfileKind.Interior => [InteriorBlockKey(record, building!.Value)],
+            _ => [.. record.DungeonBlocks.Select(block => new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.Rdb, block.SourceKey))],
+        };
+        // A block a location places twice is counted twice.
+        IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> documents = _blocks.Read(blocks);
+        return blocks.SelectMany(block => DrawnModels(key.Kind, documents[block])).Where(model => model.MeshArtifactId is not null && _models.ContainsKey(model.ModelId))
+            .GroupBy(model => model.ModelId, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// The models a block draws as static meshes or moving models in a profile of this kind. An exterior's city gates and a
+    /// dungeon's still doors are drawn by their own parts, which keep the classic mesh.
+    /// </summary>
+    private static IEnumerable<DaggerfallWorldBlockModel> DrawnModels(DaggerfallWorldProfileKind kind, DaggerfallWorldBlockDocument document)
+    {
+        HashSet<string> gates = kind == DaggerfallWorldProfileKind.Exterior ? [.. document.Gates.Select(gate => gate.ModelId)] : [];
+        return document.Models.Where(model => !gates.Contains(model.Id)
+            && (kind != DaggerfallWorldProfileKind.Dungeon || model.Action is not null || model.DoorId is null));
     }
 
     /// <summary>
@@ -140,6 +177,10 @@ internal sealed class DaggerfallLocationAssembly
 
     private static DaggerfallWorldBlockKey ExteriorBlockKey(DaggerfallSiteBlock block) => new(DaggerfallWorldBlockKind.RmbExterior, block.SourceName);
 
+    /// <summary>The interior block of a building its location's exterior places.</summary>
+    private static DaggerfallWorldBlockKey InteriorBlockKey(DaggerfallSiteRecord record, DaggerfallSiteBuildingId building) =>
+        new(DaggerfallWorldBlockKind.RmbInterior, record.Exterior!.Blocks.Single(block => block.X == building.BlockX && block.Y == building.BlockY).SourceName, building.Index);
+
     /// <summary>Where an RMB block's own frame sits in its location's exterior: blocks run east along +X and north along -Z.</summary>
     private static Vector3 RmbBlockOrigin(DaggerfallSiteBlock block) => new(block.X * RmbBlockSide, 0F, -(block.Y * RmbBlockSide));
 
@@ -200,7 +241,9 @@ internal sealed class DaggerfallLocationAssembly
         private readonly int _groundClimate = owner._definitions.Grids.ClimateAtWorldPixel(record.MapPixelX, record.MapPixelY).Value;
         private readonly IReadOnlyDictionary<string, DaggerfallWorldMesh> _meshes = owner._meshes();
         private readonly List<DaggerfallSiteSpatialPart> _spatial = [];
-        private readonly List<(string Path, ContentSha256 Sha256, Transform Pose, IReadOnlyDictionary<uint, string> Materials)> _placedMeshes = [];
+        private readonly List<(string Path, ContentSha256 Sha256, Transform Pose, IReadOnlyDictionary<uint, string> Materials, string ModelId)> _placedMeshes = [];
+        // Each remodel the profile places, by ARCH3D id, with the textures its classic slots draw here.
+        private readonly Dictionary<string, (DaggerfallArtModel Art, IReadOnlyDictionary<uint, string> Textures)> _remodels = new(StringComparer.Ordinal);
         private readonly SortedSet<string> _materials = new(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _winterTextures = new(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _rainTextures = new(StringComparer.Ordinal);
@@ -245,8 +288,7 @@ internal sealed class DaggerfallLocationAssembly
                 DaggerfallWorldBlockDocument document = blocks[ExteriorBlockKey(block)];
                 Vector3 origin = RmbBlockOrigin(block);
                 Place(document, $"block/{block.X}/{block.Y}", block.X * RmbBlockCells, -(block.Y * RmbBlockCells));
-                HashSet<string> gates = [.. document.Gates.Select(gate => gate.ModelId)];
-                foreach (DaggerfallWorldBlockModel model in document.Models.Where(model => !gates.Contains(model.Id))) Draw(model, origin);
+                foreach (DaggerfallWorldBlockModel model in DrawnModels(key.Kind, document)) Draw(model, origin);
                 foreach (DaggerfallWorldBlockDoor door in document.Doors) ExteriorDoor(door, block, origin);
                 foreach (DaggerfallWorldBlockTransitionDoor door in document.TransitionDoors)
                     DungeonEntrance(door, origin, id => PlaceId(id, block.X, block.Y));
@@ -288,7 +330,7 @@ internal sealed class DaggerfallLocationAssembly
             DaggerfallWorldBlockKey blockKey = new(DaggerfallWorldBlockKind.RmbInterior, placed.SourceName, building.Index);
             DaggerfallWorldBlockDocument document = owner._blocks.Read([blockKey])[blockKey];
             Place(document, "block", 0, 0);
-            foreach (DaggerfallWorldBlockModel model in document.Models) Draw(model, Vector3.Zero);
+            foreach (DaggerfallWorldBlockModel model in DrawnModels(key.Kind, document)) Draw(model, Vector3.Zero);
             _start = document.StartMarker;
             _enter = document.EnterMarker;
             // A building door seen from inside leads back out; without an entrance to return through, the
@@ -359,10 +401,10 @@ internal sealed class DaggerfallLocationAssembly
                 // Named by its source block as well as its grid position: the catalog places two blocks on one cell of
                 // Orsinium's dungeon, and the donor lays out both.
                 Place(document, $"block/{Scope(document)}/{block.X}/{block.Z}", block.X * RdbBlockCells, -(block.Z * RdbBlockCells));
-                foreach (DaggerfallWorldBlockModel model in document.Models)
+                foreach (DaggerfallWorldBlockModel model in DrawnModels(key.Kind, document))
                 {
-                    if (model.Action is null && model.DoorId is null) Draw(model, origin, Placed);
                     if (model.Action is { } action) ActionModel(model, action, origin, Placed);
+                    else Draw(model, origin, Placed);
                 }
 
                 foreach (DaggerfallWorldBlockDoor door in document.Doors) DungeonDoor(door, document, origin, Placed);
@@ -479,7 +521,11 @@ internal sealed class DaggerfallLocationAssembly
             DaggerfallMeshMaterialBinding[] Bindings(IReadOnlyDictionary<uint, string> mesh) =>
                 [.. mesh.Where(pair => slots.ContainsKey(pair.Value)).OrderBy(pair => pair.Key)
                     .Select(pair => new DaggerfallMeshMaterialBinding(pair.Key, slots[pair.Value]))];
-            List<DaggerfallSiteMesh> meshes = [.. _placedMeshes.Select(mesh => new DaggerfallSiteMesh(mesh.Path, mesh.Sha256, mesh.Pose, Bindings(mesh.Materials)))];
+            List<DaggerfallSiteMesh> meshes = [.. _placedMeshes.Select(mesh => new DaggerfallSiteMesh(mesh.Path, mesh.Sha256, mesh.Pose, Bindings(mesh.Materials)) { ModelId = mesh.ModelId })];
+            Dictionary<string, DaggerfallSiteRemodel> remodels = _remodels.ToDictionary(pair => pair.Key, pair => new DaggerfallSiteRemodel(
+                pair.Value.Art.File.Path, pair.Value.Art.File.Sha256, Bindings(pair.Value.Textures),
+                [.. pair.Value.Art.Slots.Where(slot => slot.Texture is not null).Select(slot => new DaggerfallRemodelTexture(slot.Slot, slot.Texture!.Path, slot.Texture.Sha256, slot.Mask))]),
+                StringComparer.Ordinal);
             DaggerfallRdbDoorDefinition[] doors = [.. _doors.Select(door => door.Visual is { } visual
                 ? door with { Visual = visual with { Materials = Bindings(Visual(visual)) } }
                 : door)];
@@ -533,7 +579,7 @@ internal sealed class DaggerfallLocationAssembly
                 catch (ArgumentException exception) { diagnostics.Add($"Assembled dungeon map of '{key.LogicalId}' is invalid: {exception.Message}"); }
             }
 
-            DaggerfallSiteGeometry geometry = new(presentation.NavigationGridId, _spatial, meshes, owner._blocks.Open);
+            DaggerfallSiteGeometry geometry = new(presentation.NavigationGridId, _spatial, meshes, owner._blocks.Open) { Remodels = remodels };
             var actors = DaggerfallSiteContent.ReadFixedActors(normalized, key.LogicalId, owner._definitions, diagnostics);
             var actorSprites = actors.Values.ToDictionary(actor => actor.EntityId,
                 actor => _media.MobileSprites[owner._definitions.RequireActor(actor.ActorId).MobileId!.Value].ForGender(actor.Gender));
@@ -600,12 +646,16 @@ internal sealed class DaggerfallLocationAssembly
             _spatial.Add(new DaggerfallSiteSpatialPart(id, spatial.ContentPath, spatial.Sha256, column, row));
         }
 
-        /// <summary>Draws one static model: its mesh posed in the profile frame with the location's textures.</summary>
+        /// <summary>
+        /// Draws one static model: its mesh posed in the profile frame with the location's textures, tagged with its ARCH3D
+        /// id, which draws its remodel there while refreshed art is drawn. The map keeps the classic mesh.
+        /// </summary>
         private void Draw(DaggerfallWorldBlockModel model, Vector3 origin, Func<string, string>? place = null)
         {
             if (Mesh(model) is not { } mesh) return;
             Vector3 position = origin + model.Position;
-            _placedMeshes.Add((mesh.Path, mesh.Sha256, DaggerfallSiteGeometry.Pose(position, model.RotationDegrees), Textures(mesh)));
+            _placedMeshes.Add((mesh.Path, mesh.Sha256, DaggerfallSiteGeometry.Pose(position, model.RotationDegrees), Textures(mesh), model.ModelId));
+            Remodel(model.ModelId);
             if (key.Kind == DaggerfallWorldProfileKind.Exterior) return;
             if (model.Bounds is not { } bounds)
             {
@@ -634,10 +684,12 @@ internal sealed class DaggerfallLocationAssembly
         }
 
         /// <summary>A mesh's slots with the textures this location draws them with, each recorded for the material table.</summary>
-        private IReadOnlyDictionary<uint, string> Textures(DaggerfallWorldMesh mesh)
+        private IReadOnlyDictionary<uint, string> Textures(DaggerfallWorldMesh mesh) => Textures(mesh.MaterialsBySlot);
+
+        private IReadOnlyDictionary<uint, string> Textures(IEnumerable<KeyValuePair<uint, string>> materialsBySlot)
         {
             Dictionary<uint, string> textures = [];
-            foreach ((uint slot, string material) in mesh.MaterialsBySlot)
+            foreach ((uint slot, string material) in materialsBySlot)
             {
                 string drawn = Texture(material);
                 textures.Add(slot, drawn);
@@ -645,6 +697,17 @@ internal sealed class DaggerfallLocationAssembly
             }
 
             return textures;
+        }
+
+        /// <summary>
+        /// Records the art pack's remodel of a placed model, once per profile: its slots that name classic texture identities
+        /// take the textures this location draws them with, as the classic's own slots do.
+        /// </summary>
+        private void Remodel(string modelId)
+        {
+            if (_remodels.ContainsKey(modelId) || !owner._models.TryGetValue(modelId, out DaggerfallArtModel? art)) return;
+            _remodels.Add(modelId, (art, Textures(art.Slots.Where(slot => slot.Material is not null)
+                .Select(slot => KeyValuePair.Create(slot.Slot, slot.Material!)))));
         }
 
         private string Texture(string material)
@@ -858,12 +921,13 @@ internal sealed class DaggerfallLocationAssembly
             }
 
             _visualMaterials[mesh.Path] = Textures(mesh);
+            Remodel(model.ModelId);
             try
             {
                 _actionModels.Add(new DaggerfallDungeonActionModelDefinition(place(action.ActionId), doorId, doorIdentity, action.Description,
                     action.ModelIndex, action.RawIndex, new DaggerfallDoorVisual(mesh.Path, mesh.Sha256, [new DaggerfallMeshMaterialBinding(0, 0)]),
                     DaggerfallSiteGeometry.InitialTransform(origin + model.Position, model.RotationDegrees), bounds.Minimum, bounds.Maximum,
-                    model.CollisionVertices, model.CollisionTriangles).Validate());
+                    model.CollisionVertices, model.CollisionTriangles) { ModelId = model.ModelId }.Validate());
             }
             catch (ArgumentException exception) { diagnostics.Add($"Action model '{model.Id}' is invalid: {exception.Message}"); }
         }

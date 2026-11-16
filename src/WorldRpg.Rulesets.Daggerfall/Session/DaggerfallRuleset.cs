@@ -180,7 +180,12 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             Lazy<DaggerfallWorldMedia> worldMedia = new(() => DaggerfallWorldMedia.Read(data));
             Lazy<DaggerfallProductMedia> productMedia = new(() => DaggerfallSiteContent.ReadProductMedia(data, worldMedia.Value, definitions));
             Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(data, worldMedia.Value));
-            DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data), () => productMedia.Value, () => meshes.Value);
+            // The refreshed art set's remodels draw in place of the classic models an assembled location places.
+            ContentPack[] artPacks = [.. roles[ArtReplacementsRole]];
+            if (artPacks.Length > 1)
+                throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {artPacks.Length} '{ArtReplacementsRole.Value}' content packs; a session draws one refreshed art set.");
+            DaggerfallArtReplacements? art = artPacks.Length == 1 ? DaggerfallArtReplacements.Read(artPacks[0].Payload, artPacks[0].Id.Value) : null;
+            DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data), () => productMedia.Value, () => meshes.Value, art?.Models);
             // Every resolved profile names its classic images against the published manifests, and an interior
             // names its building against the block catalog: each is joined when the profile is resolved, before
             // a transition touches the source, so the publication it disagrees with is named.
@@ -228,10 +233,6 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(data, inputs.ClassicPresentation);
             DaggerfallMusicBundle? music = DaggerfallMusicBundle.For(selected);
             DaggerfallHeldArt? heldArt = DaggerfallHeldArt.For(selected, DaggerfallAttackTuning.Default.Classes.Keys);
-            ContentPack[] artPacks = [.. roles[ArtReplacementsRole]];
-            if (artPacks.Length > 1)
-                throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {artPacks.Length} '{ArtReplacementsRole.Value}' content packs; a session draws one refreshed art set.");
-            DaggerfallArtReplacements? art = artPacks.Length == 1 ? DaggerfallArtReplacements.Read(artPacks[0].Payload, artPacks[0].Id.Value) : null;
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
             return new DaggerfallAdmittedContent(definitions, blocks, inputs, profiles, questReceipts, disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music, heldArt, art);
         });

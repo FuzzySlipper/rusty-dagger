@@ -160,6 +160,12 @@ internal sealed partial class DaggerfallSiteProfiles
     /// <summary>Whether this profile has been resolved yet; resolution is lazy.</summary>
     internal bool IsResolved(DaggerfallWorldProfileKey key) => _catalog.IsResolved(key);
 
+    /// <summary>
+    /// The remodelled models the location's own blocks place for this profile, each with its number of placements, which an
+    /// authored site closure of it draws classic: its pre-combined mesh names no model to swap. None without an assembly.
+    /// </summary>
+    internal IReadOnlyDictionary<string, int> Remodelled(DaggerfallWorldProfileKey key) => _catalog.Remodelled(key);
+
     internal bool TryGet(DaggerfallWorldProfileKey key, out DaggerfallSiteProfile profile)
     {
         if (_selectedVariants.TryGetValue(key.Site, out string? variant) && _catalog.TryVariant(key, variant, out profile!)) return true;
@@ -264,6 +270,9 @@ internal sealed partial class DaggerfallSiteProfiles
         {
             lock (_gate) return _resolved.ContainsKey(key) || _authored.ContainsKey(key) || _assembly?.Places(key) == true;
         }
+
+        internal IReadOnlyDictionary<string, int> Remodelled(DaggerfallWorldProfileKey key) =>
+            _assembly?.Remodelled(key) ?? new Dictionary<string, int>();
 
         internal bool HasVariant(DaggerfallSiteId site, string variant) => _variants.Keys.Any(key => key.Profile.Site == site && key.Variant == variant);
 
