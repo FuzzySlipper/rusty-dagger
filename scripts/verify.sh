@@ -44,7 +44,7 @@ echo "corpora: $corpora"
 # with its import records in local/build/import/records (and the score in local/data/music.rpak). Without it the product
 # still stages and states why it cannot be played, the suites that read it skip with the reason printed, and
 # --play, which plays it, is refused.
-import_command="dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound"
+import_command="dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound --classic-art"
 generated_missing=()
 for path in local/data/daggerfall-data.rpak local/build/import/records; do
   [[ -e "$path" ]] || generated_missing+=("$path")

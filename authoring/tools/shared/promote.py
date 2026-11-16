@@ -157,6 +157,8 @@ REPOSITORY = AUTHORING.parent
 CONTENT = REPOSITORY / "content"
 MEDIA = "worldrpg/packs/daggerfall.art-replacements/media"
 PAYLOAD = CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json"
+# The classic identities the pack replaces, which a player's import leaves out of its data container (an importer input).
+REPLACED = REPOSITORY / "src/Daggerfall.Import.Tool/inputs/replaced-classic.json"
 QUALITY = 90
 ARENA2 = REPOSITORY / "local/inputs/arena2"
 PEOPLE_RIG = Path(os.environ.get("PEOPLE_RIG", "/home/agent/dev/asset-pipeline/live-evidence/publications/w453-walk-20261109"))
@@ -1077,6 +1079,20 @@ def placed_entries(payload):
     return found
 
 
+def replaced_classic(payload):
+    """The classic identities the pack replaces, by kind and sorted: what an entry stands in for, nothing of how it looks,
+    so the list changes only when an entry is added or withdrawn, never when one is redone."""
+    art = payload["artReplacements"]
+    record = lambda entry: f"{entry['replaces']['archive']}-{entry['replaces']['record']}"
+    return {
+        "kind": "worldrpg.replaced-classic",
+        "media": sorted({entry["replaces"] for entry in [*art.get("images", []), *art.get("effects", [])]}),
+        **{kind: sorted({record(entry) for entry in art.get(kind, [])}, key=lambda key: tuple(map(int, key.split("-"))))
+           for kind in ("surfaces", "flats", "people", "meshes")},
+        "models": sorted(art.get("models", {}), key=int),
+    }
+
+
 def main(argv=None):
     global STAGE
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -1131,6 +1147,7 @@ def main(argv=None):
         commit(stale, [folder for area in a.area for folder in AREAS[area].folders])
         STAGE = None
     PAYLOAD.write_text(json.dumps(payload, indent=1) + "\n")
+    REPLACED.write_text(json.dumps(replaced_classic(payload), indent=1) + "\n")
 
 
 if __name__ == "__main__":

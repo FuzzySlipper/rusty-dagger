@@ -4,7 +4,8 @@ using Rusty.Engine.Testing;
 namespace WorldRpg.Tests.Support;
 
 /// <summary>
-/// The containers a real import packed (<c>local/data/daggerfall-data.rpak</c>, <c>local/data/music.rpak</c>), read through
+/// The containers a real import packed (<c>local/data/daggerfall-data.rpak</c>, <c>local/data/music.rpak</c>,
+/// <c>local/data/classic-art.rpak</c>), read through
 /// one shared Engine test host so a suite reads exactly what the product opens.
 /// </summary>
 /// <remarks>
@@ -18,6 +19,9 @@ internal static class TestDataContainers
 
     /// <summary>The music container's file name.</summary>
     public const string Music = "music.rpak";
+
+    /// <summary>The developer's classic-art container: the classic media the art pack draws anew, which the data container leaves out.</summary>
+    public const string ClassicArt = "classic-art.rpak";
 
     private static readonly object Gate = new();
     private static readonly Dictionary<string, Opened> OpenedContainers = new(StringComparer.Ordinal);

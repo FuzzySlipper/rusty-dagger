@@ -158,6 +158,8 @@ public sealed class ImporterRevisionTests
         Assert.Contains(AuthoredUi.ManifestFile, checkedPaths);
         Assert.Contains(checkedPaths, path => path.StartsWith(AuthoredUi.ProductDirectory + "/", StringComparison.Ordinal));
         Assert.Contains(checkedPaths, path => path.StartsWith(ImportLayout.Inputs + "/quests/", StringComparison.Ordinal));
+        // The pack, not a step, reads the art pack's replaced classic identities: which files the data container leaves out.
+        Assert.Contains(Path.GetFullPath(Path.Combine(Root, ClassicArt.ListFile)), inputs);
     }
 
     private static void Write(string tree, string path, string text)

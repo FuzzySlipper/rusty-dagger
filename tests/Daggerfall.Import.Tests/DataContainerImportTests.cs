@@ -395,6 +395,84 @@ public sealed class DataContainerImportTests : IDisposable
         });
     }
 
+    [Fact]
+    public void The_data_container_leaves_out_the_files_of_entries_the_art_pack_draws_anew_and_keeps_every_other()
+    {
+        string staging = Path.Combine(root, ImportLayout.Staging);
+        string[] cells = [.. Enumerable.Range(0, 69).Select(cell => $"spell.icon.{cell}"),
+            .. Enumerable.Range(0, 5).SelectMany(cell => new[] { $"spell.target.{cell}", $"spell.element.{cell}" })];
+        Write(root, ClassicArt.ListFile, JsonSerializer.SerializeToUtf8Bytes(new
+        {
+            kind = "worldrpg.replaced-classic",
+            media = (string[])["paper-doll.235.22", "screen.title", .. cells],
+            surfaces = (string[])["0-40"], flats = (string[])["210-3", "216-0"], people = Array.Empty<string>(), meshes = (string[])["380-1"], models = (string[])["444"],
+        }));
+        object Inventory(params (string Id, string Path)[] artifacts) => new { artifacts = artifacts.Select(artifact => new { mediaId = artifact.Id, path = artifact.Path }) };
+        void Json(string path, object value) => Write(staging, path, JsonSerializer.SerializeToUtf8Bytes(value));
+        Json("worldrpg/media/classic-media-inventory.json", Inventory(("screen.title", "worldrpg/media/ui/title.png"), ("screen.death", "worldrpg/media/ui/death.png"),
+            ("spell.icons", "worldrpg/media/ui/spell-icons.png"), ("spell.selectors", "worldrpg/media/ui/spell-selectors.png")));
+        Json("worldrpg/media/character/character-media-inventory.json", Inventory());
+        Json("worldrpg/media/character/paper-doll/paper-doll-inventory.json", Inventory(("paper-doll.235.22.red", "worldrpg/media/character/paper-doll/235-22-red.png"),
+            ("paper-doll.235.22.mask", "worldrpg/media/character/paper-doll/235-22-mask.png"), ("item.200.10", "worldrpg/media/character/paper-doll/item-200-10.png")));
+        object Resource(string id, string path) => new { id, relativePath = path };
+        Json("worldrpg/imports/shared/media/dungeon/manifest.json", new
+        {
+            media = new
+            {
+                resources = new[]
+                {
+                    Resource("material/texture-0-40", "media/dungeon/materials/texture-0-40.png"),
+                    Resource("material/texture-0-40-frame-1", "media/dungeon/materials/texture-0-40-frame-1.png"),
+                    Resource("material/texture-0-40-glass", "media/dungeon/materials/texture-0-40-glass.png"),
+                    Resource("material/texture-0-41", "media/dungeon/materials/texture-0-41.png"),
+                    Resource("terrain/texture-0-40", "media/dungeon/terrain/texture-0-40.png"),
+                    Resource("sprite/texture-0-40", "media/dungeon/billboards/texture-0-40.png"),
+                    Resource("sprite/texture-210-3", "media/dungeon/billboards/texture-210-3.png"),
+                    Resource("sprite/texture-216-0", "media/dungeon/billboards/texture-216-0.png"),
+                    Resource("sprite/texture-380-1", "media/dungeon/billboards/texture-380-1.png"),
+                },
+            },
+            actors = new object[] { new { mobileId = 5, corpse = new { textureArchive = 380, textureRecord = 1 } }, new { mobileId = 6, corpse = new { textureArchive = 380, textureRecord = 2 } } },
+        });
+        Json("worldrpg/imports/shared/geometry/index.json", new { meshes = new[] { new { meshId = "444", relativePath = "geometry/mesh-444.rstatmsh" }, new { meshId = "445", relativePath = "geometry/mesh-445.rstatmsh" } } });
+        Json("worldrpg/media/sky/manifest.json", new
+        {
+            resources = new[] { Resource("sky/00/frame-00", "media/sky/resources/sky-00-frame-00.png") },
+            nightResources = new[] { Resource("sky/night/0", "media/sky/resources/night-00.png") },
+            clearedResources = new[] { Resource("sky/00/frame-00/clear", "media/sky/resources/sky-00-frame-00-clear.png") },
+        });
+        string[] leftOut =
+        [
+            "worldrpg/media/ui/title.png", "worldrpg/media/ui/spell-icons.png", "worldrpg/media/ui/spell-selectors.png",
+            "worldrpg/media/character/paper-doll/235-22-red.png",
+            "worldrpg/imports/shared/media/dungeon/materials/texture-0-40.png", "worldrpg/imports/shared/media/dungeon/materials/texture-0-40-frame-1.png",
+            "worldrpg/imports/shared/media/dungeon/terrain/texture-0-40.png", "worldrpg/imports/shared/media/dungeon/billboards/texture-210-3.png",
+            "worldrpg/imports/shared/media/dungeon/billboards/texture-380-1.png", "worldrpg/imports/shared/media/dungeon/actors/mobile-5-corpse.png",
+            "worldrpg/imports/shared/media/dungeon/billboards/texture-216-0.png",
+            "worldrpg/imports/shared/geometry/mesh-444.rstatmsh", "worldrpg/media/sky/resources/sky-00-frame-00.png", "worldrpg/media/sky/resources/night-00.png",
+        ];
+        string[] kept =
+        [
+            "worldrpg/media/ui/death.png", "worldrpg/media/character/paper-doll/235-22-mask.png", "worldrpg/media/character/paper-doll/item-200-10.png",
+            "worldrpg/imports/shared/media/dungeon/materials/texture-0-40-glass.png", "worldrpg/imports/shared/media/dungeon/materials/texture-0-41.png",
+            "worldrpg/imports/shared/media/dungeon/billboards/texture-0-40.png", "worldrpg/imports/shared/media/dungeon/actors/mobile-6-corpse.png",
+            "worldrpg/imports/shared/geometry/mesh-445.rstatmsh", "worldrpg/media/sky/resources/sky-00-frame-00-clear.png",
+        ];
+        foreach (string path in leftOut.Concat(kept)) Write(staging, path, [1, 2]);
+
+        (int files, long bytes) = ClassicArt.Split(root);
+
+        Assert.Equal((leftOut.Length, 2L * leftOut.Length), (files, bytes));
+        Assert.All(leftOut, path => Assert.True(!File.Exists(Path.Combine(staging, path)) && File.Exists(Path.Combine(root, ClassicArt.Tree, path)), path));
+        Assert.All(kept, path => Assert.True(File.Exists(Path.Combine(staging, path)) && !File.Exists(Path.Combine(root, ClassicArt.Tree, path)), path));
+        // A rerun finds nothing more to move, and the description says what the container left out.
+        Assert.Equal((0, 0L), ClassicArt.Split(root));
+        JsonObject described = ClassicArt.LeftOut(root);
+        Assert.Equal(["444"], described["models"]!.AsArray().Select(value => (string)value!));
+        Assert.Equal(["210-3", "216-0"], described["flats"]!.AsArray().Select(value => (string)value!));
+        Assert.Contains("original panoramas", (string)described["sky"]!, StringComparison.Ordinal);
+    }
+
     [ImportedDataContainerFact]
     public void The_imported_data_container_carries_every_artifact_its_publications_name()
     {
@@ -404,6 +482,12 @@ public sealed class DataContainerImportTests : IDisposable
         {
             using ProductContentBundle opened = ProductContentBundle.OpenContainer(engine.Content, container);
             Dictionary<string, ContentReferenceInfo> entries = opened.Entries.ToArray().ToDictionary(entry => entry.Path, StringComparer.Ordinal);
+            // What the data container left out because the art pack draws it anew, the classic-art container beside it carries.
+            string classicArt = Path.Combine(TestData.RepositoryRoot, ClassicArt.Container);
+            using ProductContentBundle? classic = File.Exists(classicArt) ? ProductContentBundle.OpenContainer(engine.Content, classicArt) : null;
+            Dictionary<string, ContentReferenceInfo> leftOut = classic?.Entries.ToArray().Where(entry => entry.Path != ImportLayout.DescriptorPath)
+                .ToDictionary(entry => entry.Path, StringComparer.Ordinal) ?? [];
+            Assert.DoesNotContain(leftOut.Keys, entries.ContainsKey);
             string[] manifests = [.. entries.Keys.Where(path => path.StartsWith("worldrpg/imports/", StringComparison.Ordinal)
                 && path.EndsWith("/" + ImportPublicationManifestSerializer.ManifestRelativePath, StringComparison.Ordinal))];
             Assert.Contains($"worldrpg/imports/shared/{ImportPublicationManifestSerializer.ManifestRelativePath}", manifests);
@@ -413,7 +497,8 @@ public sealed class DataContainerImportTests : IDisposable
                 string publication = manifest[..^ImportPublicationManifestSerializer.ManifestRelativePath.Length];
                 foreach (ImportPublicationManifestArtifact artifact in ImportPublicationManifestSerializer.Deserialize(opened.ReadBytes(manifest).ToArray()).Artifacts)
                 {
-                    Assert.True(entries.TryGetValue(publication + artifact.RelativePath, out ContentReferenceInfo entry), $"'{publication}{artifact.RelativePath}' is not in the container");
+                    Assert.True(entries.TryGetValue(publication + artifact.RelativePath, out ContentReferenceInfo entry)
+                        || leftOut.TryGetValue(publication + artifact.RelativePath, out entry), $"'{publication}{artifact.RelativePath}' is in neither container");
                     Assert.Equal((ulong)artifact.ByteLen, entry.ByteLength);
                     Assert.Equal(FromHash(Convert.FromHexString(artifact.ContentHash.Value)), entry.Sha256);
                 }
@@ -421,6 +506,9 @@ public sealed class DataContainerImportTests : IDisposable
 
             JsonNode descriptor = JsonNode.Parse(opened.ReadText(ImportLayout.DescriptorPath))!;
             Assert.All(descriptor["contentPacks"]!.AsArray(), pack => Assert.Contains((string)pack!["payload"]!, entries.Keys));
+            Assert.NotNull(descriptor["leftOut"]);
+            if (classic is not null)
+                Assert.Equal((string)descriptor["importerRevision"]!, (string)JsonNode.Parse(classic.ReadText(ImportLayout.DescriptorPath))!["importerRevision"]!);
 
             string music = Path.Combine(TestData.RepositoryRoot, ImportLayout.MusicContainer);
             if (!File.Exists(music)) return;

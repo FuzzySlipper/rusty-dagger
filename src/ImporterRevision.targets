@@ -8,7 +8,8 @@
        class is not public) and declares the partial class; this target adds the constant `StampedRevision` to it.
        The inputs are the import pipeline's source (src/Daggerfall.Import and src/Daggerfall.Import.Tool, which
        holds only the import, its steps and pack, and in inputs/ the tracked files its steps read: the source
-       inventory and our tables taken from Daggerfall Unity) and the authored UI originals with their manifest. The
+       inventory, our tables taken from Daggerfall Unity, and the classic identities the art pack draws anew, which promotion
+       writes and the pack leaves out of the data container) and the authored UI originals with their manifest. The
        tracked terrain bake in inputs/relief is left out: the relief step takes it only when its record names the bake
        this code would make from the player's files, so it cannot change what the import writes. The
        import reads no Daggerfall Unity file and never the authored base payload; the ruleset joins the base pack's

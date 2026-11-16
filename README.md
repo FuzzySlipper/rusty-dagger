@@ -74,12 +74,18 @@ the one ignored folder. Its folders say what may be deleted:
   from another importer.
 
   ```bash
-  dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound
+  dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound --classic-art
   ```
 
 - It checks every input before writing anything, then packs
   `local/data/daggerfall-data.rpak` and `local/data/music.rpak`. `--music` is
-  optional. The cinematics are left out, and the game plays them as skipped,
+  optional. The data container leaves out the classic media the art pack draws
+  anew, which refreshed art never opens: the entries in
+  `src/Daggerfall.Import.Tool/inputs/replaced-classic.json` (promotion writes it,
+  so promoting a new entry moves the importer revision) and the sky's original
+  panoramas. `--classic-art` packs them into `local/data/classic-art.rpak`, which
+  `world.classic-art` needs; a player's import never builds it, and
+  `daggerfall-data.rpak` is the same either way. The cinematics are left out, and the game plays them as skipped,
   unless you add `--cinematics` (it needs `ffmpeg` and `ffprobe` on `PATH`). Their
   bytes differ by machine, so data imported with them stays in your own checkout:
   the store refuses it.
@@ -142,6 +148,9 @@ the one ignored folder. Its folders say what may be deleted:
   stages: the `data` lane's import rebakes, says where it left the rewritten
   files on the worker, and you commit them with that change. `KeptReliefTests` fails while they are stale. Git stores the
   21 MB again only when the bytes change.
+- The store and `data-sync` carry `classic-art.rpak` with each revision's other
+  containers, and `status` prints its revision: a developer's checkout has every
+  container, so it runs exactly what a player has and can still compare.
 - `local/data/first-person.rpak` is optional: 3D first-person arms built from
   purchased art by `authoring/tools/fp-arms/build.sh`. Without it a 3D `viewmodel.style`
   draws the classic weapon sprites, with a warning.

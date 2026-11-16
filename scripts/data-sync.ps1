@@ -1,4 +1,4 @@
-# Pulls the containers the game opens (local\data: daggerfall-data.rpak, music.rpak, first-person.rpak) into a Windows
+# Pulls the containers the game opens (local\data: daggerfall-data.rpak, music.rpak, classic-art.rpak, first-person.rpak) into a Windows
 # checkout; scripts/data-sync.sh says what they are. The default source is den-agents' copies by importer revision,
 # ~/.cache/rusty-dagger/data/REVISION/data, through the P: share (mapped on the console desktop only): the revisions
 # its checkouts link to, main's among them, and any other that `scripts/data-sync.sh cache REVISION` fetched there
@@ -51,6 +51,10 @@ function Report {
     if ($container -match '^[0-9a-f]{64}$' -and -not $whole) {
         Write-Output 'The container is not one whole import (an import --only or pack repack), so the game calls it stale.'
     }
+    $classic, $classicWhole = Describe (Join-Path $data 'classic-art.rpak')
+    if (-not $classic) { $classic = 'none (no readable local\data\classic-art.rpak)' }
+    Write-Output "importer revision of the classic-art container: $classic"
+    if ($classic -match '^[0-9a-f]{64}$' -and $classic -ne $container) { Write-Output 'The classic-art container is another import''s, so world.classic-art refuses it.' }
 }
 
 if ($Status) { Report; exit 0 }
@@ -64,7 +68,8 @@ elseif (Test-Path (Join-Path $Store "$checkout\data")) { $source = Join-Path $St
 elseif (-not (Test-Path (Join-Path $Store 'daggerfall-data.rpak'))) { Write-Output $missing; exit 1 }
 $revision, $whole = Describe (Join-Path $source 'daggerfall-data.rpak')
 if ($revision -ne $checkout -or -not $whole) { Write-Output $missing; exit 1 }
-robocopy $source $data daggerfall-data.rpak music.rpak /FFT /NP /NFL /NDL /R:2 /W:2
+# The developer's classic-art container, for world.classic-art, where the revision has one (every one since #10763).
+robocopy $source $data daggerfall-data.rpak music.rpak classic-art.rpak /FFT /NP /NFL /NDL /R:2 /W:2
 if ($LASTEXITCODE -ge 8) { throw "data-sync: robocopy failed ($LASTEXITCODE)" }
 # first-person.rpak is not an import output: it sits beside the containers in a checkout and at a store's root.
 if (Test-Path (Join-Path $Store 'first-person.rpak')) {

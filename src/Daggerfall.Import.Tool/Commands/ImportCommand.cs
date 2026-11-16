@@ -4,8 +4,9 @@ namespace Daggerfall.Import.Tool.Commands;
 
 /// <summary>
 /// Turns the player's Daggerfall files into the data containers in one run: every import step in the
-/// importer's dependency order, in process, into the staging tree, then <c>local/data/daggerfall-data.rpak</c>
-/// and, when a music folder is supplied, <c>local/data/music.rpak</c>.
+/// importer's dependency order, in process, into the staging tree, then <c>local/data/daggerfall-data.rpak</c>,
+/// when a music folder is supplied <c>local/data/music.rpak</c>, and with <c>--classic-art</c> the developer's
+/// <c>local/data/classic-art.rpak</c> of the classic media the art pack draws anew, which the data container leaves out.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -40,7 +41,7 @@ internal static class ImportCommand
     [
         CommandOption.Optional("--arena2", "DIR"), CommandOption.Optional("--music", "DIR"),
         CommandOption.Optional("--repository", "DIR"), CommandOption.Optional("--install", "DIR"), CommandOption.Optional("--only", "STEP[,STEP...]"),
-        CommandOption.Switch("--compress"), CommandOption.Switch("--cinematics"),
+        CommandOption.Switch("--compress"), CommandOption.Switch("--cinematics"), CommandOption.Switch("--classic-art"),
     ], Run);
 
     /// <summary>One import step: the label <c>--only</c> names it by, and the tool command it runs.</summary>
@@ -98,7 +99,7 @@ internal static class ImportCommand
         long started = Environment.TickCount64;
         if (only is null)
         {
-            foreach (string directory in new[] { ImportLayout.Staging, ImportLayout.Records, ImportLayout.MusicTracks })
+            foreach (string directory in new[] { ImportLayout.Staging, ImportLayout.Records, ImportLayout.MusicTracks, ClassicArt.Tree })
                 if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
         }
 
@@ -110,7 +111,8 @@ internal static class ImportCommand
         }
 
         DataContainers.Pack(args.Switch("--compress"), install,
-            only is null ? null : $"import --only {string.Join(',', steps.Where(step => only.Contains(step.Label)).Select(step => step.Label))}");
+            only is null ? null : $"import --only {string.Join(',', steps.Where(step => only.Contains(step.Label)).Select(step => step.Label))}",
+            args.Switch("--classic-art"));
         // A player keeps only the containers; the staging tree and the records are the developer's.
         if (ImportLayout.ReleaseDirectory is not null) Directory.Delete("local", recursive: true);
         Console.WriteLine($"import: finished in {(Environment.TickCount64 - started) / 1000}s");

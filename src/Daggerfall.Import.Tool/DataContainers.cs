@@ -109,7 +109,8 @@ internal static class ImportLayout
     /// </summary>
     public static void RefuseLinkedOutputs(string repository, string? install)
     {
-        foreach (string output in new[] { Installed(DataContainer, install), Installed(MusicContainer, install), Staging, Records, MusicTracks, KeptRelief })
+        foreach (string output in new[] { Installed(DataContainer, install), Installed(MusicContainer, install), Installed(ClassicArt.Container, install),
+                     Staging, Records, MusicTracks, ClassicArt.Tree, KeptRelief })
         {
             for (FileSystemInfo? current = new FileInfo(Path.GetFullPath(output, repository));
                  current is not null;
@@ -145,8 +146,9 @@ internal static class ImportLayout
 }
 
 /// <summary>
-/// Describes and packs the containers the import produces: <c>daggerfall-data.rpak</c> from the staging tree
-/// and, when music was supplied, <c>music.rpak</c> from its tracks.
+/// Describes and packs the containers the import produces: <c>daggerfall-data.rpak</c> from the staging tree,
+/// when music was supplied <c>music.rpak</c> from its tracks, and when asked the developer's <c>classic-art.rpak</c> from
+/// the classic media the data container leaves out.
 /// </summary>
 internal static class DataContainers
 {
@@ -191,14 +193,15 @@ internal static class DataContainers
     /// otherwise describe content it does not carry.
     /// </summary>
     /// <param name="repack">The command that repacked files an earlier run staged, or null for a full import.</param>
-    internal static void WriteDescriptor(string staging, string? repack = null)
+    /// <param name="leftOut">The classic identities whose files the staging tree no longer holds (<see cref="ClassicArt"/>).</param>
+    internal static void WriteDescriptor(string staging, string? repack = null, JsonObject? leftOut = null)
     {
         IReadOnlyList<JsonObject> packs = DerivedPacks();
         string[] absent = [.. packs.Select(pack => (string)pack["payload"]!).Where(payload => !File.Exists(Path.Combine(staging, payload)))];
         if (absent.Length != 0)
             throw new InvalidOperationException($"The staging tree lacks the derived payloads [{string.Join(", ", absent)}]; run the import before packing.");
         string[] departures = [.. Repacked(repack)];
-        Describe(staging, packs, departures);
+        Describe(staging, packs, departures, leftOut);
         Console.WriteLine($"data container: importer revision {ImporterBuild.Revision}, {packs.Count} derived content packs described"
             + (departures.Length == 0 ? "" : $"; it departs from a whole import, so it reads as stale: {string.Join("; ", departures)}"));
     }
@@ -221,7 +224,7 @@ internal static class DataContainers
     private static IEnumerable<string> Repacked(string? repack) =>
         repack is null ? [] : [$"repacked by {repack} over files an earlier run staged; run the full import"];
 
-    private static void Describe(string root, IReadOnlyList<JsonObject> packs, IReadOnlyList<string> departures)
+    private static void Describe(string root, IReadOnlyList<JsonObject> packs, IReadOnlyList<string> departures, JsonObject? leftOut = null)
     {
         JsonObject descriptor = new()
         {
@@ -230,6 +233,7 @@ internal static class DataContainers
             ["departures"] = new JsonArray([.. departures.Select(departure => JsonValue.Create(departure))]),
             ["contentPacks"] = new JsonArray([.. packs]),
         };
+        if (leftOut is not null) descriptor["leftOut"] = leftOut;
         PayloadFiles.WriteFile(Path.Combine(root, ImportLayout.DescriptorPath),
             JsonSerializer.SerializeToUtf8Bytes(descriptor, new JsonSerializerOptions { WriteIndented = true }));
     }
@@ -240,13 +244,22 @@ internal static class DataContainers
     /// files.
     /// </summary>
     /// <param name="repack">The command that repacked files an earlier run staged, or null for a full import.</param>
-    internal static void Pack(bool compress, string? install, string? repack)
+    /// <param name="classicArt">Whether to pack the developer's classic-art container from the classic media the data leaves out.</param>
+    internal static void Pack(bool compress, string? install, string? repack, bool classicArt = false)
     {
         ImportLayout.RefuseLinkedOutputs(Directory.GetCurrentDirectory(), install);
-        WriteDescriptor(ImportLayout.Staging, repack);
+        // The data container is the same bytes whether or not the classic-art container is packed beside it.
+        (int moved, long bytes) = ClassicArt.Split(Directory.GetCurrentDirectory());
+        Console.WriteLine($"classic art: {moved} staged files ({bytes} bytes) of entries the art pack draws anew moved to '{ClassicArt.Tree}', which the data container leaves out");
+        WriteDescriptor(ImportLayout.Staging, repack, ClassicArt.LeftOut(Directory.GetCurrentDirectory()));
         if (Directory.Exists(ImportLayout.MusicTracks)) WriteMusicDescriptor(ImportLayout.MusicTracks, repack);
+        if (classicArt) Describe(ClassicArt.Tree, [], [.. Repacked(repack)]);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
         PackOne(host, ImportLayout.Staging, ImportLayout.Installed(ImportLayout.DataContainer, install), compress);
+        if (classicArt)
+            PackOne(host, ClassicArt.Tree, ImportLayout.Installed(ClassicArt.Container, install), compress);
+        else
+            Console.WriteLine($"classic-art container: not packed ('{ImportLayout.Installed(ClassicArt.Container, install)}' is left as it is); --classic-art packs it for world.classic-art");
         if (Directory.Exists(ImportLayout.MusicTracks))
             PackOne(host, ImportLayout.MusicTracks, ImportLayout.Installed(ImportLayout.MusicContainer, install), compress);
         else

@@ -10,7 +10,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <summary>
 /// Ground piles: dropped items and treasure. As in the classic, a pile stands as one of the treasure archive's piles,
 /// which one fixed by the container's identity as the classic picks one at random when the pile is made. With
-/// refreshed art, a pile of one item or one stack stands as that item instead, in its metal or dye, at its own height.
+/// refreshed art, a pile of one item or one stack stands as that item instead, in its metal or dye, at its own height,
+/// and a pile of several stands as its treasure pile's refreshed flat where the set redraws it, on its own foot. A classic
+/// pile is opened only when it is drawn.
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
@@ -34,14 +36,15 @@ internal sealed partial class DaggerfallSiteAppearance
             throw new InvalidOperationException("Ground containers require the normalized treasure billboard visuals.");
         foreach (DaggerfallGroundContainer container in containers.Values.OrderBy(container => container.Id))
         {
-            object look = groundLook?.Invoke(container.Id) is { } item ? item : TreasurePile(container.Id);
+            // A treasure pile is drawn anew when the art changes; an item's look already names the art it is drawn in.
+            object look = groundLook?.Invoke(container.Id) is { } item ? item : (TreasurePile(container.Id), RefreshedPile(TreasurePile(container.Id)) is not null);
             if (groundVisuals.TryGetValue(container.Id, out GroundVisual? current))
             {
                 if (current.Look.Equals(look)) continue;
                 groundVisuals.Remove(container.Id);
                 Retire(current.Billboard);
             }
-            (Appearance visual, float lift) = look is DaggerfallGroundItemLook itemLook ? CreateGroundItem(itemLook) : CreateTreasurePile((int)look);
+            (Appearance visual, float lift) = look is DaggerfallGroundItemLook itemLook ? CreateGroundItem(itemLook) : CreateTreasurePile(((int, bool))look);
             groundVisuals.Add(container.Id, new(new BillboardVisual(container.Id, visual), look, lift));
         }
     }
@@ -49,17 +52,51 @@ internal sealed partial class DaggerfallSiteAppearance
     /// <summary>The treasure pile a container stands as: a spread of its identity over the published piles, so it keeps its pile across saves.</summary>
     private int TreasurePile(long id) => (int)((ulong)id * 0x9E3779B97F4A7C15UL % (ulong)groundContainerSprites.Count);
 
+    /// <summary>The refreshed flat a treasure pile is drawn as while refreshed art is drawn, or null where it stays classic.</summary>
+    private DaggerfallArtFlat? RefreshedPile(int index) => drawRefreshedEffects() && groundContainerSprites[index].Source is { } source
+        ? surfaceArt?.Flats.GetValueOrDefault(source) : null;
+
     /// <summary>
-    /// A treasure pile's billboard, lifted by its pivot's share of its height so it stands on the floor whatever pivot
-    /// the source publishes, as the donor lifts dropped containers by half their height.
+    /// A treasure pile's billboard: its refreshed flat standing on its own foot, or the classic pile lifted by its pivot's
+    /// share of its height so it stands on the floor whatever pivot the source publishes, as the donor lifts dropped
+    /// containers by half their height.
     /// </summary>
-    private (Appearance, float) CreateTreasurePile(int index)
+    private (Appearance, float) CreateTreasurePile((int Index, bool Refreshed) pile)
     {
-        NormalizedBillboardSprite sprite = groundContainerSprites[index];
-        Appearance visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(groundContainerAtlases[index],
+        if (pile.Refreshed && RefreshedPile(pile.Index) is { } art)
+            return (appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(RefreshedPileAtlas(art), 0, art.Foot, art.Size, flats.Items,
+                SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F), LitSprite)), 0F);
+        NormalizedBillboardSprite sprite = groundContainerSprites[pile.Index];
+        Appearance visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(ClassicTreasureAtlas(pile.Index),
             sprite.InitialFrameId, sprite.Pivot, sprite.Size, flats.Items, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default,
             new Color(1F, 1F, 1F, 1F), LitSprite));
         return (visual, sprite.Pivot.Y * sprite.Size.Y);
+    }
+
+    /// <summary>A treasure pile's classic atlas, opened the first time classic art draws it.</summary>
+    private SpriteAtlas ClassicTreasureAtlas(int index)
+    {
+        if (groundContainerAtlases.TryGetValue(index, out SpriteAtlas? opened)) return opened;
+        NormalizedBillboardSprite sprite = groundContainerSprites[index];
+        RenderResourceInfo texture = appearance.OpenTexture(content, sprite.TexturePath, sprite.TextureSha256);
+        ownedResources.Add(texture.Handle);
+        SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth, sprite.AtlasHeight,
+            sprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray())));
+        atlases.Add(atlas);
+        groundContainerAtlases.Add(index, atlas);
+        return atlas;
+    }
+
+    /// <summary>A treasure pile's refreshed flat's atlas, opened once for the site.</summary>
+    private SpriteAtlas RefreshedPileAtlas(DaggerfallArtFlat art)
+    {
+        if (groundItemAtlases.TryGetValue(art.File.Path, out SpriteAtlas? opened)) return opened;
+        RenderResourceInfo texture = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest);
+        ownedResources.Add(texture.Handle);
+        SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, RefreshedFlatFrames(art)));
+        atlases.Add(atlas);
+        groundItemAtlases.Add(art.File.Path, atlas);
+        return atlas;
     }
 
     /// <summary>

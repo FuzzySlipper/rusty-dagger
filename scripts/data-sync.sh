@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Copies the data the game and the tests read between this checkout and the den NAS store, which keeps one set per
-# importer revision: revisions/REVISION/ holds daggerfall-data.rpak, music.rpak, import.tar.zst (the import tree,
+# importer revision: revisions/REVISION/ holds daggerfall-data.rpak, music.rpak, classic-art.rpak (the classic media the
+# art pack draws anew, which a player's data container leaves out: the developer's comparison), import.tar.zst (the import tree,
 # local/build/import: 82,000 files, which the NAS writes at about 20 a second when loose), SHA256SUMS (every file,
 # the tree's by its path inside it) and published (when, from which commit and worker, with which ffmpeg). first-person.rpak is not an import output and
 # is kept once, at the store's root. The import lane (scripts/route.py data) is the one publisher; every checkout pulls
@@ -59,10 +60,10 @@ at_store() { if [[ -n $store_host ]]; then ssh -o BatchMode=yes "$store_host" "$
 # compressed (import --compress) reads the same: the revision on the first line, then "whole", "departs" or
 # "unrecorded" (a description from before departures were recorded), then one departure per line.
 describe_container() {
-  python3 - "$data/daggerfall-data.rpak" <<'EOF'
+  python3 - "$data/${1:-daggerfall-data.rpak}" <<'EOF'
 import json, os, struct, subprocess, sys
 if not os.path.isfile(sys.argv[1]):
-    sys.exit(print('none (no local/data/daggerfall-data.rpak)'))
+    sys.exit(print(f'none (no local/data/{os.path.basename(sys.argv[1])})'))
 with open(sys.argv[1], 'rb') as container:
     offset, length = struct.unpack('<QQ', container.read(24)[8:24])
     container.seek(offset)
@@ -112,11 +113,24 @@ report() {
     departs) echo "The container is not one whole import, so the game calls it stale:"; sed -n '3,$s/^/  /p' <<<"$description" ;;
     unrecorded) echo "The container records no departures (an import from before they were recorded), so this build calls it malformed." ;;
   esac
+  # The developer's classic-art container must be the same import, or world.classic-art refuses.
+  classic=$(describe_container classic-art.rpak)
+  echo "importer revision of the classic-art container: $(sed -n 1p <<<"$classic")"
+  [[ $(sed -n 1p <<<"$classic") == "$container" || $(sed -n 1p <<<"$classic") == none* ]] ||
+    echo "The classic-art container is another import's, so world.classic-art refuses it."
+}
+# The containers one revision's import writes: the classic-art one where the revision has it (every one since #10763).
+containers() {
+  local from=$1
+  echo daggerfall-data.rpak music.rpak
+  if [[ $from == store ]]; then at_store "test -f '$store_path/revisions/$revision/classic-art.rpak'" 2>/dev/null && echo classic-art.rpak
+  else [[ -f $data/classic-art.rpak ]] && echo classic-art.rpak; fi
+  return 0
 }
 
 # sha256sum lines for this checkout's import output: data/NAME for a container, import/PATH for the tree's files.
 sums() {
-  (cd "$data" && sha256sum daggerfall-data.rpak music.rpak | sed 's#  #  data/#')
+  (cd "$data" && sha256sum $(containers local) | sed 's#  #  data/#')
   (cd "$root/local/build/import" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sed 's#  \./#  import/#')
 }
 
@@ -135,7 +149,7 @@ case $direction in
     held || { missing >&2; exit 1; }
     from=$store/revisions/$revision
     mkdir -p "$data"
-    rsync "${options[@]}" "$from/daggerfall-data.rpak" "$from/music.rpak" "$data/"
+    rsync "${options[@]}" $(containers store | sed "s#^#$from/#; s# # $from/#g") "$data/"
     if at_store "test -f '$store_path/first-person.rpak'"; then rsync "${options[@]}" "$store/first-person.rpak" "$data/"; fi
     if [[ -n $import_tree ]]; then
       # The archive stays beside the tree, so a second pull of the same revision copies nothing.
@@ -169,7 +183,7 @@ case $direction in
       from=$store/revisions/$revision incoming=$cache/.incoming-$revision-$$
       mkdir -p "$incoming/data" "$incoming/import"
       trap 'chmod -R u+w "$incoming" 2>/dev/null; rm -rf "$incoming"' EXIT
-      rsync "${options[@]}" "$from/daggerfall-data.rpak" "$from/music.rpak" "$incoming/data/"
+      rsync "${options[@]}" $(containers store | sed "s#^#$from/#; s# # $from/#g") "$incoming/data/"
       rsync "${options[@]}" "$from/import.tar.zst" "$from/SHA256SUMS" "$incoming/"
       zstd -dcq "$incoming/import.tar.zst" | tar -xf - -C "$incoming/import"
       rm "$incoming/import.tar.zst"
@@ -210,6 +224,9 @@ case $direction in
     report
     [[ $(sed -n 1p <<<"$description") == "$revision" && $(sed -n 2p <<<"$description") == whole ]] ||
       { echo "data-sync: refusing to publish: the container is not one whole import at importer revision $revision" >&2; exit 1; }
+    # Every checkout runs what a player has and can still compare: the revision carries the classic-art container too.
+    [[ $(describe_container classic-art.rpak | sed -n 1p) == "$revision" && $(describe_container classic-art.rpak | sed -n 2p) == whole ]] ||
+      { echo "data-sync: refusing to publish: local/data/classic-art.rpak is not one whole import at importer revision $revision; import with --classic-art" >&2; exit 1; }
     # Cinematics (import --cinematics) encode differently on another machine, so they stay in the importing checkout.
     if [[ -n $(find "$root/local/build/import/staging/worldrpg/media/cinematics" -type f -print -quit 2>/dev/null) ]]; then
       echo "data-sync: refusing to publish: this import converted the cinematics, whose bytes differ by machine; import without --cinematics" >&2
@@ -238,7 +255,7 @@ case $direction in
     # An unchanged container becomes a link to the newest revision's (compared by content: every import stamps new times).
     link=()
     [[ -n $newest ]] && link=(--checksum "--link-dest=$newest")
-    rsync "${options[@]}" "${link[@]}" "$data/daggerfall-data.rpak" "$data/music.rpak" "$to/"
+    rsync "${options[@]}" "${link[@]}" $(containers local | sed "s#^#$data/#; s# # $data/#g") "$to/"
     rsync "${options[@]}" "$archive" "$to/import.tar.zst"
     rsync -t "$mine" "$to/SHA256SUMS"
     printf 'published: %s\ncommit: %s\nworker: %s\nencoder: %s\n' "$(date -Is)" "$(git -C "$root" rev-parse HEAD)" \

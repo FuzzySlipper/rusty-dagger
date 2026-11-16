@@ -61,11 +61,18 @@ public sealed class DaggerfallSkyMediaTests
         node["nightResources"]!.AsArray().RemoveAt(0);
         Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(TestSessions.Data(fixture.WithManifest(node))));
         node = JsonNode.Parse(fixture.Manifest)!;
-        node["resources"]![0]!["contentHash"] = new string('0',64);
+        node["clearedResources"]![0]!["contentHash"] = new string('0',64);
         Assert.Contains("digest", Assert.Throws<InvalidOperationException>(() => DaggerfallSkyMedia.Read(TestSessions.Data(fixture.WithManifest(node)))).Message);
     }
 
-    internal static SkyFixture Fixture()
+    [Fact]
+    public void A_data_container_without_the_original_panoramas_composes_the_refreshed_sky()
+    {
+        // A player's import leaves the painted originals out: the refreshed sky draws only the cleared ones, the moons and the stars.
+        DaggerfallSkyMedia.Read(TestSessions.Data(Fixture(originals: false).Content));
+    }
+
+    internal static SkyFixture Fixture(bool originals = true)
     {
         var service = new BundleContentFake();
         service.Container(DaggerfallData.DataContainerName);
@@ -75,7 +82,7 @@ public sealed class DaggerfallSkyMediaTests
         var cleared = new List<object>();
         object Resource(string id, int width, int height, int? night = null, string? kind = null)
         {
-            service.Add(DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/" + id + ".png", body);
+            if (originals) service.Add(DaggerfallData.DataContainerName, DaggerfallSkyMedia.LogicalRoot + "/" + id + ".png", body);
             return new {id, relativePath="media/sky/resources/"+id+".png", contentHash=digest, byteLength=1,
                 width,height,nightIndex=night,kind,clearColor=new[]{.1f,.2f,.3f}};
         }

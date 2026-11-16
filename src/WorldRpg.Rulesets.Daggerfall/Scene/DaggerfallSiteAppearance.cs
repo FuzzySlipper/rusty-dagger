@@ -191,7 +191,8 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly HashSet<(string Instance, DaggerfallEffectOutcomeKind Kind, ulong Generation, ulong Step)> effectFeedback = [];
     private readonly List<AttackImpactNotice> attackImpacts = [];
     private readonly List<SpriteAtlas> atlases = [];
-    private readonly List<SpriteAtlas> groundContainerAtlases = [];
+    // Each treasure pile's classic atlas, opened the first time classic art draws that pile.
+    private readonly Dictionary<int, SpriteAtlas> groundContainerAtlases = [];
     private readonly IReadOnlyList<NormalizedBillboardSprite> groundContainerSprites = [];
     private readonly List<Material> materials = [];
     private bool winterMaterials;
@@ -321,16 +322,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 actors.Add(entityId, visual);
             }
             groundContainerSprites = inputs.GroundContainerSprites ?? [];
-            foreach (NormalizedBillboardSprite groundSprite in groundContainerSprites)
-            {
-                RenderResourceInfo texture = appearance.OpenTexture(content, groundSprite.TexturePath, groundSprite.TextureSha256);
-                ownedResources.Add(texture.Handle);
-                SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(groundSprite.AtlasWidth, groundSprite.AtlasHeight,
-                    groundSprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
-                SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
-                atlases.Add(atlas);
-                groundContainerAtlases.Add(atlas);
-            }
             AdmitClassicTextures();
             foreach (NormalizedAudioClip clip in inputs.Audio)
             {
@@ -400,7 +391,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
 
     /// <summary>
     /// Builds every classic visual this site left unbuilt while refreshed art was drawn (surfaces with their seasons and
-    /// frames, models a remodel stands in for, decorations, people, quest people, remains, effects and a burning candle), so classic art draws from the
+    /// frames, models a remodel stands in for, decorations, people, quest people, remains, effects, treasure piles and a burning candle), so classic art draws from the
     /// next snapshot: the developer's switch to classic art. They are kept until the site is let go.
     /// </summary>
     /// <exception cref="InvalidOperationException">A classic file could not be opened; the message names it.</exception>
@@ -418,6 +409,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (DecorationVisual flat in decorations) { ClassicDecoration(flat, winter: false); ClassicDecoration(flat, winter: true); }
         foreach (ActorVisual visual in actors.Values) { ClassicLive(visual); ClassicCorpse(visual); }
         foreach (NpcVisual visual in npcVisuals.Values) ClassicNpc(visual);
+        for (int pile = 0; pile < groundContainerSprites.Count; pile++) ClassicTreasureAtlas(pile);
         foreach (NormalizedClassicEffect effect in classicEffects.Values) ClassicEffectTexture(effect);
         // A candle burning now draws its classic sprite from the next update, which needs the published billboard.
         if (candleAppearance is not null && !candleLooks.ContainsKey(false))

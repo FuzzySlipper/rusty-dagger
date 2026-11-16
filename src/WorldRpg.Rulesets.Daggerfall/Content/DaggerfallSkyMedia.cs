@@ -105,9 +105,12 @@ internal sealed class DaggerfallSkyMedia
             || curve.Any(knot => knot.Any(value => !float.IsFinite(value)) || knot[0] is < 0 or > 1 || knot[1] is < 0 or > 1)
             || curve.Zip(curve.Skip(1)).Any(pair => pair.First[0] >= pair.Second[0]))
             throw new InvalidOperationException("Sky publication does not close over all climate frames, night backgrounds and frame curve.");
+        // The refreshed sky draws the cleared panoramas, the moons and the stars; a player's data container leaves the original
+        // panoramas out, and classic art reads them from the developer's classic-art container when it draws them.
         using DaggerfallDataRoot bundle = content.Open(LogicalRoot);
         Dictionary<string, ContentReferenceInfo> entries = bundle.Entries.ToArray().ToDictionary(entry => entry.Path, StringComparer.Ordinal);
-        foreach (var resource in resources.Values)
+        HashSet<string> originals = [.. frames.Values, .. nights.Values];
+        foreach (var resource in resources.Values.Where(resource => !originals.Contains(resource.Id)))
             if (!entries.TryGetValue(resource.RelativePath, out var entry) || entry.Sha256 != resource.Hash || entry.ByteLength != resource.ByteLength)
                 throw new InvalidOperationException($"Sky artifact '{resource.Id}' is absent or disagrees with its published digest/length.");
         DaggerfallSkyMoon[] moons = [.. root.GetProperty("moons").EnumerateArray().Select(moon => new DaggerfallSkyMoon(moon.GetProperty("id").GetString()!,
@@ -166,8 +169,7 @@ internal sealed class DaggerfallSkyMedia
     internal RenderResource Open(IGraphicsService graphics, string id, TextureFilter filter = TextureFilter.Linear)
     {
         DaggerfallSkyResource resource = _resources[id];
-        using DaggerfallDataRoot bundle = _content.Open(LogicalRoot);
-        using var reference = bundle.OpenReference(resource.RelativePath);
+        using var reference = _content.OpenReference($"{LogicalRoot}/{resource.RelativePath}");
         return graphics.OpenResourceFromContent(new(reference, filter, TextureWrap.Clamp, TextureColorSpace.Srgb)).Handle;
     }
 }

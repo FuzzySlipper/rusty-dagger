@@ -32,9 +32,11 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
 
     /// <summary>Shows the weather over the active site, whose profile, frame offset, lighting and appearance it draws on.</summary>
     /// <param name="daylight">The share of clear noon's light the weather lets through now.</param>
+    /// <param name="cleared">Whether the sky is drawn cleared, as refreshed art draws it over the real horizon; the painted
+    /// panoramas are classic art's alone, and a player's data leaves them out.</param>
     internal void Update(DaggerfallSiteProfile inputs, Vector3 worldOffset, DaggerfallSiteLighting lighting, DaggerfallSiteAppearance appearance,
         DaggerfallSkyTime sky, float daylight, int climate, DaggerfallWeatherConditions conditions, int variant, Vector3 player, bool sheltered,
-        double seconds, bool playing, float? horizonFog)
+        double seconds, bool playing, float? horizonFog, bool cleared)
     {
         DaggerfallWeatherKind weather = conditions.Kind;
         var zones = inputs.AmbientZones.Where(zone => zone.Contains(player - worldOffset)).ToArray();
@@ -56,13 +58,13 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         if (outside && _media is not null && !closed)
         {
             DaggerfallSkySelection selected = _media.Select(climate, sky, weather, variant);
-            SelectSky(horizonFog is null ? selected : _media.Cleared(selected));
+            SelectSky(cleared ? _media.Cleared(selected) : selected);
         }
         else
         {
             // A panorama selected above replaces whatever stood; only a sky that goes without one needs its background put back.
-            bool cleared = ClearSky();
-            if (!closed && (cleared || _closed)) lighting.ApplyBackground();
+            bool takenDown = ClearSky();
+            if (!closed && (takenDown || _closed)) lighting.ApplyBackground();
         }
         air = (air * MathF.Max(daylight, _horizon.NightAir)) + new Vector3(_ambient.FlashIntensity * _horizon.FlashAir);
         Color airColor = new(air.X, air.Y, air.Z, 1);

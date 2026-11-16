@@ -4,7 +4,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
 /// Content files the suite reads under the repository's <c>content/</c> path: a tracked file from the checkout,
-/// and a file the import derived from the real data container, read through the shared Engine test host.
+/// and a file the import derived from the real data container, or, for the classic media it leaves out, the classic-art
+/// container beside it, read through the shared Engine test host.
 /// </summary>
 /// <remarks>
 /// The product sees the same union: its tracked content beside the opened container, at the same
@@ -41,20 +42,26 @@ internal static class TestContentFiles
             if (ContentRelative(value) is not { } relative || !TestDataContainers.Exists(TestDataContainers.Data)) return tracked;
             string prefix = relative.Length == 0 ? string.Empty : relative + "/";
             HashSet<string> seen = new(tracked, StringComparer.Ordinal);
-            return [.. tracked, .. TestDataContainers.Entries(TestDataContainers.Data).Keys
-                .Where(path => path.StartsWith(prefix, StringComparison.Ordinal)).Order(StringComparer.Ordinal)
+            return [.. tracked, .. Derived.SelectMany(container => TestDataContainers.Entries(container).Keys)
+                .Where(path => path.StartsWith(prefix, StringComparison.Ordinal)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)
                 .Select(path => Path.Combine(ContentRoot, path.Replace('/', Path.DirectorySeparatorChar)))
                 .Where(seen.Add)];
         });
 
-    /// <summary>The content-root-relative path of a derived file the data container carries, or null.</summary>
-    internal static string? DerivedPath(string path) =>
-        ContentRelative(path) is { Length: > 0 } relative && TestDataContainers.Contains(TestDataContainers.Data, relative) ? relative : null;
+    /// <summary>The containers derived files are read from: the data container, then the classic-art container where a real import packed one.</summary>
+    private static IEnumerable<string> Derived => new[] { TestDataContainers.Data, TestDataContainers.ClassicArt }.Where(TestDataContainers.Exists);
+
+    /// <summary>The content-root-relative path of a derived file a container carries, or null.</summary>
+    internal static string? DerivedPath(string path) => Holder(path)?.Relative;
+
+    private static (string Container, string Relative)? Holder(string path) =>
+        ContentRelative(path) is { Length: > 0 } relative && Derived.FirstOrDefault(container => TestDataContainers.Contains(container, relative)) is { } held
+            ? (held, relative) : null;
 
     private static byte[] ReadFresh(string path) =>
         File.Exists(path) ? File.ReadAllBytes(path)
-        : DerivedPath(path) is { } relative ? TestDataContainers.Read(TestDataContainers.Data, relative)
-        : throw new FileNotFoundException($"'{path}' is neither tracked nor in the data container.", path);
+        : Holder(path) is { } held ? TestDataContainers.Read(held.Container, held.Relative)
+        : throw new FileNotFoundException($"'{path}' is neither tracked nor in the data or classic-art container.", path);
 
     private static string? ContentRelative(string path)
     {

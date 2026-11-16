@@ -54,12 +54,12 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
         (folder, install) => ["import", "--arena2", folder, "--install", install]);
 
     /// <summary>The import command a developer runs in the repository root to produce the containers.</summary>
-    private const string ImportCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound";
+    private const string ImportCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound --classic-art";
 
     /// <summary>
-    /// The containers the player's own Daggerfall files are converted into: the data every game reads, and the
-    /// optional score, whose tracks are read by name; and the optional 3D first-person art, built on a development
-    /// checkout.
+    /// The containers the player's own Daggerfall files are converted into: the data every game reads, the optional score,
+    /// whose tracks are read by name, and the developer's optional classic art the data leaves out; and the optional 3D
+    /// first-person art, built on a development checkout.
     /// </summary>
     public IReadOnlyList<InstalledContentRequirement> InstalledContent { get; } =
     [
@@ -70,32 +70,22 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
         new(DaggerfallMusicBundle.ContainerName, "the Daggerfall music", Required: false,
             DevelopmentStep: $"Run `{ImportCommand}` with a folder of <track>.<ext> recordings, such as the Daggerfall Unity song pack.",
             ReleaseStep: $"Run {ReleaseImportTool} with the folder Daggerfall is installed in and --music with a folder of the game's music recordings (<track>.<ext>)."),
+        new(DaggerfallData.ClassicArtContainerName, "the classic art the refreshed art draws anew", Required: false,
+            DevelopmentStep: $"Run `{ImportCommand}` in the repository root; it is the developer's comparison (world.classic-art), never a player's.",
+            ReleaseStep: "A player's game draws the refreshed art and has no classic-art container."),
         new(DaggerfallHeldArt.ContainerName, "the 3D first-person arms", Required: false,
             DevelopmentStep: "Run `authoring/tools/fp-arms/build.sh` in the repository root (authoring/tools/fp-arms/README.md).",
             ReleaseStep: "Build first-person.rpak on a development checkout with authoring/tools/fp-arms/build.sh and place it beside the product."),
     ];
 
     /// <summary>
-    /// Whether the data container is one whole import by the importer this ruleset was built with: content another
-    /// importer revision wrote may lack, or shape differently, what this build reads, and a container that departs
-    /// from a whole import (a repack over an earlier one) holds what its revision does not say.
+    /// Whether the data container, or the developer's classic-art container, is one whole import by the importer this
+    /// ruleset was built with (<see cref="DaggerfallData.Stale"/>).
     /// </summary>
     public string? CheckInstalledContent(InstalledContent content)
     {
         ArgumentNullException.ThrowIfNull(content);
-        if (content.Name != DaggerfallData.DataContainerName) return null;
-        InstalledContentDescription? description;
-        try { description = content.Description; }
-        catch (InvalidDataException exception) { return exception.Message; }
-        if (description is null) return $"{content.Name} carries no description of the import that produced it.";
-        if (description.Revision != DaggerfallImporterRevision.Value)
-            return $"{content.Name} was imported by importer revision {Short(description.Revision)}, and this build reads revision {Short(DaggerfallImporterRevision.Value)}.";
-        // A repack over an earlier import: the revision is this build's, but it no longer says what the container holds.
-        return description.Departures.Count == 0
-            ? null
-            : $"{content.Name} is not one whole import of this build's importer revision: {string.Join("; ", description.Departures)}.";
-
-        static string Short(string revision) => revision.Length > 12 ? revision[..12] : revision;
+        return content.Name is DaggerfallData.DataContainerName or DaggerfallData.ClassicArtContainerName ? DaggerfallData.Stale(content) : null;
     }
 
     /// <summary>The entry screen that states why no Daggerfall game can be played, with nothing to play.</summary>
@@ -178,6 +168,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             if (artPacks.Length > 1)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {artPacks.Length} '{ArtReplacementsRole.Value}' content packs; a session draws one refreshed art set.");
             DaggerfallArtReplacements? art = artPacks.Length == 1 ? DaggerfallArtReplacements.Read(artPacks[0].Payload, artPacks[0].Id.Value) : null;
+            // A classic image the player's data left out because the pack drew it anew must still be drawn anew.
+            DaggerfallLeftOutMedia.Check(data, art);
             DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data), () => productMedia.Value, () => meshes.Value, art?.Models);
             // Every resolved profile names its classic images against the published manifests, and an interior
             // names its building against the block catalog: each is joined when the profile is resolved, before

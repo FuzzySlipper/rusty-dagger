@@ -504,7 +504,8 @@ internal static partial class DaggerfallSiteContent
             if (!result.TryAdd((archive, record), new(resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight,
                 resource.Frames, resource.Frames[0].Id, pivot, size)
                 { FramesPerSecond = billboard.TryGetProperty("playback", out var playback) && playback.ValueKind == JsonValueKind.Object
-                    ? DaggerfallBaseContent.Number(playback, "framesPerSecond", diagnostics) : 0f })) diagnostics.Add($"Generated billboard address {archive}/{record} repeats.");
+                    ? DaggerfallBaseContent.Number(playback, "framesPerSecond", diagnostics) : 0f, Source = (archive, record) }))
+                diagnostics.Add($"Generated billboard address {archive}/{record} repeats.");
         }
         return new ReadOnlyDictionary<(int, int), NormalizedBillboardSprite>(result);
     }
@@ -694,9 +695,9 @@ internal static partial class DaggerfallSiteContent
                 int atlasWidth = DaggerfallBaseContent.Integer(resource, "atlasWidth", diagnostics);
                 int atlasHeight = DaggerfallBaseContent.Integer(resource, "atlasHeight", diagnostics);
                 // WAV descriptors retain their published identity and digest in eager content, but
-                // their bodies are opened from the world media audio bundle on the first cue.
-                // Everything else is part of the eagerly admitted content.
-                bool hasExpectedBody = kind == "audio"
+                // their bodies are opened from the world media audio bundle on the first cue. Classic media the art pack
+                // draws anew is described here but left out of a player's data. Everything else is eagerly admitted content.
+                bool hasExpectedBody = kind == "audio" || files.LeftOut(path)
                     || files.GetExactlyOne(path).Length == byteLength;
                 if (!ValidLogicalId(id) || !ValidLogicalPath(relativePath) || !KnownClassicMediaKind(kind) || byteLength <= 0 || string.IsNullOrWhiteSpace(mimeType) || sourceWidth < 0 || sourceHeight < 0
                     || atlasWidth < 0 || atlasHeight < 0 || !hasExpectedBody)
@@ -1229,6 +1230,9 @@ internal sealed class AdmittedFiles
     internal static AdmittedFiles From(DaggerfallData content) => new(content ?? throw new ArgumentNullException(nameof(content)));
     internal bool ContainsExactlyOne(string path) => _content.Contains(path);
 
+    /// <summary>Whether a file is classic media a player's data leaves out because the art pack draws it anew.</summary>
+    internal bool LeftOut(string path) => _content.LeftOut(path);
+
     /// <summary>Requires a file to be admitted without reading it.</summary>
     internal void RequireExactlyOne(string path)
     {
@@ -1338,6 +1342,9 @@ internal sealed record NormalizedClassicMediaResource(string Id, string Kind, st
 internal sealed record NormalizedBillboardSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)
 {
     internal float FramesPerSecond { get; init; }
+
+    /// <summary>The texture record the billboard is cut from, by which the refreshed set redraws it.</summary>
+    internal (int Archive, int Record)? Source { get; init; }
 
     /// <summary>This billboard, cut from <paramref name="source"/>, as an actor's sprite. An actor's pose is where it stands, so the feet sit on the pose, not the billboard's centre.</summary>
     internal NormalizedActorSprite Standing((int Archive, int Record) source) =>

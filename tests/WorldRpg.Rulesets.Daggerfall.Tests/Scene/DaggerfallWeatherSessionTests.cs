@@ -151,6 +151,32 @@ public sealed class DaggerfallWeatherSessionTests
     }
 
     [Fact]
+    public void Refreshed_art_draws_the_cleared_sky_across_crossings_from_data_without_the_painted_panoramas()
+    {
+        // A player's data leaves the painted panoramas out, so the sky refreshed art draws never opens one, whether or not the
+        // far ground stands yet: entering a building and stepping out again, and a recall across the exterior.
+        var exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        var interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
+        var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture(originals: false).Content));
+        var fixture = Engine(exterior, interior);
+        using var session = DaggerfallSession.StartNew(fixture.Engine.Context, new DaggerfallSessionComposition(TestPayload.Definitions, exterior, DaggerfallTuning.Defaults)
+            {Profiles = new([exterior, interior]), Sky = media});
+        session.ApplyProductMode(ProductMode.Playing);
+        session.PublishInitial();
+        session.Update(Update(1));
+        Assert.True(session.TryTransitionTo(interior.ProfileKey));
+        session.Update(Update(2));
+        Assert.True(session.TryTransitionTo(exterior.ProfileKey));
+        session.Update(Update(3));
+        Vector3 here = session.Exterior.LocalToProfile(session.State.PlayerControl.Position!.Value.ToVector());
+        Assert.True(session.Sites.TryRelocatePlayer(exterior.ProfileKey, new("recall", new(here.X + (6 * DaggerfallExteriorCellResidency.CellSize), here.Y, here.Z), 0, 0)));
+        session.Update(Update(4));
+        Assert.True(session.AwaitArrivalGround().Done);
+        session.Update(Update(5));
+        Assert.True(fixture.Engine.SkyBackgrounds.Count + fixture.Engine.SkyBlends.Count > 0);
+    }
+
+    [Fact]
     public void Far_ground_hidden_across_a_relocation_centres_on_the_arrival_when_it_shows_again()
     {
         var definitions = TestPayload.Definitions;

@@ -204,6 +204,9 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     {
         if (classic && !_classicArt && _composition.ArtReplacements is not null)
         {
+            // A player's data container leaves the classic media the pack draws anew out; the developer's container holds it.
+            if (_composition.Data?.ClassicArtMissing is { } missing)
+                return $"{missing} The data left out the classic art the refreshed art draws anew; import with --classic-art to compare them.";
             try
             {
                 foreach (DaggerfallSiteAppearance appearance in _sites.Appearances) appearance.BuildClassic();

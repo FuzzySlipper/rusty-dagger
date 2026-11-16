@@ -71,9 +71,13 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
   after that, promotion keeps what the payload holds, so promote with `main` first. A redone effect with other frames
   is refused until its `sequence` fits: set it with `--set ID NAME VALUE` (a JSON value, marked set by hand), or
   take every value from the classic again with `--recompute ID`. Promotion says when new art kept an old placement.
-- Promotion writes only into the art pack's folder: commit with
-  `git add -A content/worldrpg/packs/daggerfall.art-replacements`, which takes the payload and the area's new,
-  changed and deleted files together. Nothing there is ignored, so no file needs `git add -f`.
+- Promotion writes into the art pack's folder and rewrites
+  `src/Daggerfall.Import.Tool/inputs/replaced-classic.json`, the classic identities the pack replaces, which a
+  player's import leaves out: commit both with
+  `git add -A content/worldrpg/packs/daggerfall.art-replacements src/Daggerfall.Import.Tool/inputs/replaced-classic.json`.
+  Nothing there is ignored, so no file needs `git add -f`. The list changes only when an entry is added or withdrawn;
+  then the importer revision moves, and the change lands as an importer change (README, Game data): `route.py data`
+  first, through the seat.
 
 ## Weapon models
 

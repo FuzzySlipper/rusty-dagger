@@ -28,23 +28,90 @@ internal sealed class DaggerfallData
     /// <summary>The data container's file name, installed beside the product.</summary>
     internal const string DataContainerName = "daggerfall-data.rpak";
 
+    /// <summary>
+    /// The developer's classic-art container, installed beside the data container by <c>import --classic-art</c>: the
+    /// classic media the art pack draws anew, which the data container leaves out, for the classic-art comparison.
+    /// </summary>
+    internal const string ClassicArtContainerName = "classic-art.rpak";
+
     private readonly ProductContent _content;
     private readonly ProductContentBundle? _data;
+    private readonly ProductContentBundle? _classic;
     private readonly Dictionary<string, ContentReferenceInfo[]> _roots = new(StringComparer.Ordinal);
     private HashSet<string>? _entries;
+    private HashSet<string>? _classicEntries;
 
-    /// <summary>Reads the product's content and, when it was opened, the data container.</summary>
-    internal DaggerfallData(ProductContent content, ProductContentBundle? data)
+    /// <summary>
+    /// Reads the product's content and, when they were opened, the data container and after it a current classic-art
+    /// container; <paramref name="classicArtMissing"/> says why there is none.
+    /// </summary>
+    internal DaggerfallData(ProductContent content, ProductContentBundle? data, ProductContentBundle? classic = null, string? classicArtMissing = null)
     {
         _content = content ?? throw new ArgumentNullException(nameof(content));
         _data = data;
+        _classic = classic;
+        _classicArtMissing = classicArtMissing ?? $"{ClassicArtContainerName} is not installed.";
     }
 
-    /// <summary>The derived content a composition resolved over: its product content and the opened data container.</summary>
+    private readonly string _classicArtMissing;
+
+    /// <summary>
+    /// The derived content a composition resolved over: its product content, the opened data container, and the
+    /// classic-art container when it is the import of this build's importer revision.
+    /// </summary>
     internal static DaggerfallData For(ResolvedGameComposition composition)
     {
         ArgumentNullException.ThrowIfNull(composition);
-        return new(composition.Content, composition.Installed.FirstOrDefault(installed => installed.Name == DataContainerName)?.Container);
+        InstalledContent? classic = composition.Installed.FirstOrDefault(installed => installed.Name == ClassicArtContainerName);
+        string? stale = classic is null ? null : Stale(classic);
+        return new(composition.Content, composition.Installed.FirstOrDefault(installed => installed.Name == DataContainerName)?.Container,
+            stale is null ? classic?.Container : null, stale);
+    }
+
+    /// <summary>
+    /// Why the classic media the data container leaves out cannot be drawn: the classic-art container is absent or another
+    /// import's; null when it is open and current, or when the data container left nothing out.
+    /// </summary>
+    internal string? ClassicArtMissing => _classic is null && LeavesClassicOut ? _classicArtMissing : null;
+
+    /// <summary>
+    /// Whether a file is one the data container left out because the art pack draws it anew (its description says it left
+    /// classic media out) and no open container holds: what a player's data lacks by design, which composition checks the
+    /// art pack still draws (<see cref="DaggerfallLeftOutMedia"/>).
+    /// </summary>
+    internal bool LeftOut(string path)
+    {
+        if (!LeavesClassicOut || Contains(path)) return false;
+        if (_classic is null) return true;
+        HashSet<string> classic;
+        lock (_roots) classic = _classicEntries ??= [.. _classic.Entries.ToArray().Select(entry => entry.Path)];
+        return !classic.Contains(path);
+    }
+
+    /// <summary>Whether the data container's description says it left out classic media the art pack draws anew.</summary>
+    private bool LeavesClassicOut => _leavesClassicOut ??= TryReadFile(InstalledContent.DescriptionPath, out ReadOnlyMemory<byte> description)
+        && System.Text.Json.JsonDocument.Parse(description).RootElement.TryGetProperty("leftOut", out _);
+    private bool? _leavesClassicOut;
+
+    /// <summary>
+    /// Why an installed container is not one whole import by the importer this build was built with, or null: content
+    /// another importer revision wrote may lack, or shape differently, what this build reads, and a container that departs
+    /// from a whole import (a repack over an earlier one) holds what its revision does not say.
+    /// </summary>
+    internal static string? Stale(InstalledContent content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        InstalledContentDescription? description;
+        try { description = content.Description; }
+        catch (InvalidDataException exception) { return exception.Message; }
+        if (description is null) return $"{content.Name} carries no description of the import that produced it.";
+        if (description.Revision != DaggerfallImporterRevision.Value)
+            return $"{content.Name} was imported by importer revision {Short(description.Revision)}, and this build reads revision {Short(DaggerfallImporterRevision.Value)}.";
+        return description.Departures.Count == 0
+            ? null
+            : $"{content.Name} is not one whole import of this build's importer revision: {string.Join("; ", description.Departures)}.";
+
+        static string Short(string revision) => revision.Length > 12 ? revision[..12] : revision;
     }
 
     /// <summary>Where the derived content is read from, for diagnostics that name it.</summary>
@@ -54,7 +121,8 @@ internal sealed class DaggerfallData
     internal bool TryReadFile(string path, out ReadOnlyMemory<byte> bytes)
     {
         ArgumentNullException.ThrowIfNull(path);
-        if (_content.TryReadFile(path, out ProductContentFile file) || (_data is not null && _data.TryReadFile(path, out file)))
+        if (_content.TryReadFile(path, out ProductContentFile file) || (_data is not null && _data.TryReadFile(path, out file))
+            || (_classic is not null && _classic.TryReadFile(path, out file)))
         {
             bytes = file.Bytes;
             return true;
@@ -64,9 +132,18 @@ internal sealed class DaggerfallData
         return false;
     }
 
-    /// <summary>A reference to a file of the data container, by its exact content-root-relative path, for the Engine to read.</summary>
-    internal ContentReference OpenReference(string path) =>
-        (_data ?? throw new InvalidOperationException($"'{path}' is read from {DataContainerName}, which is not open.")).OpenReference(path);
+    /// <summary>
+    /// A reference to a file of the data container, or of the classic-art container for classic media the data container
+    /// leaves out, by its exact content-root-relative path, for the Engine to read.
+    /// </summary>
+    internal ContentReference OpenReference(string path)
+    {
+        ProductContentBundle data = _data ?? throw new InvalidOperationException($"'{path}' is read from {DataContainerName}, which is not open.");
+        if (Contains(path) || _classic is null) return data.OpenReference(path);
+        HashSet<string> classic;
+        lock (_roots) classic = _classicEntries ??= [.. _classic.Entries.ToArray().Select(entry => entry.Path)];
+        return classic.Contains(path) ? _classic.OpenReference(path) : data.OpenReference(path);
+    }
 
     /// <summary>Whether a file is at this exact path, without reading it.</summary>
     internal bool Contains(string path)

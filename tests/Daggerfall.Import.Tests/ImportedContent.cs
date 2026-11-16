@@ -6,12 +6,17 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 /// <remarks>
 /// An importer API that reads a directory from disk is given the staging tree instead. The same run wrote it and
-/// packed the container from it, and packing checks that the two carry the same files with the same bytes.
+/// packed the container from it, and packing checks that the two carry the same files with the same bytes; the classic
+/// media the data container leaves out lie in the import's classic-art tree instead.
 /// </remarks>
 internal static class ImportedContent
 {
-    /// <summary>One generated file's bytes, by content-root-relative path (<c>worldrpg/...</c>), from the data container.</summary>
-    public static byte[] Read(string path) => TestDataContainers.Read(TestDataContainers.Data, path);
+    /// <summary>
+    /// One generated file's bytes, by content-root-relative path (<c>worldrpg/...</c>), from the data container, or for the
+    /// classic media it leaves out, from the classic-art container beside it.
+    /// </summary>
+    public static byte[] Read(string path) => TestDataContainers.Contains(TestDataContainers.Data, path) || !TestDataContainers.Exists(TestDataContainers.ClassicArt)
+        ? TestDataContainers.Read(TestDataContainers.Data, path) : TestDataContainers.Read(TestDataContainers.ClassicArt, path);
 
     /// <summary>One import record's bytes, by record-relative path.</summary>
     public static byte[] Record(string path) => File.ReadAllBytes(RecordPath(path));

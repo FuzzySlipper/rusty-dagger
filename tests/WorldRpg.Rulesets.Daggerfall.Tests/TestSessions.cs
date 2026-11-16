@@ -231,7 +231,9 @@ internal static class TestSessions
         ContentWithContainers(root, out _, rewritten: (path, rewrite));
 
     /// <summary>The derived content a test reads through the containers its content installs, as a composition does.</summary>
-    internal static DaggerfallData Data(ProductContent content) => new(content, TryOpen(content, DaggerfallData.DataContainerName));
+    /// <summary>The derived content over a test's containers: the data container and, where one is installed, the classic-art container.</summary>
+    internal static DaggerfallData Data(ProductContent content) =>
+        new(content, TryOpen(content, DaggerfallData.DataContainerName), TryOpen(content, DaggerfallData.ClassicArtContainerName));
 
     /// <summary>The derived content a content fake holds the bodies of, as product content a session reads by path.</summary>
     internal static DaggerfallData DataOf(ContentFake fake) => new(new ProductContent(fake.Paths
@@ -248,7 +250,7 @@ internal static class TestSessions
     internal static IReadOnlyList<InstalledContent> Installed(ProductContent content) => InstalledByContent.GetValue(content, static value =>
     {
         List<InstalledContent> installed = [];
-        foreach (string name in new[] { DaggerfallData.DataContainerName, DaggerfallMusicBundle.ContainerName })
+        foreach (string name in new[] { DaggerfallData.DataContainerName, DaggerfallMusicBundle.ContainerName, DaggerfallData.ClassicArtContainerName })
             if (TryOpen(value, name) is { } container) installed.Add(new InstalledContent(name, container));
         return installed;
     });
@@ -302,6 +304,14 @@ internal static class TestSessions
             bundles.Container(TestDataContainers.Music);
             foreach ((string path, ContentReferenceInfo entry) in TestDataContainers.Entries(TestDataContainers.Music))
                 bundles.AddEntry(TestDataContainers.Music, path, entry.Sha256, entry.ByteLength, () => TestDataContainers.Read(TestDataContainers.Music, path));
+        }
+
+        // The developer's classic-art container, which a full import with --classic-art packs beside the data.
+        if (selectedPublicationRoots is not { Count: > 0 } && TestDataContainers.Exists(TestDataContainers.ClassicArt))
+        {
+            bundles.Container(TestDataContainers.ClassicArt);
+            foreach ((string path, ContentReferenceInfo entry) in TestDataContainers.Entries(TestDataContainers.ClassicArt))
+                bundles.AddEntry(TestDataContainers.ClassicArt, path, entry.Sha256, entry.ByteLength, () => TestDataContainers.Read(TestDataContainers.ClassicArt, path));
         }
 
         return new ProductContent(eager.ToArray(), bundles);

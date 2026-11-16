@@ -793,7 +793,7 @@ internal sealed partial class DaggerfallSession
         DaggerfallWeatherConditions conditions = LocalWeather.Conditions;
         _weatherPresentation.Update(site.Inputs, site.WorldOffset, site.Lighting, site.Appearance, _time.Calendar.Sky,
             _tuning.Weather.Daylight(_time.Calendar, conditions.Kind), LocalWeather.Climate, conditions,
-            LocalWeather.SkyVariant, player, sheltered, seconds, playing, _horizon.FogDensity);       // Scene
+            LocalWeather.SkyVariant, player, sheltered, seconds, playing, _horizon.FogDensity, !_classicArt); // Scene
     }
 
     /// <summary>

@@ -160,6 +160,54 @@ public sealed class SiteAppearanceLifecycleTests
     }
 
     /// <summary>
+    /// With refreshed art a pile of several things stands as its treasure pile's refreshed flat, on that flat's own foot,
+    /// and opens no classic pile; a pile whose treasure record the set does not redraw stays classic, and classic art
+    /// draws every pile classic again.
+    /// </summary>
+    [Fact]
+    public void A_treasure_pile_the_refreshed_set_redraws_draws_its_flat_and_opens_no_classic_pile()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("refreshed/pile.png", Hash);
+        AppearanceFake appearance = new(releases);
+        NormalizedBillboardSprite Pile(int record) => new($"sprite/treasure-{record}.png", Hash, 39, 26, [new NormalizedAtlasFrame(0, 0, 0, 39, 26)], 0,
+            new Vector2(.5F, .5F), new Vector2(.975F, .65F)) { Source = (216, record) };
+        foreach (int record in new[] { 0, 1 }) content.Add($"sprite/treasure-{record}.png", Hash);
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes("""
+            {"artReplacements": {"images": [], "flats": [{"replaces": {"archive": 216, "record": 0}, "path": "refreshed/pile.png", "byteLength": 1,
+              "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 79, "height": 53,
+              "frames": [{"x": 0, "y": 0, "width": 79, "height": 53}],
+              "placement": {"size": {"width": 1.0, "height": 0.6}, "pivot": {"x": 0.5, "y": 0.5}, "foot": {"x": 0.5, "y": 0.0},
+                "from": {"size": "original", "pivot": "original", "foot": "original"}}}]}}
+            """), "test.art");
+        DaggerfallWorldProfileKey profile = new DaggerfallWorldProfileKey(new DaggerfallSiteId(1, 2), DaggerfallWorldProfileKind.Dungeon, "hold").Validate();
+        // The identity picks the pile: an even one the first record's, an odd one the second's.
+        DaggerfallGroundContainer redrawn = new(profile, 100, new EntityId(2), new WorldPoint(4F, 1F, 8F));
+        DaggerfallGroundContainer classic = new(profile, 101, new EntityId(3), new WorldPoint(5F, 1F, 8F));
+        Dictionary<long, DaggerfallGroundContainer> piles = new() { [redrawn.Id] = redrawn, [classic.Id] = classic };
+        using ActorsState actors = EmptyActors();
+        bool refreshed = true;
+        using DaggerfallSiteAppearance presentation = new(content, appearance, MediaInputs(groundContainerSprites: [Pile(0), Pile(1)]),
+            configure: site => site.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => refreshed));
+
+        presentation.Publish(actors, piles);
+        SpriteFromAtlasRequest flat = Assert.Single(appearance.SpriteRequests, request => request.Size == new Vector2(1F, .6F));
+        Assert.Equal(new Vector2(.5F, 0F), flat.Pivot);
+        Assert.Equal(redrawn.Position.ToVector(), Assert.Single(appearance.Snapshots.Last(), fact => fact.ObjectId == (ulong)redrawn.Id).Transform.Translation);
+        Assert.Contains("refreshed/pile.png", appearance.OpenedResourcePaths);
+        Assert.DoesNotContain("sprite/treasure-0.png", appearance.OpenedResourcePaths);
+        Assert.Contains("sprite/treasure-1.png", appearance.OpenedResourcePaths);
+
+        // Classic art draws the first record's classic pile, opened only now, lifted by its pivot's share of its height.
+        refreshed = false;
+        presentation.Publish(actors, piles);
+        Assert.Contains("sprite/treasure-0.png", appearance.OpenedResourcePaths);
+        Assert.Equal(redrawn.Position.ToVector() + new Vector3(0F, .325F, 0F),
+            Assert.Single(appearance.Snapshots.Last(), fact => fact.ObjectId == (ulong)redrawn.Id).Transform.Translation);
+    }
+
+    /// <summary>
     /// A ground pile stands as one of the treasure piles, which one fixed by its identity so it keeps it across saves,
     /// until it holds one kind of item that has a refreshed look; it then stands as that item, and goes back to its pile
     /// when the look goes.

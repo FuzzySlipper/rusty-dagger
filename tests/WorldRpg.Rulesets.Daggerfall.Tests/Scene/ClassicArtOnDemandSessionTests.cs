@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Debugging;
+using WorldRpg.Tests.Support;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Kit;
@@ -97,6 +98,77 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
         Assert.All(content.Opened.Where(nature.Contains).GroupBy(path => path), opens => Assert.InRange(opens.Count(), 1, placed.Contains(opens.Key) ? 2 : 1));
         Assert.True(session.Commands<IDeveloperSceneCommands>().ClassicArt("off").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(3), []));
+    }
+
+    [Fact]
+    public void Classic_art_is_refused_when_the_data_left_classic_media_out_and_no_classic_art_container_holds_it()
+    {
+        DaggerfallArtReplacements art = Art.Value;
+        DaggerfallSiteProfile site = Site(DaggerfallWorldProfileIds.Dungeon(PrivateersHold).LogicalId);
+        ContentFake content = Content(site, art);
+        content.Add(InstalledContent.DescriptionPath, """{"kind": "worldrpg.data-container", "leftOut": {"media": ["screen.title"]}}"""u8.ToArray());
+        using DaggerfallSession session = Start(content, site, art, out _, out _);
+        DebugCommandResult refused = session.Commands<IDeveloperSceneCommands>().ClassicArt("on");
+        Assert.False(refused.Succeeded);
+        Assert.Contains($"{DaggerfallData.ClassicArtContainerName} is not installed", refused.Message, StringComparison.Ordinal);
+        Assert.Contains("--classic-art", refused.Message, StringComparison.Ordinal);
+    }
+
+    [ClassicArtContainerFact]
+    public void A_window_wall_and_a_masked_helmet_compose_from_the_default_import_alone()
+    {
+        // The default import: every file the developer's classic-art container holds is absent, as a player's data lacks it.
+        DaggerfallArtReplacements art = Art.Value;
+        DaggerfallSiteProfile site = Site(DaggerfallWorldProfileIds.Exterior(Charing).LogicalId);
+        ContentFake content = Content(site, art);
+        foreach (string path in TestDataContainers.Entries(TestDataContainers.ClassicArt).Keys.Where(path => path != InstalledContent.DescriptionPath))
+            content.Remove(path);
+        List<string> releases = [];
+        AppearanceFake graphics = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(site.Geometry.Spatial[0].Sha256, releases).Service, graphics);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, site, DaggerfallTuning.Defaults)
+        {
+            Data = DataOf(content), ArtReplacements = art, Profiles = new DaggerfallSiteProfiles([site]),
+        });
+        session.PublishInitial();
+        Dictionary<string, object?> initial = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+
+        // A refreshed wall with windows draws its glass through the mask the import cut from the classic wall (until #10891).
+        string[] glass = [.. site.Materials.SelectMany(material => new[] { material.SummerGlass, material.WinterGlass, material.RainGlass })
+            .OfType<ContentArtifact>().Select(mask => mask.Path).Distinct()];
+        Assert.NotEmpty(glass);
+        Assert.Contains(site.Materials, material => material.SummerGlass is not null && art.Surface(material.TexturePath) is not null);
+        Assert.All(glass, path => Assert.Contains(path, content.Opened));
+        Assert.Contains(graphics.MaterialRequests.Values, request => !request.EmissionMap.Equals(default(RenderResourceReference)));
+
+        // A helmet's refreshed layer hides the hair beneath it through the classic mask (until #10773), read from the default import.
+        Assert.True(session.Commands<IDeveloperPlayerCommands>().Equip("Helm").Succeeded);
+        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital)]));
+        Dictionary<string, object?> hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        Dictionary<string, object?> helm = Assert.Single(Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(
+                Assert.IsType<Dictionary<string, object?>>(hud["character"])["paperDoll"])["layers"]).Cast<Dictionary<string, object?>>(),
+            layer => layer["mask"] is string);
+        Assert.StartsWith("refreshed.", Assert.IsType<string>(helm["mediaId"]), StringComparison.Ordinal);
+        string mask = Assert.IsType<string>(helm["mask"]);
+        Assert.EndsWith(".mask", mask, StringComparison.Ordinal);
+        Assert.Contains(Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(hud["uiArtDemanded"])["images"]).Cast<Dictionary<string, object?>>(),
+            image => Equals(image["id"], mask) && image["image"] is string);
+
+        // Every item icon and doll layer the HUD names arrives, read from the default import: the clothes a new character
+        // wears among them.
+        foreach (string template in new[] { "165", "190" }) Assert.True(session.Commands<IDeveloperPlayerCommands>().Give(template, 1).Succeeded);
+        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital)]));
+        hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        session.Update(new ProductUpdate(OuterUpdate(3), [Ui(JsonSerializer.Serialize(new { action = "art-request", revision = hud["uiArtDemandedRevision"] }))]));
+        HashSet<string> sent = [.. new[] { initial["uiArt"], Assert.IsType<Dictionary<string, object?>>(engine.Published())["uiArtDemanded"] }
+            .SelectMany(block => Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(block)["images"]).Cast<Dictionary<string, object?>>())
+            .Where(image => image["image"] is string).Select(image => Assert.IsType<string>(image["id"]))];
+        string[] named = [.. Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(hud["inventory"])["items"]).Cast<Dictionary<string, object?>>()
+                .Select(item => item["icon"] as string),
+            .. Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(hud["character"])["paperDoll"])["layers"])
+                .Cast<Dictionary<string, object?>>().Select(layer => layer["mediaId"] as string)];
+        Assert.Contains(named, id => id?.Contains("paper-doll.", StringComparison.Ordinal) == true);
+        Assert.All(named.OfType<string>(), id => Assert.Contains(id, sent));
     }
 
     private static DaggerfallSiteProfile Site(string logicalId) =>
