@@ -21,7 +21,8 @@ public sealed class ModelShellPresentationTests
 {
     private const string HashHex = "0000000000000001000000000000000200000000000000030000000000000004";
 
-    private static readonly Dictionary<uint, DaggerfallArtShell> Stack = new() { [0] = new(0, 3), [1] = new(1, 3), [2] = new(2, 3) };
+    /// <summary>A three-layer stack, made anew for each remodel as the art pack's reader makes each model's own.</summary>
+    private static Dictionary<uint, DaggerfallArtShell> Stack() => new() { [0] = new(0, 3), [1] = new(1, 3), [2] = new(2, 3) };
 
     private static DaggerfallSiteProfile Profile()
     {
@@ -34,8 +35,8 @@ public sealed class ModelShellPresentationTests
         {
             Remodels = new Dictionary<string, DaggerfallSiteRemodel>(StringComparer.Ordinal)
             {
-                ["518"] = new("remodel/518.rstatmsh", Hash, [new(0, 0), new(1, 0), new(2, 0)], []) { Shells = Stack },
-                ["520"] = new("remodel/520.rstatmsh", Hash, [new(0, 0), new(1, 0), new(2, 0)], []) { Shells = Stack },
+                ["518"] = new("remodel/518.rstatmsh", Hash, [new(0, 0), new(1, 0), new(2, 0)], []) { Shells = Stack() },
+                ["520"] = new("remodel/520.rstatmsh", Hash, [new(0, 0), new(1, 0), new(2, 0)], []) { Shells = Stack() },
             },
         };
         // The temperate wall: its summer stones, and in winter its snowy ones, which the set has no relief for.
@@ -104,6 +105,8 @@ public sealed class ModelShellPresentationTests
         Assert.All(drawn, request => Assert.Equal("cover/shells.wgsl", Opened(graphics, request.Shader.Shader)));
         // The core draws every texel; a layer above it the texels at least its share of the stack tall, as the ground's do.
         Assert.Equal([MaterialAlphaMode.Opaque, MaterialAlphaMode.Mask, MaterialAlphaMode.Mask], drawn.Select(request => request.AlphaMode));
+        // Their own mask keeps every texel but the empty ones, a texel one 8-bit step tall included, so the shader alone makes the cut.
+        Assert.All(drawn.Skip(1), request => Assert.InRange(request.AlphaCutoff, float.Epsilon, 1F / 255));
         Assert.Equal([0F, 1F / 3, 2F / 3], drawn.Select(request => request.Shader.Parameter1.X));
         Assert.Equal([0F, .5F, 1F], drawn.Select(request => request.Shader.Parameter0.W));
         // Shaded from the relief's root colour at the core to full at the top, the top half glinting, standing still.
@@ -135,16 +138,5 @@ public sealed class ModelShellPresentationTests
         presentation.Publish(actors);
         Assert.All(layers, layer => Assert.Equal("texture/texture-329-0.png", Texture(graphics, Now(graphics, layer))));
         Assert.All(layers, layer => Assert.Equal(default, Now(graphics, layer).Shader));
-    }
-
-    [Fact]
-    public void A_set_that_stacks_shells_without_a_ground_cover_is_refused()
-    {
-        string json = """
-            {"artReplacements": {"images": [], "models": {"518": {"path": "remodel/518.rstatmsh", "sha256": "HASH", "triangles": 9, "slots": [
-              {"slot": 0, "material": "material/texture-29-0", "shell": {"layer": 0, "layers": 2}}, {"slot": 1, "material": "material/texture-29-0", "shell": {"layer": 1, "layers": 2}}]}}}}
-            """.Replace("HASH", HashHex, StringComparison.Ordinal);
-        Assert.Equal("Content pack 'test.art' draws the remodel of ARCH3D model 518 in shells but has no ground cover to draw them with.",
-            Assert.Throws<InvalidOperationException>(() => DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes(json), "test.art")).Message);
     }
 }

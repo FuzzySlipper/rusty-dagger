@@ -130,7 +130,10 @@ internal sealed record DaggerfallArtFlipbook(int Frames, float FramesPerSecond);
 /// </summary>
 internal sealed record DaggerfallArtShell(int Layer, int Layers)
 {
-    /// <summary>The height a texel must reach to show in this layer, as a share of the stack: the ground's own cutoffs.</summary>
+    /// <summary>
+    /// The height a texel must reach to show in this layer, as a share of the stack: the ground's cutoffs, for the ground's
+    /// own core is the ground under its shells, so a stack of N layers cuts where N - 1 shells over the ground do.
+    /// </summary>
     internal float Cutoff => (float)Layer / Layers;
 
     /// <summary>How high the layer stands in its stack, from 0 at the core to 1 at the classic's faces.</summary>
@@ -544,8 +547,8 @@ internal sealed class DaggerfallArtReplacements
                     string[] key = layer.Name.Split('-');
                     float tallest = layer.Value.GetProperty("tallest").GetSingle();
                     int width = layer.Value.GetProperty("width").GetInt32(), height = layer.Value.GetProperty("height").GetInt32();
-                    if (key.Length != 2 || !float.IsFinite(tallest) || tallest is <= 0 or > 1 || width <= 0 || height <= 0)
-                        throw new InvalidOperationException($"Content pack '{packId}' states relief '{layer.Name}' without an archive, record, size and tallest texel.");
+                    if (key.Length != 2 || !float.IsFinite(tallest) || tallest is <= 0 or > 1 || width <= 0)
+                        throw new InvalidOperationException($"Content pack '{packId}' states relief '{layer.Name}' without an archive, record, width and tallest texel.");
                     relief.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
                         new(File(layer.Value, $"The relief {layer.Name}"), tallest, width, height, layer.Value.GetProperty("sway").GetSingle(),
                             Tint(layer.Value.GetProperty("shade")), layer.Value.GetProperty("glints").GetSingle(),
@@ -560,9 +563,6 @@ internal sealed class DaggerfallArtReplacements
             throw new InvalidOperationException($"Content pack '{packId}' carries an unreadable artReplacements section: {exception.Message}", exception);
         }
 
-        // A shell stack draws with the ground cover's shader and relief, so a set that stacks shells has them.
-        if (groundCover is null && models.FirstOrDefault(model => model.Value.Slots.Any(slot => slot.Shell is not null)).Key is { } shelled)
-            throw new InvalidOperationException($"Content pack '{packId}' draws the remodel of ARCH3D model {shelled} in shells but has no ground cover to draw them with.");
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people)
         { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, PeopleRig = peopleRig, Models = models };
 

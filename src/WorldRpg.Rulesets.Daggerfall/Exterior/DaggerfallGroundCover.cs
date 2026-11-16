@@ -285,7 +285,7 @@ internal sealed class DaggerfallGroundCover : IDisposable
                 // Raggedly, a thin share still keeps whole clumps, so only where it is all but gone.
                 float cutoff = _tuning.ShellRagged > 0 ? .01f : Cutoff(layer) / stack.Height;
                 uint first = (uint)positions.Count;
-                Vector3 shade = Vector3.Lerp(stack.Shade, Vector3.One, layer / Math.Max(layers - 1f, 1));
+                Vector3 shade = DaggerfallShellLayer.Shade(stack.Shade, layer / Math.Max(layers - 1f, 1));
                 int start = indices.Count;
                 for (int j = 0; j < cells * 2; j++)
                 for (int i = 0; i < cells * 2; i++)
@@ -344,9 +344,8 @@ internal sealed class DaggerfallGroundCover : IDisposable
         RenderResource image = _engine.Graphics.OpenTexture(_engine.Content, art.File.Path, art.File.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
         int layers = Math.Max(1, Enumerable.Range(0, _tuning.ShellLayers).Count(layer => Cutoff(layer) < art.Tallest));
         Material[] materials = [.. Enumerable.Range(0, layers).Select(layer =>
-            // Only the top half of a stack glints, where light catches a drift's crest.
             ShellLayer(image, layer, art.Width, art.Width / _groundRepeat, art.Sway * _tuning.ShellSway,
-                layer >= layers / 2 ? art.Glints : 0, art.SinksUnderSnow))];
+                DaggerfallShellLayer.Glints(art.Glints, layer, layers), art.SinksUnderSnow))];
         _relief[key] = (image, materials);
         return materials;
     }
@@ -354,21 +353,16 @@ internal sealed class DaggerfallGroundCover : IDisposable
     /// <summary>The height a layer's texels must reach to show, as a share of the stack.</summary>
     private float Cutoff(int layer) => (layer + 1f) / (_tuning.ShellLayers + 1f);
 
-    /// <summary>
-    /// One layer of a shell stack. The shader makes the layer's cut (<see cref="Cutoff"/>), raggedly where the ground thins,
-    /// so the material's own mask keeps all but the empty texels for it.
-    /// </summary>
+    /// <summary>One layer of a shell stack over the ground (<see cref="DaggerfallShellLayer"/>), cut at <see cref="Cutoff"/>.</summary>
     private Material ShellLayer(RenderResource image, int layer, int texels, float texelsPerMetre, float sway, float glints, bool sinksUnderSnow) =>
         _engine.Graphics.CreateMaterial(
             new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(image), .9f, new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with
             {
                 AlphaMode = MaterialAlphaMode.Mask,
-                AlphaCutoff = 1f / 512,
+                AlphaCutoff = DaggerfallShellLayer.AlphaCutoff,
                 SinksUnderSnow = sinksUnderSnow,
-                Shader = new MaterialShader(new RenderResourceReference(_shader),
-                    new Vector4(texelsPerMetre, sway, GustRate, layer / (_tuning.ShellLayers - 1f)),
-                    new Vector4(Cutoff(layer), _tuning.ShellRagged, glints, texels),
-                    default, default, default, default, sway),
+                Shader = DaggerfallShellLayer.Shader(_shader, Cutoff(layer), layer / (_tuning.ShellLayers - 1f), texels, glints, _tuning.ShellRagged,
+                    sway, texelsPerMetre, GustRate),
             });
 
     /// <summary>Three quads crossed at a third of a turn, standing on their foot, their tips (vertex alpha 1) free to flutter.</summary>

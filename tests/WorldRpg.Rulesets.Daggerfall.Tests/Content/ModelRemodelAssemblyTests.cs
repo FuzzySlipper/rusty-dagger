@@ -126,6 +126,25 @@ public sealed class ModelRemodelAssemblyTests
     }
 
     /// <summary>
+    /// A remodel's shell layers reach the town's remodel, each bound to the profile slot the town draws its classic texture
+    /// at, beside a plain slot that carries no layer.
+    /// </summary>
+    [Fact]
+    public void An_assembled_towns_remodel_carries_its_shell_layers_on_its_classic_textures_slot()
+    {
+        DaggerfallArtReplacements art = Art(("""{"41209": """ + Entry("""{"slot": 0, "material": "material/texture-67-0", "shell": {"layer": 0, "layers": 2}}, """
+            + """{"slot": 1, "material": "material/texture-67-0", "shell": {"layer": 1, "layers": 2}}, {"slot": 2, "material": "material/texture-85-0"}""")
+            + "}").Replace("HASH", HashHex, StringComparison.Ordinal));
+        DaggerfallSiteProfile charing = AssemblyWith(art).Assemble(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteRemodel trough = charing.Geometry.Remodels["41209"];
+        Assert.Equal([(0U, new DaggerfallArtShell(0, 2)), (1U, new DaggerfallArtShell(1, 2))],
+            trough.Shells.OrderBy(pair => pair.Key).Select(pair => (pair.Key, pair.Value)));
+        // The classic draws 67-0 at its slot 0, in the profile slot the town's climate gives it; both layers stack that one.
+        uint stacked = charing.Geometry.Meshes.First(mesh => mesh.ModelId == "41209").Materials!.Single(binding => binding.MeshSlot == 0).WorldMaterialSlot;
+        Assert.Equal([stacked, stacked], trough.Materials.Where(binding => binding.MeshSlot < 2).OrderBy(binding => binding.MeshSlot).Select(binding => binding.WorldMaterialSlot));
+    }
+
+    /// <summary>
     /// Charing's walls end in city gates, drawn by their own part rather than as static meshes: each gate's open and closed
     /// states carry their ARCH3D ids, and the profile carries the remodels of both.
     /// </summary>

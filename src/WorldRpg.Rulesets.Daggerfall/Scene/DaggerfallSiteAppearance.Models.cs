@@ -35,8 +35,6 @@ internal sealed partial class DaggerfallSiteAppearance
 
     // A cut-out texture's texels under this alpha are not drawn, as the ground cover and flora cut theirs.
     private const float RemodelAlphaCutoff = .5f;
-    // A shell layer's own alpha cut leaves the shader to make the layer's cut, as the ground cover's shells do.
-    private const float ShellAlphaCutoff = 1f / 512;
 
     /// <summary>
     /// One shell layer's material: the location surface it stacks, its layer, the relief and its image per season (summer,
@@ -159,16 +157,16 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         MaterialRequest request = SurfaceRequest(texture, null);
         if (relief is null) return request;
-        Vector3 shade = Vector3.Lerp(relief.Shade, Vector3.One, shell.Height);
+        Vector3 shade = DaggerfallShellLayer.Shade(relief.Shade, shell.Height);
         // A remodel's shells stand still: the shader's wind slides a layer across the ground, which on a wall would slide
-        // the layers through each other. Only the top half of a stack glints, as the ground's does.
+        // the layers through each other.
         return request with
         {
             Color = new Color(shade.X, shade.Y, shade.Z, 1F),
             AlphaMode = shell.Layer == 0 ? MaterialAlphaMode.Opaque : MaterialAlphaMode.Mask,
-            AlphaCutoff = shell.Layer == 0 ? request.AlphaCutoff : ShellAlphaCutoff,
-            Shader = new MaterialShader(new RenderResourceReference(shellShader!), new Vector4(relief.Width, 0, 0, shell.Height),
-                new Vector4(shell.Cutoff, 0, shell.Layer >= shell.Layers / 2 ? relief.Glints : 0, relief.Width), default, default),
+            AlphaCutoff = shell.Layer == 0 ? request.AlphaCutoff : DaggerfallShellLayer.AlphaCutoff,
+            Shader = DaggerfallShellLayer.Shader(shellShader!, shell.Cutoff, shell.Height, relief.Width,
+                DaggerfallShellLayer.Glints(relief.Glints, shell.Layer, shell.Layers)),
         };
     }
 
