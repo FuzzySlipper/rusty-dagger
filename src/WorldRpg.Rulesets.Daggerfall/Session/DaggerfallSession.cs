@@ -190,6 +190,45 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>The refreshed art set the session draws, or null when a developer switched to classic art or the bundle carries none.</summary>
     private DaggerfallArtReplacements? DrawnArt => _classicArt ? null : _composition.ArtReplacements;
 
+    /// <summary>The UI art the session publishes, which reads a classic image the art set draws anew only for classic art.</summary>
+    private DaggerfallUiArt _uiArt = DaggerfallUiArt.None;
+
+    /// <summary>
+    /// Switches the run to classic art or back. Refreshed art opens no classic file of an entry the art set draws anew,
+    /// so they are built at the switch: every live site builds the classic visuals it left unbuilt and the UI art reads the
+    /// classic images it left unread. A file that cannot be opened refuses the switch, named, and the run stays in
+    /// refreshed art; what was built is kept, and drawn only by classic art.
+    /// </summary>
+    /// <returns>Why classic art cannot be drawn, or null once the switch is made.</returns>
+    private string? UseClassicArt(bool classic)
+    {
+        if (classic && !_classicArt && _composition.ArtReplacements is not null)
+        {
+            try
+            {
+                foreach (DaggerfallSiteAppearance appearance in _sites.Appearances) appearance.BuildClassic();
+                _exterior.BuildClassicNature();
+                _uiArt.DemandClassic();
+            }
+            catch (InvalidOperationException refused) { return refused.Message; }
+        }
+        _classicArt = classic;
+        return null;
+    }
+
+    /// <summary>
+    /// Whether the art set draws a classic UI image anew: an image it replaces, a glint it redraws, or a spell atlas every
+    /// cell of which has its own image. Composition leaves those unread.
+    /// </summary>
+    private static Func<string, bool> DrawnAnew(DaggerfallArtReplacements art)
+    {
+        bool icons = Enumerable.Range(0, DaggerfallSpellConstruction.IconCount).All(index => art.For(DaggerfallSpellConstruction.IconMedia(index)) is not null);
+        bool selectors = Enumerable.Range(0, DaggerfallSpellConstruction.SelectorCount).All(index =>
+            art.For(DaggerfallSpellConstruction.TargetMedia(index)) is not null && art.For(DaggerfallSpellConstruction.ElementMedia(index)) is not null);
+        return id => art.For(id) is not null || art.Effects.ContainsKey(id)
+            || icons && id == DaggerfallSpellConstruction.IconAtlasMedia || selectors && id == DaggerfallSpellConstruction.SelectorAtlasMedia;
+    }
+
     /// <summary>The live-debug modules the developer and playtest owners answer, which the host registers for this session.</summary>
     public IReadOnlyList<IDebugCommandModule> DebugCommands { get; } = null!;
 

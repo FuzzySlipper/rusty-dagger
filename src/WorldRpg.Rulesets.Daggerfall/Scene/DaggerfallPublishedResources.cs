@@ -48,10 +48,12 @@ internal static class DaggerfallPublishedResources
         return audio.OpenClipFromContent(new AudioClipFromContentRequest(reference));
     }
 
+    /// <exception cref="InvalidOperationException">The Engine has no such artifact; the message names it.</exception>
     private static ContentReference Resolve(IContentService content, string path, ContentSha256 sha256)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        return content.ResolveReference(new ContentResolveRequest(path, sha256));
+        try { return content.ResolveReference(new ContentResolveRequest(path, sha256)); }
+        catch (EngineCallException missing) { throw new InvalidOperationException($"Published content '{path}' could not be opened: {missing.Message}", missing); }
     }
 }

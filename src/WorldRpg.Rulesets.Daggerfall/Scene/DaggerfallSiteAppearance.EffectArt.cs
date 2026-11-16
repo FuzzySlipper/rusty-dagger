@@ -123,29 +123,38 @@ internal sealed partial class DaggerfallSiteAppearance
     private void AttachRefreshedPerson(ActorVisual visual)
     {
         NormalizedActorSprite sprite = visual.Sprite;
-        if (visual.Refreshed is not null || visual.Live is null || sprite.SourceTexture is not { } source
-            || surfaceArt?.People.GetValueOrDefault(source) is not { } art) return;
+        if (visual.Refreshed is not null || visual.Defeated) return;
+        // A painted hem or foot can reach below the classic frame, so the person stands on the art's own base.
+        visual.Refreshed = RefreshedPerson(sprite.SourceTexture, sprite.InitialFrameId, sprite.Size, sprite.Pivot, onBase: true);
+    }
+
+    /// <summary>
+    /// The refreshed sprite of a person cut from <paramref name="source"/> at the classic sprite's size and pivot, or on
+    /// its art's own base where <paramref name="onBase"/> says; null where the set has none.
+    /// </summary>
+    private Appearance? RefreshedPerson((int Archive, int Record)? source, uint initialFrame, Vector2 classicSize, Vector2 classicPivot, bool onBase)
+    {
+        if (source is not { } key || surfaceArt?.People.GetValueOrDefault(key) is not { } art) return null;
         if (!personAtlases.TryGetValue(art.File.Path, out SpriteAtlas? atlas))
         {
             RenderResourceInfo texture = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest);
             ownedResources.Add(texture.Handle);
             DaggerfallArtRect frame = art.Frames[0];
             atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
-                [new NormalizedSpriteFrame(sprite.InitialFrameId, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)])));
+                [new NormalizedSpriteFrame(initialFrame, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)])));
             atlases.Add(atlas);
             personAtlases.Add(art.File.Path, atlas);
         }
-        // A painted hem or foot can reach below the classic frame, so the person stands on the art's own base.
-        (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, sprite.Pivot);
-        visual.Refreshed = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, pivot with { Y = 0F }, size,
+        (Vector2 size, Vector2 pivot) = art.Placed(classicSize, classicPivot);
+        return appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, initialFrame, onBase ? pivot with { Y = 0F } : pivot, size,
             BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
     }
 
     /// <summary>The sprite a living actor shows: its refreshed one while refreshed art is drawn, else its classic one.</summary>
-    private Appearance? DrawnLive(ActorVisual visual) => drawRefreshedEffects() && visual.Refreshed is { } refreshed ? refreshed : visual.Live;
+    private Appearance? DrawnLive(ActorVisual visual) => drawRefreshedEffects() && visual.Refreshed is { } refreshed ? refreshed : ClassicLive(visual);
 
     /// <summary>The corpse a defeated actor shows: the refreshed mesh while refreshed art is drawn, else its sprite.</summary>
-    private Appearance? DrawnCorpse(ActorVisual visual) => drawRefreshedEffects() && visual.CorpseMesh is { } mesh ? mesh : visual.Corpse;
+    private Appearance? DrawnCorpse(ActorVisual visual) => drawRefreshedEffects() && visual.CorpseMesh is { } mesh ? mesh : ClassicCorpse(visual);
 
     private static bool Additive(string effect) => effect == "magicSparkle"
         || effect.StartsWith("fire", StringComparison.Ordinal) || effect.StartsWith("shock", StringComparison.Ordinal) || effect.StartsWith("magic", StringComparison.Ordinal);
@@ -193,7 +202,7 @@ internal sealed partial class DaggerfallSiteAppearance
             }
             else
             {
-                RenderResourceInfo texture = classicTextures[effect.TexturePath];
+                RenderResourceInfo texture = ClassicEffectTexture(effect);
                 SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(effect.AtlasWidth, effect.AtlasHeight,
                     effect.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
                 atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));

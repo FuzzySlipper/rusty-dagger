@@ -71,7 +71,7 @@ internal sealed class DaggerfallNpcProjection(DaggerfallNpcRegistry npcs, Actors
             if (!entities.Store.Has<DaggerfallNpcBody>(existing))
                 throw new InvalidOperationException($"NPC {npc.DurableId} is already materialized by a different actor owner.");
             entities.Store.Set(existing, EngineComponentTypes.Transform, DaggerfallNpcBody.Placement(localPosition));
-            appearance().AddNpc(npc.DurableId, sprite);
+            appearance().AddNpc(npc.DurableId, sprite, (npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord));
             return;
         }
         var entity = entities.Create(identity, QuestNpcType);
@@ -79,7 +79,7 @@ internal sealed class DaggerfallNpcProjection(DaggerfallNpcRegistry npcs, Actors
         {
             entities.Store.Add(entity, new DaggerfallNpcBody());
             entities.Store.Set(entity, EngineComponentTypes.Transform, DaggerfallNpcBody.Placement(localPosition));
-            appearance().AddNpc(npc.DurableId, sprite);
+            appearance().AddNpc(npc.DurableId, sprite, (npc.Appearance.BillboardArchive, npc.Appearance.BillboardRecord));
         }
         catch { appearance().RetireNpc(npc.DurableId); entities.Destroy(identity); throw; }
     }

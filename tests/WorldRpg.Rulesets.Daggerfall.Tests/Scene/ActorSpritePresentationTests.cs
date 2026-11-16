@@ -175,6 +175,41 @@ public sealed class ActorSpritePresentationTests
     }
 
     [Fact]
+    public void A_quest_person_draws_refreshed_art_without_opening_its_classic_billboard_until_classic_art_is_asked_for()
+    {
+        List<string> releases = []; var graphics = new AppearanceFake(releases);
+        ContentFake content = MediaContent(releases);
+        content.Add("refreshed/people/texture-182-record-000.png", Hash);
+        content.Add("person.png", Hash);
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes("""
+            {"artReplacements": {"images": [], "people": [{"replaces": {"archive": 182, "record": 0}, "path": "refreshed/people/texture-182-record-000.png",
+              "byteLength": 1, "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 20, "height": 40,
+              "frames": [{"x": 0, "y": 0, "width": 20, "height": 40}], "classic": {"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5}}]}}
+            """), "test.art");
+        NormalizedBillboardSprite billboard = new("person.png", Hash, 8, 8, [new NormalizedAtlasFrame(7, 0, 0, 8, 8)], 7, new Vector2(.5F, .5F), new Vector2(2F, 4F));
+        using ActorsState actors = ActorsAt(new WorldPoint(0F, 0F, 0F));
+        bool refreshed = true;
+        using var presentation = new DaggerfallSiteAppearance(content, graphics, MediaInputs());
+        presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => refreshed);
+        presentation.AddNpc(40, billboard, (182, 0));
+        Appearance Drawn()
+        {
+            presentation.Publish(actors, new Dictionary<long, WorldRpg.Rulesets.Daggerfall.Modules.Loot.DaggerfallGroundContainer>(), npcs: [new DaggerfallNpcView(40, new WorldPoint(1F, 0F, 1F))]);
+            return Assert.Single(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(1F, 0F, 1F)).Appearance;
+        }
+        Appearance person = Drawn();
+        Assert.Contains("refreshed/people/texture-182-record-000.png", graphics.OpenedResourcePaths);
+        Assert.DoesNotContain("person.png", graphics.OpenedResourcePaths);
+        // Drawn at the classic billboard's size about its centre, which is where the person is placed.
+        Assert.Equal((new Vector2(4F, 8F), new Vector2(.5F, .5F)), (graphics.SpriteRequests[^1].Size, graphics.SpriteRequests[^1].Pivot));
+
+        presentation.BuildClassic();
+        Assert.Contains("person.png", graphics.OpenedResourcePaths);
+        refreshed = false;
+        Assert.NotEqual(person, Drawn());
+    }
+
+    [Fact]
     public void A_standing_person_draws_refreshed_art_at_the_classic_size_on_its_own_base_and_follows_the_art_choice()
     {
         List<string> releases = []; var graphics = new AppearanceFake(releases);
@@ -194,8 +229,8 @@ public sealed class ActorSpritePresentationTests
         presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => refreshed);
         presentation.AddActor(person, billboard.Standing((182, 0)));
 
-        SpriteFromAtlasRequest drawn = graphics.SpriteRequests[^1];
-        Assert.Equal(new Vector2(4F, 8F), drawn.Size);
+        // The refreshed person stands on its own base, beside the classic sprite this run draws.
+        SpriteFromAtlasRequest drawn = Assert.Single(graphics.SpriteRequests, request => request.Size == new Vector2(4F, 8F));
         Assert.Equal(new Vector2(.5F, 0F), drawn.Pivot);
         Assert.Contains("refreshed/people/texture-182-record-000.png", graphics.OpenedResourcePaths);
         Appearance Chosen()
@@ -210,6 +245,19 @@ public sealed class ActorSpritePresentationTests
         Assert.NotEqual(classic, replacement);
         refreshed = false;
         Assert.Equal(classic, Chosen());
+
+        // A person admitted while refreshed art is drawn opens no classic sprite until classic art asks for it.
+        int ClassicOpens() => graphics.OpenedResourcePaths.Count(path => path == "person.png");
+        refreshed = true;
+        presentation.RetireActor(person);
+        int before = ClassicOpens();
+        presentation.AddActor(person, billboard.Standing((182, 0)));
+        Appearance refreshedOnly = Chosen();
+        Assert.Equal(before, ClassicOpens());
+        presentation.BuildClassic();
+        Assert.Equal(before + 1, ClassicOpens());
+        refreshed = false;
+        Assert.NotEqual(refreshedOnly, Chosen());
     }
 
     [Fact]

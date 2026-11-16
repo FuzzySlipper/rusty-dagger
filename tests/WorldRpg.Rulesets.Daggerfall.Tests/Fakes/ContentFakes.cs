@@ -62,11 +62,22 @@ internal sealed class ContentFake : IContentService
         bodies[contentPath] = body;
     }
 
+    /// <summary>Withdraws an admitted file, as a container that left it out would not have it.</summary>
+    internal void Remove(string contentPath)
+    {
+        values.Remove(contentPath);
+        bodies.Remove(contentPath);
+    }
+
+    /// <summary>Every path resolved, in order, which is every file the product opened.</summary>
+    internal List<string> Opened { get; } = [];
+
     public ContentReference OpenReference(ContentOpenRequest request) => ResolveReference(new ContentResolveRequest(request.Path, values[request.Path]));
 
     public ContentReference ResolveReference(ContentResolveRequest request)
     {
         ResolveCalls++;
+        Opened.Add(request.Path);
         // Bundles carry the art replacements, whose hundreds of files no profile lists: a session asks for them by the art pack's digests.
         if (request.Path.StartsWith("worldrpg/packs/daggerfall.art-replacements/media/", StringComparison.Ordinal)) values.TryAdd(request.Path, request.Sha256);
         if (!values.TryGetValue(request.Path, out ContentSha256 known) || known != request.Sha256) throw new InvalidOperationException($"Unexpected content reference '{request.Path}'{(values.ContainsKey(request.Path) ? " with another digest" : "")}.");

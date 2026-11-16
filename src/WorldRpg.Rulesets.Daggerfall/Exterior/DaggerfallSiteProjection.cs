@@ -105,9 +105,8 @@ internal sealed class DaggerfallSiteProjection : IDisposable
                 () => placedGates.Open, () => placedGates.Visuals, () => placedMotion.Visuals, placedMotion.TryGetTransform);
             appearance = new(engine.Content, engine.Graphics, inputs, engine.Audio,
                 tuning.PresentationAudio, random, audioBundle, parts, sessionPresentation, definitions, tuning.Flats, tuning.SiteLighting,
-                prepareLocationOffUpdate, (id, gender, sprite) => DaggerfallActorGender.Resolve(random, id, gender, sprite));
+                prepareLocationOffUpdate, (id, gender, sprite) => DaggerfallActorGender.Resolve(random, id, gender, sprite), configureAppearance);
             doors.SoundRequested += appearance.PlayDoorSound;
-            configureAppearance(appearance);
             lighting = new(engine.Graphics, engine.CameraView, inputs, tuning.SiteLighting, calendar.Sky, carriesSky);
             portals = new(actors, inputs.ProfileKey, inputs.Portals);
             DaggerfallSiteProjection projection = new(inputs, doors, motion, gates, appearance, lighting, portals, spatialMovement);

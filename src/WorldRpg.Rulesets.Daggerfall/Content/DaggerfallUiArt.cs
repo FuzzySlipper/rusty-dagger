@@ -61,14 +61,16 @@ internal sealed class DaggerfallUiArt
     private readonly HashSet<string> _delivered = new(StringComparer.Ordinal);
     private readonly List<DaggerfallUiArtImage> _demanded = [];
     private readonly HashSet<string> _refreshed = new(StringComparer.Ordinal);
+    private readonly IReadOnlyList<string> _classic = [];
 
     private DaggerfallUiArt(IReadOnlyList<DaggerfallUiArtImage> images, IReadOnlyList<string> pickScreens, DaggerfallData content, Dictionary<string, InventoryEntry> inventory,
-        HashSet<string> refreshed)
+        HashSet<string> refreshed, IReadOnlyList<string> classic)
         : this(images, pickScreens)
     {
         _content = content;
         _inventory = inventory;
         _refreshed = refreshed;
+        _classic = classic;
     }
 
     private DaggerfallUiArt(IReadOnlyList<DaggerfallUiArtImage> images, IReadOnlyList<string> pickScreens)
@@ -113,6 +115,13 @@ internal sealed class DaggerfallUiArt
     }
 
     /// <summary>
+    /// Reads the classic images composition left unread because the art set draws them anew, for a developer's switch to
+    /// classic art; screens that name a classic image afterwards demand it as they draw.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">One could not be read; the message names it and its file.</exception>
+    internal void DemandClassic() => Demand(_classic);
+
+    /// <summary>
     /// The art of a session composed without derived content, which draws no image; a product composition
     /// always carries its derived content.
     /// </summary>
@@ -130,7 +139,9 @@ internal sealed class DaggerfallUiArt
     /// icon identities the content pack names for its items, <paramref name="characterIcons"/> the
     /// portraits the HUD selects and <paramref name="panelArt"/> the art a panel lays out by identity -
     /// the travel map's world and region canvases; the rest is what this presentation always draws.
-    /// <paramref name="replacements"/>' images are indexed beside the published ones and read on demand.
+    /// <paramref name="replacements"/>' images are indexed beside the published ones and read on demand. A classic image
+    /// <paramref name="drawnAnew"/> answers the art set draws anew is described but not read: refreshed art never draws it,
+    /// and <see cref="DemandClassic"/> reads it when classic art is asked for.
     /// </summary>
     /// <exception cref="InvalidOperationException">
     /// A needed identity is absent from the inventory, or admitted content does not carry the bytes the
@@ -138,7 +149,7 @@ internal sealed class DaggerfallUiArt
     /// visible rather than a blank image at runtime.
     /// </exception>
     internal static DaggerfallUiArt Read(DaggerfallData content, IEnumerable<string> itemIcons, IEnumerable<string>? characterIcons = null, IEnumerable<string>? panelArt = null,
-        DaggerfallArtReplacements? replacements = null)
+        DaggerfallArtReplacements? replacements = null, Func<string, bool>? drawnAnew = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(itemIcons);
@@ -170,6 +181,7 @@ internal sealed class DaggerfallUiArt
             refreshed.Add(id);
         }
         List<DaggerfallUiArtImage> images = [];
+        List<string> classic = [];
         foreach (string id in AlwaysShown.Concat(authored).Concat(pickScreens).Concat(itemIcons).Concat(portraits).Concat(panelArt ?? []).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
             if (!inventory.TryGetValue(id, out InventoryEntry entry))
@@ -177,10 +189,11 @@ internal sealed class DaggerfallUiArt
                 throw new InvalidOperationException($"Published UI art '{id}' is not described by the admitted content inventory '{InventoryPath}'.");
             }
 
+            if (drawnAnew?.Invoke(id) == true) { classic.Add(id); continue; }
             images.Add(new(id, DataUrl(entry, ReadArtifact(content, id, entry)), entry.Display) { Smooth = refreshed.Contains(id) });
         }
 
-        DaggerfallUiArt art = new(images, pickScreens, content, inventory, refreshed);
+        DaggerfallUiArt art = new(images, pickScreens, content, inventory, refreshed, classic);
         art._delivered.UnionWith(images.Select(image => image.Id));
         return art;
     }

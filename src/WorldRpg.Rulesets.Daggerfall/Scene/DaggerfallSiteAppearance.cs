@@ -60,34 +60,64 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private static SpriteMaterialDescriptor Glowing(SpriteMaterialDescriptor material, RenderResource map, float level) =>
         material with { EmissionColor = Vector3.One, EmissionIntensity = level, EmissionMap = new RenderResourceReference(map) };
     private readonly NormalizedBillboardSprite? candleSprite;
-    private SpriteAtlas? candleAtlas;
-    private SpriteMaterialDescriptor candleMaterial;
+    // The candle's atlas, material, size and pivot in each art set, opened the first time that set draws it.
+    private readonly Dictionary<bool, (SpriteAtlas Atlas, SpriteMaterialDescriptor Material, Vector2 Size, Vector2 Pivot)> candleLooks = [];
     private Appearance? candleAppearance;
+    private bool candleRefreshed;
     private Vector3? candlePosition;
     private ulong candleVisualId;
 
+    /// <summary>
+    /// Shows the magic candle where <paramref name="position"/> says, or nowhere: in refreshed art its refreshed flat where
+    /// the set has one, else the classic sprite, redrawn when the art drawn changes.
+    /// </summary>
     internal void UpdateMagicCandle(Vector3? position)
     {
         if (disposed || locationSuspended) position = null;
         candlePosition = position;
-        if (position is null)
+        bool refreshed = drawRefreshedEffects() && surfaceArt?.Flats.ContainsKey((LightFlatArchive, 3)) == true;
+        if (position is null || candleRefreshed != refreshed)
         {
             if (candleAppearance is { } candle) Retire(candle); candleAppearance = null;
-            return;
+            if (position is null) return;
         }
         if (candleAppearance is not null) return;
         var sprite = candleSprite ?? throw new InvalidOperationException("Normal light requires the published magic candle billboard 210/3.");
         candleVisualId = NextVisualEntityId();
-        // The candle takes the light around it, and its flame shines over that at a lamp's level.
-        if (candleAtlas is null)
+        if (!candleLooks.TryGetValue(refreshed, out var look)) candleLooks.Add(refreshed, look = CandleLook(sprite, refreshed));
+        candleRefreshed = refreshed;
+        candleAppearance = appearance.CreateSpriteFromAtlas(new(look.Atlas, sprite.InitialFrameId, look.Pivot,
+            look.Size, flats.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), look.Material));
+    }
+
+    /// <summary>
+    /// The candle as one art set draws it. It takes the light around it, and its flame shines over that at a lamp's level:
+    /// a refreshed one through its emission map where it has one, else through its own colours, as the classic does.
+    /// </summary>
+    private (SpriteAtlas, SpriteMaterialDescriptor, Vector2, Vector2) CandleLook(NormalizedBillboardSprite sprite, bool refreshed)
+    {
+        if (!refreshed)
         {
-            RenderResource texture;
-            (candleAtlas, texture) = OpenActorAtlas(content, new NormalizedActorSprite(sprite.TexturePath,
+            (SpriteAtlas atlas, RenderResource texture) = OpenActorAtlas(content, new NormalizedActorSprite(sprite.TexturePath,
                 sprite.TextureSha256, sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size));
-            candleMaterial = Glowing(LitSprite, texture, lighting.LampLevel);
+            return (atlas, Glowing(LitSprite, texture, lighting.LampLevel), sprite.Size, sprite.Pivot);
         }
-        candleAppearance = appearance.CreateSpriteFromAtlas(new(candleAtlas, sprite.InitialFrameId, sprite.Pivot,
-            sprite.Size, flats.Decorations, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1f, 1f, 1f, 1f), candleMaterial));
+        DaggerfallArtFlat art = surfaceArt!.Flats[(LightFlatArchive, 3)];
+        if (art.Frames.Count != sprite.Frames.Count)
+            throw new InvalidOperationException($"Refreshed flat '{art.File.Path}' has {art.Frames.Count} frames; its classic sprite has {sprite.Frames.Count}.");
+        RenderResource image = appearance.OpenTexture(content, art.File.Path, art.File.Sha256, TextureFilter.Nearest).Handle;
+        ownedResources.Add(image);
+        SpriteAtlas refreshedAtlas = appearance.CreateSpriteAtlas(new(image, SpriteAtlasAdapter.ToAtlasFrames(art.Width, art.Height,
+            art.Frames.Select((frame, index) => new NormalizedSpriteFrame(sprite.Frames[index].Id, (int)frame.X, (int)frame.Y, (int)frame.Width, (int)frame.Height)).ToArray())));
+        atlases.Add(refreshedAtlas);
+        RenderResource map = image;
+        if (art.Emission is { } emission)
+        {
+            map = appearance.OpenTexture(content, emission.Path, emission.Sha256, TextureFilter.Nearest).Handle;
+            ownedResources.Add(map);
+        }
+        (Vector2 size, Vector2 pivot) = art.Placed(sprite.Size, sprite.Pivot);
+        return (refreshedAtlas, Glowing(LitSprite, map, lighting.LampLevel), size, pivot);
     }
 
     private Func<float> enemyAudibleRange = () => 16F;
@@ -109,14 +139,13 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private readonly IReadOnlyList<string> hitCues;
     private readonly IReadOnlyDictionary<string, NormalizedClassicEffect> classicEffects;
     private readonly NormalizedClassicPresentation classicPresentation;
-    // Engine seals render-resource selection once Product.Create finishes.
-    // Classic effects and the optional weapon remain lazy visual instances, but
-    // their normalized texture handles must be admitted with the initial closure.
+    // The classic presentation's textures, by path: the weapon and hand atlases with the site, an effect's the first time
+    // classic art draws it.
     private readonly Dictionary<string, RenderResourceInfo> classicTextures = new(StringComparer.Ordinal);
     private readonly DaggerfallDefinitions? mobileDefinitions;
     private readonly Dictionary<long, ActorVisual> actors = [];
     private readonly Dictionary<long, GroundVisual> groundVisuals = [];
-    private readonly Dictionary<long, BillboardVisual> npcVisuals = [];
+    private readonly Dictionary<long, NpcVisual> npcVisuals = [];
     private readonly Dictionary<RangedShotIdentity, ulong> arrowVisualEntityIds = [];
     private readonly List<EffectVisual> effects = [];
     private ViewmodelVisual? viewmodel;
@@ -184,10 +213,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     // The door facts last appended, kept while the doors' revision, the slot and the door visuals stand.
     private (int Revision, int Slot, AppearanceFact[] Facts)? doorFacts;
     // Each action model's classic visual, its remodel where the profile has one, and its ordinal.
-    private readonly Dictionary<string, (Appearance Visual, Appearance? Remodel, ulong Ordinal)> actionModelVisuals = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (ModelVisual Visual, ulong Ordinal)> actionModelVisuals = new(StringComparer.Ordinal);
     // Each city gate draws its open or its closed model, or that state's remodel; all are created with the location
     // and the current state's is published under the gate's one ordinal.
-    private readonly Dictionary<string, (GateVisual Open, GateVisual Closed, ulong Ordinal)> gateVisuals = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (ModelVisual Open, ModelVisual Closed, ulong Ordinal)> gateVisuals = new(StringComparer.Ordinal);
     // Door, gate and action model visuals are drawn under ordinals of the location's identity slot rather than
     // their source or Engine entity identities, which other owners' visuals may share.
     private ulong nextLocationVisualOrdinal;
@@ -203,7 +232,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private bool completesUpdates;
     // Each static mesh the profile draws, with its pose in the profile frame and its index in the profile geometry, and
     // the appearance it shows, with its model's remodel where the profile has one: placements of one model share them.
-    private readonly List<(Appearance Appearance, Appearance? Remodel, Transform Pose, int Index)> world = [];
+    private readonly List<(ModelVisual Model, Transform Pose, int Index)> world = [];
     // While the location's geometry is admitted for one arriving on the road: its meshes and textures prepare off the update.
     private bool admittingOffUpdate;
     // A resident neighbour's appearance never publishes: the active site's snapshot draws its location.
@@ -235,8 +264,13 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     /// The gender a fixed enemy authored with none takes, from its placement identity, its authored gender and its sprite;
     /// null draws every enemy as authored.
     /// </param>
+    /// <param name="configure">
+    /// Binds the session's live policy, the art set among it, before anything is admitted, so what the refreshed set draws
+    /// anew opens no classic file; without it, everything is admitted in classic art, and an art set given later draws
+    /// beside it.
+    /// </param>
     internal DaggerfallSiteAppearance(IContentService content, IGraphicsService appearance, DaggerfallSiteProfile inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null, DaggerfallAudioBundle? audioBundle = null, DaggerfallLocationParts? parts = null, NormalizedClassicPresentation? sessionPresentation = null, DaggerfallDefinitions? definitions = null, DaggerfallFlatsTuning? flats = null, DaggerfallSiteLightingTuning? lighting = null, bool prepareLocationOffUpdate = false,
-        Func<long, string, NormalizedActorSprite, string>? actorGender = null)
+        Func<long, string, NormalizedActorSprite, string>? actorGender = null, Action<DaggerfallSiteAppearance>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
@@ -259,6 +293,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         worldAppearance = inputs.WorldAppearance;
         try
         {
+            configure?.Invoke(this);
             AdmitLocationResources(prepareLocationOffUpdate);
             DaggerfallMissileVisual? arrow = classicPresentation.WorldVisuals.SingleOrDefault(visual =>
                 visual.MediaId == "visual.missile.arrow");
@@ -284,7 +319,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 // A fixed human enemy with no gender flag takes its random gender keyed by its placement identity.
                 NormalizedActorSprite placed = actorGender is not null && inputs.Project.Actors.TryGetValue(entityId, out AuthoredActor? actor)
                     ? sprite.ForGender(actorGender(entityId, actor.Gender, sprite)) : sprite;
-                ActorVisual visual = CreateActorVisual(content, entityId, placed);
+                ActorVisual visual = CreateActorVisual(entityId, placed);
                 actors.Add(entityId, visual);
             }
             groundContainerSprites = inputs.GroundContainerSprites ?? [];
@@ -322,7 +357,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         ArgumentNullException.ThrowIfNull(sprite);
         if (durableId <= 0) throw new ArgumentOutOfRangeException(nameof(durableId));
         if (actors.ContainsKey(durableId)) throw new InvalidOperationException($"Actor {durableId} already has an appearance.");
-        ActorVisual visual = CreateActorVisual(content, durableId, sprite, mobileId);
+        ActorVisual visual = CreateActorVisual(durableId, sprite, mobileId);
         try { actors.Add(durableId, visual); }
         catch { List<Exception>? failures = null; visual.Dispose(ref failures); if (failures is { Count: > 0 }) throw new AggregateException(failures); throw; }
     }
@@ -363,6 +398,29 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         UpdateMagicCandle(null);
         Retire(new RetiredLocationResources(TakeLocationResources()));
         locationSuspended = true;
+    }
+
+    /// <summary>
+    /// Builds every classic visual this site left unbuilt while refreshed art was drawn (surfaces with their seasons and
+    /// frames, models a remodel stands in for, decorations, people, quest people, remains and effects), so classic art draws from the
+    /// next snapshot: the developer's switch to classic art. They are kept until the site is let go.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">A classic file could not be opened; the message names it.</exception>
+    internal void BuildClassic()
+    {
+        if (disposed) return;
+        foreach (SurfaceMaterial surface in surfaceMaterials)
+        {
+            for (int season = 0; season < surface.Classic.Length; season++) ClassicSurface(surface, season);
+            for (int frame = 0; frame < (surface.Frames?.Length ?? 0); frame++) ClassicFrame(surface, frame);
+        }
+        foreach ((ModelVisual model, Transform _, int _) in world) ClassicModel(model);
+        foreach ((ModelVisual open, ModelVisual closed, ulong _) in gateVisuals.Values) { ClassicModel(open); ClassicModel(closed); }
+        foreach ((ModelVisual model, ulong _) in actionModelVisuals.Values) ClassicModel(model);
+        foreach (DecorationVisual flat in decorations) { ClassicDecoration(flat, winter: false); ClassicDecoration(flat, winter: true); }
+        foreach (ActorVisual visual in actors.Values) { ClassicLive(visual); ClassicCorpse(visual); }
+        foreach (NpcVisual visual in npcVisuals.Values) ClassicNpc(visual);
+        foreach (NormalizedClassicEffect effect in classicEffects.Values) ClassicEffectTexture(effect);
     }
 
     /// <summary>
@@ -417,7 +475,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (var npc in npcs ?? [])
             if (npcVisuals.TryGetValue(npc.Id, out var visual))
                 facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.Gameplay(npc.Id, "NPC"), false, 0,
-                    new Transform(npc.Position.ToVector(), Quaternion.Identity, Vector3.One), visual.Appearance, true, RenderLayer.Scene));
+                    new Transform(npc.Position.ToVector(), Quaternion.Identity, Vector3.One), DrawnNpc(visual), true, RenderLayer.Scene));
         ReconcileSpellFlights(dungeonSpellFlights ?? []);
         foreach (EffectVisual effect in effects)
             facts.Add(new AppearanceFact(effect.EntityId, false, 0, new Transform(effect.Position.ToVector(), Quaternion.Identity, Vector3.One), effect.Appearance, true, RenderLayer.Scene));
@@ -497,9 +555,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         if (disposed) return;
         AppendDecorationFacts(facts, slot);
         bool refreshed = drawRefreshedEffects();
-        foreach ((Appearance staticWorld, Appearance? remodel, Transform pose, int index) in world)
+        foreach ((ModelVisual model, Transform pose, int index) in world)
             facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.WorldMesh(slot, index), false, 0,
-                Compose(worldAppearance.Transform, pose), Drawn(staticWorld, remodel, refreshed), worldAppearance.Visible, worldAppearance.Layer));
+                Compose(worldAppearance.Transform, pose), DrawnModel(model, refreshed), worldAppearance.Visible, worldAppearance.Layer));
         if (parts is null) return;
         // A city has thousands of doors, nearly all of them still: their facts are read again only once one moves.
         int revision = parts.DoorRevision();
@@ -511,17 +569,14 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         facts.AddRange(held.Facts);
         bool gatesOpen = parts.GatesOpen();
         foreach ((DaggerfallCityGateDefinition gate, EntityId _, DaggerfallDoorVisual _, Transform pose) in parts.Gates())
-            if (gateVisuals.TryGetValue(gate.Id, out (GateVisual Open, GateVisual Closed, ulong Ordinal) visual))
-            {
-                GateVisual state = gatesOpen ? visual.Open : visual.Closed;
+            if (gateVisuals.TryGetValue(gate.Id, out (ModelVisual Open, ModelVisual Closed, ulong Ordinal) visual))
                 facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, visual.Ordinal), false, 0, pose,
-                    Drawn(state.Classic, state.Remodel, refreshed), true, RenderLayer.Scene));
-            }
+                    DrawnModel(gatesOpen ? visual.Open : visual.Closed, refreshed), true, RenderLayer.Scene));
         foreach ((DaggerfallDungeonActionModelDefinition model, EntityId _) in parts.ActionModels())
-            if (actionModelVisuals.TryGetValue(model.ActionId, out (Appearance Visual, Appearance? Remodel, ulong Ordinal) visual)
+            if (actionModelVisuals.TryGetValue(model.ActionId, out (ModelVisual Visual, ulong Ordinal) visual)
                 && parts.ActionModelPose(model.ActionId, out Transform transform))
                 facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.LocationVisual(slot, visual.Ordinal), false, 0,
-                    transform, Drawn(visual.Visual, visual.Remodel, refreshed), true, RenderLayer.Scene));
+                    transform, DrawnModel(visual.Visual, refreshed), true, RenderLayer.Scene));
     }
 
     /// <summary>
@@ -866,7 +921,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         foreach (ActorVisual visual in actors.Values.Reverse()) DisposeActorVisual(visual, ref failures);
         if (candleAppearance is { } candle) Dispose(candle, ref failures); candleAppearance = null;
         foreach (GroundVisual visual in groundVisuals.Values.Reverse()) visual.Billboard.Dispose(ref failures);
-        foreach (BillboardVisual visual in npcVisuals.Values.Reverse()) visual.Dispose(ref failures);
+        foreach (NpcVisual visual in npcVisuals.Values.Reverse()) visual.Dispose(ref failures);
         foreach (EffectVisual effect in effects.AsEnumerable().Reverse()) effect.Dispose(ref failures);
         effects.Clear();
         if (viewmodel is { } weapon) { viewmodel = null; weapon.Dispose(ref failures); }
@@ -886,7 +941,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         doorVisualOrdinals.Clear();
         doorVisualPoses.Clear();
         doorFacts = null;
-        foreach ((Appearance visual, Appearance? _, ulong _) in actionModelVisuals.Values.Reverse()) Dispose(visual, ref failures);
+        foreach ((ModelVisual visual, ulong _) in actionModelVisuals.Values.Reverse()) if (visual.Classic is { } classic) Dispose(classic, ref failures);
         actionModelVisuals.Clear();
         // Sprite atlases borrow textures that location materials may also use. Retire every
         // atlas before releasing the location material/resource closure so dependents observe a
@@ -934,8 +989,6 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             throw new ArgumentException("Door visuals require the selected door runtime.", nameof(parts));
         foreach (NormalizedMaterial material in inputs.Materials)
         {
-            RenderResourceInfo texture = appearance.OpenTexture(content, material.TexturePath, material.TextureSha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate);
-            locationResources.Add(texture.Handle);
             Dictionary<string, RenderResource> masks = new(StringComparer.Ordinal);
             RenderResource? Glass(ContentArtifact? mask)
             {
@@ -948,48 +1001,29 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 }
                 return resource;
             }
-            RenderResource?[] glass = [Glass(material.SummerGlass), Glass(material.WinterGlass), Glass(material.RainGlass)];
-            Material created = appearance.CreateMaterial(SurfaceRequest(texture.Handle, glass[0]));
-            locationMaterials.Add(created);
-            materials.Add(created);
-            materialsBySlot.Add(material.Slot, created);
-            RenderResource Variant(ContentArtifact? variant)
-            {
-                if (variant is null) return texture.Handle;
-                var resource = appearance.OpenTexture(content, variant.Path, variant.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate);
-                locationResources.Add(resource.Handle);
-                return resource.Handle;
-            }
-            SurfaceMaterial surface = new(created, [material.TexturePath, material.WinterTexture?.Path ?? material.TexturePath, material.RainTexture?.Path ?? material.TexturePath],
-                [texture.Handle, Variant(material.WinterTexture), Variant(material.RainTexture)], texture.Handle, glass)
-            {
-                Level = glass[0] is null ? 0F : windowLevel,
-                // The first frame is the material's own texture; each later one opens as a texture of its own.
-                Frames = material.Frames is { } frames ? ([texture.Handle, .. frames.Textures.Skip(1).Select(Variant)], frames.Flipbook) : null,
-            };
+            // Refreshed walls keep the classic's windows, so the glass masks the import cut from the classic serve both art sets.
+            SurfaceMaterial surface = new(material, [Glass(material.SummerGlass), Glass(material.WinterGlass), Glass(material.RainGlass)]);
             AttachRefreshedSurface(surface);
+            // A material starts in the summer of the art set drawn now, so refreshed art opens no classic texture it draws over.
+            surface.Current = DrawnSurface(surface, 0, drawRefreshedEffects());
+            surface.Level = surface.Glass[0] is null ? 0F : windowLevel;
+            surface.Material = appearance.CreateMaterial(SurfaceRequest(surface.Current, surface.Glass[0]));
+            locationMaterials.Add(surface.Material);
+            materials.Add(surface.Material);
+            materialsBySlot.Add(material.Slot, surface.Material);
             surfaceMaterials.Add(surface);
         }
         // Every placement of a model with the same bindings shows one appearance, so the renderer draws a town's repeated
         // houses, walls and props as instances of one mesh rather than a draw of their own each.
-        Dictionary<(string Path, ContentSha256 Sha256, string Bindings), Appearance> models = [];
+        Dictionary<(string Path, ContentSha256 Sha256, string Bindings, string? ModelId), ModelVisual> models = [];
         for (int index = 0; index < inputs.Geometry.Meshes.Count; index++)
         {
             DaggerfallSiteMesh mesh = inputs.Geometry.Meshes[index];
-            var model = (mesh.Path, mesh.Sha256, string.Join(',', mesh.Materials));
-            if (models.TryGetValue(model, out Appearance? shown))
-            {
-                world.Add((shown, Remodel(mesh.ModelId), mesh.Pose, index));
-                continue;
-            }
-            Appearance created = appearance.CreateStaticMesh(content, mesh.Path, mesh.Sha256, worldAppearance.Tint, admittingOffUpdate);
-            world.Add((created, Remodel(mesh.ModelId), mesh.Pose, index));
-            models.Add(model, created);
-            // A block model binds each of its slots to the profile slot its (climate-swapped) texture has.
-            MeshMaterialBinding[] bindings = [.. mesh.Materials.Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
-                ? new MeshMaterialBinding(binding.MeshSlot, material)
-                : throw new InvalidOperationException($"Mesh '{mesh.Path}' refers to missing world material slot {binding.WorldMaterialSlot}."))];
-            appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, bindings));
+            var key = (mesh.Path, mesh.Sha256, string.Join(',', mesh.Materials), mesh.ModelId);
+            if (!models.TryGetValue(key, out ModelVisual? model))
+                // A block model binds each of its slots to the profile slot its (climate-swapped) texture has.
+                models.Add(key, model = PlaceModel(new DaggerfallDoorVisual(mesh.Path, mesh.Sha256, mesh.Materials), $"Mesh '{mesh.Path}'", mesh.ModelId));
+            world.Add((model, mesh.Pose, index));
         }
         AdmitDecorations(inputs);
         foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
@@ -1011,29 +1045,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (visual.LocalPose is { } local) doorVisualPoses.Add(door.Id, local);
         }
         foreach (DaggerfallCityGateDefinition gate in inputs.CityGates)
-            gateVisuals.Add(gate.Id, (new(StaticVisual(gate.Open.Visual, $"City gate '{gate.Id}'"), Remodel(gate.Open.ModelId)),
-                new(StaticVisual(gate.Closed.Visual, $"City gate '{gate.Id}'"), Remodel(gate.Closed.ModelId)), NextLocationVisualOrdinal()));
+            gateVisuals.Add(gate.Id, (PlaceModel(gate.Open.Visual, $"City gate '{gate.Id}'", gate.Open.ModelId),
+                PlaceModel(gate.Closed.Visual, $"City gate '{gate.Id}'", gate.Closed.ModelId), NextLocationVisualOrdinal()));
         if (parts is null) return;
         foreach ((DaggerfallDungeonActionModelDefinition model, _) in parts.ActionModels())
-        {
-            Appearance created = appearance.CreateStaticMesh(content, model.Visual.Path, model.Visual.Sha256, worldAppearance.Tint, admittingOffUpdate);
-            try
-            {
-                appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, model.Visual.Materials
-                    .Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
-                        ? new MeshMaterialBinding(binding.MeshSlot, material)
-                        : throw new InvalidOperationException($"Action model '{model.ActionId}' refers to missing world material slot {binding.WorldMaterialSlot}."))
-                    .ToArray()));
-                actionModelVisuals.Add(model.ActionId, (created, Remodel(model.ModelId), NextLocationVisualOrdinal()));
-            }
-            catch
-            {
-                List<Exception>? failures = null;
-                Dispose(created, ref failures);
-                if (failures is { Count: > 0 }) throw new AggregateException(failures);
-                throw;
-            }
-        }
+            actionModelVisuals.Add(model.ActionId, (PlaceModel(model.Visual, $"Action model '{model.ActionId}'", model.ModelId), NextLocationVisualOrdinal()));
         // A reloaded location starts in its admitted season and the current art set.
         ApplySurfaces();
     }
@@ -1070,21 +1086,21 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         List<IDisposable> retired = [];
         retired.AddRange(TakeDecorationResources());
         // A model placed several times shows one appearance, released once.
-        retired.AddRange(world.Select(part => part.Appearance).Distinct().Reverse());
+        retired.AddRange(world.Select(part => part.Model).Distinct().Select(model => model.Classic).OfType<Appearance>().Reverse());
         world.Clear();
         retired.AddRange(doorVisuals.Values.Reverse());
         doorVisuals.Clear();
         doorVisualOrdinals.Clear();
         doorVisualPoses.Clear();
         doorFacts = null;
-        retired.AddRange(actionModelVisuals.Values.Select(value => value.Visual).Reverse());
+        retired.AddRange(actionModelVisuals.Values.Select(value => value.Visual.Classic).OfType<Appearance>().Reverse());
         actionModelVisuals.Clear();
         retired.AddRange(remodels.Values.Reverse());
         remodels.Clear();
         flipbooks.Clear();
         shellMaterials.Clear();
         reliefImages.Clear();
-        foreach ((GateVisual open, GateVisual closed, ulong _) in gateVisuals.Values.Reverse()) retired.AddRange([closed.Classic, open.Classic]);
+        foreach ((ModelVisual open, ModelVisual closed, ulong _) in gateVisuals.Values.Reverse()) retired.AddRange(new[] { closed.Classic, open.Classic }.OfType<Appearance>());
         gateVisuals.Clear();
         retired.AddRange(locationMaterials.AsEnumerable().Reverse());
         foreach (Material material in locationMaterials) materials.Remove(material);
@@ -1106,8 +1122,11 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             atlases.Remove(corpseAtlas);
             Dispose(corpseAtlas, ref failures);
         }
-        atlases.Remove(visual.Atlas);
-        Dispose(visual.Atlas, ref failures);
+        if (visual.Atlas is { } atlas)
+        {
+            atlases.Remove(atlas);
+            Dispose(atlas, ref failures);
+        }
     }
 
     /// <summary>A profile-frame pose placed by the world appearance's transform.</summary>
@@ -1119,17 +1138,25 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     private void AdmitClassicTextures()
     {
         foreach (NormalizedClassicEffect effect in classicEffects.Values.OrderBy(effect => effect.Name, StringComparer.Ordinal))
-            AdmitClassicTexture(new ContentArtifact(effect.TexturePath, effect.TextureSha256));
+            if (!drawRefreshedEffects() || !refreshedEffects.ContainsKey(effect.Name)) ClassicEffectTexture(effect);
         foreach (NormalizedClassicWeapon weapon in classicPresentation.Weapons.Values)
-            AdmitClassicTexture(new ContentArtifact(weapon.TexturePath, weapon.TextureSha256));
+            if (!classicTextures.TryAdd(weapon.TexturePath, OpenClassicTexture(new ContentArtifact(weapon.TexturePath, weapon.TextureSha256))))
+                throw new InvalidOperationException($"Classic presentation repeats normalized texture path '{weapon.TexturePath}'.");
     }
 
-    private void AdmitClassicTexture(ContentArtifact artifact)
+    /// <summary>A classic effect's texture, opened the first time it is drawn: the refreshed set draws every effect it has anew.</summary>
+    private RenderResourceInfo ClassicEffectTexture(NormalizedClassicEffect effect)
+    {
+        if (!classicTextures.TryGetValue(effect.TexturePath, out RenderResourceInfo texture))
+            classicTextures.Add(effect.TexturePath, texture = OpenClassicTexture(new ContentArtifact(effect.TexturePath, effect.TextureSha256)));
+        return texture;
+    }
+
+    private RenderResourceInfo OpenClassicTexture(ContentArtifact artifact)
     {
         RenderResourceInfo texture = appearance.OpenTexture(content, artifact.Path, artifact.Sha256);
         ownedResources.Add(texture.Handle);
-        if (!classicTextures.TryAdd(artifact.Path, texture))
-            throw new InvalidOperationException($"Classic presentation repeats normalized texture path '{artifact.Path}'.");
+        return texture;
     }
 
     private static void Dispose(IDisposable value, ref List<Exception>? failures)
@@ -1138,48 +1165,69 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         catch (Exception exception) { (failures ??= []).Add(exception); }
     }
 
-    internal void AddNpc(long id, NormalizedBillboardSprite sprite)
+    /// <summary>
+    /// Draws a person the quests place, cut from <paramref name="source"/>: its refreshed person where the set has one while
+    /// refreshed art is drawn, else its classic billboard, built the first time it is drawn.
+    /// </summary>
+    internal void AddNpc(long id, NormalizedBillboardSprite sprite, (int Archive, int Record) source)
     {
         if (npcVisuals.ContainsKey(id)) return;
-        var (_, visual) = CreateSprite(content, new NormalizedActorSprite(sprite.TexturePath, sprite.TextureSha256,
-            sprite.AtlasWidth, sprite.AtlasHeight, sprite.Frames, sprite.InitialFrameId, sprite.Pivot, sprite.Size), material: CastingSprite);
-        npcVisuals.Add(id, new(id, visual));
+        NpcVisual visual = new(sprite) { Refreshed = RefreshedPerson(source, sprite.InitialFrameId, sprite.Size, sprite.Pivot, onBase: false) };
+        try { if (!drawRefreshedEffects() || visual.Refreshed is null) ClassicNpc(visual); }
+        catch { visual.Dispose(); throw; }
+        npcVisuals.Add(id, visual);
     }
+
+    private Appearance ClassicNpc(NpcVisual visual) => visual.Classic ??= CreateSprite(content, new NormalizedActorSprite(visual.Sprite.TexturePath,
+        visual.Sprite.TextureSha256, visual.Sprite.AtlasWidth, visual.Sprite.AtlasHeight, visual.Sprite.Frames, visual.Sprite.InitialFrameId,
+        visual.Sprite.Pivot, visual.Sprite.Size), material: CastingSprite).Appearance;
+
+    private Appearance DrawnNpc(NpcVisual visual) => drawRefreshedEffects() && visual.Refreshed is { } refreshed ? refreshed : ClassicNpc(visual);
 
     internal void RetireNpc(long id)
     {
         if (npcVisuals.Remove(id, out var visual)) Retire(visual);
     }
 
-    private ActorVisual CreateActorVisual(IContentService content, long entityId, NormalizedActorSprite sprite, int? mobileId = null)
+    private ActorVisual CreateActorVisual(long entityId, NormalizedActorSprite sprite, int? mobileId = null)
     {
-        Appearance? live = null;
-        Appearance? corpse = null;
-        try
-        {
         if (mobileId is null && inputs.Project.Actors.TryGetValue(entityId, out var placement))
             mobileId = mobileDefinitions?.RequireActor(placement.ActorId).MobileId;
-        var mobile = mobileId is int id ? mobileDefinitions?.Mobiles.Mobiles.GetValueOrDefault(id) : null;
-        (SpriteAtlas atlas, Appearance createdLive) = CreateSprite(content, sprite, mobile);
-        live = createdLive;
-        SpriteAtlas? corpseAtlas = null;
-        if (sprite.Corpse is { } authoredCorpse)
+        ActorVisual visual = new(entityId, sprite, mobileId is int id ? mobileDefinitions?.Mobiles.Mobiles.GetValueOrDefault(id) : null)
+            { LocationOrdinal = NextLocationVisualOrdinal() };
+        try
         {
-            // A glowing creature's remains glow as it did.
-            (corpseAtlas, corpse) = CreateSprite(content, authoredCorpse, material: LitSprite, glows: mobile?.GlowColor is not null);
-        }
-        ActorVisual visual = new(entityId, sprite, atlas, live, corpseAtlas, corpse) { LocationOrdinal = NextLocationVisualOrdinal() };
-        AttachCorpseMesh(visual);
-        AttachRefreshedPerson(visual);
-        StartState(entityId, PreferredRestState(sprite), visual);
-        return visual;
+            AttachCorpseMesh(visual);
+            AttachRefreshedPerson(visual);
+            // What the refreshed set draws anew opens no classic sprite until classic art is drawn.
+            if (!drawRefreshedEffects() || visual.Refreshed is null) ClassicLive(visual);
+            if (!drawRefreshedEffects() || visual.CorpseMesh is null) ClassicCorpse(visual);
+            return visual;
         }
         catch
         {
-            live?.Dispose();
-            corpse?.Dispose();
+            List<Exception>? failures = null;
+            DisposeActorVisual(visual, ref failures);
+            if (failures is { Count: > 0 }) throw new AggregateException(failures);
             throw;
         }
+    }
+
+    /// <summary>An actor's classic sprite, built the first time it is drawn, playing its rest state; none once it lies dead.</summary>
+    private Appearance? ClassicLive(ActorVisual visual)
+    {
+        if (visual.Live is not null || visual.Defeated) return visual.Live;
+        (visual.Atlas, visual.Live) = CreateSprite(content, visual.Sprite, visual.Mobile);
+        StartState(visual.EntityId, PreferredRestState(visual.Sprite), visual);
+        return visual.Live;
+    }
+
+    /// <summary>An actor's classic remains, built the first time they are drawn; a glowing creature's glow as it did.</summary>
+    private Appearance? ClassicCorpse(ActorVisual visual)
+    {
+        if (visual.Corpse is not null || visual.Sprite.Corpse is not { } corpse) return visual.Corpse;
+        (visual.CorpseAtlas, visual.Corpse) = CreateSprite(content, corpse, material: LitSprite, glows: visual.Mobile?.GlowColor is not null);
+        return visual.Corpse;
     }
 
     /// <summary>
@@ -1589,7 +1637,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             sourceFrameIndices.Add(value);
         }
         SpritePlaybackPlan playbackPlan = SpriteAtlasAdapter.ToPlaybackPlan(playbackSteps, state.EffectiveFramesPerSecond);
-        SpritePlayback staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual.Live, visual.Atlas, playbackPlan.Frames, playbackPlan.Markers, state.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
+        SpritePlayback staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual.Live, visual.Atlas!, playbackPlan.Frames, playbackPlan.Markers, state.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
         try { appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start)); }
         catch { staged.Dispose(); throw; }
         SpritePlayback? previous = visual.Playback;
@@ -1704,17 +1752,24 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         }
     }
 
-    internal sealed class ActorVisual(long entityId, NormalizedActorSprite sprite, SpriteAtlas atlas, Appearance live, SpriteAtlas? corpseAtlas, Appearance? corpse)
+    internal sealed class ActorVisual(long entityId, NormalizedActorSprite sprite, DaggerfallMobileDefinition? mobile)
     {
         internal long EntityId { get; } = entityId;
         internal ulong LocationOrdinal { get; init; }
         internal NormalizedActorSprite Sprite { get; } = sprite;
-        internal SpriteAtlas Atlas { get; } = atlas;
-        internal Appearance? Live { get; set; } = live;
+        /// <summary>The mobile it draws as, whose glow and shadow its classic sprites take; none for a person.</summary>
+        internal DaggerfallMobileDefinition? Mobile { get; } = mobile;
+        /// <summary>
+        /// Its classic atlas and sprite, built the first time classic art draws it (a standing person the refreshed set
+        /// draws anew builds neither while refreshed art is drawn); the sprite is let go when it dies.
+        /// </summary>
+        internal SpriteAtlas? Atlas { get; set; }
+        internal Appearance? Live { get; set; }
         /// <summary>The refreshed sprite drawn in place of a standing person's classic one, when the refreshed set has one.</summary>
         internal Appearance? Refreshed { get; set; }
-        internal SpriteAtlas? CorpseAtlas { get; } = corpseAtlas;
-        internal Appearance? Corpse { get; } = corpse;
+        /// <summary>Its classic remains, built the first time classic art draws them (none while the bone pile mesh lies in their place).</summary>
+        internal SpriteAtlas? CorpseAtlas { get; set; }
+        internal Appearance? Corpse { get; set; }
         /// <summary>The refreshed mesh drawn in place of a shared corpse sprite, when the refreshed set has one.</summary>
         internal Appearance? CorpseMesh { get; set; }
         /// <summary>The scale that draws the corpse mesh at the width of the corpse sprite it replaces.</summary>
@@ -1745,6 +1800,25 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             if (Corpse is { } corpse) DaggerfallSiteAppearance.Dispose(corpse, ref failures);
             if (CorpseMesh is { } mesh) DaggerfallSiteAppearance.Dispose(mesh, ref failures);
             CorpseMesh = null;
+        }
+    }
+
+    /// <summary>A person the quests place: its classic billboard once built, and its refreshed person where the set has one.</summary>
+    private sealed class NpcVisual(NormalizedBillboardSprite sprite) : IDisposable
+    {
+        internal NormalizedBillboardSprite Sprite { get; } = sprite;
+        internal Appearance? Classic { get; set; }
+        internal Appearance? Refreshed { get; init; }
+        public void Dispose()
+        {
+            List<Exception>? failures = null;
+            Dispose(ref failures);
+            if (failures is { Count: > 0 }) throw new AggregateException(failures);
+        }
+        internal void Dispose(ref List<Exception>? failures)
+        {
+            if (Classic is { } classic) DaggerfallSiteAppearance.Dispose(classic, ref failures);
+            if (Refreshed is { } refreshed) DaggerfallSiteAppearance.Dispose(refreshed, ref failures);
         }
     }
 

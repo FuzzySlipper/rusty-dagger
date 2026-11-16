@@ -1018,12 +1018,9 @@ internal sealed partial class DaggerfallSession
             _inventoryUi.UseWearer(() => State.Character.Identity);
             // The DOM's art comes from the derived content by media identity, so a session reads the
             // published group once and publishes it to the UI that draws it.
-            _hud = new DaggerfallHudProjection(
-                engine.Ui,
-                definitions.HudResources,
-                composition.Identity,
-                // The refreshed icons go with the classic ones, so choosing either art set needs no further delivery.
-                composition.Data is not { } data ? DaggerfallUiArt.None : DaggerfallUiArt.Read(data, composition.StartSite.ClassicPresentation.InventoryIcons.Values
+            // The refreshed icons go up front; the classic images the art set draws anew are read when a developer switches to
+            // classic art.
+            _uiArt = composition.Data is not { } data ? DaggerfallUiArt.None : DaggerfallUiArt.Read(data, composition.StartSite.ClassicPresentation.InventoryIcons.Values
                     .Concat(composition.ArtReplacements is { } refreshed ? composition.StartSite.ClassicPresentation.InventoryIcons.Values
                         .Concat(DaggerfallSpellConstruction.RefreshableMedia())
                         .Select(refreshed.For).OfType<DaggerfallArtReplacement>().Select(replacement => replacement.MediaId) : []),
@@ -1035,7 +1032,8 @@ internal sealed partial class DaggerfallSession
                     .Concat(_definitions.CharacterPresentation.RacialForms.Values.SelectMany(form => new[] { form.HeadMediaId, form.BodyMediaId })),
                     DaggerfallTravelMap.MediaIds.Concat(glintMedia).Concat(composition.ArtReplacements is { } art
                         ? glintMedia.Where(art.Effects.ContainsKey).Select(DaggerfallArtReplacements.EffectMediaId) : []),
-                    composition.ArtReplacements))
+                    composition.ArtReplacements, composition.ArtReplacements is { } drawn ? DrawnAnew(drawn) : null);
+            _hud = new DaggerfallHudProjection(engine.Ui, definitions.HudResources, composition.Identity, _uiArt)
             {
                 // The controls screen shows each action's controller buttons against the authored pad layout.
                 PadActions = tuning.ControllerInput?.Actions ?? [],
@@ -1102,7 +1100,7 @@ internal sealed partial class DaggerfallSession
                 definitions, FastTravel, Activation, Entrance, _horizon, _time, () => _mode, Presentation, (actor, pose) => SpawnActor(actor, pose),
                 local => _exterior.ProfilePosition(local), BuildingLanding);                                                    // Developer
             DaggerfallDeveloperScene scene = new(_time, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); }, _horizon, _sites,
-                LocalWeather, State.PlayerControl, definitions, classic => _classicArt = classic, () => _hanging);   // Developer
+                LocalWeather, State.PlayerControl, definitions, UseClassicArt, () => _hanging);   // Developer
             DaggerfallDeveloperGrants grants = new(hold, definitions, _random, State.Actors, State.PlayerControl, EquipmentMoves,
                 () => State.WeaponDrawn = true, State.Currency, State.SkillUses, State.LevelUps, State.Character, State.Transport, State.Inventory,
                 State.Encumbrance, State.ItemInstances, _uniqueItems, State.RacialOverrides, _lycanthropy, _time, TransportAccess,

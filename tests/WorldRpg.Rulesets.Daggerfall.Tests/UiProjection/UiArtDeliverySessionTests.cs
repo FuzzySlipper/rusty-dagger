@@ -523,9 +523,12 @@ public sealed class UiArtDeliverySessionTests
         Assert.Equal(1 / .08, Convert.ToDouble(Glint(hud, "coins")["framesPerSecond"], CultureInfo.InvariantCulture), 3);
         Assert.True(Convert.ToDouble(Assert.IsType<Dictionary<string, object?>>(Glint(hud, "magic")["slot"])["width"], CultureInfo.InvariantCulture) < 1);
         Assert.Equal(9, Assert.IsType<object?[]>(Glint(hud, "magic")["frames"]).Length);
-        Assert.Subset(Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(initial["uiArt"])["images"]).Cast<Dictionary<string, object?>>()
-                .Select(image => Assert.IsType<string>(image["id"])).ToHashSet(),
-            new HashSet<string> { "effect.glint.magic", "effect.glint.coins", "refreshed.effect.glint.magic", "refreshed.effect.glint.coins" });
+        // Only the refreshed glints travel with the session: the classic ones are read when classic art is asked for.
+        HashSet<string> sent = Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(initial["uiArt"])["images"]).Cast<Dictionary<string, object?>>()
+            .Select(image => Assert.IsType<string>(image["id"])).ToHashSet();
+        Assert.Subset(sent, new HashSet<string> { "refreshed.effect.glint.magic", "refreshed.effect.glint.coins" });
+        Assert.DoesNotContain("effect.glint.magic", sent);
+        Assert.DoesNotContain("effect.glint.coins", sent);
 
         // A developer's world.classic-art draws the classic images again, with their pixels square.
         Assert.True(session.Commands<IDeveloperSceneCommands>().ClassicArt("on").Succeeded);
@@ -546,6 +549,9 @@ public sealed class UiArtDeliverySessionTests
         Assert.Equal("effect.glint.magic", Glint(classic, "magic")["media"]);
         Assert.Equal("effect.glint.coins", Glint(classic, "coins")["media"]);
         Assert.Equal(1d, Convert.ToDouble(Assert.IsType<Dictionary<string, object?>>(Glint(classic, "magic")["slot"])["width"], CultureInfo.InvariantCulture));
+        // The switch read the classic images the session left unread, the glints and the spell atlases among them.
+        Assert.Subset(Ids(Assert.IsType<Dictionary<string, object?>>(classic["uiArtDemanded"])).ToHashSet(),
+            new HashSet<string> { "effect.glint.magic", "effect.glint.coins", DaggerfallSpellConstruction.IconAtlasMedia, DaggerfallSpellConstruction.SelectorAtlasMedia });
 
         // Dropped in classic art, the cuirass lies as one of the classic treasure piles.
         void Act(ulong step, string json) => session.Update(new ProductUpdate(OuterUpdate(step), [Input(InputEventKind.DirectDigital) with

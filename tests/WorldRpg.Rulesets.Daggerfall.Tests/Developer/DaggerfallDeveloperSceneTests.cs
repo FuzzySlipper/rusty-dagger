@@ -21,6 +21,7 @@ public sealed class DaggerfallDeveloperSceneTests
 {
     private readonly List<long> _passed = [];
     private readonly List<bool> _classic = [];
+    private string? _refusal;
     private readonly DaggerfallWorldTime _time = new(DaggerfallCalendar.Start, 0d, 12d);
 
     [Fact]
@@ -49,6 +50,11 @@ public sealed class DaggerfallDeveloperSceneTests
         Assert.Equal("The refreshed art is drawn.", scene.ClassicArt("off").Message);
         Assert.Equal("Classic art is on or off.", scene.ClassicArt("maybe").Message);
         Assert.Equal([true, false], _classic);
+        // A switch the session cannot make, as a classic file absent, is refused with its reason.
+        _refusal = "Published content 'worldrpg/media/effects/effect-blood-0-atlas.png' could not be opened.";
+        DebugCommandResult refused = scene.ClassicArt("on");
+        Assert.False(refused.Succeeded);
+        Assert.Equal($"Classic art cannot be drawn: {_refusal}", refused.Message);
 
         Assert.Equal("Trees grow as mesh or sprite.", scene.Trees("bush").Message);
         Assert.Equal("The far forest is on or off.", scene.FarForest("maybe").Message);
@@ -60,5 +66,5 @@ public sealed class DaggerfallDeveloperSceneTests
     }
 
     private DaggerfallDeveloperScene Scene() => new(_time, _passed.Add, null!, null!, null!, new PlayerControlState(null, 0f, 0f),
-        TestPayload.Definitions, _classic.Add, () => null);
+        TestPayload.Definitions, classic => { _classic.Add(classic); return _refusal; }, () => null);
 }

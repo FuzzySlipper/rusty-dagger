@@ -4159,6 +4159,26 @@ test('refreshed icons are drawn smoothed and spell icons draw their own refreshe
   } finally { f.dispose(); }
 });
 
+test('spell icons and tiles that all have refreshed images are ready without the classic atlas, which is never sent for them', async () => {
+  const f = fixture();
+  try {
+    const webp = 'data:image/webp;base64,AA==', png = 'data:image/png;base64,AA==';
+    const own = Array.from({ length: 69 }, (_, index) => `refreshed.spell.icon.${index}`);
+    const tile = (index, kind) => ({ x: 0, y: index * 16, width: 16, height: 16, image: `refreshed.spell.${kind}.${index}` });
+    const tiles = kind => Array.from({ length: 5 }, (_, index) => tile(index, kind));
+    f.publish({ uiArtRevision: 'r1', uiArt: { revision: 'r1', images: [...own, ...tiles('target').map(cell => cell.image), ...tiles('element').map(cell => cell.image)]
+      .map(id => ({ id, image: webp, smooth: true })) } });
+    const { spellIconsReady, spellSelectorsReady } = await import(pathToFileURL(join(output, 'spell-icon.js')).href);
+    assert.equal(spellIconsReady({ media: 'spell.icons', columns: 20, count: 69, images: own }), true);
+    assert.equal(spellSelectorsReady({ media: 'spell.selectors', width: 40, height: 80, targets: tiles('target'), elements: tiles('element') }), true);
+    // A cell without its own image still waits for the atlas, as classic art does.
+    assert.equal(spellIconsReady({ media: 'spell.icons', columns: 20, count: 69, images: [...own.slice(1), null] }), false);
+    assert.equal(spellIconsReady({ media: 'spell.icons', columns: 20, count: 69, images: null }), false);
+    f.publish({ uiArtRevision: 'r1', uiArtDemandedRevision: 'r1.1', uiArtDemanded: { revision: 'r1.1', images: [{ id: 'spell.icons', image: png }] } });
+    assert.equal(spellIconsReady({ media: 'spell.icons', columns: 20, count: 69, images: null }), true);
+  } finally { f.dispose(); }
+});
+
 test('enchanted items shimmer in the pack and the shop, stealable stock glints, and both follow the art choice', async () => {
   const f = fixture();
   // The glints turn on timers, which would keep the test process alive once it ends.

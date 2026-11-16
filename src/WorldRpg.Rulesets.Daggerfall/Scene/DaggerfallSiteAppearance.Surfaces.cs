@@ -35,27 +35,57 @@ internal sealed partial class DaggerfallSiteAppearance
     private float surfacesStrength;
 
     /// <summary>
-    /// One location material: its classic texture path and resource per season (summer, winter, rain; a season without a
-    /// variant repeats summer), the refreshed resource per season once the art set is admitted (the classic one where it
-    /// has none), the resource it draws now, on a window the glass mask per season and the one it holds now, and outdoors
-    /// the relief image and depth per season where that season's record has building relief, and the shader it draws now.
-    /// A classic texture of several frames holds each frame's resource, which it draws in every season, and the frame it shows.
+    /// One location material: its classic texture path per season (summer, winter, rain; a season without a variant repeats
+    /// summer) and its classic resource per season, opened the first time classic art draws it; the refreshed resource per
+    /// season once the art set is admitted (none where it has none); the resource it draws now, on a window the glass mask
+    /// per season and the one it holds now, and outdoors the relief image and depth per season where that season's record
+    /// has building relief, and the shader it draws now. A classic texture of several frames holds each frame's resource,
+    /// opened the first time classic art draws it, which it draws in every season, and the frame it shows.
     /// </summary>
-    private sealed class SurfaceMaterial(Material material, string[] paths, RenderResource[] classic, RenderResource current, RenderResource?[] glass)
+    private sealed class SurfaceMaterial(NormalizedMaterial source, RenderResource?[] glass)
     {
-        internal (RenderResource[] Textures, DaggerfallArtFlipbook Flipbook)? Frames { get; init; }
+        internal NormalizedMaterial Source { get; } = source;
+        internal RenderResource?[]? Frames { get; } = source.Frames is { } frames ? new RenderResource?[frames.Textures.Count] : null;
         internal int Frame { get; set; }
-        internal Material Material { get; } = material;
-        internal string[] Paths { get; } = paths;
-        internal RenderResource[] Classic { get; } = classic;
-        internal RenderResource[]? Refreshed { get; set; }
-        internal RenderResource Current { get; set; } = current;
+        internal Material Material { get; set; } = null!;
+        internal string[] Paths { get; } = [source.TexturePath, source.WinterTexture?.Path ?? source.TexturePath, source.RainTexture?.Path ?? source.TexturePath];
+        internal RenderResource?[] Classic { get; } = new RenderResource?[3];
+        internal RenderResource?[]? Refreshed { get; set; }
+        internal RenderResource Current { get; set; } = null!;
         internal RenderResource?[] Glass { get; } = glass;
         internal RenderResource? CurrentGlass { get; set; } = glass[0];
         internal float Level { get; set; }
         internal (RenderResource Image, float Depth)?[] Relief { get; } = new (RenderResource, float)?[3];
         internal MaterialShader Shader { get; set; }
     }
+
+    /// <summary>
+    /// A season's classic texture, opened the first time it is drawn: only classic art, or a record the art set has no
+    /// surface for, draws it. A season without a variant draws summer's.
+    /// </summary>
+    private RenderResource ClassicSurface(SurfaceMaterial surface, int season)
+    {
+        ContentArtifact? variant = season switch { 1 => surface.Source.WinterTexture, 2 => surface.Source.RainTexture, _ => null };
+        if (variant is null || variant.Path == surface.Source.TexturePath)
+            return surface.Classic[0] ??= OpenSurface(new ContentArtifact(surface.Source.TexturePath, surface.Source.TextureSha256));
+        return surface.Classic[season] ??= OpenSurface(variant);
+    }
+
+    /// <summary>One frame of a classic texture of several, opened the first time it is drawn; the first is the material's own texture.</summary>
+    private RenderResource ClassicFrame(SurfaceMaterial surface, int frame) => frame == 0 ? ClassicSurface(surface, 0)
+        : surface.Frames![frame] ??= OpenSurface(surface.Source.Frames!.Textures[frame]);
+
+    private RenderResource OpenSurface(ContentArtifact file)
+    {
+        RenderResource resource = appearance.OpenTexture(content, file.Path, file.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate).Handle;
+        locationResources.Add(resource);
+        return resource;
+    }
+
+    /// <summary>The texture a surface draws in a season: its refreshed one in refreshed art where the set has it, else its classic one.</summary>
+    private RenderResource DrawnSurface(SurfaceMaterial surface, int season, bool refreshed) =>
+        refreshed && surface.Refreshed is { } own ? own[season] ?? ClassicSurface(surface, season)
+            : surface.Frames is not null ? ClassicFrame(surface, surface.Frame) : ClassicSurface(surface, season);
 
     /// <summary>
     /// Draws building relief by <paramref name="tuning"/> at the player's <paramref name="strength"/>, read each update, so a
@@ -104,9 +134,9 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (surfaceArt is null || surface.Paths.All(path => surfaceArt.Surface(path) is null)) return;
         Dictionary<string, RenderResource> opened = new(StringComparer.Ordinal);
-        surface.Refreshed = [.. surface.Paths.Select((path, season) =>
+        surface.Refreshed = [.. surface.Paths.Select<string, RenderResource?>((path, season) =>
         {
-            if (surfaceArt.Surface(path) is not { } refreshed) return surface.Classic[season];
+            if (surfaceArt.Surface(path) is not { } refreshed) return null;
             if (!opened.TryGetValue(refreshed.File.Path, out RenderResource? resource))
             {
                 resource = appearance.OpenTexture(content, refreshed.File.Path, refreshed.File.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate).Handle;
@@ -136,8 +166,7 @@ internal sealed partial class DaggerfallSiteAppearance
     /// <summary>Draws one surface in a season, the current art set and relief strength, updating its material only where that changes it.</summary>
     private void ApplySurface(SurfaceMaterial surface, int season)
     {
-        RenderResource wanted = surfacesRefreshed && surface.Refreshed is { } refreshed ? refreshed[season]
-            : surface.Frames is { } frames ? frames.Textures[surface.Frame] : surface.Classic[season];
+        RenderResource wanted = DrawnSurface(surface, season, surfacesRefreshed);
         RenderResource? glass = surface.Glass[season];
         float level = glass is null ? 0F : windowLevel;
         MaterialShader shader = surfacesRefreshed && surfacesStrength > 0 && surfaceShader is { } relief && surface.Relief[season] is { } height

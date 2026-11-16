@@ -15,10 +15,13 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// art owners as their own settings do, and nothing of it is saved.
 /// </summary>
 /// <param name="passTime">Lets this many game seconds pass (the session's AdvanceElapsedTime, without idle fatigue).</param>
-/// <param name="useClassicArt">Draws the classic art in place of the refreshed art (true) or the refreshed art (false).</param>
+/// <param name="useClassicArt">
+/// Draws the classic art in place of the refreshed art (true) or the refreshed art (false); answers why it cannot, as a
+/// classic file absent, or null.
+/// </param>
 /// <param name="hanging">The active site's hanging pieces, when it has an owner for them.</param>
 internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<long> passTime, DaggerfallHorizon horizon,
-    DaggerfallSiteCrossing sites, DaggerfallWeather weather, PlayerControlState player, DaggerfallDefinitions definitions, Action<bool> useClassicArt,
+    DaggerfallSiteCrossing sites, DaggerfallWeather weather, PlayerControlState player, DaggerfallDefinitions definitions, Func<bool, string?> useClassicArt,
     Func<DaggerfallHanging?> hanging) : IDeveloperSceneCommands
 {
     public DebugCommandResult Hanging() => hanging() is { } pieces
@@ -111,7 +114,7 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
     {
         if (state is not ("on" or "off")) return Refused("Classic art is on or off.");
         bool classic = state == "on";
-        useClassicArt(classic);
+        if (useClassicArt(classic) is { } refusal) return Refused($"Classic art cannot be drawn: {refusal}");
         return DebugCommandResult.Success(classic ? "Classic art is drawn in place of the refreshed art for this run." : "The refreshed art is drawn.");
     }
 

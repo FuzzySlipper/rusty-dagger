@@ -50,6 +50,28 @@ internal sealed class DaggerfallExteriorTerrainAppearance : IDisposable
     {
         _art = art;
         _drawRefreshed = refreshed;
+        // Cells admitted from now on draw in the art set drawn now, so refreshed art opens no classic nature sprite.
+        if (_refreshedDrawn != refreshed())
+        {
+            _refreshedDrawn = !_refreshedDrawn;
+            RedrawNature();
+        }
+    }
+
+    /// <summary>
+    /// Opens the classic sprite of every nature record the resident cells place, which refreshed art leaves unopened, so a
+    /// developer's switch to classic art draws them from the next snapshot.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">A sprite could not be opened; the message names its file.</exception>
+    internal void BuildClassic()
+    {
+        foreach (NatureCell cell in _natureCells.Values)
+            foreach (DaggerfallExteriorNaturePlacement placement in cell.Source
+                .DistinctBy(placement => (placement.SpriteArchive, placement.SpriteRecord)))
+            {
+                (NatureSpriteKey key, NormalizedBillboardSprite sprite) = ResolveNatureSprite(placement);
+                GetNatureSprite(key, sprite, null);
+            }
     }
 
     /// <summary>Layers ground by these settings. A heightfield holds its materials, so its owner lets go of them first.</summary>

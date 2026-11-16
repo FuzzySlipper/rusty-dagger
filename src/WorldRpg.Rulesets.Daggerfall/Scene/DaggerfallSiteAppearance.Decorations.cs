@@ -20,9 +20,14 @@ internal sealed partial class DaggerfallSiteAppearance
     private float lampLevel;
     private Func<(int Archive, int Record), bool> grownInField = _ => false;
 
-    private sealed record DecorationVisual(DaggerfallSiteDecoration Definition, DecorationSprite Summer,
-        DecorationSprite Winter, ulong Ordinal)
+    private sealed record DecorationVisual(DaggerfallSiteDecoration Definition, ulong Ordinal)
     {
+        /// <summary>
+        /// Its classic summer and winter sprites, built the first time classic art draws them: a decoration the refreshed
+        /// set draws anew builds none while refreshed art is drawn.
+        /// </summary>
+        internal DecorationSprite? Summer { get; set; }
+        internal DecorationSprite? Winter { get; set; }
         /// <summary>The refreshed mesh drawn in place of its sprite while refreshed art is drawn, when the refreshed set has one.</summary>
         internal Appearance? Mesh { get; set; }
         internal float MeshScale { get; set; } = 1f;
@@ -48,14 +53,25 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         foreach (var flat in inputs.Decorations)
         {
-            var summer = CreateDecorationSprite(flat.Summer, flat.BaseAligned, Material(flat), GivesLight(flat, flat.Source));
-            var winter = flat.Summer == flat.Winter ? summer
-                : CreateDecorationSprite(flat.Winter, flat.BaseAligned, Material(flat), GivesLight(flat, flat.WinterSource));
-            DecorationVisual visual = new(flat, summer, winter, NextLocationVisualOrdinal());
+            DecorationVisual visual = new(flat, NextLocationVisualOrdinal());
             AttachDecorationMesh(visual);
             AttachDecorationFlats(visual);
             decorations.Add(visual);
+            if (!drawRefreshedEffects() || visual.Mesh is null && visual.RefreshedSummer is null) ClassicDecoration(visual, winter: false);
+            if (!drawRefreshedEffects() || visual.Mesh is null && visual.RefreshedWinter is null) ClassicDecoration(visual, winter: true);
         }
+    }
+
+    /// <summary>A decoration's classic sprite in summer or winter, built the first time it is drawn.</summary>
+    private DecorationSprite ClassicDecoration(DecorationVisual flat, bool winter)
+    {
+        if ((winter ? flat.Winter : flat.Summer) is { } built) return built;
+        DaggerfallSiteDecoration definition = flat.Definition;
+        if (winter && definition.Summer == definition.Winter) return flat.Winter = ClassicDecoration(flat, winter: false);
+        DecorationSprite created = winter
+            ? CreateDecorationSprite(definition.Winter, definition.BaseAligned, Material(definition), GivesLight(definition, definition.WinterSource))
+            : CreateDecorationSprite(definition.Summer, definition.BaseAligned, Material(definition), GivesLight(definition, definition.Source));
+        return winter ? flat.Winter = created : flat.Summer = created;
     }
 
     /// <summary>
@@ -208,8 +224,8 @@ internal sealed partial class DaggerfallSiteAppearance
 
     /// <summary>The sprite a decoration draws now: its refreshed one while refreshed art is drawn and the set has it, else its classic one.</summary>
     private DecorationSprite DrawnDecoration(DecorationVisual flat) => winterMaterials
-        ? (drawRefreshedEffects() ? flat.RefreshedWinter : null) ?? flat.Winter
-        : (drawRefreshedEffects() ? flat.RefreshedSummer : null) ?? flat.Summer;
+        ? (drawRefreshedEffects() ? flat.RefreshedWinter : null) ?? ClassicDecoration(flat, winter: true)
+        : (drawRefreshedEffects() ? flat.RefreshedSummer : null) ?? ClassicDecoration(flat, winter: false);
 
     private void AppendDecorationFacts(List<AppearanceFact> facts, int slot)
     {

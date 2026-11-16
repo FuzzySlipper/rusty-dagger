@@ -46,10 +46,15 @@ export function spellIcon(atlas: SpellIconAtlas | null | undefined, index: numbe
   return icon;
 }
 
-/** Whether the icons' art has arrived, so a drawing that shows icons redraws once it does. */
+/**
+ * Whether the icons' art has arrived, so a drawing that shows icons redraws once it does. The atlas is waited for only
+ * while a cell has no image of its own: with every cell refreshed it is never sent.
+ */
 export function spellIconsReady(atlas: SpellIconAtlas | null | undefined): boolean {
   if (!atlas) return false;
-  return image(atlas.media) !== null && (atlas.images ?? []).every(own => own === null || image(own) !== null);
+  const own = atlas.images ?? [];
+  const fromAtlas = own.length < atlas.count || own.some(cell => cell === null);
+  return (!fromAtlas || image(atlas.media) !== null) && own.every(cell => cell === null || image(cell) !== null);
 }
 
 /** One targeting or element tile: its rect in the tile atlas and, with refreshed art, its own image. */
@@ -117,5 +122,8 @@ export function spellSelector(selectors: SpellSelectors | null | undefined, kind
 /** Whether the tiles' art has arrived, so a drawing that shows tiles redraws once it does. */
 export function spellSelectorsReady(selectors: SpellSelectors | null | undefined): boolean {
   if (!selectors) return false;
-  return image(selectors.media) !== null && [...selectors.targets, ...selectors.elements].every(tile => tile.image === null || image(tile.image) !== null);
+  const tiles = [...selectors.targets, ...selectors.elements];
+  // The tile atlas is waited for only while a tile has no image of its own.
+  return (tiles.every(tile => tile.image !== null) || image(selectors.media) !== null)
+    && tiles.every(tile => tile.image === null || image(tile.image) !== null);
 }

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -92,8 +93,29 @@ internal sealed partial class DaggerfallSiteAppearance
         return created;
     }
 
-    /// <summary>One state of a city gate as drawn: its classic model and that model's remodel, where the profile has one.</summary>
-    private readonly record struct GateVisual(Appearance Classic, Appearance? Remodel);
+    /// <summary>
+    /// One classic model as drawn (a placed model, a city gate's state or a moving model): the published mesh it is cut
+    /// from with its slots' bindings, what it is to a refusal, its classic appearance once built, and its remodel where the
+    /// profile has one. While refreshed art draws the remodel the classic mesh is not built.
+    /// </summary>
+    private sealed class ModelVisual(DaggerfallDoorVisual mesh, string owner, Appearance? remodel)
+    {
+        internal DaggerfallDoorVisual Mesh { get; } = mesh;
+        internal string Owner { get; } = owner;
+        internal Appearance? Classic { get; set; }
+        internal Appearance? Remodel { get; } = remodel;
+    }
+
+    /// <summary>A model drawn by this location, its classic mesh built now unless refreshed art draws its remodel.</summary>
+    private ModelVisual PlaceModel(DaggerfallDoorVisual mesh, string owner, string? modelId)
+    {
+        ModelVisual model = new(mesh, owner, Remodel(modelId));
+        if (model.Remodel is null || !drawRefreshedEffects()) ClassicModel(model);
+        return model;
+    }
+
+    /// <summary>A model's classic mesh, built the first time it is drawn.</summary>
+    private Appearance ClassicModel(ModelVisual model) => model.Classic ??= StaticVisual(model.Mesh, model.Owner);
 
     /// <summary>The material drawing one layer of a location material's shell stack, made the first time a remodel stacks it.</summary>
     private Material Shell(Material surface, DaggerfallArtShell shell)
@@ -150,7 +172,7 @@ internal sealed partial class DaggerfallSiteAppearance
         {
             (RenderResource Texture, DaggerfallGroundRelief? Relief) wanted = refreshed && shellShader is not null && layer.Relief[season] is { } relief
                 ? (relief.Image, relief.Art)
-                : ((refreshed && layer.Surface.Refreshed is { } surface ? surface : layer.Surface.Classic)[season], null);
+                : (refreshed && layer.Surface.Refreshed?[season] is { } surface ? surface : ClassicSurface(layer.Surface, season), null);
             if (layer.Current == wanted) continue;
             appearance.UpdateMaterial(new MaterialUpdateRequest(layer.Material, ShellRequest(wanted.Texture, wanted.Relief, layer.Shell)));
             layer.Current = wanted;
@@ -185,7 +207,7 @@ internal sealed partial class DaggerfallSiteAppearance
         int season = SurfaceSeason;
         foreach (SurfaceMaterial surface in surfaceMaterials)
         {
-            if (surface.Frames is not { } frames) continue;
+            if (surface.Source.Frames is not { } frames) continue;
             surface.Frame = FlipbookFrame(frames.Flipbook);
             ApplySurface(surface, season);
         }
@@ -203,5 +225,5 @@ internal sealed partial class DaggerfallSiteAppearance
     private int FlipbookFrame(DaggerfallArtFlipbook book) => (int)(flipbookSeconds * book.FramesPerSecond % book.Frames);
 
     /// <summary>What a placed model shows now: its remodel while refreshed art is drawn and it has one, else the classic.</summary>
-    private static Appearance Drawn(Appearance classic, Appearance? remodel, bool refreshed) => refreshed && remodel is not null ? remodel : classic;
+    private Appearance DrawnModel(ModelVisual model, bool refreshed) => refreshed && model.Remodel is { } remodel ? remodel : ClassicModel(model);
 }
