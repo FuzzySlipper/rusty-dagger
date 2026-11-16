@@ -1,0 +1,12 @@
+scripts/route.py main: FAILED (product): scripts/verify.sh failed
+rusty-dagger verify at 8e608d7fa59a2571c5f7e109b8eb42dc3bece3c4 FAILED in 27.6 min
+verify on den-nimo, 27.6 min, FAIL: /home/agent/dev/rusty-dagger/local/build/route/main-8e608d7fa59a-20261116T050034/verify.log
+    lane: run cf071eddc6ddec2dc8ed2057f0430d57 of verify on den-nimo at 8e608d7fa59a2571c5f7e109b8eb42dc3bece3c4 (0 s)
+    lane: tooling took 10 s, peak memory 38 MiB
+    skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run `dotnet run --project src/Daggerfall.Source.Tool -- export-items`
+    Passed!  - Failed:     0, Passed:    12, Skipped:     0, Total:    12, Duration: 218 ms - WorldRpg.Architecture.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:   864, Skipped:     0, Total:   864, Duration: 12 m 53 s - Daggerfall.Import.Tests.dll (net10.0)
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.AzurasStarSessionTests.Occupied_star_preserves_soul_until_real_use_then_reuses_the_same_item_for_mobile_zero [3 s]
+    Failed!  - Failed:     1, Passed:  4401, Skipped:     8, Total:  4410, Duration: 13 m 19 s - WorldRpg.Rulesets.Daggerfall.Tests.dll (net10.0)
+    lane: verify took 1634 s, peak memory 20394 MiB
+    lane: verify failed (exit 1)
