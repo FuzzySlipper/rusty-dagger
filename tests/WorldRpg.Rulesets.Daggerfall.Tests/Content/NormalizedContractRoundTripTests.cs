@@ -125,21 +125,6 @@ public sealed class NormalizedContractRoundTripTests
             DaggerfallSiteContent.ClassicMediaKinds.Order(StringComparer.Ordinal));
     }
 
-    [Theory]
-    [InlineData("privateers-hold")]
-    [InlineData("castle-necromoghan")]
-    [InlineData("charing/exterior")]
-    [InlineData("charing/interior-1-1-0")]
-    public void Site_closure_documents_read_back_through_the_importer_s_records(string site)
-    {
-        string closure = Path.Combine(TestData.RepositoryRoot, "content", "worldrpg", "imports", site);
-        RoundTrip<NormalizedImportDocument>(Path.Combine(closure, Arena2MediaBundlePublication.NormalizedDocumentRelativePath));
-        RoundTrip<DungeonMediaManifestSidecar>(Path.Combine(closure, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath));
-        RoundTrip<CanonicalImportManifest>(Path.Combine(closure, ImportPublicationManifestSerializer.ManifestRelativePath));
-        // Without an authored overlay a site presents the product-wide classic sidecar rather than a copy.
-        Assert.False(TestContentFiles.Exists(Path.Combine(closure, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath)));
-    }
-
     [Fact]
     public void World_media_documents_read_back_through_the_importer_s_records()
     {

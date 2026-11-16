@@ -1366,8 +1366,8 @@ public sealed record Arena2ClassicMediaPublication(
             generated,
             BuildOverlays(resolved),
             effectiveOptions.MaximumArtifactBytes);
-        // A world visual's textures are the site's own artifacts rather than entries in the classic media
-        // group: the mesh they belong to is published per site, and the group's inventory closes over the
+        // A world visual's textures are the world media's own artifacts rather than entries in the classic
+        // media group: the mesh they belong to is published there, and the group's inventory closes over the
         // classic media the whole product shares. The visual's descriptor carries their paths and digests
         // itself, so nothing has to agree with a second list.
         List<ImportPublicationArtifact> visualArtifacts = [];
@@ -1624,12 +1624,11 @@ public sealed record Arena2ClassicMediaPublication(
     /// </summary>
     /// <remarks>
     /// A mesh the runtime shows on its own — a missile's flight, rather than a placed block — selects
-    /// textures the site's spatial closure may never mention, so the visual carries them as its own
-    /// artifacts: the site can then draw the mesh it published without a second lookup in a material
-    /// table the mesh is not part of. A leaf the caller did not supply is refused, because a texture
+    /// textures no placed block may mention, so the visual carries them as its own artifacts: the runtime
+    /// can then draw the mesh without a second lookup in a material table the mesh is not part of. A leaf the caller did not supply is refused, because a texture
     /// published under the descriptor's identity but decoded from nothing would be an invented plate.
     /// <para>
-    /// A record the site's own spatial closure also selects is published twice, under this path and
+    /// A record the dungeon media also selects is published twice, under this path and
     /// under the dungeon pass's material path. The two passes own disjoint selections, so neither can
     /// dedupe the other's output, and both decode frame zero opaquely through the same palette, which
     /// makes the two artifacts byte-identical rather than divergent.

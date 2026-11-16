@@ -87,10 +87,14 @@ public sealed class QuestWorldActionTests
         Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).Notebook.Notes);
     }
 
+    /// <summary>
+    /// A world update selects a location's variant, which the save keeps through unload and restore, and a dash clears.
+    /// No variant content is published, so the location keeps showing its base content throughout.
+    /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void Location_variant_changes_admitted_lights_after_unload_and_restore_then_dash_removes_it(bool named)
+    public void Location_variant_is_kept_through_unload_and_restore_then_dash_removes_it(bool named)
     {
         var site = ReadInputs(TestData.RepositoryRoot).Site!.Value;
         string selector = named ? $"locationnew named {TestPayload.Definitions.Locations.Records.Single(value => value.Id == site).Name} in region {site.Region}"
@@ -98,31 +102,23 @@ public sealed class QuestWorldActionTests
         var definitions = QuestWorldAdmissionTests.Definitions(actions: [$"worldupdate {selector} variant lit"],
             taskBlocks: [["_reset_ task:", $"worldupdate {selector} variant -"]]);
         using var f = new SanguineRoseSessionTests.Fixture(definitions: definitions, prepareInputs: QuestWorldAdmissionTests.WithMarker);
-        var variant = Variant(f.Inputs);
-        var profiles = new DaggerfallSiteProfiles([f.Inputs, f.Castle, variant]); f.Session.AdmitSiteProfiles(profiles.ForSession());
+        var profiles = new DaggerfallSiteProfiles([f.Inputs, f.Castle]); f.Session.AdmitSiteProfiles(profiles.ForSession());
         Start(f); Advance(f.Session);
-        Assert.Single(DaggerfallSavePayload.Read(f.Session.CaptureSave()).WorldVariants);
         var saved = DaggerfallSavePayload.Read(f.Session.CaptureSave());
+        Assert.Equal(new DaggerfallWorldVariantSave(site.Region, site.Index, "lit"), Assert.Single(saved.WorldVariants));
         Assert.Throws<ArgumentNullException>(() => (saved with { WorldVariants = null! }).Validate());
         Assert.Throws<ArgumentException>(() => (saved with { WorldVariants = [new(0, 0, "-")] }).Validate());
         Assert.Throws<ArgumentException>(() => (saved with { WorldVariants = [saved.WorldVariants[0], saved.WorldVariants[0]] }).Validate());
-        Assert.Null(profiles.Require(f.Inputs.ProfileKey).VariantName); // The shared catalog stays immutable across sessions.
-        int before = f.Appearance.LightRequests.Count;
         Assert.True(f.Session.TryTransitionTo(f.Castle.ProfileKey));
         Assert.True(f.Session.TryTransitionTo(f.Inputs.ProfileKey));
-        Assert.Equal("lit", f.Session.Sites.Projection.Inputs.VariantName);
-        Assert.Equal(17f, Assert.Single(f.Session.Sites.Projection.Inputs.Lights).Intensity);
-        Assert.Contains(f.Appearance.LightRequests.Skip(before), light => light.Descriptor.Intensity == 17f);
+        Assert.Same(profiles.Require(f.Inputs.ProfileKey), f.Session.Sites.Projection.Inputs);
         using var restored = f.Restore(profiles); Advance(restored);
-        Assert.Equal("lit", restored.Sites.Projection.Inputs.VariantName);
-        Assert.Equal(17f, Assert.Single(restored.Sites.Projection.Inputs.Lights).Intensity);
+        Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).WorldVariants);
         var savedQuests = restored.State.Quests.Capture();
         restored.State.Quests.Restore(savedQuests with { Instances = savedQuests.Instances.Select(instance => instance with
             { Tasks = instance.Tasks.Select(task => task.Symbol == "reset" ? task with { IsSet = true } : task).ToArray() }).ToArray() });
         Advance(restored);
         Assert.Empty(DaggerfallSavePayload.Read(restored.CaptureSave()).WorldVariants);
-        Assert.True(restored.TryTransitionTo(f.Castle.ProfileKey)); Assert.True(restored.TryTransitionTo(f.Inputs.ProfileKey));
-        Assert.Null(restored.Sites.Projection.Inputs.VariantName);
     }
 
     [Fact]
@@ -140,37 +136,6 @@ public sealed class QuestWorldActionTests
         Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).WorldVariants);
     }
 
-    [Fact]
-    public void Authored_site_variant_fields_use_normal_content_admission_and_missing_entries_fall_back()
-    {
-        string root = TestData.RepositoryRoot;
-        var payload = JsonNode.Parse(TestContentFiles.ReadText(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")))!;
-        var original = ReadInputs(root);
-        payload["world"]!["variant"] = "authored";
-        payload["world"]!["variantOf"] = original.ProfileKey.LogicalId;
-        var variant = DaggerfallSiteContent.Read(TestSessions.Data(ImportContent(root)), System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions);
-        var catalog = new DaggerfallSiteProfiles([original, variant]);
-        var session = catalog.ForSession([new(original.Site!.Value.Region, original.Site.Value.Index, "authored")]);
-        Assert.Equal("authored", session.Require(original.ProfileKey).VariantName);
-        Assert.Null(catalog.Require(original.ProfileKey).VariantName);
-        Assert.Null(catalog.ForSession([new(original.Site.Value.Region, original.Site.Value.Index, "missing")]).Require(original.ProfileKey).VariantName);
-        Assert.Throws<ArgumentException>(() => new DaggerfallSiteProfiles([variant]));
-    }
-
-    [Fact]
-    public void Location_variant_rejects_missing_retained_quest_markers()
-    {
-        var original = ReadInputs(TestData.RepositoryRoot);
-        Assert.NotEmpty(original.QuestMarkers);
-        Assert.Throws<NotSupportedException>(() => new DaggerfallSiteProfiles([original, Variant(original, [])]));
-    }
-
-    internal static DaggerfallSiteProfile Variant(DaggerfallSiteProfile source, IReadOnlyList<DaggerfallSiteMarker>? markers = null) => new(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook, source.Materials, source.ActorSprites, source.MobileSprites,
-        source.Audio, source.ClassicPresentation, source.Site, source.Doors, source.ProfileKind, source.ProfileKey.LogicalId,
-        source.Portals, source.Anchors.Values.ToArray(), [new("variant-light", new(1, 2, 3), 8, 17, Vector3.One)], source.GroundContainerSprites, source.DungeonMap,
-        source.DungeonActions, source.DungeonActionModels, source.InteriorBuilding, markers ?? source.QuestMarkers, source.BillboardSprites,
-        source.StaticNpcs, source.WaterVolumes, source.TerrainTextures, source.Population)
-        { VariantName = "lit", VariantBaseLogicalId = source.ProfileKey.LogicalId, AmbientZones = source.AmbientZones, PropertyContainers = source.PropertyContainers };
     private static void Drop(SanguineRoseSessionTests.Fixture f, ulong entity) => f.Submit(new { action = "inventory-drop", revision = f.Engine.PublishedNested("inventory", "revision"), item = $"unique:{entity}", amount = 1 });
     private static DaggerfallQuestInstanceSave Quest(DaggerfallSession s) => s.State.Quests.Capture().Instances.Single();
     private static void Advance(DaggerfallSession s) => s.State.Quests.Advance(s.State.Variables, DaggerfallCalendar.Start);

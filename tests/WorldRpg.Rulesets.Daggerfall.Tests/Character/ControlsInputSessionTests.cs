@@ -28,7 +28,7 @@ public sealed class ControlsInputSessionTests
         var inputs = ReadInputs(TestData.RepositoryRoot);
         List<string> releases = [];
         var content = new ContentFake(releases); PopulateContent(content, inputs);
-        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using var session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
         float before = session.State.PlayerControl.YawRadians;
@@ -51,29 +51,29 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        double before = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
+        double before = session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).Current;
         double fatigueBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.Touches(2000);
+        session.Touches(HoldActor(1));
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d), [AttackDown, AttackDown, AttackUp]));
         // Two copies of one press are one admitted swing and one fatigue charge, and the damage itself
         // waits for the end of the swing's windup.
-        Assert.Equal(before, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
+        Assert.Equal(before, session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).Current);
         Assert.True(session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue")).Current < fatigueBefore);
         ulong step = 4;
         RunSeconds(session, ref step, DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast.Windup + 2d / 60d);
-        double after = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current;
+        double after = session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).Current;
         Assert.True(after < before);
         // Held input cannot start a second swing while the first is still playing.
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 2, 1, 1, 100, 60, 3, 0, 1d / 60d),
             [Input(InputEventKind.MappedDigital, InputEdge.Held, x: 1, phase: InputPhase.Held, intent: "attack")]));
-        Assert.Equal(after, session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).Current);
+        Assert.Equal(after, session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).Current);
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         DaggerfallTuning tuning = DaggerfallTuning.Defaults;
 
@@ -156,10 +156,9 @@ public sealed class ControlsInputSessionTests
                 PadAxis(ControllerAxis.Axis2, 1f),
             ]));
 
-            // Full deflection is one unit of planar intent, and the authored start yaw is pi, which
-            // wrapping puts just inside the negative end after the stick's positive yaw travel.
+            // Full deflection is one unit of planar intent, and the other stick turns the player from the start's yaw.
             Assert.Equal(new Vector2(0f, 1f), spatial.StepRequests[0].Command.PlanarIntent);
-            Assert.Equal(-MathF.PI + (tuning.ControllerInput.LookYawRadiansPerSecond / 60f), session.State.PlayerControl.YawRadians, precision: 4);
+            Assert.Equal(inputs.InitialLook.YawRadians + (tuning.ControllerInput.LookYawRadiansPerSecond / 60f), session.State.PlayerControl.YawRadians, precision: 4);
         }
     }
 
@@ -171,7 +170,7 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
 
@@ -205,7 +204,7 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
         List<string> requested = [];
@@ -325,7 +324,7 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
@@ -348,7 +347,7 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
@@ -388,13 +387,13 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        double healthBefore = session.State.Actors.Get(2000).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current;
+        double healthBefore = session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current;
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.Strike(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
-        Assert.True(session.State.Actors.Get(2000).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current < healthBefore);
+        session.Strike(new ExplicitMeleeRequest(1, HoldActor(1), 1, 1, .125));
+        Assert.True(session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current < healthBefore);
     }
 
     [Fact]
@@ -411,7 +410,7 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         TestDaggerfallRuleset ruleset = new();
@@ -451,7 +450,7 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
         session.ApplyProductMode(ProductMode.Modal);
@@ -476,7 +475,7 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
@@ -509,7 +508,7 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
@@ -607,11 +606,11 @@ public sealed class ControlsInputSessionTests
     public void A_corpse_is_sighted_above_its_floor_contact_so_the_ground_it_lies_on_cannot_hide_it()
     {
         using DaggerfallSession session = LootableSession(out _, out PerceptionFake perception);
-        WorldPoint feet = session.State.Actors.Get(2000).Position;
+        WorldPoint feet = session.State.Actors.Get(HoldActor(1)).Position;
         session.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"loot\"}")]));
         Vector3 sighted = perception.Requests.SelectMany(request => request.Targets.ToArray())
             .Select(target => { var (id, point) = target; return (Id: id, Point: point); })
-            .Last(target => target.Id == 2000UL).Point;
+            .Last(target => target.Id == (ulong)HoldActor(1)).Point;
         Assert.Equal(feet.X, sighted.X);
         Assert.Equal(feet.Z, sighted.Z);
         Assert.True(sighted.Y > feet.Y + .05F, $"The corpse at {feet} is sighted at {sighted}.");
@@ -623,10 +622,10 @@ public sealed class ControlsInputSessionTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        var exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
+        var exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, exterior);
-        var spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         var perception = PerceptionFake.Create();
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
@@ -693,20 +692,20 @@ public sealed class ControlsInputSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         perception = PerceptionFake.Create();
         appearance = new AppearanceFake(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.Strike(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
-        AimActivationAt(session, 2000);
-        CorpseContainer corpse = session.Corpses[2000];
+        session.Strike(new ExplicitMeleeRequest(1, HoldActor(1), 1, 1, .125));
+        AimActivationAt(session, HoldActor(1));
+        CorpseContainer corpse = session.Corpses[HoldActor(1)];
         session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.3486"))]);
-        RegisterCorpseStack(session, definitions, 2000, "test.loot.3486");
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        RegisterCorpseStack(session, definitions, HoldActor(1), "test.loot.3486");
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         return session;
     }
 

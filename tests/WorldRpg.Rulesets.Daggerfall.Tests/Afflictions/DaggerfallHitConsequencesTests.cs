@@ -13,6 +13,8 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using Xunit;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallHitConsequencesTests
@@ -252,12 +254,12 @@ public sealed class DaggerfallHitConsequencesTests
     public void New_game_authored_Orc_has_a_saved_weapon_without_a_level_one_coating()
     {
         using ConditionSessionFixture f = new(random: HitRandom.Create());
-        var equipment = f.Session.State.ActorInventories.EquipmentFor(2003);
+        var equipment = f.Session.State.ActorInventories.EquipmentFor(HoldActor(4));
         Assert.True(equipment.Read().TryGet(new("right-hand"), out var weapon));
         ulong id = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;
         Assert.Null(f.Session.State.ItemInstances.RequireUnique(id).PoisonVariant);
         using var restored = f.Restore(f.Session.CaptureSave());
-        var restoredEquipment = restored.State.ActorInventories.EquipmentFor(2003);
+        var restoredEquipment = restored.State.ActorInventories.EquipmentFor(HoldActor(4));
         Assert.True(restoredEquipment.Read().TryGet(new("right-hand"), out var restoredWeapon));
         Assert.Equal(id, restoredEquipment.GetDurableItemId(new EntityId(restoredWeapon.EntityId)).Value);
         Assert.Null(restored.State.ItemInstances.RequireUnique(id).PoisonVariant);
@@ -269,12 +271,11 @@ public sealed class DaggerfallHitConsequencesTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         var hold = TestSessions.ReadInputs(root);
-        var castle = DaggerfallSiteContent.Read(TestSessions.Data(TestSessions.FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        var castle = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         List<string> releases = [];
         ContentFake content = new(releases);
         TestSessions.PopulateContent(content, hold); TestSessions.PopulateContent(content, castle);
-        var spatial = SpatialFake.Create(castle.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(castle.Geometry.Spatial[0].Sha256, releases);
         var random = HitRandom.Create();
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: random);
         var composition = new DaggerfallSessionComposition(definitions, castle, DaggerfallTuning.Defaults)
@@ -282,7 +283,7 @@ public sealed class DaggerfallHitConsequencesTests
         using var s = DaggerfallSession.StartNew(engine.Context, composition);
         s.State.Progression.AdvanceTo(0, 2);
         Assert.True(s.TryTransitionTo(hold.ProfileKey));
-        const long orc = 2003;
+        long orc = HoldActor(4);
         var equipment = s.State.ActorInventories.EquipmentFor(orc);
         Assert.True(equipment.Read().TryGet(new("right-hand"), out var weapon));
         ulong id = equipment.GetDurableItemId(new EntityId(weapon.EntityId)).Value;

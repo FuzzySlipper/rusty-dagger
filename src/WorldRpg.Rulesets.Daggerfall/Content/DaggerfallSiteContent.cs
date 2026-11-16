@@ -13,264 +13,12 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
-/// <summary>Reads one authored site pack's scenario facts and normalized world closure; no project entity names participate in runtime selection.</summary>
+/// <summary>
+/// Reads what an assembled location draws on: the product-wide world media publication's media and classic presentation,
+/// and the normalized world sections an assembly gathers from its blocks.
+/// </summary>
 internal static partial class DaggerfallSiteContent
 {
-    /// <summary>
-    /// Reads one site pack on its own, as a fixture does: with no per-block publication beside it, an exterior closure
-    /// publishes no source start markers.
-    /// </summary>
-    internal static DaggerfallSiteProfile Read(DaggerfallData content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
-    {
-        using DaggerfallWorldMedia product = DaggerfallWorldMedia.Read(content);
-        return Read(content, payload, definitions, product, _ => []);
-    }
-
-    /// <summary>
-    /// Reads one site pack against the product-wide world media its closure references, which the caller
-    /// reads once for every site it admits.
-    /// </summary>
-    /// <param name="startMarkers">
-    /// A location's source start markers in its exterior's frame (<see cref="DaggerfallLocationAssembly.ExteriorStartMarkers"/>),
-    /// which an exterior closure publishes as the assembled exterior does.
-    /// </param>
-    internal static DaggerfallSiteProfile Read(DaggerfallData content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions, DaggerfallWorldMedia product,
-        Func<DaggerfallSiteId, IReadOnlyList<WorldPoint>> startMarkers)
-    {
-        ArgumentNullException.ThrowIfNull(startMarkers);
-        ArgumentNullException.ThrowIfNull(product);
-        DaggerfallContentDiagnostics diagnostics = new();
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(payload);
-            JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "root", diagnostics);
-            DaggerfallBaseContent.RejectDuplicateProperties(root, "root", diagnostics);
-            if (DaggerfallBaseContent.Text(root, "ruleset", diagnostics) != DaggerfallBaseContent.RulesetName) diagnostics.Add("Site payload must identify ruleset 'daggerfall'.");
-            AdmittedFiles files = AdmittedFiles.From(content);
-            ScenarioStart start = ReadStart(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "startingState", diagnostics), "startingState", diagnostics), diagnostics, ReadSourceArrival(files, root, diagnostics));
-            // A starting site the published locations do not carry would leave the session standing at a
-            // location nothing can name, so it is refused against the section that does carry them. The
-            // identity set answers this question; `ResolveSite` asks the records instead, because there
-            // the question is whether a site can resolve to a name and a kind. The two can only differ on
-            // a pack carrying a location kind the ruleset cannot name, and loading such a pack already
-            // fails, so no reader ever sees them disagree.
-            if (start.Site is { } startSite && !definitions.Locations.Keys.Contains((startSite.Region, startSite.Index)))
-            {
-                diagnostics.Add($"Site startingState.site names location {startSite}, which the published locations do not carry.");
-            }
-            DaggerfallSiteProfile inputs = ReadNormalizedClosure(
-                content, files,
-                root,
-                start,
-                definitions,
-                product,
-                startMarkers,
-                diagnostics);
-            diagnostics.ThrowIfAny();
-            return inputs;
-        }
-        catch (JsonException exception)
-        {
-            diagnostics.Add($"Site payload is not valid JSON: {exception.Message}");
-            throw diagnostics.Exception();
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or FormatException or OverflowException && exception is not DaggerfallContentException)
-        {
-            diagnostics.Add($"Site payload is malformed: {exception.Message}");
-            throw diagnostics.Exception();
-        }
-    }
-
-    private static DaggerfallSiteProfile ReadNormalizedClosure(DaggerfallData content, AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallWorldMedia product,
-        Func<DaggerfallSiteId, IReadOnlyList<WorldPoint>> startMarkers, DaggerfallContentDiagnostics diagnostics)
-    {
-        JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
-        string publicationRoot = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics);
-        // The profile's identity is the id the payload states explicitly: the generated id of its location's
-        // exterior, interior or dungeon that this authored closure overrides. A variant states its base's id.
-        string profileId = DaggerfallBaseContent.OptionalText(world, "variantOf", diagnostics)
-            ?? DaggerfallBaseContent.Text(world, "profile", diagnostics);
-        DaggerfallWorldProfileKind profileKind = DaggerfallBaseContent.Text(world, "profileKind", diagnostics) switch
-        {
-            "exterior" => DaggerfallWorldProfileKind.Exterior,
-            "interior" => DaggerfallWorldProfileKind.Interior,
-            "dungeon" => DaggerfallWorldProfileKind.Dungeon,
-            _ => InvalidProfileKind(diagnostics),
-        };
-        if (!DaggerfallBaseContent.ValidId(publicationRoot.Replace('/', '-')) || publicationRoot.Contains("..", StringComparison.Ordinal))
-        {
-            diagnostics.Add("Site publicationRoot must be a stable relative logical path.");
-        }
-
-        string Prefix(string relativePath) => $"{publicationRoot.TrimEnd('/')}/{relativePath}";
-        // The closure's own artifacts, and the product-wide world media it references by the same
-        // closure-relative paths instead of carrying copies.
-        DaggerfallClosureArtifacts artifacts = new(publicationRoot, ReadImportArtifacts(files, Prefix("import-manifest.json"), publicationRoot, diagnostics), product);
-        string spatialPath = Prefix(DaggerfallBaseContent.Text(world, "collisionNavigationPath", diagnostics));
-        string meshPath = Prefix(DaggerfallBaseContent.Text(world, "staticMeshPath", diagnostics));
-        string normalizedPath = Prefix("normalized.json");
-        string mediaPath = Prefix(DaggerfallWorldMedia.DungeonSidecarRelativePath);
-        ContentSha256 spatialHash = RequireArtifact(artifacts, spatialPath, diagnostics);
-        ContentSha256 meshHash = RequireArtifact(artifacts, meshPath, diagnostics);
-        files.RequireExactlyOne(spatialPath);
-        files.RequireExactlyOne(meshPath);
-        _ = RequireArtifact(artifacts, normalizedPath, diagnostics);
-        _ = RequireArtifact(artifacts, mediaPath, diagnostics);
-        // A site presents the product-wide classic sidecar unless it carries its own (an authored overlay).
-        ReadOnlyMemory<byte>? classicMedia = artifacts.SiteCarries(DaggerfallWorldMedia.ClassicSidecarRelativePath)
-            ? files.GetExactlyOne(Prefix(DaggerfallWorldMedia.ClassicSidecarRelativePath))
-            : product.ClassicSidecar;
-        ulong gridId = UnsignedInteger(world, "navigationGridId", diagnostics);
-        AuthoredWorldAppearance worldAppearance = ReadWorldAppearance(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(world, "appearance", diagnostics), "world.appearance", diagnostics), diagnostics);
-        IReadOnlyList<DaggerfallSitePortal> portals = ReadSitePortals(world, diagnostics);
-        IReadOnlyList<DaggerfallSiteAnchor> anchors = ReadSiteAnchors(world, start, diagnostics);
-        // Travel lands at a city's source start marker nearest the side it arrives from. A closure's start is its
-        // scenario's, which can be anywhere (Charing's stood on a roof), so an exterior closure publishes its location's
-        // markers as the assembled exterior does, in the frame the two share.
-        if (profileKind == DaggerfallWorldProfileKind.Exterior && start.Site is { } markedSite)
-            anchors = [.. anchors, .. startMarkers(markedSite).Select((marker, index) =>
-                new DaggerfallSiteAnchor(DaggerfallLocationAssembly.StartMarkerAnchor(index), marker, 0F, 0F))];
-        ReadOnlyMemory<byte> normalizedWorld = files.GetExactlyOne(normalizedPath);
-        if (profileKind == DaggerfallWorldProfileKind.Dungeon && ReadEnterMarker(normalizedWorld, diagnostics) is { } enterMarker
-            && anchors.All(anchor => anchor.Id != DaggerfallLocationAssembly.EnterAnchor))
-            anchors = [.. anchors, enterMarker];
-        DaggerfallInteriorBuilding? interiorBuilding = ReadInteriorBuilding(normalizedWorld, profileKind, diagnostics);
-        if (interiorBuilding?.EntryFrame is { Doors.Count: > 0 } entry && start.Site is { } interiorSite)
-        {
-            string exterior = DaggerfallWorldProfileIds.Exterior(interiorSite).LogicalId;
-            if (portals.FirstOrDefault(portal => portal.DestinationLogicalProfile == exterior) is { } exit)
-                portals = portals.Where(portal => portal.DestinationLogicalProfile != exterior)
-                    .Concat(entry.Doors.Select((door, index) => new DaggerfallSitePortal($"exit/{index}", door.Position,
-                        exit.Radius, exterior, exit.ArrivalAnchor, door.Normal))).ToArray();
-        }
-        Dictionary<long, AuthoredActor> fixedActors = ReadFixedActors(normalizedWorld, profileId, definitions, diagnostics);
-        Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics, fixedActors, profileId);
-        foreach (var actor in fixedActors)
-            if (!actors.TryAdd(actor.Key, actor.Value)) diagnostics.Add($"Fixed actor identity {actor.Key} collides in '{profileId}'.");
-        (IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, IReadOnlyList<NormalizedBillboardSprite>? groundContainerSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> billboardSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> terrainTextures) = ReadDungeonMedia(
-            files.GetExactlyOne(mediaPath),
-            artifacts,
-            product,
-            definitions,
-            diagnostics);
-        var gates = ReadCityGates(content, normalizedWorld, product, artifacts, ref materials, diagnostics);
-        if (profileKind == DaggerfallWorldProfileKind.Exterior && start.Site is { } placedSite
-            && definitions.Locations.Records.Single(value => value.Id == placedSite).Climate is int climate)
-        {
-            var location = definitions.Locations.Records.Single(value => value.Id == placedSite);
-            int groundClimate = definitions.Grids.ClimateAtWorldPixel(location.MapPixelX, location.MapPixelY).Value;
-            materials = materials.Select(material =>
-            {
-                const string prefix = "material/texture-";
-                if (!material.MaterialResourceId.StartsWith(prefix, StringComparison.Ordinal)) return material;
-                var parts = material.MaterialResourceId[prefix.Length..].Split('-');
-                if (parts.Length != 2 || !int.TryParse(parts[0], out int archive) || !int.TryParse(parts[1], out int record)) return material;
-                string Id(DaggerfallClimateSeason season) =>
-                    $"{prefix}{ExteriorTextureArchive(definitions.Grids.Climate, archive, record, climate, groundClimate, season)}-{record}";
-                ContentArtifact? Glass(DaggerfallClimateSeason season)
-                {
-                    if (!product.TryGetResource($"{Id(season)}-glass", out var resource)) return null;
-                    string path = artifacts.Resolve(DaggerfallBaseContent.Text(resource, "relativePath", diagnostics));
-                    return new(path, RequireArtifact(artifacts, path, diagnostics));
-                }
-                ContentArtifact? Texture(DaggerfallClimateSeason season)
-                {
-                    string id = Id(season);
-                    if (!product.TryGetResource(id, out var resource))
-                    { diagnostics.Add($"Exterior texture '{id}' for {season} is not published."); return null; }
-                    string path = artifacts.Resolve(DaggerfallBaseContent.Text(resource, "relativePath", diagnostics));
-                    return new(path, RequireArtifact(artifacts, path, diagnostics));
-                }
-                var summer = Texture(DaggerfallClimateSeason.Summer);
-                var winter = Texture(DaggerfallClimateSeason.Winter);
-                var rain = Texture(DaggerfallClimateSeason.Rain);
-                return summer is null ? material : material with
-                    { TexturePath = summer.Path, TextureSha256 = summer.Sha256, WinterTexture = winter?.Path != summer.Path ? winter : null,
-                        RainTexture = rain?.Path != summer.Path ? rain : null,
-                        SummerGlass = Glass(DaggerfallClimateSeason.Summer), WinterGlass = Glass(DaggerfallClimateSeason.Winter),
-                        RainGlass = Glass(DaggerfallClimateSeason.Rain) };
-            }).ToArray();
-        }
-        // Every normal encounter table can select any entry at a valid player level. Refuse a
-        // profile whose generated media closure cannot present one before gameplay rolls it.
-        foreach (int mobileId in definitions.Encounters.Tables.SelectMany(table => table).Distinct().Order())
-        {
-            if (!sprites.ContainsKey(mobileId))
-                diagnostics.Add($"World profile '{publicationRoot}' lacks generated media for encounter mobile '{mobileId}'.");
-        }
-        IReadOnlyList<DaggerfallSiteLight> lights = ReadNormalizedLights(normalizedWorld, diagnostics);
-        IReadOnlyList<DaggerfallPopulationPlacement> population = ReadNormalizedPopulation(normalizedWorld, diagnostics);
-        if (profileKind == DaggerfallWorldProfileKind.Exterior && start.Site is { } populationSite)
-            population = [.. population, .. DaggerfallExteriorPopulation.Create(definitions,
-                definitions.Locations.Records.Single(location => location.Id == populationSite),
-                DaggerfallExteriorPopulation.ReadClearCells(normalizedWorld))];
-        IReadOnlyList<DaggerfallDungeonActionModelDefinition> actionModels = ReadNormalizedActionModels(
-            normalizedWorld, artifacts, files, materials, diagnostics);
-        IReadOnlyList<DaggerfallRdbDoorDefinition> doors = ReadNormalizedDoors(
-            normalizedWorld, meshPath, artifacts, materials, actionModels, profileKind, diagnostics);
-        IReadOnlyList<DaggerfallDungeonActionDefinition> dungeonActions = ReadNormalizedActions(normalizedWorld, doors, diagnostics);
-        HashSet<string> actionIds = dungeonActions.Select(action => action.Id).ToHashSet(StringComparer.Ordinal);
-        foreach (DaggerfallDungeonActionModelDefinition model in actionModels)
-            if (!actionIds.Contains(model.ActionId))
-                diagnostics.Add($"Normalized action model '{model.ActionId}' has no matching world action node.");
-        DaggerfallDungeonMapContent? dungeonMap = profileKind is DaggerfallWorldProfileKind.Dungeon or DaggerfallWorldProfileKind.Interior
-            ? ReadNormalizedDungeonMap(normalizedWorld, doors, portals, diagnostics)
-            : null;
-        (IReadOnlyList<NormalizedAudioClip> audio, NormalizedClassicPresentation classicPresentation) = ReadClassicPresentation(
-            files, classicMedia, artifacts, diagnostics);
-        classicPresentation = ReadClassicSelection(root, classicPresentation, definitions, diagnostics);
-        Dictionary<long, NormalizedActorSprite> actorSprites = [];
-        foreach (AuthoredActor actor in actors.Values)
-        {
-            if (!definitions.Actors.TryGetValue(actor.ActorId, out DaggerfallActorDefinition? definition))
-            {
-                // Placement validation already records the product-facing
-                // diagnostic. Avoid indexing an untrusted authored ID while
-                // gathering generated presentation facts.
-                continue;
-            }
-            if (definition.MobileId is not int mobileId || !sprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
-            {
-                diagnostics.Add($"Placement '{actor.EntityId}' has no generated actor media for Daggerfall mobile '{definition.MobileId}'.");
-                continue;
-            }
-            actorSprites.Add(actor.EntityId, ResolveActorPresentation(actor, definition, sprite, diagnostics));
-        }
-
-        return new DaggerfallSiteProfile(
-            new ProjectFacts(start.Position, new ReadOnlyDictionary<long, AuthoredActor>(actors)),
-            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact(spatialPath, spatialHash, gridId), new ContentArtifact(meshPath, meshHash)),
-            worldAppearance,
-            start.Look,
-            materials,
-            new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites),
-            new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites.ToDictionary()),
-            audio,
-            classicPresentation,
-            start.Site,
-            doors,
-            profileKind,
-            profileId,
-            portals,
-            anchors,
-            lights,
-            groundContainerSprites,
-            dungeonMap,
-            dungeonActions,
-            actionModels,
-            interiorBuilding,
-            DaggerfallQuestMarkerContent.ReadWorld(normalizedWorld, diagnostics), billboardSprites,
-            DaggerfallStaticNpcPlacement.Read(normalizedWorld, billboardSprites, definitions, start.Site, diagnostics), waterVolumes: DaggerfallDungeonWater.Read(normalizedWorld, profileId, diagnostics), terrainTextures: terrainTextures, population: population)
-        { CityGates = gates,
-            Decorations = ReadDecorations(normalizedWorld, billboardSprites, profileKind,
-                start.Site is { } decorationSite ? definitions.Locations.Records.Single(location => location.Id == decorationSite).Climate ?? 231 : 231, diagnostics),
-            VariantName = DaggerfallBaseContent.OptionalText(world, "variant", diagnostics),
-            DungeonPopulation = DaggerfallDungeonPopulationContent.Read(normalizedWorld, diagnostics),
-            VariantBaseLogicalId = DaggerfallBaseContent.OptionalText(world, "variantOf", diagnostics),
-            AmbientZones = DaggerfallAmbientZones.Read(normalizedWorld, diagnostics),
-            PropertyContainers = DaggerfallPropertyContainerPlacement.Read(normalizedWorld) };
-    }
-
     /// <summary>Ground tiles use the terrain climate's archive; models use the published climate swap table.</summary>
     internal static int ExteriorTextureArchive(DaggerfallClimateGridDefinition swaps, int archive, int record,
         int climate, int groundClimate, DaggerfallClimateSeason season) => archive < 500 && archive % 100 == 2
@@ -285,8 +33,8 @@ internal static partial class DaggerfallSiteContent
     /// <summary>
     /// Reads the product-wide world media an assembled location draws from: every actor, billboard and
     /// terrain texture the world media publication carries, its material textures by material id, and its
-    /// classic sidecar's audio and classic presentation. A location assembled from its blocks admits
-    /// the whole publication, as a site closure admits the entries it selects; it is read once and shared.
+    /// classic sidecar's audio and classic presentation, with the base payload's classic selection. Every location
+    /// assembled from its blocks admits the whole publication; it is read once and shared.
     /// </summary>
     internal static DaggerfallProductMedia ReadProductMedia(DaggerfallData content, DaggerfallWorldMedia product, DaggerfallDefinitions definitions)
     {
@@ -301,78 +49,26 @@ internal static partial class DaggerfallSiteContent
         }
 
         AdmittedFiles files = AdmittedFiles.From(content);
-        // The publication's own entries resolve by their closure-relative paths in its own root.
-        DaggerfallClosureArtifacts artifacts = new(DaggerfallWorldMedia.Root, new Dictionary<string, ContentSha256>(), product);
-        System.Text.Json.Nodes.JsonObject selection = new()
-        {
-            ["media"] = new System.Text.Json.Nodes.JsonObject { ["resources"] = new System.Text.Json.Nodes.JsonArray() },
-            ["materials"] = new System.Text.Json.Nodes.JsonArray(),
-            ["billboards"] = new System.Text.Json.Nodes.JsonArray(),
-            ["actors"] = new System.Text.Json.Nodes.JsonArray(),
-            ["shared"] = new System.Text.Json.Nodes.JsonObject
-            {
-                ["resources"] = new System.Text.Json.Nodes.JsonArray([.. product.ResourceIds.Order(StringComparer.Ordinal).Select(id => (System.Text.Json.Nodes.JsonNode?)id)]),
-                ["billboards"] = new System.Text.Json.Nodes.JsonArray([.. product.BillboardIds.Order(StringComparer.Ordinal).Select(id => (System.Text.Json.Nodes.JsonNode?)id)]),
-                ["actors"] = new System.Text.Json.Nodes.JsonArray([.. product.ActorIds.Order(StringComparer.Ordinal).Select(id => (System.Text.Json.Nodes.JsonNode?)id)]),
-            },
-        };
-        (_, IReadOnlyDictionary<int, NormalizedActorSprite> sprites, IReadOnlyList<NormalizedBillboardSprite>? groundContainer,
+        (IReadOnlyDictionary<int, NormalizedActorSprite> sprites, IReadOnlyList<NormalizedBillboardSprite>? groundContainer,
             IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> billboards,
-            IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> terrain) =
-            ReadDungeonMedia(System.Text.Encoding.UTF8.GetBytes(selection.ToJsonString()), artifacts, product, definitions, diagnostics);
+            IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> terrain) = ReadWorldMedia(product, diagnostics);
         foreach (int mobileId in definitions.Encounters.Tables.SelectMany(table => table).Distinct().Order())
             if (!sprites.ContainsKey(mobileId))
                 diagnostics.Add($"The world media publication lacks media for encounter mobile '{mobileId}'.");
         (IReadOnlyList<NormalizedAudioClip> audio, NormalizedClassicPresentation classic) =
-            ReadClassicPresentation(files, product.ClassicSidecar, artifacts, diagnostics);
+            ReadClassicPresentation(files, product.ClassicSidecar, product, diagnostics);
+        if (definitions.ClassicSelection is { } held) classic = held.Select(classic, definitions, diagnostics);
         Dictionary<string, ContentArtifact> textures = new(StringComparer.Ordinal);
         foreach (string id in product.ResourceIds.Where(id => id.StartsWith("material/", StringComparison.Ordinal)))
         {
             if (!product.TryGetResource(id, out JsonElement resource)) continue;
-            string path = artifacts.Resolve(DaggerfallBaseContent.Text(resource, "relativePath", diagnostics));
-            if (!artifacts.TryGetValue(path, out ContentSha256 hash)) diagnostics.Add($"World media material '{id}' is not an admitted artifact.");
+            string path = product.Resolve(DaggerfallBaseContent.Text(resource, "relativePath", diagnostics));
+            if (!product.TryGetArtifact(path, out ContentSha256 hash)) diagnostics.Add($"World media material '{id}' is not an admitted artifact.");
             else textures.Add(id, new ContentArtifact(path, hash));
         }
 
         diagnostics.ThrowIfAny();
         return new(sprites, groundContainer, billboards, terrain, audio, classic, textures);
-    }
-
-    /// <summary>
-    /// The identity a site payload publishes, read without its closure: the explicit profile id, the site
-    /// it starts at, its profile kind and, for a variant, its name and base id.
-    /// </summary>
-    internal static DaggerfallSitePayloadHeader ReadHeader(ReadOnlyMemory<byte> payload, string packId)
-    {
-        DaggerfallContentDiagnostics diagnostics = new();
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(payload);
-            JsonElement root = DaggerfallBaseContent.Object(document.RootElement, $"site pack '{packId}'", diagnostics);
-            JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), $"site pack '{packId}' world", diagnostics);
-            JsonElement start = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "startingState", diagnostics), $"site pack '{packId}' startingState", diagnostics);
-            DaggerfallSiteId? site = ReadStartSite(start, diagnostics);
-            DaggerfallWorldProfileKind kind = DaggerfallBaseContent.Text(world, "profileKind", diagnostics) switch
-            {
-                "exterior" => DaggerfallWorldProfileKind.Exterior,
-                "interior" => DaggerfallWorldProfileKind.Interior,
-                "dungeon" => DaggerfallWorldProfileKind.Dungeon,
-                _ => InvalidProfileKind(diagnostics),
-            };
-            string? variant = DaggerfallBaseContent.OptionalText(world, "variant", diagnostics);
-            string? variantOf = DaggerfallBaseContent.OptionalText(world, "variantOf", diagnostics);
-            string profile = variantOf ?? DaggerfallBaseContent.Text(world, "profile", diagnostics);
-            if (site is null) diagnostics.Add($"Site pack '{packId}' names no starting site, so its profile has no location.");
-            else if (!DaggerfallWorldProfileIds.TryParse(profile, out DaggerfallWorldProfileKey parsed) || parsed.Site != site || parsed.Kind != kind)
-                diagnostics.Add($"Site pack '{packId}' publishes profile '{profile}', which is not the {kind} profile id of its site {site}.");
-            diagnostics.ThrowIfAny();
-            return new(new DaggerfallWorldProfileKey(site!.Value, kind, profile).Validate(), variant, packId);
-        }
-        catch (JsonException exception)
-        {
-            diagnostics.Add($"Site pack '{packId}' payload is not valid JSON: {exception.Message}");
-            throw diagnostics.Exception();
-        }
     }
 
     /// <summary>
@@ -437,41 +133,15 @@ internal static partial class DaggerfallSiteContent
         }
         catch (JsonException exception)
         {
-            diagnostics.Add($"Normalized world closure is not valid JSON: {exception.Message}");
+            diagnostics.Add($"Normalized world document is not valid JSON: {exception.Message}");
             return [];
-        }
-    }
-
-    /// <summary>
-    /// A dungeon's source Enter marker (editor flat 199/8) as its <c>enter</c> anchor, facing north as the donor's
-    /// <c>StartDungeonInterior</c> leaves a player placed there; the Start marker (199/10) stays the door arrival.
-    /// </summary>
-    private static DaggerfallSiteAnchor? ReadEnterMarker(ReadOnlyMemory<byte> normalized, DaggerfallContentDiagnostics diagnostics)
-    {
-        using JsonDocument document = JsonDocument.Parse(normalized);
-        if (!document.RootElement.GetProperty("world").TryGetProperty("enterMarker", out JsonElement marker)
-            || marker.ValueKind != JsonValueKind.Object) return null;
-        JsonElement point = marker.GetProperty("position");
-        return new DaggerfallSiteAnchor(DaggerfallLocationAssembly.EnterAnchor, new WorldPoint(DaggerfallBaseContent.Number(point, "x", diagnostics),
-            DaggerfallBaseContent.Number(point, "y", diagnostics), DaggerfallBaseContent.Number(point, "z", diagnostics)), 0F, 0F).Validate();
-    }
-
-    private static DaggerfallInteriorBuilding? ReadInteriorBuilding(ReadOnlyMemory<byte>? bytes,
-        DaggerfallWorldProfileKind kind, DaggerfallContentDiagnostics diagnostics)
-    {
-        if (bytes is null) return null;
-        try { return DaggerfallInteriorBuilding.Read(bytes.Value, kind); }
-        catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException or OverflowException)
-        {
-            diagnostics.Add($"Normalized interior building metadata is malformed: {error.Message}");
-            return null;
         }
     }
 
     /// <summary>
     /// Projects normalized RDB action nodes without interpreting source flags as a successful
     /// operation. The graph runtime owns trigger admission and action-family policy; content admission
-    /// only validates stable identities, raw parameters, and the links/doors this closure carries.
+    /// only validates stable identities, raw parameters, and the links/doors this document carries.
     /// </summary>
     internal static IReadOnlyList<DaggerfallDungeonActionDefinition> ReadNormalizedActions(
         ReadOnlyMemory<byte>? bytes,
@@ -481,7 +151,7 @@ internal static partial class DaggerfallSiteContent
         ArgumentNullException.ThrowIfNull(doors);
         if (bytes is null)
         {
-            diagnostics.Add("Normalized world closure must contain normalized.json for its dungeon actions.");
+            diagnostics.Add("Normalized world document must contain normalized.json for its dungeon actions.");
             return [];
         }
 
@@ -594,7 +264,7 @@ internal static partial class DaggerfallSiteContent
         }
         catch (JsonException exception)
         {
-            diagnostics.Add($"Normalized world closure is not valid JSON: {exception.Message}");
+            diagnostics.Add($"Normalized world document is not valid JSON: {exception.Message}");
             return [];
         }
     }
@@ -607,7 +277,7 @@ internal static partial class DaggerfallSiteContent
     {
         if (bytes is null)
         {
-            diagnostics.Add("Normalized world closure must contain normalized.json for its source lights.");
+            diagnostics.Add("Normalized world document must contain normalized.json for its source lights.");
             return [];
         }
 
@@ -640,498 +310,7 @@ internal static partial class DaggerfallSiteContent
         }
         catch (JsonException exception)
         {
-            diagnostics.Add($"Normalized world closure is not valid JSON: {exception.Message}");
-            return [];
-        }
-    }
-
-    private static IReadOnlyList<DaggerfallSitePortal> ReadSitePortals(JsonElement world, DaggerfallContentDiagnostics diagnostics)
-    {
-        if (!world.TryGetProperty("transitions", out JsonElement section)) return [];
-        if (section.ValueKind != JsonValueKind.Array)
-        {
-            diagnostics.Add("world.transitions must be an array when supplied.");
-            return [];
-        }
-        Dictionary<string, DaggerfallSitePortal> portals = new(StringComparer.Ordinal);
-        foreach (JsonElement value in section.EnumerateArray())
-        {
-            JsonElement portal = DaggerfallBaseContent.Object(value, "world transition", diagnostics);
-            DaggerfallBaseContent.RejectDuplicateProperties(portal, "world transition", diagnostics);
-            try
-            {
-                DaggerfallSitePortal parsed = new DaggerfallSitePortal(
-                    DaggerfallBaseContent.Text(portal, "id", diagnostics),
-                    Point(DaggerfallBaseContent.Property(portal, "position", diagnostics), "world transition position", diagnostics),
-                    DaggerfallBaseContent.Number(portal, "radius", diagnostics),
-                    DaggerfallBaseContent.Text(portal, "destinationProfile", diagnostics),
-                    DaggerfallBaseContent.OptionalText(portal, "arrivalAnchor", diagnostics),
-                    portal.TryGetProperty("normal", out JsonElement normal) ? Vector3Value(normal, "world transition normal", diagnostics) : null).Validate();
-                if (!portals.TryAdd(parsed.Id, parsed)) diagnostics.Add($"World transitions repeat portal '{parsed.Id}'.");
-            }
-            catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException)
-            {
-                diagnostics.Add($"World transition is malformed: {exception.Message}");
-            }
-        }
-        return portals.Values.OrderBy(portal => portal.Id, StringComparer.Ordinal).ToArray();
-    }
-
-    private static IReadOnlyList<DaggerfallSiteAnchor> ReadSiteAnchors(JsonElement world, ScenarioStart start, DaggerfallContentDiagnostics diagnostics)
-    {
-        Dictionary<string, DaggerfallSiteAnchor> anchors = new(StringComparer.Ordinal)
-        {
-            ["start"] = new DaggerfallSiteAnchor("start", start.Position, start.Look.YawRadians, start.Look.PitchRadians).Validate(),
-        };
-        if (!world.TryGetProperty("anchors", out JsonElement section)) return anchors.Values.ToArray();
-        if (section.ValueKind != JsonValueKind.Array)
-        {
-            diagnostics.Add("world.anchors must be an array when supplied.");
-            return anchors.Values.ToArray();
-        }
-        foreach (JsonElement value in section.EnumerateArray())
-        {
-            JsonElement anchor = DaggerfallBaseContent.Object(value, "world anchor", diagnostics);
-            DaggerfallBaseContent.RejectDuplicateProperties(anchor, "world anchor", diagnostics);
-            try
-            {
-                DaggerfallSiteAnchor parsed = new DaggerfallSiteAnchor(
-                    DaggerfallBaseContent.Text(anchor, "id", diagnostics),
-                    Point(DaggerfallBaseContent.Property(anchor, "position", diagnostics), "world anchor position", diagnostics),
-                    DaggerfallBaseContent.Number(anchor, "yawRadians", diagnostics),
-                    DaggerfallBaseContent.Number(anchor, "pitchRadians", diagnostics)).Validate();
-                if (!anchors.TryAdd(parsed.Id, parsed)) diagnostics.Add($"World anchors repeat anchor '{parsed.Id}'.");
-            }
-            catch (Exception exception) when (exception is ArgumentException or ArgumentOutOfRangeException)
-            {
-                diagnostics.Add($"World anchor is malformed: {exception.Message}");
-            }
-        }
-        return anchors.Values.OrderBy(anchor => anchor.Id, StringComparer.Ordinal).ToArray();
-    }
-
-    private static DaggerfallWorldProfileKind InvalidProfileKind(DaggerfallContentDiagnostics diagnostics)
-    {
-        diagnostics.Add("Selected world profileKind must be exterior, interior, or dungeon.");
-        return DaggerfallWorldProfileKind.Dungeon;
-    }
-
-    /// <summary>
-    /// Reads action models from their normalized model-local meshes and separate source pose.
-    /// Only material groups explicitly admitted for collision contribute to dynamic triangles.
-    /// </summary>
-    internal static IReadOnlyList<DaggerfallDungeonActionModelDefinition> ReadNormalizedActionModels(
-        ReadOnlyMemory<byte>? bytes,
-        DaggerfallClosureArtifacts artifacts,
-        AdmittedFiles files,
-        IReadOnlyList<NormalizedMaterial> materials,
-        DaggerfallContentDiagnostics diagnostics)
-    {
-        if (bytes is null)
-        {
-            diagnostics.Add("Normalized world closure must contain normalized.json for its action models.");
-            return [];
-        }
-
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(bytes.Value);
-            JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "normalized action models", diagnostics);
-            JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "normalized action models.world", diagnostics);
-            if (!world.TryGetProperty("actionModels", out JsonElement modelSection)) return [];
-            if (modelSection.ValueKind != JsonValueKind.Array)
-            {
-                diagnostics.Add("Normalized world.actionModels must be an array.");
-                return [];
-            }
-
-            Dictionary<string, ContentArtifact> artifactById = new(StringComparer.Ordinal);
-            foreach (JsonElement candidate in DaggerfallBaseContent.Array(root, "artifacts", diagnostics))
-            {
-                JsonElement artifact = DaggerfallBaseContent.Object(candidate, "normalized action-model artifact", diagnostics);
-                string id = DaggerfallBaseContent.Text(artifact, "id", diagnostics);
-                string relativePath = DaggerfallBaseContent.Text(artifact, "relativePath", diagnostics);
-                string path = artifacts.Resolve(relativePath);
-                if (!artifacts.TryGetValue(path, out ContentSha256 hash))
-                    diagnostics.Add($"Normalized action-model artifact '{id}' is absent from the admitted import manifest.");
-                else if (!artifactById.TryAdd(id, new ContentArtifact(path, hash)))
-                    diagnostics.Add($"Normalized world repeats artifact '{id}'.");
-            }
-
-            Dictionary<string, uint> worldMaterialSlots = materials
-                .Where(material => !string.IsNullOrWhiteSpace(material.MaterialResourceId))
-                .ToDictionary(material => material.MaterialResourceId, material => material.Slot, StringComparer.Ordinal);
-            Dictionary<string, JsonElement> meshes = new(StringComparer.Ordinal);
-            foreach (JsonElement candidate in DaggerfallBaseContent.Array(root, "meshes", diagnostics))
-            {
-                JsonElement mesh = DaggerfallBaseContent.Object(candidate, "normalized action-model mesh", diagnostics);
-                string id = DaggerfallBaseContent.Text(mesh, "id", diagnostics);
-                if (!meshes.TryAdd(id, mesh)) diagnostics.Add($"Normalized world repeats mesh '{id}'.");
-            }
-
-            List<DaggerfallDungeonActionModelDefinition> result = [];
-            HashSet<string> actionIds = new(StringComparer.Ordinal);
-            HashSet<string> doorIds = new(StringComparer.Ordinal);
-            foreach (JsonElement value in modelSection.EnumerateArray())
-            {
-                JsonElement model = DaggerfallBaseContent.Object(value, "normalized action model", diagnostics);
-                DaggerfallBaseContent.RejectDuplicateProperties(model, "normalized action model", diagnostics);
-                string actionId = DaggerfallBaseContent.Text(model, "actionId", diagnostics);
-                string description = DaggerfallBaseContent.Text(model, "description", diagnostics);
-                ushort modelIndex = UShort(model, "modelIndex", diagnostics);
-                byte rawIndex = model.TryGetProperty("rawIndex", out _) ? Byte(model, "rawIndex", diagnostics) : (byte)0;
-                string? doorId = OptionalNullableText(model, "doorId", diagnostics);
-                DaggerfallRdbDoorId? doorIdentity = null;
-                if (doorId is not null)
-                {
-                    if (TryDoorIdentity(doorId, out DaggerfallRdbDoorId parsedDoor)) doorIdentity = parsedDoor;
-                    else diagnostics.Add($"Normalized action model '{actionId}' has invalid door identity '{doorId}'.");
-                }
-                Vector3 position = ObjectVector3(DaggerfallBaseContent.Property(model, "position", diagnostics), $"normalized action model '{actionId}' position", diagnostics);
-                Vector3 rotation = ObjectVector3(DaggerfallBaseContent.Property(model, "rotationDegrees", diagnostics), $"normalized action model '{actionId}' rotation", diagnostics);
-                JsonElement bounds = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(model, "localBounds", diagnostics), $"normalized action model '{actionId}' localBounds", diagnostics);
-                Vector3 boundsMin = ObjectVector3(DaggerfallBaseContent.Property(bounds, "minimum", diagnostics), $"normalized action model '{actionId}' minimum", diagnostics);
-                Vector3 boundsMax = ObjectVector3(DaggerfallBaseContent.Property(bounds, "maximum", diagnostics), $"normalized action model '{actionId}' maximum", diagnostics);
-                string visualArtifactId = DaggerfallBaseContent.Text(model, "visualArtifactId", diagnostics);
-                if (!actionIds.Add(actionId)) diagnostics.Add($"Normalized world repeats action model '{actionId}'.");
-                if (doorId is not null && !doorIds.Add(doorId)) diagnostics.Add($"Normalized world repeats action-model door visual '{doorId}'.");
-                if (!artifactById.TryGetValue(visualArtifactId, out ContentArtifact? visualArtifact))
-                {
-                    diagnostics.Add($"Normalized action model '{actionId}' has no admitted visual artifact '{visualArtifactId}'.");
-                    continue;
-                }
-
-                List<Vector3> collisionVertices = [];
-                List<Triangle> collisionTriangles = [];
-                HashSet<string> referencedMeshIds = new(StringComparer.Ordinal);
-                HashSet<string> visualMaterialIds = new(StringComparer.Ordinal);
-                foreach (JsonElement meshIdValue in DaggerfallBaseContent.Array(model, "meshIds", diagnostics))
-                {
-                    if (meshIdValue.ValueKind != JsonValueKind.String || meshIdValue.GetString() is not { Length: > 0 } meshId)
-                    {
-                        diagnostics.Add($"Normalized action model '{actionId}' meshIds must contain non-empty strings.");
-                        continue;
-                    }
-                    if (!referencedMeshIds.Add(meshId))
-                    {
-                        diagnostics.Add($"Normalized action model '{actionId}' repeats mesh '{meshId}'.");
-                        continue;
-                    }
-                    if (!meshes.TryGetValue(meshId, out JsonElement mesh))
-                    {
-                        diagnostics.Add($"Normalized action model '{actionId}' refers to missing mesh '{meshId}'.");
-                        continue;
-                    }
-                    string meshArtifactId = DaggerfallBaseContent.Text(mesh, "artifactId", diagnostics);
-                    if (!StringComparer.Ordinal.Equals(meshArtifactId, visualArtifactId))
-                        diagnostics.Add($"Normalized action model '{actionId}' mesh '{meshId}' refers to artifact '{meshArtifactId}', not '{visualArtifactId}'.");
-                    Vector3[] vertices = DaggerfallBaseContent.Array(mesh, "vertices", diagnostics)
-                        .Select(vertex => ObjectVector3(DaggerfallBaseContent.Object(vertex, $"action model '{actionId}' mesh vertex", diagnostics), $"action model '{actionId}' mesh vertex", diagnostics))
-                        .ToArray();
-                    JsonElement[] triangles = DaggerfallBaseContent.Array(mesh, "triangles", diagnostics).ToArray();
-                    bool[] collidable = new bool[triangles.Length];
-                    foreach (JsonElement groupValue in DaggerfallBaseContent.Array(mesh, "materialGroups", diagnostics))
-                    {
-                        JsonElement group = DaggerfallBaseContent.Object(groupValue, $"action model '{actionId}' material group", diagnostics);
-                        string materialId = DaggerfallBaseContent.Text(group, "materialResourceId", diagnostics);
-                        visualMaterialIds.Add(materialId);
-                        int start = DaggerfallBaseContent.Integer(group, "startTriangle", diagnostics);
-                        int count = DaggerfallBaseContent.Integer(group, "triangleCount", diagnostics);
-                        if (!group.TryGetProperty("participatesInCollision", out _))
-                            diagnostics.Add($"Action model '{actionId}' material group '{materialId}' has no collision admission flag.");
-                        bool participates = OptionalBoolean(group, "participatesInCollision", false, diagnostics);
-                        if (start < 0 || count < 0 || start > triangles.Length - count)
-                        {
-                            diagnostics.Add($"Action model '{actionId}' material group '{materialId}' has an invalid triangle range.");
-                            continue;
-                        }
-                        if (participates)
-                            Array.Fill(collidable, true, start, count);
-                    }
-                    if (!collidable.Any(value => value)) continue;
-                    uint firstVertex = checked((uint)collisionVertices.Count);
-                    collisionVertices.AddRange(vertices);
-                    for (int triangleIndex = 0; triangleIndex < triangles.Length; triangleIndex++)
-                    {
-                        if (!collidable[triangleIndex]) continue;
-                        JsonElement triangle = DaggerfallBaseContent.Object(triangles[triangleIndex], $"action model '{actionId}' triangle", diagnostics);
-                        int a = DaggerfallBaseContent.Integer(triangle, "firstVertex", diagnostics);
-                        int b = DaggerfallBaseContent.Integer(triangle, "secondVertex", diagnostics);
-                        int c = DaggerfallBaseContent.Integer(triangle, "thirdVertex", diagnostics);
-                        if ((uint)a >= (uint)vertices.Length || (uint)b >= (uint)vertices.Length || (uint)c >= (uint)vertices.Length)
-                        {
-                            diagnostics.Add($"Action model '{actionId}' collision triangle {triangleIndex} references a missing vertex.");
-                            continue;
-                        }
-                        collisionTriangles.Add(new Triangle(firstVertex + checked((uint)a), firstVertex + checked((uint)b), firstVertex + checked((uint)c)));
-                    }
-                }
-
-                try
-                {
-                    files.RequireExactlyOne(visualArtifact.Path);
-                    IReadOnlyList<DaggerfallMeshMaterialBinding> materialBindings = ActionModelMaterials(
-                        visualMaterialIds, actionId, worldMaterialSlots, diagnostics);
-                    DaggerfallDoorVisual visual = new DaggerfallDoorVisual(visualArtifact.Path, visualArtifact.Sha256, materialBindings).Validate();
-                    result.Add(new DaggerfallDungeonActionModelDefinition(
-                        actionId,
-                        doorId,
-                        doorIdentity,
-                        description,
-                        modelIndex,
-                        rawIndex,
-                        visual,
-                        DaggerfallSiteGeometry.InitialTransform(position, rotation),
-                        boundsMin,
-                        boundsMax,
-                        [.. collisionVertices],
-                        [.. collisionTriangles]).Validate());
-                }
-                catch (ArgumentException exception)
-                {
-                    diagnostics.Add($"Normalized action model '{actionId}' is invalid: {exception.Message}");
-                }
-            }
-            return result.OrderBy(model => model.ActionId, StringComparer.Ordinal).ToArray();
-        }
-        catch (JsonException exception)
-        {
-            diagnostics.Add($"Normalized world closure is not valid JSON: {exception.Message}");
-            return [];
-        }
-    }
-
-    /// <summary>
-    /// Binds an action model's visual to the world's material table. The importer writes the visual with
-    /// the world's material universe, as it writes door visuals, so each material the model's meshes draw
-    /// with sits at its world slot; the visual's bytes go to the Engine unread.
-    /// </summary>
-    private static IReadOnlyList<DaggerfallMeshMaterialBinding> ActionModelMaterials(
-        IReadOnlySet<string> materialIds,
-        string actionId,
-        IReadOnlyDictionary<string, uint> worldMaterialSlots,
-        DaggerfallContentDiagnostics diagnostics)
-    {
-        List<DaggerfallMeshMaterialBinding> bindings = [];
-        foreach (string materialId in materialIds.Order(StringComparer.Ordinal))
-        {
-            if (!worldMaterialSlots.TryGetValue(materialId, out uint worldSlot))
-            {
-                diagnostics.Add($"Action model '{actionId}' visual refers to missing material resource '{materialId}'.");
-                continue;
-            }
-            bindings.Add(new DaggerfallMeshMaterialBinding(worldSlot, worldSlot));
-        }
-        if (bindings.Count == 0) diagnostics.Add($"Action model '{actionId}' visual has no admitted material slots.");
-        return bindings.OrderBy(binding => binding.MeshSlot).ToArray();
-    }
-
-    /// <summary>
-    /// Selects the actual RDB action doors published with this world closure.  The import has
-    /// already converted source coordinates and model rotations; this reader only validates and
-    /// projects those normalized facts.  Door bounds come from the action visual meshes, whose
-    /// geometry is deliberately excluded from the world's static collision artifact.
-    /// </summary>
-    private static IReadOnlyList<DaggerfallRdbDoorDefinition> ReadNormalizedDoors(
-        ReadOnlyMemory<byte>? bytes,
-        string staticMeshPath,
-        DaggerfallClosureArtifacts artifacts,
-        IReadOnlyList<NormalizedMaterial> materials,
-        IReadOnlyList<DaggerfallDungeonActionModelDefinition> actionModels,
-        DaggerfallWorldProfileKind profileKind,
-        DaggerfallContentDiagnostics diagnostics)
-    {
-        if (bytes is null)
-        {
-            diagnostics.Add("Normalized world closure must contain normalized.json for its selected RDB doors.");
-            return [];
-        }
-
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(bytes.Value);
-            JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "normalized world", diagnostics);
-            JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "normalized world.world", diagnostics);
-            Dictionary<string, ContentArtifact> artifactById = [];
-            foreach (JsonElement candidate in DaggerfallBaseContent.Array(root, "artifacts", diagnostics))
-            {
-                JsonElement artifact = DaggerfallBaseContent.Object(candidate, "normalized artifact", diagnostics);
-                string id = DaggerfallBaseContent.Text(artifact, "id", diagnostics);
-                string relativePath = DaggerfallBaseContent.Text(artifact, "relativePath", diagnostics);
-                string path = artifacts.Resolve(relativePath);
-                if (!artifacts.TryGetValue(path, out ContentSha256 hash)) diagnostics.Add($"Normalized artifact '{id}' is absent from the admitted import manifest.");
-                else if (!artifactById.TryAdd(id, new ContentArtifact(path, hash))) diagnostics.Add($"Normalized world repeats artifact '{id}'.");
-            }
-            string? staticMeshArtifactId = artifactById.SingleOrDefault(pair => StringComparer.Ordinal.Equals(pair.Value.Path, staticMeshPath)).Key;
-            if (string.IsNullOrWhiteSpace(staticMeshArtifactId))
-                diagnostics.Add("Normalized world has no admitted static-mesh artifact for its action-door visuals.");
-            Dictionary<string, uint> worldMaterialSlots = materials.Where(material => !string.IsNullOrWhiteSpace(material.MaterialResourceId))
-                .ToDictionary(material => material.MaterialResourceId, material => material.Slot, StringComparer.Ordinal);
-            Dictionary<string, DaggerfallDungeonActionModelDefinition> actionModelsByDoor = [];
-            foreach (DaggerfallDungeonActionModelDefinition model in actionModels.Where(model => model.DoorId is not null))
-            {
-                if (!actionModelsByDoor.TryAdd(model.DoorId!, model))
-                    diagnostics.Add($"Normalized action models repeat door visual '{model.DoorId}'.");
-            }
-            Dictionary<string, JsonElement> meshes = [];
-            foreach (JsonElement candidate in DaggerfallBaseContent.Array(root, "meshes", diagnostics))
-            {
-                JsonElement mesh = DaggerfallBaseContent.Object(candidate, "normalized world mesh", diagnostics);
-                string id = DaggerfallBaseContent.Text(mesh, "id", diagnostics);
-                if (!meshes.TryAdd(id, mesh)) diagnostics.Add($"Normalized world repeats mesh '{id}'.");
-            }
-
-            List<DaggerfallRdbDoorDefinition> result = [];
-            HashSet<DaggerfallRdbDoorId> identities = [];
-            foreach (JsonElement candidate in DaggerfallBaseContent.Array(world, "doors", diagnostics))
-            {
-                JsonElement door = DaggerfallBaseContent.Object(candidate, "normalized RDB door", diagnostics);
-                string sourceId = DaggerfallBaseContent.Text(door, "id", diagnostics);
-                if (!TryDoorIdentity(sourceId, out DaggerfallRdbDoorId identity))
-                {
-                    diagnostics.Add($"Normalized door '{sourceId}' must name one RDB or RMB model as door/<source>-rdb|rmb/<block-x>/<block-z>/<model-index>.");
-                    continue;
-                }
-                if (!identities.Add(identity))
-                {
-                    diagnostics.Add($"Normalized world repeats RDB door '{identity}'.");
-                    continue;
-                }
-
-                Vector3 position = ObjectVector3(DaggerfallBaseContent.Property(door, "position", diagnostics), $"normalized door '{sourceId}' position", diagnostics);
-                Vector3 rotation = ObjectVector3(DaggerfallBaseContent.Property(door, "rotationDegrees", diagnostics), $"normalized door '{sourceId}' rotation", diagnostics);
-                DaggerfallDoorKind kind = DaggerfallBaseContent.Text(door, "kind", diagnostics) switch
-                {
-                    "normal" => DaggerfallDoorKind.Normal,
-                    "special" => DaggerfallDoorKind.Special,
-                    _ => InvalidDoorKind(identity, diagnostics),
-                };
-                int startingLock = DaggerfallBaseContent.Integer(door, "startingLockValue", diagnostics);
-                JsonElement actionValue = door.TryGetProperty("action", out JsonElement actionProperty)
-                    ? actionProperty
-                    : default;
-                // Action-door geometry retains its source model frame. Ordinary baked door visuals
-                // are projected into DaggerfallDoorPose's door-local frame below.
-                DaggerfallDoorActionSource? action = ReadDoorAction(actionValue, identity, diagnostics);
-
-                if (actionModelsByDoor.TryGetValue(sourceId, out DaggerfallDungeonActionModelDefinition? actionModel))
-                {
-                    if (actionModel.Visual is not { } modelVisual)
-                    {
-                        diagnostics.Add($"Normalized RDB door '{identity}' action model has no visual artifact.");
-                        continue;
-                    }
-                    try
-                    {
-                        result.Add(new DaggerfallRdbDoorDefinition(
-                            identity,
-                            actionModel.InitialTransform.Translation,
-                            rotation,
-                            actionModel.LocalBoundsMin,
-                            actionModel.LocalBoundsMax,
-                            kind,
-                            startingLock,
-                            Visual: modelVisual,
-                            Action: action)
-                        {
-                            UsesModelCoordinates = true,
-                            LockSurface = DoorSurface(profileKind),
-                        }.Validate());
-                    }
-                    catch (ArgumentException exception)
-                    {
-                        diagnostics.Add($"Normalized RDB door '{identity}' has invalid action-model pose or bounds: {exception.Message}");
-                    }
-                    continue;
-                }
-
-                List<Vector3> vertices = [];
-                HashSet<string> materialIds = [];
-                foreach (JsonElement meshIdValue in DaggerfallBaseContent.Array(door, "visualMeshIds", diagnostics))
-                {
-                    if (meshIdValue.ValueKind != JsonValueKind.String)
-                    {
-                        diagnostics.Add($"Normalized RDB door '{identity}' visualMeshIds must contain strings.");
-                        continue;
-                    }
-                    string meshId = meshIdValue.GetString() ?? string.Empty;
-                    if (!meshes.TryGetValue(meshId, out JsonElement mesh))
-                    {
-                        diagnostics.Add($"Normalized RDB door '{identity}' refers to missing visual mesh '{meshId}'.");
-                        continue;
-                    }
-                    foreach (JsonElement vertex in DaggerfallBaseContent.Array(mesh, "vertices", diagnostics))
-                        vertices.Add(ObjectVector3(DaggerfallBaseContent.Object(vertex, $"normalized RDB door '{identity}' vertex", diagnostics), $"normalized RDB door '{identity}' vertex", diagnostics));
-                    foreach (JsonElement groupValue in DaggerfallBaseContent.Array(mesh, "materialGroups", diagnostics))
-                        materialIds.Add(DaggerfallBaseContent.Text(DaggerfallBaseContent.Object(groupValue, $"normalized RDB door '{identity}' material group", diagnostics), "materialResourceId", diagnostics));
-                }
-                if (vertices.Count == 0)
-                {
-                    diagnostics.Add($"Normalized RDB door '{identity}' must have action visual geometry.");
-                    continue;
-                }
-
-                Quaternion closed = DaggerfallDoorPose.ClosedRotation(rotation);
-                Quaternion inverse = Quaternion.Inverse(closed);
-                Vector3 first = Vector3.Transform(vertices[0] - position, inverse);
-                Vector3 minimum = first;
-                Vector3 maximum = first;
-                foreach (Vector3 worldVertex in vertices.Skip(1))
-                {
-                    Vector3 local = Vector3.Transform(worldVertex - position, inverse);
-                    minimum = Vector3.Min(minimum, local);
-                    maximum = Vector3.Max(maximum, local);
-                }
-                if (door.TryGetProperty("collisionBounds", out JsonElement collisionBounds)
-                    && collisionBounds.ValueKind != JsonValueKind.Null)
-                {
-                    minimum = ObjectVector3(DaggerfallBaseContent.Property(collisionBounds, "minimum", diagnostics),
-                        $"normalized door '{sourceId}' collision minimum", diagnostics);
-                    maximum = ObjectVector3(DaggerfallBaseContent.Property(collisionBounds, "maximum", diagnostics),
-                        $"normalized door '{sourceId}' collision maximum", diagnostics);
-                }
-                DaggerfallSiteBuildingId? exteriorBuilding = null;
-                if (door.TryGetProperty("exteriorBuildingIndex", out JsonElement buildingIndex)
-                    && buildingIndex.ValueKind != JsonValueKind.Null)
-                {
-                    if (profileKind != DaggerfallWorldProfileKind.Exterior || !buildingIndex.TryGetInt32(out int index) || index < 0)
-                        diagnostics.Add($"Normalized door '{sourceId}' has invalid exterior building identity.");
-                    else exteriorBuilding = new(identity.BlockX, identity.BlockZ, index);
-                }
-                try
-                {
-                    string artifactId = $"{staticMeshArtifactId}/door/{sourceId["door/".Length..].Replace('/', '-')}";
-                    if (!artifactById.TryGetValue(artifactId, out ContentArtifact? visualArtifact))
-                    {
-                        diagnostics.Add($"Normalized RDB door '{identity}' has no separately published visual artifact.");
-                        continue;
-                    }
-                    DaggerfallMeshMaterialBinding[] bindings = materialIds.OrderBy(material => material, StringComparer.Ordinal)
-                        .Select(material => worldMaterialSlots.TryGetValue(material, out uint worldSlot)
-                            ? new DaggerfallMeshMaterialBinding(worldSlot, worldSlot)
-                            : throw new InvalidOperationException($"Normalized RDB door '{identity}' refers to missing material '{material}'."))
-                        .ToArray();
-                    result.Add(new DaggerfallRdbDoorDefinition(identity, position, rotation, minimum, maximum, kind, startingLock,
-                        Visual: new DaggerfallDoorVisual(visualArtifact.Path, visualArtifact.Sha256, bindings), Action: action)
-                    {
-                        LockSurface = DoorSurface(profileKind),
-                        ExteriorBuilding = exteriorBuilding,
-                    }.Validate());
-                }
-                catch (ArgumentException exception)
-                {
-                    diagnostics.Add($"Normalized RDB door '{identity}' has invalid pose or bounds: {exception.Message}");
-                }
-            }
-            return result.OrderBy(value => value.Id.SourceKey, StringComparer.Ordinal)
-                .ThenBy(value => value.Id.BlockX)
-                .ThenBy(value => value.Id.BlockZ)
-                .ThenBy(value => value.Id.ModelIndex)
-                .ToArray();
-        }
-        catch (JsonException exception)
-        {
-            diagnostics.Add($"Normalized world closure is not valid JSON: {exception.Message}");
+            diagnostics.Add($"Normalized world document is not valid JSON: {exception.Message}");
             return [];
         }
     }
@@ -1159,407 +338,6 @@ internal static partial class DaggerfallSiteContent
         return true;
     }
 
-    /// <summary>
-    /// Projects stable dungeon discovery facts directly from normalized importer metadata. Geometry is
-    /// placement-scoped even where its render mesh is a shared material-group aggregate. This deliberately
-    /// reads neither static-mesh nor collision artifact bytes.
-    /// </summary>
-    private static DaggerfallDungeonMapContent? ReadNormalizedDungeonMap(
-        ReadOnlyMemory<byte>? bytes,
-        IReadOnlyList<DaggerfallRdbDoorDefinition> doors,
-        IReadOnlyList<DaggerfallSitePortal> portals,
-        DaggerfallContentDiagnostics diagnostics)
-    {
-        if (bytes is null)
-        {
-            diagnostics.Add("Normalized dungeon map content requires normalized.json.");
-            return null;
-        }
-
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(bytes.Value);
-            JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "normalized dungeon map", diagnostics);
-            JsonElement world = DaggerfallBaseContent.Object(
-                DaggerfallBaseContent.Property(root, "world", diagnostics),
-                "normalized dungeon map.world",
-                diagnostics);
-
-            List<string> allWorldMeshIds = [];
-            HashSet<string> allWorldMeshIdSet = new(StringComparer.Ordinal);
-            foreach (JsonElement value in DaggerfallBaseContent.Array(world, "meshIds", diagnostics))
-            {
-                if (value.ValueKind != JsonValueKind.String || value.GetString() is not { Length: > 0 } meshId)
-                {
-                    diagnostics.Add("Normalized dungeon world.meshIds must contain non-empty strings.");
-                    continue;
-                }
-                if (!DaggerfallBaseContent.ValidId(meshId))
-                {
-                    diagnostics.Add($"Normalized dungeon world.meshIds contains invalid mesh id '{meshId}'.");
-                    continue;
-                }
-                if (!allWorldMeshIdSet.Add(meshId))
-                {
-                    diagnostics.Add($"Normalized dungeon world.meshIds repeats mesh '{meshId}'.");
-                    continue;
-                }
-                allWorldMeshIds.Add(meshId);
-            }
-
-            HashSet<string> actionMeshIds = new(StringComparer.Ordinal);
-            if (world.TryGetProperty("actionModels", out JsonElement actionModelsValue)
-                && actionModelsValue.ValueKind == JsonValueKind.Array)
-            {
-                foreach (JsonElement modelValue in actionModelsValue.EnumerateArray())
-                {
-                    JsonElement model = DaggerfallBaseContent.Object(modelValue, "normalized dungeon action model", diagnostics);
-                    foreach (JsonElement meshValue in DaggerfallBaseContent.Array(model, "meshIds", diagnostics))
-                    {
-                        if (meshValue.ValueKind == JsonValueKind.String && meshValue.GetString() is { Length: > 0 } meshId)
-                            actionMeshIds.Add(meshId);
-                    }
-                }
-            }
-            HashSet<string> actionDoorMeshIds = new(StringComparer.Ordinal);
-            foreach (JsonElement doorValue in DaggerfallBaseContent.Array(world, "doors", diagnostics))
-            {
-                JsonElement door = DaggerfallBaseContent.Object(doorValue, "normalized dungeon door", diagnostics);
-                foreach (JsonElement meshValue in DaggerfallBaseContent.Array(door, "visualMeshIds", diagnostics))
-                    if (meshValue.ValueKind == JsonValueKind.String && meshValue.GetString() is { Length: > 0 } meshId)
-                        actionDoorMeshIds.Add(meshId);
-            }
-
-            List<string> worldMeshIds = [];
-            HashSet<string> worldMeshIdSet = new(StringComparer.Ordinal);
-            if (world.TryGetProperty("staticMeshIds", out JsonElement staticMeshIdsValue))
-            {
-                if (staticMeshIdsValue.ValueKind != JsonValueKind.Array)
-                    diagnostics.Add("Normalized dungeon world.staticMeshIds must be an array.");
-                else
-                {
-                    foreach (JsonElement value in staticMeshIdsValue.EnumerateArray())
-                    {
-                        if (value.ValueKind != JsonValueKind.String || value.GetString() is not { Length: > 0 } meshId)
-                        {
-                            diagnostics.Add("Normalized dungeon world.staticMeshIds must contain non-empty strings.");
-                            continue;
-                        }
-                        if (!DaggerfallBaseContent.ValidId(meshId))
-                        {
-                            diagnostics.Add($"Normalized dungeon world.staticMeshIds contains invalid mesh id '{meshId}'.");
-                            continue;
-                        }
-                        if (!worldMeshIdSet.Add(meshId))
-                        {
-                            diagnostics.Add($"Normalized dungeon world.staticMeshIds repeats mesh '{meshId}'.");
-                            continue;
-                        }
-                        worldMeshIds.Add(meshId);
-                    }
-                }
-            }
-            else
-            {
-                // Legacy normalized worlds have no explicit static mesh partition. Their
-                // geometry placements still name door/action meshes because those placements
-                // are also the source of dungeon discovery bounds. Keep the legacy map closure
-                // whole here; rendering/collision admission is handled by the world/action
-                // projection owners, not by this discovery metadata reader.
-                foreach (string meshId in allWorldMeshIds)
-                {
-                    worldMeshIds.Add(meshId);
-                    worldMeshIdSet.Add(meshId);
-                }
-            }
-            foreach (string meshId in worldMeshIds)
-            {
-                if (!allWorldMeshIdSet.Contains(meshId))
-                    diagnostics.Add($"Normalized dungeon world.staticMeshIds refers to mesh '{meshId}', which world.meshIds does not carry.");
-                if (world.TryGetProperty("staticMeshIds", out _)
-                    && (actionMeshIds.Contains(meshId) || actionDoorMeshIds.Contains(meshId)))
-                    diagnostics.Add($"Normalized dungeon world.staticMeshIds includes dynamic action visual mesh '{meshId}'.");
-            }
-
-            Dictionary<string, JsonElement> meshes = new(StringComparer.Ordinal);
-            foreach (JsonElement value in DaggerfallBaseContent.Array(root, "meshes", diagnostics))
-            {
-                JsonElement mesh = DaggerfallBaseContent.Object(value, "normalized dungeon mesh", diagnostics);
-                string meshId = DaggerfallBaseContent.Text(mesh, "id", diagnostics);
-                if (!DaggerfallBaseContent.ValidId(meshId))
-                {
-                    diagnostics.Add($"Normalized dungeon mesh has invalid id '{meshId}'.");
-                    continue;
-                }
-                if (!meshes.TryAdd(meshId, mesh))
-                    diagnostics.Add($"Normalized dungeon repeats mesh '{meshId}'.");
-            }
-
-            HashSet<string> doorVisualMeshIds = new(StringComparer.Ordinal);
-            foreach (JsonElement value in DaggerfallBaseContent.Array(world, "doors", diagnostics))
-            {
-                JsonElement door = DaggerfallBaseContent.Object(value, "normalized dungeon door", diagnostics);
-                string doorId = DaggerfallBaseContent.Text(door, "id", diagnostics);
-                foreach (JsonElement visual in DaggerfallBaseContent.Array(door, "visualMeshIds", diagnostics))
-                {
-                    if (visual.ValueKind != JsonValueKind.String || visual.GetString() is not { Length: > 0 } meshId)
-                    {
-                        diagnostics.Add($"Normalized dungeon door '{doorId}' visualMeshIds must contain non-empty strings.");
-                        continue;
-                    }
-                    if (!allWorldMeshIdSet.Contains(meshId))
-                        diagnostics.Add($"Normalized dungeon door '{doorId}' refers to mesh '{meshId}', which world.meshIds does not carry.");
-                    if (!doorVisualMeshIds.Add(meshId))
-                        diagnostics.Add($"Normalized dungeon door visuals repeat mesh '{meshId}'.");
-                }
-            }
-
-            Dictionary<string, DaggerfallRdbDoorId> doorIdsBySourceId = [];
-            foreach (JsonElement value in DaggerfallBaseContent.Array(world, "doors", diagnostics))
-            {
-                JsonElement door = DaggerfallBaseContent.Object(value, "normalized dungeon door", diagnostics);
-                string doorId = DaggerfallBaseContent.Text(door, "id", diagnostics);
-                if (TryDoorIdentity(doorId, out DaggerfallRdbDoorId identity))
-                {
-                    if (!doorIdsBySourceId.TryAdd(doorId, identity))
-                        diagnostics.Add($"Normalized dungeon doors repeat source id '{doorId}'.");
-                }
-            }
-
-            List<DaggerfallDungeonMapGeometry> geometry = [];
-            HashSet<string> placementMeshIds = new(StringComparer.Ordinal);
-            foreach (JsonElement value in DaggerfallBaseContent.Array(world, "geometryPlacements", diagnostics))
-            {
-                JsonElement placement = DaggerfallBaseContent.Object(value, "normalized dungeon geometry placement", diagnostics);
-                DaggerfallBaseContent.RejectDuplicateProperties(placement, "normalized dungeon geometry placement", diagnostics);
-                string placementId = DaggerfallBaseContent.Text(placement, "id", diagnostics);
-                JsonElement bounds = DaggerfallBaseContent.Object(
-                    DaggerfallBaseContent.Property(placement, "bounds", diagnostics),
-                    $"normalized dungeon geometry placement '{placementId}' bounds",
-                    diagnostics);
-                Vector3 boundsMin = ObjectVector3(
-                    DaggerfallBaseContent.Property(bounds, "minimum", diagnostics),
-                    $"normalized dungeon geometry placement '{placementId}' minimum",
-                    diagnostics);
-                Vector3 boundsMax = ObjectVector3(
-                    DaggerfallBaseContent.Property(bounds, "maximum", diagnostics),
-                    $"normalized dungeon geometry placement '{placementId}' maximum",
-                    diagnostics);
-
-                List<string> meshIds = [];
-                HashSet<string> placementMeshIdSet = new(StringComparer.Ordinal);
-                foreach (JsonElement meshValue in DaggerfallBaseContent.Array(placement, "meshIds", diagnostics))
-                {
-                    if (meshValue.ValueKind != JsonValueKind.String || meshValue.GetString() is not { Length: > 0 } meshId)
-                    {
-                        diagnostics.Add($"Normalized dungeon geometry placement '{placementId}' meshIds must contain non-empty strings.");
-                        continue;
-                    }
-                    if (!worldMeshIdSet.Contains(meshId))
-                    {
-                        diagnostics.Add($"Normalized dungeon geometry placement '{placementId}' refers to mesh '{meshId}', which world.meshIds does not carry.");
-                        continue;
-                    }
-                    if (!meshes.ContainsKey(meshId))
-                        diagnostics.Add($"Normalized dungeon world references mesh '{meshId}', which normalized.json does not carry.");
-                    if (!placementMeshIdSet.Add(meshId))
-                    {
-                        diagnostics.Add($"Normalized dungeon geometry placement '{placementId}' repeats mesh '{meshId}'.");
-                        continue;
-                    }
-                    meshIds.Add(meshId);
-                    placementMeshIds.Add(meshId);
-                }
-
-                List<Vector3> samplePoints = [];
-                foreach (JsonElement sampleValue in DaggerfallBaseContent.Array(placement, "samplePoints", diagnostics))
-                {
-                    samplePoints.Add(ObjectVector3(
-                        DaggerfallBaseContent.Object(sampleValue, $"normalized dungeon geometry placement '{placementId}' sample point", diagnostics),
-                        $"normalized dungeon geometry placement '{placementId}' sample point",
-                        diagnostics));
-                }
-
-                DaggerfallRdbDoorId? doorId = null;
-                if (placement.TryGetProperty("doorId", out JsonElement doorValue) && doorValue.ValueKind != JsonValueKind.Null)
-                {
-                    if (doorValue.ValueKind != JsonValueKind.String || doorValue.GetString() is not { Length: > 0 } sourceDoorId)
-                    {
-                        diagnostics.Add($"Normalized dungeon geometry placement '{placementId}' doorId must be a source door id or null.");
-                    }
-                    else if (!doorIdsBySourceId.TryGetValue(sourceDoorId, out DaggerfallRdbDoorId identity))
-                    {
-                        diagnostics.Add($"Normalized dungeon geometry placement '{placementId}' refers to unknown source door '{sourceDoorId}'.");
-                    }
-                    else
-                    {
-                        doorId = identity;
-                        if (!doors.Any(candidate => candidate.Id == identity))
-                            diagnostics.Add($"Normalized dungeon geometry placement '{placementId}' refers to door '{sourceDoorId}', which was not admitted as a runtime door.");
-                        if (meshIds.Any(meshId => !doorVisualMeshIds.Contains(meshId)))
-                            diagnostics.Add($"Normalized dungeon geometry placement '{placementId}' names door '{sourceDoorId}' but includes a non-door visual mesh.");
-                    }
-                }
-                else if (meshIds.Any(doorVisualMeshIds.Contains))
-                {
-                    diagnostics.Add($"Normalized static dungeon geometry placement '{placementId}' includes an action-door visual mesh.");
-                }
-
-                try
-                {
-                    geometry.Add(new DaggerfallDungeonMapGeometry(placementId, boundsMin, boundsMax, meshIds, samplePoints, doorId).Validate());
-                }
-                catch (ArgumentException exception)
-                {
-                    diagnostics.Add($"Normalized dungeon geometry placement '{placementId}' is invalid: {exception.Message}");
-                }
-            }
-
-            foreach (string meshId in worldMeshIds)
-            {
-                if (!meshes.ContainsKey(meshId))
-                    diagnostics.Add($"Normalized dungeon world references mesh '{meshId}', which normalized.json does not carry.");
-                if (!placementMeshIds.Contains(meshId))
-                    diagnostics.Add($"Normalized dungeon world mesh '{meshId}' has no source geometry placement.");
-            }
-
-            List<DaggerfallSiteMarker> markers = [];
-            if (world.TryGetProperty("enterMarker", out JsonElement entranceValue) && entranceValue.ValueKind != JsonValueKind.Null)
-            {
-                JsonElement entrance = DaggerfallBaseContent.Object(entranceValue, "normalized dungeon entrance marker", diagnostics);
-                DaggerfallBaseContent.RejectDuplicateProperties(entrance, "normalized dungeon entrance marker", diagnostics);
-                string id = DaggerfallBaseContent.Text(entrance, "id", diagnostics);
-                Vector3 position = ObjectVector3(
-                    DaggerfallBaseContent.Property(entrance, "position", diagnostics),
-                    $"normalized dungeon entrance marker '{id}' position",
-                    diagnostics);
-                try
-                {
-                    markers.Add(new DaggerfallSiteMarker(
-                        id,
-                        DaggerfallSiteMarkerKind.Entrance,
-                        new WorldPoint(position.X, position.Y, position.Z)).Validate());
-                }
-                catch (ArgumentException exception)
-                {
-                    diagnostics.Add($"Normalized dungeon entrance marker '{id}' is invalid: {exception.Message}");
-                }
-            }
-
-            foreach (DaggerfallSitePortal portal in portals)
-            {
-                try
-                {
-                    markers.Add(new DaggerfallSiteMarker(
-                        portal.Id,
-                        DaggerfallSiteMarkerKind.Portal,
-                        portal.Position,
-                        portal.DestinationLogicalProfile).Validate());
-                }
-                catch (ArgumentException exception)
-                {
-                    diagnostics.Add($"Dungeon transition marker '{portal.Id}' is invalid: {exception.Message}");
-                }
-            }
-
-            try
-            {
-                return new DaggerfallDungeonMapContent(geometry, doors.Select(door => door.Id), markers);
-            }
-            catch (ArgumentException exception)
-            {
-                diagnostics.Add($"Normalized dungeon map facts are invalid: {exception.Message}");
-                return null;
-            }
-        }
-        catch (JsonException exception)
-        {
-            diagnostics.Add($"Normalized dungeon map closure is not valid JSON: {exception.Message}");
-            return null;
-        }
-    }
-
-    private static DaggerfallDoorKind InvalidDoorKind(DaggerfallRdbDoorId identity, DaggerfallContentDiagnostics diagnostics)
-    {
-        diagnostics.Add($"Normalized RDB door '{identity}' has an unknown kind.");
-        return DaggerfallDoorKind.Normal;
-    }
-
-    private static DaggerfallDoorActionSource? ReadDoorAction(JsonElement value, DaggerfallRdbDoorId identity, DaggerfallContentDiagnostics diagnostics)
-    {
-        if (value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined) return null;
-        JsonElement action = DaggerfallBaseContent.Object(value, $"normalized RDB door '{identity}' action", diagnostics);
-        int axis = DaggerfallBaseContent.Integer(action, "axis", diagnostics);
-        int duration = DaggerfallBaseContent.Integer(action, "duration", diagnostics);
-        int magnitude = DaggerfallBaseContent.Integer(action, "magnitude", diagnostics);
-        int next = DaggerfallBaseContent.Integer(action, "nextObjectOffset", diagnostics);
-        int flags = DaggerfallBaseContent.Integer(action, "flags", diagnostics);
-        if (axis is < byte.MinValue or > byte.MaxValue || duration is < ushort.MinValue or > ushort.MaxValue || magnitude is < ushort.MinValue or > ushort.MaxValue || flags is < byte.MinValue or > byte.MaxValue)
-        {
-            diagnostics.Add($"Normalized RDB door '{identity}' action values are out of source range.");
-            return null;
-        }
-        return new((byte)axis, (ushort)duration, (ushort)magnitude, next, (byte)flags);
-    }
-
-    private static Dictionary<long, AuthoredActor> ReadNormalizedPlacements(JsonElement root, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics, Dictionary<long, AuthoredActor> fixedActors, string profileId)
-    {
-        Dictionary<long, AuthoredActor> actors = [];
-        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "placements", diagnostics))
-        {
-            JsonElement placement = DaggerfallBaseContent.Object(value, "placement", diagnostics);
-            long entityId = Long(placement, "entityId", diagnostics);
-            DaggerfallActorId actorId = new(DaggerfallBaseContent.Text(placement, "actor", diagnostics));
-            AuthoredActor actor;
-            if (DaggerfallBaseContent.OptionalText(placement, "sourcePlacement", diagnostics) is { } source)
-            {
-                if (!fixedActors.Remove(FixedActorIdentity(profileId, source), out var fixedActor))
-                {
-                    diagnostics.Add($"Placement '{entityId}' names missing or repeated fixed marker '{source}'.");
-                    continue;
-                }
-                if (definitions.Actors.TryGetValue(actorId, out var definition)
-                    && definition.MobileId != definitions.RequireActor(fixedActor.ActorId).MobileId)
-                    diagnostics.Add($"Placement '{entityId}' disagrees with fixed marker '{source}' mobile.");
-                actor = fixedActor with { EntityId = entityId, ActorId = actorId };
-            }
-            else actor = new AuthoredActor(entityId, actorId, Point(DaggerfallBaseContent.Property(placement, "position", diagnostics), "placement.position", diagnostics));
-            if (entityId < 1 || !actors.TryAdd(entityId, actor))
-            {
-                diagnostics.Add($"Placement entity id '{entityId}' is invalid or duplicated.");
-            }
-            if (!definitions.Actors.ContainsKey(actorId)) diagnostics.Add($"Placement '{entityId}' refers to missing actor '{actorId.Value}'.");
-        }
-        return actors;
-    }
-
-    private static Dictionary<string, ContentSha256> ReadImportArtifacts(AdmittedFiles files, string manifestPath, string publicationRoot, DaggerfallContentDiagnostics diagnostics)
-    {
-        ReadOnlyMemory<byte> bytes = files.GetExactlyOne(manifestPath);
-        Dictionary<string, ContentSha256> artifacts = new(StringComparer.Ordinal);
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(bytes);
-            foreach (JsonElement artifact in DaggerfallBaseContent.Array(DaggerfallBaseContent.Object(document.RootElement, "import manifest", diagnostics), "artifacts", diagnostics))
-            {
-                JsonElement value = DaggerfallBaseContent.Object(artifact, "import artifact", diagnostics);
-                string relativePath = DaggerfallBaseContent.Text(value, "relativePath", diagnostics);
-                ContentSha256 hash = ContentHash(DaggerfallBaseContent.Text(value, "contentHash", diagnostics), diagnostics);
-                string path = $"{publicationRoot.TrimEnd('/')}/{relativePath}";
-                if (!artifacts.TryAdd(path, hash)) diagnostics.Add($"Generated import manifest repeats artifact '{relativePath}'.");
-            }
-        }
-        catch (JsonException exception) { diagnostics.Add($"Generated import manifest is not valid JSON: {exception.Message}"); }
-        return artifacts;
-    }
-
-    private static ContentSha256 RequireArtifact(DaggerfallClosureArtifacts artifacts, string path, DaggerfallContentDiagnostics diagnostics)
-    {
-        if (artifacts.TryGetValue(path, out ContentSha256 hash)) return hash;
-        diagnostics.Add($"Generated import manifest does not describe required artifact '{path}'.");
-        return default;
-    }
-
     private static ContentSha256 ContentHash(string hex, DaggerfallContentDiagnostics diagnostics)
     {
         try
@@ -1578,23 +356,24 @@ internal static partial class DaggerfallSiteContent
     /// <summary>The texture archive of the treasure piles a ground container stands as.</summary>
     private const int TreasureArchive = 216;
 
-    private static (IReadOnlyList<NormalizedMaterial> Materials, IReadOnlyDictionary<int, NormalizedActorSprite> Sprites, IReadOnlyList<NormalizedBillboardSprite>? GroundContainerSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> BillboardSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> TerrainTextures) ReadDungeonMedia(
-        ReadOnlyMemory<byte>? bytes,
-        DaggerfallClosureArtifacts artifacts,
+    /// <summary>
+    /// The records of <see cref="TreasureArchive"/> the classic draws a pile's image from at random, in its order
+    /// (DFU <c>DaggerfallLootDataTables.randomTreasureIconIndices</c>): the piles a ground container may stand as.
+    /// </summary>
+    private static readonly int[] TreasurePileRecords = [0, 1, 3, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 40, 43, 44, 45, 46, 47];
+
+    /// <summary>
+    /// The world media publication's actor, billboard and terrain media: every descriptor, billboard and actor entry of
+    /// its dungeon sidecar, each checked against the publication's manifest.
+    /// </summary>
+    private static (IReadOnlyDictionary<int, NormalizedActorSprite> Sprites, IReadOnlyList<NormalizedBillboardSprite>? GroundContainerSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> BillboardSprites, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> TerrainTextures) ReadWorldMedia(
         DaggerfallWorldMedia product,
-        DaggerfallDefinitions definitions,
         DaggerfallContentDiagnostics diagnostics)
     {
-        if (bytes is null) { diagnostics.Add("Generated dungeon media manifest is unavailable."); return ([], new Dictionary<int, NormalizedActorSprite>(), null, new Dictionary<(int, int), NormalizedBillboardSprite>(), new Dictionary<(int, int), NormalizedTerrainTexture>()); }
         try
         {
-            using JsonDocument document = JsonDocument.Parse(bytes.Value);
-            JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "dungeon media manifest", diagnostics);
             Dictionary<string, MediaResource> resources = [];
-            JsonElement media = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "media", diagnostics), "dungeon media", diagnostics);
-            (IReadOnlyList<JsonElement> sharedResources, IReadOnlyList<JsonElement> sharedBillboards, IReadOnlyList<JsonElement> sharedActors) =
-                ReadSharedDungeonSelection(root, product, diagnostics);
-            foreach (JsonElement value in DaggerfallBaseContent.Array(media, "resources", diagnostics).Concat(sharedResources))
+            foreach (JsonElement value in product.Resources)
             {
                 JsonElement resource = DaggerfallBaseContent.Object(value, "dungeon media resource", diagnostics);
                 string id = DaggerfallBaseContent.Text(resource, "id", diagnostics);
@@ -1622,27 +401,16 @@ internal static partial class DaggerfallSiteContent
                 {
                     diagnostics.Add($"Generated atlas resource '{id}' exceeds Daggerfall's 4096-frame publication admission limit or repeats a frame id.");
                 }
-                string path = artifacts.Resolve(relativePath);
-                if (!artifacts.TryGetValue(path, out ContentSha256 artifactHash) || artifactHash != hash)
+                string path = product.Resolve(relativePath);
+                if (!product.TryGetArtifact(path, out ContentSha256 artifactHash) || artifactHash != hash)
                 {
                     diagnostics.Add($"Generated media resource '{id}' does not agree with the import manifest.");
                 }
                 if (!resources.TryAdd(id, new MediaResource(path, hash, atlasWidth, atlasHeight, frames))) diagnostics.Add($"Generated dungeon media repeats resource '{id}'.");
             }
 
-            List<NormalizedMaterial> materials = [];
-            foreach (JsonElement value in DaggerfallBaseContent.Array(root, "materials", diagnostics))
-            {
-                JsonElement material = DaggerfallBaseContent.Object(value, "dungeon material", diagnostics);
-                uint slot = checked((uint)DaggerfallBaseContent.Integer(material, "materialSlot", diagnostics));
-                string textureId = DaggerfallBaseContent.Text(material, "mediaId", diagnostics);
-                if (!resources.TryGetValue(textureId, out MediaResource? texture)) diagnostics.Add($"Generated material slot '{slot}' refers to missing media '{textureId}'.");
-                else materials.Add(new NormalizedMaterial(slot, texture.Path, texture.Hash, DaggerfallBaseContent.Text(material, "materialResourceId", diagnostics)));
-            }
-            if (materials.Select(material => material.Slot).Distinct().Count() != materials.Count) diagnostics.Add("Generated dungeon materials repeat a static-mesh material slot.");
-
             Dictionary<int, NormalizedActorSprite> sprites = [];
-            foreach (JsonElement value in DaggerfallBaseContent.Array(root, "actors", diagnostics).Concat(sharedActors))
+            foreach (JsonElement value in product.Actors)
             {
                 JsonElement actor = DaggerfallBaseContent.Object(value, "dungeon actor media", diagnostics);
                 int mobileId = DaggerfallBaseContent.Integer(actor, "mobileId", diagnostics);
@@ -1677,7 +445,7 @@ internal static partial class DaggerfallSiteContent
                     Female = actor.TryGetProperty("female", out var female) && female.ValueKind == JsonValueKind.Object ? ReadSprite(female) : null,
                 };
             }
-            var billboards = ReadBillboardSprites([.. DaggerfallBaseContent.Array(root, "billboards", diagnostics), .. sharedBillboards], resources, diagnostics);
+            var billboards = ReadBillboardSprites([.. product.Billboards], resources, diagnostics);
             Dictionary<(int Archive, int Record), NormalizedTerrainTexture> terrainTextures = [];
             foreach ((string id, MediaResource resource) in resources)
             {
@@ -1685,53 +453,19 @@ internal static partial class DaggerfallSiteContent
                 if (!terrainTextures.TryAdd((archive, record), new NormalizedTerrainTexture(resource.Path, resource.Hash)))
                     diagnostics.Add($"Generated terrain texture address {archive}/{record} repeats.");
             }
-            // Every published treasure-archive billboard is a pile a ground container may stand as.
-            NormalizedBillboardSprite[] groundContainerSprites = [.. billboards.Where(pair => pair.Key.Archive == TreasureArchive)
-                .OrderBy(pair => pair.Key.Record).Select(pair => pair.Value)];
-            if (groundContainerSprites.Length == 0) diagnostics.Add($"Generated dungeon media has no ground-container billboard 'sprite/texture-{TreasureArchive}-N'.");
-            return (Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray()), new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites.ToDictionary()), groundContainerSprites, billboards, new ReadOnlyDictionary<(int, int), NormalizedTerrainTexture>(terrainTextures));
-        }
-        catch (JsonException exception)
-        {
-            diagnostics.Add($"Generated dungeon media manifest is not valid JSON: {exception.Message}");
-            return ([], new Dictionary<int, NormalizedActorSprite>(), null, new Dictionary<(int, int), NormalizedBillboardSprite>(), new Dictionary<(int, int), NormalizedTerrainTexture>());
-        }
-    }
-
-    /// <summary>
-    /// The product-wide dungeon entries a site sidecar admits by identity: descriptors by media id,
-    /// billboards by sprite resource id and actors by actor resource id. A sidecar that carries every
-    /// entry itself states no selection; an identity the world media publication does not carry is
-    /// reported rather than skipped, so a closure cannot silently lose an admitted sprite.
-    /// </summary>
-    private static (IReadOnlyList<JsonElement> Resources, IReadOnlyList<JsonElement> Billboards, IReadOnlyList<JsonElement> Actors) ReadSharedDungeonSelection(
-        JsonElement root, DaggerfallWorldMedia product, DaggerfallContentDiagnostics diagnostics)
-    {
-        if (!root.TryGetProperty("shared", out JsonElement selection) || selection.ValueKind == JsonValueKind.Null) return ([], [], []);
-        JsonElement shared = DaggerfallBaseContent.Object(selection, "dungeon media shared selection", diagnostics);
-        if (!product.IsPublished)
-        {
-            diagnostics.Add($"The site's dungeon media references the product-wide world media, which admitted content does not carry at '{DaggerfallWorldMedia.Root}'.");
-            return ([], [], []);
-        }
-
-        List<JsonElement> Select(string family, string kind, Func<string, (bool Found, JsonElement Entry)> lookup)
-        {
-            List<JsonElement> entries = [];
-            foreach (JsonElement value in DaggerfallBaseContent.Array(shared, family, diagnostics))
+            List<NormalizedBillboardSprite> groundContainerSprites = [];
+            foreach (int record in TreasurePileRecords)
             {
-                string id = value.ValueKind == JsonValueKind.String ? value.GetString()! : string.Empty;
-                (bool found, JsonElement entry) = lookup(id);
-                if (found) entries.Add(entry);
-                else diagnostics.Add($"The site's dungeon media admits product-wide {kind} '{id}', which the world media publication does not carry.");
+                if (billboards.TryGetValue((TreasureArchive, record), out NormalizedBillboardSprite? pile)) groundContainerSprites.Add(pile);
+                else diagnostics.Add($"The world media publication has no treasure pile billboard 'sprite/texture-{TreasureArchive}-{record}'.");
             }
-            return entries;
+            return (new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites.ToDictionary()), groundContainerSprites.AsReadOnly(), billboards, new ReadOnlyDictionary<(int, int), NormalizedTerrainTexture>(terrainTextures));
         }
-
-        return (
-            Select("resources", "descriptor", id => (product.TryGetResource(id, out JsonElement entry), entry)),
-            Select("billboards", "billboard", id => (product.TryGetBillboard(id, out JsonElement entry), entry)),
-            Select("actors", "actor", id => (product.TryGetActor(id, out JsonElement entry), entry)));
+        catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException && exception is not DaggerfallContentException)
+        {
+            diagnostics.Add($"The world media dungeon sidecar is malformed: {exception.Message}");
+            return (new Dictionary<int, NormalizedActorSprite>(), null, new Dictionary<(int, int), NormalizedBillboardSprite>(), new Dictionary<(int, int), NormalizedTerrainTexture>());
+        }
     }
 
     private static IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite> ReadBillboardSprites(
@@ -1773,32 +507,6 @@ internal static partial class DaggerfallSiteContent
             throw new InvalidOperationException($"Generated terrain texture '{id}' does not use the expected 'terrain/texture-<archive>-<record>' source handle.");
         }
         return true;
-    }
-
-    private static NormalizedActorSprite ResolveActorPresentation(AuthoredActor actor, DaggerfallActorDefinition definition, NormalizedActorSprite sprite, DaggerfallContentDiagnostics diagnostics)
-    {
-        sprite = sprite.ForGender(actor.Gender);
-        DaggerfallActorPresentationDefinition presentation = definition.Presentation;
-        if (presentation.PreferredRestState is not null && !sprite.States.ContainsKey(presentation.PreferredRestState))
-        {
-            diagnostics.Add($"Actor '{actor.ActorId.Value}' preferredRestState '{presentation.PreferredRestState}' is not published by its normalized media.");
-        }
-        foreach (string state in presentation.EffectiveFramesPerSecond.Keys)
-        {
-            if (!sprite.States.ContainsKey(state)) diagnostics.Add($"Actor '{actor.ActorId.Value}' effective playback override '{state}' is not published by its normalized media.");
-        }
-
-        IReadOnlyDictionary<string, NormalizedSpriteState> states = new ReadOnlyDictionary<string, NormalizedSpriteState>(sprite.States.ToDictionary(
-            pair => pair.Key,
-            pair => presentation.EffectiveFramesPerSecond.TryGetValue(pair.Key, out float overrideFramesPerSecond)
-                ? pair.Value with { EffectiveFramesPerSecond = overrideFramesPerSecond }
-                : pair.Value,
-            StringComparer.Ordinal));
-        return sprite with
-        {
-            PreferredRestState = presentation.PreferredRestState ?? sprite.PreferredRestState,
-            States = states,
-        };
     }
 
     private static (IReadOnlyDictionary<string, NormalizedSpriteState> States, IReadOnlyList<NormalizedAtlasFrame> Frames) ReadActorStates(JsonElement actor, MediaResource texture, Vector2 worldSize, Vector2 sourceWorldSize, int mobileId, DaggerfallContentDiagnostics diagnostics)
@@ -1938,7 +646,7 @@ internal static partial class DaggerfallSiteContent
 
     private sealed record MediaResource(string Path, ContentSha256 Hash, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames);
 
-    private static (IReadOnlyList<NormalizedAudioClip> Audio, NormalizedClassicPresentation Presentation) ReadClassicPresentation(AdmittedFiles files, ReadOnlyMemory<byte>? bytes, DaggerfallClosureArtifacts artifacts, DaggerfallContentDiagnostics diagnostics)
+    private static (IReadOnlyList<NormalizedAudioClip> Audio, NormalizedClassicPresentation Presentation) ReadClassicPresentation(AdmittedFiles files, ReadOnlyMemory<byte>? bytes, DaggerfallWorldMedia artifacts, DaggerfallContentDiagnostics diagnostics)
     {
         if (bytes is null) { diagnostics.Add("Generated classic media manifest is unavailable."); return ([], NormalizedClassicPresentation.Empty); }
         try
@@ -1957,10 +665,10 @@ internal static partial class DaggerfallSiteContent
                 string kind = DaggerfallBaseContent.Text(resource, "kind", diagnostics);
                 string relativePath = DaggerfallBaseContent.Text(resource, "relativePath", diagnostics);
                 // Audio resolves into the world media publication and the images into the classic media
-                // group, by the closure-relative path the sidecar states.
+                // group, by the publication-relative path the sidecar states.
                 string path = artifacts.Resolve(relativePath);
                 ContentSha256 hash = ContentHash(DaggerfallBaseContent.Text(resource, "contentDigest", diagnostics), diagnostics);
-                if (!artifacts.TryGetValue(path, out ContentSha256 artifact) || artifact != hash) diagnostics.Add($"Generated classic audio '{id}' does not agree with the import manifest.");
+                if (!artifacts.TryGetArtifact(path, out ContentSha256 artifact) || artifact != hash) diagnostics.Add($"Generated classic audio '{id}' does not agree with the import manifest.");
                 long byteLength = Long(resource, "byteLength", diagnostics);
                 string mimeType = DaggerfallBaseContent.Text(resource, "mimeType", diagnostics);
                 int sourceWidth = DaggerfallBaseContent.Integer(resource, "sourceWidth", diagnostics);
@@ -2062,7 +770,7 @@ internal static partial class DaggerfallSiteContent
     /// </remarks>
     private static IReadOnlyList<DaggerfallMissileVisual> ReadClassicWorldVisuals(
         JsonElement root,
-        DaggerfallClosureArtifacts artifacts,
+        DaggerfallWorldMedia artifacts,
         AdmittedFiles files,
         DaggerfallContentDiagnostics diagnostics)
     {
@@ -2114,7 +822,7 @@ internal static partial class DaggerfallSiteContent
                 continue;
             }
 
-            if (!artifacts.TryGetValue(path, out ContentSha256 artifact) || artifact != digest)
+            if (!artifacts.TryGetArtifact(path, out ContentSha256 artifact) || artifact != digest)
             {
                 diagnostics.Add($"Classic world visual '{mediaId}' names '{relativePath}', which the import manifest does not admit at '{digest}'.");
                 continue;
@@ -2138,7 +846,7 @@ internal static partial class DaggerfallSiteContent
                 ContentSha256 textureDigest = ContentHash(DaggerfallBaseContent.Text(texture, "contentDigest", diagnostics), diagnostics);
                 long byteLength = Long(texture, "byteLength", diagnostics);
                 if (!ValidLogicalPath(textureRelativePath)
-                    || !artifacts.TryGetValue(texturePath, out ContentSha256 admitted) || admitted != textureDigest
+                    || !artifacts.TryGetArtifact(texturePath, out ContentSha256 admitted) || admitted != textureDigest
                     || files.GetExactlyOne(texturePath).Length != byteLength)
                 {
                     diagnostics.Add($"Classic world visual '{mediaId}' names texture '{textureRelativePath}', which the import manifest does not admit at '{textureDigest}'.");
@@ -2281,57 +989,6 @@ internal static partial class DaggerfallSiteContent
         return Array.AsReadOnly(effects.Values.OrderBy(effect => effect.Name, StringComparer.Ordinal).ToArray());
     }
 
-    private static NormalizedClassicPresentation ReadClassicSelection(JsonElement root, NormalizedClassicPresentation classic, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
-    {
-        if (!root.TryGetProperty("classicPresentation", out JsonElement value) || value.ValueKind == JsonValueKind.Null) return classic;
-        JsonElement presentation = DaggerfallBaseContent.Object(value, "classicPresentation", diagnostics);
-        DaggerfallBaseContent.RejectDuplicateProperties(presentation, "classicPresentation", diagnostics);
-        Dictionary<string, string> mappings = new(StringComparer.Ordinal);
-        foreach (JsonElement entry in DaggerfallBaseContent.Array(presentation, "weaponVisuals", diagnostics))
-        {
-            JsonElement mapping = DaggerfallBaseContent.Object(entry, "classic weapon visual", diagnostics);
-            DaggerfallBaseContent.RejectDuplicateProperties(mapping, "classic weapon visual", diagnostics);
-            string itemId = DaggerfallBaseContent.Text(mapping, "itemId", diagnostics);
-            string resource = DaggerfallBaseContent.Text(mapping, "resource", diagnostics);
-            if (!classic.Weapons.ContainsKey(resource) || !definitions.Items.TryGetValue(new DaggerfallItemId(itemId), out DaggerfallItemDefinition? item) || item.Weapon is null) diagnostics.Add($"Classic weapon visual '{itemId}' does not select the admitted weaponSprite resource.");
-            if (!mappings.TryAdd(itemId, resource)) diagnostics.Add($"Classic weapon visuals repeat item '{itemId}'.");
-        }
-        foreach (DaggerfallItemDefinition item in definitions.Items.Values.Where(item => item.Weapon is not null))
-            if (!mappings.ContainsKey(item.Id.Value)) diagnostics.Add($"Weapon '{item.Id.Value}' has no presentation mapping.");
-        // Factory-created and enchanted weapons retain a native template identity. Join that
-        // template to its authored source weapon's admitted art instead of selecting empty hands.
-        foreach ((string itemId, string resource) in mappings.ToArray())
-        {
-            int? template = DaggerfallTemplateItemDefinitions.TemplateIndexForAuthoredItem(new(itemId));
-            if (template is null) continue;
-            foreach (DaggerfallItemDefinition item in definitions.TemplateItems.Values.Where(item =>
-                item.Weapon is not null && item.Template?.Index == template))
-                mappings.TryAdd(item.Id.Value, resource);
-        }
-        // A bow looses on its one fixed strike at the bow hit frame; art that ends that strike sooner
-        // would spend the arrow and never release it.
-        foreach ((string itemId, string resource) in mappings)
-        {
-            DaggerfallItemId id = new(itemId);
-            DaggerfallItemDefinition? item = definitions.Items.GetValueOrDefault(id) ?? definitions.TemplateItems.GetValueOrDefault(id);
-            if (item?.Weapon is not { IsBow: true } || !classic.Weapons.TryGetValue(resource, out NormalizedClassicWeapon? art)
-                || !art.Actions.TryGetValue(NormalizedClassicWeapon.PlayedStrike, out NormalizedClassicWeaponAction? loosed)) continue;
-            if (loosed.PlayedFrameCount <= NormalizedClassicWeapon.BowWeaponHitFrame)
-                diagnostics.Add($"Bow '{itemId}' selects classic weapon '{resource}', whose '{NormalizedClassicWeapon.PlayedStrike}' plays {loosed.PlayedFrameCount} frames and never reaches the bow hit frame {NormalizedClassicWeapon.BowWeaponHitFrame}.");
-        }
-        string unarmed = DaggerfallBaseContent.Text(presentation, "unarmedVisual", diagnostics);
-        if (!classic.Weapons.ContainsKey(unarmed)) diagnostics.Add("Unarmed presentation must select admitted weaponSprite media.");
-        ClassicViewmodelStyle? viewmodel = null;
-        if (mappings.Count > 0)
-        {
-            JsonElement style = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(presentation, "viewmodel", diagnostics), "classic viewmodel", diagnostics);
-            DaggerfallBaseContent.RejectDuplicateProperties(style, "classic viewmodel", diagnostics);
-            int renderOrder = DaggerfallBaseContent.Integer(style, "renderOrder", diagnostics);
-            viewmodel = new ClassicViewmodelStyle(renderOrder);
-        }
-        return classic with { CompatibleItemVisuals = new ReadOnlyDictionary<string, string>(mappings), UnarmedVisual = unarmed, Viewmodel = viewmodel };
-    }
-
     private static Vector2 OptionalClassicVector2(JsonElement objectValue, string property, Vector2 fallback, string name, DaggerfallContentDiagnostics diagnostics, bool positive = false, bool normalized = true)
     {
         if (!objectValue.TryGetProperty(property, out JsonElement value) || value.ValueKind == JsonValueKind.Null) return fallback;
@@ -2425,88 +1082,12 @@ internal static partial class DaggerfallSiteContent
     private static bool PositiveFinite(Vector2 value) =>
         float.IsFinite(value.X) && float.IsFinite(value.Y) && value.X > 0F && value.Y > 0F;
 
-    private static WorldPoint? ReadSourceArrival(AdmittedFiles files, JsonElement root, DaggerfallContentDiagnostics diagnostics)
-    {
-        JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
-        if (!world.TryGetProperty("arrivalFromSourceMarker", out JsonElement enabled) || enabled.ValueKind != JsonValueKind.True) return null;
-        string path = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics) + "/normalized.json";
-        ReadOnlyMemory<byte> bytes = files.GetExactlyOne(path);
-        using JsonDocument normalized = JsonDocument.Parse(bytes);
-        JsonElement marker = normalized.RootElement.GetProperty("world").GetProperty("startMarker");
-        if (marker.ValueKind != JsonValueKind.Object) throw new InvalidOperationException("The selected world has no normalized source start marker for arrival.");
-        JsonElement point = marker.GetProperty("position");
-        return new WorldPoint(DaggerfallBaseContent.Number(point, "x", diagnostics),
-            DaggerfallBaseContent.Number(point, "y", diagnostics), DaggerfallBaseContent.Number(point, "z", diagnostics));
-    }
-
-    private static ScenarioStart ReadStart(JsonElement value, DaggerfallContentDiagnostics diagnostics, WorldPoint? sourcePosition = null)
-    {
-        WorldPoint position = sourcePosition ?? Point(DaggerfallBaseContent.Property(value, "position", diagnostics), "startingState.position", diagnostics);
-        JsonElement look = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(value, "look", diagnostics), "startingState.look", diagnostics);
-        PlayerInitialLook initialLook = new(DaggerfallBaseContent.Number(look, "yawRadians", diagnostics), DaggerfallBaseContent.Number(look, "pitchRadians", diagnostics));
-        return new(position, initialLook, ReadStartSite(value, diagnostics));
-    }
-
-    /// <summary>
-    /// The site the scenario starts at, when it declares one.
-    /// </summary>
-    /// <remarks>
-    /// A scenario that starts the player somewhere in the world names the location it starts them at by
-    /// region and index, because the display name is not unique. The site is optional: a scenario whose
-    /// start is not a location the pack publishes - a test fixture's, or a later scenario that begins in
-    /// transit - simply has none, and the session then starts at no site rather than at an invented one.
-    /// </remarks>
-    private static DaggerfallSiteId? ReadStartSite(JsonElement value, DaggerfallContentDiagnostics diagnostics)
-    {
-        if (value.ValueKind != JsonValueKind.Object || !value.TryGetProperty("site", out JsonElement site) || site.ValueKind == JsonValueKind.Null)
-        {
-            return null;
-        }
-
-        if (site.ValueKind != JsonValueKind.Object)
-        {
-            diagnostics.Add("startingState.site must be an object naming the location's region and index.");
-            return null;
-        }
-
-        JsonElement region = DaggerfallBaseContent.Property(site, "region", diagnostics);
-        JsonElement index = DaggerfallBaseContent.Property(site, "index", diagnostics);
-        if (region.ValueKind != JsonValueKind.Number || !region.TryGetInt32(out int regionIndex) || regionIndex < 0
-            || index.ValueKind != JsonValueKind.Number || !index.TryGetInt32(out int locationIndex) || locationIndex < 0)
-        {
-            diagnostics.Add("startingState.site must name a non-negative region and index.");
-            return null;
-        }
-
-        return new DaggerfallSiteId(regionIndex, locationIndex);
-    }
-
-    private static ulong UnsignedInteger(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)
-    {
-        JsonElement result = DaggerfallBaseContent.Property(value, property, diagnostics);
-        if (result.ValueKind == JsonValueKind.Number && result.TryGetUInt64(out ulong integer) && integer > 0) return integer;
-        diagnostics.Add($"'{property}' must be a non-zero unsigned integer.");
-        return 1;
-    }
-
     internal static AuthoredWorldAppearance ReadWorldAppearance(JsonElement value, DaggerfallContentDiagnostics diagnostics)
     {
         RenderLayer layer = DaggerfallBaseContent.Text(value, "layer", diagnostics) switch { "scene" => RenderLayer.Scene, _ => InvalidLayer(diagnostics) };
         return new(ColorValue(DaggerfallBaseContent.Property(value, "tint", diagnostics), "world.appearance.tint", diagnostics), new Transform(Vector3Value(DaggerfallBaseContent.Property(value, "position", diagnostics), "world.appearance.position", diagnostics), QuaternionValue(DaggerfallBaseContent.Property(value, "rotation", diagnostics), "world.appearance.rotation", diagnostics), Vector3Value(DaggerfallBaseContent.Property(value, "scale", diagnostics), "world.appearance.scale", diagnostics)), Boolean(value, "visible", diagnostics), layer);
     }
 
-
-    private static WorldPoint Point(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
-    {
-        if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != 3) { diagnostics.Add($"'{name}' must be a three-number position."); return default; }
-        float x = NumberAt(value, 0, name, diagnostics), y = NumberAt(value, 1, name, diagnostics), z = NumberAt(value, 2, name, diagnostics);
-        return new(x, y, z);
-    }
-    private static Vector2 Vector2Value(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
-    {
-        if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != 2) { diagnostics.Add($"'{name}' must be a two-number vector."); return default; }
-        return new(NumberAt(value, 0, name, diagnostics), NumberAt(value, 1, name, diagnostics));
-    }
     private static Vector3 Vector3Value(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
     {
         if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() != 3) { diagnostics.Add($"'{name}' must be a three-number vector."); return default; }
@@ -2609,9 +1190,6 @@ internal static partial class DaggerfallSiteContent
     private static RenderLayer InvalidLayer(DaggerfallContentDiagnostics diagnostics) { diagnostics.Add("Appearance layer must be scene."); return RenderLayer.Scene; }
 }
 
-/// <summary>The identity a site payload publishes, read without its closure.</summary>
-internal sealed record DaggerfallSitePayloadHeader(DaggerfallWorldProfileKey Key, string? VariantName, string PackId);
-
 /// <summary>The product-wide world media every assembled location draws from.</summary>
 internal sealed record DaggerfallProductMedia(
     IReadOnlyDictionary<int, NormalizedActorSprite> MobileSprites,
@@ -2640,7 +1218,6 @@ internal sealed class AdmittedFiles
         : throw new DaggerfallContentException([$"Required admitted file '{path}' is missing; the site cannot be loaded without it."]);
 }
 
-internal sealed record ScenarioStart(WorldPoint Position, PlayerInitialLook Look, DaggerfallSiteId? Site);
 internal sealed record AuthoredWorldAppearance(Color Tint, Transform Transform, bool Visible, RenderLayer Layer);
 internal sealed record ContentArtifact(string Path, ContentSha256 Sha256);
 internal sealed record NormalizedMaterial(uint Slot, string TexturePath, ContentSha256 TextureSha256, string MaterialResourceId = "")
@@ -2769,17 +1346,11 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
 }
 internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSiteGeometry geometry, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyDictionary<int, NormalizedActorSprite>? mobileSprites = null, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null, IReadOnlyList<DaggerfallRdbDoorDefinition>? doors = null, DaggerfallWorldProfileKind profileKind = DaggerfallWorldProfileKind.Dungeon, string? logicalProfileId = null, IReadOnlyList<DaggerfallSitePortal>? portals = null, IReadOnlyList<DaggerfallSiteAnchor>? anchors = null, IReadOnlyList<DaggerfallSiteLight>? lights = null, IReadOnlyList<NormalizedBillboardSprite>? groundContainerSprites = null, DaggerfallDungeonMapContent? dungeonMap = null, IReadOnlyList<DaggerfallDungeonActionDefinition>? dungeonActions = null, IReadOnlyList<DaggerfallDungeonActionModelDefinition>? dungeonActionModels = null, DaggerfallInteriorBuilding? interiorBuilding = null, IReadOnlyList<DaggerfallSiteMarker>? questMarkers = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedBillboardSprite>? billboardSprites = null, IReadOnlyList<DaggerfallStaticNpcPlacement>? staticNpcs = null, IReadOnlyList<CharacterWaterVolume>? waterVolumes = null, IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture>? terrainTextures = null, IReadOnlyList<DaggerfallPopulationPlacement>? population = null)
 {
-    internal string? VariantName { get; init; }
-    internal string? VariantBaseLogicalId { get; init; }
     internal IReadOnlyList<DaggerfallPropertyContainerPlacement> PropertyContainers { get; init; } = [];
     internal IReadOnlyList<DaggerfallStaticNpcPlacement> StaticNpcs { get; } = staticNpcs ?? [];
     internal ProjectFacts Project { get; } = project;
     /// <summary>The collision/navigation artifacts the profile places and the static meshes it draws.</summary>
     internal DaggerfallSiteGeometry Geometry { get; } = geometry ?? throw new ArgumentNullException(nameof(geometry));
-    /// <summary>A published closure's one collision/navigation artifact; an assembled location has none.</summary>
-    internal SpatialContentArtifact SpatialArtifact => Geometry.ClosureSpatial;
-    /// <summary>A published closure's one combined static mesh; an assembled location has none.</summary>
-    internal ContentArtifact StaticMesh => Geometry.ClosureMesh;
     internal AuthoredWorldAppearance WorldAppearance { get; } = worldAppearance;
     internal PlayerInitialLook InitialLook { get; } = initialLook;
     internal IReadOnlyList<NormalizedMaterial> Materials { get; } = Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray());
@@ -2792,7 +1363,7 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSite
     internal DaggerfallWorldProfileKind ProfileKind { get; } = profileKind;
     internal DaggerfallInteriorBuilding? InteriorBuilding { get; } = interiorBuilding?.Validate();
     internal DaggerfallWorldProfileKey ProfileKey => Site is { } selected
-        ? new DaggerfallWorldProfileKey(selected, ProfileKind, VariantBaseLogicalId ?? logicalProfileId ?? "unscoped-profile").Validate()
+        ? new DaggerfallWorldProfileKey(selected, ProfileKind, logicalProfileId ?? "unscoped-profile").Validate()
         : throw new InvalidOperationException("A selectable world profile must name its geographic site.");
     /// <summary>Normalized RDB action doors for this selected published world, in stable source identity order.</summary>
     /// <summary>Source-derived interaction portals for this profile; destinations resolve only through admitted logical profiles.</summary>
@@ -2800,7 +1371,7 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSite
         .Select(portal => portal.Validate())
         .OrderBy(portal => portal.Id, StringComparer.Ordinal)
         .ToArray());
-    /// <summary>Named landing poses for relocation. Every normalized closure exposes its declared start as <c>start</c>.</summary>
+    /// <summary>Named landing poses for relocation. A profile with a start exposes it as <c>start</c>.</summary>
     internal IReadOnlyDictionary<string, DaggerfallSiteAnchor> Anchors { get; } = new ReadOnlyDictionary<string, DaggerfallSiteAnchor>((anchors ?? StartAnchor(project, initialLook))
         .Select(anchor => anchor.Validate())
         .ToDictionary(anchor => anchor.Id, StringComparer.Ordinal));
@@ -2821,7 +1392,7 @@ internal sealed class DaggerfallSiteProfile(ProjectFacts project, DaggerfallSite
     /// <summary>Published climate ground textures available for exterior material remapping.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), NormalizedTerrainTexture> TerrainTextures { get; } =
         new ReadOnlyDictionary<(int, int), NormalizedTerrainTexture>((terrainTextures ?? new Dictionary<(int, int), NormalizedTerrainTexture>()).ToDictionary());
-    /// <summary>Source-backed population records admitted by an exterior closure.</summary>
+    /// <summary>Source-backed population records an exterior admits.</summary>
     internal IReadOnlyList<DaggerfallPopulationPlacement> Population { get; } = Array.AsReadOnly((population ?? [])
         .OrderBy(value => value.Id, StringComparer.Ordinal).ToArray());
     /// <summary>Normalized per-placement bounds, visibility samples, and source markers used by dungeon discovery; absent on non-dungeons.</summary>

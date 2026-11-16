@@ -154,7 +154,7 @@ public sealed class SocialMagicSessionTests
             composition=new(definitions,ReadInputs(TestData.RepositoryRoot),DaggerfallTuning.Defaults);
             Engine=CreateEngine();Session=DaggerfallSession.StartNew(Engine.Context,composition);
         }
-        private EngineContextFake CreateEngine(){List<string> releases=[];ContentFake content=new(releases);PopulateContent(content,composition.StartSite);return EngineContextFake.Create(content,SpatialFake.Create(composition.StartSite.SpatialArtifact.Sha256,releases).Service,new AppearanceFake(releases),PerceptionFake.Create().Service,random:RandomMaximum.Create());}
+        private EngineContextFake CreateEngine(){List<string> releases=[];ContentFake content=new(releases);PopulateContent(content,composition.StartSite);return EngineContextFake.Create(content,SpatialFake.Create(composition.StartSite.Geometry.Spatial[0].Sha256,releases).Service,new AppearanceFake(releases),PerceptionFake.Create().Service,random:RandomMaximum.Create());}
         internal void Submit(params object[] actions)=>Submit(Session,actions);
         internal void Submit(DaggerfallSession session,params object[] actions){session.Update(new ProductUpdate(OuterUpdate(++step),actions.Select(action=>Ui(System.Text.Json.JsonSerializer.Serialize(action))).ToArray()));if(session.PendingModeRequest is {} mode)session.ApplyProductMode(mode);}
         internal DaggerfallSession Restore(RulesetSavePayload save)=>DaggerfallSession.Restore(CreateEngine().Context,composition,save);

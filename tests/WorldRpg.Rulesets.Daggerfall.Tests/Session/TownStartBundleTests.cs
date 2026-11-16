@@ -24,12 +24,12 @@ public sealed class TownStartBundleTests
     {
         string root = TestData.RepositoryRoot;
         ProductContent full = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
         foreach (DaggerfallSiteProfile near in new AssembledWorld().NearbyExteriors(exterior.Site!.Value)) AssembledWorldRun.Admit(content, near);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
@@ -56,15 +56,15 @@ public sealed class TownStartBundleTests
     {
         string root = TestData.RepositoryRoot;
         ProductContent full = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.charing-exterior");
-        DaggerfallSiteProfile store = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.charing-interior-2-1-0");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile store = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(2, 1, 0)));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
         PopulateContent(content, store);
         // The town's exterior streams the assembled exteriors around it.
         foreach (DaggerfallSiteProfile near in new AssembledWorld().NearbyExteriors(exterior.Site!.Value)) AssembledWorldRun.Admit(content, near);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
@@ -145,12 +145,12 @@ public sealed class TownStartBundleTests
     {
         string root = TestData.RepositoryRoot;
         ProductContent full = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, full, TestPayload.Definitions, "daggerfall.the-hawkston-cemetery-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(HawkstonCemetery));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
         foreach (DaggerfallSiteProfile near in new AssembledWorld().NearbyExteriors(exterior.Site!.Value)) AssembledWorldRun.Admit(content, near);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);

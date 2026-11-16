@@ -38,7 +38,7 @@ public sealed class SiteAppearanceLifecycleTests
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, inputs);
         AppearanceFake graphics = new(releases);
-        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         var engine = EngineContextFake.Create(content, spatial.Service, graphics);
         using var session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         var enemy = session.State.Actors.Get(inputs.Project.Actors.Values.First().EntityId);
@@ -67,7 +67,7 @@ public sealed class SiteAppearanceLifecycleTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         AppearanceFake graphics = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, graphics, PerceptionFake.Create().Service);
 
@@ -76,8 +76,11 @@ public sealed class SiteAppearanceLifecycleTests
 
         AppearanceFact[] snapshot = Assert.Single(graphics.Snapshots);
         Assert.Equal(snapshot.Length, snapshot.Select(fact => fact.ObjectId).Distinct().Count());
-        // The world mesh, each door, each dungeon action model, and the ranged-flight arrow.
-        Assert.Equal(1 + inputs.Doors.Count + inputs.DungeonActionModels.Count + 1, graphics.StaticMeshPaths.Count);
+        // Each block model once with its bindings (its other placements are instances of it), each door, each
+        // dungeon action model, and the ranged-flight arrow.
+        int models = inputs.Geometry.Meshes.Select(mesh => (mesh.Path, string.Join(',', mesh.Materials))).Distinct().Count();
+        Assert.True(models < inputs.Geometry.Meshes.Count);
+        Assert.Equal(models + inputs.Doors.Count + inputs.DungeonActionModels.Count + 1, graphics.StaticMeshPaths.Count);
         foreach (DaggerfallRdbDoorDefinition door in inputs.Doors)
             Assert.Contains(snapshot, fact => fact.Transform.Translation == door.Position);
 
@@ -101,7 +104,7 @@ public sealed class SiteAppearanceLifecycleTests
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         AppearanceFake appearance = new(releases);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         // The outer update owns final publication: simulation completes first, then one snapshot.
@@ -244,7 +247,6 @@ public sealed class SiteAppearanceLifecycleTests
             new PlayerInitialLook(0, 0),
             [new NormalizedMaterial(7, "texture/wall.png", Hash), new NormalizedMaterial(9, "texture/floor.png", Hash)],
             new Dictionary<long, NormalizedActorSprite>());
-        Assert.Throws<InvalidOperationException>(() => inputs.SpatialArtifact);
 
         using ActorsState actors = EmptyActors();
         using (DaggerfallSiteAppearance presentation = new(content, appearance, inputs))
@@ -316,8 +318,7 @@ public sealed class SiteAppearanceLifecycleTests
         AppearanceFake appearance = new(releases);
         DaggerfallSiteProfile inputs = new(
             new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/hold.json", Hash, 1),
-            new ContentArtifact("mesh/hold.json", Hash)),
+            FixtureGeometry("spatial/hold.json", Hash, 1, "mesh/hold.json", Hash, [new DaggerfallMeshMaterialBinding(1, 3)]),
             new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
             new PlayerInitialLook(0, 0),
             [new NormalizedMaterial(3, "texture/wall.png", Hash)],
@@ -328,7 +329,8 @@ public sealed class SiteAppearanceLifecycleTests
 
         using (DaggerfallSiteAppearance presentation = new(content, appearance, inputs))
         {
-            Assert.Equal([3u], appearance.StaticMeshBindings.Select(binding => binding.MaterialSlot));
+            // The mesh's slot 1 shows the profile's material 3.
+            Assert.Equal([1u], appearance.StaticMeshBindings.Select(binding => binding.MaterialSlot));
             Assert.Single(appearance.AtlasRequests);
             Assert.Single(appearance.SpriteRequests);
             presentation.Dispose();
@@ -353,7 +355,7 @@ public sealed class SiteAppearanceLifecycleTests
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         AppearanceFake appearance = new(releases);
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, appearance);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, appearance);
 
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults)))
         {
@@ -374,7 +376,7 @@ public sealed class SiteAppearanceLifecycleTests
         Assert.Equal(inputs.Lights.Count + 1, appearance.DisposedLights);
 
         DaggerfallSiteProfile exterior = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/exterior.json", Hash, 1), new ContentArtifact("mesh/exterior.json", Hash)),
+            FixtureGeometry("spatial/exterior.json", Hash, 1, "mesh/exterior.json", Hash),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
             site: new DaggerfallSiteId(17, 4), profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "worldrpg/test/exterior");
         using DaggerfallSiteLighting exteriorLighting = new(appearance, engine.Context.CameraView, exterior,
@@ -546,7 +548,7 @@ public sealed class SiteAppearanceLifecycleTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
@@ -659,7 +661,7 @@ public sealed class SiteAppearanceLifecycleTests
     }
 
     private static DaggerfallSiteProfile SkyExterior() => new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-        DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/exterior.json", Hash, 1), new ContentArtifact("mesh/exterior.json", Hash)),
+        FixtureGeometry("spatial/exterior.json", Hash, 1, "mesh/exterior.json", Hash),
         new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
         site: new DaggerfallSiteId(17, 4), profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: "worldrpg/test/exterior");
 

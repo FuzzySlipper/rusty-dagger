@@ -294,7 +294,7 @@ public sealed record GeometryPublication(
 /// <param name="MeshArchiveBytes">The archive's own bytes.</param>
 /// <param name="ReferencedMeshIds">
 /// The mesh numbers to publish, spelled as the caller spells them: the ones the normalized packs
-/// reference, plus any a site's own world visuals name — a missile's mesh is placed by no block, so
+/// reference, plus any the world visuals name — a missile's mesh is placed by no block, so
 /// nothing in a pack references it.
 /// </param>
 /// <param name="Textures">The texture-leaf inventory the material references are resolved against.</param>
@@ -308,7 +308,7 @@ public sealed record GeometryPublicationRequest(
     public IReadOnlyList<RmbPlacementTrim> Placements { get; init; } = [];
 }
 
-/// <summary>Builds the geometry a normalized pack and a site's world visuals reference from the archive and the inventory.</summary>
+/// <summary>Builds the geometry the normalized packs and the world visuals reference from the archive and the inventory.</summary>
 public static class GeometryPublicationBuilder
 {
     /// <summary>The relative path one mesh's artifact is published at.</summary>

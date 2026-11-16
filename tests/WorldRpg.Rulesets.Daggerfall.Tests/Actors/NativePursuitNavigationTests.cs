@@ -10,22 +10,19 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class NativePursuitNavigationTests
 {
     [Theory]
-    [InlineData(2008)]
-    [InlineData(2010)]
-    public void Nearby_rat_has_an_admitted_route_to_the_starting_player(long actorId)
+    [InlineData(40)]
+    [InlineData(42)]
+    public void Nearby_rat_has_an_admitted_route_to_the_starting_player(int source)
     {
+        long actorId = HoldActor(source);
         string root = TestData.RepositoryRoot;
         var inputs = ReadInputs(root);
         var tuning = DaggerfallTuning.Read(TestContentFiles.ReadCopy(Path.Combine(root,
             "content/worldrpg/tuning/daggerfall.defaults/payload.json")));
-        Dictionary<string, ReadOnlyMemory<byte>> files = new()
-        {
-            [inputs.SpatialArtifact.Path] = TestContentFiles.ReadCopy(Path.Combine(root, "content", inputs.SpatialArtifact.Path)),
-        };
-        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = SpatialFiles(inputs) });
         host.Call(engine =>
         {
-            using SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
+            using SpatialMovementSystem spatial = SpatialOf(engine, inputs, tuning.Spatial);
             var grounding = new DaggerfallActorGrounding(engine.Spatial, spatial,
                 tuning.EnemyBehavior.SpawnGroundProbeLift, tuning.EnemyBehavior.SpawnGroundProbeDistance);
             var from = grounding.GroundPosition(inputs.Project.Actors[actorId].Position).ToVector();

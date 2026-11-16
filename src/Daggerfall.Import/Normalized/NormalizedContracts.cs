@@ -1,126 +1,15 @@
-using System.Globalization;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Normalized;
 
 /// <summary>
-/// The stable, Engine-free schema emitted by an offline content importer.  It
-/// records normalized source facts and artifact closure only; ruleset policy
-/// and runtime objects deliberately live elsewhere. The navigation surface the
-/// world names is not repeated here: its one home is the collision/navigation
-/// artifact the spatial publication writes.
+/// The rules every normalized record admits its values by: logical identities and portable paths, finite numbers
+/// and uniqueness within a list.
 /// </summary>
-public sealed record NormalizedImportDocument(
-    ImportProvenance Provenance,
-    IReadOnlyList<NormalizedArtifactDescriptor> Artifacts,
-    NormalizedCoordinateConvention Coordinates,
-    NormalizedBounds Bounds,
-    IReadOnlyList<NormalizedMesh> Meshes,
-    NormalizedWorld World,
-    IReadOnlyList<NormalizedResourceCatalogEntry> Resources)
+public static class NormalizedImportDocument
 {
-    public NormalizedImportDocument Canonicalize() => this with
-    {
-        Provenance = Provenance.Canonicalize(),
-        Artifacts = Artifacts.OrderBy(artifact => artifact.Id, StringComparer.Ordinal)
-            .Select(artifact => artifact.Canonicalize()).ToArray(),
-        Meshes = Meshes.OrderBy(mesh => mesh.Id, StringComparer.Ordinal)
-            .Select(mesh => mesh.Canonicalize()).ToArray(),
-        World = World.Canonicalize(),
-        Resources = Resources.OrderBy(resource => resource.Id, StringComparer.Ordinal)
-            .Select(resource => resource.Canonicalize()).ToArray(),
-    };
-
-    public void Validate()
-    {
-        ArgumentNullException.ThrowIfNull(Provenance);
-        ArgumentNullException.ThrowIfNull(Artifacts);
-        ArgumentNullException.ThrowIfNull(Coordinates);
-        ArgumentNullException.ThrowIfNull(Bounds);
-        ArgumentNullException.ThrowIfNull(Meshes);
-        ArgumentNullException.ThrowIfNull(World);
-        ArgumentNullException.ThrowIfNull(Resources);
-
-        Provenance.Validate();
-        Coordinates.Validate();
-        Bounds.Validate();
-
-        ValidateUnique(Artifacts, artifact => artifact.Id, "artifact");
-        foreach (NormalizedArtifactDescriptor artifact in Artifacts)
-        {
-            artifact.Validate();
-        }
-
-        HashSet<string> artifactIds = Artifacts.Select(artifact => artifact.Id).ToHashSet(StringComparer.Ordinal);
-        foreach (NormalizedArtifactDescriptor artifact in Artifacts)
-        {
-            ValidateReferences(artifact.DependsOnArtifactIds, artifactIds, $"artifact '{artifact.Id}' dependency");
-        }
-        ValidateAcyclicArtifactDependencies(Artifacts);
-
-        ValidateUnique(Resources, resource => resource.Id, "resource");
-        foreach (NormalizedResourceCatalogEntry resource in Resources)
-        {
-            resource.Validate();
-            RequireReference(resource.ArtifactId, artifactIds, $"resource '{resource.Id}' artifact");
-        }
-
-        HashSet<string> resourceIds = Resources.Select(resource => resource.Id).ToHashSet(StringComparer.Ordinal);
-        foreach (NormalizedResourceCatalogEntry resource in Resources)
-        {
-            ValidateReferences(resource.Dependencies, resourceIds, $"resource '{resource.Id}' dependency");
-        }
-        ValidateUnique(Meshes, mesh => mesh.Id, "mesh");
-        foreach (NormalizedMesh mesh in Meshes)
-        {
-            mesh.Validate();
-            RequireReference(mesh.ArtifactId, artifactIds, $"mesh '{mesh.Id}' artifact");
-            foreach (NormalizedMaterialGroup group in mesh.MaterialGroups)
-            {
-                RequireReference(group.MaterialResourceId, resourceIds, $"mesh '{mesh.Id}' material group");
-            }
-        }
-
-        World.Validate(
-            Meshes.Select(mesh => mesh.Id).ToHashSet(StringComparer.Ordinal),
-            resourceIds,
-            artifactIds);
-        Dictionary<string, HashSet<NormalizedVector3>> verticesByMesh = Meshes.ToDictionary(
-            mesh => mesh.Id,
-            mesh => mesh.Vertices.ToHashSet(),
-            StringComparer.Ordinal);
-        foreach (NormalizedGeometryPlacement placement in World.GeometryPlacements)
-        {
-            HashSet<NormalizedVector3> placementMeshVertices = placement.MeshIds
-                .SelectMany(meshId => verticesByMesh[meshId])
-                .ToHashSet();
-            foreach (NormalizedVector3 sample in placement.SamplePoints)
-            {
-                if (!placementMeshVertices.Contains(sample))
-                {
-                    throw new InvalidOperationException($"Normalized geometry placement '{placement.Id}' sample is not a vertex of its contributing source meshes.");
-                }
-            }
-        }
-
-        Dictionary<string, NormalizedMesh> meshesById = Meshes.ToDictionary(mesh => mesh.Id, StringComparer.Ordinal);
-        foreach (NormalizedActionModelPlacement model in World.ActionModels)
-        {
-            NormalizedVector3[] localVertices = model.MeshIds.SelectMany(id => meshesById[id].Vertices).ToArray();
-            NormalizedBounds actualBounds = new(
-                new(localVertices.Min(vertex => vertex.X), localVertices.Min(vertex => vertex.Y), localVertices.Min(vertex => vertex.Z)),
-                new(localVertices.Max(vertex => vertex.X), localVertices.Max(vertex => vertex.Y), localVertices.Max(vertex => vertex.Z)));
-            if (actualBounds != model.LocalBounds)
-                throw new InvalidOperationException($"Action model '{model.ActionId}' local bounds do not match its source mesh vertices.");
-            if (model.MeshIds.Any(id => !StringComparer.Ordinal.Equals(meshesById[id].ArtifactId, model.VisualArtifactId)))
-                throw new InvalidOperationException($"Action model '{model.ActionId}' source mesh facts must name its generated visual artifact.");
-        }
-    }
-
     internal static void RequireLogicalId(string? value, string name)
     {
         if (string.IsNullOrWhiteSpace(value) || value.Any(char.IsWhiteSpace))
@@ -149,23 +38,6 @@ public sealed record NormalizedImportDocument(
         }
     }
 
-    internal static void RequireReference(string value, IReadOnlySet<string> candidates, string name)
-    {
-        RequireLogicalId(value, name);
-        if (!candidates.Contains(value))
-        {
-            throw new InvalidOperationException($"{name} references unknown ID '{value}'.");
-        }
-    }
-
-    internal static void ValidateReferences(IEnumerable<string> values, IReadOnlySet<string> candidates, string name)
-    {
-        foreach (string value in values)
-        {
-            RequireReference(value, candidates, name);
-        }
-    }
-
     internal static void ValidateUnique<T>(IEnumerable<T> values, Func<T, string> id, string kind)
     {
         HashSet<string> seen = new(StringComparer.Ordinal);
@@ -178,45 +50,6 @@ public sealed record NormalizedImportDocument(
                 throw new InvalidOperationException($"Duplicate {kind} ID '{candidate}'.");
             }
         }
-    }
-
-    private static void ValidateAcyclicArtifactDependencies(IReadOnlyList<NormalizedArtifactDescriptor> artifacts)
-    {
-        Dictionary<string, NormalizedArtifactDescriptor> byId = artifacts.ToDictionary(artifact => artifact.Id, StringComparer.Ordinal);
-        Dictionary<string, VisitState> states = [];
-        foreach (NormalizedArtifactDescriptor artifact in artifacts)
-        {
-            Visit(artifact.Id);
-        }
-
-        return;
-
-        void Visit(string id)
-        {
-            if (states.TryGetValue(id, out VisitState state))
-            {
-                if (state == VisitState.Visiting)
-                {
-                    throw new InvalidOperationException($"Normalized artifact dependency graph contains a cycle at '{id}'.");
-                }
-
-                return;
-            }
-
-            states[id] = VisitState.Visiting;
-            foreach (string dependency in byId[id].DependsOnArtifactIds)
-            {
-                Visit(dependency);
-            }
-
-            states[id] = VisitState.Visited;
-        }
-    }
-
-    private enum VisitState
-    {
-        Visiting,
-        Visited,
     }
 }
 
@@ -287,11 +120,6 @@ public sealed record LogicalSourceRecord(string SourcePath, ContentDigest Conten
 /// </summary>
 public sealed record ImportProvenance(string ImporterId, IReadOnlyList<LogicalSourceRecord> Sources)
 {
-    public ImportProvenance Canonicalize() => this with
-    {
-        Sources = Sources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray(),
-    };
-
     public void Validate()
     {
         NormalizedImportDocument.RequireLogicalId(ImporterId, nameof(ImporterId));
@@ -305,64 +133,6 @@ public sealed record ImportProvenance(string ImporterId, IReadOnlyList<LogicalSo
         foreach (LogicalSourceRecord source in Sources)
         {
             source.Validate();
-        }
-    }
-}
-
-/// <summary>A produced file and its explicit closure inside the normalized pack.</summary>
-public sealed record NormalizedArtifactDescriptor(
-    string Id,
-    string RelativePath,
-    ContentDigest ContentDigest,
-    long ByteLength,
-    IReadOnlyList<string> DependsOnArtifactIds)
-{
-    public NormalizedArtifactDescriptor Canonicalize() => this with
-    {
-        DependsOnArtifactIds = DependsOnArtifactIds.OrderBy(value => value, StringComparer.Ordinal).ToArray(),
-    };
-
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        NormalizedImportDocument.RequireLogicalPath(RelativePath, nameof(RelativePath));
-        if (ByteLength < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(ByteLength), ByteLength, "An artifact byte length cannot be negative.");
-        }
-
-        ContentDigest.Validate();
-
-        ArgumentNullException.ThrowIfNull(DependsOnArtifactIds);
-        NormalizedImportDocument.ValidateUnique(DependsOnArtifactIds, value => value, "artifact dependency");
-    }
-}
-
-public enum NormalizedHandedness
-{
-    Right,
-    Left,
-}
-
-public enum NormalizedVerticalAxis
-{
-    PositiveY,
-    NegativeY,
-}
-
-public sealed record NormalizedCoordinateConvention(NormalizedHandedness Handedness, NormalizedVerticalAxis VerticalAxis, float UnitsPerMeter)
-{
-    public void Validate()
-    {
-        if (!Enum.IsDefined(Handedness) || !Enum.IsDefined(VerticalAxis))
-        {
-            throw new ArgumentOutOfRangeException("coordinate convention", "The normalized coordinate convention is not known.");
-        }
-
-        NormalizedImportDocument.RequireFinite(UnitsPerMeter, nameof(UnitsPerMeter));
-        if (UnitsPerMeter <= 0F)
-        {
-            throw new ArgumentOutOfRangeException(nameof(UnitsPerMeter), UnitsPerMeter, "Units per metre must be positive.");
         }
     }
 }
@@ -386,18 +156,7 @@ public readonly record struct NormalizedVector3(float X, float Y, float Z)
     }
 }
 
-public sealed record NormalizedBounds(NormalizedVector3 Minimum, NormalizedVector3 Maximum)
-{
-    public void Validate()
-    {
-        Minimum.Validate(nameof(Minimum));
-        Maximum.Validate(nameof(Maximum));
-        if (Minimum.X > Maximum.X || Minimum.Y > Maximum.Y || Minimum.Z > Maximum.Z)
-        {
-            throw new ArgumentException("Normalized bounds minimum cannot exceed maximum on any axis.");
-        }
-    }
-}
+public sealed record NormalizedBounds(NormalizedVector3 Minimum, NormalizedVector3 Maximum);
 
 public readonly record struct NormalizedTriangle(int FirstVertex, int SecondVertex, int ThirdVertex);
 
@@ -543,18 +302,7 @@ public sealed record NavigationDerivationConfig(
 }
 
 /// <summary>One signed horizontal cell and quantized support level derived offline from collision geometry.</summary>
-public sealed record NormalizedNavigationCell(int Column, int Row, int Level, float SupportHeight, bool Walkable)
-{
-    public void Validate(NormalizedNavigationSurface surface)
-    {
-        NormalizedImportDocument.RequireFinite(SupportHeight, nameof(SupportHeight));
-        int expectedLevel = checked((int)MathF.Round(SupportHeight / surface.Config.LevelQuantum, MidpointRounding.AwayFromZero));
-        if (Level != expectedLevel)
-        {
-            throw new ArgumentOutOfRangeException(nameof(Level), "A navigation cell level must be the configured quantization of its support height.");
-        }
-    }
-}
+public sealed record NormalizedNavigationCell(int Column, int Row, int Level, float SupportHeight, bool Walkable);
 
 /// <summary>
 /// Sparse offline navigation supports. Coordinates deliberately remain signed:
@@ -564,227 +312,26 @@ public sealed record NormalizedNavigationSurface(
     string Id,
     string ArtifactId,
     NavigationDerivationConfig Config,
-    IReadOnlyList<NormalizedNavigationCell> Cells)
-{
-    public NormalizedNavigationSurface Canonicalize() => this with
-    {
-        Cells = Cells.OrderBy(cell => cell.Column).ThenBy(cell => cell.Row).ThenBy(cell => cell.Level).ToArray(),
-    };
+    IReadOnlyList<NormalizedNavigationCell> Cells);
 
-    public void Validate(IReadOnlySet<string> artifactIds)
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        NormalizedImportDocument.RequireReference(ArtifactId, artifactIds, nameof(ArtifactId));
-        ArgumentNullException.ThrowIfNull(Config);
-        Config.Validate();
-
-        ArgumentNullException.ThrowIfNull(Cells);
-        HashSet<(int Column, int Row, int Level)> keys = [];
-        foreach (NormalizedNavigationCell cell in Cells)
-        {
-            cell.Validate(this);
-            if (!keys.Add((cell.Column, cell.Row, cell.Level)))
-            {
-                throw new InvalidOperationException("A navigation grid cannot contain duplicate column, row, and level cells.");
-            }
-        }
-    }
-}
-
-public sealed record NormalizedMarker(string Id, NormalizedVector3 Position)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        Position.Validate(nameof(Position));
-    }
-}
+public sealed record NormalizedMarker(string Id, NormalizedVector3 Position);
 
 public sealed record NormalizedLightPlacement(string Id, NormalizedVector3 Position, float Range, float Intensity, NormalizedVector3 Color)
 {
     public bool CityLight { get; init; }
-
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        Position.Validate(nameof(Position));
-        Color.Validate(nameof(Color));
-        NormalizedImportDocument.RequireFinite(Range, nameof(Range));
-        NormalizedImportDocument.RequireFinite(Intensity, nameof(Intensity));
-        if (Range < 0F || Intensity < 0F)
-        {
-            throw new ArgumentOutOfRangeException(nameof(Range), "Light range and intensity cannot be negative.");
-        }
-    }
 }
 
 public sealed record NormalizedBillboardPlacement(string Id, string SpriteResourceId, NormalizedVector3 Position, NormalizedVector2 Size)
 {
     public bool BaseAligned { get; init; }
     public bool ClimateNature { get; init; }
-
-    public void Validate(IReadOnlySet<string> resourceIds)
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        NormalizedImportDocument.RequireReference(SpriteResourceId, resourceIds, nameof(SpriteResourceId));
-        Position.Validate(nameof(Position));
-        Size.Validate(nameof(Size));
-        if (Size.X <= 0F || Size.Y <= 0F)
-        {
-            throw new ArgumentOutOfRangeException(nameof(Size), "Billboard size must be positive.");
-        }
-    }
 }
 
 public sealed record NormalizedActorPlacement(string Id, string ActorResourceId, NormalizedVector3 Position,
-    int SpawnDistance = 0, bool Passive = false, string Gender = "unspecified")
-{
-    public void Validate(IReadOnlySet<string> resourceIds)
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        NormalizedImportDocument.RequireReference(ActorResourceId, resourceIds, nameof(ActorResourceId));
-        if (SpawnDistance is < 0 or > 6) throw new ArgumentOutOfRangeException(nameof(SpawnDistance));
-        if (Gender is not ("unspecified" or "female" or "male")) throw new ArgumentException("Unknown actor gender.", nameof(Gender));
-        Position.Validate(nameof(Position));
-    }
-}
-
-public sealed record NormalizedTreasurePlacement(string Id, string TreasureResourceId, NormalizedVector3 Position)
-{
-    public void Validate(IReadOnlySet<string> resourceIds)
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        NormalizedImportDocument.RequireReference(TreasureResourceId, resourceIds, nameof(TreasureResourceId));
-        Position.Validate(nameof(Position));
-    }
-}
+    int SpawnDistance = 0, bool Passive = false, string Gender = "unspecified");
 
 /// <summary>Normalized RDB action linkage retained for the compiled action graph.</summary>
 public sealed record NormalizedDoorAction(byte Axis, ushort Duration, ushort Magnitude, int NextObjectOffset, byte Flags);
-
-public sealed record NormalizedDoorPlacement(
-    string Id,
-    string DoorResourceId,
-    IReadOnlyList<string> VisualMeshIds,
-    NormalizedVector3 Position,
-    NormalizedVector3 RotationDegrees,
-    string Kind = "normal",
-    int StartingLockValue = 0,
-    NormalizedDoorAction? Action = null)
-{
-    /// <summary>Source-sized local interaction/collision volume for a planar exterior door.</summary>
-    public NormalizedBounds? CollisionBounds { get; init; }
-    public int? ExteriorBuildingIndex { get; init; }
-
-    public NormalizedDoorPlacement Canonicalize() => this with
-    {
-        VisualMeshIds = VisualMeshIds.OrderBy(meshId => meshId, StringComparer.Ordinal).ToArray(),
-    };
-
-    public void Validate(IReadOnlySet<string> resourceIds, IReadOnlySet<string> meshIds)
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        NormalizedImportDocument.RequireReference(DoorResourceId, resourceIds, nameof(DoorResourceId));
-        ArgumentNullException.ThrowIfNull(VisualMeshIds);
-        if (VisualMeshIds.Count == 0)
-        {
-            throw new InvalidOperationException("A normalized door placement requires at least one visual mesh.");
-        }
-
-        NormalizedImportDocument.ValidateUnique(VisualMeshIds, meshId => meshId, "door visual mesh");
-        foreach (string meshId in VisualMeshIds)
-        {
-            NormalizedImportDocument.RequireReference(meshId, meshIds, nameof(VisualMeshIds));
-        }
-        Position.Validate(nameof(Position));
-        RotationDegrees.Validate(nameof(RotationDegrees));
-        if (Kind is not ("normal" or "special")) throw new ArgumentException($"A normalized door kind must be normal or special, got '{Kind ?? "<null>"}'.", nameof(Kind));
-        if (StartingLockValue < 0 || Kind == "special" && StartingLockValue != 0) throw new ArgumentOutOfRangeException(nameof(StartingLockValue));
-        if (ExteriorBuildingIndex is < 0) throw new ArgumentOutOfRangeException(nameof(ExteriorBuildingIndex));
-        if (CollisionBounds is { } bounds)
-        {
-            bounds.Validate();
-            if (bounds.Minimum.X >= bounds.Maximum.X || bounds.Minimum.Y >= bounds.Maximum.Y || bounds.Minimum.Z >= bounds.Maximum.Z)
-                throw new ArgumentException("A door collision volume must have positive extent.", nameof(CollisionBounds));
-        }
-    }
-}
-
-/// <summary>One source model placement, bounded independently from the material-group meshes it contributes to.</summary>
-public sealed record NormalizedGeometryPlacement(
-    string Id,
-    NormalizedBounds Bounds,
-    IReadOnlyList<string> MeshIds,
-    string? DoorId = null)
-{
-    /// <summary>Deterministically selected source vertices for Engine visibility probes.</summary>
-    public IReadOnlyList<NormalizedVector3> SamplePoints { get; init; } = [];
-
-    public NormalizedGeometryPlacement Canonicalize() => this with
-    {
-        MeshIds = MeshIds.OrderBy(meshId => meshId, StringComparer.Ordinal).ToArray(),
-    };
-
-    public void Validate(IReadOnlySet<string> meshIds, IReadOnlyDictionary<string, NormalizedDoorPlacement> doors)
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        ArgumentNullException.ThrowIfNull(Bounds);
-        Bounds.Validate();
-        ArgumentNullException.ThrowIfNull(MeshIds);
-        ArgumentNullException.ThrowIfNull(SamplePoints);
-        if (MeshIds.Count == 0)
-        {
-            throw new InvalidOperationException("A normalized geometry placement requires at least one contributing mesh.");
-        }
-
-        NormalizedImportDocument.ValidateUnique(MeshIds, meshId => meshId, "geometry placement mesh");
-        foreach (string meshId in MeshIds)
-        {
-            NormalizedImportDocument.RequireReference(meshId, meshIds, nameof(MeshIds));
-        }
-
-        if (SamplePoints.Count is < 2 or > 4)
-        {
-            throw new InvalidOperationException("A normalized geometry placement requires two to four source surface samples.");
-        }
-        if (SamplePoints.Distinct().Count() != SamplePoints.Count)
-        {
-            throw new InvalidOperationException($"Normalized geometry placement '{Id}' repeats a source surface sample.");
-        }
-
-        foreach (NormalizedVector3 point in SamplePoints)
-        {
-            point.Validate(nameof(SamplePoints));
-            if (point.X < Bounds.Minimum.X || point.X > Bounds.Maximum.X
-                || point.Y < Bounds.Minimum.Y || point.Y > Bounds.Maximum.Y
-                || point.Z < Bounds.Minimum.Z || point.Z > Bounds.Maximum.Z)
-            {
-                throw new InvalidOperationException($"Normalized geometry placement '{Id}' has a surface sample outside its source bounds.");
-            }
-        }
-
-        if (DoorId is not null)
-        {
-            NormalizedImportDocument.RequireLogicalId(DoorId, nameof(DoorId));
-            if (!doors.TryGetValue(DoorId, out NormalizedDoorPlacement? door))
-            {
-                throw new InvalidOperationException($"Normalized geometry placement '{Id}' refers to unknown door '{DoorId}'.");
-            }
-
-            foreach (string meshId in MeshIds)
-            {
-                if (!door.VisualMeshIds.Contains(meshId, StringComparer.Ordinal))
-                {
-                    throw new InvalidOperationException($"Normalized geometry placement '{Id}' refers to mesh '{meshId}', which is not a visual mesh of door '{DoorId}'.");
-                }
-            }
-        }
-        else if (doors.Values.Any(door => door.VisualMeshIds.Intersect(MeshIds, StringComparer.Ordinal).Any()))
-        {
-            throw new InvalidOperationException($"Normalized static geometry placement '{Id}' cannot refer to an action-door visual mesh.");
-        }
-    }
-}
 
 /// <summary>An interior door plane in its own right-handed building frame.</summary>
 public sealed record NormalizedBuildingEntryDoor(NormalizedVector3 Position, NormalizedVector3 Normal);
@@ -794,34 +341,6 @@ public sealed record NormalizedBuildingEntryFrame(NormalizedVector3 ExteriorOrig
     IReadOnlyList<NormalizedVector3> Markers)
 {
     public IReadOnlyList<NormalizedBuildingEntryDoor> Doors { get; init; } = [];
-}
-
-/// <summary>A selected building instance in the containing site's exterior block grid.</summary>
-public sealed record NormalizedInteriorBuilding(int BlockX, int BlockY, string SourceKey, int BuildingIndex, int BuildingType, int FactionId)
-{
-    public NormalizedBuildingEntryFrame? EntryFrame { get; init; }
-    public void Validate()
-    {
-        if (BlockX is < 0 or > 255 || BlockY is < 0 or > 255 || BuildingIndex < 0)
-            throw new InvalidOperationException("An interior building must identify a valid placed block and building slot.");
-        NormalizedImportDocument.RequireLogicalId(SourceKey, nameof(SourceKey));
-        if (BuildingType is < 0 or > 255 || FactionId is < 0 or > 65535)
-            throw new InvalidOperationException("An interior building has invalid source type or faction.");
-    }
-}
-
-/// <summary>One source static person, independent of a runtime actor identity.</summary>
-public sealed record NormalizedStaticNpcPlacement(string Id, NormalizedVector3 Position, int BillboardArchive,
-    int BillboardRecord, int FactionId, string? Race, string Gender, int NameSeed)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        Position.Validate(nameof(Position));
-        if (BillboardArchive is < 0 or > 511 || BillboardRecord is < 0 or > 127 || FactionId < 0
-            || Race is not null && string.IsNullOrWhiteSpace(Race) || Gender is not ("Male" or "Female"))
-            throw new InvalidOperationException($"Static person {Id} has invalid appearance/faction: archive={BillboardArchive}, record={BillboardRecord}, faction={FactionId}, race={Race}, gender={Gender}.");
-    }
 }
 
 /// <summary>
@@ -844,21 +363,12 @@ public sealed record NormalizedPopulationPlacement(
 
     /// <summary>The faction on the supplying exterior building slot, or zero for donor dynamic population.</summary>
     public int SourceBuildingFactionId { get; init; }
-
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        Position.Validate(nameof(Position));
-        if (NameSeed is < 0 or > ushort.MaxValue || SourceBuildingType is < 0 or > byte.MaxValue
-            || SourceBuildingFactionId is < 0 or > ushort.MaxValue || BillboardArchive < 0 || BillboardRecord < 0 || FactionId < 0)
-            throw new ArgumentOutOfRangeException(nameof(BillboardArchive), "A normalized population placement has an invalid source billboard or faction.");
-    }
 }
 
 /// <summary>
-/// Source-backed dungeon area whose ambient presentation may differ from the ordinary interior.
-/// The importer carries only classification and bounds; shelter, light selection, and transition
-/// policy remain ruleset owners.
+/// The kind of source-backed dungeon area whose ambient presentation may differ from the ordinary interior.
+/// The importer carries only the classification; shelter, light selection, and transition policy remain
+/// ruleset owners.
 /// </summary>
 public enum NormalizedAmbientZoneKind
 {
@@ -866,353 +376,7 @@ public enum NormalizedAmbientZoneKind
     SpecialArea,
 }
 
-/// <summary>One normalized RDB ambient area.</summary>
-public sealed record NormalizedAmbientZone(
-    string Id,
-    NormalizedAmbientZoneKind Kind,
-    string SourceBlock,
-    int BlockX,
-    int BlockZ,
-    NormalizedBounds Bounds)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        if (!Enum.IsDefined(Kind))
-        {
-            throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "The normalized ambient zone kind is not known.");
-        }
-
-        NormalizedImportDocument.RequireLogicalId(SourceBlock, nameof(SourceBlock));
-        if (BlockX is < sbyte.MinValue or > sbyte.MaxValue || BlockZ is < sbyte.MinValue or > sbyte.MaxValue)
-        {
-            throw new ArgumentOutOfRangeException(nameof(BlockX), "A normalized dungeon ambient zone must retain its signed source block coordinates.");
-        }
-
-        ArgumentNullException.ThrowIfNull(Bounds);
-        Bounds.Validate();
-    }
-}
-
 /// <summary>Placed furniture and its normalized item groups; source model/table interpretation stays offline.</summary>
-public sealed record NormalizedPropertyContainer(string Id, NormalizedVector3 Position, IReadOnlyList<string> ItemGroups, IReadOnlyList<NormalizedVector3> InteractionPoints)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        Position.Validate(nameof(Position));
-        if (ItemGroups.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Property item groups must be named.");
-        if (InteractionPoints.Count == 0) throw new ArgumentException("Property furniture requires a surface interaction point.");
-        foreach (var point in InteractionPoints) point.Validate(nameof(InteractionPoints));
-    }
-}
+public sealed record NormalizedPropertyContainer(string Id, NormalizedVector3 Position, IReadOnlyList<string> ItemGroups, IReadOnlyList<NormalizedVector3> InteractionPoints);
 
 public sealed record NormalizedWaterVolume(string Id, NormalizedBounds Bounds);
-
-public sealed record NormalizedWorld(
-    string VisualMeshAssetId,
-    IReadOnlyList<string> MeshIds,
-    string? NavigationId,
-    NormalizedMarker? StartMarker,
-    NormalizedMarker? EnterMarker,
-    IReadOnlyList<NormalizedLightPlacement> Lights,
-    IReadOnlyList<NormalizedBillboardPlacement> Billboards,
-    IReadOnlyList<NormalizedActorPlacement> Actors,
-    IReadOnlyList<NormalizedTreasurePlacement> Treasures,
-    IReadOnlyList<NormalizedDoorPlacement> Doors)
-{
-    public IReadOnlyList<NormalizedWaterVolume> WaterVolumes { get; init; } = [];
-    public IReadOnlyList<DaggerfallWorldBlockRandomEnemy> RandomEnemies { get; init; } = [];
-
-    /// <summary>Source-selected building instance; absent for worlds without a building selection.</summary>
-    public NormalizedInteriorBuilding? InteriorBuilding { get; init; }
-    public IReadOnlyList<NormalizedPropertyContainer> PropertyContainers { get; init; } = [];
-
-    /// <summary>Source-order spawn/item points retained for quest allocation.</summary>
-    public IReadOnlyList<NormalizedQuestMarker> QuestMarkers { get; init; } = [];
-    /// <summary>Interior people, published from the selected building's people records.</summary>
-    public IReadOnlyList<NormalizedStaticNpcPlacement> StaticNpcs { get; init; } = [];
-
-    /// <summary>Exterior source population, published from selected RMB people records.</summary>
-    public IReadOnlyList<NormalizedPopulationPlacement> Population { get; init; } = [];
-
-    /// <summary>Source automap clear cells in the exterior block grid, before gameplay population sizing.</summary>
-    public IReadOnlyList<NormalizedOutdoorCell> ClearOutdoorCells { get; init; } = [];
-
-    /// <summary>Movable city gates excluded from the static closure.</summary>
-    public IReadOnlyList<DaggerfallWorldBlockGate> Gates { get; init; } = [];
-
-    /// <summary>Source action nodes and their normalized forward links.</summary>
-    public IReadOnlyList<NormalizedDungeonAction> Actions { get; init; } = [];
-
-    /// <summary>Placement-scoped source geometry when the normalizer has placement identities.</summary>
-    public IReadOnlyList<NormalizedGeometryPlacement> GeometryPlacements { get; init; } = [];
-
-    /// <summary>World meshes assembled into the immutable static visual/collision bundle.</summary>
-    public IReadOnlyList<string>? StaticMeshIds { get; init; }
-
-    /// <summary>Action-bearing RDB model meshes kept local to their explicit instance transform.</summary>
-    public IReadOnlyList<NormalizedActionModelPlacement> ActionModels { get; init; } = [];
-
-    /// <summary>Source-backed dungeon areas that select a specialized ambient presentation.</summary>
-    public IReadOnlyList<NormalizedAmbientZone> AmbientZones { get; init; } = [];
-
-    public NormalizedWorld Canonicalize() => this with
-    {
-        MeshIds = MeshIds.OrderBy(id => id, StringComparer.Ordinal).ToArray(),
-        Lights = Lights.OrderBy(light => light.Id, StringComparer.Ordinal).ToArray(),
-        Billboards = Billboards.OrderBy(billboard => billboard.Id, StringComparer.Ordinal).ToArray(),
-        Actors = Actors.OrderBy(actor => actor.Id, StringComparer.Ordinal).ToArray(),
-        WaterVolumes = WaterVolumes.OrderBy(volume => volume.Id, StringComparer.Ordinal).ToArray(),
-        RandomEnemies = RandomEnemies.OrderBy(enemy => enemy.Id, StringComparer.Ordinal).ToArray(),
-        PropertyContainers = PropertyContainers.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(),
-        StaticNpcs = StaticNpcs.OrderBy(npc => npc.Id, StringComparer.Ordinal).ToArray(),
-        Population = Population.OrderBy(person => person.Id, StringComparer.Ordinal).ToArray(),
-        Treasures = Treasures.OrderBy(treasure => treasure.Id, StringComparer.Ordinal).ToArray(),
-        Doors = Doors.OrderBy(door => door.Id, StringComparer.Ordinal).Select(door => door.Canonicalize()).ToArray(),
-        Actions = Actions.OrderBy(action => action.Id, StringComparer.Ordinal)
-            .Select(action => action.Canonicalize()).ToArray(),
-        GeometryPlacements = GeometryPlacements.OrderBy(placement => placement.Id, StringComparer.Ordinal)
-            .Select(placement => placement.Canonicalize()).ToArray(),
-        AmbientZones = AmbientZones.OrderBy(zone => zone.Id, StringComparer.Ordinal).ToArray(),
-        StaticMeshIds = (StaticMeshIds ?? MeshIds.Except(
-                Doors.SelectMany(door => door.VisualMeshIds)
-                    .Concat(ActionModels.SelectMany(model => model.MeshIds)), StringComparer.Ordinal).ToArray())
-            .OrderBy(id => id, StringComparer.Ordinal).ToArray(),
-        ActionModels = ActionModels.OrderBy(model => model.ActionId, StringComparer.Ordinal)
-            .Select(model => model.Canonicalize()).ToArray(),
-    };
-
-    public void Validate(IReadOnlySet<string> meshIds, IReadOnlySet<string> resourceIds, IReadOnlySet<string> artifactIds)
-    {
-        NormalizedImportDocument.RequireLogicalId(VisualMeshAssetId, nameof(VisualMeshAssetId));
-        ArgumentNullException.ThrowIfNull(MeshIds);
-        if (MeshIds.Count == 0)
-        {
-            throw new InvalidOperationException("A normalized world requires at least one visual mesh.");
-        }
-
-        NormalizedImportDocument.ValidateUnique(MeshIds, id => id, "world mesh");
-        foreach (string meshId in MeshIds)
-        {
-            NormalizedImportDocument.RequireReference(meshId, meshIds, nameof(MeshIds));
-        }
-        if (NavigationId is not null)
-        {
-            NormalizedImportDocument.RequireLogicalId(NavigationId, nameof(NavigationId));
-        }
-
-        NormalizedImportDocument.ValidateUnique(WaterVolumes, volume => volume.Id, "water volume");
-        foreach (var volume in WaterVolumes)
-        {
-            NormalizedImportDocument.RequireLogicalId(volume.Id, nameof(WaterVolumes));
-            volume.Bounds.Validate();
-        }
-        StartMarker?.Validate();
-        EnterMarker?.Validate();
-        InteriorBuilding?.Validate();
-        NormalizedImportDocument.ValidateUnique(PropertyContainers, value => value.Id, "property container");
-        foreach (var container in PropertyContainers) container.Validate();
-        ArgumentNullException.ThrowIfNull(QuestMarkers);
-        NormalizedImportDocument.ValidateUnique(QuestMarkers, marker => marker.Id, "quest marker");
-        foreach (NormalizedQuestMarker marker in QuestMarkers) marker.Validate();
-        NormalizedImportDocument.ValidateUnique(StaticNpcs, npc => npc.Id, "static person");
-        foreach (NormalizedStaticNpcPlacement npc in StaticNpcs) npc.Validate();
-        ArgumentNullException.ThrowIfNull(Population);
-        NormalizedImportDocument.ValidateUnique(Population, person => person.Id, "population placement");
-        foreach (NormalizedPopulationPlacement person in Population) person.Validate();
-        ArgumentNullException.ThrowIfNull(Lights);
-        ArgumentNullException.ThrowIfNull(Billboards);
-        ArgumentNullException.ThrowIfNull(Actors);
-        ArgumentNullException.ThrowIfNull(Treasures);
-        ArgumentNullException.ThrowIfNull(Doors);
-        ArgumentNullException.ThrowIfNull(Actions);
-        ArgumentNullException.ThrowIfNull(GeometryPlacements);
-        ArgumentNullException.ThrowIfNull(ActionModels);
-        ArgumentNullException.ThrowIfNull(AmbientZones);
-        NormalizedImportDocument.ValidateUnique(Lights, light => light.Id, "light placement");
-        NormalizedImportDocument.ValidateUnique(Billboards, billboard => billboard.Id, "billboard placement");
-        NormalizedImportDocument.ValidateUnique(Actors, actor => actor.Id, "actor placement");
-        NormalizedImportDocument.ValidateUnique(RandomEnemies, enemy => enemy.Id, "random enemy placement");
-        foreach (var enemy in RandomEnemies)
-        {
-            NormalizedImportDocument.RequireLogicalId(enemy.Id, nameof(enemy.Id));
-            enemy.Position.Validate(nameof(enemy.Position));
-            if (enemy.EncounterSlot is < 0 or > 255 || enemy.SpawnDistance is < 0 or > 6)
-                throw new ArgumentException($"Random enemy '{enemy.Id}' has invalid selection metadata.");
-        }
-        NormalizedImportDocument.ValidateUnique(Treasures, treasure => treasure.Id, "treasure placement");
-        NormalizedImportDocument.ValidateUnique(Doors, door => door.Id, "door placement");
-        foreach (NormalizedLightPlacement light in Lights) light.Validate();
-        foreach (NormalizedBillboardPlacement billboard in Billboards) billboard.Validate(resourceIds);
-        foreach (NormalizedActorPlacement actor in Actors) actor.Validate(resourceIds);
-        foreach (NormalizedTreasurePlacement treasure in Treasures) treasure.Validate(resourceIds);
-        foreach (NormalizedDoorPlacement door in Doors) door.Validate(resourceIds, meshIds);
-
-        NormalizedImportDocument.ValidateUnique(Actions, action => action.Id, "dungeon action");
-        HashSet<string> actionIds = Actions.Select(action => action.Id).ToHashSet(StringComparer.Ordinal);
-        HashSet<string> doorIds = Doors.Select(door => door.Id).ToHashSet(StringComparer.Ordinal);
-        foreach (NormalizedDungeonAction action in Actions)
-        {
-            action.Validate(actionIds, doorIds);
-        }
-
-        NormalizedImportDocument.ValidateUnique(ActionModels, model => model.ActionId, "action model");
-        foreach (NormalizedActionModelPlacement model in ActionModels)
-        {
-            model.Validate(actionIds, doorIds, meshIds, artifactIds);
-            NormalizedDungeonAction action = Actions.Single(candidate => StringComparer.Ordinal.Equals(candidate.Id, model.ActionId));
-            if (action.IsFlat)
-                throw new InvalidOperationException($"Action model '{model.ActionId}' refers to a flat action, not an RDB model action.");
-            if (model.DoorId is not null)
-            {
-                NormalizedDoorPlacement door = Doors.Single(candidate => StringComparer.Ordinal.Equals(candidate.Id, model.DoorId));
-                if (!door.VisualMeshIds.ToHashSet(StringComparer.Ordinal).SetEquals(model.MeshIds))
-                    throw new InvalidOperationException($"Action model '{model.ActionId}' and door '{model.DoorId}' must share exactly one local visual mesh set.");
-            }
-        }
-
-        NormalizedImportDocument.ValidateUnique(AmbientZones, zone => zone.Id, "ambient zone");
-        foreach (NormalizedAmbientZone zone in AmbientZones)
-        {
-            zone.Validate();
-        }
-
-        IReadOnlyList<string> staticMeshIds = StaticMeshIds ?? MeshIds.Except(
-            Doors.SelectMany(door => door.VisualMeshIds)
-                .Concat(ActionModels.SelectMany(model => model.MeshIds)), StringComparer.Ordinal).ToArray();
-        ArgumentNullException.ThrowIfNull(staticMeshIds);
-        NormalizedImportDocument.ValidateUnique(staticMeshIds, id => id, "static world mesh");
-        foreach (string meshId in staticMeshIds)
-            NormalizedImportDocument.RequireReference(meshId, meshIds, nameof(StaticMeshIds));
-        HashSet<string> movableMeshIds = Doors.SelectMany(door => door.VisualMeshIds)
-            .Concat(ActionModels.SelectMany(model => model.MeshIds))
-            .ToHashSet(StringComparer.Ordinal);
-        if (staticMeshIds.Intersect(movableMeshIds, StringComparer.Ordinal).Any()
-            || !staticMeshIds.Concat(movableMeshIds).ToHashSet(StringComparer.Ordinal).SetEquals(MeshIds))
-            throw new InvalidOperationException("Static, door, and action-model mesh admissions must cover every world mesh without static/dynamic overlap.");
-
-        NormalizedImportDocument.ValidateUnique(GeometryPlacements, placement => placement.Id, "geometry placement");
-        Dictionary<string, NormalizedDoorPlacement> doorsById = Doors.ToDictionary(door => door.Id, StringComparer.Ordinal);
-        foreach (NormalizedGeometryPlacement placement in GeometryPlacements)
-        {
-            placement.Validate(meshIds, doorsById);
-        }
-
-        if (GeometryPlacements.Count > 0)
-        {
-            HashSet<string> placedMeshIds = GeometryPlacements.SelectMany(placement => placement.MeshIds).ToHashSet(StringComparer.Ordinal);
-            if (!placedMeshIds.SetEquals(staticMeshIds))
-            {
-                throw new InvalidOperationException("Normalized geometry placements must collectively reference every static world mesh exactly by ID membership.");
-            }
-        }
-    }
-}
-
-public enum NormalizedResourceKind
-{
-    Material,
-    Texture,
-    Sprite,
-    ActorDefinition,
-    TreasureDefinition,
-    DoorDefinition,
-    Other,
-}
-
-/// <summary>Atlas coordinates and named source-frame metadata, with no playback behaviour or timing.</summary>
-public sealed record NormalizedSpriteFrame(string Id, int FrameIndex, int X, int Y, int Width, int Height, NormalizedVector2 Pivot)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        if (FrameIndex < 0 || X < 0 || Y < 0 || Width <= 0 || Height <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(FrameIndex), "Sprite frame coordinates and dimensions must be non-negative with a non-empty extent.");
-        }
-
-        Pivot.Validate(nameof(Pivot));
-    }
-}
-
-public sealed record NormalizedResourceCatalogEntry(
-    string Id,
-    NormalizedResourceKind Kind,
-    string ArtifactId,
-    IReadOnlyList<string> Dependencies,
-    IReadOnlyList<NormalizedSpriteFrame> SpriteFrames)
-{
-    public NormalizedResourceCatalogEntry Canonicalize() => this with
-    {
-        Dependencies = Dependencies.OrderBy(value => value, StringComparer.Ordinal).ToArray(),
-        SpriteFrames = SpriteFrames.OrderBy(frame => frame.FrameIndex).ThenBy(frame => frame.Id, StringComparer.Ordinal).ToArray(),
-    };
-
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        if (!Enum.IsDefined(Kind))
-        {
-            throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "The normalized resource kind is not known.");
-        }
-
-        NormalizedImportDocument.RequireLogicalId(ArtifactId, nameof(ArtifactId));
-        ArgumentNullException.ThrowIfNull(Dependencies);
-        ArgumentNullException.ThrowIfNull(SpriteFrames);
-        NormalizedImportDocument.ValidateUnique(Dependencies, value => value, "resource dependency");
-        NormalizedImportDocument.ValidateUnique(SpriteFrames, frame => frame.Id, "sprite frame");
-        foreach (NormalizedSpriteFrame frame in SpriteFrames)
-        {
-            frame.Validate();
-        }
-
-        if (Kind != NormalizedResourceKind.Sprite && SpriteFrames.Count != 0)
-        {
-            throw new InvalidOperationException("Only sprite resources may contain sprite frame metadata.");
-        }
-    }
-}
-
-/// <summary>Canonical JSON writer and reader.  Serialization always appends one final newline.</summary>
-public static class NormalizedImportSerializer
-{
-    private static readonly JsonSerializerOptions Options = PublishedJson.Section;
-
-    public static byte[] Serialize(NormalizedImportDocument document)
-        => Serialize(document, Options);
-
-    /// <summary>
-    /// Writes the same canonical document with compact whitespace for bulk RMB
-    /// spatial publications. The final newline remains part of the contract.
-    /// </summary>
-    public static byte[] SerializeCompact(NormalizedImportDocument document)
-        => Serialize(document, PublishedJson.SectionCompact);
-
-    private static byte[] Serialize(NormalizedImportDocument document, JsonSerializerOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(document);
-        NormalizedImportDocument canonical = document.Canonicalize();
-        canonical.Validate();
-        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(canonical, options);
-        return bytes.Concat([Encoding.UTF8.GetBytes("\n")[0]]).ToArray();
-    }
-
-    public static ContentDigest ComputeDigest(NormalizedImportDocument document) => ContentDigest.Compute(Serialize(document));
-
-    public static NormalizedImportDocument Deserialize(ReadOnlySpan<byte> finalBytes)
-    {
-        if (finalBytes.IsEmpty || finalBytes[^1] != (byte)'\n')
-        {
-            throw new JsonException("Normalized JSON must end with exactly one final newline.");
-        }
-
-        NormalizedImportDocument document = JsonSerializer.Deserialize<NormalizedImportDocument>(finalBytes, Options)
-            ?? throw new JsonException("Normalized JSON did not contain a document.");
-        document.Validate();
-        return document.Canonicalize();
-    }
-}
-
-/// <summary>One clear exterior automap cell in the placed RMB block grid.</summary>
-public sealed record NormalizedOutdoorCell(int X, int Z);

@@ -15,8 +15,7 @@ internal sealed record DaggerfallWorldMesh(string Path, ContentSha256 Sha256, IR
 
 /// <summary>
 /// Assembles a catalog location's exterior, building interior or dungeon from the per-block publication:
-/// each block the location places, moved to its grid position, its identities given that position as the
-/// site closures give them, its models drawn from the product-wide meshes with the location's textures,
+/// each block the location places, moved to its grid position, its identities given that position, its models drawn from the product-wide meshes with the location's textures,
 /// and its collision and navigation placed beside its neighbours by whole navigation cells.
 /// </summary>
 /// <remarks>
@@ -134,21 +133,7 @@ internal sealed class DaggerfallLocationAssembly
 
     private bool TryRecord(DaggerfallSiteId site, out DaggerfallSiteRecord? record) => _records.Value.TryGetValue(site, out record);
 
-    /// <summary>
-    /// A location's source start markers in its exterior's frame, in block order, as its assembled exterior publishes
-    /// them (<see cref="StartMarkerAnchor"/>). An authored closure of that exterior shares the frame and publishes them
-    /// too, so travel arrives at a closure city where it would at the assembled one. Only the exterior's block
-    /// documents are read; a location with no exterior has none.
-    /// </summary>
-    internal IReadOnlyList<WorldPoint> ExteriorStartMarkers(DaggerfallSiteId site)
-    {
-        if (!TryRecord(site, out DaggerfallSiteRecord? record) || record!.Exterior is not { Blocks.Count: > 0 } exterior) return [];
-        DaggerfallSiteBlock[] placed = PlacedBlocks(exterior);
-        IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> documents = _blocks.Read(placed.Select(ExteriorBlockKey));
-        return [.. placed.SelectMany(block => StartMarkers(block, documents[ExteriorBlockKey(block)]))];
-    }
-
-    /// <summary>An exterior's blocks in the order its site closure places them.</summary>
+    /// <summary>An exterior's blocks in grid order.</summary>
     private static DaggerfallSiteBlock[] PlacedBlocks(DaggerfallSiteExterior exterior) =>
         [.. exterior.Blocks.OrderBy(block => block.X).ThenBy(block => block.Y).ThenBy(block => block.SourceName, StringComparer.Ordinal)];
 
@@ -259,7 +244,7 @@ internal sealed class DaggerfallLocationAssembly
         private readonly List<DaggerfallCityGateDefinition> _gates = [];
         private IReadOnlyList<DaggerfallPopulationPlacement> _dynamicPopulation = [];
 
-        /// <summary>A location's exterior: every RMB block of its grid, in the site closure's block order.</summary>
+        /// <summary>A location's exterior: every RMB block of its grid, in grid order.</summary>
         internal void Exterior()
         {
             DaggerfallSiteExterior exterior = record.Exterior!;
@@ -520,7 +505,7 @@ internal sealed class DaggerfallLocationAssembly
                 Closed = gate.Closed with { Visual = gate.Closed.Visual with { Materials = Bindings(Visual(gate.Closed.Visual)) } },
             })];
 
-            // A site closure's people and furniture are canonically ordered by identity.
+            // People and furniture are canonically ordered by identity.
             foreach (string section in new[] { "staticNpcs", "propertyContainers" })
             {
                 JsonNode?[] sorted = [.. ((JsonArray)_world[section]!).OrderBy(entry => entry?["id"]?.GetValue<string>(), StringComparer.Ordinal)
@@ -557,6 +542,9 @@ internal sealed class DaggerfallLocationAssembly
                 {
                     List<DaggerfallSiteMarker> markers = [];
                     if (_enter is { } enter) markers.Add(new DaggerfallSiteMarker("marker/enter", DaggerfallSiteMarkerKind.Entrance, new WorldPoint(enter.X, enter.Y, enter.Z)));
+                    // Each source exit is on the map too, revealed once the player has left through it.
+                    markers.AddRange(_portals.Select(portal =>
+                        new DaggerfallSiteMarker(portal.Id, DaggerfallSiteMarkerKind.Portal, portal.Position, portal.DestinationLogicalProfile)));
                     map = new DaggerfallDungeonMapContent(_mapGeometry, doors.Select(door => door.Id), markers);
                 }
                 catch (ArgumentException exception) { diagnostics.Add($"Assembled dungeon map of '{key.LogicalId}' is invalid: {exception.Message}"); }
@@ -564,8 +552,11 @@ internal sealed class DaggerfallLocationAssembly
 
             DaggerfallSiteGeometry geometry = new(presentation.NavigationGridId, _spatial, meshes, owner._blocks.Open) { Remodels = remodels };
             var actors = DaggerfallSiteContent.ReadFixedActors(normalized, key.LogicalId, owner._definitions, diagnostics);
-            var actorSprites = actors.Values.ToDictionary(actor => actor.EntityId,
-                actor => _media.MobileSprites[owner._definitions.RequireActor(actor.ActorId).MobileId!.Value].ForGender(actor.Gender));
+            var actorSprites = actors.Values.ToDictionary(actor => actor.EntityId, actor =>
+            {
+                DaggerfallActorDefinition definition = owner._definitions.RequireActor(actor.ActorId);
+                return DaggerfallSiteContent.ActorPresentation(actor, definition, _media.MobileSprites[definition.MobileId!.Value], diagnostics);
+            });
             return new DaggerfallSiteProfile(
                 new ProjectFacts(position, actors),
                 geometry,
@@ -848,8 +839,7 @@ internal sealed class DaggerfallLocationAssembly
             if (model.Action is null)
             {
                 // The door runtime swings a door about its closed pose, which is not the model's own turn: its
-                // collider and visual live in the door frame, so the model frame is turned into it, as a site
-                // closure writes its door visual.
+                // collider and visual live in the door frame, so the model frame is turned into it.
                 Quaternion toDoor = Quaternion.Normalize(Quaternion.Inverse(DaggerfallDoorPose.ClosedRotation(door.RotationDegrees))
                     * DaggerfallSiteGeometry.SourceRotation(model.RotationDegrees));
                 bounds = Turned(local, toDoor);

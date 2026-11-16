@@ -294,7 +294,7 @@ public sealed class DungeonSpellFlightSessionTests
             List<string> releases = [];
             ContentFake content = new(releases);
             PopulateContent(content, inputs);
-            Spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            Spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
             EngineContextFake engine = EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service,
                 random: RandomMaximum.Create());
             Session = DaggerfallSession.StartNew(engine.Context, composition);
@@ -311,7 +311,7 @@ public sealed class DungeonSpellFlightSessionTests
             List<string> releases = [];
             ContentFake content = new(releases);
             PopulateContent(content, composition.StartSite);
-            SpatialFake spatial = SpatialFake.Create(composition.StartSite.SpatialArtifact.Sha256, releases);
+            SpatialFake spatial = SpatialFake.Create(composition.StartSite.Geometry.Spatial[0].Sha256, releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service,
                 random: RandomMaximum.Create());
             return DaggerfallSession.Restore(engine.Context, composition, save);

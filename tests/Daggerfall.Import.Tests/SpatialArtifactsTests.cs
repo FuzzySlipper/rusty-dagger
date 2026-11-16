@@ -1,75 +1,11 @@
-using System.Text;
-using System.Text.Json;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
 
-public sealed class DungeonSpatialPublicationTests
+public sealed class SpatialArtifactsTests
 {
-    [Fact]
-    public void StaticMeshOutputUsesTheEngineBinaryContentShapeAndPreservesAllVisualGroups()
-    {
-        NormalizedMesh collision = Floor("mesh/example/floor", "artifact/generated/static", "material/stone", 0F, true);
-        NormalizedMesh doorVisual = Floor("mesh/example/door", "artifact/generated/static", "material/door", 2F, false);
-        NavigationDerivationConfig config = NavigationDerivationConfig.ClassicDefault with { CellSize = 1F, LevelQuantum = 0.5F };
-        NormalizedNavigationSurface navigation = OfflineNavigationDeriver.Derive(
-            "navigation/example", "artifact/generated/spatial", [collision, doorVisual], config);
-        NormalizedWorld world = new(
-            "mesh/example",
-            [collision.Id, doorVisual.Id],
-            navigation.Id,
-            null,
-            null,
-            [], [], [], [], []);
-        NormalizedResourceCatalogEntry[] resources =
-        [
-            new("material/stone", NormalizedResourceKind.Material, "artifact/generated/resources", [], []),
-            new("material/door", NormalizedResourceKind.Material, "artifact/generated/resources", [], []),
-        ];
-        DungeonSpatialPublication publication = DungeonSpatialPublication.Create(
-            "artifact/generated/static",
-            "spatial/example/static-mesh.rstatmsh",
-            "artifact/generated/spatial",
-            "spatial/example/collision-navigation.rspatial",
-            "artifact/generated/resources",
-            "resources/example/catalog.json",
-            world.VisualMeshAssetId,
-            new(new(0F, 0F, 0F), new(2F, 2F, 2F)),
-            [collision, doorVisual],
-            world,
-            navigation,
-            resources);
-
-        using EngineBinaryContent.StaticMesh staticMesh = EngineBinaryContent.ReadStaticMesh(publication.StaticMesh.Bytes);
-        JsonElement root = staticMesh.Root;
-        Assert.Equal("mesh/example", root.GetProperty("asset").GetString());
-        JsonElement payload = root.GetProperty("payload");
-        Assert.Equal("u32", payload.GetProperty("layout").GetProperty("indexWidth").GetString());
-        Assert.Equal("resource", payload.GetProperty("source").GetProperty("kind").GetString());
-        Assert.Equal("packedStreamsLeV2", payload.GetProperty("source").GetProperty("encoding").GetString());
-        Assert.Equal("staticAsset", payload.GetProperty("provenance").GetString());
-        Assert.Equal("visualOnly", root.GetProperty("collision").GetProperty("kind").GetString());
-        Assert.Equal(2, payload.GetProperty("groups").GetArrayLength());
-        Assert.Equal(2, root.GetProperty("materialSlots").GetArrayLength());
-        Assert.Equal(8 * 3, staticMesh.Positions.Length);
-        Assert.Equal(8 * 2, staticMesh.Uvs!.Length);
-        Assert.Equal(4 * 3, staticMesh.Indices.Length);
-
-        EngineBinaryContent.SpatialArtifact spatial = EngineBinaryContent.ReadSpatial(publication.CollisionNavigation.Bytes.Span);
-        Assert.Equal("artifact/generated/static", spatial.StaticMeshArtifactId);
-        Assert.Equal(2, spatial.Triangles.Length);
-        Assert.Equal("navigation/example", spatial.NavigationId);
-        // Each f32 import value is the double its decimal names, as the JSON form stated it.
-        Assert.Equal([1, 0.5, 45, 1.8, 0.05], spatial.Config);
-        Assert.Equal(publication.Navigation.Cells.Count, spatial.Cells.Length);
-        Assert.Equal(["artifact/generated/static"], publication.CollisionNavigation.DependsOnArtifactIds);
-        using JsonDocument resourceCatalog = JsonDocument.Parse(publication.ResourceCatalog.Bytes);
-        Assert.Equal("artifact/generated/resources", resourceCatalog.RootElement.GetProperty("resources")[0].GetProperty("artifactId").GetString());
-        Assert.All(publication.ArtifactDescriptors, descriptor => Assert.Equal(descriptor.ContentDigest, ContentDigest.Compute(publication.Artifacts.Single(artifact => artifact.Id == descriptor.Id).Bytes.Span)));
-    }
-
     [Fact]
     public void DerivesSignedMultiLevelWalkableSupportsFromCollisionGeometry()
     {
@@ -85,7 +21,8 @@ public sealed class DungeonSpatialPublicationTests
             [Floor("mesh/lower", "artifact/static/negative", "material/lower", 0F, true, -2F), Floor("mesh/upper", "artifact/static/negative", "material/upper", 3F, true, -2F)],
             config);
 
-        navigation.Validate(new HashSet<string>(["artifact/spatial/negative"], StringComparer.Ordinal));
+        Assert.All(navigation.Cells, cell => Assert.Equal((int)MathF.Round(cell.SupportHeight / config.LevelQuantum, MidpointRounding.AwayFromZero), cell.Level));
+        Assert.Equal(navigation.Cells.Count, navigation.Cells.DistinctBy(cell => (cell.Column, cell.Row, cell.Level)).Count());
         Assert.Contains(navigation.Cells, cell => cell.Column < 0 && cell.Row < 0);
         Assert.Contains(navigation.Cells, cell => cell.Level == 0 && cell.Walkable);
         Assert.Contains(navigation.Cells, cell => cell.Level == 6 && cell.Walkable);
@@ -139,46 +76,6 @@ public sealed class DungeonSpatialPublicationTests
     }
 
     [Fact]
-    public void RejectsMalformedSpatialBoundsAndNavigationLevelQuantization()
-    {
-        NormalizedBounds invalidBounds = new(new(2F, 0F, 0F), new(1F, 0F, 0F));
-        Assert.Throws<ArgumentException>(invalidBounds.Validate);
-
-        NavigationDerivationConfig config = NavigationDerivationConfig.ClassicDefault with { LevelQuantum = 1F };
-        NormalizedNavigationSurface invalidLevel = new(
-            "navigation/invalid",
-            "artifact/spatial/invalid",
-            config,
-            [new(-1, -1, 2, 0F, true)]);
-        Assert.Throws<ArgumentOutOfRangeException>(() => invalidLevel.Validate(new HashSet<string>(["artifact/spatial/invalid"], StringComparer.Ordinal)));
-    }
-
-    [Fact]
-    public void RejectsSpatialPublicationMeshInputThatDoesNotExactlyMatchWorld()
-    {
-        NormalizedMesh included = Floor("mesh/included", "artifact/static", "material/included", 0F, true);
-        NormalizedMesh extra = Floor("mesh/extra", "artifact/static", "material/extra", 0F, true);
-        NormalizedNavigationSurface navigation = OfflineNavigationDeriver.Derive(
-            "navigation/example", "artifact/spatial", [included], NavigationDerivationConfig.ClassicDefault with { CellSize = 1F });
-        NormalizedWorld world = new("mesh/example", [included.Id], navigation.Id, null, null, [], [], [], [], []);
-        NormalizedResourceCatalogEntry[] resources = [new("material/included", NormalizedResourceKind.Material, "artifact/resources", [], [])];
-
-        Assert.Throws<InvalidOperationException>(() => DungeonSpatialPublication.Create(
-            "artifact/static",
-            "spatial/example/static.rstatmsh",
-            "artifact/spatial",
-            "spatial/example/spatial.rspatial",
-            "artifact/resources",
-            "resources/example/catalog.json",
-            world.VisualMeshAssetId,
-            new(new(0F, 0F, 0F), new(2F, 0F, 2F)),
-            [included, extra],
-            world,
-            navigation,
-            resources));
-    }
-
-    [Fact]
     public void CollisionPublishesEachPositionOnceAndDropsTrianglesWeldedToZeroArea()
     {
         // Two collision floors over the same square: the visual assembly keeps eight vertices, collision
@@ -194,16 +91,9 @@ public sealed class DungeonSpatialPublicationTests
         };
         NormalizedNavigationSurface navigation = OfflineNavigationDeriver.Derive(
             "navigation/example", "artifact/spatial", [first, second], NavigationDerivationConfig.ClassicDefault with { CellSize = 1F });
-        NormalizedWorld world = new("mesh/example", [first.Id, second.Id, collapsed.Id], navigation.Id, null, null, [], [], [], [], []);
-        NormalizedResourceCatalogEntry[] resources = new[] { "material/first", "material/second", "material/collapsed" }
-            .Select(material => new NormalizedResourceCatalogEntry(material, NormalizedResourceKind.Material, "artifact/resources", [], [])).ToArray();
 
-        DungeonSpatialPublication publication = DungeonSpatialPublication.Create(
-            "artifact/static", "spatial/example/static.rstatmsh", "artifact/spatial", "spatial/example/spatial.rspatial",
-            "artifact/resources", "resources/example/catalog.json", world.VisualMeshAssetId,
-            new(new(0F, 0F, 0F), new(2F, 0F, 2F)), [first, second, collapsed], world, navigation, resources);
-
-        EngineBinaryContent.SpatialArtifact spatial = EngineBinaryContent.ReadSpatial(publication.CollisionNavigation.Bytes.Span);
+        EngineBinaryContent.SpatialArtifact spatial = EngineBinaryContent.ReadSpatial(CollisionNavigationArtifact.Serialize(
+            "artifact/static", new(new(0F, 0F, 0F), new(2F, 0F, 2F)), [first, second, collapsed], navigation));
         Assert.Equal(4, spatial.Positions.Length);
         Assert.Equal(4, spatial.Triangles.Length);
         Assert.All(spatial.Triangles, triangle => Assert.Equal(3, new[] { triangle.A, triangle.B, triangle.C }.Distinct().Count()));

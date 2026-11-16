@@ -537,7 +537,6 @@ public sealed class SourceBackedServiceSessionTests
 
 internal sealed class SourceBackedServiceSessionFixture : IDisposable
 {
-    private const string SiteRole = "daggerfall.site";
     private readonly DaggerfallDefinitions _definitions;
     private readonly DaggerfallSiteProfiles _profiles;
     private readonly DaggerfallSessionComposition _composition;
@@ -582,10 +581,8 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
         ResolvedGameComposition resolved = TestSessions.Resolve(content,
             new GameBundleId("daggerfall.classic")).RequireComposition();
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile[] sites = [.. resolved.ContentPacks
-            .Where(pack => pack.Role == new ContentPackRoleId(SiteRole))
-            .Select(pack => DaggerfallSiteContent.Read(TestSessions.Data(content), pack.Payload, definitions))];
-        DaggerfallSiteProfiles profiles = new(sites);
+        DaggerfallSiteProfile[] sites = [.. SuiteSites()];
+        DaggerfallSiteProfiles profiles = new(sites, Assembly.Value);
         DaggerfallSiteProfile population = sites
             .Where(profile => profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && profile.Population.Count > 0)
             .OrderBy(profile => profile.ProfileKey.LogicalId, StringComparer.Ordinal)
@@ -686,8 +683,8 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
     {
         List<string> releases = [];
         ContentFake content = new(releases);
-        foreach (DaggerfallSiteProfile site in _sites.Concat(_guildInteriors)) PopulateContent(content, site);
-        SpatialFake spatial = SpatialFake.Create((_guildInteriors.Contains(profile) ? _guildWorld!.Source : profile).SpatialArtifact.Sha256, releases);
+        PopulateStreamedContent(content, _sites.Concat(_guildInteriors));
+        SpatialFake spatial = SpatialFake.Create((_guildInteriors.Contains(profile) ? _guildWorld!.Source : profile).Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         return DaggerfallSession.StartNew(engine.Context, _composition with { StartSite = profile,
             Profiles = _guildInteriors.Contains(profile) ? _guildWorld!.Profiles : _profiles });
@@ -701,8 +698,8 @@ internal sealed class SourceBackedServiceSessionFixture : IDisposable
             : throw new InvalidOperationException("A source-backed save must name its active world profile.");
         List<string> releases = [];
         ContentFake content = new(releases);
-        foreach (DaggerfallSiteProfile site in _sites.Concat(_guildInteriors)) PopulateContent(content, site);
-        SpatialFake spatial = SpatialFake.Create((_guildInteriors.Contains(active) ? _guildWorld!.Source : active).SpatialArtifact.Sha256, releases);
+        PopulateStreamedContent(content, _sites.Concat(_guildInteriors));
+        SpatialFake spatial = SpatialFake.Create((_guildInteriors.Contains(active) ? _guildWorld!.Source : active).Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         return DaggerfallSession.Restore(engine.Context, _composition with { StartSite = active, Profiles = _guildWorld?.Profiles ?? _profiles }, saved);
     }

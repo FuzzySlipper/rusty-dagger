@@ -168,7 +168,7 @@ public sealed class DaggerfallDestructionEffectsTests
         EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, inputs);
-            return EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service,
+            return EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service,
                 new AppearanceFake(releases), random: RandomMaximum.Create());
         }
         using var session = DaggerfallSession.StartNew(Engine().Context, composition);

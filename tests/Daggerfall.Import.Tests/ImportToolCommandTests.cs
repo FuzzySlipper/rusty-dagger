@@ -109,8 +109,6 @@ public sealed class ImportToolCommandTests
 
     [Theory]
     [InlineData("cinematic-media", "--kind", "unknown")]
-    [InlineData("rmb-spatial", "--profile", "unknown")]
-    [InlineData("write", "--region", "-1")]
     public void Invalid_command_choices_exit_one_with_usage_before_any_publication(string name, string option, string value)
     {
         var command = ToolPrograms.Commands[name];
@@ -155,8 +153,6 @@ public sealed class ImportToolCommandTests
     [InlineData("texture-leaves")]
     [InlineData("residual-paths")]
     [InlineData("map-art")]
-    [InlineData("plan")]
-    [InlineData("verify-real-data")]
     public void Report_only_verbs_leave_all_supplied_outputs_untouched(string name)
     {
         using ImportToolFixture fixture = new();
@@ -165,8 +161,6 @@ public sealed class ImportToolCommandTests
         var result = Run(args);
         Assert.True(result.Code == 0, result.Error);
         Assert.NotEmpty(result.Output);
-        if (name == "verify-real-data")
-            Assert.Contains($"verified deterministic publication ({fixture.Expected("write").Count - 1} artifacts)", result.Output, StringComparison.Ordinal);
         fixture.AssertUnchanged(before);
     }
 
@@ -195,17 +189,6 @@ public sealed class ImportToolCommandTests
         fixture.AssertUnchanged(before);
         var update = Run([.. fixture.Arguments("cinematic-media"), "--update"]);
         Assert.True(update.Code == 0, update.Error);
-        fixture.AssertPublication(before, expected);
-    }
-
-    [ImportToolDataFact]
-    public void Interior_publication_uses_the_selected_real_building()
-    {
-        using ImportToolFixture fixture = new() { Interior = true };
-        var expected = fixture.Expected("rmb-spatial");
-        var before = fixture.Snapshot();
-        var result = Run(fixture.Arguments("rmb-spatial"));
-        Assert.True(result.Code == 0, result.Error);
         fixture.AssertPublication(before, expected);
     }
 
@@ -249,8 +232,6 @@ public sealed class ImportToolCommandTests
     [InlineData("classic-quest-corpora")]
     [InlineData("source-manifest")]
     [InlineData("source-coverage")]
-    [InlineData("write")]
-    [InlineData("rmb-spatial")]
     public void Explicit_writer_verbs_publish_exact_builder_output(string name)
     {
         using ImportToolFixture fixture = new();

@@ -9,6 +9,8 @@ using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
@@ -24,11 +26,11 @@ public sealed class LoadingScreenSessionTests
     [Fact]
     public void A_dungeon_entrance_is_acknowledged_before_the_dungeon_is_read_and_entered_on_the_updates_after()
     {
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold, loadingScreen: true);
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold, loadingScreen: true);
         DaggerfallSession session = run.Session;
         LoadingScreen loading = run.Loading!;
-        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
-        DaggerfallWorldProfileKey dungeon = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
+        DaggerfallWorldProfileKey dungeon = DaggerfallWorldProfileIds.Dungeon(PrivateersHold);
         (DaggerfallSitePortal entrance, _, EntityId entity) = Assert.Single(session.Sites.Projection.Portals.All,
             portal => portal.Portal.DestinationLogicalProfile == dungeon.LogicalId);
         Assert.False(loading.IsLoading);
@@ -61,11 +63,11 @@ public sealed class LoadingScreenSessionTests
     public void An_entrance_taken_while_an_enemy_hit_is_pending_is_still_staged_on_the_loading_screen()
     {
         // Every draw comes up lowest, so the rat's swing lands.
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold, loadingScreen: true, random: LowRandom.Create());
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold, loadingScreen: true, random: LowRandom.Create());
         DaggerfallSession session = run.Session;
         LoadingScreen loading = run.Loading!;
-        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
-        DaggerfallWorldProfileKey dungeon = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
+        DaggerfallWorldProfileKey dungeon = DaggerfallWorldProfileIds.Dungeon(PrivateersHold);
         (DaggerfallSitePortal entrance, _, EntityId entity) = Assert.Single(session.Sites.Projection.Portals.All,
             portal => portal.Portal.DestinationLogicalProfile == dungeon.LogicalId);
 
@@ -102,11 +104,11 @@ public sealed class LoadingScreenSessionTests
     public void A_journey_is_acknowledged_before_it_is_made_and_arrives_on_the_updates_after()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallSiteRecord destination = world.Unpublished(_ => true);
-        using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold, loadingScreen: true);
+        DaggerfallSiteRecord destination = world.Nearby(_ => true);
+        using AssembledWorldRun run = world.Start(PrivateersHold, loadingScreen: true);
         DaggerfallSession session = run.Session;
         LoadingScreen loading = run.Loading!;
-        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
 
         run.AcceptJourney(destination);
         Assert.Equal(new LoadingState($"Travelling to {destination.Name}", $"Reading {destination.Name}", 0, 3, 0d), loading.Current);
@@ -133,8 +135,8 @@ public sealed class LoadingScreenSessionTests
     public void A_journeys_ground_and_town_are_prepared_off_the_update_under_the_screen_and_the_player_is_stood_only_once_they_are_live()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallSiteRecord destination = world.Unpublished(_ => true);
-        using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold, loadingScreen: true);
+        DaggerfallSiteRecord destination = world.Nearby(_ => true);
+        using AssembledWorldRun run = world.Start(PrivateersHold, loadingScreen: true);
         DaggerfallSession session = run.Session;
         LoadingScreen loading = run.Loading!;
         SpatialFake spatial = run.Spatial;
@@ -205,8 +207,8 @@ public sealed class LoadingScreenSessionTests
     public void A_journeys_town_placements_the_Engine_refuses_fail_the_arrival_and_are_handed_over_again_while_the_world_is_held()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallSiteRecord destination = world.Unpublished(_ => true);
-        using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold, loadingScreen: true);
+        DaggerfallSiteRecord destination = world.Nearby(_ => true);
+        using AssembledWorldRun run = world.Start(PrivateersHold, loadingScreen: true);
         DaggerfallSession session = run.Session;
         SpatialFake spatial = run.Spatial;
         int placements = spatial.ContentResidencyRequests.Count;
@@ -246,8 +248,8 @@ public sealed class LoadingScreenSessionTests
     public void A_journeys_town_placements_the_Engine_rejects_in_the_call_fail_the_arrival_and_hold_the_world_until_they_are_live_and_stood_on()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallSiteRecord destination = world.Unpublished(_ => true);
-        using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold, loadingScreen: true);
+        DaggerfallSiteRecord destination = world.Nearby(_ => true);
+        using AssembledWorldRun run = world.Start(PrivateersHold, loadingScreen: true);
         DaggerfallSession session = run.Session;
         SpatialFake spatial = run.Spatial;
         HashSet<ulong> placedBefore = [.. spatial.PlacedArtifacts];
@@ -298,8 +300,8 @@ public sealed class LoadingScreenSessionTests
     public void A_journeys_ground_the_Engine_refuses_fails_the_arrival_and_holds_the_world_until_it_is_live_and_stood_on()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallSiteRecord destination = world.Unpublished(_ => true);
-        using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold, loadingScreen: true);
+        DaggerfallSiteRecord destination = world.Nearby(_ => true);
+        using AssembledWorldRun run = world.Start(PrivateersHold, loadingScreen: true);
         DaggerfallSession session = run.Session;
         SpatialFake spatial = run.Spatial;
         bool GroundLive() => spatial.HeightfieldColliderReady;

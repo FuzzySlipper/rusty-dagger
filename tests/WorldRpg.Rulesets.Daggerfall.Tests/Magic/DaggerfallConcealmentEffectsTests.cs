@@ -54,13 +54,13 @@ public sealed class DaggerfallConcealmentEffectsTests
     {
         using Fixture f = new(); var s = f.Session;
         Start(s, "normal", 13, 0, 10); Start(s, "true", 13, 1, 10);
-        var target = s.State.Actors.Get(2000).Stats;
+        var target = s.State.Actors.Get(HoldActor(1)).Stats;
         foreach (string track in new[] { "health", "fatigue", "magicka" }) { target.GetTrack(TrackId.Parse(track)).Maximum.BaseValue = 1000; target.GetTrack(TrackId.Parse(track)).SetCurrent(1000); }
-        if (type == 4 && subtype == 0) s.State.Effects.Start(new("shield", "shield", "spell.shield", 2000, 2000, "shield", "Magic", null, 1, 10, DaggerfallAlterationEffects.ShieldState(new(1000, 1000))));
+        if (type == 4 && subtype == 0) s.State.Effects.Start(new("shield", "shield", "spell.shield", HoldActor(1), HoldActor(1), "shield", "Magic", null, 1, 10, DaggerfallAlterationEffects.ShieldState(new(1000, 1000))));
         var setting = new DaggerfallSpellEffectDefinition("attack", type, subtype, 0, 0, 1, 100, 0, 1, 7, 7, 0, 0, 1);
         var spell = new DaggerfallSpellDefinition("attack.test", 1, false, "Attack", 4, 1, 0, 0, [setting]);
         var casting = Casting(s, spell); Fund(s); Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
-        var bundle = casting.Release(1, true).Bundle!; casting.Deliver(bundle, [2000]); Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome);
+        var bundle = casting.Release(1, true).Bundle!; casting.Deliver(bundle, [HoldActor(1)]); Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(bundle.Results).Outcome);
         Assert.DoesNotContain(s.State.Effects.Active, effect => effect.Context.Instance.Value == "normal");
         Assert.Contains(s.State.Effects.Active, effect => effect.Context.Instance.Value == "true");
         if (type == 4 && subtype == 0) Assert.Equal(1000, target.GetTrack(TrackId.Parse("health")).Current);
@@ -104,12 +104,12 @@ public sealed class DaggerfallConcealmentEffectsTests
     {
         using Fixture f = new(); var s = f.Session;
         var setting = new DaggerfallSpellEffectDefinition("paralyze", 0, -1, 10, 0, 1, 100, 0, 1, 0, 0, 0, 0, 1);
-        s.State.Effects.Start(new("paralysis", "paralyze", "spell", 1, 2000, "paralyze", "Magic", null, 1, 10,
+        s.State.Effects.Start(new("paralysis", "paralyze", "spell", 1, HoldActor(1), "paralyze", "Magic", null, 1, 10,
             JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(setting, 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
         Start(s, "normal", 13, 0, 10); Start(s, "true", 24, 1, 10);
         var before = s.State.Effects.PerceptionFor(1);
         using var restored = f.Restore(s.CaptureSave()); Assert.Equal(before, restored.State.Effects.PerceptionFor(1));
-        Assert.True(restored.State.Effects.ControlsFor(2000).Movement);
+        Assert.True(restored.State.Effects.ControlsFor(HoldActor(1)).Movement);
     }
 
     [Theory]
@@ -118,11 +118,11 @@ public sealed class DaggerfallConcealmentEffectsTests
     {
         using Fixture f = new(); var s = f.Session;
         Start(s, "source-normal", 13, 0, 10); Start(s, "source-true", 13, 1, 10);
-        Start(s, "target-normal", 23, 0, 10, target: 2000);
-        DaggerfallConcealmentEffects.AfterPhysicalHit(s.State.Effects, new AttackHitFact(1, 2000, damage, 0, 0, false, 1, 1));
+        Start(s, "target-normal", 23, 0, 10, target: HoldActor(1));
+        DaggerfallConcealmentEffects.AfterPhysicalHit(s.State.Effects, new AttackHitFact(1, HoldActor(1), damage, 0, 0, false, 1, 1));
         Assert.Equal(damage == 0, s.State.Effects.Active.Any(effect => effect.Context.Instance.Value == "source-normal"));
         Assert.Contains(s.State.Effects.Active, effect => effect.Context.Instance.Value == "source-true");
-        Assert.True(s.State.Effects.PerceptionFor(2000).Blending);
+        Assert.True(s.State.Effects.PerceptionFor(HoldActor(1)).Blending);
     }
 
     private static DaggerfallSpellEffectDefinition Setting(int type, int subtype) => new("conceal", type, subtype, 10, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1);
@@ -145,7 +145,7 @@ public sealed class DaggerfallConcealmentEffectsTests
         private EngineContextFake Engine(AppearanceFake graphics)
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, _composition.StartSite);
-            return EngineContextFake.Create(content, SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256, releases).Service,
+            return EngineContextFake.Create(content, SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256, releases).Service,
                 graphics, PerceptionFake.Create().Service, random: RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload) => DaggerfallSession.Restore(Engine(new([])).Context, _composition, payload);

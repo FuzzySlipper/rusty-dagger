@@ -18,7 +18,7 @@ public sealed class DaggerfallRestorationEffectsTests
     public void Free_action_releases_existing_controls_prevents_new_paralysis_and_restores_incumbent_lifetime()
     {
         using Fixture f = new(); var s = f.Session;
-        DaggerfallParalysisEffectsTests.Start(s, "old-paralysis", 2000, 1, 100);
+        DaggerfallParalysisEffectsTests.Start(s, "old-paralysis", HoldActor(1), 1, 100);
         Assert.True(s.State.Effects.ControlsFor(1).Movement);
         Start(s, "free", "free-action", Setting(26), 10);
         Assert.False(s.State.Effects.ControlsFor(1).Movement);
@@ -29,9 +29,9 @@ public sealed class DaggerfallRestorationEffectsTests
         Assert.False(restored.State.Effects.ControlsFor(1).PhysicalAttacks);
         Assert.Equal(29u, restored.State.Effects.Active.Single(e => e.Definition.Key == "free-action").Lifecycle.RemainingRounds);
         var spell = TestPayload.Definitions.Magic.Spells["spell.047"];
-        Magicka(restored, 2000).Maximum.BaseValue = 1; Magicka(restored, 2000).SetCurrent(1);
+        Magicka(restored, HoldActor(1)).Maximum.BaseValue = 1; Magicka(restored, HoldActor(1)).SetCurrent(1);
         var casting = CastingFor(restored, spell, 1);
-        casting.Ready(2000, spell.Key); var bundle = casting.Release(2000, true).Bundle!;
+        casting.Ready(HoldActor(1), spell.Key); var bundle = casting.Release(HoldActor(1), true).Bundle!;
         casting.Deliver(bundle, [1]);
         Assert.Equal(DaggerfallCastOutcome.Immune, Assert.Single(bundle.Results).Outcome);
         Assert.Single(restored.State.Effects.Active, e => e.Definition.Key == "paralyze");
@@ -107,7 +107,7 @@ public sealed class DaggerfallRestorationEffectsTests
     public void Absorption_real_binding_returns_one_delivery_result_and_refunds_only_accepted_capacity(int chance, bool absorbed)
     {
         using Fixture f = new(); var s = f.Session; Fund(s);
-        const long target = 2000;
+        long target = HoldActor(1);
         var magicka = Magicka(s, target); magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(0);
         Start(s, "absorb", "spell-absorption", Setting(20) with { ChanceBase = chance }, 10, target:target);
         var damage = Setting(4) with { SubType = 0, MagnitudeBaseLow = 10, MagnitudeBaseHigh = 10 };
@@ -129,7 +129,7 @@ public sealed class DaggerfallRestorationEffectsTests
     [Fact]
     public void Multiple_absorbed_effects_reserve_total_capacity_before_one_refund()
     {
-        using Fixture f = new(); var s = f.Session; Fund(s); const long target = 2000;
+        using Fixture f = new(); var s = f.Session; Fund(s); long target = HoldActor(1);
         var magicka = Magicka(s, target); magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(0);
         Start(s, "absorb", "spell-absorption", Setting(20), 10, target:target);
         var damage = Setting(4) with { SubType = 2, MagnitudeBaseLow = 1, MagnitudeBaseHigh = 1 };
@@ -166,7 +166,7 @@ public sealed class DaggerfallRestorationEffectsTests
     [InlineData("regenerate", 18)]
     public void Used_item_source_outlives_its_item_breaking_and_destruction_removes_recovery_defense_and_restriction_mask(string key, int type)
     {
-        using Fixture f = new(); var s = f.Session; DaggerfallParalysisEffectsTests.Start(s, "paralyzed", 2000, 1, 100);
+        using Fixture f = new(); var s = f.Session; DaggerfallParalysisEffectsTests.Start(s, "paralyzed", HoldActor(1), 1, 100);
         var item = s.State.Inventory.Read().UniqueItems.First(); ulong id = s.State.Inventory.GetDurableItemId(item.Entity).Value;
         Start(s, "item", key, Setting(type), 100, item:id);
         // Only a held bundle is tied to its item; a used item's cast outlives the item breaking, as in the
@@ -210,19 +210,18 @@ public sealed class DaggerfallRestorationEffectsTests
     public void Regeneration_on_the_live_player_survives_a_casters_site_unload_and_current_save()
     {
         var source = ReadInputs(TestData.RepositoryRoot);
-        var destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
-            TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot,"content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")),TestPayload.Definitions);
+        var destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         var composition = new DaggerfallSessionComposition(TestPayload.Definitions,source,DaggerfallTuning.Defaults)
             { Profiles = new([source,destination]) };
         List<string> releases = []; ContentFake content = new(releases); PopulateContent(content,source); PopulateContent(content,destination);
-        var spatial = SpatialFake.Create(source.SpatialArtifact.Sha256,releases);
+        var spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256,releases);
         var engine = EngineContextFake.Create(content,spatial.Service,new AppearanceFake(releases),PerceptionFake.Create().Service,random:RandomMaximum.Create());
         using var session = DaggerfallSession.StartNew(engine.Context,composition);
         Health(session).SetCurrent(10);
-        Start(session,"unloaded-caster","regenerate",Setting(18),100,caster:2000);
+        Start(session,"unloaded-caster","regenerate",Setting(18),100,caster:HoldActor(1));
         Assert.Equal(12, Health(session).Current);
         Assert.True(session.TryTransitionTo(destination.ProfileKey));
-        Assert.DoesNotContain(2000L,session.DefinitionsByActor.Keys);
+        Assert.DoesNotContain(HoldActor(1),session.DefinitionsByActor.Keys);
         session.AdvanceElapsedTime(60); Assert.Equal(14,Health(session).Current);
         using var restored = DaggerfallSession.Restore(engine.Context,composition,session.CaptureSave());
         Assert.Equal(14,Health(restored).Current);
@@ -277,7 +276,7 @@ public sealed class DaggerfallRestorationEffectsTests
         private EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content,_composition.StartSite);
-            var spatial = SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256,releases);
+            var spatial = SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256,releases);
             return EngineContextFake.Create(content,spatial.Service,new AppearanceFake(releases),PerceptionFake.Create().Service,random:RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload) => DaggerfallSession.Restore(Engine().Context,_composition,payload);

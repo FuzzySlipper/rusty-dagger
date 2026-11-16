@@ -126,8 +126,8 @@ public sealed class AlterationMobilitySessionTests
         mana.Maximum.BaseValue = 10000; mana.SetCurrent(10000);
         Assert.Equal(DaggerfallCastOutcome.Ready, f.Session.SpellRelease.ReadyPlayerSpell(spell.Key).Outcome);
         var bundle = f.Session.Casting.Release(1, true).Bundle!;
-        Assert.Equal(DaggerfallCastOutcome.InvalidTarget, f.Session.Casting.Deliver(bundle, [2000]).Outcome);
-        Assert.False(f.Session.State.Effects.GrantsSlowfall(2000));
+        Assert.Equal(DaggerfallCastOutcome.InvalidTarget, f.Session.Casting.Deliver(bundle, [HoldActor(1)]).Outcome);
+        Assert.False(f.Session.State.Effects.GrantsSlowfall(HoldActor(1)));
         Assert.Empty(f.Session.State.Effects.Active);
     }
 
@@ -220,7 +220,7 @@ public sealed class AlterationMobilitySessionTests
             var inputs = ReadInputs(TestData.RepositoryRoot);
             List<string> releases = [];
             ContentFake content = new(releases); PopulateContent(content, inputs);
-            Spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            Spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
             var engine = EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), random: minimumRandom ? RandomMinimum.Create() : RandomMaximum.Create());
             var composition = new DaggerfallSessionComposition(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults);
             Session = save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);

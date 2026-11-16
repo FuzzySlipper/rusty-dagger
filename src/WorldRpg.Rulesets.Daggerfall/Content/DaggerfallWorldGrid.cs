@@ -11,7 +11,7 @@ internal static class DaggerfallWorldGrid
 
     /// <summary>
     /// Exterior artifacts publish navigation cells at the source terrain's 0.8-unit grid. One wilderness map pixel is
-    /// 819.2 world units, so adjacent location closures are exactly 1024 navigation cells apart in the shared Engine
+    /// 819.2 world units, so adjacent locations are exactly 1024 navigation cells apart in the shared Engine
     /// artifact grid.
     /// </summary>
     internal const long NavigationCellsPerExteriorCell = 1024;

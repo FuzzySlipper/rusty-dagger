@@ -50,7 +50,7 @@ public sealed class DaggerfallExteriorWorldTests
         List<string> releases = [];
         ContentFake content = new(releases);
         TestSessions.PopulateContent(content, inputs);
-        SpatialFake spatialFake = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatialFake = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatialFake.Service, new AppearanceFake(releases));
         IRandomService random = RandomMinimum.Create();
         DaggerfallActorAssembly assembled = DaggerfallActorFactory.Create(random, definitions, inputs, saved: null);

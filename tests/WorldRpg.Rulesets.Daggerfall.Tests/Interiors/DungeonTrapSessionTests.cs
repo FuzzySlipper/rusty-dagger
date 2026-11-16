@@ -13,7 +13,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// <summary>What the world does by touch through the live session: hurt traps and fire.</summary>
 public sealed class DungeonTrapSessionTests
 {
-    private const long Enemy = 2000;
+    private static readonly long Enemy = HoldActor(1);
 
     private static DaggerfallDungeonActionDefinition Action(DaggerfallDungeonActionFlag flag) =>
         new("trap", 1, (uint)DaggerfallDungeonTriggerFlag.Direct, (byte)flag, 0, 0, 2, -1, null, IsFlat: true);

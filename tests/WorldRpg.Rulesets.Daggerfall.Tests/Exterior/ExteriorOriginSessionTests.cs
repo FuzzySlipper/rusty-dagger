@@ -27,7 +27,10 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        // The town start's pose, authored on Charing's ground.
+        DaggerfallSiteAnchor start = DaggerfallBaseContent.ReadNewGameStart(TestContentFiles.ReadCopy(TestData.PackPayload("daggerfall.town-start")),
+            definitions.NewGame, "daggerfall.town-start").Start.Pose!;
         Dictionary<string, ReadOnlyMemory<byte>> files = PublishedUiArt(root)
             .ToDictionary(entry => entry.Path, entry => (ReadOnlyMemory<byte>)entry.Bytes);
         foreach ((string path, ReadOnlyMemory<byte> bytes) in PresentedFiles(root, exterior)) files[path] = bytes;
@@ -41,7 +44,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             List<string> releases = [];
             EngineContextFake context = EngineContextFake.Create(engine.Content, spatial, new AppearanceFake(releases),
                 worldOrigin: engine.WorldOrigin);
-            session = DaggerfallSession.StartNew(context.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
+            session = DaggerfallSession.StartNew(context.Context, new(definitions, exterior, DaggerfallTuning.Defaults) { StartPose = start });
         });
         try
         {
@@ -68,12 +71,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             float quarterQuantized = MathF.Round(exteriorFrame.Y / .25F) * .25F;
             Assert.True(MathF.Abs(exteriorFrame.Y - quarterQuantized) > .001F,
                 $"Charing's sampled location frame was quantized to {quarterQuantized} instead of retaining {exteriorFrame.Y}.");
-            WorldPoint sourcePlayer = exterior.Project.PlayerPosition
-                ?? throw new InvalidOperationException("Charing exterior has no authored player position.");
+            WorldPoint sourcePlayer = start.Position;
             WorldPoint livePlayer = session.State.PlayerControl.Position
                 ?? throw new InvalidOperationException("Native Charing session has no live player position.");
             Assert.Equal(sourcePlayer.X + exteriorFrame.X, livePlayer.X, 3);
-            // The authored start names the ground, and a new game stands the player's capsule centre on it.
+            // The town start names the ground, and a new game stands the player's capsule centre on it.
             Assert.InRange(livePlayer.Y - (sourcePlayer.Y + exteriorFrame.Y), .85F, 1F);
             Assert.Equal(sourcePlayer.Z + exteriorFrame.Z, livePlayer.Z, 3);
 
@@ -123,16 +125,17 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             output.WriteLine($"Collision against the drawn ground: {worst} m at worst.");
             Assert.InRange(worst, 0F, .02F);
 
-            Vector3 ray = exterior.Portals[0].Position.ToVector() + exteriorFrame + Vector3.UnitY * 20f;
+            Vector3 ray = exterior.Doors[0].Position + exteriorFrame + Vector3.UnitY * 20f;
             SpatialHit Hit(Vector3 point, float distance = 100F) => spatial.CastRay(new(recorded.Session!, point, -Vector3.UnitY, distance,
                 default, ReadOnlyMemory<SpatialEntityCollider>.Empty, ReadOnlyMemory<ulong>.Empty,
                 ReadOnlyMemory<SpatialEntityCollider>.Empty));
             SpatialHit before = Hit(ray);
             Assert.True(before.Present);
-            var artifact = EngineBinaryContent.ReadSpatial(files[exterior.SpatialArtifact.Path].Span);
+            DaggerfallSiteSpatialPart part = exterior.Geometry.Spatial[0];
+            var artifact = EngineBinaryContent.ReadSpatial(files[part.Path].Span);
             var cell = artifact.Cells.First(cell => cell.Walkable);
-            Vector3 routePoint = exteriorFrame + new Vector3((float)((cell.Column + .5) * artifact.Config[0]),
-                (float)cell.SupportHeight, (float)((cell.Row + .5) * artifact.Config[0]));
+            Vector3 routePoint = exteriorFrame + new Vector3((float)((cell.Column + part.ColumnOffset + .5) * artifact.Config[0]),
+                (float)cell.SupportHeight, (float)((cell.Row + part.RowOffset + .5) * artifact.Config[0]));
             NavigationStepResult beforeRoute = spatial.EvaluateNavigationStep(new(recorded.Session!,
                 routePoint, routePoint, 1f, 1000));
             Assert.Equal(NavigationPathOutcome.Reached, beforeRoute.Outcome);
@@ -211,19 +214,19 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     }
 
     [Fact]
-    public void Admitted_movement_rebases_actors_portals_ground_and_presentation_and_restores_once()
+    public void Admitted_movement_rebases_actors_doors_ground_and_presentation_and_restores_once()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
         DaggerfallSiteProfiles profiles = new([exterior, interior]);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
         PopulateContent(content, interior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
@@ -288,11 +291,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
             Assert.Equal(actorPosition.ToVector() + delta, session.State.Actors.Store.Get(
                 session.State.Actors.Get(actorId).Actor.Entity, EngineComponentTypes.CharacterMotion).SupportPreviousTranslation);
             Assert.Empty(session.State.Actors.Store.Query(DaggerfallExteriorWorld.GlobalPositions));
-            Vector3 activePortalProfile = session.Exterior.LocalToProfile(
-                session.Sites.Projection.Portals.All.First().Portal.Position.ToVector());
-            Assert.Equal(exterior.Portals[0].Position.X, activePortalProfile.X, 3);
-            Assert.Equal(exterior.Portals[0].Position.Y, activePortalProfile.Y, 3);
-            Assert.Equal(exterior.Portals[0].Position.Z, activePortalProfile.Z, 3);
+            Vector3 activeDoorProfile = session.Exterior.LocalToProfile(
+                session.Sites.Projection.Doors.Read(exterior.Doors[0].Id).Pose.Translation);
+            Assert.Equal(exterior.Doors[0].Position.X, activeDoorProfile.X, 3);
+            Assert.Equal(exterior.Doors[0].Position.Y, activeDoorProfile.Y, 3);
+            Assert.Equal(exterior.Doors[0].Position.Z, activeDoorProfile.Z, 3);
             Vector3 worldAfterHorizontalRebase = Assert.Single(appearance.Snapshots.Last(),
                 fact => fact.ObjectId == DaggerfallPresentationObjectIds.WorldMesh(DaggerfallPresentationObjectIds.ActiveLocationSlot, 0)).Transform.Translation;
             Assert.Equal(worldBeforeHorizontalRebase.X + delta.X, worldAfterHorizontalRebase.X, 3);
@@ -316,7 +319,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         ContentFake restoredContent = new(restoredReleases);
         PopulateContent(restoredContent, exterior);
         PopulateContent(restoredContent, interior);
-        SpatialFake restoredSpatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, restoredReleases);
+        SpatialFake restoredSpatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, restoredReleases);
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service,
             new AppearanceFake(restoredReleases));
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context,
@@ -341,11 +344,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         Assert.Equal(npcPosition.X, restoredNpcProfile.X, 3);
         Assert.Equal(npcPosition.Y, restoredNpcProfile.Y, 3);
         Assert.Equal(npcPosition.Z, restoredNpcProfile.Z, 3);
-        Vector3 restoredPortalProfile = restored.Exterior.LocalToProfile(
-            restored.Sites.Projection.Portals.All.First().Portal.Position.ToVector());
-        Assert.Equal(exterior.Portals[0].Position.X, restoredPortalProfile.X, 3);
-        Assert.Equal(exterior.Portals[0].Position.Y, restoredPortalProfile.Y, 3);
-        Assert.Equal(exterior.Portals[0].Position.Z, restoredPortalProfile.Z, 3);
+        Vector3 restoredDoorProfile = restored.Exterior.LocalToProfile(
+            restored.Sites.Projection.Doors.Read(exterior.Doors[0].Id).Pose.Translation);
+        Assert.Equal(exterior.Doors[0].Position.X, restoredDoorProfile.X, 3);
+        Assert.Equal(exterior.Doors[0].Position.Y, restoredDoorProfile.Y, 3);
+        Assert.Equal(exterior.Doors[0].Position.Z, restoredDoorProfile.Z, 3);
         // The explicit test poses are local after exterior admission.  Leaving the exterior
         // normalizes the Engine origin before the source return pose and detached actor delta are
         // captured. Both remove the admitted terrain frame and store the canonical profile pose, so a
@@ -384,7 +387,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         ContentFake insideContent = new(insideReleases);
         PopulateContent(insideContent, exterior);
         PopulateContent(insideContent, interior);
-        SpatialFake insideSpatial = SpatialFake.Create(interior.SpatialArtifact.Sha256, insideReleases);
+        SpatialFake insideSpatial = SpatialFake.Create(interior.Geometry.Spatial[0].Sha256, insideReleases);
         EngineContextFake insideEngine = EngineContextFake.Create(insideContent, insideSpatial.Service,
             new AppearanceFake(insideReleases));
         using DaggerfallSession fromInside = DaggerfallSession.Restore(insideEngine.Context,
@@ -427,11 +430,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         var composition = new DaggerfallSessionComposition(definitions, exterior, DaggerfallTuning.Defaults);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
@@ -449,7 +452,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         List<string> restoredReleases = [];
         ContentFake restoredContent = new(restoredReleases);
         PopulateContent(restoredContent, exterior);
-        SpatialFake restoredSpatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, restoredReleases);
+        SpatialFake restoredSpatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, restoredReleases);
         restoredSpatial.KeepPosition = true;
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, restoredSpatial.Service,
             new AppearanceFake(restoredReleases));
@@ -477,11 +480,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
@@ -560,7 +563,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         Dictionary<string, ReadOnlyMemory<byte>> files = PublishedUiArt(root)
             .ToDictionary(entry => entry.Path, entry => (ReadOnlyMemory<byte>)entry.Bytes);
         foreach ((string path, ReadOnlyMemory<byte> bytes) in PresentedFiles(root, exterior)) files[path] = bytes;
@@ -612,11 +615,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         return (DaggerfallSession.StartNew(engine.Context, new DaggerfallSessionComposition(definitions, exterior, DaggerfallTuning.Defaults)), spatial);
     }
@@ -627,11 +630,11 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
@@ -665,14 +668,14 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
         DaggerfallSiteProfiles profiles = new([exterior, interior]);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
         PopulateContent(content, interior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         RulesetSavePayload save;
         long far;
@@ -707,7 +710,7 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         ContentFake resumedContent = new(resumedReleases);
         PopulateContent(resumedContent, exterior);
         PopulateContent(resumedContent, interior);
-        SpatialFake resumedSpatial = SpatialFake.Create(interior.SpatialArtifact.Sha256, resumedReleases);
+        SpatialFake resumedSpatial = SpatialFake.Create(interior.Geometry.Spatial[0].Sha256, resumedReleases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
@@ -727,10 +730,10 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
         var before = session.Exterior.CaptureExteriorResidency()!.Value;
@@ -763,10 +766,10 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
         DaggerfallExteriorCellId center = session.Exterior.CaptureExteriorResidency()!.Value.Center;
@@ -781,10 +784,10 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
         DaggerfallExteriorCellId site = session.Exterior.CaptureExteriorResidency()!.Value.Center;
@@ -808,10 +811,10 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile exterior = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
         var before = session.Exterior.CaptureExteriorResidency()!.Value;
@@ -845,13 +848,13 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
         PopulateContent(content, interior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
             new(definitions, exterior, DaggerfallTuning.Defaults) { Profiles = new([exterior, interior]) });
@@ -893,13 +896,13 @@ public sealed class ExteriorOriginSessionTests(Xunit.Abstractions.ITestOutputHel
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
         PopulateContent(content, interior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
             new(definitions, exterior, DaggerfallTuning.Defaults) { Profiles = new([exterior, interior]) });

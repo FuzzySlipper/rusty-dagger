@@ -21,7 +21,7 @@ public sealed class QuestMarkerSourceTests
         foreach (DaggerfallBlockQuestMarkers set in compact.QuestMarkers)
         {
             Assert.Equal(set.Markers.OrderBy(marker => marker.SourceOrdinal), set.Markers);
-            foreach (NormalizedQuestMarker marker in set.Markers) marker.Validate();
+            Assert.All(set.Markers, marker => Assert.Equal((set.SourceKey, set.BuildingIndex), (marker.SourceKey, marker.BuildingIndex)));
             Assert.Equal(set.Markers.Count, set.Markers.Select(marker => marker.Id).Distinct().Count());
         }
         DaggerfallBlockQuestMarkers selected = compact.QuestMarkers.First(set => set.BuildingIndex is not null && set.Markers.Count > 0);

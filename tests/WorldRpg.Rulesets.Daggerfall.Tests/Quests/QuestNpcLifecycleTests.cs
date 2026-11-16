@@ -105,10 +105,10 @@ public sealed class QuestNpcLifecycleTests
         var definitions = QuestNpcOverlayTests.Definitions([], taskBlocks: [["_available_ task:", $"when {named.Name} is available"], ["_hide_ task:", "hide npc _contact_"]]);
         string root = TestData.RepositoryRoot;
         var content = FullContent(root);
-        var profile = StaticNpcAdmissionTests.StaticProviderSite(ReadProfile(root, content, definitions, "daggerfall.charing-interior-1-1-0"), 2, named.P3);
+        var profile = StaticNpcAdmissionTests.StaticProviderSite(Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0))), 2, named.P3);
         List<string> releases = [];
         var contentService = new ContentFake(releases); PopulateContent(contentService, profile);
-        var spatial = SpatialFake.Create(profile.SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
+        var spatial = SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases); spatial.KeepPosition = true;
         var perception = PerceptionFake.Create();
         var appearance = new AppearanceFake(releases);
         var engine = EngineContextFake.Create(contentService, spatial.Service, appearance, perception.Service);

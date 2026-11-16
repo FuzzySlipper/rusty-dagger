@@ -24,8 +24,8 @@ public sealed class ContactEngagementSessionTests
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
-        Assert.Equal(EnemyBehaviorState.Chase, session.EnemyBehavior.LastEvidence[2000].State);
-        Assert.Null(session.State.Actors.Get(2000).Attack.Pending);
+        Assert.Equal(EnemyBehaviorState.Chase, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
+        Assert.Null(session.State.Actors.Get(HoldActor(1)).Attack.Pending);
     }
 
     [Fact]
@@ -38,8 +38,8 @@ public sealed class ContactEngagementSessionTests
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
-        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
-        Assert.NotNull(session.State.Actors.Get(2000).Attack.Pending);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
+        Assert.NotNull(session.State.Actors.Get(HoldActor(1)).Attack.Pending);
         using JsonDocument observation = JsonDocument.Parse(session.Commands<PlaytestDebugModule>().Observe().Message);
         Assert.Equal(FormattableString.Invariant($"EnemyAttackTelegraph:{ContactTuning.EnemyWindUpSeconds:0.###}"),
             observation.RootElement.GetProperty("lastCombatEvent").GetProperty("kind").GetString());
@@ -52,6 +52,6 @@ public sealed class ContactEngagementSessionTests
         List<string> releases = [];
         (DaggerfallSession session, _, _) = VisibleEnemySession(releases);
         using DaggerfallSession disposable = session;
-        return session.State.Kit.Attacks.ReachOf(2000) ?? throw new InvalidOperationException("The placed enemy has no attack reach.");
+        return session.State.Kit.Attacks.ReachOf(HoldActor(1)) ?? throw new InvalidOperationException("The placed enemy has no attack reach.");
     }
 }

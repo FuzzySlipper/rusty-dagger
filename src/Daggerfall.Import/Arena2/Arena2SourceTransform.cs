@@ -12,15 +12,12 @@ public readonly record struct Arena2TextureUv(float U, float V);
 /// <summary>One source-model Euler rotation expressed in degrees.</summary>
 public readonly record struct Arena2EulerDegrees(float X, float Y, float Z);
 
-/// <summary>One triangle whose index order is explicit at the import boundary.</summary>
-public readonly record struct Arena2Triangle(int First, int Second, int Third);
-
 /// <summary>
 /// Pure Arena2 source-unit conversions used before artifact normalization.
 ///
 /// Provenance: migrated Arena2 and Daggerfall Unity importer semantics preserve
 /// the source format's global scale, mesh-point and texture divisors, block
-/// rotation divisor, and RDB block side. These helpers deliberately stop before
+/// rotation divisor, and RMB block side. These helpers deliberately stop before
 /// mesh generation, Engine projection, and ruleset interpretation.
 /// </summary>
 public static class Arena2SourceTransform
@@ -35,7 +32,6 @@ public static class Arena2SourceTransform
     private const float TextureCoordinateDivisor = 16F;
     private const float RawRotationUnitsPerTurn = 2048F;
     private const float DegreesPerTurn = 360F;
-    private const float RawBlockSide = 2048F;
     private const float RawRmbBlockSide = 4096F;
     private const float RmbRotationDivisor = 5.68888888888889F;
 
@@ -65,52 +61,6 @@ public static class Arena2SourceTransform
             -y * GlobalScaleMetres,
             z * GlobalScaleMetres,
             "RDB position");
-    }
-
-    /// <summary>
-    /// Returns the DFU-compatible origin for a MAPDITEM block. A classic block
-    /// spans 2048 raw units, or 51.2 metres, on X and Z; its Y origin is zero.
-    /// </summary>
-    public static Arena2ImportPoint ToBlockOrigin(MapsDungeonBlock block)
-    {
-        ArgumentNullException.ThrowIfNull(block);
-        float blockSideMetres = RawBlockSide * GlobalScaleMetres;
-        return CreatePoint(block.X * blockSideMetres, 0F, block.Z * blockSideMetres, nameof(block));
-    }
-
-    /// <summary>
-    /// Applies a MAPDITEM block origin to a local importer-space point. It
-    /// does not rotate geometry or create a scene object.
-    /// </summary>
-    public static Arena2ImportPoint PlaceInBlock(Arena2ImportPoint localPoint, MapsDungeonBlock block)
-    {
-        EnsureFinite(localPoint.XMetres, nameof(localPoint));
-        EnsureFinite(localPoint.YMetres, nameof(localPoint));
-        EnsureFinite(localPoint.ZMetres, nameof(localPoint));
-        Arena2ImportPoint origin = ToBlockOrigin(block);
-        return CreatePoint(
-            localPoint.XMetres + origin.XMetres,
-            localPoint.YMetres + origin.YMetres,
-            localPoint.ZMetres + origin.ZMetres,
-            nameof(localPoint));
-    }
-
-    /// <summary>Returns the donor RMB grid origin for one MAPPITEM exterior block.</summary>
-    public static Arena2ImportPoint ToExteriorBlockOrigin(MapsExteriorBlock block)
-    {
-        ArgumentNullException.ThrowIfNull(block);
-        float blockSideMetres = RawRmbBlockSide * GlobalScaleMetres;
-        return CreatePoint(block.X * blockSideMetres, 0F, block.Y * blockSideMetres, nameof(block));
-    }
-
-    /// <summary>Applies an exterior RMB grid origin to a local importer-space point.</summary>
-    public static Arena2ImportPoint PlaceInExteriorBlock(Arena2ImportPoint localPoint, MapsExteriorBlock block)
-    {
-        EnsureFinite(localPoint.XMetres, nameof(localPoint));
-        EnsureFinite(localPoint.YMetres, nameof(localPoint));
-        EnsureFinite(localPoint.ZMetres, nameof(localPoint));
-        Arena2ImportPoint origin = ToExteriorBlockOrigin(block);
-        return CreatePoint(localPoint.XMetres + origin.XMetres, localPoint.YMetres + origin.YMetres, localPoint.ZMetres + origin.ZMetres, nameof(localPoint));
     }
 
     /// <summary>
@@ -179,27 +129,6 @@ public static class Arena2SourceTransform
         return new Arena2TextureUv(u, v);
     }
 
-    /// <summary>
-    /// Reverses one validated triangle winding. The old importer mirrored
-    /// DFU-compatible left-handed coordinates to glTF's right-handed space by
-    /// negating Z, then explicitly changed each DFU fan triangle from
-    /// <c>(0, i + 2, i + 1)</c> to <c>(0, i + 1, i + 2)</c> to preserve facing.
-    /// Callers must choose this conversion rather than receiving an implicit
-    /// index-order change.
-    /// </summary>
-    public static Arena2Triangle ReverseWinding(int first, int second, int third)
-    {
-        ValidateTriangleIndex(first, nameof(first));
-        ValidateTriangleIndex(second, nameof(second));
-        ValidateTriangleIndex(third, nameof(third));
-        if (first == second || first == third || second == third)
-        {
-            throw new ArgumentException("A triangle requires three distinct vertex indices.");
-        }
-
-        return new Arena2Triangle(first, third, second);
-    }
-
     private static Arena2ImportPoint CreatePoint(float x, float y, float z, string parameterName)
     {
         EnsureFinite(x, parameterName);
@@ -220,14 +149,6 @@ public static class Arena2SourceTransform
         if (!float.IsFinite(value))
         {
             throw new ArgumentOutOfRangeException(parameterName, value, "A converted Arena2 value must be finite.");
-        }
-    }
-
-    private static void ValidateTriangleIndex(int index, string parameterName)
-    {
-        if (index < 0)
-        {
-            throw new ArgumentOutOfRangeException(parameterName, index, "A triangle index cannot be negative.");
         }
     }
 }

@@ -28,7 +28,7 @@ public sealed class ProductModeSessionTests
         ContentFake content = new(releases);
         DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         // This lifecycle seam is about one admitted realtime step and owner release ordering. Keep
@@ -65,7 +65,7 @@ public sealed class ProductModeSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         TestDaggerfallRuleset ruleset = new(videosEnabled: false);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input), ruleset, new GameBundleId("daggerfall.classic"));
@@ -97,7 +97,7 @@ public sealed class ProductModeSessionTests
         // explicit no-video fixture used by unrelated gameplay tests, production ruleset startup must surface it.
         PopulateContent(engineContent, inputs);
         EngineContextFake engine = EngineContextFake.Create(engineContent,
-            SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+            SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         TestDaggerfallRuleset ruleset = new(videosEnabled: true);
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContentWithout(root, DaggerfallCinematicPresentation.Root), input), ruleset, new GameBundleId("daggerfall.classic"));
@@ -119,7 +119,7 @@ public sealed class ProductModeSessionTests
         List<string> releases = [];
         ContentFake engineContent = new(releases);
         PopulateContent(engineContent, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         VideoRecorder video = VideoRecorder.Create();
         EngineContextFake engine = EngineContextFake.Create(engineContent, spatial.Service, new AppearanceFake(releases), video: video.Service);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
@@ -180,9 +180,9 @@ public sealed class ProductModeSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
-        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(1), 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
@@ -210,7 +210,7 @@ public sealed class ProductModeSessionTests
         // Complete each authored swing so this fixture does not leave a hit marker pending forever.
         appearance.AdvanceReceiptForAll = CompletedMarker(1);
         for (ulong step = 2; step <= 121; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
-        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
         Assert.True(appearance.ControlRequests.Count > factReactionsBefore);
         Assert.True(appearance.AdvanceRequests.Count > playbackAdvancesBefore);
     }
@@ -231,7 +231,7 @@ public sealed class ProductModeSessionTests
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
         PopulateContent(sourceContent, inputs);
-        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
         RulesetSavePayload saved;
         DaggerfallCharacterBackgroundSave committed;
@@ -307,7 +307,7 @@ public sealed class ProductModeSessionTests
 
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
-        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), saved);
@@ -333,7 +333,7 @@ public sealed class ProductModeSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
@@ -401,21 +401,21 @@ public sealed class ProductModeSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.Strike(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
-        AimActivationAt(session, 2000);
-        CorpseContainer corpse = session.Corpses[2000];
+        session.Strike(new ExplicitMeleeRequest(1, HoldActor(1), 1, 1, .125));
+        AimActivationAt(session, HoldActor(1));
+        CorpseContainer corpse = session.Corpses[HoldActor(1)];
         Assert.True(corpse.IsRegistered);
         session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.4534"))]);
-        RegisterCorpseStack(session, definitions, 2000, "test.loot.4534");
+        RegisterCorpseStack(session, definitions, HoldActor(1), "test.loot.4534");
         // The pair the passing attack test uses, so the melee assertions below can actually fire.
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         void Ui(string json, ulong step)
         {
             ProductInputEvent action = Input(InputEventKind.DirectDigital) with
@@ -510,7 +510,7 @@ public sealed class ProductModeSessionTests
         // revision that moved the gold while the modal was open - so it would move it again if the
         // dead gate were missing.
         session.Update(new ProductUpdate(OuterUpdate(6), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         Ui("{\"action\":\"loot\"}", 7);
         LootPresentation reopened = Assert.IsType<LootPresentation>(session.OpenLoot);
         session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(0, clamp: true);

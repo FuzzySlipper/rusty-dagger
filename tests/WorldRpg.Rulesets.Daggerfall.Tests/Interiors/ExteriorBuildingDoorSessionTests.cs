@@ -31,10 +31,10 @@ public sealed class ExteriorBuildingDoorSessionTests
     {
         string root = TestData.RepositoryRoot;
         ProductContent content = FullContent(root);
-        return (ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-exterior"),
-            [ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-interior-1-1-0"),
-             ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-interior-2-1-0"),
-             ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-interior-3-4-0")]);
+        return (Assembled(DaggerfallWorldProfileIds.Exterior(Charing)),
+            [Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0))),
+             Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(2, 1, 0))),
+             Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(3, 4, 0)))]);
     });
 
     /// <summary>At midnight the residence is locked: picking or bashing it is breaking in, and enters it.</summary>
@@ -325,7 +325,7 @@ public sealed class ExteriorBuildingDoorSessionTests
             ContentFake content = new(releases);
             PopulateContent(content, Exterior);
             foreach (DaggerfallSiteProfile interior in Profiles.Value.Interiors) PopulateContent(content, interior);
-            _spatial = SpatialFake.Create(Exterior.SpatialArtifact.Sha256, releases);
+            _spatial = SpatialFake.Create(Exterior.Geometry.Spatial[0].Sha256, releases);
             _spatial.KeepPosition = true;
             _perception = PerceptionFake.Create();
             _perception.Responder = request => Receipt(request.Targets.Span.ToArray()

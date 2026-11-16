@@ -40,7 +40,7 @@ internal static class CombatCollaborators
     {
         DaggerfallSiteProfile inputs = Profile.Value;
         List<string> releases = [];
-        fake = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        fake = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial = new SpatialMovementSystem(fake.Service, new ContentFake(releases),
             null, DaggerfallTuning.Defaults.Spatial);
         return new TargetingService(PerceptionFake.Create().Service, spatial, actors,

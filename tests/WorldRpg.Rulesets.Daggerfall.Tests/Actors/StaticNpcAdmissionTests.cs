@@ -20,11 +20,11 @@ public sealed class StaticNpcAdmissionTests
     {
         string root = TestData.RepositoryRoot;
         var inputs = StaticProviderSite(exterior
-            ? ReadProfile(root, FullContent(root), TestPayload.Definitions, "daggerfall.charing-exterior")
+            ? Assembled(DaggerfallWorldProfileIds.Exterior(Charing))
             : ReadInputs(root), factionId: 5911);
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, inputs);
-        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using var session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
         var npc = Assert.Single(session.State.Npcs.All, npc => npc.Kind == DaggerfallNpcKind.Static);
@@ -46,14 +46,13 @@ public sealed class StaticNpcAdmissionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
-        DaggerfallSiteProfile providerSite = StaticProviderSite(ReadProfile(root, content, definitions,
-            "daggerfall.charing-interior-1-1-0"));
+        DaggerfallSiteProfile providerSite = StaticProviderSite(Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0))));
         DaggerfallSiteProfile outside = ReadInputs(root);
         List<string> releases = [];
         ContentFake contentService = new(releases);
         PopulateContent(contentService, providerSite);
         PopulateContent(contentService, outside);
-        SpatialFake spatial = SpatialFake.Create(providerSite.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(providerSite.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(contentService, spatial.Service, new AppearanceFake(releases));
         DaggerfallSiteProfiles profiles = new([providerSite, outside]);
         DaggerfallSessionComposition composition = new(definitions, providerSite, DaggerfallTuning.Defaults)
@@ -118,13 +117,12 @@ public sealed class StaticNpcAdmissionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
         DaggerfallSiteProfile outside = ReadInputs(root);
-        DaggerfallSiteProfile providerSite = StaticProviderSite(ReadProfile(root, content, definitions,
-            "daggerfall.charing-interior-1-1-0"));
+        DaggerfallSiteProfile providerSite = StaticProviderSite(Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0))));
         List<string> releases = [];
         ContentFake contentService = new(releases);
         PopulateContent(contentService, outside);
         PopulateContent(contentService, providerSite);
-        SpatialFake spatial = SpatialFake.Create(outside.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(outside.Geometry.Spatial[0].Sha256, releases);
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(contentService, spatial.Service, appearance);
         DaggerfallSiteProfiles profiles = new([outside, providerSite]);
@@ -161,13 +159,12 @@ public sealed class StaticNpcAdmissionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
         DaggerfallSiteProfile outside = ReadInputs(root);
-        DaggerfallSiteProfile providerSite = StaticProviderSite(ReadProfile(root, content, definitions,
-            "daggerfall.charing-interior-1-1-0"), placementCount: 2);
+        DaggerfallSiteProfile providerSite = StaticProviderSite(Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0))), placementCount: 2);
         List<string> releases = [];
         ContentFake contentService = new(releases);
         PopulateContent(contentService, outside);
         PopulateContent(contentService, providerSite);
-        SpatialFake spatial = SpatialFake.Create(outside.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(outside.Geometry.Spatial[0].Sha256, releases);
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(contentService, spatial.Service, appearance);
         DaggerfallSiteProfiles profiles = new([outside, providerSite]);

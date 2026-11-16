@@ -96,7 +96,7 @@ public sealed class DaggerfallDetectionEffectsTests
     public void Corpse_treasure_uses_the_durable_container_and_current_nonempty_inventory()
     {
         using Fixture f = new(random: SessionRandom.Create()); var s = f.Session;
-        long target = 2000;
+        long target = HoldActor(1);
         s.State.Actors.Get(target).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1);
         s.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60;
         s.Strike(new WorldRpg.Rulesets.Daggerfall.Modules.Combat.ExplicitMeleeRequest(1, target, 1, 1, .125));
@@ -177,7 +177,7 @@ public sealed class DaggerfallDetectionEffectsTests
         {
             _random = random ?? RandomMaximum.Create();
             var source = ReadInputs(TestData.RepositoryRoot);
-            if (twoSites) Destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)), TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), TestPayload.Definitions);
+            if (twoSites) Destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
             Composition = new(TestPayload.Definitions, source, DaggerfallTuning.Defaults) { Profiles = new DaggerfallSiteProfiles(Destination is null ? [source] : [source, Destination]) };
             Perception.Responder = request => Receipt(request.Targets.ToArray().Select(target => new PerceptionPair(request.Observers.Span[0].Entity,
                 target.Entity, Vector3.Distance(request.Observers.Span[0].Origin, target.Center), 1, PerceptionPairKind.Occluded, 0)).ToArray());
@@ -186,7 +186,7 @@ public sealed class DaggerfallDetectionEffectsTests
         private EngineContextFake CreateEngine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, Composition.StartSite); if (Destination is not null) PopulateContent(content, Destination);
-            return EngineContextFake.Create(content, SpatialFake.Create(Composition.StartSite.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases), Perception.Service, random: _random);
+            return EngineContextFake.Create(content, SpatialFake.Create(Composition.StartSite.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases), Perception.Service, random: _random);
         }
         internal void Submit(object action) => Session.Update(new ProductUpdate(OuterUpdate(++_step), [Ui(JsonSerializer.Serialize(action))]));
         internal DaggerfallSession Restore(RulesetSavePayload payload) => DaggerfallSession.Restore(CreateEngine().Context, Composition, payload);

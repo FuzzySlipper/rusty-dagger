@@ -27,7 +27,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         PopulateTerrainContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
 
@@ -70,7 +70,7 @@ public sealed class DaggerfallHeldEnchantmentSessionTests
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
         PopulateTerrainContent(resumedContent, inputs);
-        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
         ResolvedCompositionIdentity composition = TestSessions.Resolve(FullContent(root),

@@ -176,9 +176,9 @@
     "time": "00:00"
   },
   "view": {
-    "yawRadians": 3.1415927410125732,
+    "yawRadians": 0.7853970527648926,
     "interaction": "aiming",
-    "heading": "south"
+    "heading": "north-east"
   },
   "radial": [
     {
@@ -1638,7 +1638,7 @@
       "player": {
         "x": 109,
         "y": 158,
-        "heading": 180.00000531252033
+        "heading": 44.999938186825716
       },
       "regions": [
         {
@@ -3311,16 +3311,6 @@
       "daggerfall.base",
       "daggerfall.art-replacements",
       "daggerfall.blocks",
-      "daggerfall.privateers-hold",
-      "daggerfall.castle-necromoghan",
-      "daggerfall.charing-exterior",
-      "daggerfall.charing-interior-2-1-0",
-      "daggerfall.charing-interior-1-1-0",
-      "daggerfall.charing-interior-3-4-0",
-      "daggerfall.charing-interior-3-1-13",
-      "daggerfall.charing-interior-4-2-0",
-      "daggerfall.charing-interior-1-5-17",
-      "daggerfall.charing-interior-3-2-14",
       "daggerfall.quests.fighters",
       "daggerfall.quests.mages",
       "daggerfall.quests.temples",
@@ -3329,12 +3319,6 @@
       "daggerfall.quests.merchants-vampires",
       "daggerfall.quests.disabled",
       "daggerfall.quests.nobility",
-      "daggerfall.small-ship",
-      "daggerfall.large-ship",
-      "daggerfall.the-hawkston-cemetery",
-      "daggerfall.the-tombs-of-klerd",
-      "daggerfall.the-hawkston-cemetery-exterior",
-      "daggerfall.the-tombs-of-klerd-exterior",
       "daggerfall.quests.story-early",
       "daggerfall.quests.story-late",
       "daggerfall.quests.cures"

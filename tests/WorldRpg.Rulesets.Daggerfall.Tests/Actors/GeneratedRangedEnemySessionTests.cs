@@ -87,6 +87,9 @@ public sealed class GeneratedRangedEnemySessionTests
     private static void Place(SanguineRoseSessionTests.Fixture f, long id, float distance)
     {
         f.Session.State.PlayerControl.MoveTo(Vector3.Zero);
+        // The player faces +Z, their back to the archer, so outside a shot the motor closes and swings rather than
+        // manoeuvring around a guarded target.
+        f.Session.State.PlayerControl.YawRadians = MathF.PI;
         f.Session.State.Actors.Get(id).ApplyPose(new(new(0, 0, -distance), MathF.PI));
         f.Perception.Responder = _ => Receipt(new PerceptionPair((ulong)id, 1, distance, 1, PerceptionPairKind.Visible, 1));
     }

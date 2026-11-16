@@ -36,7 +36,7 @@ public sealed class DaggerfallMysticismEffectsTests
         var casting = new DaggerfallCasting(TestPayload.Definitions.Magic with { Spells = new Dictionary<string, DaggerfallSpellDefinition> { [spell.Key] = spell } }, s.State.Effects,
             id => id == 1 ? s.State.Actors.Player.Actor : null, s.SpellTargets.MagicProfile, _ => true, _ => { }, _ => { }, RandomMaximum.Create(), 1, playerKnowsSpell: _ => true);
         Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
-        void Silence(string id) => s.State.Effects.Start(new(id, "silence", "spell.foreign", 2000, 1, "silence", "Magic", null, 1, 10,
+        void Silence(string id) => s.State.Effects.Start(new(id, "silence", "spell.foreign", HoldActor(1), 1, "silence", "Magic", null, 1, 10,
             JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(19, -1, 100), 1, 0, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
         Silence("silence-one"); Silence("silence-two");
         Assert.Equal(19u, Assert.Single(s.State.Effects.Active).Lifecycle.RemainingRounds);
@@ -180,7 +180,7 @@ public sealed class DaggerfallMysticismEffectsTests
     public void Foreign_bundle_roll_failure_stale_choice_and_target_scoped_cleanup_preserve_effects()
     {
         using Fixture f = new(); var s = f.Session;
-        Start(s, "foreign", 2000, 1, "shared"); Start(s, "other-target", 1, 2000, "shared");
+        Start(s, "foreign", HoldActor(1), 1, "shared"); Start(s, "other-target", 1, HoldActor(1), "shared");
         Cast(s, Setting(6, 0, 0)); var view = s.DispelChoice.View!;
         s.DispelChoice.Choose("stale", view.Options[0].Id); Assert.NotNull(s.DispelChoice.View);
         s.DispelChoice.Choose(view.Revision, view.Options[0].Id); Assert.Equal(2, s.State.Effects.Active.Count); Assert.Null(s.DispelChoice.View);
@@ -191,19 +191,19 @@ public sealed class DaggerfallMysticismEffectsTests
     public void Authored_banishment_is_absent_in_current_save_and_never_respawns_on_site_return()
     {
         using Fixture f = new(twoSites: true); var s = f.Session;
-        s.BanishActor(2000); Assert.False(s.State.Actors.TryGet(2000, out _)); var saved = DaggerfallSavePayload.Read(s.CaptureSave());
-        Assert.Contains(2000, saved.BanishedActors); Assert.DoesNotContain(saved.Actors, actor => actor.EntityId == 2000);
-        using var restored = f.Restore(s.CaptureSave()); Assert.False(restored.State.Actors.TryGet(2000, out _));
+        s.BanishActor(HoldActor(1)); Assert.False(s.State.Actors.TryGet(HoldActor(1), out _)); var saved = DaggerfallSavePayload.Read(s.CaptureSave());
+        Assert.Contains(HoldActor(1), saved.BanishedActors); Assert.DoesNotContain(saved.Actors, actor => actor.EntityId == HoldActor(1));
+        using var restored = f.Restore(s.CaptureSave()); Assert.False(restored.State.Actors.TryGet(HoldActor(1), out _));
         Assert.True(s.TryTransitionTo(f.Destination!.ProfileKey));
         var awaySaved = s.CaptureSave();
-        Assert.Contains(2000, DaggerfallSavePayload.Read(awaySaved).BanishedActors);
+        Assert.Contains(HoldActor(1), DaggerfallSavePayload.Read(awaySaved).BanishedActors);
         using var away = f.Restore(awaySaved);
         Assert.True(away.TryTransitionTo(f.Composition.StartSite.ProfileKey));
-        Assert.False(away.State.Actors.TryGet(2000, out _));
+        Assert.False(away.State.Actors.TryGet(HoldActor(1), out _));
         Assert.True(s.TryTransitionTo(f.Composition.StartSite.ProfileKey));
-        Assert.False(s.State.Actors.TryGet(2000, out _));
-        using var returned = f.Restore(s.CaptureSave()); Assert.False(returned.State.Actors.TryGet(2000, out _));
-        Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(saved with { BanishedActors = [2000, 2000] })));
+        Assert.False(s.State.Actors.TryGet(HoldActor(1), out _));
+        using var returned = f.Restore(s.CaptureSave()); Assert.False(returned.State.Actors.TryGet(HoldActor(1), out _));
+        Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(saved with { BanishedActors = [HoldActor(1), HoldActor(1)] })));
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(saved with { BanishedActors = [999999] })));
     }
     [Fact]
@@ -236,11 +236,11 @@ public sealed class DaggerfallMysticismEffectsTests
         using Fixture f = new(); var s = f.Session;
         var setting = Setting(7, 0, 0) with { MagnitudeBaseLow = 7, MagnitudeBaseHigh = 7 };
         void Drain(string id, string bundle) => s.State.Effects.Start(new(id, "drain-strength", "spell.foreign", null, 1, "drain", "Magic", null, 1, null,
-            DaggerfallAttributeDrainEffects.Encode(new(new(setting, 1, 7, 100, new(2000, null, DaggerfallCastSource.Spell)), 7))) { BundleId = bundle, BundleKind = DaggerfallEffectBundleKind.Spell });
+            DaggerfallAttributeDrainEffects.Encode(new(new(setting, 1, 7, 100, new(HoldActor(1), null, DaggerfallCastSource.Spell)), 7))) { BundleId = bundle, BundleKind = DaggerfallEffectBundleKind.Spell });
         Drain("hidden", "hidden.bundle"); Cast(s, Setting(6, 0, 100)); Assert.Empty(s.DispelChoice.View!.Options);
         s.DispelChoice.Choose(s.DispelChoice.View.Revision, "hidden.bundle"); Assert.Single(s.State.Effects.Active); s.DispelChoice.Choose(s.DispelChoice.View!.Revision, null);
         // The same incumbent carries its original bundle; a visible companion makes that whole bundle eligible.
-        Start(s, "visible", 2000, 1, "hidden.bundle"); Cast(s, Setting(6, 0, 100)); var option = Assert.Single(s.DispelChoice.View!.Options);
+        Start(s, "visible", HoldActor(1), 1, "hidden.bundle"); Cast(s, Setting(6, 0, 100)); var option = Assert.Single(s.DispelChoice.View!.Options);
         s.DispelChoice.Choose(s.DispelChoice.View.Revision, option.Id); Assert.Empty(s.State.Effects.Active);
 
     }
@@ -278,14 +278,14 @@ public sealed class DaggerfallMysticismEffectsTests
         internal Fixture(bool twoSites = false)
         {
             var source = ReadInputs(TestData.RepositoryRoot);
-            if (twoSites) Destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)), TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), TestPayload.Definitions);
+            if (twoSites) Destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
             Composition = new(TestPayload.Definitions, source, DaggerfallTuning.Defaults) { Profiles = new DaggerfallSiteProfiles(Destination is null ? [source] : [source, Destination]) };
             Session = DaggerfallSession.StartNew(Engine().Context, Composition);
         }
         private EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, Composition.StartSite); if (Destination is not null) PopulateContent(content, Destination);
-            Spatial = SpatialFake.Create(Composition.StartSite.SpatialArtifact.Sha256, releases);
+            Spatial = SpatialFake.Create(Composition.StartSite.Geometry.Spatial[0].Sha256, releases);
             return EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), Perception.Service, random: RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload) => DaggerfallSession.Restore(Engine().Context, Composition, payload);

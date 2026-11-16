@@ -29,7 +29,7 @@ public sealed class DungeonTeleportSessionTests
             source.WaterVolumes, source.TerrainTextures, source.Population);
         List<string> releases = [];
         var content = new ContentFake(releases); PopulateContent(content, profile);
-        var spatial = SpatialFake.Create(profile.SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
+        var spatial = SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases); spatial.KeepPosition = true;
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         var composition = new DaggerfallSessionComposition(TestPayload.Definitions, profile, DaggerfallTuning.Defaults);
         using var session = DaggerfallSession.StartNew(engine.Context, composition);

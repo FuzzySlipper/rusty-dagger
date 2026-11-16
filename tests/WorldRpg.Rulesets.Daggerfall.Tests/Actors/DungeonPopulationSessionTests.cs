@@ -24,7 +24,7 @@ public sealed class DungeonPopulationSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
@@ -45,8 +45,7 @@ public sealed class DungeonPopulationSessionTests
     public void Published_and_assembled_dungeons_populate_source_markers_and_keep_taken_loot_and_defeated_enemies(bool assembled)
     {
         var world = new AssembledWorld();
-        var published = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), world.Definitions,
-            "daggerfall.castle-necromoghan");
+        var published = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         var profile = assembled ? world.Profiles.Require(published.ProfileKey) : published;
         Assert.NotEmpty(profile.DungeonPopulation.Enemies);
         Assert.NotEmpty(profile.DungeonPopulation.Treasures);
@@ -56,7 +55,7 @@ public sealed class DungeonPopulationSessionTests
         List<string> releases = [];
         var content = new ContentFake(releases);
         PopulateContent(content, profile); PopulateContent(content, world.Source);
-        var spatial = SpatialFake.Create(world.Source.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(world.Source.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         var perception = PerceptionFake.Create();
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service, random: DungeonTreasureRandom.Create());

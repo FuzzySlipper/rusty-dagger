@@ -89,7 +89,7 @@ public sealed class DaggerfallBuildingDirectoryTests
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         List<string> releases = [];
         AppearanceFake appearance = new(releases);
-        EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, appearance);
+        EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, appearance);
         DaggerfallSiteContext sites = new(TestPayload.Definitions.Locations);
         sites.AdmitBuildingNames(engine.Context.Random, TestPayload.Definitions,
             DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))));
@@ -123,7 +123,7 @@ public sealed class DaggerfallBuildingDirectoryTests
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         appearance = new(releases);
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, appearance);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, appearance);
         return DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults)
         {
             Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json"))),

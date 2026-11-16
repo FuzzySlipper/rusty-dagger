@@ -1,17 +1,24 @@
 using System.Text.Json;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 internal sealed record DaggerfallInitialItem(int Template, string? Material, ulong Quantity);
+
+/// <summary>
+/// Where a new game places the player: a location profile, and optionally an authored pose in it. Without one the
+/// player lands where the location receives a new character (a dungeon's entrance, its Enter marker).
+/// </summary>
+internal sealed record DaggerfallNewGameStart(string Profile, DaggerfallSiteAnchor? Pose);
 internal sealed record DaggerfallInitialCareer(string Career, DaggerfallInitialItem[] Items, string[] Spells);
 internal sealed record DaggerfallNewGameDefinition(int Gold, int SpellbookTemplate, int MaleShirtTemplate,
     int MalePantsTemplate, int FemaleShirtTemplate, int FemalePantsTemplate,
     DaggerfallInitialCareer[] Careers, DaggerfallInitialItem[] CustomItems, string[] CustomMagicSpells)
 {
-    /// <summary>The site content pack a new game starts at; a bundle must select it.</summary>
-    internal string StartSitePack { get; init; } = string.Empty;
+    /// <summary>Where a new game starts.</summary>
+    internal required DaggerfallNewGameStart Start { get; init; }
 
     /// <summary>The quest sources a new game starts (the donor's tutorial and introduction), when admitted.</summary>
     internal string[] Quests { get; init; } = [];
@@ -80,18 +87,17 @@ internal static partial class DaggerfallBaseContent
         }
         int gold = Integer(section, "gold", diagnostics);
         if (gold < 0) diagnostics.Add("Starting gold cannot be negative.");
-        string startSite = Text(section, "startSite", diagnostics);
-        if (string.IsNullOrWhiteSpace(startSite)) diagnostics.Add("A new game requires a start site content pack.");
+        DaggerfallNewGameStart start = ReadStart(section, "newGame", diagnostics);
         string[] quests = [.. Array(section, "quests", diagnostics).Select(value => value.GetString() ?? string.Empty)];
         if (quests.Any(string.IsNullOrWhiteSpace) || quests.Distinct(StringComparer.Ordinal).Count() != quests.Length)
             diagnostics.Add("New-game quests must name distinct quest sources.");
         return new(gold, Template("spellbookTemplate", "MiscItems"), Template("maleShirtTemplate", "MensClothing", "chest-clothes"), Template("malePantsTemplate", "MensClothing", "legs-clothes"),
             Template("femaleShirtTemplate", "WomensClothing", "chest-clothes"), Template("femalePantsTemplate", "WomensClothing", "legs-clothes"), careers,
-            Items(section, "customItems"), Spells(section, "customMagicSpells")) { StartSitePack = startSite, Quests = quests };
+            Items(section, "customItems"), Spells(section, "customMagicSpells")) { Start = start, Quests = quests };
     }
 
     /// <summary>
-    /// A new-game start pack's payload over the base new-game definition: it names its own start site,
+    /// A new-game start pack's payload over the base new-game definition: it names its own start,
     /// starting gold, opening quests and optionally the hour play begins, and keeps every career loadout
     /// and starting gear field.
     /// </summary>
@@ -105,8 +111,7 @@ internal static partial class DaggerfallBaseContent
             diagnostics.ThrowIfAny();
             RejectDuplicateProperties(root, packId, diagnostics);
             if (Text(root, "ruleset", diagnostics) != RulesetName) diagnostics.Add($"New-game start pack '{packId}' must identify ruleset 'daggerfall'.");
-            string startSite = Text(root, "startSite", diagnostics);
-            if (string.IsNullOrWhiteSpace(startSite)) diagnostics.Add($"New-game start pack '{packId}' names no start site content pack.");
+            DaggerfallNewGameStart start = ReadStart(root, $"new-game start pack '{packId}'", diagnostics);
             int gold = Integer(root, "gold", diagnostics);
             if (gold < 0) diagnostics.Add($"New-game start pack '{packId}' cannot start with negative gold.");
             string[] quests = [.. Array(root, "quests", diagnostics).Select(value => value.GetString() ?? string.Empty)];
@@ -116,11 +121,38 @@ internal static partial class DaggerfallBaseContent
             if (startHour is < 0 or >= DaggerfallSkyTime.HoursPerDay) diagnostics.Add($"New-game start pack '{packId}' names start hour {startHour}, outside the day.");
             bool quickEntry = root.TryGetProperty("quickEntry", out JsonElement quick) && quick.GetBoolean();
             diagnostics.ThrowIfAny();
-            return baseline with { Gold = gold, StartSitePack = startSite, Quests = quests, StartHour = startHour, QuickEntry = quickEntry };
+            return baseline with { Gold = gold, Start = start, Quests = quests, StartHour = startHour, QuickEntry = quickEntry };
         }
         catch (JsonException error)
         {
             throw new InvalidOperationException($"New-game start pack '{packId}' is not valid JSON: {error.Message}", error);
         }
+    }
+
+    /// <summary>
+    /// A new game's <c>start</c>: the location profile id, and optionally a <c>position</c> in it with the
+    /// <c>yawRadians</c> faced there, given together.
+    /// </summary>
+    private static DaggerfallNewGameStart ReadStart(JsonElement owner, string what, DaggerfallContentDiagnostics diagnostics)
+    {
+        JsonElement start = Object(Property(owner, "start", diagnostics), $"{what} start", diagnostics);
+        if (start.ValueKind != JsonValueKind.Object) return new(string.Empty, null);
+        RejectDuplicateProperties(start, $"{what} start", diagnostics);
+        string profile = Text(start, "profile", diagnostics);
+        if (!DaggerfallWorldProfileIds.TryParse(profile, out _)) diagnostics.Add($"The {what} start names '{profile}', which is not a location profile id.");
+        bool positioned = start.TryGetProperty("position", out JsonElement point);
+        if (positioned != start.TryGetProperty("yawRadians", out _))
+        {
+            diagnostics.Add($"The {what} start gives a position and a yaw together, or neither.");
+            return new(profile, null);
+        }
+        if (!positioned) return new(profile, null);
+        float[] values = point.ValueKind == JsonValueKind.Array && point.GetArrayLength() == 3
+            ? [.. point.EnumerateArray().Select(value => value.ValueKind == JsonValueKind.Number ? value.GetSingle() : float.NaN)]
+            : [float.NaN, float.NaN, float.NaN];
+        if (values.Any(value => !float.IsFinite(value))) diagnostics.Add($"The {what} start position must be three finite numbers.");
+        float yaw = Number(start, "yawRadians", diagnostics);
+        if (!float.IsFinite(yaw)) diagnostics.Add($"The {what} start yaw must be finite.");
+        return new(profile, new("new-game", new WorldPoint(values[0], values[1], values[2]), yaw, 0F));
     }
 }

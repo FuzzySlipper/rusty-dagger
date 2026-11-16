@@ -3,18 +3,6 @@ namespace Daggerfall.Import.Arena2;
 /// <summary>One source dungeon-block reference placed in a MAPDITEM layout.</summary>
 public sealed record MapsDungeonBlock(string SourceName, sbyte X, sbyte Z, bool IsStart);
 
-/// <summary>Decoded MAPS location facts and its linked RDB block references.</summary>
-public sealed record MapsDungeonLayout(
-    int Region,
-    int LocationIndex,
-    string LocationName,
-    int MapId,
-    uint LocationId,
-    int Longitude,
-    int Latitude,
-    byte DungeonType,
-    IReadOnlyList<MapsDungeonBlock> Blocks);
-
 /// <summary>One RMB block in an exterior location's donor grid.</summary>
 public sealed record MapsExteriorBlock(string SourceName, byte X, byte Y);
 
@@ -453,31 +441,9 @@ public static class MapsDecoder
         return names;
     }
 
-    /// <summary>Resolves one exact source location name to its linked dungeon block layout.</summary>
-    public static MapsDungeonLayout DecodeDungeonLayout(BsaArchive archive, int region, string locationName)
-    {
-        ArgumentNullException.ThrowIfNull(archive);
-        ArgumentException.ThrowIfNullOrWhiteSpace(locationName);
-        IReadOnlyList<string> names = DecodeLocationNames(archive, region);
-        int locationIndex = FindExactLocation(names, locationName, archive.Source);
-        (int mapId, int longitude, int latitude, byte dungeonType, int _, bool _) = DecodeMapTable(GetNamedPayload(archive, "MAPTABLE", region), archive.Source, locationIndex);
-        uint exteriorLocationId = DecodeExteriorLocationId(GetNamedPayload(archive, "MAPPITEM", region), archive.Source, names.Count, locationIndex);
-        ReadOnlyMemory<byte> dungeonItems = GetNamedPayload(archive, "MAPDITEM", region);
-
-        // The same bytes read in bulk report a location with no linked dungeon, so this reports it the
-        // same way rather than refusing what the bulk path calls an ordinary outcome: no dungeon, no
-        // identity and no blocks, with the exterior location still named.
-        if (!LinksDungeon(dungeonItems, archive.Source, exteriorLocationId))
-        {
-            return new MapsDungeonLayout(region, locationIndex, locationName, mapId, 0, longitude, latitude, dungeonType, []);
-        }
-
-        (uint locationId, IReadOnlyList<MapsDungeonBlock> blocks) = DecodeDungeonRecord(dungeonItems, archive.Source, exteriorLocationId);
-        return new MapsDungeonLayout(region, locationIndex, locationName, mapId, locationId, longitude, latitude, dungeonType, blocks);
-    }
-
     /// <summary>
-    /// Reads the exact RMB-grid source layout of one named exterior location.
+    /// Reads the exact RMB-grid source layout of the location at a region/index identity. The index is the
+    /// lossless identity because MAPNAMES legitimately repeats names within one region.
     /// </summary>
     /// <remarks>
     /// This is the MAPPITEM path from the donor's <c>ReadMapPItem</c>, including its RMB-name
@@ -485,20 +451,6 @@ public static class MapsDecoder
     /// coordinate conversion rather than this decoder inventing a runtime block size or collision
     /// volume.
     /// </remarks>
-    public static MapsExteriorLayout DecodeExteriorLayout(BsaArchive archive, int region, string locationName)
-    {
-        ArgumentNullException.ThrowIfNull(archive);
-        ArgumentException.ThrowIfNullOrWhiteSpace(locationName);
-        IReadOnlyList<string> names = DecodeLocationNames(archive, region);
-        int locationIndex = FindExactLocation(names, locationName, archive.Source);
-        return DecodeExteriorLayout(archive, region, locationIndex);
-    }
-
-    /// <summary>
-    /// Reads the exact RMB-grid source layout of the location at a region/index identity. The index
-    /// overload is the lossless path for normalized publication because MAPNAMES legitimately repeats
-    /// names within one region.
-    /// </summary>
     public static MapsExteriorLayout DecodeExteriorLayout(BsaArchive archive, int region, int locationIndex)
     {
         ArgumentNullException.ThrowIfNull(archive);
@@ -530,19 +482,6 @@ public static class MapsDecoder
         }
 
         return archive.GetPayload(record);
-    }
-
-    private static int FindExactLocation(IReadOnlyList<string> names, string locationName, string source)
-    {
-        for (int index = 0; index < names.Count; index++)
-        {
-            if (StringComparer.Ordinal.Equals(names[index], locationName))
-            {
-                return index;
-            }
-        }
-
-        throw new Arena2FormatException(source, 0, $"MAPS location '{locationName}' was not found");
     }
 
     private static (int MapId, int Longitude, int Latitude, byte DungeonType, int LocationType, bool Discovered) DecodeMapTable(ReadOnlyMemory<byte> data, string source, int locationIndex)

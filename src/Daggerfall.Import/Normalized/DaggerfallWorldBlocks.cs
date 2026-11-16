@@ -234,9 +234,8 @@ public sealed record DaggerfallWorldBlockStaticNpc(string Id, NormalizedVector3 
 /// publication's meshes; no media is carried.
 /// </summary>
 /// <remarks>
-/// Identities follow the site closures' with the placement coordinates left out: a site names a block's
-/// door <c>door/{block}/{x}/{y}/{n}</c> where the block names it <c>door/{block}/{n}</c>, and likewise its
-/// lights, flats, models and actions. An RMB interior's identities are the interior closure's own.
+/// Identities carry no placement coordinates: the block names a door <c>door/{block}/{n}</c>, and likewise
+/// its lights, flats, models and actions. An RMB interior's identities are the interior's own.
 /// </remarks>
 public sealed record DaggerfallWorldBlock(
     string Key,
@@ -262,7 +261,7 @@ public sealed record DaggerfallWorldBlock(
     /// <summary>An RMB exterior's city gates.</summary>
     public IReadOnlyList<DaggerfallWorldBlockGate> Gates { get; init; } = [];
 
-    /// <summary>The block's first start marker, the one a site closure starts from.</summary>
+    /// <summary>The block's first start marker, the one a site starts from.</summary>
     public NormalizedMarker? StartMarker { get; init; }
 
     /// <summary>

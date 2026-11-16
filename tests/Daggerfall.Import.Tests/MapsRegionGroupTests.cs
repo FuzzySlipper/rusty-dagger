@@ -118,7 +118,7 @@ public sealed class MapsRegionGroupTests
     }
 
     [CorpusFact]
-    public void Agrees_with_the_single_location_resolver_about_privateers_hold()
+    public void Finds_privateers_hold_once_across_every_region()
     {
         BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
 
@@ -140,20 +140,6 @@ public sealed class MapsRegionGroupTests
         Assert.Equal(17, hold.Region);
         Assert.Equal("Privateer's Hold", hold.Name);
         Assert.NotEqual(0, hold.DungeonType);
-
-        // The two paths share the private table decoders, so what this checks is not a second reading
-        // of the same bytes: it is that finding a location by name and finding it by region-index
-        // enumeration land on the same location, and that the region-wide record carries the same
-        // values the established resolver reports for it. The lane was right that the earlier comment
-        // overstated the independence, and it is corrected here rather than defended.
-        MapsDungeonLayout layout = MapsDecoder.DecodeDungeonLayout(archive, hold.Region, hold.Name);
-        Assert.Equal(hold.MapId, layout.MapId);
-        Assert.Equal(hold.Longitude, layout.Longitude);
-        Assert.Equal(hold.Latitude, layout.Latitude);
-        Assert.Equal(hold.DungeonType, layout.DungeonType);
-        Assert.NotEmpty(layout.Blocks);
-        Assert.Equal(hold.Region, layout.Region);
-        Assert.Equal(hold.Index, layout.LocationIndex);
     }
 
     [CorpusFact]
@@ -174,21 +160,18 @@ public sealed class MapsRegionGroupTests
         Assert.All(dungeons.Where(dungeon => dungeon.State == MapsDungeonState.Read), dungeon => Assert.NotEqual(0u, dungeon.DungeonLocationId));
         Assert.All(dungeons.Where(dungeon => dungeon.State == MapsDungeonState.NoDungeon), dungeon => Assert.Empty(dungeon.Blocks));
 
-        // The starting dungeon's blocks agree with the resolver that came first, and its first block is
-        // the one the layout marks as the entrance.
+        // The starting dungeon reads, and one of its blocks is the one the layout marks as the entrance.
         MapsLocationRecord hold = Assert.Single(
             MapsDecoder.DecodeRegionLocations(archive, 17),
             location => location.Name.Contains("Privateer", StringComparison.OrdinalIgnoreCase));
         MapsDungeonLocation blocks = Assert.Single(MapsDecoder.DecodeRegionDungeons(archive, 17), dungeon => dungeon.Index == hold.Index);
-        MapsDungeonLayout layout = MapsDecoder.DecodeDungeonLayout(archive, 17, hold.Name);
         Assert.Equal(MapsDungeonState.Read, blocks.State);
-        Assert.Equal(layout.Blocks, blocks.Blocks);
-        Assert.Contains(layout.Blocks, block => block.IsStart);
+        Assert.Contains(blocks.Blocks, block => block.IsStart);
 
         // Crypt is type zero, not an absent dungeon. Its fixed story location must survive the bulk import.
         MapsDungeonLocation crypt = Assert.Single(dungeons, dungeon => dungeon.Name == "Scourg Barrow");
         Assert.Equal(MapsDungeonState.Read, crypt.State);
-        Assert.Equal(MapsDecoder.DecodeDungeonLayout(archive, crypt.Region, crypt.Name).Blocks, crypt.Blocks);
+        Assert.NotEmpty(crypt.Blocks);
 
         // Every dungeon carries a disposition, and a region read twice describes the same dungeons:
         // the region with the starting dungeon is the one compared, since it is known to have one.
@@ -218,7 +201,7 @@ public sealed class MapsRegionGroupTests
             ("MAPPITEM.017", ExteriorLayoutPItem()),
             ("MAPDITEM.017", [0, 0, 0, 0])), "fixture");
 
-        MapsExteriorLayout layout = MapsDecoder.DecodeExteriorLayout(archive, 17, "Location 0");
+        MapsExteriorLayout layout = MapsDecoder.DecodeExteriorLayout(archive, 17, 0);
         Assert.Equal(new MapsExteriorBuilding(12345, 456, 11, 17) { Sector = -123, LocationId = 54321 }, Assert.Single(layout.Buildings));
 
         Assert.Equal(17, layout.Region);

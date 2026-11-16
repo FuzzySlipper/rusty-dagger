@@ -3,7 +3,7 @@ using Daggerfall.Import.Normalized;
 
 namespace Daggerfall.Import.Normalization;
 
-/// <summary>RMB decorative flats and their light sources, shared by block and site publication.</summary>
+/// <summary>RMB decorative flats and their light sources, as the per-block publication states them.</summary>
 internal sealed class RmbFlatFacts(DungeonLogicalSourceSet sources)
 {
     /// <summary>The nature set ground scenery names until its location's climate selects the one it draws.</summary>

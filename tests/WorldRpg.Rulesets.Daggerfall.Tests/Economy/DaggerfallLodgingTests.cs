@@ -257,7 +257,7 @@ public sealed class DaggerfallLodgingTests
                 PopulateContent(content, profile);
                 PopulateTerrainContent(content, profile);
             }
-            EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Interior.SpatialArtifact.Sha256, releases).Service,
+            EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Interior.Geometry.Spatial[0].Sha256, releases).Service,
                 new AppearanceFake(releases), random: LodgingRandom.Create());
             DaggerfallSessionComposition composition = new(definitions, Interior, DaggerfallTuning.Defaults, identity)
                 { Profiles = profiles, Blocks = blocks, Sky = sky };

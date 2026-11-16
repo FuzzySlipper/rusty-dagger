@@ -46,13 +46,9 @@ internal static class Program
         // Quest corpus payloads.
         FightersQuestCorpusCommand.Command,
         ClassicQuestCorporaCommand.Command,
-        // The product-wide world media the site closures reference, then the site closures.
+        // The product-wide world media, then the per-block world publication that places it.
         WorldMediaCommand.Command,
         WorldBlocksCommand.Command,
-        DungeonSiteCommand.Write,
-        DungeonSiteCommand.Plan,
-        DungeonSiteCommand.VerifyRealData,
-        RmbSpatialCommand.Command,
         // Reconciles every producer citation against the documented inventory.
         SourceCoverageCommand.Command,
     }.ToDictionary(command => command.Name, StringComparer.Ordinal);

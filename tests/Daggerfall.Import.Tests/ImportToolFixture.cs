@@ -26,20 +26,12 @@ internal sealed partial class ImportToolFixture : IDisposable
     private string Inventory => At("content-source-manifest.csv");
     internal string InventoryFile => Inventory;
     internal DaggerfallCinematicKind CinematicKind { get; init; } = DaggerfallCinematicKind.Vid;
-    internal bool Interior { get; init; }
-    // A real one-block exterior exercises the command without repeatedly deriving a whole town's
-    // navigation. The building-selection case uses the separately published Charing interior.
-    private int RmbRegion => Interior ? 17 : 0;
-    private string RmbLocation => Interior ? "Charing" : "Caarcun Manor";
     private string Authored => At("authored.json");
     // The commands read publications from disk, so they are given the staging tree the data container was packed
-    // from. The site closures reference the product-wide world media and the classic media group they were written
-    // against, and the authored UI art the group lists is the product's tracked content.
-    private string Publication => ImportedContent.Staged("worldrpg/imports/privateers-hold");
-    private string Shared => ImportedContent.Staged("worldrpg/imports/shared");
-    private string ClassicGroup => ImportedContent.Staged("worldrpg");
+    // from: the source manifest states what the world media publication read. The authored UI art the classic
+    // media group lists is the product's tracked content.
+    private string WorldMedia => ImportedContent.Staged("worldrpg/imports/shared");
     private string AuthoredUiArt => Repo(global::Daggerfall.Import.Tool.AuthoredUi.ProductDirectory);
-    private ProductWorldMedia ProductMedia => ProductWorldMedia.Read(Shared, ClassicGroup, AuthoredUiArt);
     private IReadOnlyList<SourceInventoryRow> Rows => SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Inventory));
 
     internal ImportToolFixture()
@@ -58,11 +50,11 @@ internal sealed partial class ImportToolFixture : IDisposable
     internal void PrepareInventoryDrift()
     {
         string[] lines = File.ReadAllLines(Inventory);
-        var sourcePaths = ImportPublicationManifestSerializer.Deserialize(File.ReadAllBytes(Path.Combine(Publication,
+        var sourcePaths = ImportPublicationManifestSerializer.Deserialize(File.ReadAllBytes(Path.Combine(WorldMedia,
             ImportPublicationManifestSerializer.ManifestRelativePath))).Sources.Select(source => source.Path).ToHashSet(StringComparer.Ordinal);
         var ids = Rows.Where(row => row.RowType == "family" || sourcePaths.Contains(row.PathOrPattern)).Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
         string updated = string.Join('\n', new[] { lines[0] }.Concat(lines.Skip(1).Where(line => ids.Contains(line.Split(',')[0])))) + "\n";
-        string drift = string.Join('\n', updated.Split('\n').Select(line => line.StartsWith("CNT-001.file.MAPS.BSA,", StringComparison.Ordinal)
+        string drift = string.Join('\n', updated.Split('\n').Select(line => line.StartsWith("CNT-006.file.ARCH3D.BSA,", StringComparison.Ordinal)
             ? line.Replace(",imported,", ",uninspected,", StringComparison.Ordinal) : line));
         File.WriteAllText(Inventory, drift);
         File.SetLastWriteTimeUtc(Inventory, OldTime);
@@ -101,12 +93,8 @@ internal sealed partial class ImportToolFixture : IDisposable
             ["--quest-documents"] = Input("quests"), ["--quest-tables"] = Input("quest-tables.json"), ["--quest-list"] = Input("quest-list.json"),
             ["--item-templates"] = Input("item-templates.json"), ["--magic-item-templates"] = Input("magic-item-templates.json"),
             ["--item-groups"] = Input("item-groups.json"),
-            ["--output"] = At("report.json"), ["--repository"] = TestData.RepositoryRoot, ["--publication"] = Publication,
-            ["--region"] = name == "rmb-spatial" ? RmbRegion.ToString(System.Globalization.CultureInfo.InvariantCulture) : "17",
-            ["--location"] = name == "rmb-spatial" ? RmbLocation : "Privateer's Hold",
-            ["--source-manifest"] = At("site.sources.json"), ["--profile"] = Interior ? "interior" : "exterior",
+            ["--output"] = At("report.json"), ["--repository"] = TestData.RepositoryRoot, ["--publication"] = WorldMedia,
             ["--ui-authored-assets"] = Repo("content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-authored-assets.json"), ["--ui-original"] = AuthoredUiArt,
-            ["--shared"] = Shared, ["--classic-group"] = ClassicGroup,
             // Coverage reads the import's staging tree over the repository's content, with its import records.
             ["--content"] = ImportedContent.Staged(""), ["--import-records"] = TestData.ImportRecords,
         };
@@ -117,7 +105,6 @@ internal sealed partial class ImportToolFixture : IDisposable
         // Exercise nonempty source sets and all real artifact writers, rather than no-op success paths.
         if (name == "classic-media") args.AddRange(["--ui-authored-assets", values["--ui-authored-assets"], "--ui-original", values["--ui-original"]]);
         if (name == "cinematic-media" && CinematicKind == DaggerfallCinematicKind.Flc) args.AddRange(["--kind", "flc"]);
-        if (name == "rmb-spatial" && Interior) args.AddRange(["--block-x", "1", "--block-y", "1", "--building", "0"]);
         return [.. args];
     }
 

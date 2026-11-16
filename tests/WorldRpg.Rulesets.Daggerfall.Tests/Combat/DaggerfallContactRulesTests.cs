@@ -338,7 +338,7 @@ public sealed class DaggerfallContactRulesTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        var engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        var engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
 
         RulesetSavePayload saved;
         using (DaggerfallSession creation = DaggerfallSession.StartNew(engine.Context, composition))
@@ -488,7 +488,7 @@ public sealed class DaggerfallContactRulesTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession creation = DaggerfallSession.StartNew(engine.Context, composition);
         NewGameSessionTests.Commit(creation, "class13");

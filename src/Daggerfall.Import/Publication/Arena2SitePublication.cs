@@ -5,14 +5,14 @@ using Daggerfall.Import.Normalized;
 
 namespace Daggerfall.Import.Publication;
 
-/// <summary>What a site closure publishes beyond its own spatial selection.</summary>
-/// <param name="RuntimeActorResources">The actor media every site carries because the runtime may spawn any of them there.</param>
+/// <summary>What the world media publishes beyond what the placed blocks name.</summary>
+/// <param name="RuntimeActorResources">The actor media it carries because the runtime may spawn any of them at any site.</param>
 /// <param name="ClassicMedia">The classic media profile, with the authored UI art.</param>
 public sealed record Arena2SiteMedia(
     IReadOnlyList<string> RuntimeActorResources,
     Arena2ClassicMediaProfile ClassicMedia)
 {
-    /// <summary>Normalized faction and NPC flats available to quest admission at this site.</summary>
+    /// <summary>Normalized faction and NPC flats available to quest admission at any site.</summary>
     public IReadOnlyList<string> RuntimeNpcResources { get; init; } = [];
 
     /// <summary>Nature billboard resources admitted for exterior terrain residency.</summary>
@@ -23,21 +23,13 @@ public sealed record Arena2SiteMedia(
 }
 
 /// <summary>
-/// Builds one site closure: the normalized RDB dungeon or RMB profile, the geometry and world visuals it
-/// references, its dungeon media and the classic media, composed into one publication plan.
+/// Builds the product-wide world media every site draws from: the geometry and world visuals, the dungeon
+/// media and the classic media, composed into one publication plan.
 /// </summary>
 public static class Arena2SitePublication
 {
     /// <summary>
-    /// The ground-container billboards every site publishes for dropped loot and treasure: the TEXTURE.216 records the
-    /// classic picks a pile's image from at random (DFU <c>DaggerfallLootDataTables.randomTreasureIconIndices</c>).
-    /// </summary>
-    public static readonly IReadOnlyList<string> GroundContainerBillboards = [.. new[]
-        { 0, 1, 3, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 36, 37, 38, 39, 40, 43, 44, 45, 46, 47 }
-        .Select(record => $"sprite/texture-216-{record}")];
-
-    /// <summary>
-    /// The actor media every site publishes: one sprite per mobile the imported mobile catalog gives a texture,
+    /// The actor media the world media publishes: one sprite per mobile the imported mobile catalog gives a texture,
     /// so whichever of them the authored actors place, the runtime can draw. The donor's table leaves a mobile it
     /// never uses (the horse) with no texture, and that one has nothing to draw. Which mobiles an authored actor
     /// carries is the ruleset's join, so the import publishes media without reading the authored payload.
@@ -49,7 +41,7 @@ public static class Arena2SitePublication
         if (!document.RootElement.TryGetProperty("mobiles", out JsonElement section)
             || !section.TryGetProperty("mobiles", out JsonElement mobiles))
         {
-            throw new InvalidOperationException("The imported payload carries no mobile catalog, which is what names the actors a site publishes media for: run the mobile-catalog command first.");
+            throw new InvalidOperationException("The imported payload carries no mobile catalog, which is what names the actors the world media publishes media for: run the mobile-catalog command first.");
         }
 
         return [.. mobiles.EnumerateArray()
@@ -59,7 +51,7 @@ public static class Arena2SitePublication
             .Select(id => $"actor/mobile-{id}")];
     }
 
-    /// <summary>Uses already decoded faction/NPC addresses; no source flat decoder runs at site publication.</summary>
+    /// <summary>Uses already decoded faction/NPC addresses; no source flat decoder runs at world media publication.</summary>
     public static IReadOnlyList<string> RuntimeNpcResources(string importedPayloadJson)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(importedPayloadJson);
@@ -91,56 +83,10 @@ public static class Arena2SitePublication
         [.. new[] { 2, 3, 4, 102, 103, 104, 302, 303, 304, 402, 403, 404 }
             .SelectMany(archive => Enumerable.Range(0, 56).Select(record => $"terrain/texture-{archive}-{record}"))];
 
-    /// <summary>Publishes one RDB dungeon site, loading the texture leaves its closure names on demand.</summary>
-    public static ImportPublicationPlan Dungeon(
-        Arena2SiteSources sources,
-        int region,
-        string location,
-        Arena2SiteMedia media)
-    {
-        ArgumentNullException.ThrowIfNull(sources);
-        ArgumentNullException.ThrowIfNull(media);
-        return sources.LoadingOnDemand(() =>
-        {
-            DungeonNormalizationResult result = DungeonNormalizer.Normalize(new DungeonNormalizationRequest(
-                new DungeonLogicalSourceSet(sources.DungeonSources),
-                region,
-                location,
-                DungeonNormalizationQuotas.Default with { MaximumSourceBytes = Arena2SiteSources.MaximumTotalSourceBytes }));
-            (GeometryPublication geometry, Arena2DungeonMediaPublication dungeonMedia, Arena2ClassicMediaPublication classicMedia) =
-                PublishMedia(sources, result.Document, result.ReferencedMeshIds, media, $"selected dungeon media '{location}'");
-            return Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia, geometry).Plan;
-        });
-    }
-
-    /// <summary>Publishes one RMB exterior, or one building interior when <paramref name="building"/> is given.</summary>
-    public static (ImportPublicationPlan Plan, RmbExteriorNormalizationResult Result) Rmb(
-        Arena2SiteSources sources,
-        int region,
-        string location,
-        RmbBuildingSelection? building,
-        Arena2SiteMedia media, int? locationIndex = null)
-    {
-        ArgumentNullException.ThrowIfNull(sources);
-        ArgumentNullException.ThrowIfNull(media);
-        return sources.LoadingOnDemand(() =>
-        {
-            RmbExteriorNormalizationResult result = RmbExteriorNormalizer.Normalize(new(
-                new DungeonLogicalSourceSet(sources.DungeonSources), region, location,
-                building is null ? RmbWorldProfileKind.Exterior : RmbWorldProfileKind.Interior) { Building = building, LocationIndex = locationIndex });
-            Arena2SiteMedia selectedMedia = building is null
-                ? media
-                : media with { RuntimeNatureResources = [], RuntimeTerrainResources = [] };
-            (GeometryPublication geometry, Arena2DungeonMediaPublication dungeonMedia, Arena2ClassicMediaPublication classicMedia) =
-                PublishMedia(sources, result.Document, result.ReferencedMeshIds, selectedMedia, $"selected RMB media '{result.Layout.LocationName}'");
-            return (Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia, geometry).Plan, result);
-        });
-    }
-
     /// <summary>
-    /// Publishes the product-wide world media every site closure references instead of carrying a copy:
-    /// a material texture for every usable record of every supplied texture leaf (a block's climate and
-    /// dungeon texture tables remap its archives, so any record can be a site's material), a billboard
+    /// Publishes the product-wide world media every location draws from: a material texture for every usable
+    /// record of every supplied texture leaf (a block's climate and dungeon texture tables remap its archives,
+    /// so any record can be a location's material), a billboard
     /// atlas for every record whose frames fit one atlas strip, the actors, flats and terrain the runtime
     /// may materialize anywhere, every mesh the classic mesh archive serves, and the classic sidecar with
     /// the audio clips and world visuals the classic media group does not already publish.
@@ -167,7 +113,7 @@ public static class Arena2SitePublication
         ArgumentNullException.ThrowIfNull(locations);
         Arena2WorldTextureSelection textures = Arena2WorldTextureSelection.Select(sources.TextureLeaves(), sources.ParseTextureLeaf, WorldMediaQuotas);
         // The texture closure is exact, so exactly the leaves a selected record lives in are admitted; a
-        // leaf an actor or terrain set needs beyond them is loaded on demand like any site's.
+        // leaf an actor or terrain set needs beyond them is loaded on demand.
         foreach (ushort archive in textures.Archives) sources.AdmitTextureLeaf(archive);
         Arch3dMeshInventory meshes = Arch3dInventoryReader.Read(sources.MeshArchive.Bytes.ToArray(), sources.MeshArchive.Label);
         string[] meshIds = [.. meshes.Records
@@ -176,8 +122,7 @@ public static class Arena2SitePublication
         return sources.LoadingOnDemand(() =>
         {
             (GeometryPublication geometry, Arena2DungeonMediaPublication dungeonMedia, Arena2ClassicMediaPublication classicMedia) = PublishMedia(
-                sources, null, meshIds, media, "product-wide world media", textures.Materials, textures.Billboards, WorldMediaQuotas,
-                leaves => PlacementTrims(sources, locations, leaves));
+                sources, meshIds, media, textures, leaves => PlacementTrims(sources, locations, leaves));
             ImportProvenance provenance = new(WorldMediaImporterId, [.. sources.DungeonSources
                 .Select(source => new LogicalSourceRecord(source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length))]);
             return new Arena2WorldMediaPublication(
@@ -200,7 +145,7 @@ public static class Arena2SitePublication
 
     /// <summary>
     /// The product-wide pass reads every supplied texture leaf, so its source and artifact quotas are the
-    /// corpus's rather than one site's; the per-atlas limits are the ones every site publishes under.
+    /// corpus's; the per-atlas limits are the dungeon media defaults.
     /// </summary>
     public static Arena2DungeonMediaQuotas WorldMediaQuotas { get; } = Arena2DungeonMediaQuotas.Default with
     {
@@ -210,38 +155,32 @@ public static class Arena2SitePublication
 
     private static (GeometryPublication, Arena2DungeonMediaPublication, Arena2ClassicMediaPublication) PublishMedia(
         Arena2SiteSources sources,
-        NormalizedImportDocument? document,
         IReadOnlyList<string> referencedMeshIds,
         Arena2SiteMedia media,
-        string textureLeafConsumer,
-        IReadOnlyList<string>? runtimeMaterials = null,
-        IReadOnlyList<string>? runtimeBillboards = null,
-        Arena2DungeonMediaQuotas? quotas = null,
-        Func<TextureLeafInventory, IReadOnlyList<RmbPlacementTrim>>? placements = null)
+        Arena2WorldTextureSelection textures,
+        Func<TextureLeafInventory, IReadOnlyList<RmbPlacementTrim>> placements)
     {
         TextureLeafInventory textureLeaves = sources.TextureLeaves();
         (GeometryPublication geometry, IReadOnlyList<ClassicWorldVisualRequest> worldVisuals) =
-            PublishGeometryAndSiteVisuals(sources.MeshArchive, referencedMeshIds, textureLeaves, placements?.Invoke(textureLeaves) ?? []);
+            PublishGeometryAndWorldVisuals(sources.MeshArchive, referencedMeshIds, textureLeaves, placements(textureLeaves));
         foreach (ushort archive in worldVisuals.SelectMany(visual => visual.Materials).Select(material => material.Archive).Distinct().Order())
         {
             sources.AdmitWorldVisualTextureLeaf(archive);
         }
 
         Arena2DungeonMediaPublication dungeonMedia = Arena2DungeonMediaPublication.Create(
-            new Arena2DungeonMediaRequest(document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources), quotas ?? Arena2DungeonMediaQuotas.Default) with
+            new Arena2DungeonMediaRequest(new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources), WorldMediaQuotas) with
             {
                 RuntimeActorResources = media.RuntimeActorResources,
-                RuntimeMaterialResources = runtimeMaterials ?? [],
+                RuntimeMaterialResources = textures.Materials,
                 RuntimeBillboardResources = [.. media.RuntimeNpcResources
                     .Concat(media.RuntimeNatureResources)
-                    .Concat(GroundContainerBillboards).Concat(["sprite/texture-210-3"])
-                    .Concat((document?.World.StaticNpcs ?? []).Select(npc => $"sprite/texture-{npc.BillboardArchive}-{npc.BillboardRecord}"))
-                    .Concat((document?.World.Population ?? []).Select(person => $"sprite/texture-{person.BillboardArchive}-{person.BillboardRecord}"))
-                    .Concat(runtimeBillboards ?? [])
+                    .Concat(["sprite/texture-210-3"])
+                    .Concat(textures.Billboards)
                     .Distinct(StringComparer.Ordinal)],
                 RuntimeTerrainResources = media.RuntimeTerrainResources,
                 TextureLeaves = textureLeaves,
-                TextureLeafConsumer = textureLeafConsumer,
+                TextureLeafConsumer = "product-wide world media",
             });
         Arena2ClassicMediaPublication classicMedia = Arena2ClassicMediaPublication.Create(
             sources.ClassicMediaInputs,
@@ -252,15 +191,15 @@ public static class Arena2SitePublication
     }
 
     /// <summary>
-    /// Publishes a site's mesh geometry together with the classic world visuals that name it, in one pass.
+    /// Publishes the mesh geometry together with the classic world visuals that name it, in one pass.
     /// </summary>
     /// <remarks>
     /// The missile mesh of a flying arrow is not placed by any block, so nothing in a pack references it;
-    /// the site's own world visuals do, which is why their mesh numbers join the referenced set rather
+    /// the world visuals do, which is why their mesh numbers join the referenced set rather
     /// than being published behind the publication's back. Reading each descriptor's facts out of the
     /// geometry publication it just produced is what keeps a visual from naming an artifact nobody wrote.
     /// </remarks>
-    private static (GeometryPublication Geometry, IReadOnlyList<ClassicWorldVisualRequest> WorldVisuals) PublishGeometryAndSiteVisuals(
+    private static (GeometryPublication Geometry, IReadOnlyList<ClassicWorldVisualRequest> WorldVisuals) PublishGeometryAndWorldVisuals(
         DungeonLogicalSource archSource,
         IReadOnlyList<string> referencedMeshIds,
         TextureLeafInventory textures,

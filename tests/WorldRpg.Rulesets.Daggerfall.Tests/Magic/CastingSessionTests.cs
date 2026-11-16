@@ -209,7 +209,7 @@ public sealed class CastingSessionTests
         {
             List<string> releases = [];
             var content = new ContentFake(releases); PopulateContent(content, Composition.StartSite);
-            Spatial = SpatialFake.Create(Composition.StartSite.SpatialArtifact.Sha256, releases);
+            Spatial = SpatialFake.Create(Composition.StartSite.Geometry.Spatial[0].Sha256, releases);
             return EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service, random:_random);
         }
         internal DaggerfallSession Restore(WorldRpg.Kit.RulesetSavePayload save) => DaggerfallSession.Restore(Engine().Context, Composition, save);

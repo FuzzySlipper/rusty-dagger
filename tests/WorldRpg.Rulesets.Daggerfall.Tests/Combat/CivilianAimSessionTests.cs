@@ -14,7 +14,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// </summary>
 public sealed class CivilianAimSessionTests
 {
-    private const long Enemy = 2000;
+    private static readonly long Enemy = HoldActor(1);
     private const long Player = DaggerfallActorIdentity.PlayerEntityId;
 
     [Fact]

@@ -12,89 +12,63 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallDungeonDiscoveryTests
 {
+    /// <summary>
+    /// The map places every static model of the dungeon's blocks once, by its own bounds and visibility samples, beside the
+    /// dungeon's doors and its entrance: Privateer's Hold places one cave mesh at more than one pose.
+    /// </summary>
     [Fact]
     public void Dungeon_map_content_uses_per_placement_bounds_entrance_and_door_identities()
     {
-        (string root, DaggerfallSiteProfile inputs) = ReadPrivateersHold();
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
-        using JsonDocument normalized = JsonDocument.Parse(TestContentFiles.ReadCopy(
-            Path.Combine(root, "content/worldrpg/imports/privateers-hold/normalized.json")));
-        JsonElement world = normalized.RootElement.GetProperty("world");
-        JsonElement sourcePlacements = world.GetProperty("geometryPlacements");
-        HashSet<string> staticMeshIds = world.GetProperty("staticMeshIds").EnumerateArray()
-            .Select(value => value.GetString()!)
-            .ToHashSet(StringComparer.Ordinal);
-        HashSet<string> doorVisualMeshIds = world.GetProperty("doors").EnumerateArray()
-            .SelectMany(door => door.GetProperty("visualMeshIds").EnumerateArray())
-            .Select(value => value.GetString()!)
-            .ToHashSet(StringComparer.Ordinal);
-        Dictionary<string, HashSet<Vector3>> sourceVerticesByMesh = normalized.RootElement.GetProperty("meshes").EnumerateArray()
-            .ToDictionary(
-                mesh => mesh.GetProperty("id").GetString()!,
-                mesh => mesh.GetProperty("vertices").EnumerateArray().Select(ReadVector3).ToHashSet(),
-                StringComparer.Ordinal);
-        string[] expectedGeometryIds = sourcePlacements.EnumerateArray()
-            .Select(value => value.GetProperty("id").GetString()!)
-            .Order(StringComparer.Ordinal)
-            .ToArray();
 
-        Assert.Equal(expectedGeometryIds, map.GeometryPlacements.Select(value => value.PlacementId));
+        Assert.Equal(StaticModels(PrivateersHold), map.GeometryPlacements.Count);
+        Assert.Equal(map.GeometryPlacements.Count, map.GeometryPlacements.Select(value => value.PlacementId).Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(inputs.Doors.Select(door => door.Id).OrderBy(id => id.SourceKey, StringComparer.Ordinal)
             .ThenBy(id => id.BlockX).ThenBy(id => id.BlockZ).ThenBy(id => id.ModelIndex), map.DoorIds);
-
         foreach (DaggerfallDungeonMapGeometry placement in map.GeometryPlacements)
         {
-            JsonElement sourcePlacement = sourcePlacements.EnumerateArray()
-                .Single(value => value.GetProperty("id").GetString() == placement.PlacementId);
-            JsonElement bounds = sourcePlacement.GetProperty("bounds");
-            Assert.Equal(ReadVector3(bounds.GetProperty("minimum")), placement.BoundsMin);
-            Assert.Equal(ReadVector3(bounds.GetProperty("maximum")), placement.BoundsMax);
-            Assert.Equal(sourcePlacement.GetProperty("meshIds").EnumerateArray().Select(value => value.GetString()), placement.MeshIds);
-            Vector3[] samples = sourcePlacement.GetProperty("samplePoints").EnumerateArray().Select(ReadVector3).ToArray();
-            Assert.Equal(samples, placement.SamplePoints);
             Assert.InRange(placement.SamplePoints.Count, 2, 4);
-            HashSet<Vector3> placementVertices = placement.MeshIds.SelectMany(meshId => sourceVerticesByMesh[meshId]).ToHashSet();
-            Assert.All(placement.SamplePoints, point => Assert.Contains(point, placementVertices));
+            Assert.All(placement.SamplePoints, point => Assert.True(Vector3.Clamp(point, placement.BoundsMin, placement.BoundsMax) == point,
+                $"Sample {point} of '{placement.PlacementId}' lies outside its bounds."));
+            Assert.Single(placement.MeshIds);
         }
 
-        Assert.Contains(map.GeometryPlacements.SelectMany(placement => placement.MeshIds.Select(meshId => (meshId, placement)))
-            .GroupBy(value => value.meshId, value => value.placement),
+        Assert.Contains(map.GeometryPlacements.GroupBy(placement => placement.MeshIds[0]),
             group => group.Count() > 1 && group.Select(value => (value.BoundsMin, value.BoundsMax)).Distinct().Count() > 1);
-        Assert.NotEmpty(doorVisualMeshIds);
-        Assert.Empty(doorVisualMeshIds.Intersect(staticMeshIds));
-        Assert.All(map.GeometryPlacements.SelectMany(placement => placement.MeshIds), meshId => Assert.Contains(meshId, staticMeshIds));
 
         DaggerfallSiteMarker entrance = Assert.Single(map.Markers, value => value.Kind == DaggerfallSiteMarkerKind.Entrance);
-        JsonElement sourceEntrance = world.GetProperty("enterMarker");
-        Assert.Equal(sourceEntrance.GetProperty("id").GetString(), entrance.Id);
-        Assert.Equal(ReadVector3(sourceEntrance.GetProperty("position")), new Vector3(entrance.Position.X, entrance.Position.Y, entrance.Position.Z));
+        Assert.Equal(inputs.RequireAnchor(DaggerfallLocationAssembly.EnterAnchor).Position, entrance.Position);
         Assert.Equal(new DaggerfallSiteId(17, 179), inputs.Site);
     }
 
     [Fact]
     public void Castle_dungeon_content_admits_each_source_placement_with_visibility_samples()
     {
-        string root = TestData.RepositoryRoot;
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
-            TestSessions.Data(GeneratedContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")),
-            definitions);
+        DaggerfallSiteProfile inputs = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
-        using JsonDocument normalized = JsonDocument.Parse(TestContentFiles.ReadCopy(
-            Path.Combine(root, "content/worldrpg/imports/castle-necromoghan/normalized.json")));
-        JsonElement sourcePlacements = normalized.RootElement.GetProperty("world").GetProperty("geometryPlacements");
 
-        Assert.Equal(sourcePlacements.GetArrayLength(), map.GeometryPlacements.Count);
+        Assert.Equal(StaticModels(CastleNecromoghan), map.GeometryPlacements.Count);
         Assert.Equal(new DaggerfallSiteId(17, 9), inputs.Site);
         Assert.All(map.GeometryPlacements, placement => Assert.InRange(placement.SamplePoints.Count, 2, 4));
         Assert.Equal(125, map.DoorIds.Count);
     }
 
+    /// <summary>How many static models (neither moving nor a door) a location's dungeon blocks place, as the block publication states them.</summary>
+    private static int StaticModels(DaggerfallSiteId site)
+    {
+        DaggerfallWorldBlocks blocks = new(TestSessions.Data(FullContent(TestData.RepositoryRoot)));
+        DaggerfallSiteDungeonBlock[] placed = [.. TestPayload.Definitions.Locations.Records.Single(record => record.Id == site).DungeonBlocks];
+        IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> documents =
+            blocks.Read(placed.Select(block => new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.Rdb, block.SourceKey)));
+        return placed.Sum(block => documents[new(DaggerfallWorldBlockKind.Rdb, block.SourceKey)].Models
+            .Count(model => model.Action is null && model.DoorId is null && model.MeshArtifactId is not null));
+    }
+
     [Fact]
     public void Discovery_captures_partial_profile_scoped_progress_and_starts_each_entry_unvisited()
     {
-        (_, DaggerfallSiteProfile inputs) = ReadPrivateersHold();
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
         DaggerfallWorldProfileKey profile = inputs.ProfileKey;
         DaggerfallDungeonDiscovery discovery = new(profile, map);
@@ -149,7 +123,7 @@ public sealed class DaggerfallDungeonDiscoveryTests
     [Fact]
     public void Discovery_rejects_cross_profile_and_unknown_source_restore_ids()
     {
-        (_, DaggerfallSiteProfile inputs) = ReadPrivateersHold();
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
         DaggerfallWorldProfileKey profile = inputs.ProfileKey;
         DaggerfallDungeonDiscovery discovery = new(profile, map);
@@ -166,60 +140,17 @@ public sealed class DaggerfallDungeonDiscoveryTests
     }
 
     [Fact]
-    public void Authored_transition_is_a_stable_portal_marker_that_remains_hidden_until_revealed()
+    public void A_source_exit_is_a_stable_portal_marker_that_remains_hidden_until_revealed()
     {
-        string root = TestData.RepositoryRoot;
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
-        JsonObject payload = JsonNode.Parse(TestContentFiles.ReadCopy(
-            Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")))!.AsObject();
-        payload["world"]!["transitions"] = new JsonArray(new JsonObject
-        {
-            ["id"] = "portal/stone-door",
-            ["position"] = new JsonArray(4, 5, 6),
-            ["radius"] = 2.5F,
-            ["destinationProfile"] = "worldrpg/imports/stone-chamber",
-        });
-
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
-            TestSessions.Data(GeneratedContent(root)),
-            Encoding.UTF8.GetBytes(payload.ToJsonString()),
-            definitions);
+        DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         DaggerfallDungeonMapContent map = Assert.IsType<DaggerfallDungeonMapContent>(inputs.DungeonMap);
-        DaggerfallSiteMarker portal = Assert.Single(map.Markers, value => value.Id == "portal/stone-door");
-        Assert.Equal(DaggerfallSiteMarkerKind.Portal, portal.Kind);
-        Assert.Equal(new WorldRpg.Kit.Controls.WorldPoint(4F, 5F, 6F), portal.Position);
-        Assert.Equal("worldrpg/imports/stone-chamber", portal.DestinationLogicalProfile);
+        DaggerfallSitePortal exit = Assert.Single(inputs.Portals);
+        DaggerfallSiteMarker portal = Assert.Single(map.Markers, value => value.Kind == DaggerfallSiteMarkerKind.Portal);
+        Assert.Equal((exit.Id, exit.Position, exit.DestinationLogicalProfile), (portal.Id, portal.Position, portal.DestinationLogicalProfile));
 
         DaggerfallDungeonDiscovery discovery = new(inputs.ProfileKey, map);
         Assert.False(discovery.IsMarkerDiscovered(portal.Id));
         Assert.True(discovery.RevealMarker(portal.Id));
         Assert.True(discovery.IsMarkerDiscovered(portal.Id));
     }
-
-    private static (string Root, DaggerfallSiteProfile Inputs) ReadPrivateersHold()
-    {
-        string root = TestData.RepositoryRoot;
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
-        ProductContent content = GeneratedContent(root);
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(TestSessions.Data(content),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")), definitions);
-        return (root, inputs);
-    }
-
-    private static ProductContent GeneratedContent(string root)
-    {
-        string contentRoot = Path.Combine(root, "content");
-        ProductContentFile[] files = TestContentFiles.AllFiles(Path.Combine(contentRoot, "worldrpg/imports"))
-            .Select(path => new ProductContentFile(
-                Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')),
-                TestContentFiles.ReadCopy(path)))
-            .Concat(ClassicGroupFiles(root))
-            .ToArray();
-        return new ProductContent(files);
-    }
-
-    private static Vector3 ReadVector3(JsonElement value) => new(
-        value.GetProperty("x").GetSingle(),
-        value.GetProperty("y").GetSingle(),
-        value.GetProperty("z").GetSingle());
 }

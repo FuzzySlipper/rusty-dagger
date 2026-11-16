@@ -88,11 +88,7 @@ public sealed record NormalizedAtlasFrame(
     int Height,
     int SourceWidth,
     int SourceHeight,
-    bool Mirrored)
-{
-    public NormalizedSpriteFrame ToSpriteFrame(NormalizedVector2 pivot) =>
-        new(Id, FrameIndex, X, Y, Width, Height, pivot);
-}
+    bool Mirrored);
 
 /// <summary>Pure result of packing decoded frames into one content-addressed PNG.</summary>
 public sealed record NormalizedSpriteAtlas(

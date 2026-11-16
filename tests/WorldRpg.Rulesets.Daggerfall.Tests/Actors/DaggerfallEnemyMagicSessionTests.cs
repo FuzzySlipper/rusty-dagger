@@ -345,7 +345,7 @@ public sealed class DaggerfallEnemyMagicSessionTests
             inputs = ReadInputs(root);
             ContentFake content = new(releases);
             PopulateContent(content, inputs);
-            Spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            Spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
             Perception = PerceptionFake.Create();
             EngineContextFake engine = EngineContextFake.Create(content, Spatial.Service,
                 new AppearanceFake(releases), Perception.Service);

@@ -38,20 +38,20 @@ public sealed class LootSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.Strike(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
-        AimActivationAt(session, 2000);
-        CorpseContainer corpse = session.Corpses[2000];
+        session.Strike(new ExplicitMeleeRequest(1, HoldActor(1), 1, 1, .125));
+        AimActivationAt(session, HoldActor(1));
+        CorpseContainer corpse = session.Corpses[HoldActor(1)];
         Assert.True(corpse.IsRegistered);
         session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.2807"))]);
-        RegisterCorpseStack(session, definitions, 2000, "test.loot.2807");
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        RegisterCorpseStack(session, definitions, HoldActor(1), "test.loot.2807");
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 1d, 1d, PerceptionPairKind.Visible, 1d));
         ulong before = session.State.Inventory.Read().StoreRevision;
         void Ui(string json, ulong step)
         {
@@ -86,38 +86,38 @@ public sealed class LootSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.Concat(definitions.TemplateItems.Values).ToDictionary(
             item => new InventoryItemId(item.Id.Value),
             item => new ItemDefinition(ItemDefinitionId.Parse(item.Id.Value), item.IsFungible ? ItemKind.Fungible : ItemKind.Unique, item.MaximumQuantity));
-        using ActorsState actors = ActorsWithNpc(2000, DefeatedMechanics(), new WorldPoint(0f, 0f, 1f));
+        using ActorsState actors = ActorsWithNpc(HoldActor(1), DefeatedMechanics(), new WorldPoint(0f, 0f, 1f));
         InventoryStore world = new();
         EntityId playerOwner = actors.Player.Actor.Entity;
         MechanicsInventoryContainerCoordinator containers = new(world, actors.Entities, items);
         containers.RegisterOwner(playerOwner);
-        using SpatialMovementSystem movement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        using SpatialMovementSystem movement = new(spatial.Service, content, null, DaggerfallTuning.Defaults.Spatial);
         DaggerfallItemInstances itemInstances = new();
         DaggerfallCorpseLootModule loot = new(
             perception.Service, movement, containers, itemInstances, playerOwner, actors,
-            new Dictionary<long, DaggerfallActorDefinition> { [2000] = definitions.RequireActor(new DaggerfallActorId("thief")) },
+            new Dictionary<long, DaggerfallActorDefinition> { [HoldActor(1)] = definitions.RequireActor(new DaggerfallActorId("thief")) },
             definitions, RandomMinimum.Create(), new DaggerfallUniqueItemAllocator(1_000), new ProgressionState(), DaggerfallTuning.Defaults.LootInteraction,
             CharacterForLoot(definitions));
         // Corpse policy is independent of player XP credit.
-        ActorDiedFact death = new(2000, 77, DaggerfallDamageCause.PhysicalAttack, 3, 3d, 2, 3);
+        ActorDiedFact death = new(HoldActor(1), 77, DaggerfallDamageCause.PhysicalAttack, 3, 3d, 2, 3);
         loot.Create(death);
-        Assert.True(loot.Corpses[2000].IsInteractable);
+        Assert.True(loot.Corpses[HoldActor(1)].IsInteractable);
         Assert.Empty(containers.Read(playerOwner).Stacks);
-        var magicItem = Assert.Single(containers.Read(loot.Corpses[2000].Owner).UniqueItems,
+        var magicItem = Assert.Single(containers.Read(loot.Corpses[HoldActor(1)].Owner).UniqueItems,
             item => item.Definition.Value.Contains("-magic-", StringComparison.Ordinal));
         ulong magicIdentity = actors.Entities.IdentityOf(magicItem.Entity).Value;
         Assert.StartsWith("magic-item.", itemInstances.RequireUnique(magicIdentity).Enchantment);
 
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Occluded, 0d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Occluded, 0d));
         Assert.Null(loot.PrepareLoot(new PlayerControlState(new WorldPoint(0, 0, 0), 0, 0), ForwardLook()));
-        Assert.True(loot.Corpses[2000].IsInteractable);
+        Assert.True(loot.Corpses[HoldActor(1)].IsInteractable);
 
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         world.RegisterEquipment(new EquipmentState(playerOwner));
         InventoryComponent inventory = actors.Player.Actor.Get<InventoryComponent>();
         EquipmentComponent equipmentComponent = new(world, playerOwner);
@@ -132,9 +132,9 @@ public sealed class LootSessionTests
         // An ordinary generated corpse can hold mixed contents. Ensure the selected stack
         // has several units so this exercise distinguishes taking one from taking all.
         InventoryStackId testStack = InventoryStackId.Parse("test.loot.2882");
-        containers.Seed(loot.Corpses[2000].Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: testStack)]);
-        itemInstances.RegisterDefaultStack(DaggerfallItemOwner.Corpse(2000),
-            containers.Read(loot.Corpses[2000].Owner).Stacks.Single(stack => stack.Id == testStack), definitions.Items[new DaggerfallItemId("gold-piece")]);
+        containers.Seed(loot.Corpses[HoldActor(1)].Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: testStack)]);
+        itemInstances.RegisterDefaultStack(DaggerfallItemOwner.Corpse(HoldActor(1)),
+            containers.Read(loot.Corpses[HoldActor(1)].Owner).Stacks.Single(stack => stack.Id == testStack), definitions.Items[new DaggerfallItemId("gold-piece")]);
         ulong beforeOpen = world.Revision;
         Assert.Null(panel.Open(player, ForwardLook()));
         LootPresentation opened = Assert.IsType<LootPresentation>(panel.Read());
@@ -145,16 +145,16 @@ public sealed class LootSessionTests
         DaggerfallPlayerUiAction take = new("loot-take", opened.Revision, gold.Key, Container: opened.Container);
         Assert.Null(panel.PrepareTake(take with { Container = "other" }, player, ForwardLook()));
         Assert.Equal(beforeOpen, world.Revision);
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Occluded, 0d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Occluded, 0d));
         Assert.Null(panel.PrepareTake(take, player, ForwardLook()));
         Assert.Equal(beforeOpen, world.Revision);
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         PendingCorpseLoot pending = Assert.IsType<PendingCorpseLoot>(panel.PrepareTake(take, player, ForwardLook()));
         FactBuffer<IProductFact> facts = new();
         panel.Complete(loot.TryCommitLoot(pending, facts));
         Assert.Equal(1UL, containers.Read(playerOwner).Stacks.Single(stack => stack.Definition.Value == "gold-piece").Quantity);
-        Assert.Equal(goldBefore - 1, containers.Read(loot.Corpses[2000].Owner).Stacks.Single(stack => stack.Id == testStack).Quantity);
-        Assert.True(loot.Corpses[2000].IsInteractable);
+        Assert.Equal(goldBefore - 1, containers.Read(loot.Corpses[HoldActor(1)].Owner).Stacks.Single(stack => stack.Id == testStack).Quantity);
+        Assert.True(loot.Corpses[HoldActor(1)].IsInteractable);
         ulong afterTake = world.Revision;
         Assert.Null(panel.PrepareTake(take, player, ForwardLook()));
         Assert.Equal(afterTake, world.Revision);
@@ -166,7 +166,7 @@ public sealed class LootSessionTests
                 new("loot-take", current.Revision, next.Key, Container: current.Container), player, ForwardLook()));
             panel.Complete(loot.TryCommitLoot(one, facts));
         }
-        Assert.False(loot.Corpses[2000].IsInteractable);
+        Assert.False(loot.Corpses[HoldActor(1)].IsInteractable);
         Assert.True(Assert.IsType<LootPresentation>(panel.Read()).Empty);
         Assert.Contains("until Exit", panel.Message);
         List<IProductFact> delivered = [];
@@ -189,33 +189,33 @@ public sealed class LootSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.Concat(definitions.TemplateItems.Values).ToDictionary(
             item => new InventoryItemId(item.Id.Value),
             item => new ItemDefinition(ItemDefinitionId.Parse(item.Id.Value), item.IsFungible ? ItemKind.Fungible : ItemKind.Unique, item.MaximumQuantity));
-        using ActorsState actors = ActorsWithNpc(2000, DefeatedMechanics(), new WorldPoint(0f, 0f, 1f));
+        using ActorsState actors = ActorsWithNpc(HoldActor(1), DefeatedMechanics(), new WorldPoint(0f, 0f, 1f));
         InventoryStore world = new();
         EntityId playerOwner = actors.Player.Actor.Entity;
         MechanicsInventoryContainerCoordinator containers = new(world, actors.Entities, items);
         containers.RegisterOwner(playerOwner);
-        using SpatialMovementSystem movement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        using SpatialMovementSystem movement = new(spatial.Service, content, null, DaggerfallTuning.Defaults.Spatial);
         DaggerfallCorpseLootModule loot = new(
             perception.Service, movement, containers, new DaggerfallItemInstances(), playerOwner, actors,
-            new Dictionary<long, DaggerfallActorDefinition> { [2000] = definitions.RequireActor(new DaggerfallActorId("rat")) },
+            new Dictionary<long, DaggerfallActorDefinition> { [HoldActor(1)] = definitions.RequireActor(new DaggerfallActorId("rat")) },
             definitions, RandomMinimum.Create(), new DaggerfallUniqueItemAllocator(1_000), new ProgressionState(), DaggerfallTuning.Defaults.LootInteraction,
             CharacterForLoot(definitions));
-        loot.Create(new ActorDiedFact(2000, 77, DaggerfallDamageCause.PhysicalAttack, 3, 3d, 2, 3));
-        Assert.True(loot.Corpses[2000].IsInteractable);
-        Assert.False(loot.Corpses[2000].IsRegistered);
+        loot.Create(new ActorDiedFact(HoldActor(1), 77, DaggerfallDamageCause.PhysicalAttack, 3, 3d, 2, 3));
+        Assert.True(loot.Corpses[HoldActor(1)].IsInteractable);
+        Assert.False(loot.Corpses[HoldActor(1)].IsRegistered);
         Assert.Equal([playerOwner], world.InventoryOwners);
 
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, .8d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 1d, .8d, PerceptionPairKind.Visible, 1d));
         PendingCorpseLoot pending = Assert.IsType<PendingCorpseLoot>(loot.PrepareLoot(new PlayerControlState(new WorldPoint(0, 0, 0), 0, 0), ForwardLook()));
         Assert.True(pending.IsEmpty);
         FactBuffer<IProductFact> facts = new();
         Assert.Equal(CorpseLootCommitResult.Committed, loot.TryCommitLoot(pending, facts));
-        Assert.False(loot.Corpses[2000].IsInteractable);
+        Assert.False(loot.Corpses[HoldActor(1)].IsInteractable);
         List<IProductFact> delivered = [];
         facts.Deliver(delivered.Add);
         Assert.Single(delivered.OfType<CorpseSearchedEmptyFact>());
@@ -233,25 +233,25 @@ public sealed class LootSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.Concat(definitions.TemplateItems.Values).ToDictionary(
             item => new InventoryItemId(item.Id.Value),
             item => new ItemDefinition(ItemDefinitionId.Parse(item.Id.Value), item.IsFungible ? ItemKind.Fungible : ItemKind.Unique, item.MaximumQuantity));
-        using ActorsState actors = ActorsWithNpc(2000, DefeatedMechanics(), new WorldPoint(0f, 0f, 1f));
+        using ActorsState actors = ActorsWithNpc(HoldActor(1), DefeatedMechanics(), new WorldPoint(0f, 0f, 1f));
         InventoryStore world = new();
         MechanicsInventoryContainerCoordinator containers = new(world, actors.Entities, items);
         containers.RegisterOwner(actors.Player.Actor.Entity);
-        using SpatialMovementSystem movement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        using SpatialMovementSystem movement = new(spatial.Service, content, null, DaggerfallTuning.Defaults.Spatial);
         DaggerfallActorDefinition actor = definitions.RequireActor(new DaggerfallActorId(actorId));
         KeyedRandomFake random = KeyedRandomFake.Create(0);
         DaggerfallItemInstances itemInstances = new();
         DaggerfallCorpseLootModule loot = new(
             PerceptionFake.Create().Service, movement, containers, itemInstances, actors.Player.Actor.Entity, actors,
-            new Dictionary<long, DaggerfallActorDefinition> { [2000] = actor },
+            new Dictionary<long, DaggerfallActorDefinition> { [HoldActor(1)] = actor },
             definitions, random.Service, new DaggerfallUniqueItemAllocator(1_000), new ProgressionState(), DaggerfallTuning.Defaults.LootInteraction,
             CharacterForLoot(definitions));
 
-        loot.Create(new ActorDiedFact(2000, 77, DaggerfallDamageCause.PhysicalAttack, 3, 3d, 2, 3));
+        loot.Create(new ActorDiedFact(HoldActor(1), 77, DaggerfallDamageCause.PhysicalAttack, 3, 3d, 2, 3));
 
         // The Monk (key T, MapChance 1) and the keyless City Watch (MapChance 0) both roll the map.
         Assert.Equal(keyed, actor.LootTableKey is not null);
@@ -263,14 +263,14 @@ public sealed class LootSessionTests
             : ["corpse.loot.enemy.map"], extras);
         if (!keyed)
         {
-            Assert.False(loot.Corpses[2000].IsRegistered);
+            Assert.False(loot.Corpses[HoldActor(1)].IsRegistered);
             return;
         }
-        InventoryView contents = Assert.IsType<InventoryView>(loot.ReadContents(2000));
+        InventoryView contents = Assert.IsType<InventoryView>(loot.ReadContents(HoldActor(1)));
         Assert.Contains(contents.UniqueItems, item => item.Definition.Value == "template-287");
         Assert.Contains(contents.UniqueItems, item => item.Definition.Value == "template-278");
         InventoryStack potion = Assert.Single(contents.Stacks, stack => stack.Definition.Value == "template-83");
-        Assert.Equal(221871, itemInstances.RequireStack(DaggerfallItemOwner.Corpse(2000), potion.Id).PotionRecipeKey);
+        Assert.Equal(221871, itemInstances.RequireStack(DaggerfallItemOwner.Corpse(HoldActor(1)), potion.Id).PotionRecipeKey);
     }
 
     private static StatsComponent DefeatedMechanics()
@@ -305,7 +305,7 @@ public sealed class LootSessionTests
         ContentFake content = new(releases);
         DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service,
@@ -328,15 +328,15 @@ public sealed class LootSessionTests
             DaggerfallSession session = RunningSession(product);
 
             // One lootable corpse within reach, mirroring the session-level loot fixture.
-            session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+            session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
             session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-            session.Strike(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
-            AimActivationAt(session, 2000);
-            CorpseContainer corpse = session.Corpses[2000];
+            session.Strike(new ExplicitMeleeRequest(1, HoldActor(1), 1, 1, .125));
+            AimActivationAt(session, HoldActor(1));
+            CorpseContainer corpse = session.Corpses[HoldActor(1)];
             session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.4691"))]);
-            session.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Corpse(2000), InventoryStackId.Parse("test.loot.4691"),
-                new DaggerfallItemInstanceMetadata("gold-piece", "none", 0, 1, 1, true, false, null, null, null, DaggerfallItemOwner.Corpse(2000)).Validate());
-            perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+            session.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Corpse(HoldActor(1)), InventoryStackId.Parse("test.loot.4691"),
+                new DaggerfallItemInstanceMetadata("gold-piece", "none", 0, 1, 1, true, false, null, null, null, DaggerfallItemOwner.Corpse(HoldActor(1))).Validate());
+            perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
 
             // Opening loot through the product puts the product into the modal the session asked for.
             product.Update(new ProductUpdate(OuterUpdate(1), [UiAction("{\"action\":\"loot\"}")]));
@@ -376,20 +376,20 @@ public sealed class LootSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.Strike(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
-        AimActivationAt(session, 2000);
-        CorpseContainer corpse = session.Corpses[2000];
+        session.Strike(new ExplicitMeleeRequest(1, HoldActor(1), 1, 1, .125));
+        AimActivationAt(session, HoldActor(1));
+        CorpseContainer corpse = session.Corpses[HoldActor(1)];
         Assert.True(corpse.IsRegistered);
         session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.4740"))]);
-        RegisterCorpseStack(session, definitions, 2000, "test.loot.4740");
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        RegisterCorpseStack(session, definitions, HoldActor(1), "test.loot.4740");
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
 
         static ulong PlayerGold(DaggerfallSession session) => session.State.Inventory.Read().Stacks
             .Where(stack => stack.Definition.Value == "gold-piece").Select(stack => stack.Quantity).Aggregate(0UL, (a, b) => a + b);
@@ -463,24 +463,24 @@ public sealed class LootSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.Strike(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
-        AimActivationAt(session, 2000);
-        CorpseContainer corpse = session.Corpses[2000];
+        session.Strike(new ExplicitMeleeRequest(1, HoldActor(1), 1, 1, .125));
+        AimActivationAt(session, HoldActor(1));
+        CorpseContainer corpse = session.Corpses[HoldActor(1)];
         InventoryStackId corpseCoins = InventoryStackId.Parse("test.encumbrance.corpse");
         session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 1, Stack: corpseCoins)]);
-        RegisterCorpseStack(session, definitions, 2000, corpseCoins.Value);
+        RegisterCorpseStack(session, definitions, HoldActor(1), corpseCoins.Value);
         InventoryStackId playerCoins = InventoryStackId.Parse("test.encumbrance.player");
         session.State.Inventory.Grant(new(new InventoryItemId("gold-piece"), playerCoins, checked((ulong)session.State.Encumbrance.Read().MaximumClassicUnits)));
         session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player, session.State.Inventory.Read().Stacks.Single(stack => stack.Id == playerCoins), definitions.RequireItem(new DaggerfallItemId("gold-piece")));
         Assert.False(session.State.Encumbrance.Read().CanMove);
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
 
         void Ui(string json, ulong step) => session.Update(new ProductUpdate(OuterUpdate(step), [Input(InputEventKind.DirectDigital) with
         {
@@ -511,28 +511,28 @@ public sealed class LootSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
-        session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+        session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
-        session.Strike(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
-        AimActivationAt(session, 2000);
-        CorpseContainer corpse = session.Corpses[2000];
+        session.Strike(new ExplicitMeleeRequest(1, HoldActor(1), 1, 1, .125));
+        AimActivationAt(session, HoldActor(1));
+        CorpseContainer corpse = session.Corpses[HoldActor(1)];
         session.State.Containers.Seed(corpse.Owner, [
             new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.all.a")),
             new InventoryContainerSeed(new InventoryItemId("gold-piece"), 7, Stack: InventoryStackId.Parse("test.all.b"))]);
-        RegisterCorpseStack(session, definitions, 2000, "test.all.a");
-        RegisterCorpseStack(session, definitions, 2000, "test.all.b");
+        RegisterCorpseStack(session, definitions, HoldActor(1), "test.all.a");
+        RegisterCorpseStack(session, definitions, HoldActor(1), "test.all.b");
         if (atCapacity)
         {
             InventoryStackId playerCoins = InventoryStackId.Parse("test.all.player");
             session.State.Inventory.Grant(new(new InventoryItemId("gold-piece"), playerCoins, checked((ulong)session.State.Encumbrance.Read().MaximumClassicUnits)));
             session.State.ItemInstances.RegisterDefaultStack(DaggerfallItemOwner.Player, session.State.Inventory.Read().Stacks.Single(stack => stack.Id == playerCoins), definitions.RequireItem(new DaggerfallItemId("gold-piece")));
         }
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         void Ui(string json, ulong step) => session.Update(new ProductUpdate(OuterUpdate(step), [Input(InputEventKind.DirectDigital) with
         {
             ValueKind = InputValueKind.ProductPayload,
@@ -577,7 +577,7 @@ public sealed class LootSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         int region = session.Site.Region!.Value;
@@ -622,7 +622,7 @@ public sealed class LootSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         RulesetSavePayload saved;
         ulong letterIdentity;
@@ -684,7 +684,7 @@ public sealed class LootSessionTests
 
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
-        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), saved);
@@ -709,7 +709,7 @@ public sealed class LootSessionTests
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
         PopulateContent(sourceContent, inputs);
-        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         sourceSpatial.KeepPosition = true;
         PerceptionFake sourcePerception = PerceptionFake.Create();
         EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases), sourcePerception.Service);
@@ -733,40 +733,40 @@ public sealed class LootSessionTests
                 session.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).BaseValue = 60; // classic damage floors at zero; stage a swing this fixture can rely on
                 session.Strike(new ExplicitMeleeRequest(1, target, 1, 1, .125));
             }
-            Kill(original, 2000);
-            AimActivationAt(original, 2000);
-            CorpseContainer thief = original.Corpses[2000];
+            Kill(original, HoldActor(1));
+            AimActivationAt(original, HoldActor(1));
+            CorpseContainer thief = original.Corpses[HoldActor(1)];
             DaggerfallItemFactory itemFactory = new(definitions, RandomMinimum.Create());
             DaggerfallCreatedItem potion = itemFactory.Create(new DaggerfallItemCreateRequest(
-                "UselessItems1", "test.loot.4903.potion", DaggerfallItemOwner.Corpse(2000), TemplateIndex: 83, PotionRecipeKey: 221871));
+                "UselessItems1", "test.loot.4903.potion", DaggerfallItemOwner.Corpse(HoldActor(1)), TemplateIndex: 83, PotionRecipeKey: 221871));
             DaggerfallCreatedItem recipe = itemFactory.Create(new DaggerfallItemCreateRequest(
-                "MiscItems", "test.loot.4904.recipe", DaggerfallItemOwner.Corpse(2000), TemplateIndex: 278, PotionRecipeKey: 221871));
+                "MiscItems", "test.loot.4904.recipe", DaggerfallItemOwner.Corpse(HoldActor(1)), TemplateIndex: 278, PotionRecipeKey: 221871));
             original.State.Containers.Seed(thief.Owner, [
                 new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5, Stack: InventoryStackId.Parse("test.loot.4902")),
                 new InventoryContainerSeed(potion.Item, potion.Quantity, Stack: InventoryStackId.Parse("test.loot.4903")),
                 new InventoryContainerSeed(recipe.Item, UniqueItem: new(DurableIdentityKind.Item, 5002)),
                 new InventoryContainerSeed(new InventoryItemId("iron-dagger"), 1, new(DurableIdentityKind.Item, 5001))]);
-            RegisterCorpseStack(original, definitions, 2000, "test.loot.4902");
-            original.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Corpse(2000), InventoryStackId.Parse("test.loot.4903"), potion.Metadata);
+            RegisterCorpseStack(original, definitions, HoldActor(1), "test.loot.4902");
+            original.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Corpse(HoldActor(1)), InventoryStackId.Parse("test.loot.4903"), potion.Metadata);
             original.State.ItemInstances.RegisterUnique(5002, recipe.Metadata);
-            original.State.ItemInstances.RegisterDefaultUnique(5001, definitions.Items[new DaggerfallItemId("iron-dagger")], DaggerfallItemOwner.Corpse(2000));
+            original.State.ItemInstances.RegisterDefaultUnique(5001, definitions.Items[new DaggerfallItemId("iron-dagger")], DaggerfallItemOwner.Corpse(HoldActor(1)));
             // The giant-bat carries no loot table, so its corpse stays unregistered and empty.
             // It is tougher than the thief: repeat the explicit swing until the death lands.
-            original.State.Actors.Get(2006).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
+            original.State.Actors.Get(HoldActor(35)).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
             ulong swing = 2;
-            while (!original.State.Actors.Get(2006).IsDefeated && swing < 20)
+            while (!original.State.Actors.Get(HoldActor(35)).IsDefeated && swing < 20)
             {
-                original.Strike(new ExplicitMeleeRequest(1, 2006, swing, swing, .125));
+                original.Strike(new ExplicitMeleeRequest(1, HoldActor(35), swing, swing, .125));
                 original.Update(new ProductUpdate(OuterUpdate(swing), []));
                 swing++;
             }
-            Assert.True(original.State.Actors.Get(2006).IsDefeated, "the giant-bat should die within bounded swings");
-            Assert.False(original.Corpses[2006].IsRegistered);
+            Assert.True(original.State.Actors.Get(HoldActor(35)).IsDefeated, "the giant-bat should die within bounded swings");
+            Assert.False(original.Corpses[HoldActor(35)].IsRegistered);
             populatedPayload = original.CaptureSave();
 
             // Drain the thief through the panel: the looted save must carry a registered corpse
             // with empty contents, not an unregistered one.
-            sourcePerception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+            sourcePerception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 2.25d, .5d, PerceptionPairKind.Visible, 1d));
             Ui(original, "{\"action\":\"loot\"}", swing++);
             var activation = Assert.IsType<InteractionTargetingEvidence>(original.Activation.LastEvidence);
             Assert.Equal(Rusty.Engine.Interaction.InteractionReason.Ready, activation.Focus.Reason);
@@ -782,12 +782,12 @@ public sealed class LootSessionTests
             }
             LootPresentation drained = Assert.IsType<LootPresentation>(original.OpenLoot);
             Assert.True(drained.Empty);
-            Assert.False(original.Corpses[2000].IsInteractable);
+            Assert.False(original.Corpses[HoldActor(1)].IsInteractable);
             lootedPayload = original.CaptureSave();
         }
 
         DaggerfallSavePayload captured = DaggerfallSavePayload.Read(populatedPayload);
-        DaggerfallCorpseSave savedThief = captured.Corpses.Single(corpse => corpse.ActorId == 2000);
+        DaggerfallCorpseSave savedThief = captured.Corpses.Single(corpse => corpse.ActorId == HoldActor(1));
         Assert.True(savedThief.IsRegistered);
         // The thief's loot table generates gold on top of the seeded stack; the save carries both.
         Assert.True(savedThief.Stacks.Where(stack => stack.ItemId == "gold-piece")
@@ -806,14 +806,14 @@ public sealed class LootSessionTests
         // The live corpse path now uses retained template definitions, and its material and
         // appearance facts must survive the normal save boundary rather than becoming defaults.
         DaggerfallUniqueSave savedTemplateWeapon = savedThief.UniqueItems.First(item => definitions.RequireItem(new DaggerfallItemId(item.ItemId)).Weapon is not null);
-        DaggerfallCorpseSave savedBat = captured.Corpses.Single(corpse => corpse.ActorId == 2006);
+        DaggerfallCorpseSave savedBat = captured.Corpses.Single(corpse => corpse.ActorId == HoldActor(35));
         Assert.False(savedBat.IsRegistered);
         Assert.Empty(savedBat.Stacks);
         Assert.Empty(savedBat.UniqueItems);
 
         // The looted save keeps the thief registered with empty contents and no interaction.
         DaggerfallSavePayload looted = DaggerfallSavePayload.Read(lootedPayload);
-        DaggerfallCorpseSave lootedThief = looted.Corpses.Single(corpse => corpse.ActorId == 2000);
+        DaggerfallCorpseSave lootedThief = looted.Corpses.Single(corpse => corpse.ActorId == HoldActor(1));
         Assert.True(lootedThief.IsRegistered);
         Assert.Empty(lootedThief.Stacks);
         Assert.Empty(lootedThief.UniqueItems);
@@ -821,12 +821,12 @@ public sealed class LootSessionTests
 
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
-        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using (DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), populatedPayload))
         {
-            InventoryView restoredThief = resumed.State.Containers.Read(resumed.Corpses[2000].Owner);
+            InventoryView restoredThief = resumed.State.Containers.Read(resumed.Corpses[HoldActor(1)].Owner);
             Assert.Equal(
                 savedThief.Stacks.Where(stack => stack.ItemId == "gold-piece")
                     .OrderBy(stack => stack.StackId, StringComparer.Ordinal)
@@ -839,15 +839,15 @@ public sealed class LootSessionTests
             var restoredTemplateWeapon = restoredThief.UniqueItems.First(item => definitions.RequireItem(new DaggerfallItemId(item.Definition.Value)).Weapon is not null);
             ulong restoredTemplateIdentity = resumed.State.Actors.Entities.IdentityOf(restoredTemplateWeapon.Entity).Value;
             Assert.Equal(savedTemplateWeapon.Metadata.Material, resumed.State.ItemInstances.RequireUnique(restoredTemplateIdentity).Material);
-            Assert.Equal(221871, resumed.State.ItemInstances.RequireStack(DaggerfallItemOwner.Corpse(2000), InventoryStackId.Parse("test.loot.4903")).PotionRecipeKey);
+            Assert.Equal(221871, resumed.State.ItemInstances.RequireStack(DaggerfallItemOwner.Corpse(HoldActor(1)), InventoryStackId.Parse("test.loot.4903")).PotionRecipeKey);
             Assert.Equal(221871, resumed.State.ItemInstances.RequireUnique(5002).PotionRecipeKey);
             Assert.Contains(restoredThief.UniqueItems, item => item.Definition.Value == "template-287"
                 && resumed.State.Actors.Entities.IdentityOf(item.Entity).Value == generatedMap.EntityId);
             Assert.Equal((generatedPotion.Quantity, 221871), (
                 restoredThief.Stacks.Single(stack => stack.Id.Value == generatedPotion.StackId).Quantity,
-                resumed.State.ItemInstances.RequireStack(DaggerfallItemOwner.Corpse(2000), InventoryStackId.Parse(generatedPotion.StackId)).PotionRecipeKey));
+                resumed.State.ItemInstances.RequireStack(DaggerfallItemOwner.Corpse(HoldActor(1)), InventoryStackId.Parse(generatedPotion.StackId)).PotionRecipeKey));
             Assert.Equal(221871, resumed.State.ItemInstances.RequireUnique(generatedRecipe.EntityId).PotionRecipeKey);
-            Assert.False(resumed.Corpses[2006].IsRegistered);
+            Assert.False(resumed.Corpses[HoldActor(35)].IsRegistered);
 
             // The next generated unique must not reuse a restored live identity.
             ulong nextUnique = resumed.UniqueItemAllocator.AllocateReference().Value;
@@ -857,17 +857,17 @@ public sealed class LootSessionTests
 
         ContentFake lootedContent = new(releases);
         PopulateContent(lootedContent, inputs);
-        SpatialFake lootedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake lootedSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake lootedEngine = EngineContextFake.Create(lootedContent, lootedSpatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         using DaggerfallSession lootedSession = DaggerfallSession.Restore(lootedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), lootedPayload);
 
         // The looted corpse restores registered and empty rather than unregistered or reseeded.
-        Assert.True(lootedSession.Corpses[2000].IsRegistered);
-        Assert.False(lootedSession.Corpses[2000].IsInteractable);
-        InventoryView restoredLooted = lootedSession.State.Containers.Read(lootedSession.Corpses[2000].Owner);
+        Assert.True(lootedSession.Corpses[HoldActor(1)].IsRegistered);
+        Assert.False(lootedSession.Corpses[HoldActor(1)].IsInteractable);
+        InventoryView restoredLooted = lootedSession.State.Containers.Read(lootedSession.Corpses[HoldActor(1)].Owner);
         Assert.Empty(restoredLooted.Stacks);
         Assert.Empty(restoredLooted.UniqueItems);
-        Assert.False(lootedSession.Corpses[2006].IsRegistered);
+        Assert.False(lootedSession.Corpses[HoldActor(35)].IsRegistered);
 
         // The next generated unique still allocates cleanly after the looted restore.
         _ = lootedSession.UniqueItemAllocator.AllocateReference();

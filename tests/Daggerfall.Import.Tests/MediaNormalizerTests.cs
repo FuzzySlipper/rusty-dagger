@@ -93,7 +93,6 @@ public sealed class MediaNormalizerTests
         Assert.Equal(atlas.Frames, resource.Frames);
         Assert.Equal("Steel dagger", resource.DisplayName);
         Assert.Equal(new[] { 0, 1, 0 }, resource.Sequence);
-        Assert.Equal("artifact/sprite/weapon", resource.ToArtifactDescriptor().Id);
     }
 
     [Fact]

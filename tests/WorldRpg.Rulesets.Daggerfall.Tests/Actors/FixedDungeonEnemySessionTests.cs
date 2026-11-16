@@ -17,7 +17,7 @@ public sealed class FixedDungeonEnemySessionTests
     {
         var profile = ReadInputs(TestData.RepositoryRoot);
         Assert.Equal(25, profile.Project.Actors.Count);
-        Assert.Equal("skeletal-warrior", profile.Project.Actors[2000].ActorId.Value);
+        Assert.Equal("skeletal-warrior", profile.Project.Actors[HoldActor(1)].ActorId.Value);
         using var session = FreshSession();
         foreach (var placement in profile.Project.Actors.Values)
         {
@@ -40,7 +40,7 @@ public sealed class FixedDungeonEnemySessionTests
         List<string> releases = [];
         var content = new ContentFake(releases);
         PopulateContent(content, profile);
-        var spatial = SpatialFake.Create(world.Source.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(world.Source.Geometry.Spatial[0].Sha256, releases);
         var perception = PerceptionFake.Create();
         perception.Receipt = Receipt(new PerceptionPair((ulong)placement.EntityId, 1, 1, 1, PerceptionPairKind.Visible, 1));
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);

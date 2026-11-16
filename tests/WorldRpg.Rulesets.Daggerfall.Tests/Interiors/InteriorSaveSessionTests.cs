@@ -23,7 +23,7 @@ public sealed class InteriorSaveSessionTests
     public void A_save_inside_a_dungeon_restores_to_the_same_place_with_the_same_cells_resident()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallSiteRecord site = world.Unpublished(record => record.Kind is DaggerfallSiteKind.DungeonLabyrinth or DaggerfallSiteKind.DungeonKeep or DaggerfallSiteKind.DungeonRuin
+        DaggerfallSiteRecord site = world.Nearby(record => record.Kind is DaggerfallSiteKind.DungeonLabyrinth or DaggerfallSiteKind.DungeonKeep or DaggerfallSiteKind.DungeonRuin
             && record.Exterior is not null && record.DungeonBlocks.Count != 0
             && world.Profiles.Require(DaggerfallWorldProfileIds.Exterior(record.Id)).Portals.Count != 0);
         DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(site.Id), dungeon = DaggerfallWorldProfileIds.Dungeon(site.Id);

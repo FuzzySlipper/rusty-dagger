@@ -967,7 +967,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         for (int index = 0; index < inputs.Geometry.Meshes.Count; index++)
         {
             DaggerfallSiteMesh mesh = inputs.Geometry.Meshes[index];
-            var model = (mesh.Path, mesh.Sha256, mesh.Materials is null ? "" : string.Join(',', mesh.Materials));
+            var model = (mesh.Path, mesh.Sha256, string.Join(',', mesh.Materials));
             if (models.TryGetValue(model, out Appearance? shown))
             {
                 world.Add((shown, Remodel(mesh.ModelId), mesh.Pose, index));
@@ -976,13 +976,10 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             Appearance created = appearance.CreateStaticMesh(content, mesh.Path, mesh.Sha256, worldAppearance.Tint, admittingOffUpdate);
             world.Add((created, Remodel(mesh.ModelId), mesh.Pose, index));
             models.Add(model, created);
-            // A published closure's combined mesh is drawn with every material at its own slot; an assembled
-            // block model binds each of its slots to the profile slot its (climate-swapped) texture has.
-            MeshMaterialBinding[] bindings = mesh.Materials is null
-                ? [.. inputs.Materials.Select(material => new MeshMaterialBinding(material.Slot, materialsBySlot[material.Slot]))]
-                : [.. mesh.Materials.Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
-                    ? new MeshMaterialBinding(binding.MeshSlot, material)
-                    : throw new InvalidOperationException($"Mesh '{mesh.Path}' refers to missing world material slot {binding.WorldMaterialSlot}."))];
+            // A block model binds each of its slots to the profile slot its (climate-swapped) texture has.
+            MeshMaterialBinding[] bindings = [.. mesh.Materials.Select(binding => materialsBySlot.TryGetValue(binding.WorldMaterialSlot, out Material? material)
+                ? new MeshMaterialBinding(binding.MeshSlot, material)
+                : throw new InvalidOperationException($"Mesh '{mesh.Path}' refers to missing world material slot {binding.WorldMaterialSlot}."))];
             appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(created, bindings));
         }
         AdmitDecorations(inputs);

@@ -73,7 +73,7 @@ internal sealed record DaggerfallWorldBlockRandomEnemy(string Id, Vector3 Positi
 /// <summary>
 /// One published block document, read from the world block bundle: its typed placement facts, and the
 /// sections a placing location only re-identifies and moves (people, furniture, lights, flats, actions)
-/// kept as the normalized JSON the site closure readers interpret.
+/// kept as the normalized JSON the location assembly interprets.
 /// </summary>
 internal sealed class DaggerfallWorldBlockDocument
 {

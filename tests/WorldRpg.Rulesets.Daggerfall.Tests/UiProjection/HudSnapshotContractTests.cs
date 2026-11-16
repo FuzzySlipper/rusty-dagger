@@ -31,10 +31,13 @@ public sealed class HudSnapshotContractTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
-        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity) { Data = TestSessions.DataOf(content) });
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity)
+        {
+            Data = TestSessions.DataOf(content), StartPose = definitions.NewGame.Start.Pose,
+        });
         session.ApplyProductMode(ProductMode.Playing);
 
         DaggerfallSiteRecord site = session.Site.ActiveSite ?? throw new InvalidOperationException("The fixture session has no admitted site.");
@@ -43,7 +46,7 @@ public sealed class HudSnapshotContractTests
         long guardId = session.State.Npcs.RegisterCivilian(
             new DaggerfallNpcSite(site.Id.Region, site.Name, string.Empty),
             new DaggerfallNpcAppearance("Breton", "Female", archive, record, 0, 0), "guard", ["talk"]);
-        session.Civilians.Materialize(guardId, session.State.Actors.Get(2000).Pose);
+        session.Civilians.Materialize(guardId, session.State.Actors.Get(HoldActor(1)).Pose);
         session.State.Npcs.Bind(guardId, session.Sites.ActiveProfile);
         DaggerfallActivationTarget target = Assert.Single(session.Dialogue.NpcTargets());
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);

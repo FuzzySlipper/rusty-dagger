@@ -78,8 +78,8 @@ public sealed class DaggerfallWeatherSessionTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
-        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
+        var exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        var interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
         var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         var fairOdds = Enumerable.Range(0,24).Select(_ => new[]{100,0,0,0,0,0,0}).ToArray();
         var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = fairOdds}};
@@ -107,8 +107,8 @@ public sealed class DaggerfallWeatherSessionTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
-        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
+        var exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        var interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
         var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         var fairOdds = Enumerable.Range(0,24).Select(_ => new[]{100,0,0,0,0,0,0}).ToArray();
         var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = fairOdds}};
@@ -155,8 +155,8 @@ public sealed class DaggerfallWeatherSessionTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
-        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
+        var exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        var interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
         var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         var fairOdds = Enumerable.Range(0,24).Select(_ => new[]{100,0,0,0,0,0,0}).ToArray();
         var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = fairOdds}};
@@ -210,8 +210,8 @@ public sealed class DaggerfallWeatherSessionTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
-        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
+        var exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        var interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
         var mediaFixture = DaggerfallSkyMediaTests.Fixture();
         var media = DaggerfallSkyMedia.Read(TestSessions.Data(mediaFixture.Content));
         var rainOdds = Enumerable.Range(0,24).Select(_ => new[]{0,0,0,0,100,0,0}).ToArray();
@@ -278,7 +278,7 @@ public sealed class DaggerfallWeatherSessionTests
     {
         List<string> releases=[]; var content = new ContentFake(releases);
         foreach(var site in sites) PopulateContent(content,site);
-        var spatial = SpatialFake.Create(sites[0].SpatialArtifact.Sha256,releases);
+        var spatial = SpatialFake.Create(sites[0].Geometry.Spatial[0].Sha256,releases);
         var appearance = new AppearanceFake(releases);
         return (EngineContextFake.Create(content,spatial.Service,appearance),spatial,appearance);
     }

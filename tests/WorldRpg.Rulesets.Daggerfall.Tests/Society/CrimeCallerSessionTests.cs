@@ -80,14 +80,14 @@ public sealed class CrimeCallerSessionTests
     public void Rejected_reach_has_no_attempt_or_skill_use_and_talk_does_not_target_enemies()
     {
         using Fixture f = new(); var s = f.Session;
-        s.State.PlayerControl.MoveTo(s.State.Actors.Get(2000).Position.ToVector() + 20 * Vector3.UnitZ);
+        s.State.PlayerControl.MoveTo(s.State.Actors.Get(HoldActor(1)).Position.ToVector() + 20 * Vector3.UnitZ);
         s.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"activation-mode\",\"mode\":\"steal\"}")]));
         s.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
         Assert.False(s.ActivationPanel.View.Applied);
         Assert.Empty(s.State.Crime.Attempts);
         Assert.Equal(0, s.State.Progression.SkillUses.GetValueOrDefault("pickpocket"));
         s.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"activation-mode\",\"mode\":\"talk\"}")]));
-        AimActivationAt(s, 2000);
+        AimActivationAt(s, HoldActor(1));
         s.Update(new ProductUpdate(OuterUpdate(4), [Input(InputEventKind.DirectDigital, x: 1, phase: InputPhase.DirectUi, intent: "interact")]));
         Assert.False(s.ActivationPanel.View.Applied); Assert.Empty(s.State.Crime.Attempts);
     }
@@ -171,7 +171,7 @@ public sealed class CrimeCallerSessionTests
         private readonly DaggerfallSessionComposition composition;
         private readonly IRandomService random;
         internal DaggerfallSession Session { get; }
-        internal long TargetId { get; private set; } = 2000;
+        internal long TargetId { get; private set; } = HoldActor(1);
         internal Fixture(bool fail = false, bool nothing = false)
         {
             random = CrimeRandom.Create(fail, nothing);
@@ -184,12 +184,12 @@ public sealed class CrimeCallerSessionTests
             var site = s.Site.ActiveSite!;
             TargetId = s.State.Npcs.RegisterCivilian(new(site.Id.Region, site.Name, string.Empty),
                 new("breton", "Female", 0, 0, 0, 0), role, ["talk"]);
-            return s.Civilians.Materialize(TargetId, new(s.State.Actors.Get(2000).Position, 0));
+            return s.Civilians.Materialize(TargetId, new(s.State.Actors.Get(HoldActor(1)).Position, 0));
         }
         private EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, composition.StartSite);
-            var spatial = SpatialFake.Create(composition.StartSite.SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
+            var spatial = SpatialFake.Create(composition.StartSite.Geometry.Spatial[0].Sha256, releases); spatial.KeepPosition = true;
             var perception = PerceptionFake.Create();
             perception.Responder = request => request.Observers.ToArray().Any(observer => observer.Entity == 1)
                 ? Receipt(new PerceptionPair(1, checked((ulong)TargetId), 1, 1, PerceptionPairKind.Visible, 1)) : Receipt();

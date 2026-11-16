@@ -34,7 +34,7 @@ internal static class DaggerfallAmbientZones
 
     internal static IReadOnlyList<DaggerfallAmbientZone> Read(ReadOnlyMemory<byte>? bytes, DaggerfallContentDiagnostics diagnostics)
     {
-        if (bytes is null) { diagnostics.Add("Normalized world closure is absent for ambient zone admission."); return []; }
+        if (bytes is null) { diagnostics.Add("Normalized world document is absent for ambient zone admission."); return []; }
         try
         {
             using var document = JsonDocument.Parse(bytes.Value);

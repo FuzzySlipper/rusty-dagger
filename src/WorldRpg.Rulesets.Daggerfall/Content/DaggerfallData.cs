@@ -5,7 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>
 /// The content the import tool derives from the player's Daggerfall files, as one composition reads it: the
-/// site closures, the product-wide world and classic media, the sky, the cinematics and the per-block world,
+/// product-wide world and classic media, the sky, the cinematics and the per-block world,
 /// each by its content-root-relative path.
 /// </summary>
 /// <remarks>

@@ -35,7 +35,7 @@ public sealed class DaggerfallRestSessionTests
             ContentFake content = new(releases);
             PopulateContent(content, exterior);
             PopulateTerrainContent(content, exterior);
-            SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+            SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service,
                 new AppearanceFake(releases), random: RandomMaximum.Create());
             using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults) {Sky = sky});
@@ -67,7 +67,7 @@ public sealed class DaggerfallRestSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
 
@@ -98,7 +98,7 @@ public sealed class DaggerfallRestSessionTests
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         PopulateTerrainContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
         DaggerfallSavePayload saved;
         long elapsed;
@@ -149,7 +149,7 @@ public sealed class DaggerfallRestSessionTests
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
         PopulateTerrainContent(resumedContent, inputs);
-        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root),
@@ -181,7 +181,7 @@ public sealed class DaggerfallRestSessionTests
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         PopulateTerrainContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) { Sky = sky });
         session.State.PlayerControl.MoveTo(new WorldPoint(1000f, 1f, 1000f).ToVector());
@@ -218,7 +218,7 @@ public sealed class DaggerfallRestSessionTests
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
         PopulateTerrainContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
 
         DaggerfallSavePayload restedSave;
@@ -273,7 +273,7 @@ public sealed class DaggerfallRestSessionTests
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
         PopulateTerrainContent(resumedContent, inputs);
-        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using (DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context,
@@ -290,7 +290,7 @@ public sealed class DaggerfallRestSessionTests
         ContentFake townContent = new(releases);
         PopulateContent(townContent, townInputs);
         PopulateTerrainContent(townContent, townInputs);
-        SpatialFake townSpatial = SpatialFake.Create(townInputs.SpatialArtifact.Sha256, releases);
+        SpatialFake townSpatial = SpatialFake.Create(townInputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake townEngine = EngineContextFake.Create(townContent, townSpatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
         using DaggerfallSession townSession = DaggerfallSession.StartNew(townEngine.Context, new(definitions, townInputs, DaggerfallTuning.Defaults) {Sky = sky});
         Track townHealth = townSession.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
@@ -385,7 +385,7 @@ public sealed class DaggerfallRestSessionTests
             ContentFake content = new(releases);
             PopulateContent(content, exterior);
             PopulateTerrainContent(content, exterior);
-            Spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+            Spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
             Spatial.KeepPosition = true;
             _engine = EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
             ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(TestData.RepositoryRoot),

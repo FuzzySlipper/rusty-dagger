@@ -23,7 +23,7 @@ public sealed class DaggerfallViewLightTests
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(Hash, releases).Service, appearance);
         DaggerfallSiteProfile profile = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/site.json", Hash, 1), new ContentArtifact("mesh/site.json", Hash)),
+            FixtureGeometry("spatial/site.json", Hash, 1, "mesh/site.json", Hash),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [], new Dictionary<long, NormalizedActorSprite>(),
             site: new DaggerfallSiteId(17, 4), profileKind: kind, logicalProfileId: "worldrpg/test/site", lights: lights);
         return new(appearance, engine.Context.CameraView, profile, Tuning, calendar.Sky);

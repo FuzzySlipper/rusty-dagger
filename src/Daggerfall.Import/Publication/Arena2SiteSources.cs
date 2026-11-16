@@ -5,8 +5,8 @@ using Daggerfall.Import.Normalization;
 namespace Daggerfall.Import.Publication;
 
 /// <summary>
-/// The Arena2 files a site closure or the classic media publication may read, loaded from the operator's
-/// corpus directory under a byte quota. Only the named dungeon sources, the fixed classic media set and
+/// The Arena2 files the classic media and world media publications may read, loaded from the operator's
+/// corpus directory under a byte quota. Only the named world sources, the fixed classic media set and
 /// texture leaves are admitted; a publication that asks for anything else is refused by name.
 /// </summary>
 public sealed class Arena2SiteSources
@@ -17,16 +17,15 @@ public sealed class Arena2SiteSources
     /// <summary>The largest total of Arena2 sources one publication reads.</summary>
     public const long MaximumTotalSourceBytes = 512L * 1024L * 1024L;
 
-    /// <summary>The world sources every site closure reads before any on-demand texture leaf.</summary>
+    /// <summary>
+    /// The world sources the world media publication reads before any texture leaf: the mesh archive, the
+    /// block archive whose overlapping placements it trims, and the palette.
+    /// </summary>
     public static readonly IReadOnlyList<string> DungeonSourceNames =
     [
-        "MAPS.BSA",
         "BLOCKS.BSA",
         "ARCH3D.BSA",
-        "CLIMATE.PAK",
         "PAL.PAL",
-        "FACTION.TXT",
-        "FLATS.CFG",
     ];
 
     /// <summary>
@@ -90,16 +89,13 @@ public sealed class Arena2SiteSources
     }
 
     /// <summary>
-    /// The sources the product-wide world media publication starts from: the classic media inputs, the mesh
-    /// archive, the block archive whose overlapping placements it trims, and the palette. Texture leaves are
-    /// admitted by the selection that names them.
+    /// The sources the product-wide world media publication starts from: the classic media inputs and the
+    /// world sources. Texture leaves are admitted by the selection that names them.
     /// </summary>
     public static Arena2SiteSources ForWorldMedia(string arena2Directory)
     {
         Arena2SiteSources sources = ForClassicMedia(arena2Directory);
-        sources.LoadDungeon("ARCH3D.BSA");
-        sources.LoadDungeon("BLOCKS.BSA");
-        sources.LoadDungeon("PAL.PAL");
+        foreach (string name in DungeonSourceNames) sources.LoadDungeon(name);
         return sources;
     }
 
@@ -116,20 +112,12 @@ public sealed class Arena2SiteSources
         return TextureArchive.Parse(source.Bytes.Span, source.Label);
     }
 
-    /// <summary>The world sources and the classic media inputs a site closure starts from.</summary>
-    public static Arena2SiteSources ForSite(string arena2Directory)
-    {
-        Arena2SiteSources sources = ForClassicMedia(arena2Directory);
-        foreach (string name in DungeonSourceNames) sources.LoadDungeon(name);
-        return sources;
-    }
-
     public IReadOnlyList<DungeonLogicalSource> DungeonSources => dungeonSourceNames
         .OrderBy(name => name, StringComparer.Ordinal)
         .Select(name => loaded[name])
         .ToArray();
 
-    /// <summary>The mesh archive every site's geometry is cut from.</summary>
+    /// <summary>The mesh archive every published mesh is cut from.</summary>
     public DungeonLogicalSource MeshArchive => loaded["ARCH3D.BSA"];
 
     /// <summary>The block archive whose placements the world media trims where they overlap.</summary>
@@ -210,7 +198,7 @@ public sealed class Arena2SiteSources
         Require("FIRE00C6.CIF"), Require("FRST00C6.CIF"), Require("POIS00C6.CIF"), Require("SHOK00C6.CIF"), Require("MJIC00C6.CIF"));
 
     /// <summary>
-    /// Builds a publication, loading the dungeon source or texture leaves a normalizer reports missing and
+    /// Builds a publication, loading the texture leaves a publication step reports missing and
     /// retrying. Discovery rides typed missing-source data, never diagnostic wording. Each retry loads at
     /// least one previously unrequested source; a repeated request means the requirement does not resolve,
     /// so the loop always terminates instead of spinning.

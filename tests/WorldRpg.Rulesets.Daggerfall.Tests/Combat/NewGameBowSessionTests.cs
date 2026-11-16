@@ -113,7 +113,7 @@ public sealed class NewGameBowSessionTests
     /// <summary>A new archer's game with the starting bow drawn at a target a given distance ahead.</summary>
     internal sealed class Fixture : IDisposable
     {
-        internal const long Target = 2008;
+        internal static readonly long Target = HoldActor(40);
         internal DaggerfallSession Game { get; }
         internal SpatialFake Spatial { get; }
         private ulong step;
@@ -129,7 +129,7 @@ public sealed class NewGameBowSessionTests
             List<string> releases = [];
             ContentFake content = new(releases);
             PopulateContent(content, inputs);
-            var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
             spatial.KeepPosition = true;
             Spatial = spatial;
             var perception = PerceptionFake.Create();
@@ -137,7 +137,7 @@ public sealed class NewGameBowSessionTests
             {
                 var observer = request.Observers.Span[0];
                 if (observer.Entity != DaggerfallActorIdentity.PlayerEntityId) return Receipt();
-                var targets = request.Targets.ToArray().Where(item => item.Entity == Target).ToArray();
+                var targets = request.Targets.ToArray().Where(item => (ulong)item.Entity == (ulong)Target).ToArray();
                 if (targets.Length == 0) return Receipt();
                 var target = targets[0];
                 double separation = Vector3.Distance(observer.Origin, target.Center);

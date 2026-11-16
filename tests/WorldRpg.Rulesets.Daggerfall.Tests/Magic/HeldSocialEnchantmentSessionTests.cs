@@ -21,7 +21,7 @@ public sealed class HeldSocialEnchantmentSessionTests
             List<string> releases = [];
             ContentFake content = new(releases);
             PopulateContent(content, inputs);
-            return EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+            return EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
         }
         var identity = TestSessions.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         DaggerfallSessionComposition composition = new(definitions, inputs, DaggerfallTuning.Defaults, identity);

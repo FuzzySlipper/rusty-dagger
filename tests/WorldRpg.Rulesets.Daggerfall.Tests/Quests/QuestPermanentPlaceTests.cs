@@ -2,6 +2,8 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
@@ -17,7 +19,7 @@ public sealed class QuestPermanentPlaceTests
     {
         AssembledWorld world = new();
         DaggerfallDefinitions definitions = world.Definitions;
-        DaggerfallSiteContext sites = new(definitions.Locations, AssembledWorld.PrivateersHold, null, []);
+        DaggerfallSiteContext sites = new(definitions.Locations, PrivateersHold, null, []);
         sites.AdmitBuildingNames(RandomMinimum.Create(), definitions, world.Blocks);
         DaggerfallQuestPlaceAllocator allocator = new(definitions, sites, RandomMinimum.Create(), (_, _) => false, _ => null, (_, _) => "unused");
         DaggerfallQuestResourceDefinition template = definitions.QuestSources.Resources.First(value => value.Kind == "place" && value.PlaceKind == "permanent");

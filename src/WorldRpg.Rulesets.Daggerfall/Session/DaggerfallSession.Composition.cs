@@ -124,7 +124,7 @@ internal sealed partial class DaggerfallSession
             bool materializeActiveSite = saved?.ExteriorLocationResidency?.Loaded != false;
             DaggerfallActorAssembly assembled = DaggerfallActorFactory.Create(_random, definitions, inputs,
                 saved is null ? null : new DaggerfallActorSaves(saved.Player, saved.Actors, saved.BanishedActors, saved.DynamicActors, saved.Npcs, saved.Character),
-                materializeActiveSite);
+                materializeActiveSite, composition.StartPose);
             ActorsState actors = assembled.Actors;
             partiallyConstructed.Add(actors);
             DaggerfallCharacterState character = assembled.Character;
@@ -1016,7 +1016,7 @@ internal sealed partial class DaggerfallSession
             string[] glintMedia = [.. classicPresentation.Effects.Where(effect => effect.Name is "magicGlint" or "coinGlint").Select(effect => effect.MediaId)];
             _inventoryUi.UseWearer(() => State.Character.Identity);
             // The DOM's art comes from the derived content by media identity, so a session reads the
-            // published closure once and publishes it to the UI that draws it.
+            // published group once and publishes it to the UI that draws it.
             _hud = new DaggerfallHudProjection(
                 engine.Ui,
                 definitions.HudResources,
@@ -1257,24 +1257,7 @@ internal sealed partial class DaggerfallSession
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
             appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem, HeldShield, equipment => HeldArms(art, equipment));
         if (_composition.ArtReplacements is { } refreshed)
-        {
             appearance.UseEffectArt(_engine.Presentation, _engine.Animation, refreshed, () => DrawnArt is not null);
-            ReportClassicRemodels(appearance.Profile, refreshed);
-        }
-    }
-
-    /// <summary>
-    /// Says once per site closure that the art pack's remodels draw classic there, rather than drawing them silently: its
-    /// pre-combined mesh names no model for a remodel to replace. Which of them it places is not looked up, since that
-    /// would read the per-block publication before any location needs it.
-    /// </summary>
-    private void ReportClassicRemodels(DaggerfallSiteProfile profile, DaggerfallArtReplacements art)
-    {
-        if (!profile.Geometry.IsClosure || art.Models.Count == 0 || !_closuresReported.Add(profile.ProfileKey)) return;
-        _engine.Diagnostics.Publish(new DiagnosticsPublishRequest(DiagnosticsSeverity.Warning, DiagnosticsDisposition.Accepted,
-            "daggerfall.art", "models.closure",
-            $"Site closure '{profile.ProfileKey.LogicalId}' draws one combined mesh that names no model, so the art pack's {art.Models.Count} ARCH3D remodels draw classic there.",
-            string.Empty));
     }
 
     /// <summary>

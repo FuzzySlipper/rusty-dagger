@@ -24,7 +24,7 @@ public sealed class HostSaveSlotTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         InMemoryPersistenceService persistence = new();
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), persistence: persistence);
         using WorldRpgSaveSlots slots = new(engine.Context, "worldrpg.saves");
@@ -71,7 +71,7 @@ public sealed class HostSaveSlotTests
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
         PopulateContent(sourceContent, inputs);
-        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake sourceEngine = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases), persistence: persistence);
         TestDaggerfallRuleset sourceRuleset = new();
         double savedHealth;
@@ -101,12 +101,12 @@ public sealed class HostSaveSlotTests
                 false, true, "quest-99", "relic", null, DaggerfallItemOwner.Player).Validate();
             sourceSession.State.ItemInstances.ReplaceStack(DaggerfallItemOwner.Player, stack.Id, savedStackMetadata);
             DurableIdentityReference npcUniqueIdentity = sourceSession.UniqueItemAllocator.AllocateReference();
-            MechanicsEquipmentCoordinator npcEquipment = sourceSession.State.ActorInventories.EquipmentFor(2000);
+            MechanicsEquipmentCoordinator npcEquipment = sourceSession.State.ActorInventories.EquipmentFor(HoldActor(1));
             var npcUnique = npcEquipment.Materialize(npcUniqueIdentity, new InventoryItemId("iron-dagger"));
             sourceSession.State.ItemInstances.RegisterDefaultUnique(npcUniqueIdentity.Value,
-                definitions.Items[new DaggerfallItemId("iron-dagger")], DaggerfallItemOwner.Actor(2000));
+                definitions.Items[new DaggerfallItemId("iron-dagger")], DaggerfallItemOwner.Actor(HoldActor(1)));
             savedUniqueMetadata = new DaggerfallItemInstanceMetadata("iron-dagger", "ebony", 2, 7, 12,
-                false, true, "quest-99", "blade", null, DaggerfallItemOwner.Actor(2000)).Validate();
+                false, true, "quest-99", "blade", null, DaggerfallItemOwner.Actor(HoldActor(1))).Validate();
             sourceSession.State.ItemInstances.ReplaceUnique(npcUniqueIdentity.Value, savedUniqueMetadata);
             npcEquipment.Equip(npcUnique, [new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand")]);
             savedHealth = health.Current;
@@ -123,7 +123,7 @@ public sealed class HostSaveSlotTests
 
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
-        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases), persistence: persistence);
         TestDaggerfallRuleset resumedRuleset = new();
         // A reopened process reads the slot through the same catalog and resumes through the ruleset's
@@ -146,11 +146,11 @@ public sealed class HostSaveSlotTests
         Assert.Equal(savedStackQuantity, restoredSession.State.Inventory.Read().Stacks.Single(value => value.Definition == sourceSession.State.Inventory.Read().Stacks.First().Definition).Quantity);
         Assert.Equal(savedStackMetadata, restoredSession.State.ItemInstances.RequireStack(DaggerfallItemOwner.Player,
             restoredSession.State.Inventory.Read().Stacks.Single(value => value.Definition == sourceSession.State.Inventory.Read().Stacks.First().Definition).Id));
-        MechanicsInventoryCoordinator restoredNpcInventory = Assert.IsType<MechanicsInventoryCoordinator>(restoredSession.State.ActorInventories.InventoryFor(2000));
+        MechanicsInventoryCoordinator restoredNpcInventory = Assert.IsType<MechanicsInventoryCoordinator>(restoredSession.State.ActorInventories.InventoryFor(HoldActor(1)));
         var restoredNpcUnique = Assert.Single(restoredNpcInventory.Read().UniqueItems, item => item.Definition.Value == "iron-dagger");
         Assert.Equal(savedNpcUniqueId, restoredSession.State.Actors.Entities.IdentityOf(restoredNpcUnique.Entity).Value);
         Assert.Equal(savedUniqueMetadata, restoredSession.State.ItemInstances.RequireUnique(savedNpcUniqueId));
-        Assert.Contains(restoredSession.State.ActorInventories.EquipmentFor(2000).Read().Assignments,
+        Assert.Contains(restoredSession.State.ActorInventories.EquipmentFor(HoldActor(1)).Read().Assignments,
             assignment => assignment.Slot.Value == "right-hand" && assignment.Item.EntityId == restoredNpcUnique.Entity.Value);
 
         _ = restoredMaximum.AddModifier(1);
@@ -180,9 +180,9 @@ public sealed class HostSaveSlotTests
         InMemoryPersistenceService persistence = new();
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 1d, 1d, PerceptionPairKind.Visible, 1d));
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service, persistence: persistence);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         TestDaggerfallRuleset ruleset = new();
@@ -298,7 +298,7 @@ public sealed class HostSaveSlotTests
             List<string> releases = [];
             ContentFake content = new(releases);
             PopulateContent(content, inputs);
-            SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), persistence: persistence);
             using WorldRpgSaveSlots slots = new(engine.Context, "worldrpg.saves");
             slots.SaveSlot("slot-1", "Forged", DaggerfallSavePayload.Encode(rejected), PersistenceRevisionGuard.Absent);
@@ -323,7 +323,7 @@ public sealed class HostSaveSlotTests
         InMemoryPersistenceService persistence = new();
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), persistence: persistence);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         string preferenceKey = DaggerfallRuleset.Identity.Value;
@@ -354,7 +354,7 @@ public sealed class HostSaveSlotTests
         List<string> resumedReleases = [];
         ContentFake resumedContent = new(resumedReleases);
         PopulateContent(resumedContent, inputs);
-        EngineContextFake resumed = EngineContextFake.Create(resumedContent, SpatialFake.Create(inputs.SpatialArtifact.Sha256, resumedReleases).Service,
+        EngineContextFake resumed = EngineContextFake.Create(resumedContent, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, resumedReleases).Service,
             new AppearanceFake(resumedReleases), persistence: persistence);
         using WorldRpgProduct reopened = new(new ProductCreateContext(resumed.Context, FullContent(root), input), new TestDaggerfallRuleset(), new GameBundleId("daggerfall.classic"));
         Assert.Equal(KeyboardControl.KeyB, Assert.Single(resumed.PhysicalInput.Mappings, mapping => Encoding.UTF8.GetString(mapping.Intent.Span) == "move.forward").Keyboard);

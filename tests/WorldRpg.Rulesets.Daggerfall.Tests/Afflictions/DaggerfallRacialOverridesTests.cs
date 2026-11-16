@@ -107,7 +107,7 @@ public sealed class DaggerfallRacialOverridesTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         return DaggerfallSession.Restore(EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases)).Context,
             new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults), save);
     }

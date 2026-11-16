@@ -16,27 +16,18 @@ public sealed class Arena2SourceTransformTests
     }
 
     [Fact]
-    public void ConvertsRdbPointsAndPlacesThemAtTheClassicBlockOrigin()
+    public void ConvertsRdbPointsFromWholeUnitsAndFlipsY()
     {
-        MapsDungeonBlock block = new("S0000007.RDB", 1, -1, true);
-        Arena2ImportPoint origin = Arena2SourceTransform.ToBlockOrigin(block);
-        Arena2ImportPoint point = Arena2SourceTransform.PlaceInBlock(Arena2SourceTransform.ToImportPoint(10, -20, 30), block);
-
-        Assert.Equal(new Arena2ImportPoint(51.2F, 0F, -51.2F), origin);
-        Assert.Equal(new Arena2ImportPoint(51.45F, 0.5F, -50.45F), point);
+        Assert.Equal(new Arena2ImportPoint(0.25F, 0.5F, 0.75F), Arena2SourceTransform.ToImportPoint(10, -20, 30));
     }
 
     [Fact]
-    public void PreservesTheDonorRmbGridAndBuildingOrigins()
+    public void PreservesTheDonorRmbPointsAndBuildingOrigins()
     {
-        MapsExteriorBlock exterior = new("TVRNAA07.RMB", 2, 3);
-        Arena2ImportPoint gridOrigin = Arena2SourceTransform.ToExteriorBlockOrigin(exterior);
-        Arena2ImportPoint placed = Arena2SourceTransform.PlaceInExteriorBlock(Arena2SourceTransform.ToRmbImportPoint(100, -40, 200), exterior);
         RmbBuildingSlot building = new(0, 800, 1200, 512, 34, 0, 0, 0, 0, 0, new(0, 0, 0, 0, 0), new(0, 0, 0, 0, 0));
         Arena2ImportPoint buildingOrigin = Arena2SourceTransform.ToRmbBuildingOrigin(building);
 
-        Assert.Equal(new Arena2ImportPoint(204.8F, 0F, 307.2F), gridOrigin);
-        Assert.Equal(new Arena2ImportPoint(207.3F, 1F, 312.2F), placed);
+        Assert.Equal(new Arena2ImportPoint(2.5F, 1F, 5F), Arena2SourceTransform.ToRmbImportPoint(100, -40, 200));
         Assert.Equal(new Arena2ImportPoint(20F, 0F, 72.4F), buildingOrigin);
         Assert.Equal(-90F, Arena2SourceTransform.ToRmbYawDegrees(512));
     }
@@ -62,14 +53,6 @@ public sealed class Arena2SourceTransformTests
         Assert.Equal(0.09375F, uv.V);
     }
 
-    [Fact]
-    public void ReversesWindingExplicitlyForTheMirroredTargetSpace()
-    {
-        Arena2Triangle triangle = Arena2SourceTransform.ReverseWinding(0, 2, 1);
-
-        Assert.Equal(new Arena2Triangle(0, 1, 2), triangle);
-    }
-
     [Theory]
     [InlineData(0, 16)]
     [InlineData(16, 0)]
@@ -77,22 +60,5 @@ public sealed class Arena2SourceTransformTests
     public void RejectsMalformedTextureDimensions(int width, int height)
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => Arena2SourceTransform.ToTextureUv(default, width, height));
-    }
-
-    [Theory]
-    [InlineData(-1, 1, 2)]
-    [InlineData(0, 0, 2)]
-    public void RejectsMalformedTriangleIndices(int first, int second, int third)
-    {
-        Assert.ThrowsAny<ArgumentException>(() => Arena2SourceTransform.ReverseWinding(first, second, third));
-    }
-
-    [Fact]
-    public void RejectsNonFiniteLocalBlockPoint()
-    {
-        MapsDungeonBlock block = new("S0000007.RDB", 0, 0, false);
-        Arena2ImportPoint nonFinite = new(float.NaN, 0F, 0F);
-
-        Assert.Throws<ArgumentOutOfRangeException>(() => Arena2SourceTransform.PlaceInBlock(nonFinite, block));
     }
 }

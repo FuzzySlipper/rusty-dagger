@@ -17,13 +17,11 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// The composed catalog over the shipped content: the authored packs by their ids and every other place assembled.
+/// The composed catalog over the shipped content: every place assembled from its blocks when first needed.
 /// Sessions over it start a new game in Privateer's Hold and reach the rest of the world from there.
 /// </summary>
 internal sealed class AssembledWorld
 {
-    internal static readonly DaggerfallSiteId PrivateersHold = new(17, 179);
-
     internal DaggerfallDefinitions Definitions { get; }
     internal DaggerfallSiteProfile Source { get; }
     internal DaggerfallSiteProfiles Profiles { get; }
@@ -33,8 +31,6 @@ internal sealed class AssembledWorld
     internal DaggerfallBlocksSnapshot Blocks { get; }
     /// <summary>The per-block publication every assembled profile is built from.</summary>
     internal DaggerfallWorldBlocks WorldBlocks { get; }
-    /// <summary>The profiles the shipped bundle's site packs publish; this world reads only Privateer's Hold's closure and assembles the rest.</summary>
-    internal IReadOnlySet<DaggerfallWorldProfileKey> PublishedKeys { get; }
     /// <summary>The shipped bundle's content packs, the quest corpora among them.</summary>
     internal IReadOnlyList<ContentPack> ContentPacks { get; }
 
@@ -43,34 +39,27 @@ internal sealed class AssembledWorld
     {
         Definitions = definitions ?? TestPayload.Definitions;
         string root = TestData.RepositoryRoot;
-        Source = ReadInputs(root);
         ProductContent full = FullContent(root);
         DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(TestSessions.Data(full));
         Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(TestSessions.Data(full), media, Definitions));
         Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(TestSessions.Data(full), media));
         WorldBlocks = new DaggerfallWorldBlocks(TestSessions.Data(full));
         DaggerfallLocationAssembly assembly = new(Definitions, WorldBlocks, () => product.Value, () => meshes.Value);
-        Profiles = DaggerfallSiteProfiles.Resolve([DaggerfallAuthoredSite.Of(Source)], assembly, null);
+        Profiles = DaggerfallSiteProfiles.Resolve(assembly, null);
+        Source = Profiles.Require(DaggerfallWorldProfileIds.Dungeon(PrivateersHold));
         ResolvedGameComposition composition = TestSessions.Resolve(full, new GameBundleId("daggerfall.classic")).RequireComposition();
         Identity = composition.Identity;
         ContentPacks = [.. composition.ContentPacks];
-        PublishedKeys = composition.ContentPacks.Where(pack => pack.Role == DaggerfallRuleset.SiteRole)
-            .Select(pack => DaggerfallSiteContent.ReadHeader(pack.Payload, pack.Id.Value))
-            .Where(header => header.VariantName is null).Select(header => header.Key).ToHashSet();
         Sky = DaggerfallSkyMedia.Read(TestSessions.Data(full));
         Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.blocks.json")));
     }
 
-    /// <summary>Whether no site pack of the shipped bundle publishes any profile of this location.</summary>
-    internal bool IsUnpublished(DaggerfallSiteId site) => !PublishedKeys.Any(key => key.Site == site);
-
-    /// <summary>The location of Privateer's Hold's region nearest it that no pack publishes and the catalog places.</summary>
-    internal DaggerfallSiteRecord Unpublished(Func<DaggerfallSiteRecord, bool> wanted)
+    /// <summary>The location of Privateer's Hold's region nearest it, other than the Hold, that the catalog places.</summary>
+    internal DaggerfallSiteRecord Nearby(Func<DaggerfallSiteRecord, bool> wanted)
     {
         DaggerfallSiteRecord origin = Definitions.Locations.Records.Single(record => record.Id == PrivateersHold);
         return Definitions.Locations.Records
             .Where(record => record.Region == PrivateersHold.Region && record.Id != PrivateersHold && record.Climate is not null)
-            .Where(record => IsUnpublished(record.Id))
             .OrderBy(record => Math.Abs(record.MapPixelX - origin.MapPixelX) + Math.Abs(record.MapPixelY - origin.MapPixelY))
             .First(record => Profiles.Contains(DaggerfallWorldProfileIds.Exterior(record.Id)) && wanted(record));
     }
@@ -140,7 +129,7 @@ internal sealed class AssembledWorldRun : IDisposable
         _world = world;
         List<string> releases = [];
         ContentFake content = Content(world, destination, building, releases);
-        Spatial = SpatialFake.Create(world.Source.SpatialArtifact.Sha256, releases);
+        Spatial = SpatialFake.Create(world.Source.Geometry.Spatial[0].Sha256, releases);
         // The player stays where a test places them, so a door is used from where they stood.
         Spatial.KeepPosition = true;
         Appearance = new AppearanceFake(releases);
@@ -250,7 +239,7 @@ internal sealed class AssembledWorldRun : IDisposable
     /// </summary>
     private static IEnumerable<DaggerfallSiteProfile> Profiles(AssembledWorld world, DaggerfallSiteId destination, DaggerfallSiteBuildingId? building)
     {
-        foreach (DaggerfallSiteId site in new[] { AssembledWorld.PrivateersHold, destination }.Distinct())
+        foreach (DaggerfallSiteId site in new[] { PrivateersHold, destination }.Distinct())
         {
             foreach (DaggerfallSiteProfile exterior in world.NearbyExteriors(site)) yield return exterior;
             if (world.Profiles.TryGet(DaggerfallWorldProfileIds.Dungeon(site), out DaggerfallSiteProfile dungeon)) yield return dungeon;

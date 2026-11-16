@@ -135,22 +135,10 @@ public sealed record NormalizedMediaDescriptor(
     float? FramesPerSecond,
     bool? Loop,
     IReadOnlyList<int>? Sequence,
-    IReadOnlyList<NormalizedAtlasFrame>? GeneratedFrames = null)
-{
-    public NormalizedArtifactDescriptor ToArtifactDescriptor() => new(
-        $"artifact/{Id}",
-        RelativePath,
-        ContentDigest,
-        ByteLength,
-        []);
-}
+    IReadOnlyList<NormalizedAtlasFrame>? GeneratedFrames = null);
 
 /// <summary>Stable closure of normalized media descriptors, ordered solely by logical ID.</summary>
-public sealed record NormalizedMediaManifest(IReadOnlyList<NormalizedMediaDescriptor> Resources)
-{
-    public IReadOnlyList<NormalizedArtifactDescriptor> ToArtifactDescriptors() =>
-        Resources.Select(resource => resource.ToArtifactDescriptor()).ToArray();
-}
+public sealed record NormalizedMediaManifest(IReadOnlyList<NormalizedMediaDescriptor> Resources);
 
 public static class MediaManifestNormalizer
 {

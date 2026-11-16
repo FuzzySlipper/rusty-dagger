@@ -1242,7 +1242,7 @@ test('the Dagger developer panel pauses and steps held time, flies the observer 
     'playtest.observe': JSON.stringify({ player: { viewpoint: { x: 1, y: 2, z: 3 }, yawDegrees: 0, pitchDegrees: 0 } }),
     'engine.inspect.overlay': JSON.stringify({ on: true, collision: { radius: 8 }, sets: [] }),
     'engine.inspect.collision': JSON.stringify({ lines: 177, omitted: 0, colliders: [
-      { kind: 'static-mesh', content: 'worldrpg/imports/charing/exterior/spatial/charing/exterior/collision-navigation.rspatial', instance: 1, lines: 177 },
+      { kind: 'static-mesh', content: 'worldrpg/imports/world-blocks/rmb/resial05-rmb/exterior.rspatial', instance: 1, lines: 177 },
       { kind: 'character', lines: 12 }] }),
   };
   const root = document.getElementById('root');

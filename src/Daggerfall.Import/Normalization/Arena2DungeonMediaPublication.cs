@@ -153,19 +153,16 @@ public sealed record Arena2DungeonMediaQuotas(
     }
 }
 
-/// <summary>Pure request for normalized dungeon media generation.</summary>
-/// <param name="Dungeon">
-/// The normalized world whose meshes, billboards and actors select media, or null for the product-wide
-/// publication, whose selection is stated entirely by the runtime resource lists.
-/// </param>
+/// <summary>
+/// Pure request for the product-wide world media's dungeon media: its selection is stated entirely by the runtime
+/// resource lists.
+/// </summary>
 public sealed record Arena2DungeonMediaRequest(
-    NormalizedImportDocument? Dungeon,
     Arena2DungeonMediaSourceSet Sources,
     Arena2DungeonMediaQuotas Quotas)
 {
     /// <summary>
-    /// Material textures selected by a climate or dungeon texture table rather than by this document's
-    /// meshes, as <c>texture/&lt;archive&gt;-&lt;record&gt;</c> handles. The product-wide publication
+    /// Material textures selected by a climate or dungeon texture table rather than by a mesh, as <c>texture/&lt;archive&gt;-&lt;record&gt;</c> handles. The product-wide publication
     /// names every usable record so any block's remapped material resolves to one published texture.
     /// </summary>
     public IReadOnlyList<string> RuntimeMaterialResources { get; init; } = [];
@@ -197,14 +194,10 @@ public sealed record Arena2DungeonMediaRequest(
     public TextureLeafInventory? TextureLeaves { get; init; }
     public string? TextureLeafConsumer { get; init; }
 
-    public static Arena2DungeonMediaRequest Create(NormalizedImportDocument dungeon, Arena2DungeonMediaSourceSet sources) =>
-        new(dungeon, sources, Arena2DungeonMediaQuotas.Default);
-
     public void Validate()
     {
         ArgumentNullException.ThrowIfNull(Sources);
         ArgumentNullException.ThrowIfNull(Quotas);
-        Dungeon?.Validate();
         Quotas.Validate();
         ArgumentNullException.ThrowIfNull(RuntimeMaterialResources);
         if (RuntimeMaterialResources.Any(string.IsNullOrWhiteSpace)
@@ -558,7 +551,7 @@ public sealed record Arena2DungeonMediaPublication(
         EnforceSourceQuotas(request.Sources, request.Quotas);
 
         Arena2Palette palette = request.Sources.DecodePalette();
-        Selection selection = Select(request.Dungeon, request.RuntimeMaterialResources, request.RuntimeActorResources, request.RuntimeBillboardResources, request.RuntimeTerrainResources);
+        Selection selection = Select(request.RuntimeMaterialResources, request.RuntimeActorResources, request.RuntimeBillboardResources, request.RuntimeTerrainResources);
         EnforceExactTextureClosure(request.Sources, selection.RequiredArchives);
         if (request.TextureLeaves is not null)
         {
@@ -1063,41 +1056,19 @@ public sealed record Arena2DungeonMediaPublication(
     }
 
     private static Selection Select(
-        NormalizedImportDocument? document,
         IReadOnlyList<string> runtimeMaterialResources,
         IReadOnlyList<string> runtimeActorResources,
         IReadOnlyList<string> runtimeBillboardResources,
         IReadOnlyList<string> runtimeTerrainResources)
     {
-        Dictionary<string, NormalizedResourceCatalogEntry> resources = (document?.Resources ?? []).ToDictionary(resource => resource.Id, StringComparer.Ordinal);
         List<MaterialSelection> materials = [];
-        foreach (string materialId in (document?.Meshes ?? []).SelectMany(mesh => mesh.MaterialGroups).Select(group => group.MaterialResourceId).Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal))
-        {
-            NormalizedResourceCatalogEntry material = resources[materialId];
-            string textureId = material.Dependencies.SingleOrDefault(dependency => resources[dependency].Kind == NormalizedResourceKind.Texture)
-                ?? throw new InvalidOperationException($"Dungeon material '{materialId}' must depend on exactly one normalized texture resource.");
-            if (material.Dependencies.Count(dependency => resources[dependency].Kind == NormalizedResourceKind.Texture) != 1)
-            {
-                throw new InvalidOperationException($"Dungeon material '{materialId}' must depend on exactly one normalized texture resource.");
-            }
-
-            (ushort archive, ushort record) = ParseTextureResourceId(textureId, "texture/");
-            materials.Add(new(materialId, textureId, archive, record));
-        }
-
-        // A runtime material keeps the material resource name a document gives the same texture, so the
-        // product-wide descriptor and a site's slot binding name one artifact.
-        HashSet<string> documentTextures = materials.Select(material => material.TextureResourceId).ToHashSet(StringComparer.Ordinal);
         foreach (string textureId in runtimeMaterialResources.Distinct(StringComparer.Ordinal).OrderBy(value => value, StringComparer.Ordinal))
         {
-            if (!documentTextures.Add(textureId)) continue;
             (ushort archive, ushort record) = ParseTextureResourceId(textureId, "texture/");
             materials.Add(new($"material/texture-{archive}-{record}", textureId, archive, record));
         }
 
-        List<BillboardSelection> billboards = (document?.World.Billboards ?? [])
-            .Select(billboard => billboard.SpriteResourceId)
-            .Concat(runtimeBillboardResources)
+        List<BillboardSelection> billboards = runtimeBillboardResources
             .Distinct(StringComparer.Ordinal)
             .OrderBy(value => value, StringComparer.Ordinal)
             .Select(id =>
@@ -1115,9 +1086,7 @@ public sealed record Arena2DungeonMediaPublication(
                 return new TerrainTextureSelection(id, archive, record);
             })
             .ToList();
-        List<ActorSelection> actors = (document?.World.Actors ?? [])
-            .Select(actor => actor.ActorResourceId)
-            .Concat(runtimeActorResources)
+        List<ActorSelection> actors = runtimeActorResources
             .Distinct(StringComparer.Ordinal)
             .OrderBy(value => value, StringComparer.Ordinal)
             .Select(actorId =>

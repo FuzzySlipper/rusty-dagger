@@ -455,7 +455,7 @@ internal sealed class DaggerfallSiteCrossing : IDaggerfallExteriorSite
                 sourceProjectionSuspended = true;
             }
             else source.Lighting.Suspend();
-            // A profile can already have its authored closure detached while a caller still holds a
+            // A profile can already have its location detached while a caller still holds a
             // live spawned actor in the one canonical roster.  Capture and retire that actor at the
             // same profile boundary; otherwise the durable entity remains materialized while the
             // source site is inactive and can be mistaken for a destination actor on re-entry.

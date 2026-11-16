@@ -29,7 +29,7 @@ public sealed class DaggerfallMusicSessionTests
         List<string> releases = [];
         ContentFake contentService = new(releases);
         PopulateContent(contentService, inputs);
-        EngineContextFake engine = EngineContextFake.Create(contentService, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(contentService, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity) { Music = bundle });
 
@@ -89,14 +89,14 @@ public sealed class DaggerfallMusicSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent content = FullContent(root);
         DaggerfallSiteProfile inputs = ReadInputs(root);
-        DaggerfallSiteProfile castle = ReadProfile(root, content, definitions, "daggerfall.castle-necromoghan");
+        DaggerfallSiteProfile castle = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         DaggerfallMusicBundle bundle = Score(content);
         List<string> releases = [];
         ContentFake contentService = new(releases);
         PopulateContent(contentService, inputs);
         // A transition resolves the destination's own spatial content, so the fake carries both sites.
         PopulateContent(contentService, castle);
-        EngineContextFake engine = EngineContextFake.Create(contentService, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(contentService, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity) { Music = bundle });
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([inputs, castle]));
@@ -136,11 +136,11 @@ public sealed class DaggerfallMusicSessionTests
         DaggerfallSiteProfile inputs = ReadInputs(root);
         // A product without a music container is a supported state, not a failure: the composition admits no
         // score and the ordinary session runs silent rather than with a substituted track.
-        Assert.Null(DaggerfallMusicBundle.For(TestSessions.Resolve(FullContent(root, "worldrpg/imports/privateers-hold"), new GameBundleId("daggerfall.classic")).RequireComposition()));
+        Assert.Null(DaggerfallMusicBundle.For(TestSessions.Resolve(FullContent(root, DaggerfallWorldBlocks.Root), new GameBundleId("daggerfall.classic")).RequireComposition()));
         List<string> releases = [];
         ContentFake contentService = new(releases);
         PopulateContent(contentService, inputs);
-        EngineContextFake engine = EngineContextFake.Create(contentService, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(contentService, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity));
 
@@ -153,18 +153,18 @@ public sealed class DaggerfallMusicSessionTests
 
     [Theory]
     [InlineData("tavern", DaggerfallMusicContext.Tavern, "song_square_2")]
-    [InlineData("daggerfall.charing-interior-1-1-0", DaggerfallMusicContext.Interior, "song_23")]
-    [InlineData("daggerfall.charing-interior-3-1-13", DaggerfallMusicContext.TempleNeutral, "song_gneut")]
-    [InlineData("daggerfall.charing-interior-3-4-0", DaggerfallMusicContext.MagesGuild, "song_magic_2")]
-    [InlineData("daggerfall.charing-interior-2-1-0", DaggerfallMusicContext.Shop, "song_gshop")]
+    [InlineData("17/4/interior-1-1-0", DaggerfallMusicContext.Interior, "song_23")]
+    [InlineData("17/4/interior-3-1-13", DaggerfallMusicContext.TempleNeutral, "song_gneut")]
+    [InlineData("17/4/interior-3-4-0", DaggerfallMusicContext.MagesGuild, "song_magic_2")]
+    [InlineData("17/4/interior-2-1-0", DaggerfallMusicContext.Shop, "song_gshop")]
     public void Entering_a_source_building_selects_its_music(string descriptor, DaggerfallMusicContext context, string track)
     {
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         var content = FullContent(root);
-        var exterior = ReadProfile(root, content, definitions, "daggerfall.charing-exterior");
+        var exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         var interior = descriptor == "tavern" ? AssembleTavern(content, definitions)
-            : ReadProfile(root, content, definitions, descriptor);
+            : Assembled(descriptor);
         var fixture = MusicEngine(exterior, interior);
         using var session = DaggerfallSession.StartNew(fixture.Context,
             new(definitions, exterior, DaggerfallTuning.Defaults) {
@@ -190,7 +190,7 @@ public sealed class DaggerfallMusicSessionTests
     {
         string root = TestData.RepositoryRoot;
         var content = FullContent(root);
-        var inputs = ReadProfile(root, content, TestPayload.Definitions, "daggerfall.charing-exterior");
+        var inputs = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         var fixture = MusicEngine(inputs);
         var tuning = MusicTuning(root, alternate) with { Weather = DaggerfallWeatherTuning.Classic with {
             Odds = Enumerable.Range(0,24).Select(_ => new[]{0,0,0,0,100,0,0}).ToArray() } };
@@ -228,14 +228,14 @@ public sealed class DaggerfallMusicSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         var perception = PerceptionFake.Create();
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 1d, 1d, PerceptionPairKind.Visible, 1d));
         var appearance = new AppearanceFake(releases);
         var engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using var session = DaggerfallSession.StartNew(engine.Context,
             new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Music = bundle });
-        session.Touches(2000);
+        session.Touches(HoldActor(1));
         session.Update(new ProductUpdate(new ProductUpdateFacts(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
             AttackTap));
         ulong step = 2;
@@ -270,7 +270,7 @@ public sealed class DaggerfallMusicSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         foreach (var profile in profiles) { PopulateContent(content, profile); PopulateTerrainContent(content, profile); }
-        return EngineContextFake.Create(content, SpatialFake.Create(profiles[0].SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        return EngineContextFake.Create(content, SpatialFake.Create(profiles[0].Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
     }
 
     private static DaggerfallTuning MusicTuning(string root, bool alternate)

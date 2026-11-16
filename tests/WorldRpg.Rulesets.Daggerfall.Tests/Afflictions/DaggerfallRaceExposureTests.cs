@@ -104,7 +104,7 @@ public sealed class DaggerfallRaceExposureTests
         var profile = ReadInputs(TestData.RepositoryRoot);
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, profile);
-        var engine = EngineContextFake.Create(content, SpatialFake.Create(profile.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        var engine = EngineContextFake.Create(content, SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
         var composition = new DaggerfallSessionComposition(definitions, profile, DaggerfallTuning.Defaults);
         return save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);
     }

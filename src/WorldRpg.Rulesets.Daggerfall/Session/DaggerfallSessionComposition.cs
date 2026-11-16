@@ -14,7 +14,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// the ruleset and a test build the same graph through the same path.
 /// </summary>
 /// <param name="Definitions">The admitted base definitions.</param>
-/// <param name="StartSite">Where a new game starts, and a restore's active site when no catalog is admitted.</param>
+/// <param name="StartSite">The profile a new game starts in, and a restore's active site when no catalog is admitted.</param>
 /// <param name="Tuning">The admitted tuning profile.</param>
 /// <param name="Identity">The resolved composition's identity, which the HUD art publication names.</param>
 internal sealed record DaggerfallSessionComposition(
@@ -25,6 +25,9 @@ internal sealed record DaggerfallSessionComposition(
 {
     /// <summary>The admitted site catalog; null composes a session over the start site alone.</summary>
     internal DaggerfallSiteProfiles? Profiles { get; init; }
+
+    /// <summary>Where in the start site a new game places the player (the new-game definition's start); null places them at its start.</summary>
+    internal DaggerfallSiteAnchor? StartPose { get; init; }
 
     /// <summary>Each admitted site's audio bundle.</summary>
     internal DaggerfallSiteAudioBundles? Audio { get; init; }

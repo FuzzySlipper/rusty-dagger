@@ -221,7 +221,7 @@ public sealed class DaggerfallHeldArtTests
     [Fact]
     public void A_composition_without_the_first_person_container_draws_the_sprites()
     {
-        ProductContent content = TestSessions.FullContent(TestData.RepositoryRoot, "worldrpg/imports/privateers-hold");
+        ProductContent content = TestSessions.FullContent(TestData.RepositoryRoot, DaggerfallWorldBlocks.Root);
         ResolvedGameComposition composition = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();
 
         Assert.Null(DaggerfallHeldArt.For(composition, DaggerfallAttackTuning.Default.Classes.Keys));

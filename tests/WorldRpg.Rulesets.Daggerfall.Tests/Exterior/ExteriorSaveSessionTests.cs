@@ -22,7 +22,7 @@ public sealed class ExteriorSaveSessionTests
     public void A_save_in_a_town_street_restores_to_the_same_place_with_the_same_cells_resident()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallSiteRecord city = world.Unpublished(record => record.Kind == DaggerfallSiteKind.TownCity && record.Exterior is not null);
+        DaggerfallSiteRecord city = world.Nearby(record => record.Kind == DaggerfallSiteKind.TownCity && record.Exterior is not null);
         DaggerfallWorldProfileKey town = DaggerfallWorldProfileIds.Exterior(city.Id);
         using AssembledWorldRun run = world.Start(city.Id);
         run.Travel(city);

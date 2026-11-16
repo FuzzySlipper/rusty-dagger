@@ -252,7 +252,7 @@ public sealed class LawSessionTests
         Assert.True(s.State.Loans.Issue(region, 1, 100, loanStart,
             Banking.DaggerfallLoanSettlementAdapter.ForBank(s.State.Bank, s.State.Currency)).Approved);
         s.State.Progression.AdvanceTo(0, 2);
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("court-disease", "test-contact", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("court-disease", "test-contact", HoldActor(1), 1, [DaggerfallClassicDisease.BrainFever])));
         var disease = Assert.Single(s.State.Effects.Active, effect => effect.Context.Instance.Value == "court-disease");
         string diseaseBefore = disease.State.GetRawText();
         var stolen = s.State.Inventory.Read().UniqueItems.First();
@@ -353,12 +353,12 @@ public sealed class LawSessionTests
         {
             this.acquit = acquit;
             var content = exteriorCourt ? FullContent(TestData.RepositoryRoot) : null;
-            var source = exteriorCourt ? ReadProfile(TestData.RepositoryRoot, content!, TestPayload.Definitions, "daggerfall.charing-interior-1-1-0") : ReadInputs(TestData.RepositoryRoot);
+            var source = exteriorCourt ? Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0))) : ReadInputs(TestData.RepositoryRoot);
             Inputs = exteriorCourt ? source : SameContentAt(source, source.Site!.Value, DaggerfallWorldProfileKind.Interior, "law-room");
             // Other profiles share media, but authored actor identities belong to one profile only.
             var empty = new ProjectFacts(source.Project.PlayerPosition, new Dictionary<long, AuthoredActor>());
             Other = SameContentAt(source, source.Site!.Value, DaggerfallWorldProfileKind.Interior, "law-other", empty);
-            Outside = exteriorCourt ? ReadProfile(TestData.RepositoryRoot, content!, TestPayload.Definitions, "daggerfall.charing-exterior") : null;
+            Outside = exteriorCourt ? Assembled(DaggerfallWorldProfileIds.Exterior(Charing)) : null;
             var settings = new DaggerfallSpellEffectDefinition("touch", 4, 0, 0, 0, 1, 100, 0, 1, 10, 10, 1, 1, 1);
             var definitions = TestPayload.Definitions.ForSession([new DaggerfallSpellDefinition("custom-spell.1", -1, false, "Legal touch", 4, 1, 0, 0, multipleEffects ? [settings, settings with {Key = "second"}] : [settings]) {IsPlayerCreated = true, IsCustom = true, SpellsForSale = false}], DaggerfallSpellConstruction.ValidateDefinition);
             var tuning = DaggerfallTuning.Defaults with {Law = new(0, 0, 2, 5, 12.8f, 51.2f, 3.2)};
@@ -383,8 +383,8 @@ public sealed class LawSessionTests
         }
         internal void Charge(bool witnessed = true, string operation = "charge", DaggerfallCrimeKind crime = DaggerfallCrimeKind.Theft)
         {
-            long guard = Session.State.Actors.All.FirstOrDefault(actor => actor.DurableId != 2000 && actor.DurableId != 2001)?.DurableId ?? 2000;
-            Session.State.Crime.RecordIncident(new(operation, crime, DaggerfallCrimeStage.Completed, 1, 2000,
+            long guard = Session.State.Actors.All.FirstOrDefault(actor => actor.DurableId != HoldActor(1) && actor.DurableId != HoldActor(2))?.DurableId ?? HoldActor(1);
+            Session.State.Crime.RecordIncident(new(operation, crime, DaggerfallCrimeStage.Completed, 1, HoldActor(1),
                 Session.Site.Region!.Value, 0, DaggerfallCrimeTargetKind.Other,
                 witnessed ? new(DaggerfallCrimeWitnessQuery.CompletedWithWitnesses, [guard]) : new(DaggerfallCrimeWitnessQuery.CompletedWithoutWitnesses, []), DaggerfallCrimeGuildCredit.None));
         }
@@ -393,7 +393,7 @@ public sealed class LawSessionTests
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, Inputs); PopulateContent(content, Other);
             if (Outside is not null) PopulateContent(content, Outside);
-            Spatial = SpatialFake.Create(Inputs.SpatialArtifact.Sha256, releases); Spatial.KeepPosition = true;
+            Spatial = SpatialFake.Create(Inputs.Geometry.Spatial[0].Sha256, releases); Spatial.KeepPosition = true;
             var perception = PerceptionFake.Create();
             perception.Responder = request => Receipt(request.Observers.ToArray().SelectMany(observer => request.Targets.ToArray()
                 .Select(target => new PerceptionPair(observer.Entity, target.Entity, 1, 1, PerceptionPairKind.Visible, 1))).ToArray());

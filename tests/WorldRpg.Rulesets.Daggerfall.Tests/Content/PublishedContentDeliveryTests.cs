@@ -82,8 +82,8 @@ public sealed class PublishedContentDeliveryTests
                 // The travel atlas is its own generated group, indexed by its own inventory.
                 && !path.StartsWith("worldrpg/media/atlas", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
-        // The published group carries every classic descriptor except audio: each site closure publishes
-        // the clips it maps and opens them through its own audio bundle, so the group carries neither WAV
+        // The published group carries every classic descriptor except audio: the world media publication carries
+        // the clips and a location opens them through its audio bundle, so the group carries neither WAV
         // bodies nor a catalog of them. Product-wide sky resources have their own manifest and group below.
         Assert.DoesNotContain(GeneratedContentFiles(content), path => path.StartsWith("worldrpg/media/audio/", StringComparison.Ordinal));
         // Includes one TEXTURE.205 inventory icon for each of the 20 classic potion recipes, the gold piece's
@@ -511,14 +511,8 @@ public sealed class PublishedContentDeliveryTests
         ProductContent content = AdmittedContent();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
             content.ReadBytes("worldrpg/packs/daggerfall.base/payload.json"), content.ReadBytes("worldrpg/payloads/daggerfall.imported.json"), TestSessions.Data(content));
-        DaggerfallSiteProfile inputs = DaggerfallSiteContent.Read(
-            TestSessions.Data(content),
-            content.ReadBytes("worldrpg/packs/daggerfall.privateers-hold/payload.json"),
-            definitions);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(
-            TestSessions.Data(content),
-            content.ReadBytes("worldrpg/packs/daggerfall.castle-necromoghan/payload.json"),
-            definitions);
+        DaggerfallSiteProfile inputs = TestSessions.ReadInputs(TestData.RepositoryRoot);
+        DaggerfallSiteProfile castle = TestSessions.Assembled(DaggerfallWorldProfileIds.Dungeon(TestSessions.CastleNecromoghan));
 
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(TestSessions.Data(content), inputs.ClassicPresentation);
         DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(TestSessions.Data(content), castle.ClassicPresentation);
@@ -539,9 +533,7 @@ public sealed class PublishedContentDeliveryTests
     public void The_shared_classic_sidecar_binds_its_audio_cues_to_archive_clips_the_world_media_carries()
     {
         ProductContent content = AdmittedContent();
-        // A site closure carries no classic sidecar of its own unless an overlay changed it, so this is
-        // the record every site's session reads its clips from.
-        Assert.False(TestContentFiles.Exists(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/imports/privateers-hold/media/classic/manifest.json")));
+        // The world media publication's classic sidecar is the record every location's session reads its clips from.
         JsonElement manifest = JsonDocument.Parse(content.ReadBytes("worldrpg/imports/shared/media/classic/manifest.json").ToArray()).RootElement;
 
         // Each cue states the archive ordinal it was cut from and names a descriptor the world media

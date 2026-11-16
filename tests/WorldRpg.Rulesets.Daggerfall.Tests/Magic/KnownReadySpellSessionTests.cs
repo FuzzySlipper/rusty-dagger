@@ -165,7 +165,7 @@ public sealed class KnownReadySpellSessionTests
         private EngineContextFake CreateEngine()
         {
             List<string> releases=[];ContentFake content=new(releases);PopulateContent(content,composition.StartSite);
-            return EngineContextFake.Create(content,SpatialFake.Create(composition.StartSite.SpatialArtifact.Sha256,releases).Service,
+            return EngineContextFake.Create(content,SpatialFake.Create(composition.StartSite.Geometry.Spatial[0].Sha256,releases).Service,
                 new AppearanceFake(releases),PerceptionFake.Create().Service,random:RandomMaximum.Create());
         }
         internal void Submit(params object[] actions)

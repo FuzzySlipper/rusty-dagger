@@ -12,15 +12,6 @@ public sealed record NormalizedQuestMarker(string Id, NormalizedQuestMarkerKind 
     public int SourceOrdinal { get; init; }
     public int BlockX { get; init; }
     public int BlockZ { get; init; }
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
-        if (!Enum.IsDefined(Kind)) throw new InvalidOperationException($"Quest marker '{Id}' has an invalid kind.");
-        Position.Validate(nameof(Position));
-        NormalizedImportDocument.RequireLogicalId(SourceKey, nameof(SourceKey));
-        if (BuildingIndex is < 0) throw new InvalidOperationException($"Quest marker '{Id}' has an invalid building ordinal.");
-        if (SourceOrdinal < 0) throw new InvalidOperationException($"Quest marker '{Id}' has a negative source ordinal.");
-    }
 }
 
 internal static class QuestMarkerNormalization

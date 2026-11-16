@@ -20,7 +20,7 @@ public sealed class BundleChoiceSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
         TestDaggerfallRuleset ruleset = new();
@@ -67,7 +67,7 @@ public sealed class BundleChoiceSessionTests
             List<string> releases = [];
             ContentFake content = new(releases);
             PopulateContent(content, inputs);
-            return EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases), persistence: persistence);
+            return EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases), persistence: persistence);
         }
 
         EngineContextFake first = Engine();

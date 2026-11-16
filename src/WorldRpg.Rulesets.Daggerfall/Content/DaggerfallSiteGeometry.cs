@@ -26,12 +26,11 @@ internal sealed record DaggerfallSiteSpatialPart(string Id, string Path, Content
 
 /// <summary>
 /// One static mesh a profile draws: a content artifact posed in the profile's frame, its mesh material
-/// slots bound to the profile's material slots. A published closure's combined mesh carries no bindings
-/// of its own: it is drawn with every profile material at that material's own slot.
+/// slots bound to the profile's material slots.
 /// </summary>
-internal sealed record DaggerfallSiteMesh(string Path, ContentSha256 Sha256, Transform Pose, IReadOnlyList<DaggerfallMeshMaterialBinding>? Materials)
+internal sealed record DaggerfallSiteMesh(string Path, ContentSha256 Sha256, Transform Pose, IReadOnlyList<DaggerfallMeshMaterialBinding> Materials)
 {
-    /// <summary>The ARCH3D record id of the model an assembled block places here; a closure's combined mesh has none.</summary>
+    /// <summary>The ARCH3D record id of the model a block places here.</summary>
     internal string? ModelId { get; init; }
 
     internal DaggerfallSiteMesh Validate()
@@ -40,7 +39,8 @@ internal sealed record DaggerfallSiteMesh(string Path, ContentSha256 Sha256, Tra
         if (!float.IsFinite(Pose.Translation.X) || !float.IsFinite(Pose.Translation.Y) || !float.IsFinite(Pose.Translation.Z)
             || !float.IsFinite(Pose.Rotation.X) || !float.IsFinite(Pose.Rotation.Y) || !float.IsFinite(Pose.Rotation.Z) || !float.IsFinite(Pose.Rotation.W))
             throw new ArgumentOutOfRangeException(nameof(Pose), "A site mesh pose must be finite.");
-        if (Materials is not null && Materials.Select(binding => binding.MeshSlot).Distinct().Count() != Materials.Count)
+        ArgumentNullException.ThrowIfNull(Materials);
+        if (Materials.Select(binding => binding.MeshSlot).Distinct().Count() != Materials.Count)
             throw new ArgumentException("A site mesh binds each of its material slots once.", nameof(Materials));
         return this;
     }
@@ -58,16 +58,12 @@ internal sealed record DaggerfallSiteRemodel(string Path, ContentSha256 Sha256, 
 internal sealed record DaggerfallRemodelTexture(uint MeshSlot, string Path, ContentSha256 Sha256, bool Mask);
 
 /// <summary>
-/// What a profile places in the world: its collision and navigation artifacts and the static meshes it
-/// draws. A published site closure is one artifact and one combined mesh; a location assembled from its
-/// blocks places one artifact per block and draws each block's models from the product-wide meshes, with
-/// the remodel of each model the art pack has one for.
+/// What a profile places in the world: one collision and navigation artifact per block, each beside its
+/// neighbours, and each block's models drawn from the product-wide meshes, with the remodel of each model the
+/// art pack has one for.
 /// </summary>
 internal sealed class DaggerfallSiteGeometry
 {
-    private readonly SpatialContentArtifact? _closureSpatial;
-    private readonly ContentArtifact? _closureMesh;
-
     internal DaggerfallSiteGeometry(ulong navigationGridId, IEnumerable<DaggerfallSiteSpatialPart> spatial, IEnumerable<DaggerfallSiteMesh> meshes,
         Func<IDisposable>? spatialSource = null)
     {
@@ -82,28 +78,12 @@ internal sealed class DaggerfallSiteGeometry
         SpatialSource = spatialSource;
     }
 
-    private DaggerfallSiteGeometry(SpatialContentArtifact spatial, ContentArtifact mesh)
-        : this(spatial.NavigationGridId, [new DaggerfallSiteSpatialPart("closure", spatial.Path, spatial.Sha256)],
-            [new DaggerfallSiteMesh(mesh.Path, mesh.Sha256, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), null)])
-    {
-        _closureSpatial = spatial;
-        _closureMesh = mesh;
-    }
-
-    /// <summary>A published site closure: one collision/navigation artifact and one combined mesh drawn with every material slot.</summary>
-    internal static DaggerfallSiteGeometry Closure(SpatialContentArtifact spatial, ContentArtifact mesh)
-    {
-        ArgumentNullException.ThrowIfNull(spatial);
-        ArgumentNullException.ThrowIfNull(mesh);
-        return new(spatial, mesh);
-    }
-
     /// <summary>The navigation grid every part shares.</summary>
     internal ulong NavigationGridId { get; }
 
     /// <summary>
     /// The remodels this profile draws, by the ARCH3D record id of the model each replaces: every remodelled model its
-    /// meshes and action models place. A closure's combined mesh names no model, so it has none.
+    /// meshes and action models place.
     /// </summary>
     internal IReadOnlyDictionary<string, DaggerfallSiteRemodel> Remodels { get; init; } = new Dictionary<string, DaggerfallSiteRemodel>();
 
@@ -116,17 +96,6 @@ internal sealed class DaggerfallSiteGeometry
     /// content: the per-block publication's bundle stays open while the Engine reads the block artifacts.
     /// </summary>
     internal Func<IDisposable>? SpatialSource { get; }
-
-    /// <summary>Whether this is a published closure's single artifact and combined mesh.</summary>
-    internal bool IsClosure => _closureSpatial is not null;
-
-    /// <summary>The published closure's one collision/navigation artifact.</summary>
-    internal SpatialContentArtifact ClosureSpatial => _closureSpatial
-        ?? throw new InvalidOperationException("An assembled location places one artifact per block, not one closure artifact.");
-
-    /// <summary>The published closure's one combined static mesh.</summary>
-    internal ContentArtifact ClosureMesh => _closureMesh
-        ?? throw new InvalidOperationException("An assembled location draws its blocks' models, not one combined mesh.");
 
     /// <summary>
     /// A model mesh's pose from its placement's position and source Euler degrees. The donor turns

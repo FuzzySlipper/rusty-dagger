@@ -30,7 +30,7 @@ public sealed class DungeonInteractionSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         spatial.FloorHit = _ => default(SpatialHit) with
         {
@@ -63,7 +63,7 @@ public sealed class DungeonInteractionSessionTests
 
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
-        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), session.CaptureSave());
@@ -82,13 +82,12 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile castle = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, castle);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
@@ -130,13 +129,12 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile castle = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, castle);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
@@ -165,13 +163,12 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile castle = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, castle);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
@@ -195,13 +192,12 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile castle = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, castle);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
@@ -237,13 +233,12 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile castle = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, castle);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
@@ -294,13 +289,12 @@ public sealed class DungeonInteractionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile castle = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, castle);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
@@ -373,7 +367,7 @@ public sealed class DungeonInteractionSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
@@ -433,7 +427,7 @@ public sealed class DungeonInteractionSessionTests
         ContentFake restoredContent = new(releases);
         PopulateContent(restoredContent, inputs);
         EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent,
-            SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases),
+            SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases),
             random: RandomMaximum.Create());
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), DaggerfallSavePayload.Encode(saved));
@@ -457,7 +451,7 @@ public sealed class DungeonInteractionSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         perception.Responder = request => Receipt([.. request.Targets.Span.ToArray().Select(target =>
@@ -512,7 +506,7 @@ public sealed class DungeonInteractionSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         DaggerfallDungeonActionDefinition prompt = new("test/prompt", 100, (uint)DaggerfallDungeonTriggerFlag.Direct,
@@ -578,7 +572,7 @@ public sealed class DungeonInteractionSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
@@ -614,7 +608,7 @@ public sealed class DungeonInteractionSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         DaggerfallSavePayload saved;
         DaggerfallItemDefinition definition = definitions.RequireItem(new DaggerfallItemId("template-277"));

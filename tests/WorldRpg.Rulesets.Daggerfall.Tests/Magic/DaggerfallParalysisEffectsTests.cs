@@ -246,7 +246,7 @@ public sealed class DaggerfallParalysisEffectsTests
         private EngineContextFake Engine()
         {
             List<string> releases=[];ContentFake content=new(releases);PopulateContent(content,_composition.StartSite);
-            Spatial=SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256,releases);Spatial.KeepPosition=true;
+            Spatial=SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256,releases);Spatial.KeepPosition=true;
             return EngineContextFake.Create(content,Spatial.Service,new AppearanceFake(releases),random:RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload)=>DaggerfallSession.Restore(Engine().Context,_composition,payload);

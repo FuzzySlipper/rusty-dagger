@@ -328,7 +328,7 @@ public sealed class DaggerfallTravelSessionTests
     public void Actual_ship_fare_accepts_letters_and_reserves_inn_coins(bool inn)
     {
         using Fixture fixture = new(ocean: true);
-        fixture.AddLetter(2000);
+        fixture.AddLetter((ulong)HoldActor(1));
         DaggerfallTravelQuote initial = fixture.Preview(inn: inn, ship: true);
         Assert.True(initial.ShipCost > 0);
         if (inn)
@@ -601,7 +601,7 @@ public sealed class DaggerfallTravelSessionTests
             ContentFake content = new(releases);
             PopulateContent(content, Origin); PopulateContent(content, Destination);
             PopulateTerrainContent(content, Origin); PopulateTerrainContent(content, Destination);
-            Spatial = SpatialFake.Create(Origin.SpatialArtifact.Sha256, releases);
+            Spatial = SpatialFake.Create(Origin.Geometry.Spatial[0].Sha256, releases);
             var engine = Engine = EngineContextFake.Create(content, Spatial.Service,
                 new AppearanceFake(releases), random: encounter ? TravelEncounterRandom.CreateEncounter() : LodgingRandom.Create());
             DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)));

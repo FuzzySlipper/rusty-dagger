@@ -167,7 +167,7 @@ public sealed class DaggerfallAlterationEffectsTests
         {
             List<string> releases = [];
             ContentFake content = new(releases); PopulateContent(content, _composition.StartSite);
-            var spatial = SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256, releases);
+            var spatial = SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256, releases);
             return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service, random:RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(WorldRpg.Kit.RulesetSavePayload payload) => DaggerfallSession.Restore(Engine().Context, _composition, payload);

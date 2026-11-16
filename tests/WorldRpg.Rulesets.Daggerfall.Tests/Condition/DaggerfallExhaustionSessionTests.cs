@@ -114,7 +114,7 @@ public sealed class DaggerfallExhaustionSessionTests
     [Fact]
     public void A_gallop_beside_an_enemy_ends_at_a_trot_short_of_the_collapse()
     {
-        using AssembledWorldRun run = World.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = World.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
         run.Spatial.KeepPosition = false;
         Assert.True(session.Commands<IDeveloperPlayerCommands>().Ride("horse").Succeeded);
@@ -147,7 +147,7 @@ public sealed class DaggerfallExhaustionSessionTests
     [Fact]
     public void A_rider_who_collapses_stops_where_they_fall()
     {
-        using AssembledWorldRun run = World.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = World.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
         run.Spatial.KeepPosition = false;
         Assert.True(session.Commands<IDeveloperPlayerCommands>().Ride("horse").Succeeded);

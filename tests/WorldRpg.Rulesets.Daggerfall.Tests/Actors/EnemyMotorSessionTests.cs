@@ -19,16 +19,16 @@ public sealed class EnemyMotorSessionTests
     {
         using var fixture = new Fixture(strafe);
         var session = fixture.Session;
-        var actor = session.State.Actors.Get(2008);
+        var actor = session.State.Actors.Get(HoldActor(40));
         actor.ApplyPose(new(new(0, 0, -2), 0));
         session.State.PlayerControl.MoveTo(Vector3.Zero);
         session.State.PlayerControl.YawRadians = 0;
         session.State.WeaponDrawn = true;
         actor.Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(true);
-        fixture.Perception.Receipt = Receipt(new PerceptionPair(2008, 1, 2, 1, PerceptionPairKind.Visible, 1));
+        fixture.Perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(40), 1, 2, 1, PerceptionPairKind.Visible, 1));
         fixture.Spatial.NavigationRequests.Clear();
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(strafe ? EnemyBehaviorState.Strafe : EnemyBehaviorState.Retreat, session.EnemyBehavior.LastEvidence[2008].State);
+        Assert.Equal(strafe ? EnemyBehaviorState.Strafe : EnemyBehaviorState.Retreat, session.EnemyBehavior.LastEvidence[HoldActor(40)].State);
         var request = fixture.Spatial.NavigationRequests.First(value => value.From == new Vector3(0, 0, -2));
         if (strafe) Assert.NotEqual(0, request.Target.X);
         else Assert.True(request.Target.Z < -2);
@@ -62,7 +62,7 @@ public sealed class EnemyMotorSessionTests
             var profile = ReadInputs(TestData.RepositoryRoot);
             List<string> releases = [];
             var content = new ContentFake(releases); PopulateContent(content, profile);
-            Spatial = SpatialFake.Create(profile.SpatialArtifact.Sha256, releases); Spatial.KeepPosition = true;
+            Spatial = SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases); Spatial.KeepPosition = true;
             var engine = EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), Perception.Service,
                 random: MotorRandom.Create(strafe));
             Session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, profile, DaggerfallTuning.Defaults));

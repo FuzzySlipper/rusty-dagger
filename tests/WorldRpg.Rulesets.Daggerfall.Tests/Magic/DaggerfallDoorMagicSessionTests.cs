@@ -221,8 +221,7 @@ public sealed class DaggerfallDoorMagicSessionTests
         {
             _maximumRandom = maximumRandom;
             var inputs = ReadInputs(TestData.RepositoryRoot);
-            Destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)), TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot,
-                "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), TestPayload.Definitions);
+            Destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
             Composition = new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Profiles = new DaggerfallSiteProfiles([inputs, Destination]) };
             Session = DaggerfallSession.StartNew(Engine(maximumRandom).Context, Composition);
             Door = Session.Sites.Projection.Doors.All.First(value => !value.IsLocked && value.Kind == DaggerfallDoorKind.Normal);
@@ -230,7 +229,7 @@ public sealed class DaggerfallDoorMagicSessionTests
         private EngineContextFake Engine(bool maximumRandom)
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, Composition.StartSite); PopulateContent(content, Destination);
-            Spatial = SpatialFake.Create(Composition.StartSite.SpatialArtifact.Sha256, releases); Spatial.KeepPosition = true;
+            Spatial = SpatialFake.Create(Composition.StartSite.Geometry.Spatial[0].Sha256, releases); Spatial.KeepPosition = true;
             var perception = PerceptionFake.Create(); perception.Responder = request => Receipt(request.Targets.Span.ToArray()
                 .Select(target => new PerceptionPair(1, target.Entity, 1, 1, PerceptionPairKind.Visible, 1)).ToArray());
             return Published = EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), perception.Service,

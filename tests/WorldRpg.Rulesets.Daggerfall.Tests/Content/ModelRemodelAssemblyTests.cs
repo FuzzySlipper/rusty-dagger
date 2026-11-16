@@ -36,15 +36,17 @@ public sealed class ModelRemodelAssemblyTests
             + """{"slot": 3, "texture": {"path": "remodel/41209-1.png", "sha256": "HASH"}, "alpha": "mask"}""")
         + """, "61027": """ + Entry("""{"slot": 0, "material": "material/texture-67-0"}""") + "}").Replace("HASH", HashHex, StringComparison.Ordinal));
 
-    private static readonly Lazy<DaggerfallLocationAssembly> Assembly = new(() =>
+    private static readonly Lazy<DaggerfallLocationAssembly> Assembly = new(() => AssemblyWith(Trough));
+
+    private static DaggerfallLocationAssembly AssemblyWith(DaggerfallArtReplacements art)
     {
         ProductContent content = FullContent(TestData.RepositoryRoot);
         DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(TestSessions.Data(content));
         Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(TestSessions.Data(content), media, TestPayload.Definitions));
         Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(TestSessions.Data(content), media));
         return new DaggerfallLocationAssembly(TestPayload.Definitions, new DaggerfallWorldBlocks(TestSessions.Data(content)), () => product.Value, () => meshes.Value,
-            Trough.Models);
-    });
+            art.Models);
+    }
 
     [Fact]
     public void A_remodel_states_its_mesh_triangles_and_what_each_slot_draws()
@@ -110,5 +112,44 @@ public sealed class ModelRemodelAssemblyTests
         Assert.NotEmpty(levers);
         Assert.All(hold.DungeonActionModels, model => Assert.NotNull(model.ModelId));
         Assert.Contains("61027", hold.Geometry.Remodels.Keys);
+    }
+
+    /// <summary>
+    /// Privateer's Hold, where a new game starts, places none of the shipped remodels. Its static models are tagged as any
+    /// location's are, so a remodel of the one its blocks place most is drawn there, bound to the dungeon's own textures.
+    /// </summary>
+    [Fact]
+    public void Privateers_hold_draws_the_remodel_of_a_static_model_its_blocks_place()
+    {
+        DaggerfallSiteProfile classic = Assembly.Value.Assemble(DaggerfallWorldProfileIds.Dungeon(PrivateersHold));
+        Assert.All(classic.Geometry.Meshes, mesh => Assert.NotNull(mesh.ModelId));
+        string model = classic.Geometry.Meshes.GroupBy(mesh => mesh.ModelId!).MaxBy(group => group.Count())!.Key;
+        DaggerfallArtReplacements art = Art(("{\"" + model + "\": " + Entry("""{"slot": 0, "material": "material/texture-67-0"}""") + "}")
+            .Replace("HASH", HashHex, StringComparison.Ordinal));
+
+        DaggerfallSiteProfile hold = AssemblyWith(art).Assemble(DaggerfallWorldProfileIds.Dungeon(PrivateersHold));
+        DaggerfallSiteRemodel remodel = Assert.Single(hold.Geometry.Remodels).Value;
+        Assert.Equal("remodel/model.rstatmsh", remodel.Path);
+        DaggerfallMeshMaterialBinding bound = Assert.Single(remodel.Materials);
+        Assert.Equal(0U, bound.MeshSlot);
+        Assert.Contains(hold.Materials, material => material.Slot == bound.WorldMaterialSlot);
+    }
+
+    /// <summary>
+    /// The shipped art pack's remodels reach the place a new game starts and the first town: Charing draws its troughs
+    /// remodelled, and Privateer's Hold the remodelled containers its blocks place, standing or moving.
+    /// </summary>
+    [Fact]
+    public void The_shipped_remodels_draw_in_charing_and_privateers_hold()
+    {
+        DaggerfallArtReplacements shipped = DaggerfallArtReplacements.Read(TestContentFiles.Read(Path.Combine(TestData.RepositoryRoot, "content",
+            DaggerfallArtReplacements.Folder, "payload.json")), "daggerfall.art-replacements");
+        DaggerfallLocationAssembly assembly = AssemblyWith(shipped);
+        DaggerfallSiteProfile charing = assembly.Assemble(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile hold = assembly.Assemble(DaggerfallWorldProfileIds.Dungeon(PrivateersHold));
+        Assert.Contains("41209", charing.Geometry.Remodels.Keys);
+        Assert.NotEmpty(hold.Geometry.Remodels);
+        Assert.All(hold.Geometry.Remodels.Keys, model => Assert.True(hold.Geometry.Meshes.Any(mesh => mesh.ModelId == model)
+            || hold.DungeonActionModels.Any(moving => moving.ModelId == model)));
     }
 }

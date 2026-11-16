@@ -5,6 +5,8 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class QuestWorldAdmissionTests
@@ -265,7 +267,7 @@ public sealed class QuestWorldAdmissionTests
         var groundEntity = state.Actors.Entities.Resolve(new(WorldRpg.Kit.World.DurableIdentityKind.Container, checked((ulong)sourceOwner.Id)));
         var source = Rusty.Engine.Mechanics.InventoryStackId.Parse(bound.StackId);
         var destination = Rusty.Engine.Mechanics.InventoryStackId.Parse("quest.actor-held");
-        const long actorId = 2000;
+        long actorId = HoldActor(1);
         ulong quantity = state.Containers.Read(groundEntity).Stacks.Single(value => value.Id == source).Quantity;
         state.Containers.Transfer(groundEntity, state.Actors.Get(actorId).Actor.Entity, new(resource.SelectedItem!.Item, quantity, source, destination));
         state.ItemInstances.TransferStack(sourceOwner, DaggerfallItemOwner.Actor(actorId), source, destination, sourceWasExhausted: true);

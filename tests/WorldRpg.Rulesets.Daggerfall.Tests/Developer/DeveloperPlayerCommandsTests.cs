@@ -4,6 +4,8 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using Xunit;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
@@ -18,7 +20,7 @@ public sealed class DeveloperPlayerCommandsTests
     [Fact]
     public void Hold_wields_a_named_weapon_drawn_in_the_main_hand()
     {
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
         session.State.WeaponDrawn = false;
 
@@ -34,7 +36,7 @@ public sealed class DeveloperPlayerCommandsTests
     [Fact]
     public void Hold_magic_wields_an_enchanted_weapon_drawn()
     {
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
         session.State.WeaponDrawn = false;
 
@@ -49,7 +51,7 @@ public sealed class DeveloperPlayerCommandsTests
     [Fact]
     public void Equip_goes_through_the_ordinary_rules_and_tries_a_shield_on_the_off_arm()
     {
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
 
         // The fixture's class forbids shields, so the rules refuse it by name and it stays in the pack.
@@ -64,7 +66,7 @@ public sealed class DeveloperPlayerCommandsTests
     [Fact]
     public void Spell_teaches_a_named_spell_once_and_refuses_what_it_cannot_tell_apart()
     {
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
         var spell = TestPayload.Definitions.Magic.Spells.First(pair => !session.State.Character.KnownSpells.Contains(pair.Key));
 
@@ -78,7 +80,7 @@ public sealed class DeveloperPlayerCommandsTests
     [Fact]
     public void Ride_gives_and_mounts_a_horse_and_puts_the_weapon_away_and_refuses_what_is_no_mount()
     {
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
         session.State.WeaponDrawn = true;
 
@@ -97,7 +99,7 @@ public sealed class DeveloperPlayerCommandsTests
     [Fact]
     public void A_horse_takes_the_step_along_its_own_heading_and_holds_the_view_in_range()
     {
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
         float start = session.State.PlayerControl.YawRadians;
         Assert.True(session.Commands<IDeveloperPlayerCommands>().Ride("horse").Succeeded);
@@ -121,7 +123,7 @@ public sealed class DeveloperPlayerCommandsTests
     [Fact]
     public void Morph_curses_and_changes_the_player_and_changes_them_back()
     {
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
 
         Assert.Contains("no beast form", session.Commands<IDeveloperPlayerCommands>().Morph("").Message, StringComparison.Ordinal);
@@ -140,7 +142,7 @@ public sealed class DeveloperPlayerCommandsTests
     [Fact]
     public void Give_makes_items_by_label_template_name_or_index_and_refuses_what_it_cannot_name()
     {
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
         int Count(string definition) => session.State.Inventory.Read().UniqueItems.Count(item => item.Definition.Value == definition);
 
@@ -162,7 +164,7 @@ public sealed class DeveloperPlayerCommandsTests
     [Fact]
     public void Give_makes_clothing_from_either_catalog_cut_for_that_catalog()
     {
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
         string Gender(string definition) => session.State.ItemInstances.RequireUnique(session.State.Actors.Entities.IdentityOf(
             session.State.Inventory.Read().UniqueItems.Single(item => item.Definition.Value == definition).Entity).Value).Gender!;
@@ -179,7 +181,7 @@ public sealed class DeveloperPlayerCommandsTests
     [Fact]
     public void Gold_skill_level_and_heal_go_through_currency_progression_and_vitals()
     {
-        using AssembledWorldRun run = Shared.Value.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = Shared.Value.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
 
         ulong gold = session.State.Currency.Read().Gold;

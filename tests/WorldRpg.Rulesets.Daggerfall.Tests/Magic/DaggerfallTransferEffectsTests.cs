@@ -121,7 +121,7 @@ public sealed class DaggerfallTransferEffectsTests
     [InlineData("spell.049", "health", true)] [InlineData("spell.063", "fatigue", false)]
     public void Published_transfer_delivers_through_real_session_and_restores_current_save_without_replay(string key, string track, bool lethal)
     {
-        using Fixture f = new(); var s = f.Session; const long target = 2000;
+        using Fixture f = new(); var s = f.Session; long target = HoldActor(1);
         var sourceTrack = Track(s, 1, track); var targetTrack = Track(s, target, track);
         sourceTrack.SetCurrent(1); targetTrack.Maximum.BaseValue = 1000; targetTrack.SetCurrent(1); Fund(s, 1);
         s.State.Character.LearnSpell(key); Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell(key).Outcome);
@@ -164,7 +164,7 @@ public sealed class DaggerfallTransferEffectsTests
         private EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, _composition.StartSite);
-            return EngineContextFake.Create(content, SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256, releases).Service,
+            return EngineContextFake.Create(content, SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256, releases).Service,
                 new AppearanceFake(releases), random: RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload) => DaggerfallSession.Restore(Engine().Context, _composition, payload);

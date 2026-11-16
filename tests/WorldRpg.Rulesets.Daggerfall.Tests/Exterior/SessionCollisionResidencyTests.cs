@@ -25,7 +25,7 @@ public sealed class SessionCollisionResidencyTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile destination = ReadProfile(root, FullContent(root), definitions, "daggerfall.castle-necromoghan");
+        DaggerfallSiteProfile destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         DaggerfallDungeonActionModelDefinition[] sourceModels = CollisionModels(source);
         DaggerfallDungeonActionModelDefinition[] destinationModels = CollisionModels(destination);
         Assert.NotEmpty(sourceModels);
@@ -34,7 +34,7 @@ public sealed class SessionCollisionResidencyTests
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, destination);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, destination]));
@@ -93,15 +93,15 @@ public sealed class SessionCollisionResidencyTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        ProductContent admitted = FullContent(root, "worldrpg/imports/charing");
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
+        ProductContent admitted = FullContent(root, DaggerfallWorldBlocks.Root);
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
         Assert.Equal(DaggerfallWorldProfileKind.Exterior, exterior.ProfileKey.Kind);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
         PopulateContent(content, interior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         // The step answers with the pose it was given, so the crossing below is the player's own move.
         spatial.KeepPosition = true;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
@@ -188,12 +188,12 @@ public sealed class SessionCollisionResidencyTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        ProductContent admitted = FullContent(root, "worldrpg/imports/charing");
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        ProductContent admitted = FullContent(root, DaggerfallWorldBlocks.Root);
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, exterior, DaggerfallTuning.Defaults));
 
@@ -219,12 +219,12 @@ public sealed class SessionCollisionResidencyTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        ProductContent admitted = FullContent(root, "worldrpg/imports/charing");
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
+        ProductContent admitted = FullContent(root, DaggerfallWorldBlocks.Root);
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         DaggerfallSessionComposition composition = new(definitions, exterior, DaggerfallTuning.Defaults);
         DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
@@ -304,7 +304,7 @@ public sealed class SessionCollisionResidencyTests
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, resident);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
@@ -368,7 +368,7 @@ public sealed class SessionCollisionResidencyTests
         PopulateContent(content, source);
         PopulateContent(content, resident);
         PopulateContent(content, interior);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
             new(definitions, source, DaggerfallTuning.Defaults) { Profiles = profiles });

@@ -47,7 +47,7 @@ public sealed class NormalLightSessionTests
     {
         using var f = new Fixture();
         var invalid = Release(f.Session);
-        Assert.Equal(DaggerfallCastOutcome.InvalidTarget, f.Session.Casting.Deliver(invalid, [2000]).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.InvalidTarget, f.Session.Casting.Deliver(invalid, [HoldActor(1)]).Outcome);
         Assert.Empty(f.Session.State.Effects.Active);
         Cast(f.Session);
         f.Session.Update(new ProductUpdate(OuterUpdate(1), []));
@@ -95,11 +95,11 @@ public sealed class NormalLightSessionTests
             ContentFake content = new(releases); PopulateContent(content, inputs);
             if (twoSites)
             {
-                Destination = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), TestPayload.Definitions, "daggerfall.castle-necromoghan");
+                Destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
                 PopulateContent(content, Destination);
             }
             Graphics = new(releases) { RejectDisposeOfRetainedAppearance = true };
-            var engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, Graphics);
+            var engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, Graphics);
             var composition = new DaggerfallSessionComposition(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults);
             Session = save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);
             if (Destination is not null) Session.AdmitSiteProfiles(new([inputs, Destination]));

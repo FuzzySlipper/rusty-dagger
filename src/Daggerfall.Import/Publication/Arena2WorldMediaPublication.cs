@@ -6,8 +6,8 @@ namespace Daggerfall.Import.Publication;
 
 /// <summary>
 /// The product-wide world media publication: one closure of the material textures, billboard and actor
-/// atlases, terrain textures, meshes, classic sidecar and audio clips every site closure references, with
-/// the selection facts that say which texture records it carries and which it cannot.
+/// atlases, terrain textures, meshes, classic sidecar and audio clips every site draws from, with the
+/// selection facts that say which texture records it carries and which it cannot.
 /// </summary>
 /// <param name="Plan">The publication closure, written once under the product's content root.</param>
 /// <param name="Textures">Which texture records became materials and billboards, and why the others did not.</param>
@@ -32,8 +32,8 @@ public sealed record Arena2WorldTextureRefusal(ushort Archive, ushort Record, st
 /// The texture records the product-wide publication carries. A block's climate and dungeon texture tables
 /// remap the archives its meshes name, and a flat may sit in any archive, so every record a material or a
 /// billboard atlas can be cut from is selected rather than the records one site happens to use. A record
-/// that cannot be cut in a form is stated with its reason instead of being dropped silently; a site that
-/// needs it then fails naming it, exactly as it would have when it cut the record itself.
+/// that cannot be cut in a form is stated with its reason instead of being dropped silently, so a site that
+/// needs it fails naming it.
 /// </summary>
 public sealed class Arena2WorldTextureSelection
 {
@@ -64,7 +64,7 @@ public sealed class Arena2WorldTextureSelection
     /// <summary>
     /// Selects every publishable record of every leaf the inventory decoded. A material is the record's
     /// first frame; a billboard is every frame in one strip, so the frames must fit the atlas quota side by
-    /// side, exactly as a site's billboard atlas is packed.
+    /// side, exactly as a billboard atlas is packed.
     /// </summary>
     public static Arena2WorldTextureSelection Select(
         TextureLeafInventory inventory,

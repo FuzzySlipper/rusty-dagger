@@ -341,6 +341,9 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// <summary>The authored presentation locations assembled from their blocks share, when the payload carries it.</summary>
     internal DaggerfallAssembledSiteDefinition? AssembledSites { get; init; }
 
+    /// <summary>The session's classic held-item presentation, when the payload carries it; a session without one is refused at admission.</summary>
+    internal DaggerfallClassicSelection? ClassicSelection { get; init; }
+
     internal DaggerfallBuildingNameInputs BuildingNames { get; init; } = new([]);
     internal IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors { get; } = new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors.ToDictionary());
     internal IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> Items { get; } = new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items.ToDictionary());

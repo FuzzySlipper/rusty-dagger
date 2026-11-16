@@ -20,8 +20,8 @@ public sealed class SiteGeometryPlacementTests
         int opened = 0, closed = 0;
         DaggerfallSiteGeometry geometry = new(source.Geometry.NavigationGridId,
             [
-                new DaggerfallSiteSpatialPart("block/0/0", source.SpatialArtifact.Path, source.SpatialArtifact.Sha256),
-                new DaggerfallSiteSpatialPart("block/1/-1", source.SpatialArtifact.Path, source.SpatialArtifact.Sha256, 64, 64),
+                new DaggerfallSiteSpatialPart("block/0/0", source.Geometry.Spatial[0].Path, source.Geometry.Spatial[0].Sha256),
+                new DaggerfallSiteSpatialPart("block/1/-1", source.Geometry.Spatial[0].Path, source.Geometry.Spatial[0].Sha256, 64, 64),
             ],
             source.Geometry.Meshes,
             () => { opened++; return new Release(() => closed++); });
@@ -29,7 +29,7 @@ public sealed class SiteGeometryPlacementTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));

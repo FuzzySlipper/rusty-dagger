@@ -14,38 +14,8 @@ namespace Daggerfall.Import.Publication;
 /// </summary>
 public sealed record DungeonMediaManifestSidecar(
     NormalizedMediaManifest Media,
-    IReadOnlyList<DungeonMaterialMediaManifest> Materials,
     IReadOnlyList<DungeonBillboardMediaManifest> Billboards,
-    IReadOnlyList<DungeonActorMediaManifest> Actors)
-{
-    /// <summary>
-    /// The entries a site closure admits from the product-wide world media sidecar instead of carrying
-    /// them, or null for a sidecar that carries every entry it admits. Only a site closure written against
-    /// that publication states it; <see cref="ProductWorldMedia.Rehydrate"/> restores the complete sidecar.
-    /// </summary>
-    public DungeonSharedMediaSelection? Shared { get; init; }
-}
-
-/// <summary>
-/// The product-wide dungeon media entries one site closure admits by identity: descriptors by media id,
-/// billboards by sprite resource id and actors by actor resource id. Each names an entry the product-wide
-/// sidecar carries exactly as the site would have written it.
-/// </summary>
-public sealed record DungeonSharedMediaSelection(
-    IReadOnlyList<string> Resources,
-    IReadOnlyList<string> Billboards,
-    IReadOnlyList<string> Actors);
-
-/// <summary>One generated dungeon material texture and its resource meaning.</summary>
-public sealed record DungeonMaterialMediaManifest(
-    string TextureResourceId,
-    string MaterialResourceId,
-    uint MaterialSlot,
-    ushort TextureArchive,
-    ushort TextureRecord,
-    int Width,
-    int Height,
-    string MediaId);
+    IReadOnlyList<DungeonActorMediaManifest> Actors);
 
 /// <summary>One generated dungeon billboard and its source-backed frame facts.</summary>
 public sealed record DungeonBillboardMediaManifest(
@@ -110,127 +80,21 @@ public sealed record ClassicMediaManifestSidecar(
 { }
 
 /// <summary>
-/// Joins spatial normalization with independently generated dungeon and
-/// classic media into one portable publication closure. This is deliberately
-/// an offline composition seam: it creates no Engine resources and does not
+/// Composes independently generated dungeon and classic media with the mesh geometry into the product-wide world
+/// media publication. This is deliberately an offline composition seam: it creates no Engine resources and does not
 /// inspect a directory.
 /// </summary>
-public sealed record Arena2MediaBundlePublication(
-    NormalizedImportDocument Document,
-    ImportPublicationPlan Plan)
+public static class Arena2MediaBundlePublication
 {
     public const string DungeonMediaManifestRelativePath = "media/dungeon/manifest.json";
     public const string ClassicMediaManifestRelativePath = "media/classic/manifest.json";
-    public const string NormalizedDocumentRelativePath = "normalized.json";
 
     private static readonly JsonSerializerOptions JsonOptions = PublishedJson.Section;
 
     /// <summary>
-    /// Creates a complete content-addressed publication. Source records from
-    /// the spatial and classic passes are merged into the serialized normalized
-    /// document; an equal source path must retain the exact same schema, digest,
-    /// and length in both passes.
-    /// </summary>
-    public static Arena2MediaBundlePublication Create(
-        DungeonNormalizationResult dungeon,
-        Arena2DungeonMediaPublication dungeonMedia,
-        Arena2ClassicMediaPublication classicMedia,
-        GeometryPublication geometry)
-    {
-        ArgumentNullException.ThrowIfNull(dungeon);
-        dungeon.Validate();
-        return CreateCore(dungeon.Document, dungeon.SpatialPublication, dungeonMedia, classicMedia, geometry, compactNormalizedJson: false);
-    }
-
-    /// <summary>Publishes RMB spatial output through the same media and artifact closure as an RDB location.</summary>
-    public static Arena2MediaBundlePublication Create(
-        RmbExteriorNormalizationResult rmb,
-        Arena2DungeonMediaPublication dungeonMedia,
-        Arena2ClassicMediaPublication classicMedia,
-        GeometryPublication geometry)
-    {
-        ArgumentNullException.ThrowIfNull(rmb);
-        rmb.Validate();
-        return CreateCore(rmb.Document, rmb.SpatialPublication, dungeonMedia, classicMedia, geometry, compactNormalizedJson: true);
-    }
-
-    private static Arena2MediaBundlePublication CreateCore(
-        NormalizedImportDocument spatialDocument,
-        DungeonSpatialPublication spatial,
-        Arena2DungeonMediaPublication dungeonMedia,
-        Arena2ClassicMediaPublication classicMedia,
-        GeometryPublication geometry,
-        bool compactNormalizedJson)
-    {
-        ArgumentNullException.ThrowIfNull(spatialDocument);
-        ArgumentNullException.ThrowIfNull(spatial);
-        ArgumentNullException.ThrowIfNull(dungeonMedia);
-        ArgumentNullException.ThrowIfNull(classicMedia);
-        ArgumentNullException.ThrowIfNull(geometry);
-        spatialDocument.Validate();
-        geometry.Validate();
-
-        ValidateDungeonMedia(dungeonMedia);
-        ValidateClassicMedia(classicMedia);
-        ValidateClassicWorldVisuals(classicMedia.WorldVisuals, geometry);
-
-        ImportProvenance mergedProvenance = MergeProvenance(spatialDocument.Provenance, classicMedia.Sources);
-        NormalizedImportDocument document = (spatialDocument with { Provenance = mergedProvenance }).Canonicalize();
-        document.Validate();
-        spatial.ValidateAgainst(document);
-
-        DungeonMediaManifestSidecar dungeonSidecar = CreateDungeonSidecar(spatial, dungeonMedia);
-        ClassicMediaManifestSidecar classicSidecar = CreateClassicSidecar(classicMedia);
-        ValidatePersistedSidecars(dungeonSidecar, classicSidecar);
-        byte[] dungeonSidecarBytes = SerializeSidecar(dungeonSidecar);
-        byte[] classicSidecarBytes = SerializeSidecar(classicSidecar);
-
-        Dictionary<string, string> spatialPathsById = spatial.Artifacts
-            .ToDictionary(artifact => artifact.Id, artifact => artifact.RelativePath, StringComparer.Ordinal);
-        Dictionary<string, string> geometryPathsById = geometry.Artifacts
-            .ToDictionary(artifact => artifact.Id, artifact => artifact.RelativePath, StringComparer.Ordinal);
-        List<ImportPublicationArtifact> artifacts = [
-            .. geometry.Artifacts.Select(artifact => new ImportPublicationArtifact(
-                artifact.RelativePath,
-                artifact.Bytes.Span,
-                artifact.DependsOnArtifactIds.Select(id => geometryPathsById[id]).ToArray())),
-            .. spatial.Artifacts.Select(artifact => new ImportPublicationArtifact(
-                artifact.RelativePath,
-                artifact.Bytes.Span,
-                artifact.DependsOnArtifactIds.Select(id => spatialPathsById[id]).ToArray())),
-            .. dungeonMedia.Artifacts,
-            .. classicMedia.Artifacts,
-            new ImportPublicationArtifact(
-                DungeonMediaManifestRelativePath,
-                dungeonSidecarBytes,
-                dungeonMedia.Artifacts.Select(artifact => artifact.RelativePath).ToArray()),
-            new ImportPublicationArtifact(
-                ClassicMediaManifestRelativePath,
-                classicSidecarBytes,
-                classicMedia.Artifacts.Select(artifact => artifact.RelativePath).ToArray()),
-        ];
-
-        string[] normalizedDependencies = [
-            .. spatial.Artifacts.Select(artifact => artifact.RelativePath),
-            .. geometry.Artifacts.Select(artifact => artifact.RelativePath),
-            DungeonMediaManifestRelativePath,
-            ClassicMediaManifestRelativePath,
-        ];
-        artifacts.Add(new ImportPublicationArtifact(
-            NormalizedDocumentRelativePath,
-            compactNormalizedJson
-                ? NormalizedImportSerializer.SerializeCompact(document)
-                : NormalizedImportSerializer.Serialize(document),
-            normalizedDependencies));
-
-        return new(document, ImportPublicationPlan.Create(mergedProvenance, artifacts));
-    }
-
-    /// <summary>
     /// Composes the product-wide world media publication: every mesh, material, billboard, actor and
     /// terrain artifact and the classic sidecar, with the classic artifacts the classic media group does not
-    /// already publish. Its dungeon sidecar binds no material slot, because a slot belongs to one site's
-    /// static mesh; a site closure binds its slots to these descriptors by media identity.
+    /// already publish. A location binds each mesh slot to these descriptors by media identity.
     /// </summary>
     /// <param name="provenance">The mesh, palette and texture sources the world media pass read.</param>
     /// <param name="classicGroup">
@@ -256,7 +120,7 @@ public sealed record Arena2MediaBundlePublication(
         ValidateClassicWorldVisuals(classicMedia.WorldVisuals, geometry);
         ImportProvenance mergedProvenance = MergeProvenance(provenance, classicMedia.Sources);
 
-        DungeonMediaManifestSidecar dungeonSidecar = CreateDungeonSidecar(null, dungeonMedia);
+        DungeonMediaManifestSidecar dungeonSidecar = CreateDungeonSidecar(dungeonMedia);
         ClassicMediaManifestSidecar classicSidecar = CreateClassicSidecar(classicMedia);
         ValidatePersistedSidecars(dungeonSidecar, classicSidecar);
 
@@ -376,29 +240,14 @@ public sealed record Arena2MediaBundlePublication(
 
     private static void ValidatePersistedDungeonSidecar(DungeonMediaManifestSidecar sidecar, IReadOnlyDictionary<string, NormalizedMediaDescriptor> media)
     {
-        ArgumentNullException.ThrowIfNull(sidecar.Materials);
         ArgumentNullException.ThrowIfNull(sidecar.Billboards);
         ArgumentNullException.ThrowIfNull(sidecar.Actors);
-        if (sidecar.Materials.Any(value => value is null) || sidecar.Billboards.Any(value => value is null) || sidecar.Actors.Any(value => value is null)
-            || sidecar.Materials.Select(value => value.TextureResourceId).Distinct(StringComparer.Ordinal).Count() != sidecar.Materials.Count
-            || sidecar.Materials.Select(value => value.MaterialResourceId).Distinct(StringComparer.Ordinal).Count() != sidecar.Materials.Count
-            || sidecar.Materials.Select(value => value.MaterialSlot).Distinct().Count() != sidecar.Materials.Count
+        if (sidecar.Billboards.Any(value => value is null) || sidecar.Actors.Any(value => value is null)
             || sidecar.Billboards.Select(value => value.SpriteResourceId).Distinct(StringComparer.Ordinal).Count() != sidecar.Billboards.Count
             || sidecar.Actors.Select(value => value.ActorResourceId).Distinct(StringComparer.Ordinal).Count() != sidecar.Actors.Count
             || sidecar.Actors.Select(value => value.MobileId).Distinct().Count() != sidecar.Actors.Count)
         {
             throw new InvalidOperationException("Persisted dungeon sidecar identifiers must be unique.");
-        }
-
-        foreach (DungeonMaterialMediaManifest material in sidecar.Materials)
-        {
-            NormalizedImportDocument.RequireLogicalId(material.TextureResourceId, nameof(material.TextureResourceId));
-            NormalizedImportDocument.RequireLogicalId(material.MaterialResourceId, nameof(material.MaterialResourceId));
-            NormalizedMediaDescriptor descriptor = RequirePersistedDescriptor(media, material.MediaId, NormalizedMediaKind.Texture, "dungeon material");
-            if (material.Width <= 0 || material.Height <= 0 || descriptor.SourceWidth != material.Width || descriptor.SourceHeight != material.Height)
-            {
-                throw new InvalidOperationException("Persisted dungeon material dimensions do not match the generated descriptor.");
-            }
         }
 
         foreach (DungeonBillboardMediaManifest billboard in sidecar.Billboards)
@@ -682,46 +531,12 @@ public sealed record Arena2MediaBundlePublication(
             sources.Values.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray());
     }
 
-    /// <summary>
-    /// Creates a dungeon sidecar. With a spatial publication every material binds the static-mesh slot it is
-    /// drawn with; without one (the product-wide publication) the material descriptors stand alone and no
-    /// slot is bound, because a slot is a fact about one site's static mesh.
-    /// </summary>
-    private static DungeonMediaManifestSidecar CreateDungeonSidecar(DungeonSpatialPublication? spatial, Arena2DungeonMediaPublication publication)
+    /// <summary>Creates the dungeon sidecar: every billboard and actor the media publication carries, in identity order.</summary>
+    private static DungeonMediaManifestSidecar CreateDungeonSidecar(Arena2DungeonMediaPublication publication)
     {
         ArgumentNullException.ThrowIfNull(publication);
-        Dictionary<string, uint> slotByMaterial = (spatial?.MaterialSlots ?? [])
-            .ToDictionary(binding => binding.MaterialResourceId, binding => binding.Slot, StringComparer.Ordinal);
-        if (spatial is not null && slotByMaterial.Count != spatial.MaterialSlots.Count)
-        {
-            throw new InvalidOperationException("Spatial publication has duplicate material-slot resource IDs.");
-        }
-
-        string[] generatedMaterials = publication.MaterialTextures
-            .Select(media => media.MaterialResourceId)
-            .OrderBy(id => id, StringComparer.Ordinal)
-            .ToArray();
-        if (generatedMaterials.Distinct(StringComparer.Ordinal).Count() != generatedMaterials.Length
-            || spatial is not null && !generatedMaterials.SequenceEqual(slotByMaterial.Keys.OrderBy(id => id, StringComparer.Ordinal), StringComparer.Ordinal))
-        {
-            throw new InvalidOperationException("Dungeon media materials must exactly match the static-mesh material-slot publication.");
-        }
-
         return new(
         CanonicalizeMedia(publication.MediaManifest),
-        publication.MaterialTextures
-            .Where(_ => spatial is not null)
-            .OrderBy(media => media.TextureResourceId, StringComparer.Ordinal)
-            .Select(media => new DungeonMaterialMediaManifest(
-                media.TextureResourceId,
-                media.MaterialResourceId,
-                slotByMaterial[media.MaterialResourceId],
-                media.TextureArchive,
-                media.TextureRecord,
-                media.Width,
-                media.Height,
-                media.Descriptor.Id))
-            .ToArray(),
         publication.Billboards
             .OrderBy(media => media.SpriteResourceId, StringComparer.Ordinal)
             .Select(media => new DungeonBillboardMediaManifest(

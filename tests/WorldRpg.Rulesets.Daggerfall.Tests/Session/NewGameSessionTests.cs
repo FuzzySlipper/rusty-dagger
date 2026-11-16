@@ -276,7 +276,7 @@ public sealed class NewGameSessionTests
         internal EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, Inputs);
-            var spatial = SpatialFake.Create(Inputs.SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
+            var spatial = SpatialFake.Create(Inputs.Geometry.Spatial[0].Sha256, releases); spatial.KeepPosition = true;
             return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: _random);
         }
         public void Dispose() => Title.Dispose();

@@ -136,7 +136,7 @@ public sealed class ContactGuardSessionTests
             var inputs = ReadInputs(TestData.RepositoryRoot);
             List<string> releases = [];
             ContentFake content = new(releases); PopulateContent(content, inputs);
-            SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
             Appearance = new(releases);
             Engine = EngineContextFake.Create(content, spatial.Service, Appearance);
             Session = DaggerfallSession.StartNew(Engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));

@@ -34,7 +34,7 @@ public sealed class AssembledWorldTravelSessionTests
     public void Travel_to_an_unpublished_city_enters_a_building_and_leaves_it_across_saves()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallSiteRecord city = world.Unpublished(record => record.Kind == DaggerfallSiteKind.TownCity && record.Exterior is not null);
+        DaggerfallSiteRecord city = world.Nearby(record => record.Kind == DaggerfallSiteKind.TownCity && record.Exterior is not null);
         DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(city.Id);
 
         // The building entered: a tavern, which keeps no hours, whose interior the catalog places.
@@ -113,7 +113,7 @@ public sealed class AssembledWorldTravelSessionTests
     public void Travel_to_an_unpublished_dungeon_enters_it_and_leaves_through_its_exit()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallSiteRecord site = world.Unpublished(record => record.Kind is DaggerfallSiteKind.DungeonLabyrinth or DaggerfallSiteKind.DungeonKeep or DaggerfallSiteKind.DungeonRuin
+        DaggerfallSiteRecord site = world.Nearby(record => record.Kind is DaggerfallSiteKind.DungeonLabyrinth or DaggerfallSiteKind.DungeonKeep or DaggerfallSiteKind.DungeonRuin
             && record.Exterior is not null && record.DungeonBlocks.Count != 0
             && world.Profiles.Require(DaggerfallWorldProfileIds.Exterior(record.Id)).Portals.Count != 0);
         DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(site.Id), dungeon = DaggerfallWorldProfileIds.Dungeon(site.Id);
@@ -167,7 +167,7 @@ public sealed class AssembledWorldTravelSessionTests
     public void A_walled_city_s_gates_close_at_dusk_and_open_at_dawn()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallSiteRecord city = world.Unpublished(record => record.Exterior is not null
+        DaggerfallSiteRecord city = world.Nearby(record => record.Exterior is not null
             && world.Profiles.Require(DaggerfallWorldProfileIds.Exterior(record.Id)).CityGates.Count != 0);
         DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(city.Id);
         DaggerfallSiteProfile walled = world.Profiles.Require(exterior);

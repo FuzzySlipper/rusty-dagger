@@ -5,6 +5,8 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
+using WorldRpg.Rulesets.Daggerfall.Content;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DungeonWaterSessionTests
@@ -15,15 +17,14 @@ public sealed class DungeonWaterSessionTests
     public void Castle_water_reaches_player_swimming_drowning_and_aquatic_enemy_navigation(bool assembled)
     {
         var world = new AssembledWorld();
-        var published = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), world.Definitions,
-            "daggerfall.castle-necromoghan");
+        var published = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         var profile = assembled ? world.Profiles.Require(published.ProfileKey) : published;
         var water = Assert.Single(profile.WaterVolumes);
         var center = (water.Minimum + water.Maximum) * .5f;
         center.Y = water.Maximum.Y - 2;
         List<string> releases = [];
         var content = new ContentFake(releases); PopulateContent(content, profile);
-        var spatial = SpatialFake.Create(world.Source.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(world.Source.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         spatial.MovementFact = request => new(request.Command.Movement.Mode, 1f, true, false, false, false);
         spatial.TriggerResult = request => new(

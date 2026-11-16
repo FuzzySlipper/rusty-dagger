@@ -39,7 +39,7 @@ public sealed class SanguineRoseSessionTests
         Assert.InRange(Vector3.Distance(f.Session.State.PlayerControl.Position!.Value.ToVector(), f.Session.State.Actors.Get(ally).Position.ToVector()), 4f, 20.2f);
         using var restored = f.Restore();
         Assert.Equal("player-ally", restored.DefinitionsByActor[ally].Team);
-        Assert.Equal(f.Session.State.Actors.Get(ally).Pose, restored.State.Actors.Get(ally).Pose);
+        SamePose(f.Session.State.Actors.Get(ally).Pose, restored.State.Actors.Get(ally).Pose);
         Assert.Equal(1400, restored.State.ItemInstances.RequireUnique(f.Source).CurrentCondition);
     }
 
@@ -174,7 +174,7 @@ public sealed class SanguineRoseSessionTests
         Assert.False(f.Session.State.Actors.TryGet(ally, out _));
         using var restored = f.Restore(profiles);
         Assert.True(restored.TryTransitionTo(f.Inputs.ProfileKey));
-        Assert.Equal(pose, restored.State.Actors.Get(ally).Pose);
+        SamePose(pose, restored.State.Actors.Get(ally).Pose);
         Assert.Equal("player-ally", restored.DefinitionsByActor[ally].Team);
         Assert.Equal(27, restored.DefinitionsByActor[ally].MobileId);
         Assert.Single(restored.DefinitionsByActor.Where(entry => entry.Value.Team == "player-ally"));
@@ -229,6 +229,13 @@ public sealed class SanguineRoseSessionTests
         Assert.Equal(f.Session.DefinitionsByActor[ally].Id, restored.DefinitionsByActor[ally].Id);
     }
 
+    /// <summary>An actor's heading is kept as a rotation, so reading it back after a restore may move its last bit.</summary>
+    private static void SamePose(ActorPose expected, ActorPose actual)
+    {
+        Assert.Equal(expected.Position, actual.Position);
+        Assert.Equal(expected.HeadingYawRadians, actual.HeadingYawRadians, precision: 5);
+    }
+
     private static double Health(Rusty.Engine.Entities.Actor actor) => actor.Get<StatsComponent>().GetTrack(TrackId.Parse("health")).Current;
     private sealed class ForceHit : ICombatContribution
     {
@@ -265,8 +272,7 @@ public sealed class SanguineRoseSessionTests
                 inputs.Site, inputs.Doors, inputs.ProfileKind, inputs.ProfileKey.LogicalId, inputs.Portals, inputs.Anchors.Values.ToArray(),
                 inputs.Lights, inputs.GroundContainerSprites, inputs.DungeonMap, inputs.DungeonActions, inputs.DungeonActionModels,
                 inputs.InteriorBuilding, inputs.QuestMarkers, inputs.BillboardSprites);
-            Castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
-                TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), TestPayload.Definitions);
+            Castle = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
             var identity = TestSessions.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
             Composition = new(definitions ?? TestPayload.Definitions, Inputs, DaggerfallTuning.Defaults, identity);
             if (prepareComposition is not null) Composition = prepareComposition(Composition);
@@ -298,7 +304,7 @@ public sealed class SanguineRoseSessionTests
         private (EngineContextFake, SpatialFake, PerceptionFake, AppearanceFake) CreateEngine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, Inputs); PopulateContent(content, Castle);
-            var spatial = SpatialFake.Create(Inputs.SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
+            var spatial = SpatialFake.Create(Inputs.Geometry.Spatial[0].Sha256, releases); spatial.KeepPosition = true;
             spatial.FloorHit = request => request.Direction.Y < 0f ? default(SpatialHit) with
             { Present = true, Point = new(request.Origin.X, 0, request.Origin.Z), Normal = Vector3.UnitY, Converged = true } : default;
             var perception = PerceptionFake.Create();

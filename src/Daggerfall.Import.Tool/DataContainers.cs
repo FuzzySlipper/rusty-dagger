@@ -54,7 +54,7 @@ internal static class ImportLayout
     /// <summary>The classic media group the classic, sky, character and paper-doll media are written into.</summary>
     public const string ClassicGroup = $"{Staging}/worldrpg";
 
-    /// <summary>The product-wide world media publication every site closure references.</summary>
+    /// <summary>The product-wide world media publication the placed blocks draw from.</summary>
     public const string WorldMedia = $"{Staging}/worldrpg/imports/shared";
 
     /// <summary>The per-block world publication.</summary>

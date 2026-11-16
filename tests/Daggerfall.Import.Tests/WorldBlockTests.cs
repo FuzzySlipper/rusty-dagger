@@ -8,9 +8,8 @@ using Xunit;
 namespace Daggerfall.Import.Tests;
 
 /// <summary>
-/// The per-block publication: every block a location places normalized in its own frame from the same
-/// block-level content the site normalizers place, so a site assembled from its blocks' facts carries the
-/// site closure's doors, markers, people and buildings.
+/// The per-block publication: every block a location places normalized in its own frame, with the doors, markers,
+/// people and buildings a site assembles from it.
 /// </summary>
 public sealed class WorldBlockTests
 {
@@ -79,7 +78,7 @@ public sealed class WorldBlockTests
         Assert.All(plants, plant => Assert.True(plant.ClimateNature && plant.BaseAligned));
     }
 
-    [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK", "FACTION.TXT", "PAL.PAL")]
+    [CorpusFact("BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT", "PAL.PAL")]
     public void Castle_necromoghans_flooded_block_publishes_the_source_water_surface()
     {
         var sources = Sources();
@@ -89,15 +88,6 @@ public sealed class WorldBlockTests
         Assert.Equal((0F, -51.2F, 51.2F, 0F),
             (water.Bounds.Minimum.X, water.Bounds.Minimum.Z, water.Bounds.Maximum.X, water.Bounds.Maximum.Z));
         Assert.True(water.Bounds.Minimum.Y < water.Bounds.Maximum.Y);
-        var site = DungeonNormalizer.Normalize(DungeonNormalizationRequest.Create(sources, 17, "Castle Necromoghan") with
-        {
-            Quotas = DungeonNormalizationQuotas.Default with { MaximumSourceBytes = 1024L * 1024L * 1024L },
-            Navigation = NavigationDerivationConfig.ClassicDefault with { CellSize = 10F },
-        });
-        var placed = Assert.Single(site.Document.World.WaterVolumes);
-        Assert.Contains("w0000020", placed.Id);
-        Assert.Equal(10F, placed.Bounds.Maximum.Y);
-        Assert.Equal(placed, Assert.Single(NormalizedImportSerializer.Deserialize(NormalizedImportSerializer.Serialize(site.Document)).World.WaterVolumes));
         Assert.Empty(new WorldBlockNormalizer(sources).Rdb("N0000065.RDB").Block.WaterVolumes);
     }
 
@@ -112,15 +102,6 @@ public sealed class WorldBlockTests
         Assert.All(block.Actors, value => Assert.InRange(value.SpawnDistance, 0, 6));
     }
 
-    private const float RmbBlockSide = 4096F * Arena2SourceTransform.SourceUnitMetres;
-    private const float RdbBlockSide = 2048F * Arena2SourceTransform.SourceUnitMetres;
-
-    /// <summary>
-    /// Charing's exterior, assembled from its 42 placed blocks' facts (block-local identities given their
-    /// grid position, block-local positions moved by the block origin), names the site closure's doors with
-    /// their buildings and locks, its fixed people and its start marker; each provider interior's facts are
-    /// the interior closure's quest markers, people, furniture and building.
-    /// </summary>
     [CorpusFact("BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT", "PAL.PAL")]
     public void Fixed_enemy_metadata_matches_every_source_marker()
     {
@@ -156,115 +137,61 @@ public sealed class WorldBlockTests
     /// <summary>
     /// Travel lands a traveller on a city's start marker. The automap paints the marker's pixel as it paints every
     /// flat, and the outdoor navigation mask dropped the ground under it: arriving at Charing's east gate stood the
-    /// player on no navigation. Each of Charing's gate markers now stands on a walkable ground cell.
+    /// player on no navigation. Each of Charing's gate markers now stands on a walkable ground cell of its block.
     /// </summary>
-    [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK", "FACTION.TXT")]
+    [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT")]
     public void Charing_s_navigation_holds_ground_under_every_gate_start_marker()
     {
         DungeonLogicalSourceSet sources = Sources();
-        RmbExteriorNormalizationResult site = RmbExteriorNormalizer.Normalize(new(sources, 17, "Charing", RmbWorldProfileKind.Exterior) { LocationIndex = 4 });
         float cellSize = NavigationDerivationConfig.ClassicDefault.CellSize;
-        HashSet<(int Column, int Row)> walkable = [.. site.SpatialPublication.Navigation.Cells
-            .Where(cell => cell.Walkable && cell.SupportHeight == 0F).Select(cell => (cell.Column, cell.Row))];
         WorldBlockNormalizer normalizer = new(sources);
-        NormalizedVector3[] markers = [.. site.Layout.Blocks.SelectMany(placed => normalizer.RmbExterior(placed.SourceName).Block.StartMarkers
-            .Select(marker => Add(marker.Position, new(placed.X * RmbBlockSide, 0F, -(placed.Y * RmbBlockSide)))))];
+        Dictionary<string, WorldBlockNormalization> blocks = new(StringComparer.Ordinal);
+        int markers = 0;
+        foreach (MapsExteriorBlock placed in Exterior(sources, 17, "Charing").Blocks)
+        {
+            if (!blocks.TryGetValue(placed.SourceName, out WorldBlockNormalization? block))
+                blocks.Add(placed.SourceName, block = normalizer.RmbExterior(placed.SourceName));
+            if (block.Block.StartMarkers.Count == 0) continue;
+            HashSet<(int Column, int Row)> walkable = [.. EngineBinaryContent.ReadSpatial(block.Spatial!.Bytes.Span).Cells
+                .Where(cell => cell.Walkable && cell.SupportHeight == 0).Select(cell => (cell.Column, cell.Row))];
+            foreach (NormalizedMarker marker in block.Block.StartMarkers)
+            {
+                Assert.Contains(((int)MathF.Floor(marker.Position.X / cellSize), (int)MathF.Floor(marker.Position.Z / cellSize)), walkable);
+                markers++;
+            }
+        }
 
-        Assert.Equal(4, markers.Length);
-        Assert.All(markers, marker => Assert.Contains(((int)MathF.Floor(marker.X / cellSize), (int)MathF.Floor(marker.Z / cellSize)), walkable));
+        Assert.Equal(4, markers);
     }
 
-    [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK", "FACTION.TXT")]
-    public void Charing_assembled_from_its_block_facts_carries_the_site_closures_doors_markers_and_buildings()
+    /// <summary>
+    /// Each door into a building on Charing's 42 placed blocks names a building slot its block states, and each
+    /// provider interior states the building its exterior slot describes, with its own collision and placements.
+    /// </summary>
+    [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT")]
+    public void Charings_blocks_state_every_building_a_door_enters()
     {
         DungeonLogicalSourceSet sources = Sources();
-        RmbExteriorNormalizationResult site = RmbExteriorNormalizer.Normalize(new(sources, 17, "Charing", RmbWorldProfileKind.Exterior)
-        {
-            LocationIndex = 4,
-            // Doors, markers and people do not depend on the navigation grid; a coarse one keeps this quick.
-            Navigation = NavigationDerivationConfig.ClassicDefault with { CellSize = 10F },
-        });
+        MapsExteriorLayout charing = Exterior(sources, 17, "Charing");
         WorldBlockNormalizer normalizer = new(sources);
-        Dictionary<string, DaggerfallWorldBlock> facts = site.Layout.Blocks.Select(block => block.SourceName).Distinct(StringComparer.Ordinal)
+        Dictionary<string, DaggerfallWorldBlock> facts = charing.Blocks.Select(block => block.SourceName).Distinct(StringComparer.Ordinal)
             .ToDictionary(name => name, name => normalizer.RmbExterior(name).Block, StringComparer.Ordinal);
-        Assert.Equal(42, site.Layout.Blocks.Count);
-
-        List<(string Id, NormalizedVector3 Position, NormalizedVector3 Rotation, int Lock, int? Building, NormalizedBounds? Bounds)> doors = [];
-        List<NormalizedPopulationPlacement> people = [];
-        NormalizedMarker? start = null;
-        foreach (MapsExteriorBlock placed in site.Layout.Blocks.OrderBy(block => block.X).ThenBy(block => block.Y).ThenBy(block => block.SourceName, StringComparer.Ordinal))
+        Assert.Equal(42, charing.Blocks.Count);
+        foreach ((string name, DaggerfallWorldBlock block) in facts)
         {
-            DaggerfallWorldBlock block = facts[placed.SourceName];
-            NormalizedVector3 origin = new(placed.X * RmbBlockSide, 0F, -(placed.Y * RmbBlockSide));
-            string scope = $"door/{PublishedIds.Slug(placed.SourceName)}-rmb/";
-            foreach (DaggerfallWorldBlockDoor door in block.Doors)
-            {
-                Assert.StartsWith(scope, door.Id, StringComparison.Ordinal);
-                doors.Add(($"{scope}{placed.X}/{placed.Y}/{door.Id[scope.Length..]}", Add(door.Position, origin), door.RotationDegrees,
-                    door.StartingLockValue, door.BuildingIndex, door.CollisionBounds));
-            }
-
-            people.AddRange(block.Population.Select(person => person with { Position = Add(person.Position, origin) }));
-            if (block.StartMarker is { } marker) start ??= marker with { Position = Add(marker.Position, origin) };
-        }
-
-        Assert.Equal(site.Document.World.Doors.Select(door => door.Id).Order(StringComparer.Ordinal), doors.Select(door => door.Id).Order(StringComparer.Ordinal));
-        Dictionary<string, NormalizedDoorPlacement> siteDoors = site.Document.World.Doors.ToDictionary(door => door.Id, StringComparer.Ordinal);
-        foreach (var door in doors)
-        {
-            NormalizedDoorPlacement expected = siteDoors[door.Id];
-            // A site places a door from its world-space plane; the block from its local plane, so only the
-            // float rounding of the translation differs.
-            Near(expected.Position, door.Position);
-            Assert.Equal((0F, 0F), (door.Rotation.X, door.Rotation.Z));
-            // A door facing exactly -Z states 180 or -180 as the sign of a zero normal component falls.
-            float turn = MathF.Abs(expected.RotationDegrees.Y - door.Rotation.Y) % 360F;
-            Assert.True(MathF.Min(turn, 360F - turn) < 1e-3F, $"Door '{door.Id}' turns {door.Rotation.Y} where the site turns {expected.RotationDegrees.Y}.");
-            Assert.Equal((expected.StartingLockValue, expected.ExteriorBuildingIndex), (door.Lock, door.Building));
-            Near(expected.CollisionBounds!.Minimum, door.Bounds!.Minimum);
-            Near(expected.CollisionBounds.Maximum, door.Bounds.Maximum);
-        }
-
-        NormalizedPopulationPlacement[] sitePeople = [.. site.Document.World.Population];
-        Assert.Equal(sitePeople.OrderBy(person => person.Id, StringComparer.Ordinal), people.OrderBy(person => person.Id, StringComparer.Ordinal));
-        Assert.Equal(site.Document.World.StartMarker, start);
-
-        // Each building a door enters is a sub-record the block states, with the catalog's interior facts.
-        foreach (MapsExteriorBlock placed in site.Layout.Blocks)
-        {
-            DaggerfallWorldBlock block = facts[placed.SourceName];
+            Assert.All(block.Doors, door => Assert.StartsWith($"door/{PublishedIds.Slug(name)}-rmb/", door.Id, StringComparison.Ordinal));
             Assert.All(block.Doors.Where(door => door.BuildingIndex is not null), door => Assert.Contains(block.Buildings, building => building.Index == door.BuildingIndex));
         }
 
         foreach ((byte x, byte y, int building) in new (byte, byte, int)[] { (1, 1, 0), (2, 1, 0), (3, 4, 0), (3, 1, 13), (1, 5, 17), (4, 2, 0), (3, 2, 14) })
         {
-            RmbExteriorNormalizationResult interior = RmbExteriorNormalizer.Normalize(new(sources, 17, "Charing", RmbWorldProfileKind.Interior)
-            {
-                LocationIndex = 4,
-                Building = new(x, y, building),
-                Navigation = NavigationDerivationConfig.ClassicDefault with { CellSize = 2F },
-            });
-            NormalizedWorld world = interior.Document.World;
-            DaggerfallWorldBlock block = normalizer.RmbInterior(world.InteriorBuilding!.SourceKey, building).Block;
-            Assert.Equal((world.InteriorBuilding.BuildingIndex, world.InteriorBuilding.BuildingType, world.InteriorBuilding.FactionId),
-                (block.InteriorBuilding!.Index, block.InteriorBuilding.BuildingType, block.InteriorBuilding.FactionId));
-            Assert.Equal(world.QuestMarkers.Select(marker => (marker.Id, marker.Kind, marker.Position, marker.SourceOrdinal)),
-                block.QuestMarkers.Select(marker => (marker.Id, marker.Kind, marker.Position, marker.SourceOrdinal)));
-            Assert.Equal(world.StartMarker, block.StartMarker);
-            Assert.Equal(world.EnterMarker, block.EnterMarker);
-            int buildingKey = (x << 16) + (y << 8) + building;
-            Assert.Equal(world.StaticNpcs, block.StaticNpcs.Select(npc => new NormalizedStaticNpcPlacement(npc.Id, npc.Position,
-                npc.BillboardArchive, npc.BillboardRecord, npc.FactionId, npc.Race, npc.Gender, npc.SourceOffset ^ (buildingKey + 4)))
-                .OrderBy(npc => npc.Id, StringComparer.Ordinal));
-            Assert.Equal(world.PropertyContainers.Select(Container), block.PropertyContainers.OrderBy(container => container.Id, StringComparer.Ordinal).Select(Container));
-            Assert.NotNull(block.Spatial);
-            Assert.NotEmpty(world.GeometryPlacements);
-            foreach (var placement in world.GeometryPlacements)
-            {
-                var model = Assert.Single(block.Models, model => model.Id == placement.Id);
-                Assert.Equal(placement.Bounds, model.Bounds);
-                Assert.Equal(placement.SamplePoints, model.SamplePoints);
-            }
+            string name = Assert.Single(charing.Blocks, placed => placed.X == x && placed.Y == y).SourceName;
+            DaggerfallWorldBlockBuilding slot = Assert.Single(facts[name].Buildings, value => value.Index == building);
+            DaggerfallWorldBlock interior = normalizer.RmbInterior(name, building).Block;
+            Assert.True(slot.HasInterior);
+            Assert.Equal((slot.Index, slot.BuildingType, slot.FactionId), (interior.InteriorBuilding!.Index, interior.InteriorBuilding.BuildingType, interior.InteriorBuilding.FactionId));
+            Assert.NotNull(interior.Spatial);
+            Assert.Contains(interior.Models, model => model.Bounds is not null && model.SamplePoints is { Count: > 0 });
         }
     }
 
@@ -344,61 +271,23 @@ public sealed class WorldBlockTests
     private static int Ordinal(string id) => int.Parse(id[(id.LastIndexOf('/') + 1)..], System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>
-    /// Privateer's Hold assembled from its RDB blocks' facts, with the catalog's start block, dungeon type and
-    /// texture table, carries the dungeon closure's lights, billboards, actors, treasure, quest markers, doors,
-    /// actions and start marker exactly.
+    /// Privateer's Hold's blocks, with the catalog's start block and texture table: each action model carries its
+    /// own collision and each door its local extent, and the table states every archive it redraws.
     /// </summary>
     [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK", "FACTION.TXT", "PAL.PAL")]
-    public void Privateers_hold_assembled_from_its_block_facts_carries_the_dungeon_closures_placements()
+    public void Privateers_hold_blocks_carry_their_moving_models_and_the_catalogs_texture_table()
     {
         DungeonLogicalSourceSet sources = Sources();
-        DungeonNormalizationResult site = DungeonNormalizer.Normalize(DungeonNormalizationRequest.Create(sources, 17, "Privateer's Hold") with
-        {
-            Quotas = DungeonNormalizationQuotas.Default with { MaximumSourceBytes = 1024L * 1024L * 1024L },
-        });
         DaggerfallLocations catalog = Catalog(sources);
         DaggerfallLocationMap location = Assert.Single(catalog.Locations, value => value.Region == 17 && value.Name == "Privateer's Hold");
         DaggerfallDungeonRecord dungeon = Assert.Single(catalog.Dungeons, value => value.Region == 17 && value.Index == location.Index);
         DaggerfallDungeonTextureTable table = dungeon.TextureTable!;
         WorldBlockNormalizer normalizer = new(sources);
-        Dictionary<string, DaggerfallWorldBlock> facts = dungeon.BlockPlacements.Select(block => block.SourceKey).Distinct(StringComparer.Ordinal)
-            .ToDictionary(name => name, name => normalizer.Rdb(name).Block, StringComparer.Ordinal);
+        DaggerfallWorldBlock[] facts = [.. dungeon.BlockPlacements.Select(block => block.SourceKey).Distinct(StringComparer.Ordinal)
+            .Select(name => normalizer.Rdb(name).Block)];
 
-        List<string> lights = [], billboards = [], actors = [], treasures = [], quests = [], doors = [], actions = [], moving = [];
-        Dictionary<string, (NormalizedVector3 Minimum, NormalizedVector3 Maximum, NormalizedVector3[] Samples)> placements = new(StringComparer.Ordinal);
-        NormalizedMarker? start = null, enter = null;
-        foreach (DaggerfallDungeonBlockPlacement placed in dungeon.BlockPlacements.OrderBy(block => block.X).ThenBy(block => block.Z).ThenBy(block => block.SourceKey, StringComparer.Ordinal))
+        foreach (DaggerfallWorldBlock block in facts)
         {
-            DaggerfallWorldBlock block = facts[placed.SourceKey];
-            string slug = PublishedIds.Slug(placed.SourceKey);
-            NormalizedVector3 origin = new(placed.X * RdbBlockSide, 0F, -(placed.Z * RdbBlockSide));
-            string Place(string id)
-            {
-                int scope = id.IndexOf($"/{slug}/", StringComparison.Ordinal) + slug.Length + 2;
-                return $"{id[..scope]}{placed.X}/{placed.Z}/{id[scope..]}";
-            }
-
-            string Key(string id, NormalizedVector3 position) => $"{Place(id)}@{Add(position, origin)}";
-            lights.AddRange(block.Lights.Select(light => Key(light.Id, light.Position)));
-            billboards.AddRange(block.Billboards.Select(billboard =>
-            {
-                // The dungeon's texture table remaps the classic wall archives; a billboard's record stays.
-                string[] parts = billboard.SpriteResourceId["sprite/texture-".Length..].Split('-');
-                ushort archive = DungeonTextureTableTransform.RemapArchive(ushort.Parse(parts[0]), [.. table.Archives.Select(value => (ushort)value)], (ushort)table.DoorArchiveOffset);
-                return $"{Key(billboard.Id, billboard.Position)}={archive}-{parts[1]}";
-            }));
-            actors.AddRange(block.Actors.Select(actor => $"{Key(actor.Id, actor.Position)}={actor.ActorResourceId}:{actor.SpawnDistance}:{actor.Passive}:{actor.Gender}"));
-            treasures.AddRange(block.Treasures.Select(treasure => Key(treasure.Id, treasure.Position)));
-            quests.AddRange(block.QuestMarkers.Select(marker => $"{Key(marker.Id, marker.Position)}={marker.Kind}/{marker.SourceOrdinal}"));
-            doors.AddRange(block.Doors.Select(door => $"{Key(door.Id, door.Position)}={door.Kind}/{door.StartingLockValue}/{door.RotationDegrees}"));
-            actions.AddRange(block.Actions.Select(action => $"{Place(action.Id)}->{(action.NextActionId is null ? "" : Place(action.NextActionId))}"
-                + $"@{(action.Position is { } position ? Add(position, origin) : null)}"));
-            // A static placement's map extent and samples, and an action model's own extent and collision.
-            foreach (DaggerfallWorldBlockModel model in block.Models.Where(model => model.Bounds is not null))
-                placements.Add(Place(model.Id), (Add(model.Bounds!.Minimum, origin), Add(model.Bounds.Maximum, origin),
-                    [.. model.SamplePoints!.Select(point => Add(point, origin))]));
-            moving.AddRange(block.Models.Where(model => model.Action is not null && model.LocalBounds is not null).Select(model =>
-                $"{Place(model.Action!.ActionId)}@{model.LocalBounds}"));
             Assert.All(block.Models.Where(model => model.Action is not null && model.MeshArtifactId is not null), model =>
             {
                 Assert.NotNull(model.Collision);
@@ -408,38 +297,10 @@ public sealed class WorldBlockTests
             });
             Assert.All(block.Models.Where(model => model.DoorId is not null && model.MeshArtifactId is not null),
                 model => Assert.NotNull(model.LocalBounds));
-            if (placed.Start)
-            {
-                start ??= block.StartMarker is { } marker ? marker with { Position = Add(marker.Position, origin) } : null;
-                enter ??= block.EnterMarker is { } marker2 ? marker2 with { Position = Add(marker2.Position, origin) } : null;
-            }
         }
 
-        NormalizedWorld world = site.Document.World;
-        Assert.Equal(world.Lights.Select(light => $"{light.Id}@{light.Position}").Order(StringComparer.Ordinal), lights.Order(StringComparer.Ordinal));
-        Assert.Equal(world.Billboards.Select(billboard => $"{billboard.Id}@{billboard.Position}={billboard.SpriteResourceId["sprite/texture-".Length..]}").Order(StringComparer.Ordinal),
-            billboards.Order(StringComparer.Ordinal));
-        Assert.Equal(world.Actors.Select(actor => $"{actor.Id}@{actor.Position}={actor.ActorResourceId}:{actor.SpawnDistance}:{actor.Passive}:{actor.Gender}").Order(StringComparer.Ordinal), actors.Order(StringComparer.Ordinal));
-        Assert.Equal(world.Treasures.Select(treasure => $"{treasure.Id}@{treasure.Position}").Order(StringComparer.Ordinal), treasures.Order(StringComparer.Ordinal));
-        Assert.All(world.Treasures, treasure => Assert.Equal($"treasure/dungeon-type-{location.DungeonType}", treasure.TreasureResourceId));
-        Assert.Equal(world.QuestMarkers.Select(marker => $"{marker.Id}@{marker.Position}={marker.Kind}/{marker.SourceOrdinal}").Order(StringComparer.Ordinal), quests.Order(StringComparer.Ordinal));
-        Assert.Equal(world.Doors.Select(door => $"{door.Id}@{door.Position}={door.Kind}/{door.StartingLockValue}/{door.RotationDegrees}").Order(StringComparer.Ordinal), doors.Order(StringComparer.Ordinal));
-        Assert.Equal(world.Actions.Select(action => $"{action.Id}->{action.NextActionId ?? ""}@{action.Position}").Order(StringComparer.Ordinal), actions.Order(StringComparer.Ordinal));
-        Assert.Equal(world.StartMarker, start);
-        Assert.Equal(world.EnterMarker, enter);
-        // A site places a model from its world-space points; the block from its own frame, so only the float
-        // rounding of the block translation differs.
-        Assert.Equal(world.GeometryPlacements.Select(placement => placement.Id).Order(StringComparer.Ordinal), placements.Keys.Order(StringComparer.Ordinal));
-        foreach (NormalizedGeometryPlacement placement in world.GeometryPlacements)
-        {
-            (NormalizedVector3 minimum, NormalizedVector3 maximum, NormalizedVector3[] samples) = placements[placement.Id];
-            Near(placement.Bounds.Minimum, minimum);
-            Near(placement.Bounds.Maximum, maximum);
-            Assert.Equal(placement.SamplePoints.Count, samples.Length);
-            foreach ((NormalizedVector3 expected, NormalizedVector3 actual) in placement.SamplePoints.Zip(samples)) Near(expected, actual);
-        }
-        Assert.Equal(world.ActionModels.Select(model => $"{model.ActionId}@{model.LocalBounds}").Order(StringComparer.Ordinal), moving.Order(StringComparer.Ordinal));
-        Assert.Contains(facts.Values, block => block.WaterLevel is not null || block.AmbientZone is not null || block.Spatial is not null);
+        Assert.Contains(facts.SelectMany(block => block.Models), model => model.Action is not null && model.LocalBounds is not null);
+        Assert.Contains(facts, block => block.WaterLevel is not null || block.AmbientZone is not null || block.Spatial is not null);
         // The catalog's texture table states every archive it redraws, the door archive included.
         Assert.Equal(DungeonTextureTableTransform.RemappedArchives.Select(archive => (int)archive), table.Remaps.Select(remap => remap.Archive));
         Assert.All(table.Remaps, remap => Assert.Equal(DungeonTextureTableTransform.RemapArchive((ushort)remap.Archive,
@@ -475,8 +336,7 @@ public sealed class WorldBlockTests
         Assert.Equal((DaggerfallWorldBlockTransitionKind.DungeonExit, 95), (dungeonExit.Kind, dungeonExit.Texture.Archive));
         Assert.True(Distance(dungeonExit.Position, startBlock.StartMarker!.Position) < 2F, "The start marker stands at the dungeon's exit.");
 
-        MapsExteriorLayout klerd = MapsDecoder.DecodeExteriorLayout(BsaArchive.Parse(sources.Require("MAPS.BSA").Bytes.Span, sources.Require("MAPS.BSA").Label),
-            0, "The Tombs of Klerd");
+        MapsExteriorLayout klerd = Exterior(sources, 0, "The Tombs of Klerd");
         DaggerfallWorldBlockTransitionDoor[] entrances = [.. klerd.Blocks.SelectMany(block => normalizer.RmbExterior(block.SourceName).Block.TransitionDoors)];
         Assert.NotEmpty(entrances);
         Assert.All(entrances, door => Assert.True(door.Kind == DaggerfallWorldBlockTransitionKind.DungeonEntrance
@@ -490,8 +350,7 @@ public sealed class WorldBlockTests
         DaggerfallWorldBlockModel placed = Assert.Single(wall.Models, model => model.Id == gate.ModelId);
         Assert.Equal((placed.Position, placed.RotationDegrees), (gate.Position, gate.RotationDegrees));
 
-        MapsExteriorLayout charing = MapsDecoder.DecodeExteriorLayout(BsaArchive.Parse(sources.Require("MAPS.BSA").Bytes.Span, sources.Require("MAPS.BSA").Label),
-            17, "Charing");
+        MapsExteriorLayout charing = Exterior(sources, 17, "Charing");
         Assert.All(charing.Blocks.Select(block => normalizer.RmbExterior(block.SourceName).Block), block =>
             Assert.Equal(block.StartMarker?.Position, block.StartMarkers.FirstOrDefault()?.Position));
         Assert.Contains(charing.Blocks, block => normalizer.RmbExterior(block.SourceName).Block.StartMarkers.Count != 0);
@@ -560,7 +419,7 @@ public sealed class WorldBlockTests
 
     /// <summary>
     /// The catalog states each location's climate and each dungeon's start block and classic texture table: the
-    /// inputs and table the dungeon normalizer builds the dungeon with.
+    /// inputs and table a site assembles the dungeon with.
     /// </summary>
     [CorpusFact("MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "CLIMATE.PAK")]
     public void The_catalog_states_each_dungeons_start_block_and_classic_texture_table()
@@ -571,12 +430,13 @@ public sealed class WorldBlockTests
         Assert.All(catalog.Locations, location => Assert.InRange(location.Climate!.Value, 223, 232));
         Assert.All(catalog.Dungeons, dungeon => Assert.Single(dungeon.BlockPlacements, block => block.Start));
         DaggerfallLocationMap hold = Assert.Single(catalog.Locations, value => value.Region == 17 && value.Name == "Privateer's Hold");
-        MapsDungeonLayout layout = MapsDecoder.DecodeDungeonLayout(maps, 17, "Privateer's Hold");
-        (int x, int y) = MapsDecoder.ToMapPixel(layout.Longitude, layout.Latitude);
+        MapsLocationRecord source = Assert.Single(MapsDecoder.DecodeRegionLocations(maps, 17), value => value.Index == hold.Index);
+        MapsDungeonLocation layout = Assert.Single(MapsDecoder.DecodeRegionDungeons(maps, 17), value => value.Index == hold.Index);
+        (int x, int y) = MapsDecoder.ToMapPixel(source.Longitude, source.Latitude);
         Assert.True(climate.TryGetPixel(x, y, out byte value));
         Assert.Equal(value, hold.Climate);
         DaggerfallDungeonRecord dungeon = Assert.Single(catalog.Dungeons, record => record.Region == 17 && record.Index == hold.Index);
-        Assert.Equal(DungeonTextureTableTransform.CreateClassic(layout.LocationId, value).Select(archive => (int)archive), dungeon.TextureTable!.Archives);
+        Assert.Equal(DungeonTextureTableTransform.CreateClassic(layout.DungeonLocationId, value).Select(archive => (int)archive), dungeon.TextureTable!.Archives);
         Assert.Equal(layout.Blocks.Select(block => (block.SourceName, (int)block.X, (int)block.Z, block.IsStart)),
             dungeon.BlockPlacements.Select(block => (block.SourceKey, block.X, block.Z, block.Start)));
     }
@@ -655,57 +515,18 @@ public sealed class WorldBlockTests
         }
     }
 
-    /// <summary>
-    /// The published Charing exterior closure's doors and start marker are the ones its published blocks
-    /// state, placed at their grid positions: the generated per-block facts assemble to today's site.
-    /// </summary>
-    [CorpusAndGeneratedContentFact("MAPS.BSA")]
-    public void The_published_charing_closure_is_assembled_from_the_published_blocks()
-    {
-        const string blocksRoot = "worldrpg/imports/world-blocks/";
-        using JsonDocument closure = JsonDocument.Parse(ImportedContent.Read("worldrpg/imports/charing/exterior/normalized.json"));
-        MapsExteriorLayout charing = MapsDecoder.DecodeExteriorLayout(BsaArchive.Parse(File.ReadAllBytes(TestData.Corpus("MAPS.BSA")), "arena2/MAPS.BSA"), 17, "Charing");
-        Dictionary<string, DaggerfallWorldBlock> blocks = new(StringComparer.Ordinal);
-        List<(string Id, NormalizedVector3 Position, int? Building, int Lock)> doors = [];
-        NormalizedMarker? start = null;
-        foreach ((string name, int x, int y) in charing.Blocks.Select(block => (block.SourceName, (int)block.X, (int)block.Y))
-            .OrderBy(block => block.Item2).ThenBy(block => block.Item3).ThenBy(block => block.Item1, StringComparer.Ordinal))
-        {
-            if (!blocks.TryGetValue(name, out DaggerfallWorldBlock? block))
-                blocks.Add(name, block = JsonSerializer.Deserialize<DaggerfallWorldBlock>(
-                    ImportedContent.Read($"{blocksRoot}{WorldBlockNormalizer.RmbExteriorKey(name)}.json"), PublishedJson.SectionRead)!);
-            NormalizedVector3 origin = new(x * RmbBlockSide, 0F, -(y * RmbBlockSide));
-            string scope = $"door/{PublishedIds.Slug(name)}-rmb/";
-            doors.AddRange(block.Doors.Select(door => ($"{scope}{x}/{y}/{door.Id[scope.Length..]}", Add(door.Position, origin), door.BuildingIndex, door.StartingLockValue)));
-            if (block.StartMarker is { } marker) start ??= marker with { Position = Add(marker.Position, origin) };
-        }
-
-        JsonElement world = closure.RootElement.GetProperty("world");
-        Dictionary<string, JsonElement> published = world.GetProperty("doors").EnumerateArray().ToDictionary(door => door.GetProperty("id").GetString()!, StringComparer.Ordinal);
-        Assert.Equal(published.Keys.Order(StringComparer.Ordinal), doors.Select(door => door.Id).Order(StringComparer.Ordinal));
-        foreach (var door in doors)
-        {
-            JsonElement expected = published[door.Id];
-            Near(Vector(expected.GetProperty("position")), door.Position);
-            Assert.Equal(expected.GetProperty("exteriorBuildingIndex").ValueKind == JsonValueKind.Null ? null : expected.GetProperty("exteriorBuildingIndex").GetInt32(), door.Building);
-            Assert.Equal(expected.GetProperty("startingLockValue").GetInt32(), door.Lock);
-        }
-
-        Assert.Equal(Vector(world.GetProperty("startMarker").GetProperty("position")), start!.Position);
-    }
-
-    private static NormalizedVector3 Vector(JsonElement value) => new(value.GetProperty("x").GetSingle(), value.GetProperty("y").GetSingle(), value.GetProperty("z").GetSingle());
-
-    private static string Container(NormalizedPropertyContainer container) =>
-        $"{container.Id}@{container.Position}:{string.Join(',', container.ItemGroups)}:{string.Join(';', container.InteractionPoints)}";
-
-    private static NormalizedVector3 Add(NormalizedVector3 left, NormalizedVector3 right) => new(left.X + right.X, left.Y + right.Y, left.Z + right.Z);
-
     private static void Near(NormalizedVector3 expected, NormalizedVector3 actual)
     {
         Assert.InRange(actual.X, expected.X - 1e-3F, expected.X + 1e-3F);
         Assert.InRange(actual.Y, expected.Y - 1e-3F, expected.Y + 1e-3F);
         Assert.InRange(actual.Z, expected.Z - 1e-3F, expected.Z + 1e-3F);
+    }
+
+    /// <summary>The RMB grid of the region's first location of that name, as a by-name lookup in MAPNAMES finds it.</summary>
+    private static MapsExteriorLayout Exterior(DungeonLogicalSourceSet sources, int region, string name)
+    {
+        BsaArchive maps = BsaArchive.Parse(sources.Require("MAPS.BSA").Bytes.Span, sources.Require("MAPS.BSA").Label);
+        return MapsDecoder.DecodeExteriorLayout(maps, region, MapsDecoder.DecodeLocationNames(maps, region).ToList().IndexOf(name));
     }
 
     private static DaggerfallLocations Catalog(DungeonLogicalSourceSet sources) => DaggerfallLocationBuilder.Build(
@@ -740,7 +561,7 @@ public sealed class WorldBlockTests
         Assert.NotEmpty(Arena2WorldBlocksPublication.Create(Sources(), locations, "world-media", catalog: catalog).Plan.Artifacts);
     }
 
-    private static DungeonLogicalSourceSet Sources(bool textures = true) => new(Directory.EnumerateFiles(TestData.CorpusRoot)
+    internal static DungeonLogicalSourceSet Sources(bool textures = true) => new(Directory.EnumerateFiles(TestData.CorpusRoot)
         .Where(path => Path.GetFileName(path) is "MAPS.BSA" or "BLOCKS.BSA" or "ARCH3D.BSA" or "CLIMATE.PAK" or "FACTION.TXT" or "FLATS.CFG" or "PAL.PAL"
             || textures && Path.GetFileName(path).StartsWith("TEXTURE.", StringComparison.Ordinal))
         .Select(path => new DungeonLogicalSource($"arena2/{Path.GetFileName(path)}", File.ReadAllBytes(path))));

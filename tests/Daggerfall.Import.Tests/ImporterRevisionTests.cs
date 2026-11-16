@@ -35,7 +35,7 @@ public sealed class ImporterRevisionTests
                 """);
             string[] read =
             [
-                "src/Daggerfall.Import/Normalization/RmbExteriorNormalizer.cs",
+                "src/Daggerfall.Import/Normalization/WorldBlockNormalizer.cs",
                 "src/Daggerfall.Import/Publication/WorldBlocksPublication.cs",
                 "src/Daggerfall.Import.Tool/Commands/ImportCommand.cs",
                 "src/Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj",

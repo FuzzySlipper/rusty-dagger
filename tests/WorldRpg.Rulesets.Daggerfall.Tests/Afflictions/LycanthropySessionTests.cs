@@ -162,7 +162,7 @@ public sealed class LycanthropySessionTests
         using var restored = Restore(s.CaptureSave());
         Assert.Equal(5, restored.Casting.ReadyFor(1)!.Cost);
         var bundle = Assert.IsType<DaggerfallLiveSpell>(restored.Casting.Release(1, true).Bundle);
-        Assert.Equal(DaggerfallCastOutcome.InvalidTarget, restored.Casting.Deliver(bundle, [2000]).Outcome);
+        Assert.Equal(DaggerfallCastOutcome.InvalidTarget, restored.Casting.Deliver(bundle, [HoldActor(1)]).Outcome);
         Assert.False(restored.State.RacialOverrides.Current!.State.BeastForm);
         Assert.Equal(DaggerfallCastOutcome.Ready, restored.SpellRelease.ReadyPlayerSpell("spell.085").Outcome);
         Assert.True(restored.Lycanthropy.Cure());
@@ -223,7 +223,7 @@ public sealed class LycanthropySessionTests
     {
         var inputs = ReadInputs(TestData.RepositoryRoot); List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, inputs);
-        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         var composition = new DaggerfallSessionComposition(definitions ?? TestPayload.Definitions, inputs, DaggerfallTuning.Defaults);
         return save is null ? DaggerfallSession.StartNew(engine.Context, composition) : DaggerfallSession.Restore(engine.Context, composition, save);

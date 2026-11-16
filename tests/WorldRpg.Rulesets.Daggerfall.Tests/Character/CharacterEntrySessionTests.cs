@@ -14,7 +14,7 @@ public sealed class CharacterEntrySessionTests
         var inputs = ReadInputs(TestData.RepositoryRoot);
         List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, inputs);
         var session = DaggerfallSession.StartNew(EngineContextFake.Create(content,
-            SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases)).Context,
+            SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases)).Context,
             new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
         session.ApplyProductMode(ProductMode.Title);
         session.OpenCharacterCreation();
@@ -106,7 +106,7 @@ public sealed class CharacterEntrySessionTests
         var inputs = ReadInputs(TestData.RepositoryRoot);
         List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, inputs);
         using var session = DaggerfallSession.StartNew(EngineContextFake.Create(content,
-            SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases)).Context,
+            SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases)).Context,
             new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
         session.ApplyProductMode(ProductMode.Title);
         session.OpenCharacterCreation();

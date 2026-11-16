@@ -117,10 +117,10 @@ public sealed class DaggerfallMapPresentationTests
     {
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
-        var profile = ReadProfile(root, FullContent(root), definitions, "daggerfall.charing-exterior");
+        var profile = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, profile);
-        var engine = EngineContextFake.Create(content, SpatialFake.Create(profile.SpatialArtifact.Sha256, releases).Service,
+        var engine = EngineContextFake.Create(content, SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases).Service,
             new AppearanceFake(releases), random: MapRandom.Create());
         var composition = new DaggerfallSessionComposition(definitions, profile, DaggerfallTuning.Defaults)
         {

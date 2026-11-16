@@ -286,7 +286,7 @@ internal sealed record DaggerfallSavePayload(
             if (activeShip.Kind != DaggerfallSiteKind.HomeYourShips || activeShip.MapPixelX != anchor.MapPixelX || activeShip.MapPixelY != anchor.MapPixelY)
                 throw new ArgumentException("Saved boarding must be at the owned ship's actual world site.");
         }
-        // A saved profile resolves through the catalog: a published closure or the location's assembly.
+        // A saved profile resolves through the catalog, which assembles the location it names.
         bool Admitted(DaggerfallWorldProfileKey profile) => profile == inputs.ProfileKey || profiles?.TryGet(profile, out _) == true;
         foreach (DaggerfallGroundContainerSave ground in GroundContainers)
         {

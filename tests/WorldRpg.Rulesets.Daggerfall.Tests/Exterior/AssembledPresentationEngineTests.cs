@@ -16,6 +16,8 @@ using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using Xunit.Abstractions;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
@@ -44,9 +46,9 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     public void Leaving_the_hold_draws_the_island_window_and_going_back_down_retires_it()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
-        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
-        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
+        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(PrivateersHold);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, PrivateersHold);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
         long managedBefore = GC.GetTotalMemory(forceFullCollection: true);
         long processBefore = Environment.WorkingSet;
@@ -112,9 +114,9 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     public void Leaving_a_site_just_after_its_enemies_gave_chase_releases_it_through_the_engine()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
-        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
-        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
+        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(PrivateersHold);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, PrivateersHold);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
         AssembledWorldRun run = OnGround(host, host.Call(engine => world.Start(engine, files)));
         try
@@ -146,8 +148,8 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     public void A_walk_climbs_the_stair_out_of_the_hold_s_starting_rooms()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
-        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(PrivateersHold);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, PrivateersHold);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
         AssembledWorldRun run = host.Call(engine => world.StartInHold(engine, files));
         try
@@ -177,8 +179,8 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     public void A_quarter_turned_closed_door_blocks_its_doorway_until_it_opens()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
-        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(PrivateersHold);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, PrivateersHold);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
         AssembledWorldRun run = host.Call(engine => world.StartInHold(engine, files));
         try
@@ -262,7 +264,7 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     public void A_building_of_the_island_window_is_entered_and_left()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
         (DaggerfallSiteId site, DaggerfallSiteBuildingId building) = NeighbourBuilding(world);
         DaggerfallWorldProfileKey interior = DaggerfallWorldProfileIds.Interior(site, building);
         Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, site, building);
@@ -307,9 +309,9 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     public void Entering_a_neighbouring_interior_stands_the_player_on_its_floor()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
-        DaggerfallSiteId hamlet = new(AssembledWorld.PrivateersHold.Region, 197);
-        DaggerfallSiteId village = new(AssembledWorld.PrivateersHold.Region, 198);
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
+        DaggerfallSiteId hamlet = new(PrivateersHold.Region, 197);
+        DaggerfallSiteId village = new(PrivateersHold.Region, 198);
         (DaggerfallSiteId Site, DaggerfallSiteBuildingId Building)[] buildings =
             [(hamlet, new(0, 0, 0)), (hamlet, new(0, 1, 0)), (hamlet, new(2, 0, 0)), (village, new(0, 0, 3))];
         Dictionary<string, ReadOnlyMemory<byte>> files = new(StringComparer.Ordinal);
@@ -368,9 +370,9 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     public void A_dungeon_arrival_stands_on_its_floor_and_a_remembered_entrance_is_not_raised_again()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(AssembledWorld.PrivateersHold);
-        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
-        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
+        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(PrivateersHold);
+        Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, PrivateersHold);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
         AssembledWorldRun run = host.Call(engine => world.StartInHold(engine, files));
         try
@@ -429,14 +431,14 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     public void The_hold_and_an_assembled_interior_publish_through_the_engine()
     {
         AssembledWorld world = Shared.Value;
-        DaggerfallSiteRecord city = world.Unpublished(record => record.Kind == DaggerfallSiteKind.TownCity && record.Exterior is not null);
+        DaggerfallSiteRecord city = world.Nearby(record => record.Kind == DaggerfallSiteKind.TownCity && record.Exterior is not null);
         DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(city.Id);
         DaggerfallSiteBuildingId building = world.Profiles.Require(exterior).Doors
             .Select(door => door.ExteriorBuilding)
             .OfType<DaggerfallSiteBuildingId>()
             .First(candidate => world.Profiles.Contains(DaggerfallWorldProfileIds.Interior(city.Id, candidate)));
         DaggerfallWorldProfileKey interior = DaggerfallWorldProfileIds.Interior(city.Id, building);
-        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(AssembledWorld.PrivateersHold);
+        DaggerfallWorldProfileKey hold = DaggerfallWorldProfileIds.Dungeon(PrivateersHold);
         Dictionary<string, ReadOnlyMemory<byte>> files = AssembledWorldRun.EngineContent(world, city.Id, building);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = files });
         AssembledWorldRun run = host.Call(engine => world.StartInHold(engine, files));
@@ -804,9 +806,9 @@ public sealed class AssembledPresentationEngineTests(ITestOutputHelper output)
     /// </summary>
     private static (DaggerfallSiteId Site, DaggerfallSiteBuildingId Building) NeighbourBuilding(AssembledWorld world)
     {
-        DaggerfallSiteId village = new(AssembledWorld.PrivateersHold.Region, 198);
+        DaggerfallSiteId village = new(PrivateersHold.Region, 198);
         DaggerfallSiteBuildingId building = new(0, 0, 0);
-        DaggerfallSiteRecord hold = world.Definitions.Locations.Records.Single(record => record.Id == AssembledWorld.PrivateersHold);
+        DaggerfallSiteRecord hold = world.Definitions.Locations.Records.Single(record => record.Id == PrivateersHold);
         DaggerfallSiteRecord record = world.Definitions.Locations.Records.Single(record => record.Id == village);
         Assert.InRange(Math.Abs(record.MapPixelX - hold.MapPixelX), 0, DaggerfallExteriorCellResidency.StreamingRadius);
         Assert.InRange(Math.Abs(record.MapPixelY - hold.MapPixelY), 0, DaggerfallExteriorCellResidency.StreamingRadius);

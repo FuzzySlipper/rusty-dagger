@@ -89,7 +89,7 @@ public sealed class SoundCatalogTests
 
     /// <summary>
     /// The reference closure: every admitted catalog entry names the artifact the publication emitted
-    /// for it, a site closure delivers that artifact, and the product-wide group publishes no audio.
+    /// for it, the world media delivers that artifact, and the product-wide group publishes no audio.
     /// </summary>
     [CorpusAndGeneratedContentFact]
     public void Every_admitted_clip_is_carried_by_the_artifact_the_publication_emitted()
@@ -163,14 +163,13 @@ public sealed class SoundCatalogTests
             AssertWave(artifact.Bytes.Span);
             Assert.True(artifact.Bytes.Span[44..].SequenceEqual(archive.GetClip(clip.Ordinal).PcmUnsigned8.Span));
 
-            // A site closure delivers that same artifact under its closure-relative name, below the
-            // clips root its audio bundle declares: the samples come from the same archive ordinal
-            // whichever closure cuts them.
+            // The world media delivers that same artifact under its publication-relative name, below the
+            // clips root its audio bundle declares.
             Assert.Equal(artifact.Bytes.ToArray(), ImportedContent.Read("worldrpg/imports/shared/" + resource.RelativePath));
         }
 
-        // The product-wide group carries neither clips nor a catalog of them: each site stages and opens
-        // its own clips, and nothing at runtime reads the catalog.
+        // The classic media group carries neither clips nor a catalog of them: the world media carries the
+        // clips the session opens, and nothing at runtime reads the catalog.
         Assert.DoesNotContain(TestDataContainers.Entries(TestDataContainers.Data).Keys, path => path.StartsWith("worldrpg/media/audio/", StringComparison.Ordinal));
     }
 

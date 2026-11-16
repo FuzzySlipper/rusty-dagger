@@ -18,7 +18,7 @@ public sealed class DaggerfallFortifyEffectsTests
         using Fixture f = new(); var s = f.Session; var stat = Stat(s, 1, subtype); stat.BaseValue = 50;
         Assert.Equal(DaggerfallEffectAdmissionOutcome.Started, Start(s, "first", subtype, 7, 10));
         Assert.Equal(57, stat.Value); Assert.Equal(50, stat.BaseValue); Assert.Single(stat.Sources);
-        Assert.Equal(DaggerfallEffectAdmissionOutcome.Refreshed, Start(s, "same", subtype, 99, 10, settingsAmount: 7, caster: 2001));
+        Assert.Equal(DaggerfallEffectAdmissionOutcome.Refreshed, Start(s, "same", subtype, 99, 10, settingsAmount: 7, caster: HoldActor(2)));
         var effect = Assert.Single(s.State.Effects.Active); Assert.Equal("first", effect.Context.Instance.Value); Assert.Equal(19u, effect.Lifecycle.RemainingRounds);
         Assert.Equal(57, stat.Value); Assert.Single(stat.Sources);
         Assert.Equal(DaggerfallEffectAdmissionOutcome.Started, Start(s, "different", subtype, 3, 10));
@@ -70,7 +70,7 @@ public sealed class DaggerfallFortifyEffectsTests
     {
         using Fixture f = new(); var s = f.Session; Stat(s, 1, 0).BaseValue = 50;
         s.State.Effects.Start(new("drain", "drain-strength", "drain", null, 1, "drain", "Magic", null, 1, null,
-            DaggerfallAttributeDrainEffects.Encode(new(new(new("drain", 7, 0, 0, 0, 1, 0, 0, 1, 8, 8, 0, 0, 1), 1, 8, 100, new(2000, null, DaggerfallCastSource.Spell)), 8))));
+            DaggerfallAttributeDrainEffects.Encode(new(new(new("drain", 7, 0, 0, 0, 1, 0, 0, 1, 8, 8, 0, 0, 1), 1, 8, 100, new(HoldActor(1), null, DaggerfallCastSource.Spell)), 8))));
         Start(s, "buff", 0, 7, 10); Assert.Equal(49, Stat(s, 1, 0).Value);
         s.State.Effects.CancelSource("fortify"); Assert.Equal(42, Stat(s, 1, 0).Value); Assert.Equal("drain", Assert.Single(s.State.Effects.Active).Context.Instance.Value);
         long target = s.SpawnActor("rat", new(new(11, 0, 11), 0)); Start(s, "retired", 0, 3, 10, target: target); s.RetireActor(target);
@@ -104,8 +104,8 @@ public sealed class DaggerfallFortifyEffectsTests
     }
 
     private static DaggerfallSpellEffectDefinition Setting(int subtype, int amount) => new("fortify", 9, subtype, 10, 0, 1, 0, 0, 1, amount, amount, 0, 0, 1);
-    private static DaggerfallEffectAdmissionOutcome Start(DaggerfallSession s, string instance, int subtype, int amount, uint rounds, int? settingsAmount = null, long target = 1, long caster = 2000) => s.State.Effects.Start(new(
-        instance, DaggerfallFortifyEffects.Key(subtype), "fortify", caster, target, "fortify", "Magic", null, 1, rounds,
+    private static DaggerfallEffectAdmissionOutcome Start(DaggerfallSession s, string instance, int subtype, int amount, uint rounds, int? settingsAmount = null, long target = 1, long? caster = null) => s.State.Effects.Start(new(
+        instance, DaggerfallFortifyEffects.Key(subtype), "fortify", caster ?? HoldActor(1), target, "fortify", "Magic", null, 1, rounds,
         JsonSerializer.SerializeToElement(new DaggerfallCastEffectState(Setting(subtype, settingsAmount ?? amount), 1, amount, 100), DaggerfallMagicJson.Default.DaggerfallCastEffectState)));
     private static Stat Stat(DaggerfallSession s, long id, int subtype) => (id == 1 ? s.State.Actors.Player.Stats : s.State.Actors.Get(id).Stats)
         .GetStat(StatId.Parse(DaggerfallMechanicsIds.Attributes[subtype].Value));
@@ -118,7 +118,7 @@ public sealed class DaggerfallFortifyEffectsTests
         private EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, _composition.StartSite);
-            return EngineContextFake.Create(content, SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256, releases).Service,
+            return EngineContextFake.Create(content, SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256, releases).Service,
                 new AppearanceFake(releases), PerceptionFake.Create().Service, random: RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload) => DaggerfallSession.Restore(Engine().Context, _composition, payload);

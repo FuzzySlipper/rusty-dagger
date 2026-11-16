@@ -30,10 +30,9 @@ public sealed record RmbPlacementTrim(string PlacementId, uint ModelNumber, IRea
 /// line, and some town blocks set a building's trim into another's wall. A streamed location draws each
 /// placement from the model's shared mesh, so two faces in one plane and facing, with different texture
 /// offsets, reach the same depth at every pixel and shimmer in motion. Taking the placements in source
-/// order, as a site closure merges them (<see cref="CoplanarSurfaces"/>), a placement any of whose static
-/// faces an earlier one covers is drawn by a mesh of its own with the covered part cut away. Building door
-/// faces are drawn whole and cover nothing, as the closure keeps them; a city gate swaps its model by the time
-/// of day and is left out.
+/// order (<see cref="CoplanarSurfaces"/>), a placement any of whose static faces an earlier one covers is
+/// drawn by a mesh of its own with the covered part cut away. Building door faces are drawn whole and cover
+/// nothing; a city gate swaps its model by the time of day and is left out.
 /// </remarks>
 public static class RmbPlacementTrims
 {

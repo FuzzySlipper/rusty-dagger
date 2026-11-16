@@ -140,8 +140,7 @@ public sealed class WabbajackSessionTests
         f.Session.Strike(new(1, dynamic, 1, 10000, .125));
         var first = f.Session.State.Actors.Get(f.Target).Pose;
         var second = f.Session.State.Actors.Get(dynamic).Pose;
-        var destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
-            TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), TestPayload.Definitions);
+        var destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         var profiles = new DaggerfallSiteProfiles([f.Inputs, destination]);
         f.Session.AdmitSiteProfiles(profiles);
         Assert.True(f.Session.TryTransitionTo(destination.ProfileKey));
@@ -203,11 +202,10 @@ public sealed class WabbajackSessionTests
         {
             List<string> releases = [];
             ContentFake content = new(releases); PopulateContent(content, Inputs);
-            var castle = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
-                TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), TestPayload.Definitions);
+            var castle = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
             PopulateContent(content, castle);
             if (additional is not null) PopulateContent(content, additional);
-            var spatial = SpatialFake.Create((additional ?? Inputs).SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
+            var spatial = SpatialFake.Create((additional ?? Inputs).Geometry.Spatial[0].Sha256, releases); spatial.KeepPosition = true;
             return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: SelectionRandom.Create(_draw));
         }
         internal void Strike() => Session.Strike(new(1, Target, 1, 1, .125));

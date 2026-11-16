@@ -70,7 +70,7 @@ public sealed class HeldAbsorptionSessionTests
     public void Normal_incoming_cast_is_consumed_once_with_source_identity_actual_refund_and_HUD_outcome()
     {
         using Fixture f = new(); var s = f.Session; var item = Stock(s); Equip(s,item);
-        Fund(s,2000); var magicka = Fund(s,1); magicka.SetCurrent(0);
+        Fund(s,HoldActor(1)); var magicka = Fund(s,1); magicka.SetCurrent(0);
         double strength = s.State.Actors.Player.Stats.GetStat(StatId.Parse("strength")).Value;
         var bundle = Incoming(s);
         Assert.Equal(DaggerfallCastOutcome.DeliveryCompleted,s.Casting.Deliver(bundle,[1]).Outcome);
@@ -96,7 +96,7 @@ public sealed class HeldAbsorptionSessionTests
     public void Whole_effect_capacity_school_and_held_source_rules_are_preserved()
     {
         using Fixture f = new(); var s = f.Session; var item = Stock(s); Equip(s,item);
-        Fund(s,2000); var magicka = Fund(s,1); magicka.SetCurrent(0);
+        Fund(s,HoldActor(1)); var magicka = Fund(s,1); magicka.SetCurrent(0);
         var baseline = Incoming(s); s.Casting.Deliver(baseline,[1]);
         int cost = Assert.Single(baseline.Absorptions).AdmittedSpellPoints;
         magicka.Maximum.BaseValue=cost-1; magicka.SetCurrent(0);
@@ -193,8 +193,8 @@ public sealed class HeldAbsorptionSessionTests
     }
     private static DaggerfallLiveSpell Incoming(DaggerfallSession s)
     {
-        Assert.Equal(DaggerfallCastOutcome.Ready,s.Casting.Ready(2000,"spell.009").Outcome);
-        return s.Casting.Release(2000,true).Bundle!;
+        Assert.Equal(DaggerfallCastOutcome.Ready,s.Casting.Ready(HoldActor(1),"spell.009").Outcome);
+        return s.Casting.Release(HoldActor(1),true).Bundle!;
     }
     private static Track FundRead(DaggerfallSession s,long id)=>(id==1?s.State.Actors.Player.Stats:s.State.Actors.Get(id).Stats).GetTrack(TrackId.Parse("magicka"));
     private static Track Fund(DaggerfallSession s,long id)
@@ -217,7 +217,7 @@ public sealed class HeldAbsorptionSessionTests
         private EngineContextFake CreateEngine()
         {
             List<string> releases=[]; ContentFake content=new(releases);PopulateContent(content,composition.StartSite);
-            return EngineContextFake.Create(content,SpatialFake.Create(composition.StartSite.SpatialArtifact.Sha256,releases).Service,
+            return EngineContextFake.Create(content,SpatialFake.Create(composition.StartSite.Geometry.Spatial[0].Sha256,releases).Service,
                 new AppearanceFake(releases),PerceptionFake.Create().Service,random:RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload save)=>DaggerfallSession.Restore(CreateEngine().Context,composition,save);

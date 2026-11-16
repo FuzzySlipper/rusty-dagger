@@ -226,9 +226,9 @@ public sealed class VampirismSessionTests
         internal Fixture()
         {
             var root = TestData.RepositoryRoot; var definitions = TestPayload.Definitions;
-            var files = FullContent(root, "worldrpg/imports/privateers-hold", "worldrpg/imports/the-hawkston-cemetery", "worldrpg/imports/the-hawkston-cemetery/exterior");
-            profiles = [ReadInputs(root), ReadProfile(root, files, definitions, "daggerfall.the-hawkston-cemetery"),
-                ReadProfile(root, files, definitions, "daggerfall.the-hawkston-cemetery-exterior")];
+            var files = FullContent(root, DaggerfallWorldBlocks.Root);
+            profiles = [ReadInputs(root), Assembled(DaggerfallWorldProfileIds.Dungeon(HawkstonCemetery)),
+                Assembled(DaggerfallWorldProfileIds.Exterior(HawkstonCemetery))];
             composition = new(definitions, profiles[0], DaggerfallTuning.Defaults) { Profiles = new(profiles), VideosEnabled = false,
                 Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(root,"content/worldrpg/payloads/daggerfall.blocks.json"))) };
             Session = DaggerfallSession.StartNew(Engine().Context, composition);
@@ -237,7 +237,7 @@ public sealed class VampirismSessionTests
         {
             List<string> releases = []; ContentFake content = new(releases);
             foreach (var profile in profiles) PopulateContent(content, profile);
-            var spatial = SpatialFake.Create(profiles[0].SpatialArtifact.Sha256, releases);
+            var spatial = SpatialFake.Create(profiles[0].Geometry.Spatial[0].Sha256, releases);
             return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: VampireRandom.Create());
         }
         internal DaggerfallSession Restore() => DaggerfallSession.Restore(Engine().Context, composition, Session.CaptureSave());

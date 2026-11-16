@@ -5,8 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>
 /// The deterministic identity of every profile a catalog location can have: its exterior, its dungeon
 /// and each building interior its exterior blocks declare. Saves, return destinations, discoveries, action
-/// graphs and authored overrides all name a profile by this id, so a location resolves to the same profile
-/// whether an authored closure or the per-block assembly provides it.
+/// graphs and the new-game start all name a profile by this id.
 /// </summary>
 internal static class DaggerfallWorldProfileIds
 {

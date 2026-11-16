@@ -88,7 +88,7 @@ public sealed class GroundRestingSessionTests
         {
             ContentFake content = new(releases);
             PopulateContent(content, Inputs);
-            spatial = SpatialFake.Create(Inputs.SpatialArtifact.Sha256, releases);
+            spatial = SpatialFake.Create(Inputs.Geometry.Spatial[0].Sha256, releases);
             spatial.KeepPosition = true;
             // As in the Engine, a probe meets the floor only once the site's collision has been admitted.
             spatial.FloorHit = request => request.Direction.Y >= -.5F || !spatial.ContentResidencyRequests.Any(admission => admission.Admitted.Length > 0) ? default
@@ -105,7 +105,7 @@ public sealed class GroundRestingSessionTests
         {
             ContentFake content = new(releases);
             PopulateContent(content, Inputs);
-            EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+            EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(Inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
             return DaggerfallSession.Restore(engine.Context, new(TestPayload.Definitions, Inputs, DaggerfallTuning.Defaults), saved);
         }
 

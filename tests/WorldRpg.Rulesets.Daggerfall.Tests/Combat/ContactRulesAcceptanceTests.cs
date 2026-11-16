@@ -22,7 +22,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class ContactRulesAcceptanceTests
 {
     private const long Player = DaggerfallActorIdentity.PlayerEntityId;
-    private const long Enemy = 2000;
+    private static readonly long Enemy = HoldActor(1);
 
     [Fact]
     public void A_game_raises_its_guard_and_saves_and_loads()
@@ -169,13 +169,13 @@ public sealed class ContactRulesAcceptanceTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service, random: RandomMaximum.Create());
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));
-        const long archer = 2004;
+        long archer = HoldActor(5);
         session.State.PlayerControl.MoveTo(Vector3.Zero);
         session.State.Actors.Get(archer).ApplyPose(new(new(0, 0, -8), MathF.PI));
         session.State.Actors.Get(archer).Actor.Get<Modules.Behavior.DaggerfallEnemyPerceptionMemory>().SetForcedHostile(true);
@@ -184,7 +184,7 @@ public sealed class ContactRulesAcceptanceTests
         spatial.FloorHit = request => new SpatialHit(true, SpatialHitKind.Entity, player, 0, 0, 0, 0, 0, 0, default,
             request.Origin + request.Direction * .2f, -request.Direction, .2d, 0d, 0d, false, true);
         double separation = TestPayload.Definitions.EnemyRanged.MinimumDistance + 2d;
-        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMarker(archer, "rangedFrames"));
         double health = Health(session, Player);
 
@@ -217,7 +217,7 @@ public sealed class ContactRulesAcceptanceTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service, persistence: persistence);
         return (engine, new TestDaggerfallRuleset());
     }

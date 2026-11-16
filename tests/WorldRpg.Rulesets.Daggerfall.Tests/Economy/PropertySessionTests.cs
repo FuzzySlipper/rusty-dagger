@@ -467,8 +467,8 @@ public sealed class PropertySessionTests
                 source.MobileSprites, source.Audio, source.ClassicPresentation, destination.Id,
                 profileKind: DaggerfallWorldProfileKind.Exterior, logicalProfileId: DaggerfallWorldProfileIds.Exterior(destination.Id).LogicalId,
                 billboardSprites: source.BillboardSprites, terrainTextures: source.TerrainTextures);
-            Small = ReadProfile(root, content, definitions, "daggerfall.small-ship");
-            Large = ReadProfile(root, content, definitions, "daggerfall.large-ship");
+            Small = Assembled(DaggerfallWorldProfileIds.Exterior(SmallShip));
+            Large = Assembled(DaggerfallWorldProfileIds.Exterior(LargeShip));
             profiles = new(admitShips ? [Land, House, Small, Large, Destination] : [Land, House, Destination]);
             Session = Create(null);
         }
@@ -480,7 +480,7 @@ public sealed class PropertySessionTests
                 PopulateContent(content, profile);
                 PopulateTerrainContent(content, profile);
             }
-            var spatial = SpatialFake.Create(Land.SpatialArtifact.Sha256, releases);
+            var spatial = SpatialFake.Create(Land.Geometry.Spatial[0].Sha256, releases);
             spatial.KeepPosition = true;
             var engine = EngineContextFake.Create(content, spatial.Service,
                 new AppearanceFake(releases), random: LodgingRandom.Create());

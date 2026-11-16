@@ -7,6 +7,8 @@ using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>Checks the audio bodies are read from the data container only when a cue first plays.</summary>
@@ -71,8 +73,7 @@ public sealed class DaggerfallAudioBundleTests
         IGraphicsService graphics = GraphicsFake.Create();
         DaggerfallSiteProfile inputs = new(
             new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/hold.json", default, 1),
-            new ContentArtifact("mesh/hold.json", default)),
+            FixtureGeometry("spatial/hold.json", default, 1, "mesh/hold.json", default),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene),
             new PlayerInitialLook(0F, 0F),
             [],
@@ -124,7 +125,7 @@ public sealed class DaggerfallAudioBundleTests
         var bundle = new DaggerfallAudioBundle(TestSessions.Data(new ProductContent(Array.Empty<ProductContentFile>(), content.Service)), DaggerfallWorldMedia.AudioRoot, clips);
         var audio = AudioFake.Create();
         var inputs = new DaggerfallSiteProfile(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/hold.json", default, 1), new ContentArtifact("mesh/hold.json", default)),
+            FixtureGeometry("spatial/hold.json", default, 1, "mesh/hold.json", default),
             new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene), new PlayerInitialLook(0, 0), [],
             new Dictionary<long, NormalizedActorSprite>(), mobileSprites: null, clips);
         var appearance = new DaggerfallSiteAppearance(content.Service, GraphicsFake.Create(), inputs, audio.Service,

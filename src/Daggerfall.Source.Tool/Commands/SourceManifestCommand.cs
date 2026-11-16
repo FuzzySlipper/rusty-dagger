@@ -5,14 +5,14 @@ namespace Daggerfall.Source.Tool.Commands;
 
 /// <summary>
 /// Reconciles the documented inventory against a real source tree and writes the machine-readable source
-/// manifest. Which sources count as imported comes from a published site closure, so the record states what
-/// a consumer actually read rather than a second guess at it. <c>--update-inventory</c> is the only writer
-/// of the inventory's disposition column.
+/// manifest. Which sources count as imported comes from a publication's manifest, the world media's unless
+/// <c>--publication</c> names another, so the record states what a consumer actually read rather than a
+/// second guess at it. <c>--update-inventory</c> is the only writer of the inventory's disposition column.
 /// </summary>
 internal static class SourceManifestCommand
 {
     public static ToolCommand Command { get; } = new("source-manifest",
-        [Options.Arena2, Options.Inventory, CommandOption.Required("--output", "FILE"), CommandOption.Required("--publication", "PUBLISHED_DIR"), CommandOption.Switch("--update-inventory")], Run, Program.Tool);
+        [Options.Arena2, Options.Inventory, CommandOption.Required("--output", "FILE"), CommandOption.Staged("--publication", "PUBLISHED_DIR", ImportLayout.WorldMedia), CommandOption.Switch("--update-inventory")], Run, Program.Tool);
 
     private static int Run(CommandArguments args)
     {

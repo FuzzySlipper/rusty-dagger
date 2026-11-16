@@ -437,7 +437,7 @@ internal sealed partial class DaggerfallSession
             _exterior.FollowPlayerOnTheRoad();                                                    // Exterior
             // A player who has dropped beneath the terrain is stood back on it rather than falling for ever.
             _ = _exterior.RecoverPlayerBelowTerrain();                                            // Exterior
-            // A terrain cell can remain resident while the authored location closure is unloaded.
+            // A terrain cell can remain resident while the location on it is unloaded.
             // Its live wilderness actors still use the admitted terrain and actor owners.
         }
         if (player.Movement is not null)

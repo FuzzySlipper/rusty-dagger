@@ -6,7 +6,7 @@ namespace Daggerfall.Import.Tests;
 public sealed class QuestNpcMediaSelectionTests
 {
     [Fact]
-    public void Site_closure_includes_both_faction_genders_and_static_questor_addresses_once()
+    public void World_media_includes_both_faction_genders_and_static_questor_addresses_once()
     {
         string payload = """
             {"factions":{"factions":[{"flatVisuals":[{"id":23041,"archive":180,"record":1},{"id":23042,"archive":180,"record":2}]}],

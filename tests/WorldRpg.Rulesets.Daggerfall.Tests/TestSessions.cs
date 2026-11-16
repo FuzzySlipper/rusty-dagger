@@ -36,7 +36,7 @@ internal static class TestSessions
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         return DaggerfallSavePayload.Read(session.CaptureSave());
@@ -51,7 +51,7 @@ internal static class TestSessions
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         return effects is null
@@ -86,14 +86,84 @@ internal static class TestSessions
 
     internal static PerceptionReadoutResult Receipt(params PerceptionPair[] pairs) => new(pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, checked((uint)pairs.Length), false, 0, 1, 1, checked((uint)pairs.Length), checked((ulong)pairs.Length), 0, 0, 0, 0);
 
-    internal static DaggerfallSiteProfile ReadInputs(string root)
-    {
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
-        return DaggerfallSiteContent.Read(Data(ImportContent(root)), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")), definitions);
-    }
+    internal static readonly DaggerfallSiteId PrivateersHold = new(17, 179);
+    internal static readonly DaggerfallSiteId Charing = new(17, 4);
+    internal static readonly DaggerfallSiteId CastleNecromoghan = new(17, 9);
+    internal static readonly DaggerfallSiteId HawkstonCemetery = new(17, 0);
+    internal static readonly DaggerfallSiteId TombsOfKlerd = new(0, 11);
+    internal static readonly DaggerfallSiteId SmallShip = new(31, 1);
+    internal static readonly DaggerfallSiteId LargeShip = new(31, 2);
 
-    internal static DaggerfallSiteProfile ReadProfile(string root, ProductContent content, DaggerfallDefinitions definitions, string pack) =>
-        DaggerfallSiteContent.Read(Data(content), TestContentFiles.Read(Path.Combine(root, "content/worldrpg/packs", pack, "payload.json")), definitions);
+    /// <summary>Privateer's Hold assembled from its blocks, where a new game starts and most session fixtures stand.</summary>
+    internal static DaggerfallSiteProfile ReadInputs(string root) => Assembled(DaggerfallWorldProfileIds.Dungeon(PrivateersHold));
+
+    /// <summary>
+    /// The durable identity of the fixed actor Privateer's Hold places by source object <paramref name="index"/> of its
+    /// one block: 1 a skeletal warrior, 2 a thief, 3 a giant bat, 4 an orc, 5 an archer, then bats, rats and imps at
+    /// 6, 35 and 39-49, 71 and 72, and a skeletal warrior, thieves, a bat and a rat at 103-107.
+    /// </summary>
+    internal static long HoldActor(int index) =>
+        DaggerfallSiteContent.FixedActorIdentity("17/179/dungeon", $"actor/s0000999-rdb/0/0/{index}");
+
+    /// <summary>
+    /// The places the session suites stand in, each assembled from its blocks: Privateer's Hold, Castle Necromoghan, the
+    /// Hawkston Cemetery and the Tombs of Klerd with their exteriors, both ships, and Charing's exterior with seven of its
+    /// buildings (a house, the general store, the Mages Guild, the temple of Kynareth, the bank, a bookseller and a knightly order).
+    /// </summary>
+    internal static IReadOnlyList<DaggerfallSiteProfile> SuiteSites() =>
+    [
+        Assembled(DaggerfallWorldProfileIds.Dungeon(PrivateersHold)), Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan)),
+        Assembled(DaggerfallWorldProfileIds.Dungeon(HawkstonCemetery)), Assembled(DaggerfallWorldProfileIds.Exterior(HawkstonCemetery)),
+        Assembled(DaggerfallWorldProfileIds.Dungeon(TombsOfKlerd)), Assembled(DaggerfallWorldProfileIds.Exterior(TombsOfKlerd)),
+        Assembled(DaggerfallWorldProfileIds.Exterior(SmallShip)), Assembled(DaggerfallWorldProfileIds.Exterior(LargeShip)),
+        Assembled(DaggerfallWorldProfileIds.Exterior(Charing)),
+        .. new DaggerfallSiteBuildingId[] { new(1, 1, 0), new(2, 1, 0), new(3, 4, 0), new(3, 1, 13), new(1, 5, 17), new(4, 2, 0), new(3, 2, 14) }
+            .Select(building => Assembled(DaggerfallWorldProfileIds.Interior(Charing, building))),
+    ];
+
+    /// <summary>The profile a location profile id names, assembled from the shipped data.</summary>
+    internal static DaggerfallSiteProfile Assembled(string logicalId) =>
+        DaggerfallWorldProfileIds.TryParse(logicalId, out DaggerfallWorldProfileKey key) ? Assembled(key)
+            : throw new ArgumentException($"'{logicalId}' is not a location profile id.", nameof(logicalId));
+
+    /// <summary>A location profile assembled from the shipped data as the product assembles it, once per profile for the run.</summary>
+    internal static DaggerfallSiteProfile Assembled(DaggerfallWorldProfileKey key) => AssembledProfiles.GetOrAdd(key, value => Assembly.Value.Assemble(value));
+
+    /// <summary>The location assembly over the shipped data and definitions, as the ruleset composes it.</summary>
+    internal static readonly Lazy<DaggerfallLocationAssembly> Assembly = new(() =>
+    {
+        DaggerfallData data = Data(FullContent(TestData.RepositoryRoot));
+        DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(data);
+        Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(data, media, TestPayload.Definitions));
+        Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(data, media));
+        return new DaggerfallLocationAssembly(TestPayload.Definitions, new DaggerfallWorldBlocks(data), () => product.Value, () => meshes.Value);
+    });
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> AssembledProfiles = new();
+
+    /// <summary>A fixture's own geometry: one collision and navigation artifact and one mesh, drawn with no materials.</summary>
+    internal static DaggerfallSiteGeometry FixtureGeometry(string spatialPath, ContentSha256 spatialSha256, ulong navigationGridId, string meshPath, ContentSha256 meshSha256,
+        IReadOnlyList<DaggerfallMeshMaterialBinding>? materials = null) =>
+        new(navigationGridId, [new DaggerfallSiteSpatialPart("fixture", spatialPath, spatialSha256)],
+            [new DaggerfallSiteMesh(meshPath, meshSha256, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), materials ?? [])]);
+
+    /// <summary>Every collision and navigation part of a profile, by content path, for a real Engine host to serve.</summary>
+    internal static Dictionary<string, ReadOnlyMemory<byte>> SpatialFiles(DaggerfallSiteProfile profile) =>
+        profile.Geometry.Spatial.DistinctBy(part => part.Path).ToDictionary(part => part.Path,
+            part => (ReadOnlyMemory<byte>)TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content", part.Path)), StringComparer.Ordinal);
+
+    /// <summary>A spatial session holding every collision and navigation part of a profile, placed in the profile's frame as a session places them.</summary>
+    internal static SpatialMovementSystem SpatialOf(IEngineContext engine, DaggerfallSiteProfile profile, SpatialTuning tuning)
+    {
+        SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, null, tuning);
+        try
+        {
+            _ = spatial.ApplyContentArtifactResidency(profile.Geometry.Spatial.Select((part, index) => new SpatialContentArtifactPlacement(
+                checked((ulong)index + 1), part.Path, part.Sha256, ColumnOffset: part.ColumnOffset, RowOffset: part.RowOffset)), [], profile.Geometry.NavigationGridId);
+            return spatial;
+        }
+        catch { spatial.Dispose(); throw; }
+    }
 
     internal static void RegisterCorpseStack(DaggerfallSession session, DaggerfallDefinitions definitions, long actorId, string stackId)
     {
@@ -107,14 +177,7 @@ internal static class TestSessions
     internal static NormalizedActorSprite SpriteFor(DaggerfallSiteProfile inputs, string actorId) => inputs.ActorSprites.First(pair => inputs.Project.Actors[pair.Key].ActorId.Value == actorId).Value;
 
     /// <summary>
-    /// Privateer's Hold's closure with the product-wide media it references: the world media publication
-    /// and the classic media group's inventory and the artifacts it lists.
-    /// </summary>
-    internal static ProductContent ImportContent(string root) => new(
-        ContentAt(root, "worldrpg/imports/privateers-hold").Files.ToArray().Concat(ProductMediaFiles(root)).ToArray());
-
-    /// <summary>
-    /// The eager product-wide media every site closure references: every world media artifact other than
+    /// The eager product-wide media every location draws from: every world media artifact other than
     /// the audio clips its bundle serves, and the classic media group's inventory with the artifacts it lists.
     /// </summary>
     internal static IEnumerable<ProductContentFile> ProductMediaFiles(string root)
@@ -130,7 +193,7 @@ internal static class TestSessions
         foreach (ProductContentFile file in ClassicGroupFiles(root)) yield return file;
     }
 
-    /// <summary>The classic media group's inventory and the artifacts it lists, which site closures reference.</summary>
+    /// <summary>The classic media group's inventory and the artifacts it lists, which the world media references.</summary>
     internal static IEnumerable<ProductContentFile> ClassicGroupFiles(string root)
     {
         string contentRoot = Path.Combine(root, "content");
@@ -148,8 +211,8 @@ internal static class TestSessions
             .Select(root => root.TrimEnd('/'))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
-        // The selected-closure form omits unrelated closures but keeps the product-wide media every
-        // selected closure references; only the full form installs the score.
+        // The selected form omits the publications not named but keeps the product-wide media and the per-block
+        // world every location draws from; only the full form installs the score.
         return ContentWithContainers(root, out _,
             selectedRoots.Length == 0 ? selectedRoots : [.. selectedRoots, DaggerfallWorldMedia.Root, DaggerfallWorldBlocks.Root, .. ClassicGroupArtifacts(root)]);
     }
@@ -251,32 +314,7 @@ internal static class TestSessions
         || relative.StartsWith("worldrpg/media/", StringComparison.Ordinal)
             && string.Equals(Path.GetExtension(relative), ".json", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// The complete dungeon sidecar a site closure stands for: its own entries joined to the product-wide
-    /// entries its <c>shared</c> selection admits, in the canonical order a complete sidecar is written in.
-    /// </summary>
-    internal static JsonObject CompleteDungeonSidecar(string root, string publicationRoot)
-    {
-        string contentRoot = Path.Combine(root, "content");
-        JsonObject site = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(contentRoot, publicationRoot, "media/dungeon/manifest.json")))!.AsObject();
-        if (site["shared"] is not JsonObject selection) return site;
-        JsonObject shared = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(contentRoot, DaggerfallWorldMedia.Root, "media/dungeon/manifest.json")))!.AsObject();
-        JsonArray Join(JsonArray own, JsonArray product, string family, string key)
-        {
-            HashSet<string> admitted = [.. selection[family]!.AsArray().Select(id => id!.GetValue<string>())];
-            return new JsonArray([.. own.Select(value => value!.DeepClone())
-                .Concat(product.Where(value => admitted.Contains(value![key]!.GetValue<string>())).Select(value => value!.DeepClone()))
-                .OrderBy(value => value![key]!.GetValue<string>(), StringComparer.Ordinal)]);
-        }
-
-        site["media"]!["resources"] = Join(site["media"]!["resources"]!.AsArray(), shared["media"]!["resources"]!.AsArray(), "resources", "id");
-        site["billboards"] = Join(site["billboards"]!.AsArray(), shared["billboards"]!.AsArray(), "billboards", "spriteResourceId");
-        site["actors"] = Join(site["actors"]!.AsArray(), shared["actors"]!.AsArray(), "actors", "actorResourceId");
-        site["shared"] = null;
-        return site;
-    }
-
-    /// <summary>The content paths of the classic media group's artifacts, which the site closures reference.</summary>
+    /// <summary>The content paths of the classic media group's artifacts, which the world media references.</summary>
     private static IReadOnlyList<string> ClassicGroupArtifacts(string root)
     {
         using JsonDocument document = JsonDocument.Parse(TestContentFiles.Read(Path.Combine(root, "content", DaggerfallWorldMedia.ClassicInventoryPath)));
@@ -327,6 +365,21 @@ internal static class TestSessions
             .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), TestContentFiles.Read(path)))
             .ToArray());
     }
+
+    /// <summary>
+    /// The given sites and every exterior an exterior among them streams around it, for a fake content service to
+    /// serve: a session standing in a town opens its neighbours' blocks too.
+    /// </summary>
+    internal static void PopulateStreamedContent(ContentFake content, IEnumerable<DaggerfallSiteProfile> sites)
+    {
+        DaggerfallSiteProfile[] given = [.. sites];
+        IEnumerable<DaggerfallSiteProfile> neighbours = given
+            .Where(site => site.ProfileKind == DaggerfallWorldProfileKind.Exterior && site.Site is not null)
+            .SelectMany(site => Streamed.Value.NearbyExteriors(site.Site!.Value));
+        foreach (DaggerfallSiteProfile profile in given.Concat(neighbours).DistinctBy(profile => profile.ProfileKey)) PopulateContent(content, profile);
+    }
+
+    private static readonly Lazy<AssembledWorld> Streamed = new(() => new AssembledWorld());
 
     internal static void PopulateContent(ContentFake content, DaggerfallSiteProfile inputs)
     {
@@ -500,7 +553,7 @@ internal static class TestSessions
         };
         return new DaggerfallSiteProfile(
             new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-            DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/hold.json", Hash, 1), new ContentArtifact("mesh/hold.json", Hash)),
+            FixtureGeometry("spatial/hold.json", Hash, 1, "mesh/hold.json", Hash),
             new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
             new PlayerInitialLook(0, 0),
             [],
@@ -596,9 +649,9 @@ internal static class TestSessions
         DaggerfallSiteProfile inputs = ReadInputs(root);
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
-        perception.Receipt = Receipt(new PerceptionPair(2000, 1, distance, 1d, PerceptionPairKind.Visible, distance));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(1), 1, distance, 1d, PerceptionPairKind.Visible, distance));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service, random: random);
         engineCreated?.Invoke(engine);
@@ -714,13 +767,8 @@ internal static class TestSessions
 
     internal static ulong AuthoredMarker(long placedEntityId, string framesProperty)
     {
-        string root = TestData.RepositoryRoot;
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
-        JsonObject profile = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json")))!.AsObject();
-        JsonObject placement = profile["placements"]!.AsArray().Select(value => value!.AsObject())
-            .Single(value => value["entityId"]!.GetValue<long>() == placedEntityId);
-        DaggerfallActorDefinition actor = definitions.RequireActor(new DaggerfallActorId(placement["actor"]!.GetValue<string>()));
-        JsonObject media = CompleteDungeonSidecar(root, "worldrpg/imports/privateers-hold");
+        DaggerfallActorDefinition actor = TestPayload.Definitions.RequireActor(ReadInputs(TestData.RepositoryRoot).Project.Actors[placedEntityId].ActorId);
+        JsonObject media = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content", DaggerfallWorldMedia.Root, DaggerfallWorldMedia.DungeonSidecarRelativePath)))!.AsObject();
         JsonObject mobile = media["actors"]!.AsArray().Select(value => value!.AsObject())
             .Single(value => value["mobileId"]!.GetValue<int>() == actor.MobileId);
         List<int> frames = [.. mobile["sourceAttackSequence"]![framesProperty]!.AsArray().Select(value => value!.GetValue<int>())];
@@ -817,7 +865,7 @@ internal sealed class ConditionSessionFixture : IDisposable
         identity = Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: random);
         Session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
     }
@@ -826,7 +874,7 @@ internal sealed class ConditionSessionFixture : IDisposable
     {
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         return DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), saved);
     }

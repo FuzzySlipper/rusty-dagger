@@ -69,7 +69,7 @@ public sealed class DaggerfallHealingEffectsTests
         using Fixture f = new(); var s = f.Session;
         s.State.Progression.AdvanceTo(0, 100); Track(s, "health").Maximum.BaseValue = 10000; Track(s, "health").SetCurrent(10000);
         Drain(s, "willpower", 2, 7);
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain", "monster", HoldActor(1), 1, [DaggerfallClassicDisease.BrainFever])));
         s.AdvanceElapsedTime(86400); Assert.True(s.State.Poisons.Afflict(s.State.Actors.Player.Actor, (int)DaggerfallPoisonVariant.Arsenic));
         double before = Stat(s, 2).Value; Assert.Equal(DaggerfallCastOutcome.Applied, Heal(s, 2, 99)); Assert.Equal(before + 7, Stat(s, 2).Value);
         Assert.True(s.State.Poisons.IsAfflicted(s.State.Actors.Player.Actor) || s.State.Poisons.HasPersistingDamage(s.State.Actors.Player.Actor)); Assert.NotEmpty(s.State.Effects.Active);
@@ -86,7 +86,7 @@ public sealed class DaggerfallHealingEffectsTests
         using var restored = f.Restore(s.CaptureSave()); Assert.Empty(restored.State.Effects.Active);
         Assert.Equal(Track(s, "magicka").Current, Track(restored, "magicka").Current);
         restored.State.Effects.AdvanceElapsedRounds(100); Assert.Equal(Track(s, "magicka").Current, Track(restored, "magicka").Current);
-        Assert.Throws<ArgumentException>(() => s.State.Effects.Start(new("invalid", "heal-spell-points", "potion", 2000, 1, "potion", "Magic", null, 1, 1, DaggerfallHealingEffects.SpellPointState(7))));
+        Assert.Throws<ArgumentException>(() => s.State.Effects.Start(new("invalid", "heal-spell-points", "potion", HoldActor(1), 1, "potion", "Magic", null, 1, 1, DaggerfallHealingEffects.SpellPointState(7))));
         Track(s, "health").SetCurrent(0); double before = Track(s, "magicka").Current;
         Assert.Equal(DaggerfallEffectAdmissionOutcome.TargetUnavailable, Potion(s, 10)); Assert.Equal(before, Track(s, "magicka").Current);
     }
@@ -125,7 +125,7 @@ public sealed class DaggerfallHealingEffectsTests
         "potion", "heal-spell-points", "potion", 1, 1, "restorePower", "Magic", null, 1, 1, DaggerfallHealingEffects.SpellPointState(amount)));
     private static void Drain(DaggerfallSession s, string instance, int subtype, int amount) => s.State.Effects.Start(new(
         instance, DaggerfallAttributeDrainEffects.Key(subtype), "drain", null, 1, "drain", "Magic", null, 1, null,
-        DaggerfallAttributeDrainEffects.Encode(new(new(new("drain", 7, subtype, 0, 0, 1, 0, 0, 1, amount, amount, 0, 0, 1), 1, amount, 100, new(2000, null, DaggerfallCastSource.Spell)), amount))));
+        DaggerfallAttributeDrainEffects.Encode(new(new(new("drain", 7, subtype, 0, 0, 1, 0, 0, 1, amount, amount, 0, 0, 1), 1, amount, 100, new(HoldActor(1), null, DaggerfallCastSource.Spell)), amount))));
     private static Track Track(DaggerfallSession s, string name) => s.State.Actors.Player.Stats.GetTrack(TrackId.Parse(name));
     private static Stat Stat(DaggerfallSession s, int subtype) => s.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallAttributeDrainEffects.Attributes[subtype].Value));
     private static void Fund(DaggerfallSession s) { Track(s, "magicka").Maximum.BaseValue = 10000; Track(s, "magicka").SetCurrent(10000); }
@@ -137,7 +137,7 @@ public sealed class DaggerfallHealingEffectsTests
         private EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, _composition.StartSite);
-            return EngineContextFake.Create(content, SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256, releases).Service,
+            return EngineContextFake.Create(content, SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256, releases).Service,
                 new AppearanceFake(releases), PerceptionFake.Create().Service, random: RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload) => DaggerfallSession.Restore(Engine().Context, _composition, payload);

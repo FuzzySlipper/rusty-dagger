@@ -40,11 +40,11 @@ public sealed class DaggerfallCureEffectsTests
     public void Real_cure_delivery_selects_all_matching_sources_and_preserves_other_conditions_and_targets(string key, int subtype)
     {
         using Fixture f = new(); var s = f.Session;
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain.one", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain.two", "quest", 2001, 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain.one", "monster", HoldActor(1), 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain.two", "quest", HoldActor(2), 1, [DaggerfallClassicDisease.BrainFever])));
         Assert.True(s.State.Poisons.Afflict(s.State.Actors.Player.Actor, (int)DaggerfallPoisonVariant.Arsenic));
-        Assert.True(s.State.Poisons.Afflict(s.State.Actors.Get(2000).Actor, (int)DaggerfallPoisonVariant.NuxVomica));
-        Paralyze(s, "paralysis.one", 2000, 1); Paralyze(s, "paralysis.two", 2001, 1); Paralyze(s, "paralysis.other", 1, 2000);
+        Assert.True(s.State.Poisons.Afflict(s.State.Actors.Get(HoldActor(1)).Actor, (int)DaggerfallPoisonVariant.NuxVomica));
+        Paralyze(s, "paralysis.one", HoldActor(1), 1); Paralyze(s, "paralysis.two", HoldActor(2), 1); Paralyze(s, "paralysis.other", 1, HoldActor(1));
         s.AdvanceElapsedTime(60);
         var selected = s.State.Effects.Active.Where(e => e.Context.Target.Value == 1 && Matches(e, subtype))
             .Select(e => e.Context.Instance.Value).ToArray();
@@ -57,9 +57,9 @@ public sealed class DaggerfallCureEffectsTests
         Assert.Equal(retained.Order(), s.State.Effects.Active.Select(e => e.Context.Instance.Value).Order());
         Assert.Equal(selected.Order(), outcomes.Where(o => o.Kind == DaggerfallEffectOutcomeKind.Cured).Select(o => o.Instance).Order());
         Assert.Equal(subtype != 2, s.State.Effects.ControlsFor(1).Movement);
-        Assert.True(s.State.Effects.ControlsFor(2000).Movement);
+        Assert.True(s.State.Effects.ControlsFor(HoldActor(1)).Movement);
         Assert.Equal(subtype != 1, s.State.Poisons.IsAfflicted(s.State.Actors.Player.Actor));
-        Assert.True(s.State.Poisons.IsAfflicted(s.State.Actors.Get(2000).Actor));
+        Assert.True(s.State.Poisons.IsAfflicted(s.State.Actors.Get(HoldActor(1)).Actor));
         using var restored = f.Restore(s.CaptureSave());
         Assert.Equal(retained.Order(), restored.State.Effects.Active.Select(e => e.Context.Instance.Value).Order());
         restored.AdvanceElapsedTime(120);
@@ -72,16 +72,16 @@ public sealed class DaggerfallCureEffectsTests
     public void Cure_paralyzation_releases_real_movement_and_physical_attack_consumers_before_expiry()
     {
         using Fixture f = new(); var s = f.Session;
-        Paralyze(s, "blocked.one", 2000, 1); Paralyze(s, "blocked.two", 2001, 1);
+        Paralyze(s, "blocked.one", HoldActor(1), 1); Paralyze(s, "blocked.two", HoldActor(2), 1);
         s.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
         Assert.Equal(Vector2.Zero, f.Spatial.StepRequests.Last().Command.PlanarIntent);
-        double before = Health(s, 2000).Current;
-        s.Strike(new(1, 2000, 1, 1000, .125)); Assert.Equal(before, Health(s, 2000).Current);
+        double before = Health(s, HoldActor(1)).Current;
+        s.Strike(new(1, HoldActor(1), 1, 1000, .125)); Assert.Equal(before, Health(s, HoldActor(1)).Current);
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Cast(s, CureParalysisKey).Results).Outcome);
         Assert.Equal(default, s.State.Effects.ControlsFor(1));
         s.Update(new ProductUpdate(OuterUpdate(2), []));
         Assert.NotEqual(Vector2.Zero, f.Spatial.StepRequests.Last().Command.PlanarIntent);
-        s.Strike(new(1, 2000, 1, 1000, .125)); Assert.True(Health(s, 2000).Current < before);
+        s.Strike(new(1, HoldActor(1), 1, 1000, .125)); Assert.True(Health(s, HoldActor(1)).Current < before);
         using var restored = f.Restore(s.CaptureSave()); Assert.Equal(default, restored.State.Effects.ControlsFor(1));
     }
 
@@ -91,7 +91,7 @@ public sealed class DaggerfallCureEffectsTests
         using Fixture f = new(); var s = f.Session;
         var willpower = s.State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Willpower.Value));
         double baseline = willpower.Value;
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain", "monster", HoldActor(1), 1, [DaggerfallClassicDisease.BrainFever])));
         s.AdvanceElapsedTime(86400);
         Assert.True(willpower.Value < baseline); double health = Health(s, 1).Current;
         Assert.Equal(DaggerfallCastOutcome.Applied, Assert.Single(Cast(s, "spell.059").Results).Outcome);
@@ -150,11 +150,11 @@ public sealed class DaggerfallCureEffectsTests
         ]);
         var composition = new DaggerfallSessionComposition(CureDefinitions.Value, inputs, DaggerfallTuning.Defaults) { Effects = catalog };
         List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, inputs);
-        var engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service,
+        var engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service,
             new AppearanceFake(releases), random: RandomMaximum.Create());
         using var s = session = DaggerfallSession.StartNew(engine.Context, composition);
         s.State.Progression.AdvanceTo(0, 100);
-        Paralyze(s, "long.one", 2000, 1); Paralyze(s, "long.two", 2001, 1);
+        Paralyze(s, "long.one", HoldActor(1), 1); Paralyze(s, "long.two", HoldActor(2), 1);
         using var json = System.Text.Json.JsonDocument.Parse("{}");
         s.State.Effects.Start(new("round-caller", "scheduled-caller", "test", 1, 1, "scheduled", "Magic", null, 1, 10, json.RootElement));
         Assert.True(s.State.Effects.ControlsFor(1).Movement);
@@ -176,7 +176,7 @@ public sealed class DaggerfallCureEffectsTests
             var spell = original with { RangeType = range, Effects = [new("cure", 3, subtype, 0, 0, 0, 100, 0, 1, 0, 0, 0, 0, 0)] };
             var casting = CastingFor(s, spell, 100);
             Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
-            var bundle = casting.Release(1, true).Bundle!; casting.Deliver(bundle, [range == 0 ? 1 : 2000]);
+            var bundle = casting.Release(1, true).Bundle!; casting.Deliver(bundle, [range == 0 ? 1 : HoldActor(1)]);
             Assert.Equal(DaggerfallCastOutcome.NoMatch, Assert.Single(bundle.Results).Outcome);
             for (int element = 0; element < 4; element++)
             {
@@ -194,7 +194,7 @@ public sealed class DaggerfallCureEffectsTests
     public void Failed_cure_chance_preserves_the_existing_condition(int subtype)
     {
         using Fixture f = new(); var s = f.Session;
-        Paralyze(s, "retained", 2000, 1);
+        Paralyze(s, "retained", HoldActor(1), 1);
         var original = TestPayload.Definitions.Magic.Spells["spell.059"];
         var spell = original with { Effects = [new("cure", 3, subtype, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0)] };
         var casting = CastingFor(s, spell, 100); Assert.Equal(DaggerfallCastOutcome.Ready, casting.Ready(1, spell.Key).Outcome);
@@ -271,7 +271,7 @@ public sealed class DaggerfallCureEffectsTests
         private EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, _composition.StartSite);
-            Spatial = SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256, releases); Spatial.KeepPosition = true;
+            Spatial = SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256, releases); Spatial.KeepPosition = true;
             return EngineContextFake.Create(content, Spatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload) => DaggerfallSession.Restore(Engine().Context, _composition, payload);

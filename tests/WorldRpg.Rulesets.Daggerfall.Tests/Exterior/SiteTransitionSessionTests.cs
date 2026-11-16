@@ -28,16 +28,15 @@ public sealed class SiteTransitionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source); PopulateContent(content, destination);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         DaggerfallSessionComposition composition = new(definitions, source, DaggerfallTuning.Defaults) { Profiles = new DaggerfallSiteProfiles([source, destination]) };
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
-        const long target = 2000;
+        long target = HoldActor(1);
         DaggerfallParalysisEffectsTests.Start(session, "hostile-paralysis", 1, target, 100);
         uint? remaining = Assert.Single(session.State.Effects.Active).Lifecycle.RemainingRounds;
         Assert.True(session.State.Actors.Get(target).Actor.Get<DaggerfallEnemyPerceptionMemory>().ForcedHostile);
@@ -59,13 +58,12 @@ public sealed class SiteTransitionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, destination);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, destination]));
@@ -73,7 +71,7 @@ public sealed class SiteTransitionSessionTests
         session.State.PlayerControl.MoveTo(sourcePosition.ToVector());
         session.State.PlayerControl.YawRadians = .7f;
         session.State.PlayerControl.PitchRadians = -.2f;
-        const long sourceActorId = 2000;
+        long sourceActorId = HoldActor(1);
         ActorState sourceActor = session.State.Actors.Get(sourceActorId);
         WorldPoint actorPosition = new(21f, 4f, -13f);
         sourceActor.ApplyPose(new ActorPose(actorPosition, .4f));
@@ -137,7 +135,7 @@ public sealed class SiteTransitionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan");
+        DaggerfallSiteProfile destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         DaggerfallSiteProfiles profiles = new([source, destination]);
         ResolvedCompositionIdentity identity = TestSessions.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         DaggerfallSessionComposition composition = new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles };
@@ -202,7 +200,7 @@ public sealed class SiteTransitionSessionTests
             List<string> releases = [];
             ContentFake content = new(releases);
             PopulateContent(content, source); PopulateContent(content, destination);
-            return EngineContextFake.Create(content, SpatialFake.Create(active.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+            return EngineContextFake.Create(content, SpatialFake.Create(active.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
         }
     }
 
@@ -213,14 +211,14 @@ public sealed class SiteTransitionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile destination = ReadProfile(root, admitted, definitions, "daggerfall.castle-necromoghan");
+        DaggerfallSiteProfile destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         DaggerfallSiteProfiles profiles = new([source, destination]);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, destination);
         AppearanceFake appearance = new(releases);
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(source.SpatialArtifact.Sha256, releases).Service, appearance);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases).Service, appearance);
         RulesetSavePayload save;
 
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults)))
@@ -240,7 +238,7 @@ public sealed class SiteTransitionSessionTests
         PopulateContent(restoredContent, source);
         PopulateContent(restoredContent, destination);
         AppearanceFake restoredAppearance = new(restoredReleases);
-        EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, SpatialFake.Create(destination.SpatialArtifact.Sha256, restoredReleases).Service, restoredAppearance);
+        EngineContextFake restoredEngine = EngineContextFake.Create(restoredContent, SpatialFake.Create(destination.Geometry.Spatial[0].Sha256, restoredReleases).Service, restoredAppearance);
         ResolvedCompositionIdentity identity = TestSessions.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using (DaggerfallSession restored = DaggerfallSession.Restore(restoredEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save))
         {
@@ -253,13 +251,13 @@ public sealed class SiteTransitionSessionTests
     }
 
     [Fact]
-    public void Charing_portals_enter_and_return_between_profiles_that_share_a_geographic_site()
+    public void A_Charing_house_is_entered_by_its_door_and_left_by_its_exit_between_profiles_that_share_a_geographic_site()
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
-        DaggerfallSiteProfile interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
+        DaggerfallSiteProfile exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        DaggerfallSiteProfile interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
         Assert.Equal(exterior.Site, interior.Site);
         Assert.NotEqual(exterior.ProfileKey, interior.ProfileKey);
         DaggerfallSiteProfiles profiles = new([exterior, interior]);
@@ -267,7 +265,7 @@ public sealed class SiteTransitionSessionTests
         ContentFake content = new(releases);
         PopulateContent(content, exterior);
         PopulateContent(content, interior);
-        SpatialFake spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         RulesetSavePayload save;
@@ -280,13 +278,21 @@ public sealed class SiteTransitionSessionTests
             Assert.Contains(spawnedActor, session.DynamicActors.Keys);
             Assert.Equal(DurableEntityResolution.Materialized,
                 session.State.Actors.Entities.Classify(spawnedIdentity, session.State.Npcs.Identities!));
-            // Initial exterior admission and the following movement step may rebase the live
-            // projection. Keep the admitted Engine entity as the visibility key; its position is
-            // sampled again by the ordinary interaction query after that frame boundary.
-            var exteriorPortal = Assert.Single(session.Sites.Projection.Portals.All);
-            AimActivationAt(session, exteriorPortal.Portal.Position);
-            perception.Responder = request => PortalReceipt(request, exteriorPortal.Entity);
+            // The house is entered through its own door, which is locked at night and opens freely from six in the
+            // morning. Initial exterior admission and the following movement step may rebase the live projection.
+            // Keep the admitted Engine entity as the visibility key; its position is sampled again by the ordinary
+            // interaction query after that frame boundary.
+            session.AdvanceElapsedTime(6 * 60 * 60);
+            DaggerfallRdbDoorId entrance = exterior.Doors.First(door => door.ExteriorBuilding == new DaggerfallSiteBuildingId(1, 1, 0)).Id;
+            DaggerfallDoorView door = session.Sites.Projection.Doors.Read(entrance);
+            AimActivationAt(session, WorldPoint.From(door.Pose.Translation));
+            perception.Responder = request => PortalReceipt(request, door.Entity);
             session.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"loot\"}")]));
+            Assert.True(session.ActivationPanel.View.Applied, session.ActivationPanel.View.Message);
+            // The house greets the player first; reading the greeting on lets the entry go ahead.
+            var greeting = session.DungeonText.Projection!;
+            session.Update(new ProductUpdate(OuterUpdate(2), [Ui(JsonSerializer.Serialize(new
+                { action = "dungeon-text-close", item = greeting.ActionId, revision = greeting.Revision.ToString(System.Globalization.CultureInfo.InvariantCulture) }))]));
 
             Assert.Equal(interior.ProfileKey, session.Sites.ActiveProfile);
             Assert.Equal(interior.Site, session.Site.Active);
@@ -294,7 +300,6 @@ public sealed class SiteTransitionSessionTests
             Assert.Equal(DurableEntityResolution.Unloaded,
                 session.State.Actors.Entities.Classify(spawnedIdentity, session.State.Npcs.Identities!));
             Assert.Equal(2, spatial.ReplaceCalls);
-            Assert.Equal("You pass through the entrance.", session.ActivationPanel.View.Message);
             Assert.Equal(interior.ProfileKey, DaggerfallSavePayload.Read(session.CaptureSave()).Site.ActiveProfile!.Require());
             save = session.CaptureSave();
         }
@@ -303,13 +308,14 @@ public sealed class SiteTransitionSessionTests
         Assert.Equal(interior.ProfileKey, captured.Site.ActiveProfile!.Require());
         Assert.Equal(exterior.ProfileKey, captured.Site.ReturnProfile!.Require());
         Assert.Equal(exterior.ProfileKey, Assert.Single(captured.SiteDeltas).Profile.Require());
-        Assert.Equal(spawnedActor, Assert.Single(captured.SiteDeltas[0].DynamicActors).EntityId);
+        // The rat stays outside with the street's own spawns of the morning.
+        Assert.Contains(captured.SiteDeltas[0].DynamicActors, actor => actor.EntityId == spawnedActor);
 
         List<string> resumedReleases = [];
         ContentFake resumedContent = new(resumedReleases);
         PopulateContent(resumedContent, exterior);
         PopulateContent(resumedContent, interior);
-        SpatialFake resumedSpatial = SpatialFake.Create(interior.SpatialArtifact.Sha256, resumedReleases);
+        SpatialFake resumedSpatial = SpatialFake.Create(interior.Geometry.Spatial[0].Sha256, resumedReleases);
         PerceptionFake resumedPerception = PerceptionFake.Create();
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases), resumedPerception.Service);
         ResolvedCompositionIdentity identity = TestSessions.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
@@ -341,15 +347,14 @@ public sealed class SiteTransitionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(admitted),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         DaggerfallSiteProfiles profiles = new([source, destination]);
         DaggerfallEffectCatalog catalog = EffectCatalog();
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, destination);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         long dynamicActor;
         RulesetSavePayload save;
@@ -384,7 +389,7 @@ public sealed class SiteTransitionSessionTests
         ContentFake resumedContent = new(resumedReleases);
         PopulateContent(resumedContent, source);
         PopulateContent(resumedContent, destination);
-        SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
+        SpatialFake resumedSpatial = SpatialFake.Create(destination.Geometry.Spatial[0].Sha256, resumedReleases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Effects = catalog, Profiles = profiles }, save);
@@ -429,13 +434,12 @@ public sealed class SiteTransitionSessionTests
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
-        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, destination);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, destination]));
@@ -455,13 +459,12 @@ public sealed class SiteTransitionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(admitted),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, destination);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults));
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([source, destination]));
@@ -493,14 +496,13 @@ public sealed class SiteTransitionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(admitted),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         DaggerfallSiteProfiles profiles = new([source, destination]);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, destination);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         RulesetSavePayload save;
         long relocatedActor;
@@ -557,7 +559,7 @@ public sealed class SiteTransitionSessionTests
         ContentFake resumedContent = new(resumedReleases);
         PopulateContent(resumedContent, source);
         PopulateContent(resumedContent, destination);
-        SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
+        SpatialFake resumedSpatial = SpatialFake.Create(destination.Geometry.Spatial[0].Sha256, resumedReleases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);
@@ -580,14 +582,13 @@ public sealed class SiteTransitionSessionTests
         DaggerfallDefinitions definitions = TestPayload.Definitions;
         DaggerfallSiteProfile source = ReadInputs(root);
         ProductContent admitted = FullContent(root);
-        DaggerfallSiteProfile destination = DaggerfallSiteContent.Read(TestSessions.Data(admitted),
-            TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), definitions);
+        DaggerfallSiteProfile destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         DaggerfallSiteProfiles profiles = new([source, destination]);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, destination);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         RulesetSavePayload save;
         using (DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, source, DaggerfallTuning.Defaults)))
@@ -604,7 +605,7 @@ public sealed class SiteTransitionSessionTests
         ContentFake resumedContent = new(resumedReleases);
         PopulateContent(resumedContent, source);
         PopulateContent(resumedContent, destination);
-        SpatialFake resumedSpatial = SpatialFake.Create(destination.SpatialArtifact.Sha256, resumedReleases);
+        SpatialFake resumedSpatial = SpatialFake.Create(destination.Geometry.Spatial[0].Sha256, resumedReleases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(resumedReleases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(admitted, new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession restored = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, source, DaggerfallTuning.Defaults, identity) { Profiles = profiles }, save);

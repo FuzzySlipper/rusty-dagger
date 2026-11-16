@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
@@ -16,11 +17,10 @@ namespace Daggerfall.Import.Publication;
 /// An authored original the publication would resample is refused, since the product reads the tracked file.
 /// </para>
 /// <para>
-/// The group publishes no audio. The product-wide world media publication carries the clips every site's
-/// classic sidecar maps, under the one audio bundle the Host declares for it, and the session opens clips
-/// only from that bundle, so copies of the same WAV bodies here would be bytes nothing opens. The images
-/// this group publishes are, in turn, referenced by the world media publication and the site closures
-/// rather than copied into them.
+/// The group publishes no audio. The product-wide world media publication carries the clips its classic
+/// sidecar maps, under the one audio bundle the Host declares for it, and the session opens clips only from
+/// that bundle, so copies of the same WAV bodies here would be bytes nothing opens. The images this group
+/// publishes are, in turn, referenced by the world media publication rather than copied into it.
 /// The sound catalog is built from the same publication as an importer-side disposition report of the
 /// numeric archive; nothing at runtime reads it, so it is reported by the command rather than published.
 /// </para>
@@ -60,7 +60,7 @@ public sealed class ClassicMediaGroup
 
     /// <summary>
     /// Builds the classic media and its sound catalog. The catalog's admitted entries are the
-    /// publication's own audio manifests, so "a site closure carries this clip" is a reference to bytes
+    /// publication's own audio manifests, so "the world media carries this clip" is a reference to bytes
     /// the same publication emits rather than a second list the catalog keeps in agreement.
     /// </summary>
     public static ClassicMediaGroup Create(Arena2ClassicMediaInputs inputs, Arena2ClassicMediaProfile profile)
@@ -160,4 +160,50 @@ public sealed class ClassicMediaGroup
         new(".CEL", "class-question animation", [], "no publisher in this group: the FLC container and its frames are read, and the character group publishes the class portraits from them, but nothing here emits an artifact from these files and nothing plays them back, so this group carries no canvas for them", "Assets/Scripts/API/FlcFile.cs"),
         new(".BSS", "compass sprite bank", [], "no publisher in this group: the BSS container is decoded and its frames are published through the character group, but this classic-media group emits no artifact from these files", "Assets/Scripts/API/BssFile.cs"),
     ];
+
+    /// <summary>
+    /// The classic media group's artifacts by group-relative path, read from the inventory the classic-media
+    /// command writes under the group root. The inventory names each artifact by its content path, which is
+    /// the group's directory name joined to the group-relative path.
+    /// </summary>
+    public static IReadOnlyDictionary<string, ImportPublicationManifestArtifact> ReadInventory(string classicGroupRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(classicGroupRoot);
+        string root = Path.GetFullPath(classicGroupRoot);
+        string group = Path.GetFileName(Path.TrimEndingDirectorySeparator(root));
+        string inventory = ImportPublicationPlan.ToOutputPath(root, InventoryRelativePath);
+        if (!File.Exists(inventory))
+            throw new FileNotFoundException($"'{InventoryRelativePath}' is absent from the classic media group at '{root}' (run the classic-media command first).", inventory);
+        byte[] bytes = File.ReadAllBytes(inventory);
+        Dictionary<string, ImportPublicationManifestArtifact> artifacts = new(StringComparer.Ordinal);
+        using JsonDocument document = JsonDocument.Parse(bytes);
+        if (!document.RootElement.TryGetProperty("generator", out JsonElement generator) || generator.GetString() != Generator
+            || !document.RootElement.TryGetProperty("artifacts", out JsonElement entries) || entries.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidDataException($"'{InventoryRelativePath}' under '{root}' is not the classic media group's inventory.");
+        }
+
+        foreach (JsonElement entry in entries.EnumerateArray())
+        {
+            string path = entry.GetProperty("path").GetString() ?? string.Empty;
+            if (!path.StartsWith(group + "/", StringComparison.Ordinal))
+            {
+                throw new InvalidDataException($"Classic media inventory entry '{path}' is not under the group '{group}'.");
+            }
+
+            string relative = path[(group.Length + 1)..];
+            ImportPublicationManifestArtifact artifact = new(
+                relative,
+                new ContentDigest(entry.GetProperty("sha256").GetString() ?? string.Empty),
+                entry.GetProperty("byteLength").GetInt64(),
+                []);
+            artifact.Validate();
+            if (!artifacts.TryAdd(relative, artifact))
+            {
+                throw new InvalidDataException($"The classic media inventory names '{path}' twice.");
+            }
+        }
+
+        return artifacts;
+    }
 }

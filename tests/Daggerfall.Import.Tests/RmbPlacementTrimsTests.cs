@@ -6,15 +6,15 @@ using Xunit;
 
 namespace Daggerfall.Import.Tests;
 
-/// <summary>A streamed block's overlapping placements draw each patch of surface once, as its site closure does.</summary>
+/// <summary>A streamed block's overlapping placements draw each patch of surface once.</summary>
 public sealed class RmbPlacementTrimsTests
 {
     [CorpusFact]
-    public void A_streamed_graveyard_draws_what_its_closure_draws_with_no_patch_of_hedge_twice()
+    public void A_streamed_graveyard_draws_no_patch_of_hedge_twice()
     {
         // The Hawkston Cemetery is one block, GRVEAS07. Streamed, its models are posed one by one the way the
         // runtime poses them; the trimmed placements draw their world media meshes in place of their models'.
-        DungeonLogicalSourceSet sources = RmbExteriorNormalizerTests.Sources();
+        DungeonLogicalSourceSet sources = WorldBlockTests.Sources();
         WorldBlockNormalizer normalizer = new(sources);
         DaggerfallWorldBlock block = normalizer.RmbExterior("GRVEAS07.RMB").Block;
         BsaArchive arch = BsaArchive.Parse(sources.Require("ARCH3D.BSA").Bytes.Span, "arena2/ARCH3D.BSA");
@@ -22,7 +22,6 @@ public sealed class RmbPlacementTrimsTests
         Assert.Contains(trims, trim => trim.Faces.Any(face => face.TextureArchive == 33));
         Dictionary<string, RmbPlacementTrim> byPlacement = trims.ToDictionary(trim => trim.PlacementId, StringComparer.Ordinal);
 
-        Dictionary<string, double> streamedArea = new(StringComparer.Ordinal);
         List<NormalizedVector3[]> drawn = [];
         foreach (DaggerfallWorldBlockModel model in block.Models)
         {
@@ -51,34 +50,61 @@ public sealed class RmbPlacementTrimsTests
                     return new NormalizedVector3(moved.X, moved.Y, moved.Z);
                 })];
                 for (int index = 1; index < placed.Length - 1; index++)
-                {
-                    NormalizedVector3[] triangle = [placed[0], placed[index], placed[index + 1]];
-                    drawn.Add(triangle);
-                    string material = $"texture-{face.TextureArchive}-{face.TextureRecord}";
-                    streamedArea[material] = streamedArea.GetValueOrDefault(material) + Area(triangle);
-                }
+                    drawn.Add([placed[0], placed[index], placed[index + 1]]);
             }
         }
 
-        RmbExteriorNormalizerTests.AssertNoOverlaps(drawn);
-        RmbExteriorNormalizationResult closure = RmbExteriorNormalizer.Normalize(new(sources, 17, "The Hawkston Cemetery", RmbWorldProfileKind.Exterior));
-        Dictionary<string, double> closureArea = new(StringComparer.Ordinal);
-        foreach (NormalizedMesh mesh in closure.Document.Meshes.Where(mesh => mesh.MaterialGroups.All(group => !group.CollisionOnly)))
-        {
-            string material = mesh.Id[(mesh.Id.LastIndexOf('/') + 1)..];
-            foreach (NormalizedTriangle triangle in mesh.Triangles)
-                closureArea[material] = closureArea.GetValueOrDefault(material)
-                    + Area([mesh.Vertices[triangle.FirstVertex], mesh.Vertices[triangle.SecondVertex], mesh.Vertices[triangle.ThirdVertex]]);
-        }
-
-        Assert.Equal(closureArea.Keys.Order(), streamedArea.Keys.Order());
-        Assert.All(closureArea, pair => Assert.True(Math.Abs(pair.Value - streamedArea[pair.Key]) < 0.01 + (pair.Value * 1E-4),
-            $"{pair.Key}: the closure draws {pair.Value:F3} m², the streamed block {streamedArea[pair.Key]:F3} m²"));
+        AssertNoOverlaps(drawn);
     }
 
-    private static double Area(NormalizedVector3[] triangle)
+    /// <summary>Refuses two drawn triangles sharing more than an edge in one plane and facing.</summary>
+    private static void AssertNoOverlaps(IEnumerable<NormalizedVector3[]> drawn)
     {
-        Vector3 a = new(triangle[0].X, triangle[0].Y, triangle[0].Z), b = new(triangle[1].X, triangle[1].Y, triangle[1].Z), c = new(triangle[2].X, triangle[2].Y, triangle[2].Z);
-        return Vector3.Cross(b - a, c - a).Length() / 2.0;
+        List<string> overlaps = [];
+        foreach (IGrouping<(int, int, int, int), NormalizedVector3[]> plane in drawn.Where(triangle => Normal(triangle) != default).GroupBy(PlaneKey))
+        {
+            NormalizedVector3[][] triangles = [.. plane];
+            for (int first = 0; first < triangles.Length; first++)
+                for (int second = first + 1; second < triangles.Length; second++)
+                    if (Overlap(triangles[first], triangles[second], Normal(triangles[first])))
+                        overlaps.Add(string.Join(" ", triangles[first]) + " | " + string.Join(" ", triangles[second]));
+        }
+        Assert.True(overlaps.Count == 0, $"{overlaps.Count} overlapping coplanar pairs, first: {overlaps.FirstOrDefault()}");
+    }
+
+    private static (int, int, int, int) PlaneKey(NormalizedVector3[] triangle)
+    {
+        NormalizedVector3 normal = Normal(triangle);
+        return ((int)MathF.Round(normal.X * 100F), (int)MathF.Round(normal.Y * 100F), (int)MathF.Round(normal.Z * 100F),
+            (int)MathF.Round(((normal.X * triangle[0].X) + (normal.Y * triangle[0].Y) + (normal.Z * triangle[0].Z)) * 100F));
+    }
+
+    private static NormalizedVector3 Normal(NormalizedVector3[] triangle)
+    {
+        NormalizedVector3 a = new(triangle[1].X - triangle[0].X, triangle[1].Y - triangle[0].Y, triangle[1].Z - triangle[0].Z);
+        NormalizedVector3 b = new(triangle[2].X - triangle[0].X, triangle[2].Y - triangle[0].Y, triangle[2].Z - triangle[0].Z);
+        NormalizedVector3 cross = new((a.Y * b.Z) - (a.Z * b.Y), (a.Z * b.X) - (a.X * b.Z), (a.X * b.Y) - (a.Y * b.X));
+        float length = MathF.Sqrt((cross.X * cross.X) + (cross.Y * cross.Y) + (cross.Z * cross.Z));
+        return length > 1E-6F ? new(cross.X / length, cross.Y / length, cross.Z / length) : default;
+    }
+
+    /// <summary>Whether two triangles in one plane share more than an edge, by the separating edges of either.</summary>
+    private static bool Overlap(NormalizedVector3[] first, NormalizedVector3[] second, NormalizedVector3 normal)
+    {
+        int drop = MathF.Abs(normal.X) > MathF.Abs(normal.Y) ? (MathF.Abs(normal.X) > MathF.Abs(normal.Z) ? 0 : 2) : (MathF.Abs(normal.Y) > MathF.Abs(normal.Z) ? 1 : 2);
+        (float, float) Flat(NormalizedVector3 point) => drop switch { 0 => (point.Y, point.Z), 1 => (point.X, point.Z), _ => (point.X, point.Y) };
+        (float X, float Y)[] a = [.. first.Select(Flat)], b = [.. second.Select(Flat)];
+        foreach ((float X, float Y)[] triangle in new[] { a, b })
+            for (int edge = 0; edge < 3; edge++)
+            {
+                (float x0, float y0) = triangle[edge];
+                (float x1, float y1) = triangle[(edge + 1) % 3];
+                (float nx, float ny) = (y0 - y1, x1 - x0);
+                float length = MathF.Sqrt((nx * nx) + (ny * ny));
+                if (length < 1E-6F) continue;
+                float[] pa = [.. a.Select(p => ((p.X * nx) + (p.Y * ny)) / length)], pb = [.. b.Select(p => ((p.X * nx) + (p.Y * ny)) / length)];
+                if (pa.Max() <= pb.Min() + 0.002F || pb.Max() <= pa.Min() + 0.002F) return false;
+            }
+        return true;
     }
 }

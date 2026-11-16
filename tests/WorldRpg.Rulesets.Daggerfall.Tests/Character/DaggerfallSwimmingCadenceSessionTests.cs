@@ -34,7 +34,7 @@ public sealed class DaggerfallSwimmingCadenceSessionTests
             List<string> releases = [];
             var content = new ContentFake(releases);
             PopulateContent(content, inputs);
-            var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
             spatial.KeepPosition = true;
             // Fix the admitted Engine movement fact to isolate the session's persisted skill cadence.
             spatial.MovementFact = _ => new(CharacterMovementMode.Swimming, .5f, false, false, false, false);

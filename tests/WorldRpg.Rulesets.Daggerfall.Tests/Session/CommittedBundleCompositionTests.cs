@@ -15,7 +15,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class CommittedBundleCompositionTests
 {
-    private const string SiteRole = "daggerfall.site";
     private const string NewGameStartRole = "daggerfall.new-game-start";
 
     /// <summary>Every game bundle committed under the content root, by id.</summary>
@@ -42,19 +41,19 @@ public sealed class CommittedBundleCompositionTests
     {
         string root = TestData.RepositoryRoot;
         ResolvedGameComposition composition = TestSessions.Resolve(FullContent(root), new GameBundleId(bundleId)).RequireComposition();
-        // A bundle's new-game start pack, when it selects one, names its start site over the base definition.
-        string startPack = composition.ContentPacks.SingleOrDefault(pack => pack.Role.Value == NewGameStartRole) is { } startOverride
-            ? JsonDocument.Parse(startOverride.Payload).RootElement.GetProperty("startSite").GetString()!
-            : TestPayload.Definitions.NewGame.StartSitePack;
-        ContentPack startSite = composition.ContentPacks.Single(pack => pack.Id.Value == startPack && pack.Role.Value == SiteRole);
-        DaggerfallSiteProfile start = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(root)), startSite.Payload, TestPayload.Definitions);
+        // A bundle's new-game start pack, when it selects one, names its start over the base definition.
+        DaggerfallNewGameStart startDefinition = composition.ContentPacks.SingleOrDefault(pack => pack.Role.Value == NewGameStartRole) is { } startOverride
+            ? DaggerfallBaseContent.ReadNewGameStart(startOverride.Payload, TestPayload.Definitions.NewGame, startOverride.Id.Value).Start
+            : TestPayload.Definitions.NewGame.Start;
+        Assert.True(DaggerfallWorldProfileIds.TryParse(startDefinition.Profile, out DaggerfallWorldProfileKey startKey));
+        DaggerfallSiteProfile start = Assembled(startKey);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, start);
         // An exterior start streams the assembled exteriors around it.
         if (start.Site is { } site && start.ProfileKey == DaggerfallWorldProfileIds.Exterior(site))
             foreach (DaggerfallSiteProfile near in new AssembledWorld().NearbyExteriors(site)) AssembledWorldRun.Admit(content, near);
-        SpatialFake spatial = SpatialFake.Create(start.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(start.Geometry.Spatial[0].Sha256, releases);
         // The player stays put: one step must not stream in neighbouring exterior cells the fake does not carry.
         spatial.KeepPosition = true;
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
@@ -77,26 +76,8 @@ public sealed class CommittedBundleCompositionTests
     }
 
     /// <summary>
-    /// Every site's audio bodies are published once, in the world media publication, and opened from the data
-    /// container below its audio root, so no site payload names an audio bundle of its own.
-    /// </summary>
-    [Fact]
-    public void No_site_payload_names_an_audio_bundle_of_its_own()
-    {
-        string root = TestData.RepositoryRoot;
-        string[] sitePayloads = [.. Directory.GetFiles(Path.Combine(root, "content/worldrpg/packs"), "payload.json", SearchOption.AllDirectories)
-            .Where(path => TopLevelSection(TestContentFiles.Read(path), "world") is not null)];
-        Assert.NotEmpty(sitePayloads);
-        Assert.All(sitePayloads, path =>
-        {
-            using JsonDocument world = JsonDocument.Parse(TopLevelSection(TestContentFiles.Read(path), "world")!.Value);
-            Assert.False(world.RootElement.TryGetProperty("audioBundle", out _), $"Site payload of '{Path.GetFileName(Path.GetDirectoryName(path))}' names an audio bundle of its own.");
-        });
-    }
-
-    /// <summary>
     /// The data container carries every root the default composition opens as a whole (the sky, the cinematics,
-    /// the world audio and the per-block world), and every clip a selected site names is a file below the world
+    /// the world audio and the per-block world), and every clip an assembled location names is a file below the world
     /// media audio root in it.
     /// </summary>
     [Fact]
@@ -112,22 +93,19 @@ public sealed class CommittedBundleCompositionTests
         ResolvedGameComposition composition = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();
         HashSet<string> entries = [.. carried];
         List<string> missingClips = [];
-        foreach (ContentPack pack in composition.ContentPacks.Where(pack => pack.Role.Value == SiteRole))
-        {
-            DaggerfallSiteProfile site = DaggerfallSiteContent.Read(TestSessions.Data(content), pack.Payload, TestPayload.Definitions);
-            string clips = DaggerfallWorldMedia.AudioRoot;
-            Assert.NotEmpty(site.Audio);
-            missingClips.AddRange(site.Audio
-                .Where(clip => !clip.Path.StartsWith(clips + "/", StringComparison.Ordinal) || !entries.Contains(clip.Path))
-                .Select(clip => $"{pack.Id.Value}: {clip.Id} -> {clip.Path}"));
-        }
+        DaggerfallSiteProfile site = ReadInputs(root);
+        string clips = DaggerfallWorldMedia.AudioRoot;
+        Assert.NotEmpty(site.Audio);
+        missingClips.AddRange(site.Audio
+            .Where(clip => !clip.Path.StartsWith(clips + "/", StringComparison.Ordinal) || !entries.Contains(clip.Path))
+            .Select(clip => $"{clip.Id} -> {clip.Path}"));
         Assert.Empty(missingClips);
     }
 
     /// <summary>
     /// Every committed pack is selected by a committed bundle, so no payload sits beside the product
     /// admitted by nothing, and the authored new-game definition names content the default bundle admits:
-    /// its start site is a selected site pack, and a new game started from it begins every quest it names.
+    /// its start is a location the catalog places, and a new game started from it begins every quest it names.
     /// </summary>
     [Fact]
     public void Every_committed_pack_is_selected_and_the_new_game_starts_what_it_names()
@@ -150,7 +128,8 @@ public sealed class CommittedBundleCompositionTests
 
         DaggerfallNewGameDefinition newGame = TestPayload.Definitions.NewGame;
         ResolvedGameComposition classic = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();
-        Assert.Contains(classic.ContentPacks, pack => pack.Id.Value == newGame.StartSitePack && pack.Role.Value == SiteRole);
+        Assert.True(DaggerfallWorldProfileIds.TryParse(newGame.Start.Profile, out DaggerfallWorldProfileKey startKey));
+        Assert.Equal(startKey, Assembled(startKey).ProfileKey);
         Assert.NotEmpty(newGame.Quests);
 
         using IGameSession title = CreateWithBundle(_ => { });
@@ -176,7 +155,7 @@ public sealed class CommittedBundleCompositionTests
     [Fact]
     public void Admission_refuses_a_pack_role_the_ruleset_does_not_interpret()
     {
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithPackRole("daggerfall.castle-necromoghan", "daggerfall.unknown"));
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithPackRole("daggerfall.art-replacements", "daggerfall.unknown"));
 
         Assert.Contains("declares role 'daggerfall.unknown'", error.Message, StringComparison.Ordinal);
     }
@@ -205,8 +184,7 @@ public sealed class CommittedBundleCompositionTests
     [Fact]
     public void A_new_game_starts_at_the_authored_start_site_whatever_the_bundle_order()
     {
-        // Site packs listed in reverse put a ship, then dungeons, ahead of Privateer's Hold; the authored
-        // new-game definition still names where play begins.
+        // Pack order carries no meaning: the authored new-game definition names where play begins.
         using IGameSession session = CreateWithBundle(bundle =>
         {
             JsonArray packs = bundle["contentPacks"]!.AsArray();
@@ -215,60 +193,42 @@ public sealed class CommittedBundleCompositionTests
             foreach (JsonNode pack in reversed) packs.Add(pack);
         });
         DaggerfallSession daggerfall = Assert.IsType<DaggerfallSession>(session);
-        Assert.Equal("daggerfall.privateers-hold", TestPayload.Definitions.NewGame.StartSitePack);
+        Assert.Equal(DaggerfallWorldProfileIds.Dungeon(PrivateersHold).LogicalId, TestPayload.Definitions.NewGame.Start.Profile);
         Assert.Equal(ReadInputs(TestData.RepositoryRoot).ProfileKey, daggerfall.Sites.ActiveProfile);
     }
 
     [Fact]
-    public void A_bundle_without_the_authored_start_site_is_refused_by_name()
+    public void A_new_game_start_no_location_places_is_refused_by_name()
     {
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithBundle(bundle =>
-        {
-            JsonArray packs = bundle["contentPacks"]!.AsArray();
-            packs.Remove(packs.Single(pack => pack!["id"]!.GetValue<string>() == "daggerfall.privateers-hold"));
-        }));
-        Assert.Contains("does not select the new-game start site 'daggerfall.privateers-hold'", error.Message, StringComparison.Ordinal);
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithFile("worldrpg/packs/daggerfall.base/payload.json",
+            payload => payload["newGame"]!["start"]!["profile"] = "17/4/dungeon"));
+        Assert.Contains("names profile '17/4/dungeon', which no location places", error.Message, StringComparison.Ordinal);
     }
 
     /// <summary>Resolves the default bundle after editing its descriptor, then creates a session.</summary>
-    private static IGameSession CreateWithBundle(Action<JsonObject> edit)
-    {
-        string root = TestData.RepositoryRoot;
-        // The edited descriptor replaces one eager file; the bundles the Host stages travel with it.
-        ProductContent full = StagedContent(root, out BundleContentFake bundles);
-        const string bundlePath = "worldrpg/bundles/daggerfall.classic.bundle.json";
-        JsonObject bundle = JsonNode.Parse(full.ReadBytes(bundlePath).Span)!.AsObject();
-        edit(bundle);
-        ProductContentFile[] files = [.. full.Files.ToArray().Select(file => Encoding.UTF8.GetString(file.Path.Span) == bundlePath
-            ? new ProductContentFile(file.Path.ToArray(), Encoding.UTF8.GetBytes(bundle.ToJsonString()))
-            : file)];
-        ResolvedGameComposition composition = TestSessions.Resolve(new ProductContent(files, bundles), new GameBundleId("daggerfall.classic")).RequireComposition();
-        DaggerfallSiteProfile inputs = ReadInputs(root);
-        List<string> releases = [];
-        ContentFake content = new(releases);
-        PopulateContent(content, inputs);
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
-        return new DaggerfallRuleset(videosEnabled: false).CreateSession(new GameSessionContext(engine.Context, composition));
-    }
+    private static IGameSession CreateWithBundle(Action<JsonObject> edit) => CreateWithFile("worldrpg/bundles/daggerfall.classic.bundle.json", edit);
 
     /// <summary>Resolves the default bundle with one pack's declared role replaced, then creates a session.</summary>
-    private static IGameSession CreateWithPackRole(string packId, string role)
+    private static IGameSession CreateWithPackRole(string packId, string role) =>
+        CreateWithFile($"worldrpg/packs/{packId}/pack.json", manifest => manifest["role"] = role);
+
+    /// <summary>Resolves the default bundle after editing one staged JSON file, then creates a session.</summary>
+    private static IGameSession CreateWithFile(string path, Action<JsonObject> edit)
     {
         string root = TestData.RepositoryRoot;
-        // The edited descriptor replaces one eager file; the bundles the Host stages travel with it.
+        // The edited file replaces one eager file; the bundles the Host stages travel with it.
         ProductContent full = StagedContent(root, out BundleContentFake bundles);
-        string manifestPath = $"worldrpg/packs/{packId}/pack.json";
-        JsonObject manifest = JsonNode.Parse(full.ReadBytes(manifestPath).Span)!.AsObject();
-        manifest["role"] = role;
-        ProductContentFile[] files = [.. full.Files.ToArray().Select(file => Encoding.UTF8.GetString(file.Path.Span) == manifestPath
-            ? new ProductContentFile(file.Path.ToArray(), Encoding.UTF8.GetBytes(manifest.ToJsonString()))
+        JsonObject edited = JsonNode.Parse(full.ReadBytes(path).Span)!.AsObject();
+        edit(edited);
+        ProductContentFile[] files = [.. full.Files.ToArray().Select(file => Encoding.UTF8.GetString(file.Path.Span) == path
+            ? new ProductContentFile(file.Path.ToArray(), Encoding.UTF8.GetBytes(edited.ToJsonString()))
             : file)];
         ResolvedGameComposition composition = TestSessions.Resolve(new ProductContent(files, bundles), new GameBundleId("daggerfall.classic")).RequireComposition();
         DaggerfallSiteProfile inputs = ReadInputs(root);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
         return new DaggerfallRuleset(videosEnabled: false).CreateSession(new GameSessionContext(engine.Context, composition));
     }
 }

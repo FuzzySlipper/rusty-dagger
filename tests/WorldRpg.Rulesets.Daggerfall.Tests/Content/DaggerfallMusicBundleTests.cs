@@ -66,7 +66,7 @@ public sealed class DaggerfallMusicBundleTests
     [Fact]
     public void A_composition_without_a_music_container_composes_no_score()
     {
-        ProductContent content = TestSessions.FullContent(TestData.RepositoryRoot, "worldrpg/imports/privateers-hold");
+        ProductContent content = TestSessions.FullContent(TestData.RepositoryRoot, DaggerfallWorldBlocks.Root);
         ResolvedGameComposition composition = TestSessions.Resolve(content, new GameBundleId("daggerfall.classic")).RequireComposition();
 
         Assert.DoesNotContain(composition.Installed, installed => installed.Name == DaggerfallMusicBundle.ContainerName);

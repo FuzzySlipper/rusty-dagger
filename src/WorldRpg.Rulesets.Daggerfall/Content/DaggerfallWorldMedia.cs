@@ -4,17 +4,15 @@ using Rusty.Engine;
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>
-/// The product-wide world media every site closure references: the meshes, material textures, billboard
+/// The product-wide world media every assembled location draws from: the meshes, material textures, billboard
 /// and actor atlases, terrain textures, classic sidecar, audio clips and world visuals the importer publishes
-/// once, and the classic images the classic media group publishes. A site closure names a shared artifact by
-/// the same closure-relative path it would have carried, and <see cref="DaggerfallClosureArtifacts"/>
-/// resolves that path here when the site does not carry it.
+/// once, and the classic images the classic media group publishes. Their sidecars name each artifact by its
+/// publication-relative path, which <see cref="Resolve"/> turns into a content path.
 /// </summary>
 /// <remarks>
 /// Every body is read from the data container when first needed; the audio clips below
-/// <see cref="AudioRoot"/> are opened as Engine references when a cue first plays. The dungeon sidecar is held as one parsed
-/// document while the selected sites are read, so each site resolves the entries it admits by identity
-/// without reparsing it; dispose the instance once the sites are read.
+/// <see cref="AudioRoot"/> are opened as Engine references when a cue first plays. The dungeon sidecar is held as one
+/// parsed document while the product media is read from it; dispose the instance once that is done.
 /// </remarks>
 internal sealed class DaggerfallWorldMedia : IDisposable
 {
@@ -77,7 +75,7 @@ internal sealed class DaggerfallWorldMedia : IDisposable
     /// <summary>Whether the content carries the world media publication at all.</summary>
     internal bool IsPublished => _dungeon is not null;
 
-    /// <summary>The product-wide classic sidecar a site without its own presents.</summary>
+    /// <summary>The product-wide classic sidecar.</summary>
     internal ReadOnlyMemory<byte>? ClassicSidecar { get; }
 
     /// <summary>
@@ -140,20 +138,33 @@ internal sealed class DaggerfallWorldMedia : IDisposable
     /// <summary>Every product-wide dungeon descriptor's media id.</summary>
     internal IEnumerable<string> ResourceIds => _resources.Keys;
 
-    /// <summary>Every product-wide billboard's sprite resource id.</summary>
-    internal IEnumerable<string> BillboardIds => _billboards.Keys;
+    /// <summary>Every product-wide dungeon descriptor, in sidecar order.</summary>
+    internal IEnumerable<JsonElement> Resources => _resources.Values;
 
-    /// <summary>Every product-wide actor's resource id.</summary>
-    internal IEnumerable<string> ActorIds => _actors.Keys;
+    /// <summary>Every product-wide billboard entry, in sidecar order.</summary>
+    internal IEnumerable<JsonElement> Billboards => _billboards.Values;
+
+    /// <summary>Every product-wide actor entry, in sidecar order.</summary>
+    internal IEnumerable<JsonElement> Actors => _actors.Values;
 
     /// <summary>A product-wide dungeon descriptor by media id.</summary>
     internal bool TryGetResource(string id, out JsonElement resource) => _resources.TryGetValue(id, out resource);
 
-    /// <summary>A product-wide billboard entry by sprite resource id.</summary>
-    internal bool TryGetBillboard(string id, out JsonElement billboard) => _billboards.TryGetValue(id, out billboard);
+    /// <summary>
+    /// The content path a publication-relative path names: the world media publication's when it carries it, else the
+    /// classic media group's, else the world media path, which then fails its manifest check by name.
+    /// </summary>
+    internal string Resolve(string relativePath)
+    {
+        string shared = $"{Root}/{relativePath}";
+        if (Shared.ContainsKey(shared)) return shared;
+        string classic = $"{ClassicGroupRoot}/{relativePath}";
+        return ClassicGroup.ContainsKey(classic) ? classic : shared;
+    }
 
-    /// <summary>A product-wide actor entry by actor resource id.</summary>
-    internal bool TryGetActor(string id, out JsonElement actor) => _actors.TryGetValue(id, out actor);
+    /// <summary>The admitted digest of a resolved content path.</summary>
+    internal bool TryGetArtifact(string contentPath, out ContentSha256 hash) =>
+        Shared.TryGetValue(contentPath, out hash) || ClassicGroup.TryGetValue(contentPath, out hash);
 
     public void Dispose() => _dungeon?.Dispose();
 
@@ -179,43 +190,4 @@ internal sealed class DaggerfallWorldMedia : IDisposable
         catch (JsonException exception) { diagnostics.Add($"The classic media inventory is not valid JSON: {exception.Message}"); }
         return artifacts;
     }
-}
-
-/// <summary>
-/// One site closure's artifacts and the product-wide artifacts it references, as one lookup. A closure-relative
-/// path resolves to the site's own artifact when the site carries it, then to the world media publication,
-/// then to the classic media group; the hash lookup answers for any of the three by content path.
-/// </summary>
-internal sealed class DaggerfallClosureArtifacts
-{
-    private readonly string _root;
-    private readonly IReadOnlyDictionary<string, ContentSha256> _site;
-    private readonly DaggerfallWorldMedia _product;
-
-    internal DaggerfallClosureArtifacts(string publicationRoot, IReadOnlyDictionary<string, ContentSha256> site, DaggerfallWorldMedia product)
-    {
-        _root = publicationRoot.TrimEnd('/');
-        _site = site;
-        _product = product;
-    }
-
-    /// <summary>Whether the site itself carries the artifact at a closure-relative path.</summary>
-    internal bool SiteCarries(string relativePath) => _site.ContainsKey($"{_root}/{relativePath}");
-
-    /// <summary>The content path a closure-relative path names; the site's own path when nothing carries it.</summary>
-    internal string Resolve(string relativePath)
-    {
-        string site = $"{_root}/{relativePath}";
-        if (_site.ContainsKey(site)) return site;
-        string shared = $"{DaggerfallWorldMedia.Root}/{relativePath}";
-        if (_product.Shared.ContainsKey(shared)) return shared;
-        string classic = $"{DaggerfallWorldMedia.ClassicGroupRoot}/{relativePath}";
-        return _product.ClassicGroup.ContainsKey(classic) ? classic : site;
-    }
-
-    /// <summary>The admitted digest of a resolved content path.</summary>
-    internal bool TryGetValue(string contentPath, out ContentSha256 hash) =>
-        _site.TryGetValue(contentPath, out hash)
-        || _product.Shared.TryGetValue(contentPath, out hash)
-        || _product.ClassicGroup.TryGetValue(contentPath, out hash);
 }

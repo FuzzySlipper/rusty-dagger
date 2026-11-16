@@ -19,8 +19,8 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class WorldBlocksCommand
 {
     public static ToolCommand Command { get; } = new("world-blocks",
-        [Options.Arena2, Options.Pack, SiteInputs.Shared, CommandOption.Staged(SiteInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldBlocks), Options.Inventory,
-            CommandOption.Staged(SiteInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-blocks.sources.json"),
+        [Options.Arena2, Options.Pack, PublicationInputs.Shared, CommandOption.Staged(PublicationInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldBlocks), Options.Inventory,
+            CommandOption.Staged(PublicationInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-blocks.sources.json"),
             CommandOption.Staged("--buildings", "PAYLOAD.json", ImportLayout.BuildingsPayload)], Run);
 
     private static int Run(CommandArguments args)
@@ -28,7 +28,7 @@ internal static class WorldBlocksCommand
         Stopwatch clock = Stopwatch.StartNew();
         string arena2 = Path.GetFullPath(args[Options.Arena2.Name]);
         DungeonLogicalSourceSet sources = new([
-            .. new[] { "BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT" }.Select(name => Source(arena2, name)),
+            .. new[] { "BLOCKS.BSA", "ARCH3D.BSA", "FACTION.TXT", "FLATS.CFG" }.Select(name => Source(arena2, name)),
             .. Directory.EnumerateFiles(arena2, "TEXTURE.*").Select(path => Source(arena2, Path.GetFileName(path))),
         ]);
         DaggerfallLocations locations = PayloadFiles.ReadSection<DaggerfallLocations>(args[Options.Pack.Name], "locations");
@@ -36,10 +36,10 @@ internal static class WorldBlocksCommand
             ?? throw new InvalidOperationException($"The block building catalog '{args["--buildings"]}' is empty.");
         WorldBlocksPublication publication = Arena2WorldBlocksPublication.Create(sources, locations, Arena2SitePublication.WorldMediaImporterId,
             line => Console.WriteLine($"world blocks: {line} ({clock.Elapsed.TotalSeconds:F0}s)"), catalog);
-        RequireSharedMeshes(publication, args[SiteInputs.Shared.Name]);
-        ImportPublicationPlan plan = publication.Plan.WithInvocation(SiteInputs.Invocation(args));
-        SiteInputs.PrintComparison(ImportPublicationWriter.Write(plan, Path.GetFullPath(args[SiteInputs.Output.Name])));
-        SiteInputs.WriteSourceManifest(args, plan);
+        RequireSharedMeshes(publication, args[PublicationInputs.Shared.Name]);
+        ImportPublicationPlan plan = publication.Plan.WithInvocation(PublicationInputs.Invocation(args));
+        PublicationInputs.PrintComparison(ImportPublicationWriter.Write(plan, Path.GetFullPath(args[PublicationInputs.Output.Name])));
+        PublicationInputs.WriteSourceManifest(args, plan);
         DaggerfallWorldBlockCounts counts = publication.Index.Counts;
         long bytes = plan.Artifacts.Sum(artifact => (long)artifact.Bytes.Length);
         long spatial = plan.Artifacts.Where(artifact => artifact.RelativePath.EndsWith(SpatialArtifactBinary.Extension, StringComparison.Ordinal)).Sum(artifact => (long)artifact.Bytes.Length);

@@ -29,7 +29,7 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         // A wall across every horizontal query, while the floor probe the movement owner uses still
         // sees no obstruction.
@@ -41,9 +41,9 @@ public sealed class RangedCombatSessionTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         PlaceArcherInRangedBand(session);
-        const long archer = 2004;
+        long archer = HoldActor(5);
         double separation = definitions.EnemyRanged.MinimumDistance + 2d;
-        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
         WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator quiver = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(session.State.ActorInventories.InventoryFor(archer));
         double beforeHealth = PlayerHealth(session);
 
@@ -64,16 +64,16 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         PlaceArcherInRangedBand(session);
-        const long archer = 2004;
+        long archer = HoldActor(5);
         double separation = definitions.EnemyRanged.MinimumDistance + 2d;
-        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
         double beforeHealth = PlayerHealth(session);
 
         // The line is clear at release; the wall is only there for the arrow already flying.
@@ -100,9 +100,9 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         using DaggerfallSession session = CreateArcherSession(root, definitions, inputs, releases,
             out AppearanceFake appearance, out PerceptionFake perception);
-        const long archer = 2004;
+        long archer = HoldActor(5);
         double separation = definitions.EnemyRanged.MinimumDistance + 2d;
-        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d,
+        perception.Receipt = Receipt(new PerceptionPair((ulong)archer, 1, separation, 1d,
             PerceptionPairKind.Visible, 1d));
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
 
@@ -114,7 +114,7 @@ public sealed class RangedCombatSessionTests
 
         // The shot owns one stable visual identity while its released line advances; stopping later
         // enemy decisions does not cancel a missile already in flight.
-        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 0d,
+        perception.Receipt = Receipt(new PerceptionPair((ulong)archer, 1, separation, 0d,
             PerceptionPairKind.FacingRejected, 0d));
         appearance.AdvanceReceiptForAll = null;
         session.Update(new ProductUpdate(OuterUpdate(2), []));
@@ -141,7 +141,7 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
@@ -151,7 +151,7 @@ public sealed class RangedCombatSessionTests
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         PlaceArcherInRangedBand(session);
-        long archer = 2004;
+        long archer = HoldActor(5);
         Assert.Equal("archer", inputs.Project.Actors[archer].ActorId.Value);
         double shotReach = definitions.Actions["archer-shot"].Reach!.Value;
         // Past every melee reach this corpus authors, and inside the archer's own.
@@ -215,9 +215,9 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         using DaggerfallSession session = CreateArcherSession(root, definitions, inputs, releases,
             out AppearanceFake appearance, out PerceptionFake perception);
-        const long archer = 2004;
+        long archer = HoldActor(5);
         double separation = definitions.EnemyRanged.MinimumDistance + 2d;
-        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d,
+        perception.Receipt = Receipt(new PerceptionPair((ulong)archer, 1, separation, 1d,
             PerceptionPairKind.Visible, 1d));
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
         double healthBefore = PlayerHealth(session);
@@ -226,7 +226,7 @@ public sealed class RangedCombatSessionTests
         // catches up three steps, and the arrow keeps its 25 m/s across each batch.
         session.Update(new ProductUpdate(OuterUpdate(1) with { SimulationStep = 1, AdmittedStepCount = 3 }, []));
         appearance.AdvanceReceiptForAll = null;
-        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 0d,
+        perception.Receipt = Receipt(new PerceptionPair((ulong)archer, 1, separation, 0d,
             PerceptionPairKind.FacingRejected, 0d));
         DaggerfallMissileVisual arrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
             visual => visual.MediaId == "visual.missile.arrow");
@@ -299,7 +299,7 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
@@ -307,9 +307,9 @@ public sealed class RangedCombatSessionTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         PlaceArcherInRangedBand(session);
         ArrowsMeetThePlayer(spatial, session);
-        const long archer = 2004;
+        long archer = HoldActor(5);
         double separation = definitions.EnemyRanged.MinimumDistance + 2d;
-        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)archer, 1, separation, 1d, PerceptionPairKind.Visible, 1d));
         double healthBefore = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current;
 
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
@@ -335,12 +335,12 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         PlaceArcherInRangedBand(session);
-        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, null, DaggerfallTuning.Defaults.Spatial);
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
@@ -348,7 +348,7 @@ public sealed class RangedCombatSessionTests
             new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
         DaggerfallCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
             physicalAttacksBlocked: id => session.State.Effects.ControlsFor(id).PhysicalAttacks, actorGameplayActive: _ => true);
-        const long archer = 2004;
+        long archer = HoldActor(5);
         const ulong generation = 77;
         const ulong releaseStep = 400;
         Dictionary<long, WorldPoint> positions = new()
@@ -387,12 +387,12 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         PlaceArcherInRangedBand(session);
-        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, null, DaggerfallTuning.Defaults.Spatial);
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId, placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
@@ -401,7 +401,7 @@ public sealed class RangedCombatSessionTests
         bool gameplayActive = true;
         DaggerfallCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
             physicalAttacksBlocked: _ => false, actorGameplayActive: _ => gameplayActive);
-        const long archer = 2004;
+        long archer = HoldActor(5);
         const ulong generation = 77;
         const ulong releaseStep = 400;
         Dictionary<long, WorldPoint> positions = new()
@@ -461,8 +461,8 @@ public sealed class RangedCombatSessionTests
         double healthAtRelease;
         using (DaggerfallSession original = CreateArcherSession(root, definitions, inputs, releases, out AppearanceFake appearance, out PerceptionFake perception))
         {
-            perception.Receipt = Receipt(new PerceptionPair(2004, 1, 8d, 1d, PerceptionPairKind.Visible, 1d));
-            appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(2004));
+            perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(5), 1, 8d, 1d, PerceptionPairKind.Visible, 1d));
+            appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(HoldActor(5)));
             original.Update(new ProductUpdate(OuterUpdate(1), []));
             DaggerfallMissileVisual arrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
                 visual => visual.MediaId == "visual.missile.arrow");
@@ -474,7 +474,7 @@ public sealed class RangedCombatSessionTests
 
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
-        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         resumedSpatial.KeepPosition = true;
         AppearanceFake resumedAppearance = new(releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, resumedAppearance);
@@ -500,12 +500,12 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         PlaceArcherInRangedBand(session);
-        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, null, DaggerfallTuning.Defaults.Spatial);
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
@@ -539,12 +539,12 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
         PlaceArcherInRangedBand(session);
-        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, null, DaggerfallTuning.Defaults.Spatial);
         Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
             placement => placement.EntityId,
             placement => definitions.RequireActor(placement.ActorId));
@@ -578,7 +578,7 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         ContentFake sourceContent = new(releases);
         PopulateContent(sourceContent, inputs);
-        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases));
         long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
         RulesetSavePayload payload;
@@ -596,7 +596,7 @@ public sealed class RangedCombatSessionTests
 
         ContentFake resumedContent = new(releases);
         PopulateContent(resumedContent, inputs);
-        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = TestSessions.Resolve(FullContent(root), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;
         using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity), payload);
@@ -609,7 +609,7 @@ public sealed class RangedCombatSessionTests
     {
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         perception = PerceptionFake.Create();
         appearance = new AppearanceFake(releases);
@@ -626,9 +626,9 @@ public sealed class RangedCombatSessionTests
         List<string> releases = [];
         using DaggerfallSession session = CreateArcherSession(root, definitions, inputs, releases,
             out AppearanceFake appearance, out PerceptionFake perception);
-        const long archer = 2004;
+        long archer = HoldActor(5);
         double separation = definitions.EnemyRanged.MinimumDistance + 2d;
-        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 1d,
+        perception.Receipt = Receipt(new PerceptionPair((ulong)archer, 1, separation, 1d,
             PerceptionPairKind.Visible, 1d));
         appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredRangedMarker(archer));
         double healthBefore = PlayerHealth(session);
@@ -638,7 +638,7 @@ public sealed class RangedCombatSessionTests
             AdmittedStepCount = admittedStepCount,
         }, []));
         appearance.AdvanceReceiptForAll = null;
-        perception.Receipt = Receipt(new PerceptionPair(archer, 1, separation, 0d,
+        perception.Receipt = Receipt(new PerceptionPair((ulong)archer, 1, separation, 0d,
             PerceptionPairKind.FacingRejected, 0d));
         DaggerfallMissileVisual arrow = Assert.Single(inputs.ClassicPresentation.WorldVisuals,
             visual => visual.MediaId == "visual.missile.arrow");
@@ -671,8 +671,8 @@ public sealed class RangedCombatSessionTests
     private static void PlaceArcherInRangedBand(DaggerfallSession session)
     {
         session.State.PlayerControl.MoveTo(Vector3.Zero);
-        session.State.Actors.Get(2004).ApplyPose(new(new(0, 0, -8), MathF.PI));
-        session.State.Actors.Get(2004).Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(true);
+        session.State.Actors.Get(HoldActor(5)).ApplyPose(new(new(0, 0, -8), MathF.PI));
+        session.State.Actors.Get(HoldActor(5)).Actor.Get<DaggerfallEnemyPerceptionMemory>().SetForcedHostile(true);
     }
 
     /// <summary>

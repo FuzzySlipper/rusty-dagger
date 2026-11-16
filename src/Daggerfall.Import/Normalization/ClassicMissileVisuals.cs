@@ -2,8 +2,8 @@ using System.Globalization;
 
 namespace Daggerfall.Import.Normalization;
 
-/// <summary>One classic mesh a published site shows for a missile while it is in flight.</summary>
-/// <param name="MediaId">The logical identity the site composition names this visual by.</param>
+/// <summary>One classic mesh the runtime shows for a missile while it is in flight.</summary>
+/// <param name="MediaId">The logical identity the runtime names this visual by.</param>
 /// <param name="MeshNumber">The mesh number, as the numeric mesh archive indexes it.</param>
 /// <param name="Use">What shows it, so the visual is published with a consumer rather than on its own.</param>
 public sealed record ClassicMissileVisual(string MediaId, uint MeshNumber, string Use);
@@ -29,12 +29,12 @@ public static class ClassicMissileVisuals
     /// <summary>The mesh number the donor creates for a flying arrow.</summary>
     public const uint ArrowMeshNumber = 99800;
 
-    /// <summary>The missile visuals every published site carries.</summary>
+    /// <summary>The missile visuals the world media carries.</summary>
     public static IReadOnlyList<ClassicMissileVisual> Published { get; } =
         [new("visual.missile.arrow", ArrowMeshNumber, "the in-flight arrow Game/DaggerfallMissile.cs creates")];
 
     /// <summary>
-    /// The mesh numbers these visuals draw from, so a site publication can publish the geometry they
+    /// The mesh numbers these visuals draw from, so the world media can publish the geometry they
     /// name in the same pass rather than pointing a descriptor at an artifact nobody wrote.
     /// </summary>
     public static IReadOnlyList<string> MeshIds { get; } =

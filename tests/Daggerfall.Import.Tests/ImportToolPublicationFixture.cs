@@ -85,7 +85,7 @@ internal sealed partial class ImportToolFixture
                     result.Add(At($"output/daggerfall.quests.{id}.json"), NamedQuestCorpusPublication.Serialize(NamedQuestCorpusPublication.Create(id, Read<DaggerfallQuestPack>(Pack, "questSources"), Read<DaggerfallQuestOriginalSourceSet>(Records, "questOriginalSources"))));
                 break;
             case "source-manifest":
-                var manifest = ImportPublicationManifestSerializer.Deserialize(File.ReadAllBytes(Path.Combine(Publication, ImportPublicationManifestSerializer.ManifestRelativePath)));
+                var manifest = ImportPublicationManifestSerializer.Deserialize(File.ReadAllBytes(Path.Combine(WorldMedia, ImportPublicationManifestSerializer.ManifestRelativePath)));
                 result.Add(At("report.json"), SourceManifestSerializer.Serialize(SourceManifestPublication.ForPublication(manifest.Sources.Select(source => source.Path), Arena2, Path.GetFileName(Inventory), File.ReadAllBytes(Inventory)))); break;
             case "source-coverage":
                 // The staging tree's files replace the repository content's at the same path; records keep their own label.
@@ -101,20 +101,6 @@ internal sealed partial class ImportToolFixture
                 var request = new SourceManifestRequest("arena2", "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv", Arena2, imported, [], Rows.Where(row => row.Disposition == "excluded").Select(row => row.PathOrPattern.StartsWith("arena2/", StringComparison.Ordinal) ? row.PathOrPattern["arena2/".Length..] : row.PathOrPattern).ToArray());
                 var coverage = SourceCoverageReconciler.Build(SourceManifestBuilder.Scan(request, File.ReadAllBytes(Inventory)), inputs.Consumers, inputs.Quests, inputs.Unsupported, Rows);
                 result.Add(At("report.json"), SourceCoverageReconciler.Serialize(coverage)); break;
-            case "write":
-            case "rmb-spatial":
-                var siteMedia = new Arena2SiteMedia(Arena2SitePublication.RuntimeActorResources(File.ReadAllText(Pack)), ClassicProfile())
-                {
-                    RuntimeNpcResources = Arena2SitePublication.RuntimeNpcResources(File.ReadAllText(Pack)),
-                    RuntimeNatureResources = Arena2SitePublication.RuntimeNatureResources(),
-                    RuntimeTerrainResources = Arena2SitePublication.RuntimeTerrainResources(),
-                };
-                ImportPublicationPlan plan = name == "write"
-                    ? Arena2SitePublication.Dungeon(Arena2SiteSources.ForSite(Arena2), 17, "Privateer's Hold", siteMedia)
-                    : Arena2SitePublication.Rmb(Arena2SiteSources.ForSite(Arena2), RmbRegion, RmbLocation, Interior ? new RmbBuildingSelection(1, 1, 0) : null, siteMedia).Item1;
-                plan = ProductMedia.Partition(plan.WithInvocation(new ImportInvocation(["daggerfall-import-tool", .. Arguments(name)])));
-                Artifacts(At("output"), plan.Artifacts);
-                result.Add(At("site.sources.json"), SourceManifestSerializer.Serialize(SourceManifestPublication.ForPublication(plan.Manifest.Sources.Select(source => source.Path), Arena2, Path.GetFileName(Inventory), File.ReadAllBytes(Inventory)))); break;
             default: throw new ArgumentException($"No expected builder output for {name}.");
         }
     }

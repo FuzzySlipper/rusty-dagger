@@ -61,10 +61,12 @@ public sealed class Arena2SpatialFormatTests
             ("MAPTABLE.017", CreateMapTable()),
             ("MAPPITEM.017", CreateMapPItem()),
             ("MAPDITEM.017", CreateMapDItem())), "maps-fixture");
-        MapsDungeonLayout layout = MapsDecoder.DecodeDungeonLayout(archive, 17, "Fixture Hold");
+        MapsLocationRecord location = Assert.Single(MapsDecoder.DecodeRegionLocations(archive, 17));
+        MapsDungeonLocation dungeon = Assert.Single(MapsDecoder.DecodeRegionDungeons(archive, 17));
 
-        Assert.Equal((42, 99U, 1280, 2560, (byte)2), (layout.MapId, layout.LocationId, layout.Longitude, layout.Latitude, layout.DungeonType));
-        Assert.Equal(new MapsDungeonBlock("S0000007.RDB", 1, -1, true), Assert.Single(layout.Blocks));
+        Assert.Equal(("Fixture Hold", 42, 1280, 2560, (byte)2), (location.Name, location.MapId, location.Longitude, location.Latitude, location.DungeonType));
+        Assert.Equal((MapsDungeonState.Read, 99U), (dungeon.State, dungeon.DungeonLocationId));
+        Assert.Equal(new MapsDungeonBlock("S0000007.RDB", 1, -1, true), Assert.Single(dungeon.Blocks));
         Assert.Equal((10, 479), MapsDecoder.ToMapPixel(1280, 2560));
 
         BsaArchive truncated = BsaArchive.Parse(CreateNamedBsa(("MAPNAMES.017", BitConverter.GetBytes(1U))), "truncated-maps");

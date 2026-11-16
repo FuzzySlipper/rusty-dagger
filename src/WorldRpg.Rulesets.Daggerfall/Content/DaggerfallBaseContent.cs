@@ -206,6 +206,7 @@ internal static partial class DaggerfallBaseContent
                 DialogueWorldRules = dialogueWorldRules,
                 NewGame = newGame,
                 AssembledSites = assembledSites,
+                ClassicSelection = DaggerfallClassicSelection.Read(root, diagnostics),
                 QuestJournalTitles = ReadQuestJournalTitles(root, diagnostics),
                 Help = ReadHelp(root, diagnostics),
                 Tutorial = ReadTutorial(root, diagnostics),
@@ -226,8 +227,8 @@ internal static partial class DaggerfallBaseContent
 
     /// <summary>
     /// The authored presentation every location assembled from its blocks shares: its world appearance and
-    /// the navigation grid its block artifacts are placed on. A payload without it admits only published
-    /// site closures, and an assembly that needs it refuses by name.
+    /// the navigation grid its block artifacts are placed on. A payload without it admits no location: an
+    /// assembly that needs it refuses by name.
     /// </summary>
     private static DaggerfallAssembledSiteDefinition? ReadAssembledSites(JsonElement root, DaggerfallContentDiagnostics diagnostics)
     {

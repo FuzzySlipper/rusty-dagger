@@ -27,7 +27,7 @@ public sealed class RazorSessionTests
         {
             List<string> releases = [];
             ContentFake content = new(releases); PopulateContent(content, inputs);
-            var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
+            var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases); spatial.KeepPosition = true;
             return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random:RandomMaximum.Create());
         }
         DaggerfallSessionComposition composition = new(definitions, inputs, DaggerfallTuning.Defaults);
@@ -81,7 +81,7 @@ public sealed class RazorSessionTests
         {
             List<string> releases = [];
             ContentFake content = new(releases); PopulateContent(content, inputs);
-            var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
+            var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases); spatial.KeepPosition = true;
             return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
         }
         var identity = TestSessions.Resolve(FullContent(TestData.RepositoryRoot), new GameBundleId("daggerfall.classic")).RequireComposition().Identity;

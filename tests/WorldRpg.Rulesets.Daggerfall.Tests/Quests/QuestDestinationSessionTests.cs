@@ -7,6 +7,8 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
@@ -23,12 +25,11 @@ public sealed class QuestDestinationSessionTests
     public void Remote_building_realizes_its_queued_person_foe_and_item_when_entered_after_restore()
     {
         AssembledWorld world = Shared.Value;
-        using AssembledWorldRun start = world.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun start = world.Start(PrivateersHold);
         DaggerfallQuestResourceBinding place = Begin(start, "remote-building");
         Assert.Equal(DaggerfallWorldProfileKind.Interior, place.PlaceSelection!.Kind);
         DaggerfallSiteId site = place.Places[0].Require();
         DaggerfallSiteBuildingId building = new(place.Building!.BlockX, place.Building.BlockY, place.Building.Index);
-        Assert.True(world.IsUnpublished(site));
         DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(site), interior = DaggerfallWorldProfileIds.Interior(site, building);
 
         using AssembledWorldRun run = world.Restore(start.Session.CaptureSave(), site, building);
@@ -53,11 +54,10 @@ public sealed class QuestDestinationSessionTests
     public void Remote_dungeon_realizes_its_queued_person_foe_and_item_when_entered_after_restore()
     {
         AssembledWorld world = Shared.Value;
-        using AssembledWorldRun start = world.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun start = world.Start(PrivateersHold);
         DaggerfallQuestResourceBinding place = Begin(start, "remote-dungeon");
         Assert.Equal(DaggerfallWorldProfileKind.Dungeon, place.PlaceSelection!.Kind);
         DaggerfallSiteId site = place.Places[0].Require();
-        Assert.True(world.IsUnpublished(site));
         DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(site), dungeon = DaggerfallWorldProfileIds.Dungeon(site);
 
         using AssembledWorldRun run = world.Restore(start.Session.CaptureSave(), site);
@@ -80,13 +80,12 @@ public sealed class QuestDestinationSessionTests
     public void Permanent_castle_is_reached_by_quest_teleport_and_realizes_its_queued_person_foe_and_item_after_restore()
     {
         AssembledWorld world = Shared.Value;
-        using AssembledWorldRun start = world.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun start = world.Start(PrivateersHold);
         DaggerfallQuestResourceBinding place = Begin(start, "permanent");
         DaggerfallSiteId site = place.Places[0].Require();
         // Place _daggerfall_ permanent DaggerfallCastle2 (S0000008): the castle beneath the city of Daggerfall.
         Assert.Equal("Daggerfall", world.Definitions.Locations.Records.Single(record => record.Id == site).Name);
         Assert.Equal(DaggerfallWorldProfileKind.Dungeon, place.PlaceSelection!.Kind);
-        Assert.True(world.IsUnpublished(site));
         DaggerfallWorldProfileKey dungeon = DaggerfallWorldProfileIds.Dungeon(site);
 
         using AssembledWorldRun run = world.Restore(start.Session.CaptureSave(), site);

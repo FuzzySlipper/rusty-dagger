@@ -1280,7 +1280,7 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
         foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values) resident.Projection.SyncCityGates(_time.Calendar);
     }
 
-    /// <summary>Retires neighboring exterior closures before a profile transition or session dispose.</summary>
+    /// <summary>Retires neighboring exterior locations before a profile transition or session dispose.</summary>
     internal void RetireResidentExteriorLocations(bool capture = true)
     {
         foreach (DaggerfallWorldProfileKey key in _residentExteriorLocations.Keys

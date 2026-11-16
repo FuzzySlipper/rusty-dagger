@@ -27,7 +27,7 @@ public sealed class NamiraSessionTests
             List<string> releases = [];
             ContentFake content = new(releases);
             PopulateContent(content, inputs);
-            SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
             spatial.KeepPosition = true;
             appearance = new(releases);
             perception = PerceptionFake.Create();

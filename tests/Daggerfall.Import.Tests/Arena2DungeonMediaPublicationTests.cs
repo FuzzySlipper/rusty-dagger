@@ -126,7 +126,7 @@ public sealed class Arena2DungeonMediaPublicationTests
     }
 
     [Fact]
-    public void PublishesAnExplicitRuntimeHumanMobileOutsideThePlacedDungeonActors()
+    public void PublishesARuntimeHumanMobileBesideTheFixtureRat()
     {
         List<Arena2DungeonMediaSource> sources = [.. CreateSources(),
             new("arena2/TEXTURE.380", CreateTextureArchive(20)),
@@ -135,7 +135,7 @@ public sealed class Arena2DungeonMediaPublicationTests
         Arena2DungeonMediaPublication publication = Arena2DungeonMediaPublication.Create(CreateRequest() with
         {
             Sources = new Arena2DungeonMediaSourceSet(sources),
-            RuntimeActorResources = ["actor/mobile-141"],
+            RuntimeActorResources = ["actor/mobile-0", "actor/mobile-141"],
         });
 
         Assert.Equal(new byte[] { 0, 141 }, publication.Actors.Select(actor => actor.MobileId.Value));
@@ -330,8 +330,7 @@ public sealed class Arena2DungeonMediaPublicationTests
         Replace(sources, "TEXTURE.255", CreateAsymmetricTransparentTextureArchive(20));
         Replace(sources, "TEXTURE.401", CreateAsymmetricTransparentTextureArchive(2));
 
-        DungeonActorSpriteMedia actor = Assert.Single(Arena2DungeonMediaPublication.Create(
-            Arena2DungeonMediaRequest.Create(CreateDungeon(), new Arena2DungeonMediaSourceSet(sources))).Actors);
+        DungeonActorSpriteMedia actor = Assert.Single(Arena2DungeonMediaPublication.Create(Request(new Arena2DungeonMediaSourceSet(sources))).Actors);
 
         DungeonMediaFrameLayout[] actorFrames = actor.States.SelectMany(state => state.Frames).ToArray();
         Assert.Contains(actorFrames, frame => frame.AtlasFrame.SourceWidth == 3);
@@ -356,7 +355,7 @@ public sealed class Arena2DungeonMediaPublicationTests
         Replace(sources, "TEXTURE.255", CreateTextureArchive(15));
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => Arena2DungeonMediaPublication.Create(
-            Arena2DungeonMediaRequest.Create(CreateDungeon(), new Arena2DungeonMediaSourceSet(sources))));
+            Request(new Arena2DungeonMediaSourceSet(sources))));
 
         Assert.Contains("preferred rest state", error.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -394,15 +393,15 @@ public sealed class Arena2DungeonMediaPublicationTests
     {
         Arena2DungeonMediaSource[] sources = CreateSources();
         Arena2DungeonMediaSourceSet extra = new([.. sources, new Arena2DungeonMediaSource("TEXTURE.003", CreateTextureArchive(1))]);
-        Assert.Throws<MissingDungeonMediaTexturesException>(() => Arena2DungeonMediaPublication.Create(Arena2DungeonMediaRequest.Create(CreateDungeon(), extra)));
+        Assert.Throws<MissingDungeonMediaTexturesException>(() => Arena2DungeonMediaPublication.Create(Request(extra)));
 
         Arena2DungeonMediaSource[] malformedSources = CreateSources();
         Replace(malformedSources, "TEXTURE.255", [1]);
         Arena2DungeonMediaSourceSet malformed = new(malformedSources);
-        Assert.Throws<Arena2FormatException>(() => Arena2DungeonMediaPublication.Create(Arena2DungeonMediaRequest.Create(CreateDungeon(), malformed)));
+        Assert.Throws<Arena2FormatException>(() => Arena2DungeonMediaPublication.Create(Request(malformed)));
 
         Arena2DungeonMediaQuotas tinyAtlas = Arena2DungeonMediaQuotas.Default with { MaximumAtlasDimension = 1 };
-        Assert.Throws<InvalidOperationException>(() => Arena2DungeonMediaPublication.Create(new(CreateDungeon(), new(CreateSources()), tinyAtlas)));
+        Assert.Throws<InvalidOperationException>(() => Arena2DungeonMediaPublication.Create(Request(new(CreateSources()), tinyAtlas)));
     }
 
     [Fact]
@@ -412,7 +411,7 @@ public sealed class Arena2DungeonMediaPublicationTests
         Arena2DungeonMediaSource[] sources = CreateSources();
         Arena2DungeonMediaSourceSet extra = new([.. sources, new Arena2DungeonMediaSource("TEXTURE.003", CreateTextureArchive(1))]);
         MissingDungeonMediaTexturesException mismatch = Assert.Throws<MissingDungeonMediaTexturesException>(
-            () => Arena2DungeonMediaPublication.Create(Arena2DungeonMediaRequest.Create(CreateDungeon(), extra)));
+            () => Arena2DungeonMediaPublication.Create(Request(extra)));
         Assert.Empty(mismatch.MissingTextureNames);
         Assert.Equal(["TEXTURE.003"], mismatch.UnneededTextureNames);
 
@@ -420,7 +419,7 @@ public sealed class Arena2DungeonMediaPublicationTests
         Arena2DungeonMediaSourceSet shortSources = new(CreateSources()
             .Where(source => source.Label is not "arena2/TEXTURE.002" and not "arena2/TEXTURE.401").ToArray());
         MissingDungeonMediaTexturesException shortMismatch = Assert.Throws<MissingDungeonMediaTexturesException>(
-            () => Arena2DungeonMediaPublication.Create(Arena2DungeonMediaRequest.Create(CreateDungeon(), shortSources)));
+            () => Arena2DungeonMediaPublication.Create(Request(shortSources)));
         Assert.Equal(["TEXTURE.002", "TEXTURE.401"], shortMismatch.MissingTextureNames);
         Assert.Empty(shortMismatch.UnneededTextureNames);
     }
@@ -460,22 +459,19 @@ public sealed class Arena2DungeonMediaPublicationTests
     }
 
     private static Arena2DungeonMediaRequest CreateRequest(bool reverseSources = false) =>
-        Arena2DungeonMediaRequest.Create(CreateDungeon(), new Arena2DungeonMediaSourceSet(reverseSources ? CreateSources().Reverse() : CreateSources()));
+        Request(new Arena2DungeonMediaSourceSet(reverseSources ? CreateSources().Reverse() : CreateSources()));
+
+    /// <summary>The fixture's selection: one material texture and one billboard from TEXTURE.002, and the rat.</summary>
+    private static Arena2DungeonMediaRequest Request(Arena2DungeonMediaSourceSet sources, Arena2DungeonMediaQuotas? quotas = null) =>
+        new(sources, quotas ?? Arena2DungeonMediaQuotas.Default)
+        {
+            RuntimeMaterialResources = ["texture/2-0"],
+            RuntimeBillboardResources = ["sprite/texture-2-1"],
+            RuntimeActorResources = ["actor/mobile-0"],
+        };
 
     private static Arena2DungeonMediaRequest CreateActorRequest(byte mobileId, ushort archive, int actorRecordCount = 20)
     {
-        NormalizedImportDocument document = CreateDungeon();
-        string actorId = $"actor/mobile-{mobileId}";
-        document = document with
-        {
-            Resources = document.Resources.Select(resource => resource.Id == "actor/mobile-0"
-                ? resource with { Id = actorId }
-                : resource).ToArray(),
-            World = document.World with
-            {
-                Actors = [new NormalizedActorPlacement("actor/fixture", actorId, new NormalizedVector3(0, 0, 0))],
-            },
-        };
         // The exact texture closure requires every archive the selected mobile
         // references, its corpse included, so the fixture derives them from the source
         // links rather than listing them: a link that gains a corpse cannot leave this
@@ -493,7 +489,7 @@ public sealed class Arena2DungeonMediaPublicationTests
 
         if (mobile?.FemaleTextureArchive is { } female)
             sources.Add(new Arena2DungeonMediaSource($"arena2/TEXTURE.{female.Value:000}", CreateTextureArchive(actorRecordCount)));
-        return Arena2DungeonMediaRequest.Create(document, new Arena2DungeonMediaSourceSet(sources));
+        return Request(new Arena2DungeonMediaSourceSet(sources)) with { RuntimeActorResources = [$"actor/mobile-{mobileId}"] };
     }
 
     private static Arena2DungeonMediaRequest CreateCorpusActorRequest(byte mobileId)
@@ -529,50 +525,6 @@ public sealed class Arena2DungeonMediaPublicationTests
         new("arena2/TEXTURE.255", CreateTextureArchive(20)),
         new("arena2/TEXTURE.401", CreateTextureArchive(2)),
     ];
-
-    private static NormalizedImportDocument CreateDungeon()
-    {
-        const string artifactId = "artifact/fixture";
-        NormalizedArtifactDescriptor artifact = new(
-            artifactId,
-            "fixture.json",
-            new ContentDigest(new string('0', 64)),
-            1,
-            []);
-        NormalizedResourceCatalogEntry texture = new("texture/2-0", NormalizedResourceKind.Texture, artifactId, [], []);
-        NormalizedResourceCatalogEntry material = new("material/texture-2-0", NormalizedResourceKind.Material, artifactId, ["texture/2-0"], []);
-        NormalizedResourceCatalogEntry sprite = new("sprite/texture-2-1", NormalizedResourceKind.Sprite, artifactId, [], []);
-        NormalizedResourceCatalogEntry actor = new("actor/mobile-0", NormalizedResourceKind.ActorDefinition, artifactId, [], []);
-        NormalizedMesh mesh = new(
-            "mesh/fixture",
-            artifactId,
-            [new NormalizedVector3(0, 0, 0), new NormalizedVector3(1, 0, 0), new NormalizedVector3(0, 0, 1)],
-            [new NormalizedVector3(0, 1, 0), new NormalizedVector3(0, 1, 0), new NormalizedVector3(0, 1, 0)],
-            [new NormalizedVector2(0, 0), new NormalizedVector2(1, 0), new NormalizedVector2(0, 1)],
-            [new NormalizedTriangle(0, 1, 2)],
-            [new NormalizedMaterialGroup("material/texture-2-0", 0, 1, true)]);
-        NormalizedWorld world = new(
-            "mesh/fixture",
-            ["mesh/fixture"],
-            null,
-            null,
-            null,
-            [],
-            [new NormalizedBillboardPlacement("billboard/fixture", "sprite/texture-2-1", new NormalizedVector3(0, 0, 0), new NormalizedVector2(1, 1))],
-            [new NormalizedActorPlacement("actor/fixture", "actor/mobile-0", new NormalizedVector3(0, 0, 0))],
-            [],
-            []);
-        return new NormalizedImportDocument(
-            new ImportProvenance(
-                "daggerfall-import/test",
-                [new LogicalSourceRecord("arena2/MAPS.BSA", new ContentDigest(new string('0', 64)), 1)]),
-            [artifact],
-            new NormalizedCoordinateConvention(NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),
-            new NormalizedBounds(new NormalizedVector3(0, 0, 0), new NormalizedVector3(1, 1, 1)),
-            [mesh],
-            world,
-            [texture, material, sprite, actor]);
-    }
 
     private static void Replace(Arena2DungeonMediaSource[] sources, string suffix, byte[] bytes)
     {

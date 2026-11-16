@@ -7,20 +7,18 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// The site catalog resolves profiles when first needed: composition reads only the start site's closure,
-/// and a session enters, saves and restores inside locations assembled from their blocks, keyed by their
+/// The site catalog resolves profiles when first needed: composition assembles only the start site from its
+/// blocks, and a session enters, saves and restores inside locations assembled from theirs, keyed by their
 /// generated profile ids.
 /// </summary>
 public sealed class AssembledSiteSessionTests
 {
-    private static readonly DaggerfallSiteId Charing = new(17, 4);
-
     /// <summary>
-    /// Composing the shipped bundle reads only the new-game start site's closure: no other authored site is
-    /// parsed and nothing of the per-block publication is read until a location needs it.
+    /// Composing the shipped bundle assembles only the new-game start site: of the per-block publication it reads the
+    /// index and Privateer's Hold's block alone, and any other location is read when it is first needed.
     /// </summary>
     [Fact]
-    public void Composition_reads_only_the_start_site_and_never_reads_the_block_publication()
+    public void Composition_assembles_only_the_start_site_and_reads_only_its_blocks()
     {
         string root = TestData.RepositoryRoot;
         ProductContent staged = StagedContent(root, out BundleContentFake bundles);
@@ -29,26 +27,27 @@ public sealed class AssembledSiteSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, start);
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(start.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(start.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
 
         using IGameSession created = new DaggerfallRuleset(videosEnabled: false).CreateSession(new GameSessionContext(engine.Context, composition));
 
         DaggerfallSession session = Assert.IsType<DaggerfallSession>(created);
         DaggerfallSiteProfiles profiles = session.Sites.RequireProfiles();
-        Assert.Equal(16, profiles.AuthoredKeys.Count);
-        Assert.Equal([start.ProfileKey], profiles.AuthoredKeys.Where(profiles.IsResolved));
-        Assert.DoesNotContain(bundles.ReadFiles, file => file.Path.StartsWith(DaggerfallWorldBlocks.Root + "/", StringComparison.Ordinal));
+        Assert.True(profiles.IsResolved(start.ProfileKey));
+        string[] BlockReads() => [.. bundles.ReadFiles.Where(file => file.Path.StartsWith(DaggerfallWorldBlocks.Root + "/", StringComparison.Ordinal))
+            .Select(file => file.Path[(DaggerfallWorldBlocks.Root.Length + 1)..]).Distinct()];
+        string[] holdBlocks = [.. TestPayload.Definitions.Locations.Records.Single(record => record.Id == start.Site).DungeonBlocks
+            .Select(block => $"rdb/{block.SourceKey.ToLowerInvariant().Replace('.', '-')}.json").Distinct()];
+        Assert.Equal([DaggerfallWorldBlocks.IndexPath, .. holdBlocks.Order(StringComparer.Ordinal)], BlockReads().Order(StringComparer.Ordinal));
         Assert.False(profiles.IsResolved(DaggerfallWorldProfileIds.Exterior(Charing)));
 
-        // Asking for a profile no pack overrides assembles it then, from the blocks it places alone.
-        DaggerfallWorldProfileKey interior = UnpublishedCharingInterior(profiles);
+        // Asking for another profile assembles it then, from the blocks it places alone.
+        DaggerfallWorldProfileKey interior = FirstCharingInterior(profiles);
         DaggerfallSiteProfile assembled = profiles.Require(interior);
         Assert.Equal(interior, assembled.ProfileKey);
-        Assert.Equal([DaggerfallWorldBlocks.IndexPath, $"rmb/{assembled.InteriorBuilding!.Building.SourceKey.ToLowerInvariant().Replace('.', '-')}/interior-{interior.LogicalId.Split('-')[^1]}.json"],
-            bundles.ReadFiles.Where(file => file.Path.StartsWith(DaggerfallWorldBlocks.Root + "/", StringComparison.Ordinal))
-                .Select(file => file.Path[(DaggerfallWorldBlocks.Root.Length + 1)..]).Distinct());
-        // An authored pack still overrides its explicit id.
-        Assert.StartsWith("worldrpg/imports/charing/interior-3-4-0/", profiles.Require(DaggerfallWorldProfileIds.Interior(Charing, new(3, 4, 0))).SpatialArtifact.Path, StringComparison.Ordinal);
+        Assert.Equal([DaggerfallWorldBlocks.IndexPath, .. holdBlocks.Order(StringComparer.Ordinal),
+            $"rmb/{assembled.InteriorBuilding!.Building.SourceKey.ToLowerInvariant().Replace('.', '-')}/interior-{interior.LogicalId.Split('-')[^1]}.json"],
+            BlockReads().Order(StringComparer.Ordinal).OrderBy(path => path == DaggerfallWorldBlocks.IndexPath ? 0 : path.StartsWith("rdb/", StringComparison.Ordinal) ? 1 : 2));
     }
 
     /// <summary>
@@ -66,7 +65,7 @@ public sealed class AssembledSiteSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, start);
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(start.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(start.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
 
         using IGameSession created = new DaggerfallRuleset(videosEnabled: false).CreateSession(new GameSessionContext(engine.Context, composition));
         DaggerfallSession session = Assert.IsType<DaggerfallSession>(created);
@@ -103,8 +102,8 @@ public sealed class AssembledSiteSessionTests
         Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(TestSessions.Data(full), media, definitions));
         Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(TestSessions.Data(full), media));
         DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(TestSessions.Data(full)), () => product.Value, () => meshes.Value);
-        DaggerfallSiteProfiles profiles = DaggerfallSiteProfiles.Resolve([DaggerfallAuthoredSite.Of(source)], assembly, null);
-        DaggerfallWorldProfileKey interior = UnpublishedCharingInterior(profiles);
+        DaggerfallSiteProfiles profiles = DaggerfallSiteProfiles.Resolve(assembly, null);
+        DaggerfallWorldProfileKey interior = FirstCharingInterior(profiles);
         DaggerfallWorldProfileKey dungeon = definitions.Locations.Records
             .Where(record => record.Region == 17 && record.DungeonBlocks.Count > 0 && record.Climate is not null && record.Id != source.Site)
             .Select(record => DaggerfallWorldProfileIds.Dungeon(record.Id)).First(assembly.Places);
@@ -113,14 +112,14 @@ public sealed class AssembledSiteSessionTests
         PopulateContent(content, source);
         PopulateContent(content, profiles.Require(interior));
         PopulateContent(content, profiles.Require(dungeon));
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         DaggerfallSessionComposition composition = new(definitions, source, DaggerfallTuning.Defaults) { Profiles = profiles };
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
         Assert.True(session.TryTransitionTo(interior));
         Assert.Equal(interior, session.Sites.ActiveProfile);
-        // Every block part of the interior was placed; the source dungeon's closure was removed.
+        // Every block part of the interior was placed; the source dungeon's parts were removed.
         Assert.Equal(profiles.Require(interior).Geometry.Spatial.Count, spatial.ContentResidencyRequests.Last().Admitted.Length);
         RulesetSavePayload insideInterior = session.CaptureSave();
         DaggerfallSavePayload saved = DaggerfallSavePayload.Read(insideInterior);
@@ -151,12 +150,12 @@ public sealed class AssembledSiteSessionTests
         }
     }
 
-    /// <summary>The first Charing building with an interior that no authored pack publishes.</summary>
-    private static DaggerfallWorldProfileKey UnpublishedCharingInterior(DaggerfallSiteProfiles profiles)
+    /// <summary>The first Charing building with an interior.</summary>
+    private static DaggerfallWorldProfileKey FirstCharingInterior(DaggerfallSiteProfiles profiles)
     {
         DaggerfallSiteExterior exterior = TestPayload.Definitions.Locations.Records.Single(record => record.Id == Charing).Exterior!;
         return exterior.Buildings.Keys.OrderBy(building => building.BlockX).ThenBy(building => building.BlockY).ThenBy(building => building.Index)
             .Select(building => DaggerfallWorldProfileIds.Interior(Charing, building))
-            .First(key => !profiles.AuthoredKeys.Contains(key) && profiles.TryGet(key, out _));
+            .First(key => profiles.TryGet(key, out _));
     }
 }

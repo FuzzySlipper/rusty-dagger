@@ -6,6 +6,8 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>The interiors owner on its own, without a session: what an arrival and a departure do to a dungeon.</summary>
@@ -52,8 +54,7 @@ public sealed class DaggerfallInteriorsTests
 
     private static DaggerfallSiteProfile Profile(string logicalProfileId, int index, DaggerfallDungeonMapContent? map) => new(
         new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-        DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/action-triggers", new ContentSha256(1, 2, 3, 4), 1),
-            new ContentArtifact("mesh/action-triggers", new ContentSha256(1, 2, 3, 4))),
+        FixtureGeometry("spatial/action-triggers", new ContentSha256(1, 2, 3, 4), 1, "mesh/action-triggers", new ContentSha256(1, 2, 3, 4)),
         new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene),
         new PlayerInitialLook(0f, 0f),
         [],

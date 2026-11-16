@@ -87,7 +87,7 @@ public sealed class DaggerfallTransformationInfectionTests
     public void Duplicate_and_opposing_lycans_reject_but_vampire_can_coexist_until_permanent_consumption()
     {
         using Fixture f = new(videos: false); var s = f.Session;
-        Assert.Equal(DaggerfallInfectionAdmission.TargetUnavailable, s.Infections.Inflict(Exposure("enemy", DaggerfallInfectionKind.Werewolf) with { TargetId = 2000 }));
+        Assert.Equal(DaggerfallInfectionAdmission.TargetUnavailable, s.Infections.Inflict(Exposure("enemy", DaggerfallInfectionKind.Werewolf) with { TargetId = HoldActor(1) }));
         Assert.Equal(DaggerfallInfectionAdmission.Started, s.Infections.Inflict(Exposure("wolf", DaggerfallInfectionKind.Werewolf)));
         Assert.Equal(DaggerfallInfectionAdmission.Incumbent, s.Infections.Inflict(Exposure("boar", DaggerfallInfectionKind.Wereboar)));
         Assert.Equal(DaggerfallInfectionAdmission.Started, s.Infections.Inflict(Exposure("vamp", DaggerfallInfectionKind.Vampire)));
@@ -125,7 +125,7 @@ public sealed class DaggerfallTransformationInfectionTests
         var active = Assert.Single(save.ActiveEffects);
         var wrong = new DaggerfallInfectionState(DaggerfallInfectionKind.Vampire, State(s).StartingDay, 3, DaggerfallInfectionStage.DeathPending);
         Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { State = JsonSerializer.SerializeToElement(wrong, DaggerfallAfflictionJson.Default.DaggerfallInfectionState) }] }));
-        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { CasterId = 2000 }] }));
+        Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { CasterId = HoldActor(1) }] }));
         Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { ItemId = 123 }] }));
         Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Encode(save with { ActiveEffects = [active with { BundleKind = DaggerfallEffectBundleKind.HeldMagicItem }] }));
         var stuck = State(s) with { Unavailable = "Impossible incubating failure." };
@@ -202,13 +202,13 @@ public sealed class DaggerfallTransformationInfectionTests
     public void Infection_is_target_owned_after_source_actor_is_banished_and_keeps_historical_provenance()
     {
         using Fixture f = new(videos: false); var s = f.Session;
-        s.Infections.Inflict(Exposure("hit-infection", DaggerfallInfectionKind.Werewolf) with { CasterId = 2000 });
+        s.Infections.Inflict(Exposure("hit-infection", DaggerfallInfectionKind.Werewolf) with { CasterId = HoldActor(1) });
         Assert.Null(Assert.Single(s.State.Effects.Active).Context.Caster);
-        Assert.Equal(2000, State(s).OriginActorId);
-        s.BanishActor(2000);
+        Assert.Equal(HoldActor(1), State(s).OriginActorId);
+        s.BanishActor(HoldActor(1));
         Assert.Single(s.State.Effects.Active);
         using var restored = f.Restore(s.CaptureSave());
-        Assert.Equal(2000, State(restored).OriginActorId);
+        Assert.Equal(HoldActor(1), State(restored).OriginActorId);
         Assert.Single(restored.State.Effects.Active);
     }
 
@@ -236,14 +236,14 @@ public sealed class DaggerfallTransformationInfectionTests
         internal Fixture(bool videos, DaggerfallCinematicPresentationTests.Harness? media = null, bool twoSites = false)
         {
             _media = media;
-            if (twoSites) Destination = DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)), TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")), TestPayload.Definitions);
+            if (twoSites) Destination = Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
             Composition = new(TestPayload.Definitions, ReadInputs(TestData.RepositoryRoot), DaggerfallTuning.Defaults) { VideosEnabled = videos, Data = media is null ? null : TestSessions.Data(media.Content), Profiles = new DaggerfallSiteProfiles(Destination is null ? [ReadInputs(TestData.RepositoryRoot)] : [ReadInputs(TestData.RepositoryRoot), Destination]) };
             Session = DaggerfallSession.StartNew(Engine(), Composition);
         }
         private IEngineContext Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, Composition.StartSite); if (Destination is not null) PopulateContent(content, Destination);
-            var spatial = SpatialFake.Create(Composition.StartSite.SpatialArtifact.Sha256, releases);
+            var spatial = SpatialFake.Create(Composition.StartSite.Geometry.Spatial[0].Sha256, releases);
             var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
             return _media is null ? engine.Context : DaggerfallCinematicPresentationTests.Proxy.Create<IEngineContext>((method, args) => method == "get_Video" ? _media.Video : typeof(IEngineContext).GetMethod(method)!.Invoke(engine.Context, args));
         }

@@ -7,13 +7,15 @@ using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 using Xunit.Abstractions;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
 /// Destination coverage of the shipped quest corpora. Each corpus's Place declarations are expanded, world-wide,
 /// into every profile the source Place rules can select for them (<see cref="QuestDestinationExpansion"/>). Every one must resolve to a catalog
 /// profile, and the block each draws its quest markers from must publish the markers the selection relied on. The
-/// counts, with the share the bundle's site packs publish, are written to the test output for the coverage record.
+/// counts are written to the test output for the coverage record.
 /// </summary>
 public sealed class QuestDestinationCoverageTests(ITestOutputHelper output)
 {
@@ -22,7 +24,7 @@ public sealed class QuestDestinationCoverageTests(ITestOutputHelper output)
     {
         AssembledWorld world = new();
         DaggerfallDefinitions definitions = world.Definitions;
-        DaggerfallSiteContext sites = new(definitions.Locations, AssembledWorld.PrivateersHold, null, []);
+        DaggerfallSiteContext sites = new(definitions.Locations, PrivateersHold, null, []);
         sites.AdmitBuildingNames(RandomMinimum.Create(), definitions, world.Blocks);
         DaggerfallQuestPlaceAllocator allocator = new(definitions, sites, RandomMinimum.Create(), (_, _) => false, _ => null, (_, _) => "unused");
         QuestDestinationExpansion expansion = new(definitions, sites, allocator);
@@ -42,11 +44,10 @@ public sealed class QuestDestinationCoverageTests(ITestOutputHelper output)
                 $"locations {destinations.Select(key => key.Site).Distinct().Count()}",
                 $"profiles {destinations.Count} (interiors {destinations.Count(key => key.Kind == DaggerfallWorldProfileKind.Interior)}, "
                     + $"dungeons {destinations.Count(key => key.Kind == DaggerfallWorldProfileKind.Dungeon)}, exteriors {destinations.Count(key => key.Kind == DaggerfallWorldProfileKind.Exterior)})",
-                $"published before {destinations.Count(world.PublishedKeys.Contains)}",
                 $"reachable now {destinations.Count - unresolved.Length}"));
             everything.UnionWith(destinations);
         }
-        output.WriteLine($"all corpora | locations {everything.Select(key => key.Site).Distinct().Count()} | profiles {everything.Count} | published before {everything.Count(world.PublishedKeys.Contains)}");
+        output.WriteLine($"all corpora | locations {everything.Select(key => key.Site).Distinct().Count()} | profiles {everything.Count}");
 
         // Each interior and dungeon block publishes the quest markers the selection read from the block catalog.
         Dictionary<DaggerfallWorldBlockKey, IReadOnlyList<DaggerfallSiteMarker>> expected = [];

@@ -101,9 +101,9 @@ public sealed class EnemyCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
-        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(1), 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
 
@@ -112,9 +112,9 @@ public sealed class EnemyCombatSessionTests
         session.Touches(DaggerfallActorIdentity.PlayerEntityId);
         // The swing is decided on the admitted step; its authored damage frame hands it to the
         // published wind-up, and the blow lands on the player's body when that ends.
-        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(HoldActor(1)));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
         appearance.AdvanceReceiptForAll = null;
         RunWindUp(session, 2, 1);
@@ -125,18 +125,18 @@ public sealed class EnemyCombatSessionTests
         session.Update(new ProductUpdate(OuterUpdate(WindUpEnd(1) + 1), []));
         Assert.Equal(healthAfterAttack, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
 
-        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.FacingRejected, 0d));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(1), 1, 1d, 0d, PerceptionPairKind.FacingRejected, 0d));
         session.Update(new ProductUpdateState(.125f));
-        Assert.Equal(EnemyBehaviorState.Search, session.EnemyBehavior.LastEvidence[2000].State);
-        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Occluded, 0d));
+        Assert.Equal(EnemyBehaviorState.Search, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
+        perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(1), 1, 1d, 1d, PerceptionPairKind.Occluded, 0d));
         session.Update(new ProductUpdateState(.125f));
-        Assert.Equal(EnemyBehaviorState.Blocked, session.EnemyBehavior.LastEvidence[2000].State);
+        Assert.Equal(EnemyBehaviorState.Blocked, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
 
-        ActorState rat = session.State.Actors.Get(2000);
+        ActorState rat = session.State.Actors.Get(HoldActor(1));
         rat.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(-999, clamp: true);
-        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(1), 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         session.Update(new ProductUpdateState(.125f));
-        Assert.Equal(EnemyBehaviorState.Dead, session.EnemyBehavior.LastEvidence[2000].State);
+        Assert.Equal(EnemyBehaviorState.Dead, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public sealed class EnemyCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         spatial.KeepPosition = true;
         PerceptionFake perception = PerceptionFake.Create();
         AppearanceFake appearance = new(releases);
@@ -165,10 +165,10 @@ public sealed class EnemyCombatSessionTests
         session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         AimActivationAt(session, corpse);
         perception.Receipt = Receipt(
-            new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d),
+            new PerceptionPair((ulong)HoldActor(1), 1, 1d, 1d, PerceptionPairKind.Visible, 1d),
             new PerceptionPair(1, checked((ulong)corpse), 1d, 1d, PerceptionPairKind.Visible, 1d));
         session.Touches(DaggerfallActorIdentity.PlayerEntityId);
-        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(HoldActor(1)));
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         appearance.AdvanceReceiptForAll = null;
         for (ulong step = 2; step < WindUpEnd(1); step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
@@ -194,7 +194,7 @@ public sealed class EnemyCombatSessionTests
 
         // The enemy decides a hitting swing; its damage frame has not been reached.
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
 
         // The player swings while that strike is still in flight. The swing is admitted in this update
         // and starts the player's own cooldown; the enemy's strike has still not landed.
@@ -207,7 +207,7 @@ public sealed class EnemyCombatSessionTests
 
         // The enemy's strike lands at its own frame and wind-up, independently of the player's swing.
         session.Touches(DaggerfallActorIdentity.PlayerEntityId);
-        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(HoldActor(1)));
         session.Update(new ProductUpdate(OuterUpdate(4), []));
         appearance.AdvanceReceiptForAll = null;
         RunWindUp(session, 5, 1);
@@ -222,10 +222,10 @@ public sealed class EnemyCombatSessionTests
         using DaggerfallSession disposable = session;
 
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
         session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(1, clamp: true);
         session.Touches(DaggerfallActorIdentity.PlayerEntityId);
-        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(HoldActor(1)));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
         appearance.AdvanceReceiptForAll = null;
         for (ulong step = 3; step < WindUpEnd(1); step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
@@ -251,16 +251,16 @@ public sealed class EnemyCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases),
             PerceptionFake.Create().Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
 
-        ActorState rat = session.State.Actors.Get(2008);
+        ActorState rat = session.State.Actors.Get(HoldActor(40));
         Assert.True(authored[rat.DurableId].GroundOnSpawn);
         Assert.Equal(rat.Position.ToVector().Y + inputs.ActorSprites[rat.DurableId].Size.Y * .5f,
             policy.AimPoint(rat).Y, 4);
-        ActorState imp = session.State.Actors.Get(2009);
+        ActorState imp = session.State.Actors.Get(HoldActor(41));
         Assert.False(authored[imp.DurableId].GroundOnSpawn);
         Assert.Equal(imp.Position.ToVector(), policy.AimPoint(imp));
     }
@@ -274,7 +274,7 @@ public sealed class EnemyCombatSessionTests
 
         // One resolver owns enemy swings; the in-step path is the player's, and
         // accepting an enemy here would silently restore the old timing.
-        Assert.Throws<ArgumentException>(() => session.Strike(new ExplicitMeleeRequest(2000, 1, 1, 1, .125)));
+        Assert.Throws<ArgumentException>(() => session.Strike(new ExplicitMeleeRequest(HoldActor(1), 1, 1, 1, .125)));
     }
 
     [Fact]
@@ -294,19 +294,19 @@ public sealed class EnemyCombatSessionTests
 
         // The decision charged the attack before the save, and the swing itself is
         // transient: the resumed session must not replay damage it never saw land.
-        Assert.Contains(saved.CombatCooldowns, cooldown => cooldown.AttackerId == 2000);
+        Assert.Contains(saved.CombatCooldowns, cooldown => cooldown.AttackerId == HoldActor(1));
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
-        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(1), 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake resumedAppearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, resumedAppearance, perception.Service);
         using DaggerfallSession resumed = DaggerfallSession.Restore(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, composition), DaggerfallSavePayload.Encode(saved));
         long resumedHealth = PlayerHealth(resumed);
         resumed.Touches(DaggerfallActorIdentity.PlayerEntityId);
 
-        resumedAppearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        resumedAppearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(HoldActor(1)));
         resumed.Update(new ProductUpdate(OuterUpdate(2), []));
         resumedAppearance.AdvanceReceiptForAll = null;
         RunWindUp(resumed, 3, 1);
@@ -375,10 +375,10 @@ public sealed class EnemyCombatSessionTests
 
         // Still visible, but beyond the authored reach: the behaviour chases instead
         // of attacking, which cancels the swing already in flight.
-        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 5d, 1d, PerceptionPairKind.Visible, 5d));
-        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(1), 1, 5d, 1d, PerceptionPairKind.Visible, 5d));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(HoldActor(1)));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
-        Assert.Equal(EnemyBehaviorState.Chase, session.EnemyBehavior.LastEvidence[2000].State);
+        Assert.Equal(EnemyBehaviorState.Chase, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
         appearance.AdvanceReceiptForAll = null;
         RunWindUp(session, 3, 1);
 
@@ -396,13 +396,13 @@ public sealed class EnemyCombatSessionTests
         session.Touches(DaggerfallActorIdentity.PlayerEntityId);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
 
-        session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(-999, clamp: true);
-        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("health")).SetCurrent(-999, clamp: true);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(HoldActor(1)));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
         appearance.AdvanceReceiptForAll = null;
         RunWindUp(session, 3, 1);
 
-        Assert.Equal(EnemyBehaviorState.Dead, session.EnemyBehavior.LastEvidence[2000].State);
+        Assert.Equal(EnemyBehaviorState.Dead, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
         Assert.Equal(healthBefore, PlayerHealth(session));
     }
 
@@ -425,7 +425,7 @@ public sealed class EnemyCombatSessionTests
         Assert.Equal(healthBefore, PlayerHealth(session));
 
         // A crossing arriving afterwards cannot land the expired swing.
-        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(HoldActor(1)));
         session.Update(new ProductUpdate(OuterUpdate(3), []));
         appearance.AdvanceReceiptForAll = null;
         RunWindUp(session, 4, 1);
@@ -445,7 +445,7 @@ public sealed class EnemyCombatSessionTests
         ProductUpdateFacts facts = new(ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d);
         session.Update(new ProductUpdate(facts, []));
 
-        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
         Assert.Equal(healthBefore, PlayerHealth(session));
     }
 
@@ -532,9 +532,9 @@ public sealed class EnemyCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
-        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(1), 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
@@ -544,10 +544,10 @@ public sealed class EnemyCombatSessionTests
         // The update that decides the swing carries no damage: nothing has been struck
         // until the authored damage frame is reached.
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[2000].State);
+        Assert.Equal(EnemyBehaviorState.Attack, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
         Assert.Equal(healthBefore, session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")).Current);
 
-        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(HoldActor(1)));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
         appearance.AdvanceReceiptForAll = null;
         RunWindUp(session, 3, 1);
@@ -568,9 +568,9 @@ public sealed class EnemyCombatSessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
-        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(1), 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake appearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
@@ -580,10 +580,10 @@ public sealed class EnemyCombatSessionTests
         session.Update(new ProductUpdate(OuterUpdate(1), []));
         // Losing sight cancels the swing; a crossing from the already-playing animation
         // must not land the strike the attacker is no longer making.
-        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.Occluded, 0d));
-        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(2000));
+        perception.Receipt = Receipt(new PerceptionPair((ulong)HoldActor(1), 1, 1d, 0d, PerceptionPairKind.Occluded, 0d));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1, markerId: AuthoredMeleeMarker(HoldActor(1)));
         session.Update(new ProductUpdate(OuterUpdate(2), []));
-        Assert.Equal(EnemyBehaviorState.Search, session.EnemyBehavior.LastEvidence[2000].State);
+        Assert.Equal(EnemyBehaviorState.Search, session.EnemyBehavior.LastEvidence[HoldActor(1)].State);
         appearance.AdvanceReceiptForAll = null;
         RunWindUp(session, 3, 1);
 

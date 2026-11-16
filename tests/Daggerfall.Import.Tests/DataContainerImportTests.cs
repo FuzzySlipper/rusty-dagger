@@ -408,7 +408,6 @@ public sealed class DataContainerImportTests : IDisposable
                 && path.EndsWith("/" + ImportPublicationManifestSerializer.ManifestRelativePath, StringComparison.Ordinal))];
             Assert.Contains($"worldrpg/imports/shared/{ImportPublicationManifestSerializer.ManifestRelativePath}", manifests);
             Assert.Contains($"worldrpg/imports/world-blocks/{ImportPublicationManifestSerializer.ManifestRelativePath}", manifests);
-            Assert.Contains($"worldrpg/imports/charing/exterior/{ImportPublicationManifestSerializer.ManifestRelativePath}", manifests);
             foreach (string manifest in manifests)
             {
                 string publication = manifest[..^ImportPublicationManifestSerializer.ManifestRelativePath.Length];

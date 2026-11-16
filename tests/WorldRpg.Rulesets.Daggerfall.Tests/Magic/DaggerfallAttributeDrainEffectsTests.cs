@@ -21,7 +21,7 @@ public sealed class DaggerfallAttributeDrainEffectsTests
         Assert.Equal("destruction", row.School); Assert.Equal((4, 25, 2, 25), (row.Coefficient0, row.Coefficient1, row.Coefficient2, row.Coefficient3));
         Assert.Equal(new DaggerfallMagicEffectComponentCost(116, 8, 100), row.RegularComponents!.Magnitude);
         var stat = Stat(s, 1, subtype); stat.BaseValue = 50;
-        Start(s, "first", subtype, 7); Start(s, "second", subtype, 8, caster: 2001);
+        Start(s, "first", subtype, 7); Start(s, "second", subtype, 8, caster: HoldActor(2));
         Assert.Equal(50, stat.BaseValue); Assert.Equal(35, stat.Value);
         Assert.Single(stat.Sources); var incumbent = Assert.Single(s.State.Effects.Active);
         Assert.Equal("first", incumbent.Context.Instance.Value);
@@ -45,7 +45,7 @@ public sealed class DaggerfallAttributeDrainEffectsTests
     [InlineData(4)] [InlineData(5)] [InlineData(6)] [InlineData(7)]
     public void Real_compiled_casts_apply_partial_saves_to_initial_and_incumbent_payloads_once(int subtype)
     {
-        using Fixture f = new(); var s = f.Session; const long target = 2000;
+        using Fixture f = new(); var s = f.Session; long target = HoldActor(1);
         Stat(s, target, subtype).BaseValue = 50;
         var setting = Setting(subtype, 10);
         var spell = TestPayload.Definitions.Magic.Spells["spell.009"] with { Key = "drain.test", Effects = [setting] };
@@ -66,7 +66,7 @@ public sealed class DaggerfallAttributeDrainEffectsTests
     [Fact]
     public void Published_strength_leech_is_delivered_paid_and_visible_through_existing_stats()
     {
-        using Fixture f = new(); var s = f.Session; const long target = 2000;
+        using Fixture f = new(); var s = f.Session; long target = HoldActor(1);
         Fund(s, 1); s.State.Character.LearnSpell("spell.009");
         double before = Stat(s, target, 0).Value, magicka = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("magicka")).Current;
         Assert.Equal(DaggerfallCastOutcome.Ready, s.SpellRelease.ReadyPlayerSpell("spell.009").Outcome);
@@ -107,7 +107,7 @@ public sealed class DaggerfallAttributeDrainEffectsTests
         s.State.Progression.AdvanceTo(0, 100);
         var health = s.State.Actors.Player.Stats.GetTrack(TrackId.Parse("health")); health.Maximum.BaseValue = 10000; health.SetCurrent(10000);
         Start(s, "strength", 0, 7); Start(s, "willpower", 2, 7);
-        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain", "monster", 2000, 1, [DaggerfallClassicDisease.BrainFever])));
+        Assert.Equal(DaggerfallDiseaseAdmission.Started, s.Diseases.Inflict(new("brain", "monster", HoldActor(1), 1, [DaggerfallClassicDisease.BrainFever])));
         Assert.True(s.State.Poisons.Afflict(s.State.Actors.Player.Actor, (int)DaggerfallPoisonVariant.Arsenic));
         s.AdvanceElapsedTime(86400);
         double diseaseLoss = Stat(s, 1, 2).BaseValue - Stat(s, 1, 2).Value - 7;
@@ -141,15 +141,15 @@ public sealed class DaggerfallAttributeDrainEffectsTests
         {
             0 => effect with { State = DaggerfallAttributeDrainEffects.Encode(state with { Magnitude = 6 }) },
             1 => effect with { RemainingRounds = 1 },
-            _ => effect with { CasterId = 2000 },
+            _ => effect with { CasterId = HoldActor(1) },
         };
         Assert.Throws<ArgumentException>(() => f.Restore(DaggerfallSavePayload.Encode(saved with { ActiveEffects = [bad] })));
     }
 
     private static DaggerfallSpellEffectDefinition Setting(int subtype, int magnitude) => new("drain", 7, subtype, 0, 0, 1, 0, 0, 1, magnitude, magnitude, 0, 0, 1);
-    private static void Start(DaggerfallSession s, string instance, int subtype, int amount, long target = 1, long caster = 2000) =>
+    private static void Start(DaggerfallSession s, string instance, int subtype, int amount, long target = 1, long? caster = null) =>
         s.State.Effects.Start(new(instance, DaggerfallAttributeDrainEffects.Key(subtype), "spell.drain", null, target, "drain", "Magic", null, 1, null,
-            DaggerfallAttributeDrainEffects.Encode(new(new(Setting(subtype, amount), 1, amount, 100, new(caster, null, DaggerfallCastSource.Spell)), amount))));
+            DaggerfallAttributeDrainEffects.Encode(new(new(Setting(subtype, amount), 1, amount, 100, new(caster ?? HoldActor(1), null, DaggerfallCastSource.Spell)), amount))));
     private static int Heal(DaggerfallSession s, int subtype, int amount) => DaggerfallAttributeDrainEffects.Heal(s.State.Effects, 1,
         DaggerfallAttributeDrainEffects.Attributes[subtype], amount, () => s.State.Character.Career);
     private static Stat Stat(DaggerfallSession s, long id, int subtype) => (id == 1 ? s.State.Actors.Player.Stats : s.State.Actors.Get(id).Stats)
@@ -171,7 +171,7 @@ public sealed class DaggerfallAttributeDrainEffectsTests
         private EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, _composition.StartSite);
-            var spatial = SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256, releases);
+            var spatial = SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256, releases);
             return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), PerceptionFake.Create().Service, random: RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload) => DaggerfallSession.Restore(Engine().Context, _composition, payload);

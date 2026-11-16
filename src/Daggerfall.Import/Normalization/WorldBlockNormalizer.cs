@@ -9,10 +9,10 @@ namespace Daggerfall.Import.Normalization;
 public sealed record WorldBlockNormalization(DaggerfallWorldBlock Block, GeneratedSpatialArtifact? Spatial);
 
 /// <summary>
-/// Normalizes single RMB exteriors, RMB building interiors and RDB blocks in their own frames, from the same
-/// block-level content (<see cref="RmbBlockContent"/>, <see cref="RdbBlockContent"/>) the site normalizers
-/// place. A block's static meshes are placements of the product-wide meshes; its collision and navigation are
-/// derived from those placements exactly as a site derives its own, in the block's frame.
+/// Normalizes single RMB exteriors, RMB building interiors and RDB blocks in their own frames, from their
+/// block-level content (<see cref="RmbBlockContent"/>, <see cref="RdbBlockContent"/>). A block's static meshes
+/// are placements of the product-wide meshes; its collision and navigation are derived from those placements,
+/// in the block's frame.
 /// </summary>
 public sealed class WorldBlockNormalizer
 {
@@ -31,8 +31,11 @@ public sealed class WorldBlockNormalizer
     private readonly Dictionary<string, string> unresolved = new(StringComparer.Ordinal);
     private readonly Dictionary<(ushort Archive, ushort Record), (int Width, int Height)> textures = [];
 
-    /// <param name="sources">BLOCKS.BSA, ARCH3D.BSA, FACTION.TXT and the texture leaves the blocks' billboards name.</param>
-    /// <param name="navigation">The navigation derivation every site closure uses, so placed blocks share its grid.</param>
+    /// <param name="sources">
+    /// BLOCKS.BSA, ARCH3D.BSA, FACTION.TXT, FLATS.CFG (the genders of exterior people) and the texture leaves the
+    /// blocks' billboards name.
+    /// </param>
+    /// <param name="navigation">The navigation derivation every block uses, so placed blocks share its grid.</param>
     public WorldBlockNormalizer(DungeonLogicalSourceSet sources, NavigationDerivationConfig? navigation = null)
     {
         ArgumentNullException.ThrowIfNull(sources);
@@ -86,7 +89,7 @@ public sealed class WorldBlockNormalizer
             if (trimmed.TryGetValue(id, out string? trim)) placement = placement with { MeshArtifactId = trim };
             models.Add(placement);
             // A gate swaps its model by the time of day, so neither variant is static collision; its door planes
-            // stay the doors the site closure states.
+            // stay the block's doors.
             bool gate = RmbBlockContent.IsCityGate(model.ModelId);
             if (gate)
                 gates.Add(new($"gate/{slug}/{gates.Count}", id, placement.Position, placement.RotationDegrees,
@@ -244,7 +247,7 @@ public sealed class WorldBlockNormalizer
             bool movable = model.ActionModel || model.ActionDoor;
             // The facts a placing location needs without the mesh bytes: a static placement's extent and map
             // samples in the block's frame, and a moving placement's model-local extent and, for an action
-            // model, its model-local collision, exactly as a dungeon site derives them.
+            // model, its model-local collision.
             List<NormalizedVector3> placed = [];
             List<NormalizedVector3> local = [];
             NormalizedMeshBuilder? collision = model.ActionModel ? new("material/collision", participatesInCollision: true) : null;
@@ -383,7 +386,7 @@ public sealed class WorldBlockNormalizer
 
     /// <summary>
     /// The block's bounds and its collision/navigation artifact, derived from its static geometry with the
-    /// sites' navigation config; an exterior admits only its clear outdoor ground. A block with no static
+    /// navigation config; an exterior admits only its clear outdoor ground. A block with no static
     /// geometry has no artifact.
     /// </summary>
     private (NormalizedBounds?, DaggerfallWorldBlockSpatial?, GeneratedSpatialArtifact?) Spatial(
@@ -403,7 +406,7 @@ public sealed class WorldBlockNormalizer
         return (bounds, new(relativePath, artifact.ContentDigest, artifact.Bytes.Length, surface.Id, staticMeshArtifactId), artifact);
     }
 
-    /// <summary>Decodes an RMB placement's mesh once, refusing a model number the archive does not serve, as a site does.</summary>
+    /// <summary>Decodes an RMB placement's mesh once, refusing a model number the archive does not serve.</summary>
     private Arch3dMesh RmbMesh(RmbBlockModel model) => RmbMesh(model.ModelId, model.Identity);
 
     private Arch3dMesh RmbMesh(string modelId, string identity)

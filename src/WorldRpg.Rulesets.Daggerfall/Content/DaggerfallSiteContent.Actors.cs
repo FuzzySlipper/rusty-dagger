@@ -9,7 +9,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 internal static partial class DaggerfallSiteContent
 {
-    private static long FixedActorIdentity(string profile, string sourceId) =>
+    /// <summary>The durable identity of a location's fixed source actor: its profile id and its placed source identity.</summary>
+    internal static long FixedActorIdentity(string profile, string sourceId) =>
         (long)(StableHash.NonZeroFnv1a64($"daggerfall.fixed-actor:{profile}:{sourceId}") & 0x3fff_ffff_ffffUL) | 0x4000_0000_0000L;
 
     internal static Dictionary<long, AuthoredActor> ReadFixedActors(ReadOnlyMemory<byte> normalized, string profile,
@@ -48,5 +49,27 @@ internal static partial class DaggerfallSiteContent
             if (!actors.TryAdd(id, actor)) diagnostics.Add($"Fixed actor '{sourceId}' collides with identity {id} in '{profile}'.");
         }
         return actors;
+    }
+
+    /// <summary>
+    /// A fixed actor's sprite: its mobile's media in the actor's gender, with the authored actor's presentation over it
+    /// (the state it rests in and any playback rate it overrides), each refused unless the media publishes that state.
+    /// </summary>
+    internal static NormalizedActorSprite ActorPresentation(AuthoredActor actor, DaggerfallActorDefinition definition, NormalizedActorSprite sprite,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        sprite = sprite.ForGender(actor.Gender);
+        DaggerfallActorPresentationDefinition presentation = definition.Presentation;
+        if (presentation.PreferredRestState is not null && !sprite.States.ContainsKey(presentation.PreferredRestState))
+            diagnostics.Add($"Actor '{actor.ActorId.Value}' preferredRestState '{presentation.PreferredRestState}' is not published by its normalized media.");
+        foreach (string state in presentation.EffectiveFramesPerSecond.Keys)
+            if (!sprite.States.ContainsKey(state)) diagnostics.Add($"Actor '{actor.ActorId.Value}' effective playback override '{state}' is not published by its normalized media.");
+        IReadOnlyDictionary<string, NormalizedSpriteState> states = new System.Collections.ObjectModel.ReadOnlyDictionary<string, NormalizedSpriteState>(sprite.States.ToDictionary(
+            pair => pair.Key,
+            pair => presentation.EffectiveFramesPerSecond.TryGetValue(pair.Key, out float framesPerSecond)
+                ? pair.Value with { EffectiveFramesPerSecond = framesPerSecond }
+                : pair.Value,
+            StringComparer.Ordinal));
+        return sprite with { PreferredRestState = presentation.PreferredRestState ?? sprite.PreferredRestState, States = states };
     }
 }

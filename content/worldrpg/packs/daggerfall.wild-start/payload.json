@@ -1,6 +1,6 @@
 {
   "ruleset": "daggerfall",
-  "startSite": "daggerfall.the-hawkston-cemetery-exterior",
+  "start": { "profile": "17/0/exterior", "position": [58.0, 0.0, -51.6], "yawRadians": 0 },
   "gold": 5000,
   "quests": [],
   "startHour": 12,

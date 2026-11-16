@@ -11,6 +11,8 @@ using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
@@ -147,8 +149,7 @@ public sealed class DaggerfallDungeonActionsTests
                 new SpatialContentArtifact("spatial/action-triggers", new ContentSha256(1, 2, 3, 4), 1), new SpatialTuning(.5d, 8, 8, 1));
             DaggerfallSiteProfile inputs = new(
                 new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
-                DaggerfallSiteGeometry.Closure(new SpatialContentArtifact("spatial/action-triggers", new ContentSha256(1, 2, 3, 4), 1),
-                    new ContentArtifact("mesh/action-triggers", new ContentSha256(1, 2, 3, 4))),
+                FixtureGeometry("spatial/action-triggers", new ContentSha256(1, 2, 3, 4), 1, "mesh/action-triggers", new ContentSha256(1, 2, 3, 4)),
                 new AuthoredWorldAppearance(default, default, true, RenderLayer.Scene),
                 new PlayerInitialLook(0f, 0f), [], new Dictionary<long, NormalizedActorSprite>(),
                 site: new DaggerfallSiteId(1, 2), logicalProfileId: "dungeon", dungeonMap: new DaggerfallDungeonMapContent([], [], []));

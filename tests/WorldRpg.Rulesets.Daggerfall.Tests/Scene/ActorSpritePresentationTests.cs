@@ -258,9 +258,7 @@ public sealed class ActorSpritePresentationTests
     {
         string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        string scenario = TestContentFiles.ReadText(Path.Combine(root, "content/worldrpg/packs/daggerfall.privateers-hold/payload.json"));
-
-        DaggerfallSiteProfile ratInputs = DaggerfallSiteContent.Read(TestSessions.Data(ImportContent(root)), Encoding.UTF8.GetBytes(scenario), definitions);
+        DaggerfallSiteProfile ratInputs = ReadInputs(root);
         NormalizedActorSprite rat = SpriteFor(ratInputs, "rat");
         Assert.Equal("ratIdle", rat.PreferredRestState);
 

@@ -50,31 +50,29 @@ public sealed class TransitionDoorSightTests
     }
 
     /// <summary>
-    /// Every authored source exit (and so each assembled portal on the same door) is in sight from its room.
-    /// <paramref name="wallThroughDoor"/> marks a closure whose collision has a wall in the door's own plane, which
-    /// stops Engine sight at the door's centre: the playtested case of Privateer's Hold.
+    /// Every source exit is in sight from its room. <paramref name="wallThroughDoor"/> marks a location whose collision
+    /// has a wall in the door's own plane, which stops Engine sight at the door's centre: the playtested case of
+    /// Privateer's Hold.
     /// </summary>
     [Theory]
-    [InlineData("daggerfall.privateers-hold", true)]
-    [InlineData("daggerfall.castle-necromoghan", false)]
-    [InlineData("daggerfall.charing-interior-1-5-17", false)]
-    [InlineData("daggerfall.charing-interior-2-1-0", false)]
-    [InlineData("daggerfall.charing-interior-3-1-13", false)]
-    [InlineData("daggerfall.charing-interior-3-2-14", false)]
-    [InlineData("daggerfall.charing-interior-3-4-0", false)]
-    [InlineData("daggerfall.charing-interior-4-2-0", false)]
-    public void Each_authored_source_exit_is_sighted_from_its_open_side(string pack, bool wallThroughDoor)
+    [InlineData("17/179/dungeon", true)]
+    [InlineData("17/9/dungeon", false)]
+    [InlineData("17/4/interior-1-5-17", false)]
+    [InlineData("17/4/interior-2-1-0", false)]
+    [InlineData("17/4/interior-3-1-13", false)]
+    [InlineData("17/4/interior-3-2-14", false)]
+    [InlineData("17/4/interior-3-4-0", false)]
+    [InlineData("17/4/interior-4-2-0", false)]
+    public void Each_source_exit_is_sighted_from_its_open_side(string profileId, bool wallThroughDoor)
     {
-        string root = TestData.RepositoryRoot;
-        DaggerfallSiteProfile profile = ReadProfile(root, FullContent(root), TestPayload.Definitions, pack);
+        Assert.True(DaggerfallWorldProfileIds.TryParse(profileId, out DaggerfallWorldProfileKey key));
+        DaggerfallSiteProfile profile = Assembled(key);
+        string pack = profileId;
         Assert.NotEmpty(profile.Portals);
-        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = new Dictionary<string, ReadOnlyMemory<byte>>
-        {
-            [profile.SpatialArtifact.Path] = TestContentFiles.ReadCopy(Path.Combine(root, "content", profile.SpatialArtifact.Path)),
-        } });
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = SpatialFiles(profile) });
         host.Call(engine =>
         {
-            using SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, profile.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+            using SpatialMovementSystem spatial = SpatialOf(engine, profile, DaggerfallTuning.Defaults.Spatial);
             foreach (DaggerfallSitePortal portal in profile.Portals)
             {
                 Vector3 normal = Assert.NotNull(portal.Normal);

@@ -77,14 +77,11 @@ public sealed class PropertyCrimeSessionTests
     public void Source_furniture_surface_is_visible_through_retained_native_static_collision()
     {
         string root = TestData.RepositoryRoot;
-        var profile = ReadProfile(root, FullContent(root), TestPayload.Definitions, "daggerfall.charing-interior-1-1-0");
-        using var host = EngineTestHost.Create(new EngineTestHostOptions { Content = new Dictionary<string, ReadOnlyMemory<byte>>
-        {
-            [profile.SpatialArtifact.Path] = TestContentFiles.ReadCopy(Path.Combine(root, "content", profile.SpatialArtifact.Path)),
-        } });
+        var profile = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
+        using var host = EngineTestHost.Create(new EngineTestHostOptions { Content = SpatialFiles(profile) });
         host.Call(engine =>
         {
-            using SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, profile.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+            using SpatialMovementSystem spatial = SpatialOf(engine, profile, DaggerfallTuning.Defaults.Spatial);
             foreach (var placement in profile.PropertyContainers)
             {
                 bool visible = false;
@@ -117,7 +114,7 @@ public sealed class PropertyCrimeSessionTests
         internal Fixture(bool caught)
         {
             _caught = caught;
-            var profile = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), TestPayload.Definitions, "daggerfall.charing-interior-1-1-0");
+            var profile = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
             Assert.NotEmpty(profile.PropertyContainers);
             _composition = new(TestPayload.Definitions, profile, DaggerfallTuning.Defaults) { Profiles = new([profile]), Blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json"))) };
             Session = DaggerfallSession.StartNew(Engine(), _composition);
@@ -127,7 +124,7 @@ public sealed class PropertyCrimeSessionTests
             List<string> releases = [];
             ContentFake content = new(releases);
             PopulateContent(content, _composition.StartSite);
-            _spatial = SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256, releases);
+            _spatial = SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256, releases);
             _spatial.KeepPosition = true;
             _perception = PerceptionFake.Create();
             return EngineContextFake.Create(content, _spatial.Service, new AppearanceFake(releases), _perception.Service, random: PropertyRandom.Create(_caught)).Context;

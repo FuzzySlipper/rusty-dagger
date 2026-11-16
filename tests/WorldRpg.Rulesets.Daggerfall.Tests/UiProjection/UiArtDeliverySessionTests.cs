@@ -31,7 +31,7 @@ public sealed class UiArtDeliverySessionTests
         ContentFake content = new(releases);
         DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content) });
         session.PublishInitial();
@@ -164,7 +164,7 @@ public sealed class UiArtDeliverySessionTests
         ContentFake content = new(releases);
         DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content) });
         session.PublishInitial();
         Dictionary<string, object?> hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
@@ -219,7 +219,7 @@ public sealed class UiArtDeliverySessionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
-        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMinimum.Create());
         using var session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content) });
         session.ApplyProductMode(WorldRpg.Kit.ProductMode.Title);
@@ -437,7 +437,7 @@ public sealed class UiArtDeliverySessionTests
                 .Concat(art.People.Values.Select(person => person.File.Path)).Distinct().OfType<string>())
             content.Add(path, TestContentFiles.ReadCopy(Path.Combine(root, "content", path)));
         AppearanceFake appearance = new(releases);
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, appearance);
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, appearance);
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context,
             new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content), ArtReplacements = art });
@@ -582,7 +582,7 @@ public sealed class UiArtDeliverySessionTests
         DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults) { Data = TestSessions.DataOf(content) });
         session.PublishInitial();
@@ -632,7 +632,7 @@ public sealed class UiArtDeliverySessionTests
         DaggerfallSiteProfile inputs = ReadInputs(root);
         PopulateContent(content, inputs);
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
 
         // A group whose inventory no longer describes the death screen must refuse to start rather
         // than run with a blank screen, and the refusal has to name what was looked for and where.

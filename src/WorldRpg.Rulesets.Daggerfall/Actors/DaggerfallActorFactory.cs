@@ -71,7 +71,7 @@ internal static class DaggerfallActorFactory
     internal const ActorCapabilities PlayerCapabilities = ActorCapabilities.Targeting | ActorCapabilities.Attacks | ActorCapabilities.Progression;
     internal const ActorCapabilities NonPlayerCapabilities = ActorCapabilities.Targeting | ActorCapabilities.Attacks;
     internal static DaggerfallActorAssembly Create(IRandomService random, DaggerfallDefinitions definitions, DaggerfallSiteProfile inputs, DaggerfallActorSaves? saved,
-        bool materializeActiveSite = true)
+        bool materializeActiveSite = true, DaggerfallSiteAnchor? newGamePose = null)
     {
         ActorsState actors = new();
         try
@@ -204,10 +204,13 @@ internal static class DaggerfallActorFactory
             authored.Add(DaggerfallActorIdentity.PlayerEntityId, playerDefinition);
             if (saved is not null) MaterializeDynamicActors(random, actors, mechanics, definitions, saved.DynamicActors, authored, inventoryStore);
             // A restored player stands where the save left them from construction on: the active profile may
-            // have no authored start (a location without start markers), and the camera is built from this pose.
+            // have no start of its own (a location without start markers), and the camera is built from this pose.
+            // A new game stands where the new-game definition places it, else at the start site's start.
             PlayerControlState control = saved?.Player is { } pose
                 ? new(new WorldPoint(pose.X, pose.Y, pose.Z), pose.YawRadians, pose.PitchRadians)
-                : new(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians);
+                : newGamePose is { } start
+                    ? new(start.Position, start.YawRadians, start.PitchRadians)
+                    : new(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians);
             return new(
                 control,
                 actors, inventoryStore, inventory, equipmentCoordinator, containers,

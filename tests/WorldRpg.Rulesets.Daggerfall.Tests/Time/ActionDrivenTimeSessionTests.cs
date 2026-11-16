@@ -118,7 +118,7 @@ public sealed class ActionDrivenTimeSessionTests
         var inputs = ReadInputs(TestData.RepositoryRoot);
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, inputs);
-        var spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         TestDaggerfallRuleset ruleset = new(videosEnabled: false);
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
@@ -162,7 +162,7 @@ public sealed class ActionDrivenTimeSessionTests
             var inputs = ReadInputs(TestData.RepositoryRoot);
             List<string> releases = [];
             ContentFake content = new(releases); PopulateContent(content, inputs);
-            Spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+            Spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
             Appearance = new(releases);
             Engine = EngineContextFake.Create(content, Spatial.Service, Appearance);
             Session = DaggerfallSession.StartNew(Engine.Context, new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults));

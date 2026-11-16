@@ -99,7 +99,7 @@ public sealed class QuestGuardSpawnTests
         internal Fixture(bool immediate, DaggerfallDefinitions? definitions = null)
         {
             definitions ??= QuestWorldAdmissionTests.Definitions(actions: ["spawncityguards" + (immediate ? " immediate" : "")]);
-            profile = ReadProfile(TestData.RepositoryRoot, FullContent(TestData.RepositoryRoot), definitions, "daggerfall.charing-exterior");
+            profile = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
             composition = new(definitions, profile, DaggerfallTuning.Defaults with { Law = new(5, 5, 2, 2, 12.8f, 51.2f, 3.2) }) { Profiles = new([profile]) };
             Session = DaggerfallSession.StartNew(Engine().Context, composition);
             var site = definitions.Locations.Records.Single(x => x.Id == profile.Site);
@@ -122,7 +122,7 @@ public sealed class QuestGuardSpawnTests
         {
             List<string> releases = [];
             ContentFake content = new(releases); PopulateContent(content, profile);
-            Spatial = SpatialFake.Create(profile.SpatialArtifact.Sha256, releases); Spatial.KeepPosition = true;
+            Spatial = SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases); Spatial.KeepPosition = true;
             Spatial.FloorHit = request => request.Direction.Y < 0 ? default(SpatialHit) with
             { Present = true, Point = new(request.Origin.X, 0, request.Origin.Z), Normal = Vector3.UnitY, Converged = true } : default;
             var perception = PerceptionFake.Create();

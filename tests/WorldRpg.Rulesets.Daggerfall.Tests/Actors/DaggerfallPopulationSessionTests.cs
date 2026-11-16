@@ -173,8 +173,7 @@ public sealed class DaggerfallPopulationSessionTests
             && (record.MapPixelX != sourceRecord.MapPixelX || record.MapPixelY != sourceRecord.MapPixelY)
             && Math.Abs(record.MapPixelX - sourceRecord.MapPixelX) <= DaggerfallExteriorCellResidency.StreamingRadius
             && Math.Abs(record.MapPixelY - sourceRecord.MapPixelY) <= DaggerfallExteriorCellResidency.StreamingRadius);
-        DaggerfallSiteProfile template = ReadProfile(root, FullContent(root, "worldrpg/imports/charing"), definitions,
-            "daggerfall.charing-exterior");
+        DaggerfallSiteProfile template = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id,
             includeAuthoredActors: false);
         DaggerfallSiteProfile resident = PopulationProfile(template, residentRecord.Id,
@@ -191,7 +190,7 @@ public sealed class DaggerfallPopulationSessionTests
         PopulateContent(content, source);
         PopulateContent(content, resident);
         PopulateContent(content, interior);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
@@ -258,8 +257,7 @@ public sealed class DaggerfallPopulationSessionTests
         DaggerfallSiteRecord[] towns = [.. definitions.Locations.Records.Where(record => record.Exterior is not null).Take(2)];
         Assert.Equal(2, towns.Length);
 
-        DaggerfallSiteProfile template = ReadProfile(root, FullContent(root, "worldrpg/imports/charing"), definitions,
-            "daggerfall.charing-exterior");
+        DaggerfallSiteProfile template = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         DaggerfallSiteProfile source = PopulationProfile(template, towns[0].Id);
         DaggerfallSiteProfile destination = PopulationProfile(template, towns[1].Id,
             includeAuthoredActors: false, includePopulation: false);
@@ -271,7 +269,7 @@ public sealed class DaggerfallPopulationSessionTests
         ContentFake content = new(releases);
         PopulateContent(content, source);
         PopulateContent(content, destination);
-        SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
 
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
@@ -461,8 +459,7 @@ public sealed class DaggerfallPopulationSessionTests
                 record.Id != sourceRecord.Id
                 && Math.Abs(record.MapPixelX - sourceRecord.MapPixelX) <= 1
                 && Math.Abs(record.MapPixelY - sourceRecord.MapPixelY) <= 1);
-            DaggerfallSiteProfile template = ReadProfile(root, FullContent(root, "worldrpg/imports/charing"), definitions,
-                "daggerfall.charing-exterior");
+            DaggerfallSiteProfile template = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
             DaggerfallSiteProfile source = PopulationProfile(template, sourceRecord.Id,
                 includeAuthoredActors: false);
             DaggerfallSiteProfile resident = PopulationProfile(template, residentRecord.Id,
@@ -480,12 +477,12 @@ public sealed class DaggerfallPopulationSessionTests
             PopulateContent(content, source);
             PopulateContent(content, resident);
             PopulateContent(content, interior);
-            SpatialFake spatial = SpatialFake.Create(source.SpatialArtifact.Sha256, releases);
+            SpatialFake spatial = SpatialFake.Create(source.Geometry.Spatial[0].Sha256, releases);
             AppearanceFake appearance = new(releases);
             EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
             DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, composition);
             // StartNew admits the selected profile before the catalog is attached. Let the
-            // ordinary first update reconcile the real neighboring exterior closure so these
+            // ordinary first update reconcile the real neighboring exterior so these
             // tests exercise retained source actors through the same runtime path as the host.
             session.Update(new ProductUpdate(OuterUpdate(1), []));
             return new(session, composition, source, resident, interior, appearance, engine);
@@ -498,7 +495,7 @@ public sealed class DaggerfallPopulationSessionTests
             PopulateContent(content, Source);
             PopulateContent(content, Resident);
             PopulateContent(content, Interior);
-            SpatialFake spatial = SpatialFake.Create(Source.SpatialArtifact.Sha256, releases);
+            SpatialFake spatial = SpatialFake.Create(Source.Geometry.Spatial[0].Sha256, releases);
             AppearanceFake appearance = new(releases);
             return (EngineContextFake.Create(content, spatial.Service, appearance), appearance);
         }

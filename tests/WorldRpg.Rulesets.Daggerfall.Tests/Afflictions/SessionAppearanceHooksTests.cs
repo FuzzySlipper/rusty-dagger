@@ -14,12 +14,12 @@ public sealed class SessionAppearanceHooksTests
         string root = TestData.RepositoryRoot;
         var definitions = TestPayload.Definitions;
         var admitted = FullContent(root);
-        var exterior = ReadProfile(root, admitted, definitions, "daggerfall.charing-exterior");
-        var interior = ReadProfile(root, admitted, definitions, "daggerfall.charing-interior-1-1-0");
+        var exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        var interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, exterior); PopulateContent(content, interior);
-        var spatial = SpatialFake.Create(exterior.SpatialArtifact.Sha256, releases);
+        var spatial = SpatialFake.Create(exterior.Geometry.Spatial[0].Sha256, releases);
         var audio = AudioRecorder.Create();
         var engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), audioService: audio.Service);
         var tuning = DaggerfallTuning.Defaults with { PresentationAudio = DaggerfallTuning.Defaults.PresentationAudio with {

@@ -43,10 +43,10 @@ public sealed class CareerPassiveSessionTests
         foreach (var session in new[] { original, Restore(original.CaptureSave()) })
         {
             var magicka = Track(session, "magicka"); magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(0);
-            var caster = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("magicka"));
+            var caster = session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("magicka"));
             caster.Maximum.BaseValue = 10000; caster.SetCurrent(10000);
-            Assert.Equal(DaggerfallCastOutcome.Ready, session.Casting.Ready(2000, "spell.009").Outcome);
-            var spell = session.Casting.Release(2000, true).Bundle!;
+            Assert.Equal(DaggerfallCastOutcome.Ready, session.Casting.Ready(HoldActor(1), "spell.009").Outcome);
+            var spell = session.Casting.Release(HoldActor(1), true).Bundle!;
             session.Casting.Deliver(spell, [1]);
             Assert.Equal(absorbs, Assert.Single(spell.Results).Outcome == DaggerfallCastOutcome.Absorbed);
             Assert.Equal(absorbs, magicka.Current > 0);
@@ -224,10 +224,10 @@ public sealed class CareerPassiveSessionTests
         foreach (var session in new[] { original, Restore(original.CaptureSave()) })
         {
             var magicka = Track(session, "magicka"); magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(0);
-            var caster = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("magicka"));
+            var caster = session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("magicka"));
             caster.Maximum.BaseValue = 10000; caster.SetCurrent(10000);
-            Assert.Equal(DaggerfallCastOutcome.Ready, session.Casting.Ready(2000, "spell.009").Outcome);
-            var spell = session.Casting.Release(2000, true).Bundle!;
+            Assert.Equal(DaggerfallCastOutcome.Ready, session.Casting.Ready(HoldActor(1), "spell.009").Outcome);
+            var spell = session.Casting.Release(HoldActor(1), true).Bundle!;
             session.Casting.Deliver(spell, [1]);
             Assert.Equal(DaggerfallCastOutcome.Absorbed, Assert.Single(spell.Results).Outcome);
             Assert.True(magicka.Current > 0);
@@ -281,14 +281,14 @@ public sealed class CareerPassiveSessionTests
         var magicka = session.State.Actors.Get(sorcerer).Stats.GetTrack(TrackId.Parse("magicka"));
         magicka.Maximum.BaseValue = 10000; magicka.SetCurrent(0);
         Assert.Equal(100, session.State.Effects.MagicDefenseFor(sorcerer).AbsorptionChance);
-        var caster = session.State.Actors.Get(2000).Stats.GetTrack(TrackId.Parse("magicka"));
+        var caster = session.State.Actors.Get(HoldActor(1)).Stats.GetTrack(TrackId.Parse("magicka"));
         caster.Maximum.BaseValue = 10000; caster.SetCurrent(10000);
-        Assert.Equal(DaggerfallCastOutcome.Ready, session.Casting.Ready(2000, "spell.009").Outcome);
-        var spell = session.Casting.Release(2000, true).Bundle!;
+        Assert.Equal(DaggerfallCastOutcome.Ready, session.Casting.Ready(HoldActor(1), "spell.009").Outcome);
+        var spell = session.Casting.Release(HoldActor(1), true).Bundle!;
         session.Casting.Deliver(spell, [sorcerer]);
         Assert.Equal(DaggerfallCastOutcome.Absorbed, Assert.Single(spell.Results).Outcome);
         Assert.True(magicka.Current > 0);
-        Assert.Equal(0, session.State.Effects.MagicDefenseFor(2000).AbsorptionChance);
+        Assert.Equal(0, session.State.Effects.MagicDefenseFor(HoldActor(1)).AbsorptionChance);
     }
 
     private static void SetPresetCareer(DaggerfallSession session, string career)
@@ -319,7 +319,7 @@ public sealed class CareerPassiveSessionTests
         var inputs = profile ?? ReadInputs(TestData.RepositoryRoot);
         List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, inputs);
         foreach (var texture in inputs.TerrainTextures.Values) content.Add(texture.TexturePath, texture.TextureSha256);
-        var context = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service,
+        var context = EngineContextFake.Create(content, SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases).Service,
             new AppearanceFake(releases), random: RandomMaximum.Create()).Context;
         DaggerfallSessionComposition composition = new(TestPayload.Definitions, inputs, DaggerfallTuning.Defaults)
         { Sky = profile?.ProfileKey.Kind == DaggerfallWorldProfileKind.Exterior ? DaggerfallSkyMedia.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot))) : null };

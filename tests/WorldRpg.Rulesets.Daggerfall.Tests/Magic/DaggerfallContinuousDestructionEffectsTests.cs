@@ -43,7 +43,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     [InlineData("spell.050",1,"fatigue")] [InlineData("spell.051",2,"magicka")]
     public void Published_spells_apply_real_periodic_tracks_and_save_does_not_repeat_the_initial_tick(string key,int subtype,string name)
     {
-        using Fixture f = new(); var s = f.Session; const long target = 2000;
+        using Fixture f = new(); var s = f.Session; long target = HoldActor(1);
         foreach (string track in new[] {"health","fatigue","magicka"}) { var t=Track(s,target,track); t.Maximum.BaseValue=10000;t.SetCurrent(10000); }
         Fund(s); s.State.Character.LearnSpell(key);
         Assert.Equal(DaggerfallCastOutcome.Ready,s.SpellRelease.ReadyPlayerSpell(key).Outcome);
@@ -67,7 +67,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
         s.State.Character.LearnSpell(key);
         Assert.Equal(DaggerfallCastOutcome.UnknownSpell,s.SpellRelease.ReadyPlayerSpell(key).Outcome);
         var setting=TestPayload.Definitions.Magic.Spells[key].Effects.Single(e=>e.Type==1);
-        const long target=2000;
+        long target = HoldActor(1);
         var track=Track(s,target,name);track.Maximum.BaseValue=10000;track.SetCurrent(10000);
         uint duration=checked((uint)DaggerfallMagicAdmissionPolicy.CalculateEffectDuration(setting,1));
         s.State.Effects.Start(new("poison",new[]{"continuous-damage-health","continuous-damage-fatigue","continuous-damage-spell-points"}[subtype],
@@ -80,7 +80,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     [Fact]
     public void Peaceful_nonplayer_fatigue_preserves_the_track_and_pacification_until_it_becomes_hostile()
     {
-        using Fixture f=new();var s=f.Session;const long target=2000;
+        using Fixture f=new();var s=f.Session;long target = HoldActor(1);
         var memory=s.State.Actors.Get(target).Actor.Get<WorldRpg.Rulesets.Daggerfall.Modules.Behavior.DaggerfallEnemyPerceptionMemory>();
         memory.Pacified=true;
         var fatigue=Track(s,target,"fatigue");fatigue.Maximum.BaseValue=1000;fatigue.SetCurrent(1000);
@@ -109,7 +109,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
             Assert.Equal(before,Track(s,1,"magicka").Current);
             casting=CastingFor(s,spell with {RangeType=1});
             Assert.Equal(DaggerfallCastOutcome.Ready,casting.Ready(1,spell.Key).Outcome);
-            var bundle=casting.Release(1,true).Bundle!;casting.Deliver(bundle,[2000]);
+            var bundle=casting.Release(1,true).Bundle!;casting.Deliver(bundle,[HoldActor(1)]);
             Assert.Equal(DaggerfallCastOutcome.Applied,Assert.Single(bundle.Results).Outcome);
             var instance=Assert.Single(s.State.Effects.Active);s.State.Effects.Cancel(instance.Context.Instance);
         }
@@ -136,7 +136,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     [Fact]
     public void Real_periodic_death_reaches_existing_corpse_and_reward_consumers()
     {
-        using Fixture f=new();var s=f.Session;const long target=2000;
+        using Fixture f=new();var s=f.Session;long target = HoldActor(1);
         Track(s,target,"health").SetCurrent(3);
         Start(s,"death",0,100,target:target,caster:1);
         Assert.False(s.Corpses.ContainsKey(target));
@@ -170,7 +170,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
         using Fixture f=new();var s=f.Session;var track=Track(s,1,name);track.Maximum.BaseValue=1000;track.SetCurrent(1000);
         var setting=Setting(subtype);
         s.State.Effects.Start(new("partial",new[]{"continuous-damage-health","continuous-damage-fatigue","continuous-damage-spell-points"}[subtype],
-            "spell.periodic",2000,1,setting.Key,"Magic",null,1,2,DaggerfallPeriodicCast.Encode(new(new(setting,1,0,50),0))));
+            "spell.periodic",HoldActor(1),1,setting.Key,"Magic",null,1,2,DaggerfallPeriodicCast.Encode(new(new(setting,1,0,50),0))));
         Assert.Equal(1000-perRound,track.Current);
         using var restored=f.Restore(s.CaptureSave());restored.State.Effects.AdvanceElapsedRounds(20);
         Assert.Equal(1000-2*perRound,Track(restored,1,name).Current);Assert.Empty(restored.State.Effects.Active);
@@ -182,12 +182,11 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     public void A_player_payload_survives_unloading_its_casters_site_and_resumes_its_saved_round(int subtype,string name,int perRound)
     {
         var source=ReadInputs(TestData.RepositoryRoot);
-        var destination=DaggerfallSiteContent.Read(TestSessions.Data(FullContent(TestData.RepositoryRoot)),
-            TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot,"content/worldrpg/packs/daggerfall.castle-necromoghan/payload.json")),TestPayload.Definitions);
+        var destination=Assembled(DaggerfallWorldProfileIds.Dungeon(CastleNecromoghan));
         var composition=new DaggerfallSessionComposition(TestPayload.Definitions,source,DaggerfallTuning.Defaults)
             {Profiles=new([source,destination])};
         List<string> releases=[];ContentFake content=new(releases);PopulateContent(content,source);PopulateContent(content,destination);
-        var spatial=SpatialFake.Create(source.SpatialArtifact.Sha256,releases);
+        var spatial=SpatialFake.Create(source.Geometry.Spatial[0].Sha256,releases);
         var engine=EngineContextFake.Create(content,spatial.Service,new AppearanceFake(releases),PerceptionFake.Create().Service,random:RandomMaximum.Create());
         using var s=DaggerfallSession.StartNew(engine.Context,composition);
         var track=Track(s,1,name);track.Maximum.BaseValue=1000;track.SetCurrent(1000);
@@ -196,7 +195,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
         int idleFatiguePerMinute = name == "fatigue" ? DaggerfallTuning.Defaults.Locomotion.IdleFatiguePerGameMinute : 0;
         double expectedAfterFirstElapsedMinute = 1000 - (2 * perRound) - idleFatiguePerMinute;
         double expectedAfterSecondElapsedMinute = 1000 - (3 * perRound) - (2 * idleFatiguePerMinute);
-        Assert.True(s.TryTransitionTo(destination.ProfileKey));Assert.DoesNotContain(2000L,s.DefinitionsByActor.Keys);
+        Assert.True(s.TryTransitionTo(destination.ProfileKey));Assert.DoesNotContain(HoldActor(1),s.DefinitionsByActor.Keys);
         s.AdvanceElapsedTime(60);Assert.Equal(expectedAfterFirstElapsedMinute,track.Current);
         using var restored=DaggerfallSession.Restore(engine.Context,composition,s.CaptureSave());
         Assert.Equal(expectedAfterFirstElapsedMinute,Track(restored,1,name).Current);
@@ -240,12 +239,12 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
     }
 
     private static DaggerfallSpellEffectDefinition Setting(int subtype,int magnitude=2)=>new("periodic",1,subtype,10,0,1,100,0,1,magnitude,magnitude,0,0,1);
-    private static void Start(DaggerfallSession s,string instance,int subtype,uint rounds,int magnitude=2,long target=1,long caster=2000,ulong? item=null)
+    private static void Start(DaggerfallSession s,string instance,int subtype,uint rounds,int magnitude=2,long target=1,long? caster=null,ulong? item=null)
     {
         var setting=Setting(subtype,magnitude);
         var state=DaggerfallPeriodicCast.Encode(new(new(setting,1,0,100),0));
         s.State.Effects.Start(new(instance,new[]{"continuous-damage-health","continuous-damage-fatigue","continuous-damage-spell-points"}[subtype],
-            "spell.periodic",caster,target,setting.Key,"Magic",item,1,rounds,state));
+            "spell.periodic",caster ?? HoldActor(1),target,setting.Key,"Magic",item,1,rounds,state));
     }
     private static Track Track(DaggerfallSession s,long id,string name)=>(id==1?s.State.Actors.Player.Stats:s.State.Actors.Get(id).Stats).GetTrack(TrackId.Parse(name));
     private static void Fund(DaggerfallSession s){var t=Track(s,1,"magicka");t.Maximum.BaseValue=10000;t.SetCurrent(10000);}
@@ -263,7 +262,7 @@ public sealed class DaggerfallContinuousDestructionEffectsTests
         private EngineContextFake Engine()
         {
             List<string> releases=[];ContentFake content=new(releases);PopulateContent(content,_composition.StartSite);
-            var spatial=SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256,releases);
+            var spatial=SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256,releases);
             return EngineContextFake.Create(content,spatial.Service,new AppearanceFake(releases),PerceptionFake.Create().Service,random:RandomMaximum.Create());
         }
         internal DaggerfallSession Restore(RulesetSavePayload payload)=>DaggerfallSession.Restore(Engine().Context,_composition,payload);

@@ -135,7 +135,7 @@ public sealed class MagicPresentationSessionTests
             composition=composition with { Audio=new DaggerfallSiteAudioBundles(TestSessions.Data(content),new DaggerfallSiteProfiles([site])) };
             Engine=CreateEngine();Session=DaggerfallSession.StartNew(Engine.Context,composition);
         }
-        private EngineContextFake CreateEngine(){List<string> releases=[];ContentFake c=new(releases);PopulateContent(c,composition.StartSite);return EngineContextFake.Create(c,SpatialFake.Create(composition.StartSite.SpatialArtifact.Sha256,releases).Service,new AppearanceFake(releases),PerceptionFake.Create().Service,random:RandomMaximum.Create());}
+        private EngineContextFake CreateEngine(){List<string> releases=[];ContentFake c=new(releases);PopulateContent(c,composition.StartSite);return EngineContextFake.Create(c,SpatialFake.Create(composition.StartSite.Geometry.Spatial[0].Sha256,releases).Service,new AppearanceFake(releases),PerceptionFake.Create().Service,random:RandomMaximum.Create());}
         internal void Update()=>Session.Update(new ProductUpdate(OuterUpdate(++step),[]));
         internal DaggerfallSession Restore(RulesetSavePayload save,out EngineContextFake engine){engine=CreateEngine();return DaggerfallSession.Restore(engine.Context,composition,save);}
         public void Dispose()=>Session.Dispose();

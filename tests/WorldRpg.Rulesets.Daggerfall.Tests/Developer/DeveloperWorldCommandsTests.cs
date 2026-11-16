@@ -9,6 +9,8 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
 
+using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
+
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
@@ -26,7 +28,7 @@ public sealed class DeveloperWorldCommandsTests
     public void A_teleport_stands_the_player_where_the_body_fits_refuses_an_occupied_spot_unless_forced_and_is_saved()
     {
         AssembledWorld world = Shared.Value;
-        using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = world.Start(PrivateersHold);
         DaggerfallSession session = run.Session;
         Vector3 start = Position(session);
         // With nothing below, a spot is refused unless forced: an interior is a box in empty space.
@@ -86,7 +88,7 @@ public sealed class DeveloperWorldCommandsTests
 
         // The saved game holds the moved player.
         Vector3 saved = Position(session);
-        using AssembledWorldRun restored = world.Restore(session.CaptureSave(), AssembledWorld.PrivateersHold);
+        using AssembledWorldRun restored = world.Restore(session.CaptureSave(), PrivateersHold);
         Assert.Equal(Planar(saved), Planar(Position(restored.Session)), new PlanarComparer());
     }
 
@@ -174,7 +176,7 @@ public sealed class DeveloperWorldCommandsTests
     public void Commands_list_the_places_a_name_matches_and_refuse_a_dead_player()
     {
         AssembledWorld world = Shared.Value;
-        using AssembledWorldRun run = world.Start(AssembledWorld.PrivateersHold);
+        using AssembledWorldRun run = world.Start(PrivateersHold);
         DebugCommandResult several = run.Session.Commands<IDeveloperPlacementCommands>().Travel("Castle");
         Assert.False(several.Succeeded);
         Assert.Contains("Name one by region/index", several.Message, StringComparison.Ordinal);

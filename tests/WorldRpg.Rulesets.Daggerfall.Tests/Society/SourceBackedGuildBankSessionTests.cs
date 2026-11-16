@@ -46,10 +46,11 @@ public sealed class SourceBackedGuildBankSessionTests
         Assert.Equal(1_000_000UL, session.State.Bank.BalanceForRegion(region));
 
         // Charing is a source town with a bank but no port-town byte, so its admitted bank offers
-        // the actual local house deed rather than a fabricated ship deed. The bank remains the
+        // the actual local house deeds rather than a fabricated ship deed. The bank remains the
         // ordinary authority for this source property purchase.
-        DaggerfallPropertyOfferView house = Assert.Single(session.EconomyPanels.ReadPropertyPresentation().Offers,
-            offer => offer.Key.StartsWith("house/", StringComparison.Ordinal) && offer.CanBuy);
+        DaggerfallPropertyOfferView house = session.EconomyPanels.ReadPropertyPresentation().Offers
+            .First(offer => offer.Key.StartsWith("house/", StringComparison.Ordinal) && offer.CanBuy);
+        Assert.DoesNotContain(session.EconomyPanels.ReadPropertyPresentation().Offers, offer => !offer.Key.StartsWith("house/", StringComparison.Ordinal));
         ulong housePrice = ulong.Parse(house.Price, System.Globalization.CultureInfo.InvariantCulture);
         ulong carriedBeforePurchase = session.State.Currency.Read().Gold;
         ulong carriedDebit = Math.Min(carriedBeforePurchase, housePrice);
@@ -313,7 +314,6 @@ public sealed class SourceBackedGuildBankSessionTests
 
 internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
 {
-    private const string SiteRole = "daggerfall.site";
     private readonly DaggerfallDefinitions _definitions;
     private readonly DaggerfallSiteProfile[] _sites;
     private readonly DaggerfallSiteProfiles _profiles;
@@ -361,10 +361,8 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
         ResolvedGameComposition resolved = TestSessions.Resolve(content,
             new GameBundleId("daggerfall.classic")).RequireComposition();
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallSiteProfile[] sites = [.. resolved.ContentPacks
-            .Where(pack => pack.Role == new ContentPackRoleId(SiteRole))
-            .Select(pack => DaggerfallSiteContent.Read(TestSessions.Data(content), pack.Payload, definitions))];
-        DaggerfallSiteProfiles profiles = new(sites);
+        DaggerfallSiteProfile[] sites = [.. SuiteSites()];
+        DaggerfallSiteProfiles profiles = new(sites, Assembly.Value);
         DaggerfallSiteProfile bank = SourceProfile(sites, "BANKAL01.RMB", 1, 5, 17, 3, 0);
         DaggerfallSiteProfile knightly = SourceProfile(sites, "KDRAAL01.RMB", 3, 2, 14, 11, 368);
         DaggerfallSiteProfile mages = SourceProfile(sites, "MAGEAA14.RMB", 3, 4, 0, 11, 40);
@@ -405,8 +403,8 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
     {
         List<string> releases = [];
         ContentFake content = new(releases);
-        foreach (DaggerfallSiteProfile site in _sites) PopulateContent(content, site);
-        SpatialFake spatial = SpatialFake.Create(profile.SpatialArtifact.Sha256, releases);
+        PopulateStreamedContent(content, _sites);
+        SpatialFake spatial = SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: Random, video: Video);
         DaggerfallSessionComposition composition = _composition with { StartSite = profile };
         return DaggerfallSession.StartNew(engine.Context, configure?.Invoke(composition) ?? composition);
@@ -420,8 +418,8 @@ internal sealed class SourceBackedGuildBankSessionFixture : IDisposable
             : throw new InvalidOperationException("A source-backed save must name its active world profile.");
         List<string> releases = [];
         ContentFake content = new(releases);
-        foreach (DaggerfallSiteProfile site in _sites) PopulateContent(content, site);
-        SpatialFake spatial = SpatialFake.Create(active.SpatialArtifact.Sha256, releases);
+        PopulateStreamedContent(content, _sites);
+        SpatialFake spatial = SpatialFake.Create(active.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: Random, video: Video);
         return DaggerfallSession.Restore(engine.Context, _composition with { StartSite = active }, saved);
     }

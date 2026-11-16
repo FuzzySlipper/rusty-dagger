@@ -4,32 +4,32 @@ using Daggerfall.Import.Publication;
 namespace Daggerfall.Import.Tool.Commands;
 
 /// <summary>
-/// Publishes the product-wide world media every site closure references: the meshes, material textures,
-/// billboard and actor atlases, terrain textures, classic sidecar, audio clips and world visuals, once,
-/// beside the site closures rather than copied into each of them.
+/// Publishes the product-wide world media every site draws from: the meshes, material textures, billboard
+/// and actor atlases, terrain textures, classic sidecar, audio clips and world visuals, once.
 /// </summary>
 /// <remarks>
 /// It reads the imported payload for the actors and flats the runtime may materialize anywhere, and for the
-/// locations whose placed blocks it trims where placements overlap, so it runs after the payload's sections; the classic media group is read so the classic images it already publishes
-/// are referenced rather than published again. The site
-/// commands then reference this publication with <c>--shared</c>.
+/// locations whose placed blocks it trims where placements overlap, so it runs after the payload's sections;
+/// the classic media group is read so the classic images it already publishes are referenced rather than
+/// published again. The world-blocks command then checks its placed meshes against this publication with
+/// <c>--shared</c>.
 /// </remarks>
 internal static class WorldMediaCommand
 {
     public static ToolCommand Command { get; } = new("world-media",
-        [Options.Arena2, CommandOption.Staged(SiteInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldMedia), AuthoredUi.Manifest, AuthoredUi.Originals, Options.Inventory, Options.Pack,
-            CommandOption.Staged(SiteInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-media.sources.json"), SiteInputs.ClassicGroup], Run);
+        [Options.Arena2, CommandOption.Staged(PublicationInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldMedia), AuthoredUi.Manifest, AuthoredUi.Originals, Options.Inventory, Options.Pack,
+            CommandOption.Staged(PublicationInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-media.sources.json"), PublicationInputs.ClassicGroup], Run);
 
     private static int Run(CommandArguments args)
     {
         Arena2WorldMediaPublication publication = Arena2SitePublication.WorldMedia(
             Arena2SiteSources.ForWorldMedia(Path.GetFullPath(args[Options.Arena2.Name])),
-            SiteInputs.Media(args, AuthoredUi.Profile(args, required: true)),
-            ProductWorldMedia.ReadClassicGroup(args[SiteInputs.ClassicGroup.Name]),
+            PublicationInputs.Media(args, AuthoredUi.Profile(args, required: true)),
+            ClassicMediaGroup.ReadInventory(args[PublicationInputs.ClassicGroup.Name]),
             PayloadFiles.ReadSection<DaggerfallLocations>(args[Options.Pack.Name], "locations"));
-        ImportPublicationPlan plan = publication.Plan.WithInvocation(SiteInputs.Invocation(args));
-        SiteInputs.PrintComparison(ImportPublicationWriter.Write(plan, Path.GetFullPath(args[SiteInputs.Output.Name])));
-        SiteInputs.WriteSourceManifest(args, plan);
+        ImportPublicationPlan plan = publication.Plan.WithInvocation(PublicationInputs.Invocation(args));
+        PublicationInputs.PrintComparison(ImportPublicationWriter.Write(plan, Path.GetFullPath(args[PublicationInputs.Output.Name])));
+        PublicationInputs.WriteSourceManifest(args, plan);
         Arena2WorldTextureSelection textures = publication.Textures;
         Console.WriteLine($"world media: {plan.Artifacts.Count} artifacts, {plan.Artifacts.Sum(artifact => (long)artifact.Bytes.Length)} bytes");
         Console.WriteLine($"  textures: {textures.Materials.Count} material records and {textures.Billboards.Count} billboard records from {textures.Archives.Count} leaves");

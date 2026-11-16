@@ -214,7 +214,7 @@ public sealed class MolagBalSessionTests
         private EngineContextFake Engine()
         {
             List<string> releases = []; ContentFake content = new(releases); PopulateContent(content, _composition.StartSite);
-            var spatial = SpatialFake.Create(_composition.StartSite.SpatialArtifact.Sha256, releases); spatial.KeepPosition = true;
+            var spatial = SpatialFake.Create(_composition.StartSite.Geometry.Spatial[0].Sha256, releases); spatial.KeepPosition = true;
             return EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), random: RandomMaximum.Create());
         }
         internal Track Magicka(DaggerfallSession session, long actor) => Stats(session, actor).GetTrack(TrackId.Parse("magicka"));

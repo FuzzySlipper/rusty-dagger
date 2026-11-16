@@ -188,9 +188,6 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     /// <summary>The refreshed art set the session draws, or null when a developer switched to classic art or the bundle carries none.</summary>
     private DaggerfallArtReplacements? DrawnArt => _classicArt ? null : _composition.ArtReplacements;
 
-    /// <summary>The site closures whose classic remodelled models this run has already reported.</summary>
-    private readonly HashSet<DaggerfallWorldProfileKey> _closuresReported = [];
-
     /// <summary>The live-debug modules the developer and playtest owners answer, which the host registers for this session.</summary>
     public IReadOnlyList<IDebugCommandModule> DebugCommands { get; } = null!;
 

@@ -22,16 +22,16 @@ public sealed class PlaytestInspectionTests
         var (created, _, perception) = VisibleEnemySession([], distance: 5);
         using var session = created;
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        var behavior = session.EnemyBehavior.LastEvidence[2000];
+        var behavior = session.EnemyBehavior.LastEvidence[HoldActor(1)];
         perception.Receipt = Receipt(); // The separate player query has no pair outside weapon reach.
         using var readout = JsonDocument.Parse(session.Commands<PlaytestTargetsDebugModule>().Targets().Message);
-        var actor = readout.RootElement.GetProperty("actors").EnumerateArray().Single(a => a.GetProperty("id").GetString() == "actor:2000");
+        var actor = readout.RootElement.GetProperty("actors").EnumerateArray().Single(a => a.GetProperty("id").GetString() == $"actor:{HoldActor(1)}");
         Assert.Equal("unavailable", actor.GetProperty("currentAttackVisibility").GetString());
         var enemy = actor.GetProperty("enemyBehavior");
         Assert.Equal("Chase", enemy.GetProperty("state").GetString());
         Assert.True(enemy.GetProperty("detected").GetBoolean());
         Assert.Equal("NoPath", enemy.GetProperty("navigation").GetString());
-        Assert.Same(behavior, session.EnemyBehavior.LastEvidence[2000]);
+        Assert.Same(behavior, session.EnemyBehavior.LastEvidence[HoldActor(1)]);
     }
 
     [Fact]
@@ -61,10 +61,10 @@ public sealed class PlaytestInspectionTests
     public void A_streamed_exterior_floor_is_read_only_where_its_collision_is_loaded_and_a_route_is_the_engine_step()
     {
         string root = TestData.RepositoryRoot;
-        DaggerfallSiteProfile charing = ReadProfile(root, FullContent(root), TestPayload.Definitions, "daggerfall.charing-exterior");
+        DaggerfallSiteProfile charing = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         List<string> releases = [];
         ContentFake content = new(releases); PopulateContent(content, charing);
-        SpatialFake spatial = SpatialFake.Create(charing.SpatialArtifact.Sha256, releases);
+        SpatialFake spatial = SpatialFake.Create(charing.Geometry.Spatial[0].Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(TestPayload.Definitions, charing, DaggerfallTuning.Defaults));
         Assert.True(session.AwaitArrivalGround().Done);
@@ -144,7 +144,7 @@ public sealed class PlaytestInspectionTests
     public void Playtest_actions_follow_saved_binding_and_hold_an_attack_for_a_tap_whatever_the_speed_without_spending_resources()
     {
         var (created, _, perception) = VisibleEnemySession([]);
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1, 1, PerceptionPairKind.Visible, 1));
+        perception.Receipt = Receipt(new PerceptionPair(1, (ulong)HoldActor(1), 1, 1, PerceptionPairKind.Visible, 1));
         using var session = created;
         var fatigue = session.State.Actors.Player.Stats.GetTrack(TrackId.Parse("fatigue"));
         double before = fatigue.Current;

@@ -7,7 +7,7 @@ internal sealed record DaggerfallDungeonTreasurePlacement(string Id, WorldPoint 
 internal sealed record DaggerfallDungeonEnemyPlacement(string Id, WorldPoint Position, int EncounterSlot,
     int SpawnDistance, bool Passive, bool Underwater, bool AquaticSpawnAllowed = false);
 
-/// <summary>The same normalized marker contract for site closures and placed source blocks.</summary>
+/// <summary>The normalized treasure and enemy markers an assembled dungeon gathers from its placed source blocks.</summary>
 internal sealed record DaggerfallDungeonPopulationContent(IReadOnlyList<DaggerfallDungeonTreasurePlacement> Treasures,
     IReadOnlyList<DaggerfallDungeonEnemyPlacement> Enemies)
 {

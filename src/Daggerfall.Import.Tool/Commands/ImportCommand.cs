@@ -31,7 +31,7 @@ internal static class ImportCommand
 
     private static readonly string[] Arena2Files =
         ["MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "MONSTER.BSA", "DAGGER.SND", "TEXT.RSC", "CLASSES.DAT", "CLIMATE.PAK", "POLITIC.PAK",
-         "WOODS.WLD", "FACTION.TXT", "SPELLS.STD", "MAGIC.DEF", "ANIM0000.VID", "AZURA.FLC"];
+         "WOODS.WLD", "FACTION.TXT", "FLATS.CFG", "SPELLS.STD", "MAGIC.DEF", "ANIM0000.VID", "AZURA.FLC"];
 
     /// <summary>Our own tables the steps read, under <see cref="ImportLayout.Inputs"/>.</summary>
     private static readonly string[] InputFiles = ["races.json", "item-groups.json", "item-templates.json", "magic-item-templates.json", "spell-costs.json", "mobiles.json", "npc-captions.json", "quest-tables.json", "quest-list.json"];
@@ -184,7 +184,7 @@ internal static class ImportCommand
             "--out", $"{ImportLayout.Payloads}/daggerfall.quests.fighters.json");
         Add("classic-quest-corpora", "classic-quest-corpora", "--pack", imported, "--records", importRecords, "--out", ImportLayout.Payloads);
 
-        // 4. The product-wide world media every site closure references: every mesh, material texture, billboard
+        // 4. The product-wide world media every location draws from: every mesh, material texture, billboard
         //    and actor atlas, terrain texture, the classic sidecar and its audio clips, published once.
         Add("world-media", "world-media", "--arena2", arena2, "--ui-authored-assets", UiAssets, "--ui-original", UiOriginal, "--inventory", Inventory,
             "--pack", imported, "--classic-group", classicGroup, "--out", worldMedia,
@@ -195,44 +195,7 @@ internal static class ImportCommand
         Add("world-blocks", "world-blocks", "--arena2", arena2, "--pack", imported, "--buildings", buildings, "--shared", worldMedia, "--inventory", Inventory,
             "--out", ImportLayout.WorldBlocks, "--source-manifest", $"{records}/world-blocks.sources.json");
 
-        // 6. Site closures. Each writes only what is its own: every body and shared sidecar entry is referenced
-        //    from the world media publication above. Its source manifest goes to the import records.
-        string[] common = ["--arena2", arena2, "--ui-authored-assets", UiAssets, "--ui-original", UiOriginal, "--inventory", Inventory,
-            "--pack", imported, "--shared", worldMedia, "--classic-group", classicGroup];
-        void Site(string verb, string label, string output, string region, string location, params string[] more) =>
-            Add(label, [verb, .. common, "--out", $"{staging}/worldrpg/imports/{output}",
-                "--source-manifest", $"{records}/sites/{label}.sources.json", "--region", region, "--location", location, .. more]);
-        Site("write", "privateers-hold", "privateers-hold", "17", "Privateer's Hold");
-        Site("write", "castle-necromoghan", "castle-necromoghan", "17", "Castle Necromoghan");
-        Site("write", "the-hawkston-cemetery", "the-hawkston-cemetery", "17", "The Hawkston Cemetery");
-        Site("write", "the-tombs-of-klerd", "the-tombs-of-klerd", "0", "The Tombs of Klerd");
-        Site("rmb-spatial", "the-hawkston-cemetery-exterior", "the-hawkston-cemetery/exterior", "17", "The Hawkston Cemetery", "--profile", "exterior");
-        Site("rmb-spatial", "the-tombs-of-klerd-exterior", "the-tombs-of-klerd/exterior", "0", "The Tombs of Klerd", "--profile", "exterior");
-        Site("rmb-spatial", "charing-exterior", "charing/exterior", "17", "Charing", "--profile", "exterior");
-        Site("rmb-spatial", "charing-interior-1-1-0", "charing/interior-1-1-0", "17", "Charing",
-            "--profile", "interior", "--block-x", "1", "--block-y", "1", "--building", "0");
-        // Source-backed ordinary providers are selected from the published RMB building records. These closures
-        // keep their source block/building identity in the normalized document, so the ruleset admits the people
-        // and their catalog services at the real interior site.
-        foreach ((string label, string x, string y, string building) in new[]
-        {
-            ("charing-general-store-interior", "2", "1", "0"),
-            ("charing-mages-interior", "3", "4", "0"),
-            ("charing-kynareth-interior", "3", "1", "13"),
-            ("charing-bank-interior", "1", "5", "17"),
-            ("charing-shop-interior", "4", "2", "0"),
-            ("charing-knights-interior", "3", "2", "14"),
-        })
-        {
-            Site("rmb-spatial", label, $"charing/interior-{x}-{y}-{building}", "17", "Charing", "--location-index", "4",
-                "--profile", "interior", "--block-x", x, "--block-y", y, "--building", building);
-        }
-
-        // The two ships share their display name; their MAPS indices select them.
-        Site("rmb-spatial", "small-ship", "small-ship/exterior", "31", "Your Ship", "--location-index", "1", "--profile", "exterior");
-        Site("rmb-spatial", "large-ship", "large-ship/exterior", "31", "Your Ship", "--location-index", "2", "--profile", "exterior");
-
-        // 7. Reconcile every producer citation and raw-record ledger against the documented inventory, over the
+        // 6. Reconcile every producer citation and raw-record ledger against the documented inventory, over the
         //    content the product will see. This is import coverage, not runtime parity certification.
         Add("source-coverage", "source-coverage", "--arena2", arena2, "--inventory", Inventory, "--repository", ".",
             "--content", staging, "--import-records", records, "--output", $"{records}/source-coverage.json");
