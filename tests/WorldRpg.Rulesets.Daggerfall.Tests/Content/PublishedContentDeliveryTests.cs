@@ -827,6 +827,28 @@ public sealed class PublishedContentDeliveryTests
     }
 
     /// <summary>
+    /// Buildings' relief (#10859) ships with the shader their faces draw it with, at the bytes the set states: house 125's
+    /// plaster, quoins and windows, the city wall's stone and the roofs have it in each climate and the winter above it,
+    /// each as deep as a few centimetres, every relief file at the bytes it states.
+    /// </summary>
+    [Fact]
+    public void Building_relief_ships_its_shader_and_gives_house_125_the_city_wall_and_the_roofs_depth_in_every_climate_and_winter()
+    {
+        ProductContent content = AdmittedContent();
+        DaggerfallGroundCoverArt cover = DaggerfallArtReplacements.Read(content.ReadBytes("worldrpg/packs/daggerfall.art-replacements/payload.json"),
+            "daggerfall.art-replacements").GroundCover!;
+        DaggerfallArtFile shader = Assert.IsType<DaggerfallArtFile>(cover.SurfaceShader);
+        DaggerfallGroundRelief[] faces = [.. cover.Relief.Values.Where(relief => relief.Depth is not null)];
+        Assert.All(faces.Select(relief => relief.File).Append(shader), file =>
+            Assert.Equal(file.Sha256, DaggerfallContentHash.Parse(Convert.ToHexStringLower(SHA256.HashData(content.ReadBytes(file.Path).Span)), file.Path)));
+        Assert.All(faces, relief => Assert.InRange(relief.Depth!.Value, .005F, .1F));
+        // City A's plaster 12, the city walls 17 and the roofs 69, in the temperate summer and the winter above it.
+        (int, int)[] expected = [.. new[] { 312, 313, 317, 318, 369, 370 }.SelectMany(archive => new[] { 0, 1 }.Select(record => (archive, record)))];
+        Assert.All(expected, record => Assert.True(cover.Relief.TryGetValue(record, out DaggerfallGroundRelief? relief) && relief.Depth is not null,
+            $"Texture {record} has no building relief."));
+    }
+
+    /// <summary>
     /// The walking test figure ships one rigc-compiled/3 model per view with exactly the pages it names beside it, every
     /// view holding the clips the set states; its four-direction set is the front, back and the profile both ways, and its
     /// eight-direction set adds each three-quarter view with its mirrored twin.
@@ -997,7 +1019,7 @@ public sealed class PublishedContentDeliveryTests
             .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces,
             .. flats, .. flats.Where(flat => flat.TryGetProperty("emission", out _)).Select(flat => flat.GetProperty("emission")),
             .. people.DistinctBy(person => person.GetProperty("path").GetString()),
-            .. new[] { "shell", "shader", "tuft" }.Select(file => section.GetProperty("groundCover").GetProperty(file)),
+            .. new[] { "shell", "shader", "tuft", "surfaceShader" }.Select(file => section.GetProperty("groundCover").GetProperty(file)),
             .. section.GetProperty("groundCover").GetProperty("relief").EnumerateObject().Select(relief => relief.Value),
             .. section.GetProperty("trees").EnumerateObject().SelectMany(tree => new[] { "bark", "leaves", "stone", "mesh" }
                 .Where(file => tree.Value.TryGetProperty(file, out _)).Select(file => tree.Value.GetProperty(file)))

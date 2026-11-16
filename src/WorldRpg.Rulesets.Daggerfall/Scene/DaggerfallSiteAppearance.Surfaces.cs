@@ -11,6 +11,13 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// set has one. A season or art change updates only the materials whose texture changes. A window's glass mask stays
 /// bound to its material, so nightfall changes only the emission's level, in either art set: refreshed walls keep the
 /// classic's window layout, so the classic's mask covers their glass.
+/// <para>
+/// Outdoors, a refreshed surface whose record's relief has a depth (<see cref="DaggerfallGroundRelief.Depth"/>), a
+/// building's wall, door or roof, draws it with the set's surface shader near the camera, as deep as the player's relief
+/// strength asks, fading to the flat face with distance (<see cref="DaggerfallSurfaceReliefTuning"/>). Classic art, a
+/// strength of 0 and a record without such relief draw the plain surface. Interiors and dungeons draw the same records
+/// flat: their relief waits on Patch's decision (#10859).
+/// </para>
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
@@ -19,11 +26,18 @@ internal sealed partial class DaggerfallSiteAppearance
     private bool surfacesRefreshed;
     private Vector3 windowColor;
     private float windowLevel;
+    // The set's surface shader, once an art set with building relief is admitted outdoors, the tuning it draws by, and the
+    // player's strength, read live, with the strength the surfaces draw now.
+    private RenderResource? surfaceShader;
+    private DaggerfallSurfaceReliefTuning reliefTuning = DaggerfallSurfaceReliefTuning.Default;
+    private Func<float> reliefStrength = () => 0F;
+    private float surfacesStrength;
 
     /// <summary>
     /// One location material: its classic texture path and resource per season (summer, winter, rain; a season without a
     /// variant repeats summer), the refreshed resource per season once the art set is admitted (the classic one where it
-    /// has none), the resource it draws now, and on a window the glass mask per season and the one it holds now.
+    /// has none), the resource it draws now, on a window the glass mask per season and the one it holds now, and outdoors
+    /// the relief image and depth per season where that season's record has building relief, and the shader it draws now.
     /// </summary>
     private sealed class SurfaceMaterial(Material material, string[] paths, RenderResource[] classic, RenderResource current, RenderResource?[] glass)
     {
@@ -35,6 +49,19 @@ internal sealed partial class DaggerfallSiteAppearance
         internal RenderResource?[] Glass { get; } = glass;
         internal RenderResource? CurrentGlass { get; set; } = glass[0];
         internal float Level { get; set; }
+        internal (RenderResource Image, float Depth)?[] Relief { get; } = new (RenderResource, float)?[3];
+        internal MaterialShader Shader { get; set; }
+    }
+
+    /// <summary>
+    /// Draws building relief by <paramref name="tuning"/> at the player's <paramref name="strength"/>, read each update, so a
+    /// change in the video settings shows at once.
+    /// </summary>
+    internal void UseSurfaceRelief(DaggerfallSurfaceReliefTuning tuning, Func<float> strength)
+    {
+        reliefTuning = tuning.Validate();
+        reliefStrength = strength;
+        ApplySurfaces();
     }
 
     /// <summary>Lights the location's window glass in a colour at a level, which is zero while the windows are dark.</summary>
@@ -45,10 +72,10 @@ internal sealed partial class DaggerfallSiteAppearance
         ApplySurfaces();
     }
 
-    /// <summary>A surface's material: its texture, and its glass lit at the current level.</summary>
-    private MaterialRequest SurfaceRequest(RenderResource texture, RenderResource? glass)
+    /// <summary>A surface's material: its texture, its glass lit at the current level, and its relief's shader, if it draws one.</summary>
+    private MaterialRequest SurfaceRequest(RenderResource texture, RenderResource? glass, MaterialShader shader = default)
     {
-        MaterialRequest request = new(new Color(1F, 1F, 1F, 1F), texture, 1F, new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false);
+        MaterialRequest request = new(new Color(1F, 1F, 1F, 1F), texture, 1F, new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false) { Shader = shader };
         return glass is null ? request : request with { EmissionColor = windowColor, EmissionIntensity = windowLevel, EmissionMap = glass };
     }
 
@@ -56,6 +83,12 @@ internal sealed partial class DaggerfallSiteAppearance
     private void UseSurfaceArt(DaggerfallArtReplacements art)
     {
         surfaceArt = art;
+        if (inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior && art.GroundCover is { SurfaceShader: { } shader } cover && surfaceShader is null
+            && cover.Relief.Values.Any(relief => relief.Depth is not null))
+        {
+            surfaceShader = appearance.OpenShader(content, shader.Path, shader.Sha256);
+            ownedResources.Add(surfaceShader);
+        }
         foreach (SurfaceMaterial surface in surfaceMaterials) AttachRefreshedSurface(surface);
         UseShellArt(art);
         foreach (DecorationVisual flat in decorations) AttachDecorationFlats(flat);
@@ -78,21 +111,28 @@ internal sealed partial class DaggerfallSiteAppearance
             }
             return resource;
         })];
+        if (surfaceShader is null) return;
+        for (int season = 0; season < surface.Relief.Length; season++)
+            if (surfaceArt.Relief(surface.Paths[season]) is { Depth: { } depth } relief && surfaceArt.Surface(surface.Paths[season]) is not null)
+                surface.Relief[season] = (ReliefImage(relief), depth);
     }
 
-    /// <summary>Draws each surface in the current season and art set.</summary>
+    /// <summary>Draws each surface in the current season, art set and relief strength.</summary>
     private void ApplySurfaces()
     {
         surfacesRefreshed = drawRefreshedEffects();
+        surfacesStrength = reliefStrength();
         int season = materialSeason switch { DaggerfallExteriorSeason.Winter => 1, DaggerfallExteriorSeason.Rain => 2, _ => 0 };
         foreach (SurfaceMaterial surface in surfaceMaterials)
         {
             RenderResource wanted = (surfacesRefreshed && surface.Refreshed is { } refreshed ? refreshed : surface.Classic)[season];
             RenderResource? glass = surface.Glass[season];
             float level = glass is null ? 0F : windowLevel;
-            if (wanted == surface.Current && glass == surface.CurrentGlass && level == surface.Level) continue;
-            appearance.UpdateMaterial(new MaterialUpdateRequest(surface.Material, SurfaceRequest(wanted, glass)));
-            (surface.Current, surface.CurrentGlass, surface.Level) = (wanted, glass, level);
+            MaterialShader shader = surfacesRefreshed && surfacesStrength > 0 && surfaceShader is { } relief && surface.Relief[season] is { } height
+                ? reliefTuning.Shader(relief, height.Image, height.Depth, surfacesStrength) : default;
+            if (wanted == surface.Current && glass == surface.CurrentGlass && level == surface.Level && shader == surface.Shader) continue;
+            appearance.UpdateMaterial(new MaterialUpdateRequest(surface.Material, SurfaceRequest(wanted, glass, shader)));
+            (surface.Current, surface.CurrentGlass, surface.Level, surface.Shader) = (wanted, glass, level, shader);
         }
         ApplyShells(season, surfacesRefreshed);
     }

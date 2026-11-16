@@ -211,6 +211,29 @@ public sealed class DaggerfallControlSettingsTests
         Assert.Equal(chosen, settings.LampShadows);
     }
 
+    /// <summary>
+    /// Surface relief defaults to 0.6 of each record's depth, as Patch chose (#10859), also for preferences saved before it
+    /// existed; it round-trips from 0, which draws buildings flat, to 2 in tenths, and a strength off its steps or outside
+    /// its range is refused without changing the one in force.
+    /// </summary>
+    [Fact]
+    public void Surface_relief_defaults_to_six_tenths_and_round_trips_from_flat_to_double_in_tenths()
+    {
+        DaggerfallControlSettings settings = new();
+        Assert.Equal(.6f, settings.SurfaceRelief);
+        Assert.Equal(.6f, DaggerfallControlSettings.Parse(PersistedBindings(new("attack", "Primary"))).SurfaceRelief);
+
+        settings.SetSurfaceRelief(0);
+        Assert.Equal(0f, DaggerfallControlSettings.Parse(settings.Serialize()).SurfaceRelief);
+        settings.SetSurfaceRelief(2);
+        Assert.Equal(2f, DaggerfallControlSettings.Parse(settings.Serialize()).SurfaceRelief, 4);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetSurfaceRelief(1.25f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetSurfaceRelief(2.1f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetSurfaceRelief(-.1f));
+        Assert.Equal(2f, settings.SurfaceRelief, 4);
+    }
+
     private static string PersistedBindings(KeyValuePair<string, string?> replacement)
     {
         Dictionary<string, List<string>?> bindings = new(StringComparer.Ordinal);

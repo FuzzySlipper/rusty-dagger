@@ -1,0 +1,39 @@
+{
+ "sets": [9, 12, 14, 17, 21, 26, 35, 38, 42, 58, 61, 64, 69, 71, 74, 79, 82],
+ "deepbumpDepth": 0.03,
+ "roles": {
+  "masonry": {"depth": 0.04, "levels": [0.8, 0.9, 1], "bevel": 2, "outline": 0.72, "run": 8, "detail": 0},
+  "stone": {"depth": 0.05, "levels": [0.75, 0.9, 1], "bevel": 3, "outline": 0.72, "run": 8, "detail": 0},
+  "plaster": {"depth": 0.02, "levels": [0.35, 0.85, 0.9], "bevel": 2, "outline": 0.55, "detail": 0.06, "smooth": 1.6, "blur": 1.5},
+  "quoins": {"depth": 0.03, "levels": [1, 0.55, 0.6], "bevel": 2, "outline": 0.62, "detail": 0.08, "smooth": 1.2},
+  "frame": {"depth": 0.04, "levels": [1, 0.75, 0.8], "bevel": 1.5, "outline": 0.7, "detail": 0},
+  "timber": {"depth": 0.04, "levels": [0.55, 1, 0.7], "bevel": 1.5, "outline": 0.7, "detail": 0.12},
+  "planks": {"depth": 0.03, "levels": [0.55, 0.8, 1], "bevel": 1.5, "outline": 0.7, "detail": 0.12},
+  "door": {"depth": 0.025, "levels": [0.6, 0.75, 1], "bevel": 1.5, "outline": 0.66, "detail": 0.12},
+  "shingles": {"depth": 0.035, "courses": true, "bevel": 1, "outline": 0.75, "detail": 0.1},
+  "foliage": {"depth": 0.04, "levels": [0.3, 0.7, 1], "bevel": 1, "outline": 0.7, "detail": 0.1},
+  "snow": {"depth": 0.02, "levels": [0.7, 0.85, 1], "bevel": 3, "outline": 0.85, "detail": 0}
+ },
+ "archives": {
+  "9": {"*": "masonry"}, "109": {"*": "masonry"}, "309": {"*": "masonry"}, "409": {"*": "masonry"},
+  "12": {"*": "plaster", "0": "quoins", "3": "masonry"}, "112": {"*": "masonry"},
+  "312": {"*": "plaster", "0": "quoins", "3": "masonry"}, "412": {"*": "masonry"},
+  "14": {"*": "plaster"}, "114": {"*": "masonry"}, "314": {"*": "frame"}, "414": {"*": "frame"},
+  "17": {"*": "stone"}, "117": {"*": "stone"}, "317": {"*": "stone"}, "417": {"*": "stone"},
+  "118": {"*": "stone"}, "318": {"*": "stone"}, "418": {"*": "stone"},
+  "121": {"*": "planks", "1": "timber"}, "321": {"*": "planks", "4": "door", "9": "timber"},
+  "26": {"*": "plaster"}, "126": {"*": "plaster", "0": "quoins"}, "426": {"*": "planks"},
+  "35": {"*": "masonry"}, "135": {"*": "masonry"}, "335": {"*": "masonry"}, "435": {"*": "masonry"},
+  "38": {"*": "masonry"}, "138": {"*": "masonry"}, "438": {"*": "masonry"},
+  "42": {"*": "plaster"}, "142": {"*": "masonry"}, "442": {"*": "plaster"},
+  "58": {"*": "planks"}, "158": {"*": "masonry"}, "358": {"*": "frame"}, "458": {"*": "masonry"},
+  "61": {"*": "masonry"}, "161": {"*": "masonry"}, "361": {"*": "masonry"}, "461": {"*": "masonry"},
+  "64": {"*": "plaster"}, "164": {"*": "frame"}, "364": {"*": "planks"}, "464": {"*": "masonry"},
+  "69": {"*": "shingles", "1": "masonry"}, "169": {"*": "shingles", "1": "foliage"},
+  "369": {"*": "shingles", "1": "foliage"}, "469": {"*": "shingles"},
+  "170": {"*": "snow"}, "370": {"*": "snow"}, "470": {"*": "snow"},
+  "171": {"*": "planks"},
+  "74": {"*": "door"}, "174": {"*": "door"}, "374": {"*": "door"}, "474": {"*": "door"},
+  "79": {"*": "frame"}, "82": {"*": "frame"}
+ }
+}

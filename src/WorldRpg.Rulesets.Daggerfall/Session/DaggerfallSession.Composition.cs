@@ -1258,6 +1258,7 @@ internal sealed partial class DaggerfallSession
         appearance.UseNatureField(record => _horizon.GrowsPlaced(record));
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
             appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem, HeldShield, equipment => HeldArms(art, equipment));
+        appearance.UseSurfaceRelief(_tuning.SurfaceRelief, () => _controls.Settings.SurfaceRelief);
         if (_composition.ArtReplacements is { } refreshed)
             appearance.UseEffectArt(_engine.Presentation, _engine.Animation, refreshed, () => DrawnArt is not null);
     }

@@ -93190,7 +93190,5934 @@
      ],
      "glints": 0,
      "sinksUnderSnow": false
+    },
+    "9-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-009-0.png",
+     "byteLength": 36259,
+     "sha256": "f4be0dc705ebdc9523097819067b6efe2ca2acef760fa517c69f1cd58348d064",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "9-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-009-1.png",
+     "byteLength": 26197,
+     "sha256": "6ccd3218370969359ba7baf4dc7539af3306d985b74709890589283ddffacdf6",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "9-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-009-2.png",
+     "byteLength": 14537,
+     "sha256": "1260d18e05c562bf8ed18e2b49d83e4c597cf649b48d426668d0b993d6571372",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "9-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-009-3.png",
+     "byteLength": 30245,
+     "sha256": "c6a1a10fee5302b5a06c8311b268ee828dd17cff2ae9fb6202b7e8a218e80f15",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "9-4": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-009-4.png",
+     "byteLength": 17818,
+     "sha256": "f18f96deebb74e1c19f9f1151ab62e915baa37a69bd9b89beac05a5a6559e120",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "12-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-012-0.png",
+     "byteLength": 51131,
+     "sha256": "2da368886037f9a3167378e7d1fd55e0b0014b20da1a96d93962bfb1341203e8",
+     "width": 128,
+     "height": 256,
+     "kind": "quoins",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "12-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-012-1.png",
+     "byteLength": 60261,
+     "sha256": "1da2ad146f65dea30b5fa1752e8fba3be57bb393c251e4d4f791e0f07f7b58d0",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "12-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-012-2.png",
+     "byteLength": 60261,
+     "sha256": "1da2ad146f65dea30b5fa1752e8fba3be57bb393c251e4d4f791e0f07f7b58d0",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "12-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-012-3.png",
+     "byteLength": 36353,
+     "sha256": "685605fd94b2661d3ada28c1ec3f1a3cd6215bc4ad93c44f17fae4285b983ae2",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "14-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-014-0.png",
+     "byteLength": 57295,
+     "sha256": "d2e130faae78a9204b5572522a1aabcf9da7ff24d88f220998a2a7e027500da6",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "14-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-014-1.png",
+     "byteLength": 68674,
+     "sha256": "8edaf8b7a16a3b03eeae6b37e87c4ebf0ccd559b652de809de33e735f19e4edc",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "14-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-014-3.png",
+     "byteLength": 60581,
+     "sha256": "8bc1a9d23e04056ee5be521504eb4770b9f9ff514c442a27ae8f02b9dce228e2",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "17-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-017-0.png",
+     "byteLength": 28948,
+     "sha256": "71336e7880b00b393cea4c10195d9006bac919f8dc8a829d15a678ed9f593f04",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "17-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-017-1.png",
+     "byteLength": 30932,
+     "sha256": "584f812941a3a77377b420cf00cf75c94d0cf480b7760b421ede1608c4aa8b27",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "17-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-017-2.png",
+     "byteLength": 10535,
+     "sha256": "7f553de13d4d3fc1521035fccccfada932e545ebefac169ac7bc2d484b1c17ac",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "26-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-026-0.png",
+     "byteLength": 41242,
+     "sha256": "871dcf7bfebc604179abdbe40e4d804188fc7d2dc57c6cbb671c33411e637393",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "26-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-026-1.png",
+     "byteLength": 38552,
+     "sha256": "164ebea5e29e11806fe8716e38983946a2826bfce728e51b80176260410c8bc2",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "26-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-026-2.png",
+     "byteLength": 38902,
+     "sha256": "2a500e6bf43c19c6bcb03e3d9f26cb3f8d5ac069f5d4d30899d47e3d1c899340",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "26-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-026-3.png",
+     "byteLength": 31861,
+     "sha256": "44873dd840460d3f76294a902699e52420b7617bf693f9548d0e1f45b0edb571",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "35-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-035-0.png",
+     "byteLength": 44596,
+     "sha256": "5411c7190af4efc167e0b25c66fd579c56209670a7632d04dee706a458d58756",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "35-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-035-1.png",
+     "byteLength": 28193,
+     "sha256": "2df9a6b292b011e69c2d92f847a9bbae4b95a6f4bfd5c0b804bd607fc17bc720",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "35-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-035-3.png",
+     "byteLength": 39860,
+     "sha256": "1b9377d33717d7022b59d815e3e42aa7595ad5b51c4d54cbd56e5983b04add5f",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "38-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-038-0.png",
+     "byteLength": 30201,
+     "sha256": "61af45ed0cf3a13c5f2051b1ae79441ce9bfcc9708a9afcf5ce85cc40f707c16",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "38-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-038-1.png",
+     "byteLength": 30770,
+     "sha256": "0f38f7ca157ff4fcb19955ead62ec622b43d016cff7f29b6a7750c15bbdb4b40",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "38-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-038-2.png",
+     "byteLength": 30198,
+     "sha256": "15024661f35b57acca9de931cb6601ba69c76330501cc480a21a3cde5d266207",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "38-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-038-3.png",
+     "byteLength": 39241,
+     "sha256": "b786c0073f4425fdafeb2ee6c61c3b545705cc5f21258c2e8688a7459eb93b9c",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "42-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-042-0.png",
+     "byteLength": 49559,
+     "sha256": "022c3c248e43ad365dda88e66fb2fc9b2267b6934e028c39c10ddb597a50c2fb",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "42-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-042-1.png",
+     "byteLength": 47832,
+     "sha256": "fe1b6f420945c2006e1c5101dd54abc38e8526f27898f47876349e34bb1bec58",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "42-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-042-2.png",
+     "byteLength": 47832,
+     "sha256": "fe1b6f420945c2006e1c5101dd54abc38e8526f27898f47876349e34bb1bec58",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "42-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-042-3.png",
+     "byteLength": 60240,
+     "sha256": "d82e307e1d77c37d590c52f9676606c18bda995958d56b783d08b56885ff95a0",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "58-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-058-0.png",
+     "byteLength": 20938,
+     "sha256": "ced4394fd259a81152d6b9b4d56ca3382e4f571ccddc0cd64654ea0f45e31c5b",
+     "width": 128,
+     "height": 256,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "58-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-058-1.png",
+     "byteLength": 27795,
+     "sha256": "a4d74c7ff419f746a66615fa7567875781015c8aced83e43b9b6bd8d98282d93",
+     "width": 128,
+     "height": 256,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "58-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-058-3.png",
+     "byteLength": 43173,
+     "sha256": "c5ea858dcc27535e72c332c7e6b3c262e98da94d40818a6bd0dfad40a6020f7a",
+     "width": 128,
+     "height": 256,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "61-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-061-0.png",
+     "byteLength": 46691,
+     "sha256": "c79dcf39e2149184a35ee9129258c04852a9972d769a9d94a0e49c9cb76dc7a5",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "61-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-061-1.png",
+     "byteLength": 47608,
+     "sha256": "9f83e7504b9c6dfca46e455c812e9aab34d2312db793846a2cfab8e706aa754c",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "61-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-061-3.png",
+     "byteLength": 48777,
+     "sha256": "ef4a11371ae5a616213cc66a842726bac11053608077632aa622812d7f3c9dc2",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "64-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-064-0.png",
+     "byteLength": 48777,
+     "sha256": "4cd5014f8e3f8805f770e04d1ccb98773390fac7bce9f45f5060475e186cd19a",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "64-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-064-1.png",
+     "byteLength": 54680,
+     "sha256": "caf32b785fc9afd1a28cdde8d253f68984aabced83b043e8e8ad4a664bc0277a",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "64-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-064-3.png",
+     "byteLength": 47219,
+     "sha256": "ca298f354db0b1173e978dc73a034a8d5410b99e952c25aeb2622cdd67af90c5",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "69-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-069-0.png",
+     "byteLength": 18837,
+     "sha256": "dc13e44b263e3d8ecbea1a3f3190fc78a1ac34b1027cacefb49a74ad8b9e69f7",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "69-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-069-1.png",
+     "byteLength": 17818,
+     "sha256": "eddc9307901c026e662611e88857c01c87262439502d2875e70c5d3e050d202f",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "69-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-069-2.png",
+     "byteLength": 23861,
+     "sha256": "2857885e39a2c9a7125289d0346be1b0f2202b9c737a0c0eff9883e6659937b0",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "69-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-069-3.png",
+     "byteLength": 17702,
+     "sha256": "3d424d487575377f6334cde2b9f07331bf89cc402461492e9e320695ae8ef730",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "74-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-074-0.png",
+     "byteLength": 51206,
+     "sha256": "fe1bec7acaaf7d999020c03124bd1f6a08734f54a52c8a6e5b65fd6ac780679c",
+     "width": 128,
+     "height": 256,
+     "kind": "door",
+     "tallest": 1.0,
+     "depth": 0.025,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "74-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-074-2.png",
+     "byteLength": 48982,
+     "sha256": "0f4e12e5671a4d9e5e891433b9e2f559877a38bf1f28bd06b97b2c166c4961bd",
+     "width": 128,
+     "height": 256,
+     "kind": "door",
+     "tallest": 1.0,
+     "depth": 0.025,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "79-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-079-0.png",
+     "byteLength": 23339,
+     "sha256": "7a130f55ea84389a9ea9e9309bb49829a218a6ed2ed63312a9882e0d0536098e",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "79-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-079-1.png",
+     "byteLength": 34626,
+     "sha256": "b0ac475aa5d1fbe7950b3fa6ee5271c0822d6f94f25e0b3cb1d05e6612df2638",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "79-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-079-2.png",
+     "byteLength": 36276,
+     "sha256": "d530a392177963f5488c3ec69b565bbd1ef9ff09249a1f313a4427e97a0cfdeb",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "79-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-079-3.png",
+     "byteLength": 34475,
+     "sha256": "0b416f504af6629a267b4a66a5de83ab057c25c488f2cb71173a48c6092ef14d",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "80-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-080-0.png",
+     "byteLength": 27279,
+     "sha256": "42cd95cf6666993c97ec64ab7fdebfa23c8f1be8ba31d725f8b85f6d233ca509",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "80-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-080-1.png",
+     "byteLength": 36639,
+     "sha256": "6531601b60db756e293375c0cd67b5ffabf1ca53c867def8a067d00d91018040",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "80-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-080-2.png",
+     "byteLength": 37272,
+     "sha256": "f63295a5566023b47b6c6de180f890d64ba568ed2804f8eb838671d68f6ac09d",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "80-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-080-3.png",
+     "byteLength": 35836,
+     "sha256": "95aa55500717a1919bef3f0cf3c4f7a5c891fcac8f257d0c1be83b6fd4879982",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "82-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-082-0.png",
+     "byteLength": 27941,
+     "sha256": "74a7d1fe633da4eaea892f6d585f0c2dff93897392cd5453f5bd03c2a3e82c66",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "82-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-082-1.png",
+     "byteLength": 32901,
+     "sha256": "bc77e822906160d9d6ef88d63e05c02091a091f7882607c0e10037f118536dfa",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "82-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-082-2.png",
+     "byteLength": 9989,
+     "sha256": "ce78c25ca4daf304608427e5b260b13a8ac6185be1c00060620873cd30d7d4cd",
+     "width": 128,
+     "height": 128,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "82-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-082-3.png",
+     "byteLength": 14861,
+     "sha256": "791760afb7a455a1a49708810218963e542495582e819082462fcd3f43d97c7d",
+     "width": 128,
+     "height": 128,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "82-4": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-082-4.png",
+     "byteLength": 14422,
+     "sha256": "0e889fdeab16c390d34ef198817220f4ba157f7a9033bd19c994b59120d6734a",
+     "width": 128,
+     "height": 128,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "83-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-083-0.png",
+     "byteLength": 29934,
+     "sha256": "59350e17027ea97079a038490c415ad5fe337e5273e6183ffd1e1084a4ba7de2",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "83-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-083-1.png",
+     "byteLength": 34061,
+     "sha256": "384d1649de217b2b973f9b59bd97b18a175bd27b768fb464b148c66f9f7a95bd",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "109-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-109-0.png",
+     "byteLength": 48255,
+     "sha256": "911b142c65081e538f078e02d157e07789cc64e738c5afaaf5f801c3e7d8982e",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "109-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-109-1.png",
+     "byteLength": 25197,
+     "sha256": "e7d7d76aad8a8e788ebd239cf1898cae4097cc00b8bfdbae1ccef51f8cb30c60",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "109-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-109-2.png",
+     "byteLength": 25552,
+     "sha256": "f56fd6adb6aef1a38d8243ac933dfa46834633af00690e739b9715b5110d7ffa",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "109-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-109-3.png",
+     "byteLength": 35770,
+     "sha256": "f1c0499bac7b366cdf5beeb401b0db10af38f157cf9686455ac410d76e34c045",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "109-4": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-109-4.png",
+     "byteLength": 10744,
+     "sha256": "55d2dcc501c55cfb81847eab8382fa6908942dc4595b9205bdd134ff9ca55a1e",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "110-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-110-0.png",
+     "byteLength": 46131,
+     "sha256": "5621ec7ec9bda8c4889e99f0c0c2ba9ed8a052cbf691e1778cb3abe98b5175b7",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "110-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-110-1.png",
+     "byteLength": 28586,
+     "sha256": "49c535958c4287dd9280a77283fb106d232a969f384912147860a98e06d741c8",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "110-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-110-2.png",
+     "byteLength": 23345,
+     "sha256": "8cc59c9dd76553fbc8d5c5c0490052b5bd5008dfbbf36a9bcef81bf2867c3cda",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "110-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-110-3.png",
+     "byteLength": 35469,
+     "sha256": "f8a0b600adfa08f45b5de96f014f52292890f22441c5b702c0a010538d3f4efc",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "112-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-112-0.png",
+     "byteLength": 46652,
+     "sha256": "01003c45c93bf54987469f78cc23daa6a9da8d0bdc36a02678e31fa0c98c17df",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "112-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-112-1.png",
+     "byteLength": 52208,
+     "sha256": "aa16a8682c08fc19461b84c708ac54ef40af9110255daa3286221e3f1e29aa3e",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "112-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-112-2.png",
+     "byteLength": 48842,
+     "sha256": "50e6d79c029683d4e98414a8d9099bbf42e348cb1b5120ee6d6a0ce81fe816db",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "112-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-112-3.png",
+     "byteLength": 46382,
+     "sha256": "52ca6b048c3532cc8c8f6b731cea76f5fdf1043bed0e62f2bff3a0f348075792",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "113-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-113-0.png",
+     "byteLength": 46519,
+     "sha256": "98b3c73958e60f87c6de79d9a1c06bc0ad6239bea70239d95545452577344590",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "113-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-113-1.png",
+     "byteLength": 52309,
+     "sha256": "fa9a38af14a29ece4389be382e5beae7543794fc4dc6968a388ba6fe52b29b11",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "113-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-113-2.png",
+     "byteLength": 49977,
+     "sha256": "6b4bd2de0918c05d4dcfe0917ea6e6bcc7e0191256fcdbdd24fef5948201cc3a",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "113-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-113-3.png",
+     "byteLength": 46791,
+     "sha256": "3187199fa3bf5363a7430db08559be1aaec81bbb4088a7fd1175f17b20fecb5b",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "114-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-114-0.png",
+     "byteLength": 32917,
+     "sha256": "f80008ac3b7d6611478c1f574fee4e59ca375291516dfcf0f4735fa44fee9d5a",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "114-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-114-1.png",
+     "byteLength": 26122,
+     "sha256": "38a09f3dbe14f3590cdde45068476839acec1bdc90833cf787ed9a2e1e19a09b",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "114-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-114-3.png",
+     "byteLength": 42739,
+     "sha256": "a73bfc7019d4925c90b6f7cfb4af58795fbf019ae2a9fa4dc6510de5a97ed64c",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "115-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-115-0.png",
+     "byteLength": 33246,
+     "sha256": "ed0cfd9be1c993d0c903f6d12aff16edba276c29f36c9299b071575b1c2867c2",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "115-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-115-1.png",
+     "byteLength": 27889,
+     "sha256": "4fb5aa8e79525044506760bbc616c2c162a8aec290e8e6c329dc556db746ac09",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "115-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-115-3.png",
+     "byteLength": 39682,
+     "sha256": "e91750c5e9deab21bf91d7239315f043f763b1d17669868db92c0db9aa73b1de",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "117-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-117-0.png",
+     "byteLength": 16813,
+     "sha256": "40f58be38984e0edc7547cd70eab5220298c1cf96f7ee67443624908d802d3c4",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "117-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-117-1.png",
+     "byteLength": 15258,
+     "sha256": "f25a82305751bac189338873c82a46975345a61cacaf3232e6a9fe8b7555fe2c",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "117-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-117-2.png",
+     "byteLength": 16794,
+     "sha256": "0a0cdc1df91f73fcb80fefd9c93edce8dda16c351f7b2ea49c62fd60863dc3fd",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "118-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-118-0.png",
+     "byteLength": 16016,
+     "sha256": "19cf353315df8d3073ca51cbac74681f73c7acf83db197d3d4c8ad91cbf3452c",
+     "width": 128,
+     "height": 128,
+     "kind": "stone, snowed",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "118-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-118-1.png",
+     "byteLength": 15122,
+     "sha256": "b112f1c64ff87e926e7cf55089658062ca453ba2586579874d586cfe0191acb3",
+     "width": 128,
+     "height": 128,
+     "kind": "stone, snowed",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "118-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-118-2.png",
+     "byteLength": 3911,
+     "sha256": "a814f5856e330701b4c3e75de455aae7fe5eb1c02b7ccf0c340290abdc0f9bef",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "121-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-121-1.png",
+     "byteLength": 33384,
+     "sha256": "e073ccd0ef5d38ed42a80c8d20c88eae7dcff3ef239315c1a45bce2ddbb05ff4",
+     "width": 128,
+     "height": 192,
+     "kind": "timber",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "126-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-126-0.png",
+     "byteLength": 39910,
+     "sha256": "4a3ce3c4aa6136ef9b7aa73865b6ba25d8dafd91eeeefce76fcb51f5977f9a17",
+     "width": 128,
+     "height": 256,
+     "kind": "quoins",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "126-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-126-1.png",
+     "byteLength": 38860,
+     "sha256": "2bca88c718f45f5c6d6e3e5677175affb5b63f51221aa193acfcbf6ecdb6d939",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "126-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-126-2.png",
+     "byteLength": 35738,
+     "sha256": "13106780f11f0e1db20400dbe355e6eaa1d2c5a10aa578010878b8d9f36c159a",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "126-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-126-3.png",
+     "byteLength": 49737,
+     "sha256": "7a6103101575c458cffb1047dad792ffc95abb0d8341a23501bca088b9701bef",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "127-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-127-0.png",
+     "byteLength": 40158,
+     "sha256": "7eec9cd11e88f833ebcc988098b9d723f9bd448efc5e02b2fa1c2483450ec585",
+     "width": 128,
+     "height": 256,
+     "kind": "quoins, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "127-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-127-1.png",
+     "byteLength": 38814,
+     "sha256": "8ed1e1f48fe8186d8ff04b4dd84b2b1662460c50ce28e5f443c4c510d5c41293",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster, snowed",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "127-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-127-2.png",
+     "byteLength": 35572,
+     "sha256": "d482b964e99186c2662f3c4dac9b55186bd3aedf907e72f3020db8bf21b852f3",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster, snowed",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "127-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-127-3.png",
+     "byteLength": 48880,
+     "sha256": "f0c1fe4c43fddb90e7fce8c3ef74994eef45dd2a0014a26e05320f1f77e090a4",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster, snowed",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "135-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-135-0.png",
+     "byteLength": 52108,
+     "sha256": "5f0f1793d1767286d6a5326112c4afed72710fc0aa8f2a21f3573d0073adeec8",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "135-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-135-1.png",
+     "byteLength": 60145,
+     "sha256": "c9f62218de00f992a84065da80f4ee64c0fac6bc7f7a2ca1feacfc67849edc8b",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "135-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-135-3.png",
+     "byteLength": 61626,
+     "sha256": "ebde6d174f977562ca3ed77af2f83d87cd5eefbc4f549b9f29dcf7e5e0c058ce",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "136-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-136-0.png",
+     "byteLength": 49916,
+     "sha256": "11ca5bee91cab156c9c146ec1139399a9b057970c0cc631eb361654b989044af",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "136-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-136-1.png",
+     "byteLength": 57627,
+     "sha256": "251aeb14ae42a4d8d513d9ba7f443d251e18d719945737ab3df72730f0ddff95",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "136-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-136-3.png",
+     "byteLength": 53838,
+     "sha256": "ee1e4edf5aa8638e71e0b0f7d29a9efda1c646a4b7a02402aa7827f9727a2022",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "138-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-138-0.png",
+     "byteLength": 50510,
+     "sha256": "5003cf353011981a79eec02f117674c4ff69da0365e5271c1b73d0c32cb3383a",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "138-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-138-1.png",
+     "byteLength": 48000,
+     "sha256": "24c90ffd75542129912ad9b88ba93b23003f3a5c0c01e25e3470c68c1aff1dda",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "138-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-138-2.png",
+     "byteLength": 54732,
+     "sha256": "75e8f7bef70393808f92ef7c602bfaff5eef5109e63dd5545465d7a935ffed54",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "138-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-138-3.png",
+     "byteLength": 51653,
+     "sha256": "7dbccdc19e6aecf4a066bf6438473a204bd33bb80000237185a306586f0bf290",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "139-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-139-0.png",
+     "byteLength": 50910,
+     "sha256": "7d025d7b1eb09f6f0275495cf9e7adb21137beab7c4a033355b10bd6640f8051",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "139-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-139-1.png",
+     "byteLength": 48261,
+     "sha256": "1ea8fcfe23affea081299ed81b13dc5cc53359cde90ab779c98ba3fc1309acb5",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "139-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-139-2.png",
+     "byteLength": 54866,
+     "sha256": "92f088ba884b4e539f06ab66a7fa748f263bc75e308d571fb3f119f6c5e88064",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "139-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-139-3.png",
+     "byteLength": 48493,
+     "sha256": "a4c217804288466e8996ec03cf0d758470ef99a592cd29ba9b072a001330e6b0",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "142-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-142-0.png",
+     "byteLength": 47507,
+     "sha256": "cfe8b0c57d7cb6c56ac5271f36a1e5bee885583516df4dc8dab7780fb5734949",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "142-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-142-1.png",
+     "byteLength": 49658,
+     "sha256": "5193cd48a75faf4e7043f00aa1fabe9fc0b1e1d5b42a8d6f209d1e783ded8066",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "142-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-142-2.png",
+     "byteLength": 49450,
+     "sha256": "93edadbb3ae93cdfb7b648ebfb427709bb5c70539af2567b28cc209b529a4964",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "142-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-142-3.png",
+     "byteLength": 41744,
+     "sha256": "83fb2c9c26e2e7609a64c6456faccbf823b7ce0c7874d86ecce74ad7202e4255",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "143-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-143-0.png",
+     "byteLength": 45961,
+     "sha256": "889952e610c046223fa1d61d1683f6167e02e85c1977967c9bd20b4e591ed0ef",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "143-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-143-1.png",
+     "byteLength": 48539,
+     "sha256": "3e11ca038bfb9cf6f34be8a40004bdc4aa497ba852d220527ab5e55888e5ac2d",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "143-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-143-2.png",
+     "byteLength": 46720,
+     "sha256": "b7abe01ff9de34647599307b7033f008333f9e3f79d8313d4d96559701faf22a",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "143-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-143-3.png",
+     "byteLength": 37317,
+     "sha256": "2213ce38821c85147382142eeef95a2c22e12d5f856c488a67be99f1f03786d3",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "158-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-158-0.png",
+     "byteLength": 31227,
+     "sha256": "bbc01ab18be6c0a8acac58905abb2502be9a4d9548c1441822c12c024392eaff",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "158-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-158-1.png",
+     "byteLength": 33427,
+     "sha256": "ed4b4e1ca50701b77f149f345bcd364f4632fcede6081c4bfaec14e31420e00a",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "158-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-158-3.png",
+     "byteLength": 30336,
+     "sha256": "10e6bac1eea93a8a0f4a593262040711bc5d8ac29bd45768ab4994440d1b8d58",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "159-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-159-0.png",
+     "byteLength": 31902,
+     "sha256": "fe576c9246bc4f37b7e1e0d569341fb2ea8a1ff9231d060a60c5b0918d5a2444",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "159-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-159-1.png",
+     "byteLength": 33666,
+     "sha256": "b648ad850e3d6d550a79b84be1695353838e04451416fd6203a7b4f5d59978b0",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "159-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-159-3.png",
+     "byteLength": 30679,
+     "sha256": "81b7ff635a2cd5e66e300ac7ee9f0c9bf4c6513f44ff3beb841461b791739bc5",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "161-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-161-0.png",
+     "byteLength": 39887,
+     "sha256": "60e430f4e0e83bdc8c3920aabd301cf09d74f198419ede6e00f359cce24a1b9d",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "161-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-161-1.png",
+     "byteLength": 39130,
+     "sha256": "4d5fe77eb2dcc4bcd6b2708e496237ade5bc16ee2ff27dd9e284097ebff6a59f",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "161-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-161-3.png",
+     "byteLength": 40549,
+     "sha256": "75b853ed5f6c45b9f40010004d7a91c5da2c338babc8ae2a4cef95970125d038",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "162-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-162-0.png",
+     "byteLength": 39698,
+     "sha256": "ec46ab59560b914ea8b4b22dc418199ffd47e3d324b3893dc570b9b87a94ac5b",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "162-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-162-1.png",
+     "byteLength": 38712,
+     "sha256": "4b0828a50f5c3b9d4a6f8efd4e8379128b92d36f4c7270084f4bafdf8783bb0c",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "162-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-162-3.png",
+     "byteLength": 39332,
+     "sha256": "522bc79abcabb36c2e54aa9f5b2e7ba373c154c0927befcc3ebaa1a1d775f353",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "164-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-164-0.png",
+     "byteLength": 43310,
+     "sha256": "5e1c5e91a20b1ae4e29e9addc95956a2c3772630d09ca529fbd5cfc0b5e8a6d7",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "164-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-164-1.png",
+     "byteLength": 46327,
+     "sha256": "b4ae1544fab1f5465cce5a52cc748d656f64904a2e5a3e82e01a30243badd6d4",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "164-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-164-3.png",
+     "byteLength": 49170,
+     "sha256": "0948e13c349c4314c55af865e68047696a5c44d5d74aea0dece5e589c6a20243",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "165-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-165-0.png",
+     "byteLength": 41089,
+     "sha256": "d26554b9a42a20527f7d2117d6923da3a45f66a14ab1793b80bae10b6e049cd4",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "165-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-165-1.png",
+     "byteLength": 42121,
+     "sha256": "b66cc168dbca1711fbd467df4ed1492236440be4fdec189f7f723e117945b759",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "165-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-165-3.png",
+     "byteLength": 46967,
+     "sha256": "a625129a71c4e132feefa19aba58433bc7b98fc7852b05947121d8d9fda3e76d",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "169-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-169-0.png",
+     "byteLength": 17702,
+     "sha256": "3d424d487575377f6334cde2b9f07331bf89cc402461492e9e320695ae8ef730",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "169-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-169-1.png",
+     "byteLength": 29301,
+     "sha256": "204aa44db5c4dc89ae0b3d3a1d39556e3038cccb80c33494de65fb38834ce261",
+     "width": 128,
+     "height": 128,
+     "kind": "foliage",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "169-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-169-2.png",
+     "byteLength": 20228,
+     "sha256": "304b9c5879f963a503eee8a426626af3a1832af597ba5e8de0caff349b2f2850",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "169-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-169-3.png",
+     "byteLength": 22821,
+     "sha256": "76154e0b7f1cbe8d277f8f7dad5073d09468cf0e9f7c60a3fa957c4460336121",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "170-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-170-0.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "170-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-170-1.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "170-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-170-2.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "170-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-170-3.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "171-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-171-3.png",
+     "byteLength": 16165,
+     "sha256": "f89b03f039b79e0f92e8ffb1eb8a554fc35b455e89fc0cccfc467c6264fcfb2b",
+     "width": 128,
+     "height": 128,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "171-4": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-171-4.png",
+     "byteLength": 18841,
+     "sha256": "7c51c579a4eb31df8a19340d335d97b8328919a1658c85aa7b630be2265bf6d4",
+     "width": 128,
+     "height": 128,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "172-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-172-0.png",
+     "byteLength": 28309,
+     "sha256": "6f877de25e676a77319c395db558cd5590add7c473d400c9d52565f33d15fb7e",
+     "width": 128,
+     "height": 256,
+     "kind": "planks, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "172-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-172-1.png",
+     "byteLength": 25496,
+     "sha256": "50db93c74dc36a46107982d7a5103c72241c4bb3d2835029f4981d8ebbf2540d",
+     "width": 128,
+     "height": 256,
+     "kind": "planks, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "172-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-172-3.png",
+     "byteLength": 30372,
+     "sha256": "f92b55e0291685e155244a7fa121f1513d5d35cf0d8324b4508b8cafa8b01877",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "174-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-174-0.png",
+     "byteLength": 41558,
+     "sha256": "06c59cd58d8501ffe96e076f09e63536cee7df1233e85aae54f3b1a32b856332",
+     "width": 128,
+     "height": 256,
+     "kind": "door",
+     "tallest": 1.0,
+     "depth": 0.025,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "174-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-174-2.png",
+     "byteLength": 43153,
+     "sha256": "9f512285fe2d4abd71e58c224f216dfa4b470a1ceb9b469c4be52b799cea61bc",
+     "width": 128,
+     "height": 256,
+     "kind": "door",
+     "tallest": 1.0,
+     "depth": 0.025,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "309-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-309-0.png",
+     "byteLength": 50969,
+     "sha256": "54ceafae2ca29521581c8f41164ae3d7c3109f7f667a08e899ff36b2f78f7dda",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "309-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-309-1.png",
+     "byteLength": 25197,
+     "sha256": "e7d7d76aad8a8e788ebd239cf1898cae4097cc00b8bfdbae1ccef51f8cb30c60",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "309-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-309-2.png",
+     "byteLength": 25552,
+     "sha256": "f56fd6adb6aef1a38d8243ac933dfa46834633af00690e739b9715b5110d7ffa",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "309-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-309-3.png",
+     "byteLength": 35770,
+     "sha256": "f1c0499bac7b366cdf5beeb401b0db10af38f157cf9686455ac410d76e34c045",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "309-4": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-309-4.png",
+     "byteLength": 11476,
+     "sha256": "8ed6307e7173f941a0abfb0e3ba9f6b45ce45c367d790721c291bce702ce552b",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "310-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-310-0.png",
+     "byteLength": 48567,
+     "sha256": "4143b3f574dba0017e40a50ff561e78b541267f23c2609813e57e757600283d3",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "310-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-310-1.png",
+     "byteLength": 28630,
+     "sha256": "0babb9c04b60a7b6d13fe26d2f58421c1eb1b30d18ce17d3b2e03ea09403a361",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "310-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-310-2.png",
+     "byteLength": 23345,
+     "sha256": "8cc59c9dd76553fbc8d5c5c0490052b5bd5008dfbbf36a9bcef81bf2867c3cda",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "310-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-310-3.png",
+     "byteLength": 35469,
+     "sha256": "f8a0b600adfa08f45b5de96f014f52292890f22441c5b702c0a010538d3f4efc",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "312-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-312-0.png",
+     "byteLength": 52152,
+     "sha256": "cd347e4800eaf7755436fd5930f266b473b408abdc1f9430d21c476de6a90739",
+     "width": 128,
+     "height": 256,
+     "kind": "quoins",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "312-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-312-1.png",
+     "byteLength": 44117,
+     "sha256": "8583c622090117783b398feb226151b905a754f40789a68dff801f78e65fc5ae",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "312-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-312-2.png",
+     "byteLength": 39274,
+     "sha256": "f8e661d61ed7b26251885b094f8e7380b185996f128c5e7c4cdc29d8e6ebdddd",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "312-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-312-3.png",
+     "byteLength": 28868,
+     "sha256": "58934616743c5ef24de4ac99acf6a5297600889010dc6a672ee96ebcf8996b0a",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "313-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-313-0.png",
+     "byteLength": 51366,
+     "sha256": "3432f2a30ba2a56757b077ec13e52eabb5ee7db79ca754723b5766de35b1019f",
+     "width": 128,
+     "height": 256,
+     "kind": "quoins, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "313-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-313-1.png",
+     "byteLength": 44717,
+     "sha256": "46a790626b7e0c53a6374babae855319b90e5290e2661cf77def12ff82128863",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster, snowed",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "313-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-313-2.png",
+     "byteLength": 39525,
+     "sha256": "e5cb215a9fdb7eb1720f42155435c638d452aac90cc7ddac5274d0e90f77f5f1",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster, snowed",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "313-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-313-3.png",
+     "byteLength": 29751,
+     "sha256": "d667aece6d7be141c7b056615f630be66fc1717e252585b917d1a1622b0dbbfb",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "314-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-314-0.png",
+     "byteLength": 39304,
+     "sha256": "ff83cd3ffa6f51b8559e5f35221d05e21c85eb30931192c2879beb9a96db7bd4",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "314-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-314-1.png",
+     "byteLength": 36857,
+     "sha256": "aaf285b3101cb39c11c5ba911abc9a0e107eb9d13fa86af7c62720ba0bd8fe47",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "314-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-314-3.png",
+     "byteLength": 40427,
+     "sha256": "a98e18f53fbeb07510650d8437b7119f04a0b64fef081842c0643998b83f643e",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "315-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-315-0.png",
+     "byteLength": 37306,
+     "sha256": "d2223a727ba4805715bec8b0810f7a62b9be29b18572aadcb6b554c264ed45fd",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "315-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-315-1.png",
+     "byteLength": 35862,
+     "sha256": "2da9e6ebc42968fa012ad8bb0373c0d5808af23aa272506bb33ff38e83fef5a4",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "315-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-315-3.png",
+     "byteLength": 39506,
+     "sha256": "dfd78814ece03ff94151ba634e6056a0660456bd9f3a0271c425fd2b1b972517",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "317-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-317-0.png",
+     "byteLength": 30333,
+     "sha256": "fe279a1796e3ef7018d527120e96aeafc568db056d3acd31d537bf8fe08b9572",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "317-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-317-1.png",
+     "byteLength": 29860,
+     "sha256": "1da02556278ca031257421149e13e5eaa8702f2a65a6cd5c83c02b8d5c504d6b",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "317-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-317-2.png",
+     "byteLength": 11833,
+     "sha256": "725a74b9537eaae9b405c38a528e981b32c2cf9aec6a8df318ede37ef5bcc4d0",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "318-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-318-0.png",
+     "byteLength": 20190,
+     "sha256": "420cc4805ce9235247318e618613e62323e51958e3861235692bd48f9a21572b",
+     "width": 128,
+     "height": 128,
+     "kind": "stone, snowed",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "318-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-318-1.png",
+     "byteLength": 29127,
+     "sha256": "d2badf5819bd4556175547ad55fb6eb310dca33ba5292db55258c710432ebde0",
+     "width": 128,
+     "height": 128,
+     "kind": "stone, snowed",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "318-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-318-2.png",
+     "byteLength": 3875,
+     "sha256": "e24fd06e2477489180ef886f8c8767f85e2426b91b63ade69366425eba5c49fd",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "321-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-321-2.png",
+     "byteLength": 19401,
+     "sha256": "6b055b0585428101bd540d708cef3e776a1d0d90d3b92b6adc84427f4a02311b",
+     "width": 128,
+     "height": 128,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "321-4": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-321-4.png",
+     "byteLength": 10708,
+     "sha256": "b099e4e36dea6a262b82e3e92f675f4ec6080dfcb54c14e12b7883eaf898df9e",
+     "width": 64,
+     "height": 128,
+     "kind": "door",
+     "tallest": 1.0,
+     "depth": 0.025,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "321-9": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-321-9.png",
+     "byteLength": 25151,
+     "sha256": "2b646f0dd3424f3d5910c7e75da0d195796f171e67b54f66aec0c8b1f0ef27c2",
+     "width": 128,
+     "height": 128,
+     "kind": "timber",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "326-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-326-0.png",
+     "byteLength": 45974,
+     "sha256": "2197d0ae0cf1f7a4fa1a8dbb07f8782578e4e5895d36c7b24163a1e04c332901",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "326-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-326-1.png",
+     "byteLength": 42494,
+     "sha256": "2ea54c6f8cadb2765ae0fc56617d67e4aac2beb22e56a8f14253fd96b8bb422f",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "326-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-326-2.png",
+     "byteLength": 43575,
+     "sha256": "386d3b3670436e6793adecc129b539b643ae4a509ac32d8ebcba5e0b48ae186b",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "326-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-326-3.png",
+     "byteLength": 42411,
+     "sha256": "03caff7d3b84f14b2dc3324753f021f38c40b5054d2f46c971ddfd267cc432d4",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "327-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-327-0.png",
+     "byteLength": 41621,
+     "sha256": "2aa29c796a252fa77cc9535d8eb84f477f0bf88d74cbf4952cd43baf9723c5a8",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "327-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-327-1.png",
+     "byteLength": 38510,
+     "sha256": "1cdcc44b3f71aecaddc7608ce9f8c9f297bfd94ede9a51416e2dd1803abc5108",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "327-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-327-2.png",
+     "byteLength": 39572,
+     "sha256": "a113809aeb96c31d2c6d0ed5c0a109ebf79e93b99d52c83538f027468105d6fc",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "327-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-327-3.png",
+     "byteLength": 41318,
+     "sha256": "9e039a67ca5f5cf3261c9f8d5ab6ca896ade85ba2a6f640c564e47033f3327d6",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "335-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-335-0.png",
+     "byteLength": 48794,
+     "sha256": "324150b2a1ed87f3b801cf9801f4119bd46963ec48c7212709d95d754e1be34e",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "335-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-335-1.png",
+     "byteLength": 48448,
+     "sha256": "26e9ea3694c77eae740b12f22bb5e9604896548a0c91a6c36caec4b17a2d865c",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "335-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-335-3.png",
+     "byteLength": 50372,
+     "sha256": "cf4b61ff6beac70473a792a63fbb291d67f316a4bb56411d09166cfd2f8d84c0",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "336-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-336-0.png",
+     "byteLength": 47430,
+     "sha256": "439cb6e8cb7b27012ad24ef16132307d405ff101ccbd339b2f68b4e864f5cfc1",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "336-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-336-1.png",
+     "byteLength": 47440,
+     "sha256": "e2afd16787a411f91c50dbdeafba1d8758b4c48d09b701a7f6b5a2b828b1e691",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "336-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-336-3.png",
+     "byteLength": 44577,
+     "sha256": "f1762f88b8b04ea3ce25cc7043c5d60cb2e704b7e0703ac7c729808704814b11",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "338-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-338-0.png",
+     "byteLength": 40068,
+     "sha256": "2a2abbf66db8b1afbbcae299000a2c9620e5072d0c36dbec4ca491dd963f961a",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "338-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-338-1.png",
+     "byteLength": 49647,
+     "sha256": "e5152025b50fd7267931c6e072322ec6844dfcd7ff4d9e00cc6de118168bfb7e",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "338-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-338-2.png",
+     "byteLength": 42094,
+     "sha256": "f6257c268803ce10b0530942327af2792082ff9f3cc20eeb00ad938b9443496e",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "338-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-338-3.png",
+     "byteLength": 45886,
+     "sha256": "bb22c9fe52e6c658717e77bbd11a859f78805d464ee8ab321d20f39424cc4094",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "339-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-339-0.png",
+     "byteLength": 38584,
+     "sha256": "e1fb24ff0b11f3ba671999741bc4cb6aed7514e2de6eefa394b1d71052ffe319",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "339-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-339-1.png",
+     "byteLength": 42831,
+     "sha256": "6e611c09eb45bcdd80cff2500c4498ae48721940712bca06a8653c00703a471c",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "339-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-339-2.png",
+     "byteLength": 37732,
+     "sha256": "df39752e34a4ac5f8b0be620380045fd21b06c38ee361f17e62c3e0902a573c9",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "339-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-339-3.png",
+     "byteLength": 42764,
+     "sha256": "ac37380a92dd96953e43abb5e3e58bdabd525d6acd95c69353d5394f3a414c4a",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "342-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-342-0.png",
+     "byteLength": 43739,
+     "sha256": "30a2e2c50e675ab3ca9f6d4b117203398b2e43d956c6ab436cd0887f2e233f33",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "342-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-342-1.png",
+     "byteLength": 38541,
+     "sha256": "789fe9bce55a5cbdfe56e51144aa167847d4a9b0e4f91070a9ea03b3236065cd",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "342-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-342-2.png",
+     "byteLength": 40210,
+     "sha256": "9cbbe4fd8072aa3113ad49bbc41ede036e4625ad77abeab1f228006d2934092a",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "342-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-342-3.png",
+     "byteLength": 39268,
+     "sha256": "3d3b192f93463d71307f673f3e8bbdafcb42c0cec3d0587f2d0f6de29cb9bf8a",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "343-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-343-0.png",
+     "byteLength": 41033,
+     "sha256": "2a857f25e72f782b3b76c75f32cb719580e9d43544617cc4dca3d985fc8402ac",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "343-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-343-1.png",
+     "byteLength": 37516,
+     "sha256": "a4d95bc063c06648ab8d8589d3fb94b5196bc651f8872bc7a081786b2dc6921e",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "343-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-343-2.png",
+     "byteLength": 38138,
+     "sha256": "7361dfced997b4f86dd76c0910ad5b6924729928044ef768ec6f95f3cd0c5041",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "343-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-343-3.png",
+     "byteLength": 39465,
+     "sha256": "3967bb817b460f4487d6c4a9788b8bec91fd7f288300482ac8bfbbc80bbe0306",
+     "width": 128,
+     "height": 256,
+     "kind": "deepbump, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "358-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-358-0.png",
+     "byteLength": 39261,
+     "sha256": "9d1b3cd509f599b1877d53fda35c78043c88d391b466c0f69c3307ddeab50f77",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "358-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-358-1.png",
+     "byteLength": 34868,
+     "sha256": "87eb5120221ae817a679a07f317896f850ca7d07bc2eb77f24471aff130af505",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "358-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-358-3.png",
+     "byteLength": 41996,
+     "sha256": "b8206d40d91eb717bb9fc3953642ca59c767e09f02e86bce94f2a72065cf737f",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "359-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-359-0.png",
+     "byteLength": 39249,
+     "sha256": "2c04bc80158b2b825d9b6d36f460a755ae83e5e3a3837b568f05ad25b48ebce0",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "359-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-359-1.png",
+     "byteLength": 35008,
+     "sha256": "0e6e9c3ed967f97e9f27dae1a51ad8be60f3083e7eb64b935978e4003965dc7b",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "359-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-359-3.png",
+     "byteLength": 41351,
+     "sha256": "2f5fa8c55a13def93004f9cd646e92f5bd88cd5eb95aa70e86325bc51f82c7cc",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "361-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-361-0.png",
+     "byteLength": 44847,
+     "sha256": "49cf7fe48e67cd984c29a26a600086326cb786a49d86cc67f97bb831fd7c911a",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "361-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-361-1.png",
+     "byteLength": 44416,
+     "sha256": "fc63ad2382d4fa8cf2f617885b5b5871c0b953954d33103b2f43cb9addf44773",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "361-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-361-3.png",
+     "byteLength": 55412,
+     "sha256": "4f5aeecaec4f547bb549f705dee699940a93f5f8bc0ea0a4a3442f722892271e",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "362-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-362-0.png",
+     "byteLength": 43155,
+     "sha256": "c4da053292302fa0d7be65c0b57653c1c9d061e6cd69ab5010ab97524cd5320d",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "362-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-362-1.png",
+     "byteLength": 43353,
+     "sha256": "d1bba123642b3361745785fff1b7d6bf2082e22545eadea0c1dce9162fdb6a76",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "362-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-362-3.png",
+     "byteLength": 52876,
+     "sha256": "7cdc22ac2dd66609b76eafca6f860fcebdaa5e7550974ab24f545e7150a3f228",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "364-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-364-0.png",
+     "byteLength": 52486,
+     "sha256": "15c9d3e90b7a049273e0867c88e6b7933d5a61e8ad8594fa723f9a195fb34ff3",
+     "width": 128,
+     "height": 256,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "364-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-364-1.png",
+     "byteLength": 29738,
+     "sha256": "95ea4ff06d808668ee62b93605f32041e54ca2b826d625ae0bd7f2e81639a8c4",
+     "width": 128,
+     "height": 256,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "364-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-364-3.png",
+     "byteLength": 37117,
+     "sha256": "f20d2ecdeee4fffe68d3d9062150b72079ba5471ff725c0d6f37b4b3cf56d0e3",
+     "width": 128,
+     "height": 256,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "365-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-365-0.png",
+     "byteLength": 50881,
+     "sha256": "4b74256f5c5bec1536f21d2dfac7d17bd21e9a14c2732022adc78ee2ed15807c",
+     "width": 128,
+     "height": 256,
+     "kind": "planks, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "365-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-365-1.png",
+     "byteLength": 35735,
+     "sha256": "0844e9809e99d9d7c41a09209ac8d2c494dd30f19d64b5e8560babe19d37df36",
+     "width": 128,
+     "height": 256,
+     "kind": "planks, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "365-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-365-3.png",
+     "byteLength": 38728,
+     "sha256": "473081f0b4ea41c2458cc89dcdf68a170fec8d1d80c0eac5e8d5e4d2fd4c767b",
+     "width": 128,
+     "height": 256,
+     "kind": "planks, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "369-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-369-0.png",
+     "byteLength": 17864,
+     "sha256": "451a990e15fc34ee886d80bbb7ffa48127c2a7c8401205ef7c465b5bfc904a95",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "369-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-369-1.png",
+     "byteLength": 29301,
+     "sha256": "204aa44db5c4dc89ae0b3d3a1d39556e3038cccb80c33494de65fb38834ce261",
+     "width": 128,
+     "height": 128,
+     "kind": "foliage",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "369-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-369-2.png",
+     "byteLength": 20228,
+     "sha256": "304b9c5879f963a503eee8a426626af3a1832af597ba5e8de0caff349b2f2850",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "369-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-369-3.png",
+     "byteLength": 22821,
+     "sha256": "76154e0b7f1cbe8d277f8f7dad5073d09468cf0e9f7c60a3fa957c4460336121",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "370-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-370-0.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "370-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-370-1.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "370-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-370-2.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "370-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-370-3.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "374-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-374-0.png",
+     "byteLength": 49119,
+     "sha256": "7c8054f7d0b789de91a3c7e183b9451a58a875834bbd7c5c50e3c6199ba7bd1f",
+     "width": 128,
+     "height": 256,
+     "kind": "door",
+     "tallest": 1.0,
+     "depth": 0.025,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "374-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-374-2.png",
+     "byteLength": 42550,
+     "sha256": "dd9dc95dcf3adb81c8ab8ec99fc58ba8c807ec42bbc5b5c77e1480a620f25f33",
+     "width": 128,
+     "height": 256,
+     "kind": "door",
+     "tallest": 1.0,
+     "depth": 0.025,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "374-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-374-3.png",
+     "byteLength": 52795,
+     "sha256": "8bc4094da4bafeee251b38ceba27aaf3aa22772d03c80466bf344411d8e25874",
+     "width": 128,
+     "height": 256,
+     "kind": "door",
+     "tallest": 1.0,
+     "depth": 0.025,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "409-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-409-0.png",
+     "byteLength": 56538,
+     "sha256": "861288e65381ff4dc0743d75a62580b2ffc21543f8c2331785ead3578baec75a",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "409-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-409-1.png",
+     "byteLength": 52962,
+     "sha256": "cbd048a1f83b4a275db1d801f53a8f5482b35fd198c64fed85d715229d69cb99",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "409-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-409-2.png",
+     "byteLength": 28764,
+     "sha256": "221603462ea1b79325d964d5bc3bb981adbea0144ee6a12d8546e1a981177906",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "409-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-409-3.png",
+     "byteLength": 49254,
+     "sha256": "f527f1af5aeae873f75e0e5faf84207ffbb5cde7c5bd0a5922004c253b812d09",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "409-4": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-409-4.png",
+     "byteLength": 18892,
+     "sha256": "952ae13506d0d2005dca1ed766a9ace4c5388ea80f42d4860b9cfd518998c85f",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "410-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-410-0.png",
+     "byteLength": 56100,
+     "sha256": "b81c69144080733468f5113b689d3857798de3d4cd4ceac41abd447e3e4f3b06",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "410-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-410-1.png",
+     "byteLength": 52422,
+     "sha256": "6f05f9705127b51f1c393bafa2b001f0cddeb04fe57e2941ddf405cd3fcae93c",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "410-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-410-2.png",
+     "byteLength": 28257,
+     "sha256": "3bec063533f3f093c5db4efe50a93e982f2d6ccc429d4bc6e0eba501e2cc22e9",
+     "width": 128,
+     "height": 128,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "410-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-410-3.png",
+     "byteLength": 47473,
+     "sha256": "6782bcf19b0ee17802c3692500023cb26df226a433d1d101d5fce627bd0e8571",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "412-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-412-0.png",
+     "byteLength": 47273,
+     "sha256": "535e2b56c095efba8b47714fe5c256b16a04f33c379ad6187880595f46714243",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "412-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-412-1.png",
+     "byteLength": 42706,
+     "sha256": "c092999a372a6537201a4aa42832036d929101b6a3e2a7a573e3c5b72d73f14a",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "412-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-412-2.png",
+     "byteLength": 54368,
+     "sha256": "9704f8ac176a4a3dd1a1e36f5d99dfdd9e93742252fd324e9db60cbe4018e0a3",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "412-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-412-3.png",
+     "byteLength": 53246,
+     "sha256": "82a91c342d1a655d4a026e3a155c7496118359abd83d7e97c4ebe80087ea0cf3",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "413-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-413-0.png",
+     "byteLength": 43542,
+     "sha256": "931f7d9bfaabb47a758dc5573b7980861f3226b483cf6b0479eaa3f8262cda5c",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "413-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-413-1.png",
+     "byteLength": 39809,
+     "sha256": "f907e7c46bb8e80ae2dc1f3172ddeeb3b72110c2a759091def3d300a4d973ba7",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "413-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-413-2.png",
+     "byteLength": 48712,
+     "sha256": "42dd4a02faa235e379ce6f2097b728156150b4abac3ba434fa6fd0b8467bd4cc",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "413-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-413-3.png",
+     "byteLength": 50140,
+     "sha256": "741cd34738f767125b38576d54a53c42767f0699771914f24c8ff1dafc3746c5",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "414-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-414-0.png",
+     "byteLength": 48865,
+     "sha256": "cd61478365a893202d5201ca134b5137f04d51d4b9ef9329331002b27efa00ff",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "414-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-414-1.png",
+     "byteLength": 44773,
+     "sha256": "ce9e44d1f16d41677071b7f3890f7dc768254418c293b3a90f63a4caef48f75c",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "414-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-414-3.png",
+     "byteLength": 46312,
+     "sha256": "db0fbbd0356fb9264f4870307e620a1b147c7b98f51ee9d89ee7e346e792714d",
+     "width": 128,
+     "height": 256,
+     "kind": "frame",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "415-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-415-0.png",
+     "byteLength": 47140,
+     "sha256": "7ce16afa0806c111991ffe475b325acf5caba72c4317d93feac135d41198a6c7",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "415-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-415-1.png",
+     "byteLength": 42301,
+     "sha256": "538073ed8788d30c66b5d2f3fc88f7521addecfeae32cd517106a8f8630366f3",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "415-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-415-3.png",
+     "byteLength": 44954,
+     "sha256": "d67b00a4145473fece80ad933cb6dd47342637b9d21fcddc70c9e439756d8bd9",
+     "width": 128,
+     "height": 256,
+     "kind": "frame, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "417-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-417-0.png",
+     "byteLength": 22699,
+     "sha256": "120eedbbf3263d3b30c46a978de50858d1c8f07f7134e77b10b51d2d774c2d8b",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "417-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-417-1.png",
+     "byteLength": 20064,
+     "sha256": "6b29d1f26939ba91a64dc494a7cd93ca8c63258282009545cfb5c48fd74c21d7",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "417-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-417-2.png",
+     "byteLength": 22861,
+     "sha256": "8bfd50a76df63d059f5da2cf6b2b7a9c2f61f626ac93afd7089567aa3fccd6fc",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "418-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-418-0.png",
+     "byteLength": 17494,
+     "sha256": "eb95a9f6021f823118a462a9ed98c8446f3252f818ecb14ff210823a2b808b0c",
+     "width": 128,
+     "height": 128,
+     "kind": "stone, snowed",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "418-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-418-1.png",
+     "byteLength": 16784,
+     "sha256": "e71db77d093630de404515597b8545d31c591989a6a6c1872c615f49efef7bfb",
+     "width": 128,
+     "height": 128,
+     "kind": "stone, snowed",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "418-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-418-2.png",
+     "byteLength": 4242,
+     "sha256": "45cd14a000243e86f07dd87608da32c7d8267d5c835a1a73cb8c128a017a642c",
+     "width": 128,
+     "height": 128,
+     "kind": "stone",
+     "tallest": 1.0,
+     "depth": 0.05,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "426-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-426-0.png",
+     "byteLength": 66680,
+     "sha256": "73334b4e12abe1eb22ecb3e6fc5ab23da95f58102197270e665c3a750e8fda24",
+     "width": 128,
+     "height": 256,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "426-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-426-1.png",
+     "byteLength": 64151,
+     "sha256": "da6a92f66a64266b0e78924bcb72fcc9eabd45d164dc9dc8bb5f260794fd12c5",
+     "width": 128,
+     "height": 256,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "426-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-426-2.png",
+     "byteLength": 67514,
+     "sha256": "65fe370e1c98f6726d2407f91ec6d6166200705d3d1474321f9a976dc4fc09fe",
+     "width": 128,
+     "height": 256,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "426-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-426-3.png",
+     "byteLength": 53790,
+     "sha256": "20989a528c435197f1209b057d94c2435b1606e7b840a971d42c81f0109e39b4",
+     "width": 128,
+     "height": 256,
+     "kind": "planks",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "427-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-427-0.png",
+     "byteLength": 65956,
+     "sha256": "8f5b11e374f50e9cdd4a320891c426ab3aa0b3baeb60a37b5d43c7b2056904b4",
+     "width": 128,
+     "height": 256,
+     "kind": "planks, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "427-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-427-1.png",
+     "byteLength": 64987,
+     "sha256": "6a81164d5cfb6ca549f3e151090b0d9af034dfc33cf40fd0a4aebcdc6cccb6dc",
+     "width": 128,
+     "height": 256,
+     "kind": "planks, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "427-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-427-2.png",
+     "byteLength": 66466,
+     "sha256": "757cb61f1aae9d64142479b9c72828385b5b71c7c90aec48f0be5efd86de24ca",
+     "width": 128,
+     "height": 256,
+     "kind": "planks, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "427-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-427-3.png",
+     "byteLength": 48669,
+     "sha256": "2c1c5226dbcc978088f83553575a8cc1d49f911c44a945754e70c5320eb8e257",
+     "width": 128,
+     "height": 256,
+     "kind": "planks, snowed",
+     "tallest": 1.0,
+     "depth": 0.03,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "435-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-435-0.png",
+     "byteLength": 48794,
+     "sha256": "324150b2a1ed87f3b801cf9801f4119bd46963ec48c7212709d95d754e1be34e",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "435-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-435-1.png",
+     "byteLength": 48448,
+     "sha256": "26e9ea3694c77eae740b12f22bb5e9604896548a0c91a6c36caec4b17a2d865c",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "435-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-435-3.png",
+     "byteLength": 50372,
+     "sha256": "cf4b61ff6beac70473a792a63fbb291d67f316a4bb56411d09166cfd2f8d84c0",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "438-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-438-0.png",
+     "byteLength": 44355,
+     "sha256": "7fcd123b537861e83cde39912564239fdf54570baba8ae2b120f2edf55685471",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "438-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-438-1.png",
+     "byteLength": 44844,
+     "sha256": "b3296d0a72ab29118f2b599a677c135e4b3f94203bad8d9b7b2ddf64a5e281e2",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "438-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-438-2.png",
+     "byteLength": 38991,
+     "sha256": "641746de6c3b34343a178a4fe60efe3b8a023ddbd1543655816aae85a3e7eab2",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "438-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-438-3.png",
+     "byteLength": 44699,
+     "sha256": "17f59bacd8cdea7365b2e18e68cc64981008344cc519552504102cfb87f93612",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "439-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-439-0.png",
+     "byteLength": 42161,
+     "sha256": "69e3c80c60ed226c7d1f95185dbbd8d01e3b52db035decc190c0bc34403c3808",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "439-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-439-1.png",
+     "byteLength": 41875,
+     "sha256": "e01e8805eb4584123d2202b83b5bcc3ad5db7729defb464abe005ce870d13e3f",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "439-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-439-2.png",
+     "byteLength": 36777,
+     "sha256": "1db45f4cc8fec7d968f6f4929f558afc00774674ec51d4a3b398b362a472ae59",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "439-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-439-3.png",
+     "byteLength": 44039,
+     "sha256": "cfa0084524881f08be5fca796afe0080acae72dcccd53e7efcc55bc1a7f15942",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "442-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-442-0.png",
+     "byteLength": 65571,
+     "sha256": "08945766ab101c0aa8f7ced2a366feafebecb5dd9a6534fc5a744d774b701a37",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "442-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-442-1.png",
+     "byteLength": 68992,
+     "sha256": "648e1f20126b8e4346abc7e7dcb451a0c81579f722f3f0127a4fbcf80619d129",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "442-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-442-2.png",
+     "byteLength": 65744,
+     "sha256": "f7e8f9340948bf476030c8e1f6892d63ed1285518a806c43be7830f00df7838e",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "442-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-442-3.png",
+     "byteLength": 66811,
+     "sha256": "bc70fdbfbce9e7f2f3e84b3e48c815b36e2289ed15605d3d99e764f1b19be3dc",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "443-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-443-0.png",
+     "byteLength": 63866,
+     "sha256": "478d68d80080fbf9893d6f323a81531fb3b08761dfc18e4cee76078bdcfabfce",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster, snowed",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "443-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-443-1.png",
+     "byteLength": 67735,
+     "sha256": "dba7d86ebfad9c8e37049e91b76210f3f9713791981e31d75824593fc84412b0",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster, snowed",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "443-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-443-2.png",
+     "byteLength": 64320,
+     "sha256": "353531dedb2a5f2b9fdc386f9049c28ed8ba687898457511aa0d404dd5badd16",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster, snowed",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "443-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-443-3.png",
+     "byteLength": 61924,
+     "sha256": "e1b7c25387fb2b0f463240fa58b201630d28f94623ec88f1cfb4f4cb35c4666e",
+     "width": 128,
+     "height": 256,
+     "kind": "plaster, snowed",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "458-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-458-0.png",
+     "byteLength": 40827,
+     "sha256": "9b23a4508ddfe42e33a96cc7a12c6893e8115e00cf98a24b33ba0dbe79247a62",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "458-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-458-1.png",
+     "byteLength": 43061,
+     "sha256": "18b3606885e46f09b94871a9694937f09a7d53d754771b4e343b75c955261da1",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "458-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-458-3.png",
+     "byteLength": 40325,
+     "sha256": "6b9ad678c62fc016296d9f402747c568cae80ea59d7184cac1d18b8dd8b4be7b",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "459-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-459-0.png",
+     "byteLength": 41111,
+     "sha256": "741707ddb9c240ab5c24b836847427491dc2c794edd2700089ade92493c2c5e6",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "459-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-459-1.png",
+     "byteLength": 43193,
+     "sha256": "f5dd4439d5ad84c17c5e59300de52c8d2c1e93a9a97e22594f4ef451927294e7",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "459-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-459-3.png",
+     "byteLength": 39712,
+     "sha256": "4a4b9fe90eddfd64e2e5d5a55e564e8386f6d3e56238309b0e4d9388de02aed7",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "461-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-461-0.png",
+     "byteLength": 35820,
+     "sha256": "2bceae1aaf9d455e298654180788783e26a879e9f8fbf2d9207faede6fdd5573",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "461-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-461-1.png",
+     "byteLength": 36656,
+     "sha256": "39613100f0f2cfe4ca93eac96fd05f1c3eb38eba36827d253d865aacf9588f12",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "461-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-461-3.png",
+     "byteLength": 41451,
+     "sha256": "27d6cea7a5e9b72340b049574dd07209231b60098029bb58a223aa79ce8df071",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "462-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-462-0.png",
+     "byteLength": 35820,
+     "sha256": "2bceae1aaf9d455e298654180788783e26a879e9f8fbf2d9207faede6fdd5573",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "462-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-462-1.png",
+     "byteLength": 36656,
+     "sha256": "39613100f0f2cfe4ca93eac96fd05f1c3eb38eba36827d253d865aacf9588f12",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "462-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-462-3.png",
+     "byteLength": 41451,
+     "sha256": "27d6cea7a5e9b72340b049574dd07209231b60098029bb58a223aa79ce8df071",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "464-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-464-0.png",
+     "byteLength": 49737,
+     "sha256": "3491b9b0ebea46532ab1041772b0c746e55606c304aac1fab9e5e4f4403bafc4",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "464-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-464-1.png",
+     "byteLength": 55417,
+     "sha256": "c1f16076e716d1ad042fbb95fb20a6b253dfa4a0e8abfc95d1b8074be92df312",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "464-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-464-3.png",
+     "byteLength": 56073,
+     "sha256": "849a235487cfcda9b9418e9ae8a3854a5bf1b9ebf3be24e2cf91b2b4788362e1",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "465-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-465-0.png",
+     "byteLength": 49538,
+     "sha256": "efcbc47c09005a6e4f95654ea2127fccb54f7cf6e19547da46fd124d1fe44543",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "465-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-465-1.png",
+     "byteLength": 55527,
+     "sha256": "c6d3110956ffa62109d0ecc3011beb525c5de912b681ecf25c5db05c63bd5dbe",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "465-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-465-3.png",
+     "byteLength": 52719,
+     "sha256": "ac3c13e71708c961c00b4c96e2af509159f8b0e69a97c343e3750ef7a199c677",
+     "width": 128,
+     "height": 256,
+     "kind": "masonry, snowed",
+     "tallest": 1.0,
+     "depth": 0.04,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "469-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-469-0.png",
+     "byteLength": 31188,
+     "sha256": "b45cd281e13dc7e64846e7f5d7d3a9d3e901e498797980f3a51ecbf5a803c2a1",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "469-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-469-1.png",
+     "byteLength": 17864,
+     "sha256": "451a990e15fc34ee886d80bbb7ffa48127c2a7c8401205ef7c465b5bfc904a95",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "469-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-469-2.png",
+     "byteLength": 20586,
+     "sha256": "377297d98c9a5719348f55e22219496ab0b968091ba276f2787dcec9f4907bb2",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "469-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-469-3.png",
+     "byteLength": 22821,
+     "sha256": "76154e0b7f1cbe8d277f8f7dad5073d09468cf0e9f7c60a3fa957c4460336121",
+     "width": 128,
+     "height": 128,
+     "kind": "shingles",
+     "tallest": 1.0,
+     "depth": 0.035,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "470-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-470-0.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "470-1": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-470-1.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "470-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-470-2.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "470-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-470-3.png",
+     "byteLength": 1999,
+     "sha256": "cfb6d499d392b41c1dd7dd4a9903689405ca018464724458cf3b20ee186c10f2",
+     "width": 128,
+     "height": 128,
+     "kind": "snow",
+     "tallest": 1.0,
+     "depth": 0.02,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "474-0": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-474-0.png",
+     "byteLength": 59837,
+     "sha256": "f592840fe14f8fb666ba18958b0278c881cb32aea9a1bbfd28148870eaeb7558",
+     "width": 128,
+     "height": 256,
+     "kind": "door",
+     "tallest": 1.0,
+     "depth": 0.025,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "474-2": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-474-2.png",
+     "byteLength": 40337,
+     "sha256": "e8477ec3d8e8d4fb1b3b18968e5cadb992a47279a83f006a66395b6a5373330d",
+     "width": 128,
+     "height": 256,
+     "kind": "door",
+     "tallest": 1.0,
+     "depth": 0.025,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
+    },
+    "474-3": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief-474-3.png",
+     "byteLength": 45887,
+     "sha256": "36266ff886bde57e7959c84f220acc35bb2e81ef1aedb06d5f8f737696a2772b",
+     "width": 128,
+     "height": 256,
+     "kind": "door",
+     "tallest": 1.0,
+     "depth": 0.025,
+     "sway": 0,
+     "shade": [
+      0.55,
+      0.55,
+      0.55
+     ],
+     "glints": 0,
+     "sinksUnderSnow": false
     }
+   },
+   "surfaceShader": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief.wgsl",
+    "byteLength": 5775,
+    "sha256": "834bc06a7d0e512d00171603c78181ed8f4a57d78cfc49e2df5c35e116de968b"
    }
   },
   "trees": {

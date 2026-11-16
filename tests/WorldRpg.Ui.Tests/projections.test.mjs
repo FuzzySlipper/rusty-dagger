@@ -2743,6 +2743,29 @@ test('Settings offers lamp shadows beside the shadow budget and sends the whole 
   await Promise.resolve(); await Promise.resolve();
 });
 
+test('Settings offers surface relief only with a refreshed art set, as a strength from flat to its maximum', async () => {
+  const f = fixture();
+  try {
+    f.publish({ controls: { diagnostic: '', bindings: [], surfaceRelief: null } });
+    f.root.querySelector('[data-action="settings"]').click();
+    assert.equal(video.mounts.at(-1).options.productOptions.find(row => row.id === 'surfaceRelief'), undefined,
+      'Classic art draws no relief, so no strength is offered.');
+  } finally { f.dispose(); }
+  await Promise.resolve(); await Promise.resolve();
+  const g = fixture();
+  try {
+    g.publish({ controls: { diagnostic: '', bindings: [], surfaceRelief: { strength: 0.6, maximum: 2, step: 0.1 } } });
+    g.root.querySelector('[data-action="settings"]').click();
+    const relief = video.mounts.at(-1).options.productOptions.find(row => row.id === 'surfaceRelief');
+    assert.deepEqual([relief.group, relief.kind, relief.min, relief.max, relief.step, relief.value], ['Buildings', 'range', 0, 2, 0.1, 0.6]);
+    relief.onChange(0);
+    assert.deepEqual(g.actions.at(-1), { action: 'controls-surface-relief', scale: 0 });
+    relief.onChange('1.4');
+    assert.deepEqual(g.actions.at(-1), { action: 'controls-surface-relief', scale: 1.4 });
+  } finally { g.dispose(); }
+  await Promise.resolve(); await Promise.resolve();
+});
+
 test('activation selection follows product mode and emits only semantic mode changes', () => {
   const f = fixture();
   try {

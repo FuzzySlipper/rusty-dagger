@@ -162,11 +162,14 @@ internal sealed record DaggerfallArtSurface(DaggerfallArtFile File, int Width, i
 /// The refreshed ground cover: a tileable shell texture whose alpha is each texel's blade height, this many texels square and
 /// drawn this many to the metre, the shader that sways the shells, and a grass tuft, both images greyscale; and each ground archive's grass, the
 /// linear tints that colour the shells and the tufts there. An archive the set names no grass for grows no grass. The relief
-/// of each classic texture record shells lift (every open ground layer, and each surface a remodel stacks in shells), by its
-/// archive and record, is that record's own refreshed texture with its texels' heights: the set's one home for them.
+/// of each classic texture record shells lift (every open ground layer, and each surface a remodel stacks in shells), or a
+/// building's walls, doors and roofs march into, by its archive and record, is that record's own refreshed texture with its
+/// texels' heights: the set's one home for them. <paramref name="SurfaceShader"/> is the shader a location's faces draw a
+/// relief with a depth in (<c>relief.wgsl</c>), where the set has such relief.
 /// </summary>
 internal sealed record DaggerfallGroundCoverArt(DaggerfallArtFile Shell, int ShellTexels, float ShellTexelsPerMetre, DaggerfallArtFile Shader, DaggerfallArtFile Tuft,
-    IReadOnlyDictionary<int, (Vector3 Shells, Vector3 Tufts)> Grass, IReadOnlyDictionary<(int Archive, int Record), DaggerfallGroundRelief> Relief);
+    IReadOnlyDictionary<int, (Vector3 Shells, Vector3 Tufts)> Grass, IReadOnlyDictionary<(int Archive, int Record), DaggerfallGroundRelief> Relief,
+    DaggerfallArtFile? SurfaceShader = null);
 
 /// <summary>
 /// A refreshed nature mesh standing in for a flora sprite: a prop mesh (bark, leaf and stone parts, its vertex alpha the
@@ -184,9 +187,12 @@ internal sealed record DaggerfallTreeArt(DaggerfallArtFile Mesh, float MeshHeigh
 /// tallest texel's share, so the stack draws only the layers it reaches; its size in texels, as the record's (a ground
 /// tile's is square, a wall's need not be); how far its top sways in the wind, as a share of the shells' sway (a remodel's
 /// shells stand still); the linear colour its lowest layer is shaded to, rising to its own at the top; what share of its
-/// top texels glint as the viewer moves; and whether lying snow buries it, as it buries all but the snow's own relief.
+/// top texels glint as the viewer moves; whether lying snow buries it, as it buries all but the snow's own relief; and, for
+/// a record a building's walls, doors or roofs draw, <paramref name="Depth"/>: how far under the face its floor lies, in
+/// metres, which a location's face marches into near the camera. A relief without a depth draws on no face.
 /// </summary>
-internal sealed record DaggerfallGroundRelief(DaggerfallArtFile File, float Tallest, int Width, int Height, float Sway, Vector3 Shade, float Glints, bool SinksUnderSnow);
+internal sealed record DaggerfallGroundRelief(DaggerfallArtFile File, float Tallest, int Width, int Height, float Sway, Vector3 Shade, float Glints, bool SinksUnderSnow,
+    float? Depth = null);
 
 /// <summary>
 /// A refreshed world billboard standing in for one classic texture record: a PNG atlas of its frames in classic order, each
@@ -292,7 +298,7 @@ internal sealed class DaggerfallArtReplacements
 
     /// <summary>
     /// The relief of the classic texture record the importer published at <paramref name="texturePath"/>, which a remodel's
-    /// shell stack draws, if the set has one.
+    /// shell stack draws, and a location's face where it has a depth, if the set has one.
     /// </summary>
     internal DaggerfallGroundRelief? Relief(string texturePath) =>
         Record(texturePath) is { } record && GroundCover?.Relief.TryGetValue(record, out DaggerfallGroundRelief? relief) == true ? relief : null;
@@ -566,13 +572,20 @@ internal sealed class DaggerfallArtReplacements
                     int width = layer.Value.GetProperty("width").GetInt32(), height = layer.Value.GetProperty("height").GetInt32();
                     if (key.Length != 2 || !float.IsFinite(tallest) || tallest is <= 0 or > 1 || width <= 0)
                         throw new InvalidOperationException($"Content pack '{packId}' states relief '{layer.Name}' without an archive, record, width and tallest texel.");
+                    float? depth = layer.Value.TryGetProperty("depth", out JsonElement metres) ? metres.GetSingle() : null;
+                    if (depth is { } deep && (!float.IsFinite(deep) || deep <= 0))
+                        throw new InvalidOperationException($"Content pack '{packId}' sinks relief '{layer.Name}' {deep} metres under a face.");
                     relief.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
                         new(File(layer.Value, $"The relief {layer.Name}"), tallest, width, height, layer.Value.GetProperty("sway").GetSingle(),
                             Tint(layer.Value.GetProperty("shade")), layer.Value.GetProperty("glints").GetSingle(),
-                            layer.Value.GetProperty("sinksUnderSnow").GetBoolean()));
+                            layer.Value.GetProperty("sinksUnderSnow").GetBoolean(), depth));
                 }
+                DaggerfallArtFile? surfaceShader = cover.TryGetProperty("surfaceShader", out JsonElement faces) ? File(faces, "The surfaces' relief shader") : null;
+                // A face draws its relief only through the shader, so depths without it would ship relief nothing draws.
+                if (surfaceShader is null && relief.Values.Any(entry => entry.Depth is not null))
+                    throw new InvalidOperationException($"Content pack '{packId}' gives its surfaces' relief depths but no surfaceShader to draw them with.");
                 groundCover = new(File(shell, "The ground cover's shell texture"), side, texels, File(cover.GetProperty("shader"), "The ground cover's shader"),
-                    File(tuft, "The ground cover's tuft"), grass, relief);
+                    File(tuft, "The ground cover's tuft"), grass, relief, surfaceShader);
             }
         }
         catch (Exception exception) when (exception is JsonException or KeyNotFoundException or FormatException)

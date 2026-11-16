@@ -1,17 +1,19 @@
 import { mountVideoOptions, type ProductVideoOption, type VideoOptionsMount } from '@rusty-engine/video-options';
-import type { ControlAction, GroundCoverChoice, LampShadowChoice } from './controls.js';
+import type { ControlAction, GroundCoverChoice, LampShadowChoice, SurfaceReliefChoice } from './controls.js';
 
 /**
  * Settings' video section: the Engine's video options panel, drawn beside the controls. The Engine owns its
  * catalogue, applies a choice at once and keeps it for the install, so no Engine video setting is game state. The game
- * adds its own rows beside them, ground cover and its distance, and beside the Engine's shadow budget which lamps cast
- * shadows, in what sectors and whether outdoors, which it keeps with the player's other preferences. The
+ * adds its own rows beside them, ground cover and its distance, beside the Engine's shadow budget which lamps cast
+ * shadows, in what sectors and whether outdoors, and how deep buildings' relief draws, which it keeps with the player's
+ * other preferences. The
  * panel mounts the first time Settings opens and reads the catalogue again each time after, since presets and other
  * pages change it.
  */
 export interface VideoSettings {
   show(): void;
-  update(groundCover: GroundCoverChoice | null | undefined, lampShadows: LampShadowChoice | null | undefined): void;
+  update(groundCover: GroundCoverChoice | null | undefined, lampShadows: LampShadowChoice | null | undefined,
+    surfaceRelief: SurfaceReliefChoice | null | undefined): void;
   dispose(): void;
 }
 
@@ -59,16 +61,26 @@ export function mountVideoSettings(root: HTMLElement, send: (action: ControlActi
       onChange: value => send({ action: 'controls-clutter-distance', scale: Number(value) }),
     },
   ] : [];
-  const options = (): ProductVideoOption[] => [...lampOptions(), ...groundOptions()];
+  let relief: SurfaceReliefChoice | null = null;
+  const reliefOptions = (): ProductVideoOption[] => relief ? [
+    {
+      id: 'surfaceRelief', label: 'Surface relief', group: 'Buildings', kind: 'range',
+      min: 0, max: relief.maximum, step: relief.step, unit: '×', value: relief.strength,
+      description: 'How deep walls, doors and roofs look up close. 0 draws them flat.',
+      onChange: value => send({ action: 'controls-surface-relief', scale: Number(value) }),
+    },
+  ] : [];
+  const options = (): ProductVideoOption[] => [...lampOptions(), ...groundOptions(), ...reliefOptions()];
   return {
     show() {
       if (panel) void panel.then(mounted => mounted.refresh());
       else panel = mountVideoOptions(root, { hide: HIDDEN, productOptions: options() });
     },
-    update(next, nextLamps) {
-      const changed = JSON.stringify([next ?? null, nextLamps ?? null]) !== JSON.stringify([ground, lamps]);
+    update(next, nextLamps, nextRelief) {
+      const changed = JSON.stringify([next ?? null, nextLamps ?? null, nextRelief ?? null]) !== JSON.stringify([ground, lamps, relief]);
       ground = next ?? null;
       lamps = nextLamps ?? null;
+      relief = nextRelief ?? null;
       if (changed) void panel?.then(mounted => mounted.setProductOptions(options()));
     },
     dispose() {

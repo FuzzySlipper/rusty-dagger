@@ -28,7 +28,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private double flipbookSeconds;
     // One material for each layer of each location material a remodel stacks, shared by every remodel stacking it.
     private readonly Dictionary<(Material Surface, DaggerfallArtShell Shell), ShellMaterial> shellMaterials = [];
-    // The location's relief images, by path: one texture's relief serves every layer of its stacks.
+    // The location's relief images, by path: one texture's relief serves every layer of its stacks and every face drawing it.
     private readonly Dictionary<string, RenderResource> reliefImages = new(StringComparer.Ordinal);
     // The ground cover's shader, which draws every shell stack, once an art set that stacks shells is admitted.
     private RenderResource? shellShader;
@@ -123,16 +123,19 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (surfaceArt is null) return;
         for (int season = 0; season < layer.Relief.Length; season++)
+            if (surfaceArt.Relief(layer.Surface.Paths[season]) is { } relief) layer.Relief[season] = (ReliefImage(relief), relief);
+    }
+
+    /// <summary>A record's relief image, opened the first time the location draws it, as a shell stack or a face's relief.</summary>
+    private RenderResource ReliefImage(DaggerfallGroundRelief relief)
+    {
+        if (!reliefImages.TryGetValue(relief.File.Path, out RenderResource? image))
         {
-            if (surfaceArt.Relief(layer.Surface.Paths[season]) is not { } relief) continue;
-            if (!reliefImages.TryGetValue(relief.File.Path, out RenderResource? image))
-            {
-                image = appearance.OpenTexture(content, relief.File.Path, relief.File.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate).Handle;
-                locationResources.Add(image);
-                reliefImages.Add(relief.File.Path, image);
-            }
-            layer.Relief[season] = (image, relief);
+            image = appearance.OpenTexture(content, relief.File.Path, relief.File.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate).Handle;
+            locationResources.Add(image);
+            reliefImages.Add(relief.File.Path, image);
         }
+        return image;
     }
 
     /// <summary>

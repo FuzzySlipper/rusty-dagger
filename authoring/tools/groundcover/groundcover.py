@@ -16,6 +16,9 @@
   mortar, in every climate and season the walls' 29-0 and 29-1 swap to. A remodel's stack is its own depth, so its relief
   reaches the top of it.
 
+The buildings' relief in the same section, and the shader their faces draw it with, are relief.py's
+(authoring/tools/relief), which this keeps as it finds them.
+
 Both images are greyscale, so the tint alone colours them. The textures are made in code from a fixed seed; run it again
 after changing them, or after the refreshed grass surfaces change.
 
@@ -187,6 +190,16 @@ def relief_entry(archive, record, kind, source=TERRAIN):
         "kind": kind, "tallest": round(np.asarray(image)[..., 3].max() / 255, 4)} | LOOKS.get(kind, LOOKS["ground"])
 
 
+def section(previous, made):
+    """The ground cover section: `made`, this run's, with the buildings' relief and the shader their faces draw it with
+    kept from `previous` as relief.py (authoring/tools/relief) left them, since the section is the one home for every
+    record's relief."""
+    kept = {key: entry for key, entry in previous.get("relief", {}).items() if not entry["path"].startswith(f"{MEDIA}/")}
+    if both := sorted(kept.keys() & made["relief"].keys()):
+        raise SystemExit(f"relief.py already makes the relief of {', '.join(both)}: one record has one relief.")
+    return made | {"relief": made["relief"] | kept} | ({"surfaceShader": previous["surfaceShader"]} if "surfaceShader" in previous else {})
+
+
 def main():
     shell_image, tuft_image = shell(), tuft()
     shell_mean, tuft_mean = mean_linear(shell_image).mean() * SHELL_SHADE, mean_linear(tuft_image).mean()
@@ -196,14 +209,14 @@ def main():
         grass[str(archive)] = {"shells": [round(float(v), 4) for v in np.clip(ground / shell_mean, 0, 1)],
                                "tufts": [round(float(v), 4) for v in np.clip(ground / tuft_mean, 0, 1)]}
     payload = json.loads(PAYLOAD.read_text())
-    payload["artReplacements"]["groundCover"] = {
+    payload["artReplacements"]["groundCover"] = section(payload["artReplacements"].get("groundCover", {}), {
         "shell": publish("shell", shell_image) | {"texelsPerMetre": SHELL_TEXELS_PER_METRE},
         "tuft": publish("tuft", tuft_image),
         "shader": hashed("shells.wgsl"),
         "grass": grass,
         "relief": {f"{archive}-{record}": relief_entry(archive, record, kind) for (archive, record), kind in RELIEF.items()}
         | {f"{archive}-{record}": relief_entry(archive, record, kind, SURFACES) for (archive, record), kind in SHELLED.items()},
-    }
+    })
     PAYLOAD.write_text(json.dumps(payload, indent=1) + "\n")
     print(json.dumps(payload["artReplacements"]["groundCover"], indent=1))
 

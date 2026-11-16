@@ -1000,6 +1000,13 @@
     "tuftScaleMin": 0.7,
     "tuftScaleMax": 1.4
   },
+  "surfaceRelief": {
+    "fadeStart": 8,
+    "fadeEnd": 14,
+    "steps": 24,
+    "cavity": 0.5,
+    "slope": 1
+  },
   "water": {
     "shallow": [0.85, 0.95, 0.95],
     "deep": [0.5, 0.6, 0.7],

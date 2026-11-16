@@ -85,8 +85,8 @@ internal sealed class DaggerfallPlayerControls(IInputService mappings, IAudioSer
     internal void Change(Action<DaggerfallControlSettings> edit) => Change(edit, reset: false);
 
     /// <summary>
-    /// Returns the bindings to their defaults, keeping the interface scale, the ground cover, the lamp shadows and the sound levels:
-    /// they are not bindings.
+    /// Returns the bindings to their defaults, keeping the interface scale, the ground cover, the lamp shadows, the surface
+    /// relief and the sound levels: they are not bindings.
     /// </summary>
     internal void Reset() => Change(null, reset: true);
 
@@ -101,6 +101,7 @@ internal sealed class DaggerfallPlayerControls(IInputService mappings, IAudioSer
                 candidate.SetGroundCover(Settings.GroundCover);
                 candidate.SetClutterDistance(Settings.ClutterDistance);
                 candidate.SetLampShadows(Settings.LampShadows);
+                candidate.SetSurfaceRelief(Settings.SurfaceRelief);
                 foreach ((string bus, _) in DaggerfallControlSettings.SoundBuses) candidate.SetVolume(bus, Settings.Volume(bus));
             }
             edit?.Invoke(candidate);

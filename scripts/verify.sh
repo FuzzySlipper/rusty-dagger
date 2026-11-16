@@ -110,6 +110,8 @@ node --test tests/WorldRpg.Ui.Tests/*.test.mjs
 # exported; without either they skip with the reason.
 if python3 -c 'import numpy, scipy, PIL' 2>/dev/null; then
   python3 -m unittest discover -s authoring/tools/surfaces -p 'test_*.py'
+  python3 -m unittest discover -s authoring/tools/groundcover -p 'test_*.py'
+  python3 -m unittest discover -s authoring/tools/relief -p 'test_*.py'
   if [[ -d local/art/reference/items ]]; then
     python3 -m unittest discover -s authoring/tools/paper-doll -p 'test_*.py'
   else

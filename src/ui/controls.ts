@@ -13,6 +13,8 @@ export interface ControlsProjection {
   readonly groundCover?: GroundCoverChoice | null;
   /** Lamp shadows' video choices: which lamps cast near the player, in sectors of what share of the game's side, and outdoors too. */
   readonly lampShadows?: LampShadowChoice | null;
+  /** How deep buildings' relief draws up close, offered only with a refreshed art set: 0 (flat) to its maximum, in steps. */
+  readonly surfaceRelief?: SurfaceReliefChoice | null;
   readonly bindings: readonly ControlBinding[];
   /** The categories in the order the screen groups the bindings, with their headings. */
   readonly categories?: readonly { readonly id: string; readonly label: string }[];
@@ -25,6 +27,12 @@ export interface GroundCoverChoice {
   readonly grows: boolean;
   readonly distance: number;
   readonly minimum: number;
+  readonly maximum: number;
+  readonly step: number;
+}
+
+export interface SurfaceReliefChoice {
+  readonly strength: number;
   readonly maximum: number;
   readonly step: number;
 }

@@ -325,6 +325,7 @@
         4
       ]
     },
+    "surfaceRelief": null,
     "uiScaleRange": {
       "minimum": 0.5,
       "maximum": 3,

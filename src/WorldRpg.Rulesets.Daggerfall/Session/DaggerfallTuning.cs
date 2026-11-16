@@ -50,6 +50,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallSiteTuning Site => new(PresentationAudio, Flats, SiteLighting, WorldOrigin, Ground);
     internal DaggerfallFloraTuning Flora { get; init; } = DaggerfallFloraTuning.Default;
     internal DaggerfallGroundCoverTuning GroundCover { get; init; } = DaggerfallGroundCoverTuning.Default;
+    internal DaggerfallSurfaceReliefTuning SurfaceRelief { get; init; } = DaggerfallSurfaceReliefTuning.Default;
     internal DaggerfallWaterTuning Water { get; init; } = DaggerfallWaterTuning.Default;
     internal DaggerfallContactTuning Contact { get; init; } = DaggerfallContactTuning.Default;
     internal DaggerfallAttackTuning Attacks { get; init; } = DaggerfallAttackTuning.Default;
@@ -159,6 +160,7 @@ internal sealed record DaggerfallTuning(
             Hanging = DaggerfallHangingTuning.Read(root.GetProperty("hanging")),
             Flora = DaggerfallFloraTuning.Read(root.GetProperty("flora")),
             GroundCover = DaggerfallGroundCoverTuning.Read(root.GetProperty("groundCover")),
+            SurfaceRelief = DaggerfallSurfaceReliefTuning.Read(root.GetProperty("surfaceRelief")),
             Water = DaggerfallWaterTuning.Read(root.GetProperty("water")),
             Contact = DaggerfallContactTuning.Read(root.GetProperty("contact")),
             Attacks = DaggerfallAttackTuning.Read(root.GetProperty("attacks")),

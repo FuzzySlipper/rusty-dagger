@@ -401,7 +401,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         Func<long, DaggerfallGroundItemLook?>? groundLook = null)
     {
         if (disposed || drawnByActiveSnapshot) return;
-        if (surfacesRefreshed != drawRefreshedEffects()) ApplySurfaces();
+        if (surfacesRefreshed != drawRefreshedEffects() || surfacesStrength != reliefStrength()) ApplySurfaces();
         ReconcileGroundVisuals(groundContainers, groundLook);
         List<AppearanceFact> facts = [];
         if (candleAppearance is { } candle && candlePosition is Vector3 candleAt)
