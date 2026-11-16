@@ -18,7 +18,7 @@ import numpy as np
 from scipy import ndimage
 from PIL import Image, ImageCms, ImageFilter
 
-PALETTE_FILE = Path.home() / "research/daggerfall-files/ART_PAL.COL"
+PALETTE_FILE = Path(__file__).resolve().parents[3] / "local/inputs/arena2/ART_PAL.COL"
 COLOURS = 32
 SCALE = 2
 SEAM = 1.5        # a wrap edge changing this many times the texture's ordinary change is a seam
