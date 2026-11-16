@@ -8,8 +8,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 internal sealed record DaggerfallInitialItem(int Template, string? Material, ulong Quantity);
 
 /// <summary>
-/// Where a new game places the player: a location profile, and optionally an authored pose in it. Without one the
-/// player lands where the location receives a new character (a dungeon's entrance, its Enter marker).
+/// Where a new game places the player: a location profile, and optionally an authored pose in it, which the new
+/// character keeps wherever it is. Without one the title stands at the location's start and the new character where
+/// the location receives one (a dungeon's Enter marker, where the site crossing stands it).
 /// </summary>
 internal sealed record DaggerfallNewGameStart(string Profile, DaggerfallSiteAnchor? Pose);
 internal sealed record DaggerfallInitialCareer(string Career, DaggerfallInitialItem[] Items, string[] Spells);
@@ -139,7 +140,6 @@ internal static partial class DaggerfallBaseContent
         if (start.ValueKind != JsonValueKind.Object) return new(string.Empty, null);
         RejectDuplicateProperties(start, $"{what} start", diagnostics);
         string profile = Text(start, "profile", diagnostics);
-        if (!DaggerfallWorldProfileIds.TryParse(profile, out _)) diagnostics.Add($"The {what} start names '{profile}', which is not a location profile id.");
         bool positioned = start.TryGetProperty("position", out JsonElement point);
         if (positioned != start.TryGetProperty("yawRadians", out _))
         {
@@ -152,7 +152,6 @@ internal static partial class DaggerfallBaseContent
             : [float.NaN, float.NaN, float.NaN];
         if (values.Any(value => !float.IsFinite(value))) diagnostics.Add($"The {what} start position must be three finite numbers.");
         float yaw = Number(start, "yawRadians", diagnostics);
-        if (!float.IsFinite(yaw)) diagnostics.Add($"The {what} start yaw must be finite.");
         return new(profile, new("new-game", new WorldPoint(values[0], values[1], values[2]), yaw, 0F));
     }
 }

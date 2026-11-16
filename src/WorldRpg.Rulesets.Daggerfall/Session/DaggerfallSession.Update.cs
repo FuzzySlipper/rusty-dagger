@@ -1529,7 +1529,9 @@ internal sealed partial class DaggerfallSession
         var replacement = StartNew(_engine, _composition);                                                     // Session
         try
         {
-            replacement._sites.PlaceNewCharacter();                                                            // Interiors
+            // An authored start pose is where the factory stood the player; without one the start profile receives a new
+            // character as the donor does (a dungeon's Enter marker).
+            if (_composition.StartPose is null) replacement._sites.PlaceNewCharacter();                        // Interiors
             replacement._creation.CommitNewCharacter(choices);                                                 // Character
             DaggerfallStartingKit.ClearLoadout(replacement.State.Inventory, replacement.State.Equipment,
                 replacement.State.ItemInstances, replacement.State.Actors.Entities);                           // Items

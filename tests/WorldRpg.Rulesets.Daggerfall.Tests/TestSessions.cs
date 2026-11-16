@@ -375,11 +375,19 @@ internal static class TestSessions
         DaggerfallSiteProfile[] given = [.. sites];
         IEnumerable<DaggerfallSiteProfile> neighbours = given
             .Where(site => site.ProfileKind == DaggerfallWorldProfileKind.Exterior && site.Site is not null)
-            .SelectMany(site => Streamed.Value.NearbyExteriors(site.Site!.Value));
+            .SelectMany(site => NearbyExteriorKeys(site.Site!.Value).Where(key => Assembly.Value.Places(key)).Select(Assembled));
         foreach (DaggerfallSiteProfile profile in given.Concat(neighbours).DistinctBy(profile => profile.ProfileKey)) PopulateContent(content, profile);
     }
 
-    private static readonly Lazy<AssembledWorld> Streamed = new(() => new AssembledWorld());
+    /// <summary>The exterior of every location an exterior window centred on <paramref name="site"/> streams, a step across its map pixel's edge included.</summary>
+    internal static IEnumerable<DaggerfallWorldProfileKey> NearbyExteriorKeys(DaggerfallSiteId site)
+    {
+        DaggerfallSiteRecord centre = TestPayload.Definitions.Locations.Records.Single(record => record.Id == site);
+        return TestPayload.Definitions.Locations.Records
+            .Where(record => record.Exterior is not null
+                && Math.Abs(record.Exterior.MapPixelX - centre.MapPixelX) <= 4 && Math.Abs(record.Exterior.MapPixelY - centre.MapPixelY) <= 4)
+            .Select(record => DaggerfallWorldProfileIds.Exterior(record.Id));
+    }
 
     internal static void PopulateContent(ContentFake content, DaggerfallSiteProfile inputs)
     {

@@ -189,7 +189,7 @@ internal sealed partial class DaggerfallSiteProfiles
                 ArgumentNullException.ThrowIfNull(profile);
                 if (profile.Site is null) throw new ArgumentException("A seeded world profile must name its Daggerfall site.", nameof(seeded));
                 DaggerfallWorldProfileKey key = profile.ProfileKey.Validate();
-                if (!_resolved.TryAdd(key, Admit(key, profile))) throw new ArgumentException($"The seeded profiles repeat world profile '{key.LogicalId}'.");
+                if (!_resolved.TryAdd(key, Admit(profile))) throw new ArgumentException($"The seeded profiles repeat world profile '{key.LogicalId}'.");
             }
 
             foreach (IGrouping<string, DaggerfallWorldProfileKey> named in _resolved.Keys.GroupBy(key => key.LogicalId, StringComparer.Ordinal))
@@ -215,24 +215,15 @@ internal sealed partial class DaggerfallSiteProfiles
             {
                 if (_resolved.TryGetValue(key, out profile)) return true;
                 if (_assembly?.Places(key) != true) return false;
-                profile = Admit(key, _assembly.Assemble(key));
+                profile = Admit(_assembly.Assemble(key));
                 _resolved.Add(key, profile);
                 return true;
             }
         }
 
-        /// <summary>Checks a resolved profile is the one its id names, then runs the composition's admission checks.</summary>
-        private DaggerfallSiteProfile Admit(DaggerfallWorldProfileKey key, DaggerfallSiteProfile profile)
+        /// <summary>Runs the composition's admission checks over a profile as it is first resolved.</summary>
+        private DaggerfallSiteProfile Admit(DaggerfallSiteProfile profile)
         {
-            if (profile.Site is not DaggerfallSiteId || profile.ProfileKey != key)
-                throw new InvalidOperationException($"Profile '{key.LogicalId}' resolves '{profile.ProfileKey.LogicalId}'.");
-            if (profile.InteriorBuilding is not null && key.Kind != DaggerfallWorldProfileKind.Interior)
-                throw new InvalidOperationException($"Profile '{key.LogicalId}': only an interior profile can name a placed building.");
-            if (key.Kind == DaggerfallWorldProfileKind.Interior
-                && DaggerfallWorldProfileIds.TryParse(key.LogicalId, out _, out DaggerfallSiteBuildingId? building)
-                && (profile.InteriorBuilding is not { } interior
-                    || building != new DaggerfallSiteBuildingId(interior.BlockX, interior.BlockY, interior.Building.Index)))
-                throw new InvalidOperationException($"Profile '{key.LogicalId}' does not place the building its id names.");
             _admit?.Invoke(profile);
             return profile;
         }

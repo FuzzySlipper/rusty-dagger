@@ -66,6 +66,20 @@ public sealed class NewGameSessionTests
         Assert.Equal(0F, game.State.PlayerControl.YawRadians);
     }
 
+    /// <summary>A start that authors its own pose in a dungeon keeps it: the Enter marker is where a start with none lands.</summary>
+    [Fact]
+    public void An_authored_start_pose_in_a_dungeon_is_where_the_new_character_stands()
+    {
+        DaggerfallSiteAnchor pose = new("new-game", new WorldPoint(20F, 0F, -30F), 1.5F, 0F);
+        using Fixture f = new(startPose: pose);
+        Assert.Equal(pose.Position, f.Title.State.PlayerControl.Position);
+
+        Commit(f.Title);
+        using var game = Assert.IsType<DaggerfallSession>(f.Title.CreateNewGame());
+        Assert.Equal(pose.Position, game.State.PlayerControl.Position);
+        Assert.Equal(pose.YawRadians, game.State.PlayerControl.YawRadians);
+    }
+
     [Fact]
     public void The_final_summary_names_race_attributes_and_skills_and_states_gold_once()
     {
@@ -266,10 +280,10 @@ public sealed class NewGameSessionTests
         internal DaggerfallSession Title { get; }
         internal EngineContextFake TitleEngine { get; }
         private readonly Rusty.Engine.IRandomService _random;
-        internal Fixture(Rusty.Engine.IRandomService? random = null)
+        internal Fixture(Rusty.Engine.IRandomService? random = null, DaggerfallSiteAnchor? startPose = null)
         {
             _random = random ?? RandomMinimum.Create();
-            Composition = new(Definitions, Inputs, DaggerfallTuning.Defaults);
+            Composition = new(Definitions, Inputs, DaggerfallTuning.Defaults) { StartPose = startPose };
             TitleEngine = Engine();
             Title = DaggerfallSession.StartNew(TitleEngine.Context, Composition);
         }

@@ -39,7 +39,6 @@ internal sealed record DaggerfallSiteMesh(string Path, ContentSha256 Sha256, Tra
         if (!float.IsFinite(Pose.Translation.X) || !float.IsFinite(Pose.Translation.Y) || !float.IsFinite(Pose.Translation.Z)
             || !float.IsFinite(Pose.Rotation.X) || !float.IsFinite(Pose.Rotation.Y) || !float.IsFinite(Pose.Rotation.Z) || !float.IsFinite(Pose.Rotation.W))
             throw new ArgumentOutOfRangeException(nameof(Pose), "A site mesh pose must be finite.");
-        ArgumentNullException.ThrowIfNull(Materials);
         if (Materials.Select(binding => binding.MeshSlot).Distinct().Count() != Materials.Count)
             throw new ArgumentException("A site mesh binds each of its material slots once.", nameof(Materials));
         return this;

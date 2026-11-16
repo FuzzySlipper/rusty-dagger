@@ -109,10 +109,8 @@ internal sealed class AssembledWorld
     /// <summary>Every assembled exterior an exterior window centred on <paramref name="site"/> streams, a step across its map pixel's edge included.</summary>
     internal IEnumerable<DaggerfallSiteProfile> NearbyExteriors(DaggerfallSiteId site)
     {
-        DaggerfallSiteRecord centre = Definitions.Locations.Records.Single(record => record.Id == site);
-        foreach (DaggerfallSiteRecord near in Definitions.Locations.Records.Where(record => record.Exterior is not null
-            && Math.Abs(record.Exterior.MapPixelX - centre.MapPixelX) <= 4 && Math.Abs(record.Exterior.MapPixelY - centre.MapPixelY) <= 4))
-            if (Profiles.TryGet(DaggerfallWorldProfileIds.Exterior(near.Id), out DaggerfallSiteProfile exterior)) yield return exterior;
+        foreach (DaggerfallWorldProfileKey key in TestSessions.NearbyExteriorKeys(site))
+            if (Profiles.TryGet(key, out DaggerfallSiteProfile exterior)) yield return exterior;
     }
 }
 
