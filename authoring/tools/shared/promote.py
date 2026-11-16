@@ -595,7 +595,9 @@ def effect_glow():
 WORLD_MESHES = [("corpse-bones.glb", [(380, 1), (380, 4)]),
                 # rocks.py's placed flats (#10849): the fallen logs towns lay about, and the dungeons' stalagmites.
                 ("logs-213-11.glb", [(213, 11)]), ("logs-213-12.glb", [(213, 12)]),
-                *((f"stalagmite-300-{record}.glb", [(300, record)]) for record in range(6, 16))]
+                *((f"stalagmite-300-{record}.glb", [(300, record)]) for record in range(6, 16)),
+                # the barrel flat streets, houses and dungeons place (#10848), staves painted from its refreshed flat
+                ("barrel-205-0.glb", [(205, 0)])]
 
 
 def glb_width(path):

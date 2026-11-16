@@ -714,5 +714,69 @@
  "520": {
   "status": "accepted",
   "note": "Low stone wall in the ground cover's shell stack, as Patch chose from #10850's sheets (\"I like the stone wall effect too go ahead on it as well\"): the classic's own faces in 9 layers, the outermost on the classic's faces and each lower one a step deeper to a core 5 cm inside, each drawing the relief of the stones the location draws (29-0 and its caps 29-1 in every climate and season) cut at its height, so the stones stand out of their mortar in pixels (hedges.py, #10850)."
+ },
+ "41116": {
+  "status": "accepted",
+  "note": "House fireplace. Hand-built, as #10842 recommended and Patch accepted (#10842 47165), with the animated fire Patch asked for (\"animated hearth\", #10848 47169): a stone surround and sooted firebox baked into one pixel atlas at 128 px/m from the refreshed stone 87-5 and planks, as #10847's B direction, and two flame cards that step through the refreshed campfire 210-1's four flame frames, cut out and unlit so the fire stays bright in the flat interior light (#10848). A segmental arch over a 0.42 m firebox, a timber mantel and the chimney breast under the classic's slope."
+ },
+ "41117": {
+  "status": "accepted",
+  "note": "Corner fireplace, placed across a room's corner. Hand-built, as #10842 recommended and Patch accepted (#10842 47165), with the animated fire Patch asked for (\"animated hearth\", #10848 47169): a stone surround and sooted firebox baked into one pixel atlas at 128 px/m from the refreshed stone 87-5 and planks, as #10847's B direction, and two flame cards that step through the refreshed campfire 210-1's four flame frames, cut out and unlit so the fire stays bright in the flat interior light (#10848). Its hull is a wedge with no depth at the floor, so the hearth is raised 0.32 m to a 0.24 m firebox and upright fireback, under a stone hood to the corner."
+ },
+ "41409": {
+  "status": "accepted",
+  "note": "Ladder, hand-built: slanted rails as the classic's and five round rungs at the classic's rungs, baked into one pixel atlas from its own 0-76 and 0-77; the 45th model #10842's count included (#10848)."
+ },
+ "41120": {
+  "status": "accepted",
+  "note": "House organ (#10842 named it a loom; the classic paints a keyboard, pedals and gilded pipes). Hand-built, where #10842 recommended a generated shape in the classic's skin: Pixal3D four-view from Qwen's four redraws melted the pipe rank into a hood, since the redraws disagreed on the back and sides, and TRELLIS from the front alone gave a slab whose reskin smeared keys and pipes across it. So: a console with a kneehole and pedals, a keyboard, a music desk and thirteen round pipes before the back panel, each as tall as the classic's hull allows where it stands, baked into one pixel atlas at 128 px/m from the refreshed woods and the classic's own keys and gilded pipes, as the hearths are (#10848)."
+ },
+ "41115": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): an A-frame trestle from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41125": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a braced sawhorse trestle from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41118": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): an anvil on its block from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41009": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): #10842's Pixal3D four-view spinning wheel (wheel, spokes, flyer and treadle), fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "62323": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): #10842's Pixal3D four-view shrouded effigy statue, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "62327": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): #10842's Pixal3D four-view shrouded effigy statue, 62323's geometry in 62327's own texture, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41304": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a carved slab altar on a stepped, tapered pedestal from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41305": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a speckled granite slab altar on a tapered pedestal from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41306": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a rough-hewn tapered altar block, remeshed closed where reduction tore it from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41307": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a panelled altar under an overhanging slab, remeshed closed where reduction tore it from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41700": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): a pillory with the neck and wrist holes cut through, on two posts from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
+ },
+ "41701": {
+  "status": "accepted",
+  "note": "Generated in the classic's skin, as #10842 recommended and Patch accepted (#10842 47165): wooden stocks with the neck and wrist holes cut through the board, on splayed feet from TRELLIS.2 on a Qwen redraw of the classic, fitted per axis into the classic's box, reduced, pulled inside its convex hull, and each triangle skinned from the nearest classic face that points its way with that face's uv map, so it draws the location's own refreshed surfaces with their remaps (#10848)."
  }
 }

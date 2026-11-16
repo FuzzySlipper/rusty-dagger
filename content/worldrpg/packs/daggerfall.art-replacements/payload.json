@@ -50387,6 +50387,16 @@
     "byteLength": 37324,
     "sha256": "953dccf022cc3dc29268af1b3e671333f1b29ebb55dee5332abe5794f77bd357",
     "footprint": 0.694
+   },
+   {
+    "replaces": {
+     "archive": 205,
+     "record": 0
+    },
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/effects/barrel-205-0.glb",
+    "byteLength": 49224,
+    "sha256": "6574e287e594b41da2abcc7daf6a3e85fdb6c75f901fb60953d76cc27fbcc807",
+    "footprint": 1.016
    }
   ],
   "surfaces": [
@@ -98887,6 +98897,30 @@
      }
     ]
    },
+   "41009": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41009.rstatmsh",
+    "byteLength": 217187,
+    "sha256": "7d798b65918ebb670a8b51a4705c00505347dfec7090fa8706a002a5730a278d",
+    "triangles": 2000,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-0-75"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-67-0"
+     },
+     {
+      "slot": 2,
+      "material": "material/texture-67-8"
+     },
+     {
+      "slot": 3,
+      "material": "material/texture-87-7"
+     }
+    ]
+   },
    "41010": {
     "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41010.rstatmsh",
     "byteLength": 61756,
@@ -100661,6 +100695,102 @@
      }
     ]
    },
+   "41115": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41115.rstatmsh",
+    "byteLength": 161928,
+    "sha256": "308cc531134d1e4c9df83b67f46580bc62c2497df44f63bdbb8fb9b88759a603",
+    "triangles": 1490,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-0-76"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-67-8"
+     }
+    ]
+   },
+   "41116": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41116.rstatmsh",
+    "byteLength": 33682,
+    "sha256": "0ef6ffd291946238ea6c7a5a5651962392fa8e70e1ad8ca33648d435874b564f",
+    "triangles": 302,
+    "slots": [
+     {
+      "slot": 0,
+      "texture": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41116-0.png",
+       "byteLength": 3786,
+       "sha256": "51d3f7c2d5e80317ad5ea6cc0022f2d590fc34dd710bc1cc1d4ad3638b9c8f80"
+      },
+      "alpha": "mask",
+      "frames": 4,
+      "framesPerSecond": 8,
+      "unlit": true
+     },
+     {
+      "slot": 1,
+      "texture": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41116-1.png",
+       "byteLength": 138414,
+       "sha256": "f49b3772fdc468f748c0435a67883b55c8cff4e77c30f77dce324d1f7be9b21a"
+      }
+     }
+    ]
+   },
+   "41117": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41117.rstatmsh",
+    "byteLength": 25486,
+    "sha256": "556e877959bfec9bb01cfd75b90bbea91f4f321d645a7096ac34e172e2b484bb",
+    "triangles": 226,
+    "slots": [
+     {
+      "slot": 0,
+      "texture": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41117-0.png",
+       "byteLength": 3786,
+       "sha256": "51d3f7c2d5e80317ad5ea6cc0022f2d590fc34dd710bc1cc1d4ad3638b9c8f80"
+      },
+      "alpha": "mask",
+      "frames": 4,
+      "framesPerSecond": 8,
+      "unlit": true
+     },
+     {
+      "slot": 1,
+      "texture": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41117-1.png",
+       "byteLength": 110410,
+       "sha256": "1f58fe7ce33d6bda997ee3e84fd5c2fc0f0fa23819d39b01e563b9d2e6afc32f"
+      }
+     }
+    ]
+   },
+   "41118": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41118.rstatmsh",
+    "byteLength": 162645,
+    "sha256": "77dc55365bd72973d2a815b1c632103afb80b3cbd3bf2a8111c5fc9da819e6dd",
+    "triangles": 1495,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-0-91"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-0-92"
+     },
+     {
+      "slot": 2,
+      "material": "material/texture-0-93"
+     },
+     {
+      "slot": 3,
+      "material": "material/texture-0-95"
+     }
+    ]
+   },
    "41119": {
     "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41119.rstatmsh",
     "byteLength": 27729,
@@ -100673,6 +100803,22 @@
        "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41119-0.png",
        "byteLength": 35158,
        "sha256": "3da6c3724fad538a3cb6e405e0edb672ab85ede31cfb2fac27e4f56142be803a"
+      }
+     }
+    ]
+   },
+   "41120": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41120.rstatmsh",
+    "byteLength": 144800,
+    "sha256": "2d42cfe4ff4056e5da602304bc073e401c85b66a10abe715565d85fd71c545f3",
+    "triangles": 1332,
+    "slots": [
+     {
+      "slot": 0,
+      "texture": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41120-0.png",
+       "byteLength": 117825,
+       "sha256": "d1d4428c0e24a49739341910c875b27f2f8190074ec2e3cd76a8bdb57ea94df5"
       }
      }
     ]
@@ -100768,6 +100914,30 @@
        "sha256": "980088c77adbe448978b05c6613b43bb9aaf706ca0a8ac1c43cf2d9ae325d693"
       },
       "alpha": "mask"
+     }
+    ]
+   },
+   "41125": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41125.rstatmsh",
+    "byteLength": 163179,
+    "sha256": "f4bec424460f28a2d0f8209d1c5150b390b0663bc793ac4c15ae96cd24e58584",
+    "triangles": 1500,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-0-77"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-0-78"
+     },
+     {
+      "slot": 2,
+      "material": "material/texture-0-79"
+     },
+     {
+      "slot": 3,
+      "material": "material/texture-67-8"
      }
     ]
    },
@@ -100995,6 +101165,70 @@
      }
     ]
    },
+   "41304": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41304.rstatmsh",
+    "byteLength": 162339,
+    "sha256": "e83a7d10475eb25ccc9708147b1f049e7bab3cfa1d7b677c9791a691ff92d48f",
+    "triangles": 1493,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-41-0"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-46-1"
+     },
+     {
+      "slot": 2,
+      "material": "material/texture-46-2"
+     }
+    ]
+   },
+   "41305": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41305.rstatmsh",
+    "byteLength": 162913,
+    "sha256": "f4be9217dd41b8f1d4c1a2a037af274a6cbfaff913611c6a7158130a074f2afc",
+    "triangles": 1500,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-41-1"
+     }
+    ]
+   },
+   "41306": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41306.rstatmsh",
+    "byteLength": 163004,
+    "sha256": "0e27c326a2e22c629e70e047fe9c5c4d4004c0d2bbde1a721cc7bb2419a23bfd",
+    "triangles": 1500,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-41-0"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-46-2"
+     }
+    ]
+   },
+   "41307": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41307.rstatmsh",
+    "byteLength": 162998,
+    "sha256": "2ab64d3fb9aab47ac3d2ebc7117d7cc1acc10cf7e115959af988a55ef4a48595",
+    "triangles": 1500,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-46-1"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-46-2"
+     }
+    ]
+   },
    "41400": {
     "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41400.rstatmsh",
     "byteLength": 11686,
@@ -101017,6 +101251,54 @@
        "sha256": "c661d0ac20f45c310c689cd50a255b00a75442f625f3d34aaaed9f20d0a6061f"
       },
       "material": "material/texture-67-8"
+     }
+    ]
+   },
+   "41409": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41409.rstatmsh",
+    "byteLength": 18650,
+    "sha256": "5c516dc1ffffe4f5d42f67ea7147389c5dd603a7b938dd3eb41bdff240db369f",
+    "triangles": 164,
+    "slots": [
+     {
+      "slot": 0,
+      "texture": {
+       "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41409-0.png",
+       "byteLength": 8642,
+       "sha256": "714b00bd351ecaa9ec2e57fcaefabfec3a02ebccc306afd60513bf35217eaa05"
+      }
+     }
+    ]
+   },
+   "41700": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41700.rstatmsh",
+    "byteLength": 162990,
+    "sha256": "d942659946f42285422fdb2bf9a0a13e1ff2edc7b40e878fef2515745f76bdb3",
+    "triangles": 1500,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-67-8"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-89-4"
+     }
+    ]
+   },
+   "41701": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/41701.rstatmsh",
+    "byteLength": 162896,
+    "sha256": "87987906eded1c9207359df25ffbabfaeb5257d6441f7c02366224f81023f3c8",
+    "triangles": 1499,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-67-8"
+     },
+     {
+      "slot": 1,
+      "material": "material/texture-89-4"
      }
     ]
    },
@@ -102739,6 +103021,30 @@
         "sha256": "202c658a21f788181fb8840b91f8cf5e1ce146c46a6d5e610956978198d71177"
        }
       }
+     }
+    ]
+   },
+   "62323": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/62323.rstatmsh",
+    "byteLength": 324808,
+    "sha256": "1e1f8a6241b06ac102304a7ff4125a11ce395d2943c63f9016869e8ed6e9a77f",
+    "triangles": 2999,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-341-0"
+     }
+    ]
+   },
+   "62327": {
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/models/62327.rstatmsh",
+    "byteLength": 324808,
+    "sha256": "6ee2bee3527f29b29dbb1e5ec29b62dead8d10678bf9c643ceabfc47d8f19b69",
+    "triangles": 2999,
+    "slots": [
+     {
+      "slot": 0,
+      "material": "material/texture-341-3"
      }
     ]
    }
