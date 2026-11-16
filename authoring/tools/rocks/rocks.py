@@ -911,9 +911,14 @@ GNARLED_KIND = {
          "segments": 2, "wobble": .45, "rise": .08, "tip": .2},
     ],
 }
-# A fallen log's radius, and how many of its thicknesses high the sprites' heaps of two stand, their broken limbs and all,
-# which sets how long a heap's shape makes each log.
-LOG_RADIUS, HEAP_THICKNESSES = .2, 4.5
+# A heaped log's radius as a share of the heap's height, as thick as the sprites paint theirs (about 20 of a 68-pixel
+# heap), and its broken limbs: stubs pointing up and out, more of them than a forest log's, as the sprites draw them.
+LOG_RADIUS = .15
+LOG_STUBS = {"count": [5, 8], "start": .1, "end": .95, "angle": [35, 75], "length": [.25, .55], "shrink": 0.0, "radius": .4,
+             "sides": 4, "segments": 2, "wobble": .35, "rise": .25, "tip": .3}
+# How deep a heaped log lies in the ground, as a share of its thickness: resting on it, where rusty-craftsurvive half
+# buries a forest log in leaf litter.
+LOG_SINK = .05
 
 
 def turned_out(part):
@@ -959,18 +964,21 @@ def logs(seed, aspect):
     sprite; a prop mesh of one bark part."""
     lib = flora()
     rng = np.random.default_rng(seed)
-    length = aspect * HEAP_THICKNESSES * 2 * LOG_RADIUS
-    lib.KINDS["heaped-log"] = lib.merged(lib.KINDS["log"], {"trunk": {"length": length, "radius": LOG_RADIUS}})
+    # The heap is about a metre high, one log on another and their stubs; crossed, each log spans about the sprite's width.
+    length = aspect * 1.05
+    lib.KINDS["heaped-log"] = lib.merged(lib.KINDS["log"], {"sink": LOG_SINK, "trunk": {"length": length, "radius": LOG_RADIUS},
+                                                            "levels": [LOG_STUBS]})
     first, _, _, _, _ = lib.build("heaped-log", seed, 1.0)
-    second, _, high, _, _ = lib.build("heaped-log", seed + 1, 1.0)
-    turn = math.radians(rng.uniform(40, 65))
-    spin = np.array([[math.cos(turn), 0, math.sin(turn)], [0, 1, 0], [-math.sin(turn), 0, math.cos(turn)]])
-    lift = np.array([rng.uniform(-.2, .2) * length, high[1] * .6, 0])
+    second, _, _, _, _ = lib.build("heaped-log", seed + 1, 1.0)
+    # The logs cross in an X seen from the front, as the sprites paint them: each turned either way of the view's plane,
+    # the second resting on the first.
+    half = math.radians(rng.uniform(25, 35))
+    lift = np.array([rng.uniform(-.1, .1) * length, LOG_RADIUS * 1.7, 0])
     out = {"positions": [], "normals": [], "uvs": [], "colors": [], "indices": []}
-    for part, moved in ((first[0], False), (second[0], True)):
+    for part, turn, raise_ in ((first[0], -half, np.zeros(3)), (second[0], half, lift)):
+        spin = np.array([[math.cos(turn), 0, math.sin(turn)], [0, 1, 0], [-math.sin(turn), 0, math.cos(turn)]])
         p, n = np.array(part["positions"]).reshape(-1, 3), np.array(part["normals"]).reshape(-1, 3)
-        if moved:
-            p, n = p @ spin.T + lift, n @ spin.T
+        p, n = p @ spin.T + raise_, n @ spin.T
         base = len(out["positions"]) // 3
         out["positions"] += [round(float(v), 4) for v in p.ravel()]
         out["normals"] += [round(float(v), 4) for v in n.ravel()]
