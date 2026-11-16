@@ -1,0 +1,12 @@
+scripts/route.py main: FAILED (product): scripts/verify.sh failed
+rusty-dagger verify at 0f5e489b5b22033c80bf25ecd9ac601701c3ba93 FAILED in 28.1 min
+verify on den-m5, 28.1 min, FAIL: /home/agent/dev/rusty-dagger/local/build/route/main-0f5e489b5b22-20261116T080034/verify.log
+    lane: run bbc0c586342fba85ffda83edb4033d51 of verify on den-m5 at 0f5e489b5b22033c80bf25ecd9ac601701c3ba93 (0 s)
+    lane: tooling took 10 s, peak memory 39 MiB
+    skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run `dotnet run --project src/Daggerfall.Source.Tool -- export-items`
+    Passed!  - Failed:     0, Passed:    12, Skipped:     0, Total:    12, Duration: 224 ms - WorldRpg.Architecture.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:   864, Skipped:     0, Total:   864, Duration: 13 m 11 s - Daggerfall.Import.Tests.dll (net10.0)
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.HudSnapshotContractTests.Published_hud_snapshot_matches_the_fixture_the_ui_suite_renders [3 s]
+    Failed!  - Failed:     1, Passed:  4424, Skipped:     8, Total:  4433, Duration: 12 m 56 s - WorldRpg.Rulesets.Daggerfall.Tests.dll (net10.0)
+    lane: verify took 1629 s, peak memory 22386 MiB
+    lane: verify failed (exit 1)
