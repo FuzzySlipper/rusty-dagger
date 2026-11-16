@@ -260,6 +260,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private void NeutralizeGuard() => _guard.Neutralize(_latestUpdateGeneration ?? 0UL, _latestSimulationStep ?? 0UL, _facts);
     private ulong? _latestUpdateGeneration;
     private ulong? _latestSimulationStep;
+    /// <summary>This update's play waits for arrival ground the Engine has not made live, which holds the world.</summary>
+    private bool _groundless;
     /// <summary>What is open over the world, which of it holds the world, and the pad's panel request.</summary>
     private readonly DaggerfallOpenInteractions _interactions;
     private bool _disposed;

@@ -87,8 +87,8 @@ internal sealed partial class DaggerfallSession
             ReconcileSummoningFoes();                                                             // Session: the summoned hostiles' list, below
             // An arrival whose ground the Engine refused holds the world, like a held mode, until that ground is live
             // and the player stands on it: nothing would hold anyone up meanwhile.
-            bool groundless = _mode == ProductMode.Playing && !_exterior.RecoverArrivalGround(); // Exterior
-            bool playing = _mode == ProductMode.Playing && !groundless && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !Law.ModalOpen && Cinematics?.ActiveSource is null && DispelChoice.Pending is null && !IdentifyChoice.Open && CreateItemChoice.Pending is null;
+            _groundless = _mode == ProductMode.Playing && !_exterior.RecoverArrivalGround();   // Exterior
+            bool playing = _mode == ProductMode.Playing && !_groundless && !Summoning.PendingOffer && State.Quests.PendingOffer is null && !Law.ModalOpen && Cinematics?.ActiveSource is null && DispelChoice.Pending is null && !IdentifyChoice.Open && CreateItemChoice.Pending is null;
             bool modal = _mode == ProductMode.Modal || Summoning.PendingOffer || State.Quests.PendingOffer is not null || Law.ModalOpen || DispelChoice.Pending is not null || IdentifyChoice.Open || CreateItemChoice.Pending is not null;
             DaggerfallUiPhases phase = _mode == ProductMode.Dead ? DaggerfallUiPhases.Dead
                 : playing ? DaggerfallUiPhases.Playing
@@ -1157,7 +1157,7 @@ internal sealed partial class DaggerfallSession
     private void UpdatePlayerTime(ProductUpdateFacts facts)
     {
         bool presentation = PresentationNeedsTime;
-        bool playing = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen
+        bool playing = _mode == ProductMode.Playing && !_interactions.HoldsWorldOpen && !_groundless
             && !State.Actors.Player.IsDefeated && !Law.ModalOpen && !Summoning.PendingOffer
             && State.Quests.PendingOffer is null && DispelChoice.Pending is null
             && !IdentifyChoice.Open && CreateItemChoice.Pending is null;
@@ -1186,7 +1186,10 @@ internal sealed partial class DaggerfallSession
             PublishPresentation();                                                                // UiProjection
     }
 
-    /// <summary>The title or a cinematic plays on world time, whatever holds play.</summary>
+    /// <summary>
+    /// The title or a cinematic plays on world time, whatever holds play: its pictures and sound stop with Engine time,
+    /// so step-indexed timers age behind a cinematic that plays over the world.
+    /// </summary>
     private bool PresentationNeedsTime => _mode == ProductMode.Title || _openingCinematics.IsActive || Cinematics?.ActiveSource is not null;
 
     /// <summary>Condition's swimming roll for the player as the session holds them now.</summary>
@@ -1460,9 +1463,11 @@ internal sealed partial class DaggerfallSession
         _modeLine.Say(mode, _condition.ModeLine(mode) ?? _interactions.ModeMessage(_mode));      // UiProjection, an exhaustion death's line Condition's
         _condition.EnterMode(mode);                                                               // Condition
         // A mode other than play holds the world from the change itself: a host pause forwards no later update that
-        // could ask for the hold, and the Engine must stop admitting steps for the world it no longer runs.
+        // could ask for the hold, and the Engine must stop admitting steps for the world it no longer runs. A pause
+        // holds a playing cinematic too, since nothing is forwarded to show it.
         if (mode != ProductMode.Playing)
-            _playerTime.Update(ActionDrivenPlay, new(PresentationNeedsTime, false, false, false), StrikeFeel.TimeRate);   // Time
+            _playerTime.Update(ActionDrivenPlay, new(mode != ProductMode.Paused && PresentationNeedsTime, false, false, false),
+                StrikeFeel.TimeRate);                                                             // Time
         PublishPresentation();                                                                    // UiProjection
     }
 

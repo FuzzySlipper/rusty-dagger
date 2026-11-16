@@ -247,6 +247,8 @@ public sealed class SessionCollisionResidencyTests
             Assert.Contains(spatial.HeightfieldColliderReads, read => read.X < player.X + 1F);
             Assert.Contains(spatial.HeightfieldColliderReads, read => read.X > player.X + (away / 2F));
             Assert.False(session.AwaitArrivalGround().Done);
+            // The wait holds Engine time too, so nothing counted in steps ages while nobody steps.
+            Assert.Equal(0d, engine.GameplayTime.Read().Rate);
 
             // A staged arrival: the walkers are asked after there too, and nothing stands until they have ground.
             session.Exterior.DropGroundCollider();
@@ -259,6 +261,7 @@ public sealed class SessionCollisionResidencyTests
             Assert.False(session.Exterior.CollisionPending);
             session.Update(new ProductUpdate(OuterUpdate(2), []));
             Assert.True(spatial.StepCalls > steps);
+            Assert.Equal(1d, engine.GameplayTime.Read().Rate);
 
             // Load: the saved enemy's ground holds the load's own wait and the first update after it.
             RulesetSavePayload save = session.CaptureSave();
