@@ -1284,7 +1284,7 @@ test('the Dagger developer panel pauses and steps held time, flies the observer 
     assert.equal(developer.commands.at(-1), 'engine.inspect.overlay show collision 30');
     button('List colliders here').click(); await settle();
     assert.equal(developer.commands.at(-1), 'engine.inspect.collision 30');
-    assert.match(element.querySelector('.dagger-developer-status').textContent, /2 colliders, 177 lines:\nstatic-mesh worldrpg\/imports\/charing\/exterior.*\ncharacter instance \?/s);
+    assert.match(element.querySelector('.dagger-developer-status').textContent, /2 colliders, 177 lines:\nstatic-mesh worldrpg\/imports\/world-blocks\/rmb\/resial05-rmb\/exterior\.rspatial.*\ncharacter instance \?/s);
 
     // The free camera starts at the player's eye and flies by key; the player never moves.
     button('Free camera').click(); await settle(); await settle();
