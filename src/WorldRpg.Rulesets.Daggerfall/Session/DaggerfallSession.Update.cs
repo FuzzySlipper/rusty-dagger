@@ -1176,7 +1176,9 @@ internal sealed partial class DaggerfallSession
             || falling || new Vector2(motion.ControlledVelocity.X, motion.ControlledVelocity.Z).LengthSquared() > .0001f
             || motion.ExternalVelocity.LengthSquared() > .0001f;
         bool action = _playerTime.WorldActionPending || _input.HasPendingActions || _guard.WantsTime || PlayerAttack.Clock.Busy || !_combat.PlayerWeaponReady
-            || State.Actors.Player.Attack.ReadyAtStep > facts.SimulationStep
+            // Measured from the last step the world took: the Engine's count runs on through a pause, and the held
+            // steps are added to the cooldown only when the world next takes one.
+            || State.Actors.Player.Attack.ReadyAtStep > (_latestSimulationStep is ulong taken ? taken + 1 : facts.SimulationStep)
             || _combat.HasPlayerRangedFlight
             || Casting.PendingRangedFlights.Any(flight => flight.CasterId == DaggerfallActorIdentity.PlayerEntityId)
             || _doors.AnyMoving

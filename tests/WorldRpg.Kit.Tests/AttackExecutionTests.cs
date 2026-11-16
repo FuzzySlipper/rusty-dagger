@@ -117,6 +117,12 @@ public sealed class AttackExecutionTests
         Assert.True(execution.Start(new AttackRequest(2, 3, 4, 113, 1d, Delayed: false), facts));
         execution.ObserveTimeline(4, 500, named: true);
         Assert.True(execution.IsReady(2, 4, 500));
+
+        // A named step behind the world's leaves the timeline where the world stands.
+        Assert.True(execution.Start(new AttackRequest(2, 3, 4, 500, 1d, Delayed: false), facts));
+        execution.ObserveTimeline(4, 5, named: true);
+        execution.ObserveTimeline(4, 501);
+        Assert.True(execution.IsReady(2, 4, 503));
     }
 
     [Fact]
