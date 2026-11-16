@@ -1,7 +1,9 @@
 using System.Buffers.Binary;
+using System.IO.Compression;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
+using Daggerfall.Import.Normalization;
 using Daggerfall.Source.Tool.Commands;
 using Daggerfall.Source.Tool.Remodels;
 using WorldRpg.Tests.Support;
@@ -85,7 +87,8 @@ public sealed class ModelMeshCommandTests
     [Fact]
     public void A_glb_becomes_the_static_mesh_with_classic_slots_by_identity_and_carried_textures_by_path()
     {
-        byte[] png = [0x89, (byte)'P', (byte)'N', (byte)'G', 1, 2, 3];
+        // An 8-bit RGB texture, as image tools often write one: the Engine admits only 8-bit RGBA.
+        byte[] png = Png(2, [200, 120, 40, 10, 20, 30]);
         byte[] glb = Glb([("texture-67-0", null, Square(0), null), ("planks", png, Square(1), null), ("material/texture-85-0", null, Square(2), null), ("goods", png, Square(3), "MASK")]);
         IReadOnlyList<RemodelPart> parts = RemodelGlb.Read(glb, "41209.glb");
         Assert.Equal(["material/texture-67-0", null, "material/texture-85-0", null], parts.Select(part => part.ClassicMaterial));
@@ -97,12 +100,25 @@ public sealed class ModelMeshCommandTests
             ModelMeshCommand.Write("41209", parts, "packs/art/media/models");
         Assert.Equal(8, triangles);
         Assert.Equal([("material/texture-67-0", 0), ("material/texture-85-0", 1), ("packs/art/media/models/41209-0.png", 2), ("packs/art/media/models/41209-1.png", 3)], slots);
-        // One PNG drawn opaque and cut out is published once for each.
-        Assert.Equal([(png, false), (png, true)], textures.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value));
+        // One PNG drawn opaque and cut out is published once for each, written again as 8-bit RGBA with its colours kept.
+        Assert.Equal([false, true], textures.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value.Mask));
+        Assert.All(textures.Values, texture =>
+        {
+            Assert.Equal([8, 6, 0, 0, 0], texture.Png[24..29]);
+            Assert.Equal([200, 120, 40, 255, 10, 20, 30, 255], DeterministicPngReader.ReadRgba8(texture.Png, "written").Rgba);
+        });
         using EngineBinaryContent.StaticMesh mesh = EngineBinaryContent.ReadStaticMesh(bytes);
         Assert.Equal(24, mesh.Indices.Length);
         Assert.Equal(slots.Select(slot => slot.Material), mesh.Root.GetProperty("materialSlots").EnumerateArray().Select(slot => slot.GetProperty("material").GetString()));
         Assert.Equal("remodel-41209", mesh.Root.GetProperty("asset").GetString());
+    }
+
+    [Fact]
+    public void A_glb_texture_that_is_not_8_bit_truecolour_is_refused_with_its_format()
+    {
+        byte[] glb = Glb([("planks", Png(3, [0, 1]), Square(0), null)]);
+        Assert.Equal("'41214.glb's material 'planks' texture' is not eight-bit non-interlaced truecolour PNG (bit depth 8, colour type 3).",
+            Assert.Throws<InvalidOperationException>(() => RemodelGlb.Read(glb, "41214.glb")).Message);
     }
 
     [Theory]
@@ -113,6 +129,30 @@ public sealed class ModelMeshCommandTests
     {
         byte[] glb = Glb([(name, png ? [0x89, (byte)'P'] : null, Square(0), alpha)]);
         Assert.Contains(reason, Assert.Throws<InvalidDataException>(() => RemodelGlb.Read(glb, "41209.glb")).Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A two-pixel-wide, one-row PNG of colour type <paramref name="colourType"/> (2 RGB, 3 palette, 6 RGBA) holding
+    /// <paramref name="samples"/>, written by hand since the importer's encoder writes only RGBA; its checksums are left
+    /// zero, which the importer's reader does not check.
+    /// </summary>
+    private static byte[] Png(byte colourType, byte[] samples)
+    {
+        static byte[] Chunk(string kind, byte[] data)
+        {
+            byte[] chunk = new byte[12 + data.Length];
+            BinaryPrimitives.WriteInt32BigEndian(chunk, data.Length);
+            Encoding.ASCII.GetBytes(kind).CopyTo(chunk, 4);
+            data.CopyTo(chunk, 8);
+            return chunk;
+        }
+        byte[] header = new byte[13];
+        BinaryPrimitives.WriteInt32BigEndian(header, colourType == 3 ? samples.Length : 2);
+        BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(4), 1);
+        (header[8], header[9]) = (8, colourType);
+        using MemoryStream compressed = new();
+        using (ZLibStream zlib = new(compressed, CompressionLevel.Optimal, leaveOpen: true)) zlib.Write([0, .. samples]);
+        return [137, 80, 78, 71, 13, 10, 26, 10, .. Chunk("IHDR", header), .. Chunk("IDAT", compressed.ToArray()), .. Chunk("IEND", [])];
     }
 
     /// <summary>Two triangles of a unit square at height <paramref name="z"/>, in its own frame.</summary>

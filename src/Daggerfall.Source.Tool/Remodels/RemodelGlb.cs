@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Numerics;
 using System.Text.Json;
+using Daggerfall.Import.Normalization;
 
 namespace Daggerfall.Source.Tool.Remodels;
 
@@ -16,8 +17,9 @@ internal sealed record RemodelPart(string? ClassicMaterial, byte[]? Png, IReadOn
 /// transforms, grouped by material. The GLB is in the classic model's own frame: importer space, right-handed metres with
 /// Y up, as glTF is. A material named <c>texture-A-R</c> (or <c>material/texture-A-R</c>) draws that classic texture
 /// record, its uvs in whole repeats of the record with v down, as glTF's are; any other material carries its own PNG base
-/// colour, opaque or, with glTF's <c>alphaMode</c> <c>MASK</c> at the default cutoff of half, cut out by its alpha. Only
-/// what an authoring tool writes for a static mesh is read; anything else is refused by name.
+/// colour, opaque or, with glTF's <c>alphaMode</c> <c>MASK</c> at the default cutoff of half, cut out by its alpha. That PNG
+/// is written again as 8-bit RGBA, the only PNG the Engine admits as a texture, whatever 8-bit truecolour form the GLB
+/// carries it in. Only what an authoring tool writes for a static mesh is read; anything else is refused by name.
 /// </summary>
 internal static class RemodelGlb
 {
@@ -124,7 +126,8 @@ internal static class RemodelGlb
             JsonElement image = root.GetProperty("images")[root.GetProperty("textures")[texture.GetProperty("index").GetInt32()].GetProperty("source").GetInt32()];
             if (!image.TryGetProperty("bufferView", out JsonElement view) || image.GetProperty("mimeType").GetString() != "image/png")
                 throw new InvalidDataException($"{label}'s material '{name}' carries a texture that is not a PNG inside the GLB.");
-            return new(null, View(view.GetInt32()).ToArray(), corners, alpha == "MASK");
+            DeterministicPngImage pixels = DeterministicPngReader.ReadRgba8(View(view.GetInt32()).ToArray(), $"{label}'s material '{name}' texture");
+            return new(null, DeterministicPngEncoder.EncodeRgba8(pixels.Width, pixels.Height, pixels.Rgba), corners, alpha == "MASK");
         }
 
         private ReadOnlyMemory<byte> View(int index)

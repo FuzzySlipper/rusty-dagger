@@ -960,6 +960,11 @@ public sealed class PublishedContentDeliveryTests
             }
         });
 
+        // A remodel's own textures are 8-bit RGBA PNGs, the only PNG the Engine admits as a texture: any other loads no
+        // location that places the model.
+        Assert.All(art.Models.Values.SelectMany(model => model.Slots).Select(slot => slot.Texture).OfType<DaggerfallArtFile>(), texture =>
+            Assert.Equal([8, 6, 0, 0, 0], content.ReadBytes(texture.Path).Span[24..29].ToArray()));
+
         // Refreshed people stand in for classic records as one-frame 8-bit RGBA atlases of their stated size.
         JsonElement[] people = [.. section.GetProperty("people").EnumerateArray()];
         Assert.NotEmpty(people);
