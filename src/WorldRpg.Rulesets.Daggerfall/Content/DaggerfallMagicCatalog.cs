@@ -176,9 +176,9 @@ internal sealed record DaggerfallMagicItemDefinition(
 {
     /// <summary>
     /// The ItemBuilder groups this template enchants: a regular template's base-group selector offers several, and
-    /// CreateRegularMagicItem draws one per item; an artifact names its one donor group.
+    /// CreateRegularMagicItem draws one per item; an artifact names one donor group, called by the published item groups.
     /// </summary>
-    internal string[] BaseCategories => Type == 0
+    internal string[] BaseCategories(IReadOnlyDictionary<int, DaggerfallItemGroupDefinition> groups) => Type == 0
         ? Group switch
         {
             0 => ["Armor", "Weapons", "MensClothing", "ReligiousItems", "WomensClothing", "Gems", "Jewellery"],
@@ -186,12 +186,9 @@ internal sealed record DaggerfallMagicItemDefinition(
             2 => ["Weapons"],
             _ => throw new InvalidOperationException($"Regular magic template '{Key}' has unknown base-group selector {Group}."),
         }
-        : [Group switch
-        {
-            2 => "Armor", 3 => "Weapons", 6 => "MensClothing", 7 => "Books", 10 => "ReligiousItems",
-            12 => "WomensClothing", 14 => "Gems", 15 => "PlantIngredients1", 25 => "Jewellery",
-            _ => throw new InvalidOperationException($"Magic template '{Key}' names donor group {Group}, which has no retained ItemBuilder category."),
-        }];
+        : [groups.TryGetValue(Group, out DaggerfallItemGroupDefinition? group) && group.TemplateIndices
+            ? group.Name
+            : throw new InvalidOperationException($"Magic template '{Key}' names donor group {Group}, which publishes no item templates.")];
 }
 
 /// <summary>A published record that carried no spell, kept so the catalog states what it did not carry.</summary>

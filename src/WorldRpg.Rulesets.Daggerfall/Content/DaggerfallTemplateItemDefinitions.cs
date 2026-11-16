@@ -77,17 +77,18 @@ internal static class DaggerfallTemplateItemDefinitions
             var id = new DaggerfallItemId(MadeGemDefinition(gem.Id.Value));
             result.Add(id, new(id, DaggerfallItemKind.Unique, 1, gem.Weight, gem.Value, gem.Weapon, gem.Armor, gem.Shield, gem.Equipment, gem.Template));
         }
-        AddMagicDefinitions(result, magic);
+        AddMagicDefinitions(result, magic, templates.Groups);
         return new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(result);
     }
 
     internal static string MadeGemDefinition(string source) => source + "-enchantable";
 
-    private static void AddMagicDefinitions(Dictionary<DaggerfallItemId, DaggerfallItemDefinition> result, DaggerfallMagicCatalogSet magic)
+    private static void AddMagicDefinitions(Dictionary<DaggerfallItemId, DaggerfallItemDefinition> result, DaggerfallMagicCatalogSet magic,
+        IReadOnlyDictionary<int, DaggerfallItemGroupDefinition> groups)
     {
         foreach (DaggerfallMagicItemDefinition magicItem in magic.MagicItems.Values.OrderBy(value => value.Key, StringComparer.Ordinal))
         {
-            string[] categories = magicItem.BaseCategories;
+            string[] categories = magicItem.BaseCategories(groups);
             foreach (DaggerfallItemDefinition baseItem in result.Values.ToArray()
                 .Where(item => item.Template is not null && item.Template.Index != 131 && !item.Id.Value.Contains("-magic-", StringComparison.Ordinal) && !item.Id.Value.EndsWith("-enchantable", StringComparison.Ordinal)
                     && categories.Any(category => item.Template.Groups.Contains(category, StringComparer.Ordinal))))

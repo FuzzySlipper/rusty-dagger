@@ -120,7 +120,7 @@ internal sealed class DaggerfallItemFactory(DaggerfallDefinitions definitions, I
 
     private (string Category, int? Template, string? Material) MagicBase(DaggerfallMagicItemDefinition magic, DaggerfallItemCreateRequest request)
     {
-        string[] categories = magic.BaseCategories;
+        string[] categories = magic.BaseCategories(_definitions.ItemTemplateCatalog.Groups);
         if (magic.Type == 0)
         {
             string selected = PlayerGroup(categories[Draw(request.Key + ".magic-group", 0, categories.Length - 1)], request.Gender);
