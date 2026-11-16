@@ -14,7 +14,8 @@ seam) and band (a shape or shade cut off at the edge), each how many times the t
 An axis fails at reduce.SEAM or more where the classic record scores under it: a classic that breaks at its edge (a
 storey, a frame, a beam) was drawn to, and the refresh keeps its break, sharper. reduce.wraps, by which batch.py makes a
 record seamless on an axis, is the same judgement of the classic. A record looked at and found to hold where it scores
-as a seam carries a "seam" note in corrections.json, its axis first ("y: why"), and passes on that axis.
+as a seam carries a "seam" note in corrections.json: the axis and why, and the hash of the pixels looked at (pixels(), so
+a changed image is looked at again), and passes on that axis.
 
     tiling.py                      every shipped surface; report and repeat renders under local/art/review/surfaces/tiling
     tiling.py texture-312-1 ...    only these records
@@ -24,7 +25,7 @@ Writes report.md (failing records first, worst first, with axis, scores, the cla
 place the record most) and, for each failing record, KEY.png: its classic and refreshed repeated 3x3 with nearest sampling.
 Exits 1 when a record fails.
 """
-import argparse, collections, csv, json, re, struct, sys
+import argparse, collections, csv, hashlib, json, re, struct, sys
 from pathlib import Path
 
 import numpy as np
@@ -41,8 +42,13 @@ IMPORTED = STAGING / "payloads/daggerfall.imported.json"
 PACK = REPOSITORY / "content/worldrpg/packs/daggerfall.art-replacements"
 CONTENT = REPOSITORY / "content"
 REFERENCE = REPOSITORY / "local/art/reference/surfaces"
-# A record whose edge scores as a seam but was looked at and holds (corrections.json "seam": its axis and why).
+# A record whose edge scores as a seam but was looked at and holds (corrections.json "seam": {"pixels": hash, axis: why}).
 REVIEWED = {key: note["seam"] for key, note in json.loads((Path(__file__).resolve().parent / "corrections.json").read_text()).items() if "seam" in note}
+
+
+def pixels(image):
+    """A short hash of an image's colours, the same for a final and the RGBA PNG promotion writes from it."""
+    return hashlib.sha256(np.ascontiguousarray(np.asarray(image.convert("RGB"))).tobytes()).hexdigest()[:16]
 OUT = REPOSITORY / "local/art/review/surfaces/tiling"
 MATERIAL = re.compile(r"material/texture-(\d+)-(\d+)")
 KEY = re.compile(r"texture-(\d+)-(\d+)")
@@ -230,7 +236,7 @@ def main():
                 row[name + "_classic"] = classic_seam(*k, axis)
         row["worst"] = max(max(row.get(n + "_score", (0, 0))) for n in "xy")
         row["fails"] = [n for n in "xy" if laid[n] and fails(row[n + "_score"], row[n + "_classic"])
-                        and not REVIEWED.get(key, "").startswith(n + ":")]
+                        and not (n in REVIEWED.get(key, {}) and REVIEWED[key]["pixels"] == pixels(image))]
         rows.append(row)
     failing = [r for r in rows if r["fails"]]
     failing.sort(key=lambda r: -r["worst"])

@@ -381,7 +381,7 @@
  },
  "texture-009-3": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-009-4": {
   "status": "accepted",
@@ -429,7 +429,7 @@
  },
  "texture-016-3": {
   "status": "accepted",
-  "note": "Patch accepted the interior-city review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-city review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-016-4": {
   "status": "accepted",
@@ -453,7 +453,7 @@
  },
  "texture-019-1": {
   "status": "accepted",
-  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-019-2": {
   "status": "accepted",
@@ -461,7 +461,7 @@
  },
  "texture-019-3": {
   "status": "accepted",
-  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-crypt-a review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-019-4": {
   "status": "accepted",
@@ -589,7 +589,7 @@
  },
  "texture-029-4": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-033-0": {
   "status": "accepted",
@@ -617,7 +617,7 @@
  },
  "texture-037-1": {
   "status": "accepted",
-  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-mages-guild review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-037-2": {
   "status": "accepted",
@@ -661,7 +661,7 @@
  },
  "texture-040-3": {
   "status": "accepted",
-  "note": "Patch accepted the interior-manor review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-manor review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-040-4": {
   "status": "accepted",
@@ -881,7 +881,7 @@
  },
  "texture-060-0": {
   "status": "accepted",
-  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-060-1": {
   "status": "accepted",
@@ -921,7 +921,7 @@
  },
  "texture-063-2": {
   "status": "accepted",
-  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-063-3": {
   "status": "accepted",
@@ -1225,7 +1225,7 @@
  },
  "texture-085-7": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-base-textures review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-base-textures review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-086-0": {
   "status": "accepted",
@@ -1517,7 +1517,7 @@
  },
  "texture-109-3": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-109-4": {
   "status": "accepted",
@@ -1537,7 +1537,7 @@
  },
  "texture-110-3": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-112-0": {
   "status": "accepted",
@@ -1717,7 +1717,7 @@
  },
  "texture-123-0": {
   "status": "accepted",
-  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-123-1": {
   "status": "accepted",
@@ -1809,7 +1809,7 @@
  },
  "texture-129-0": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-129-1": {
   "status": "accepted",
@@ -1817,11 +1817,11 @@
  },
  "texture-129-4": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-130-0": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-130-1": {
   "status": "accepted",
@@ -1829,11 +1829,11 @@
  },
  "texture-130-4": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-fences review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-131-0": {
   "status": "accepted",
-  "note": "Patch accepted the set-31 review sheet on 2026-11-03."
+  "note": "Patch accepted the set-31 review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-131-1": {
   "status": "accepted",
@@ -1957,7 +1957,7 @@
  },
  "texture-138-2": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-138-3": {
   "status": "accepted",
@@ -1973,7 +1973,7 @@
  },
  "texture-139-2": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-manor review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-139-3": {
   "status": "accepted",
@@ -2029,7 +2029,7 @@
  },
  "texture-142-3": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-143-0": {
   "status": "accepted",
@@ -2045,7 +2045,7 @@
  },
  "texture-143-3": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-merchant-homes review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-144-0": {
   "status": "accepted",
@@ -2149,11 +2149,11 @@
  },
  "texture-150-3": {
   "status": "accepted",
-  "note": "Patch accepted the set-50 review sheet on 2026-11-03."
+  "note": "Patch accepted the set-50 review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-151-0": {
   "status": "accepted",
-  "note": "Patch accepted the set-51 review sheet on 2026-11-03."
+  "note": "Patch accepted the set-51 review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-151-1": {
   "status": "accepted",
@@ -2193,19 +2193,19 @@
  },
  "texture-153-3": {
   "status": "accepted",
-  "note": "Patch accepted the set-53 review sheet on 2026-11-03."
+  "note": "Patch accepted the set-53 review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-154-0": {
   "status": "accepted",
-  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-154-1": {
   "status": "accepted",
-  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-154-2": {
   "status": "accepted",
-  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-154-3": {
   "status": "accepted",
@@ -2237,7 +2237,7 @@
  },
  "texture-158-1": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-158-2": {
   "status": "accepted",
@@ -2253,7 +2253,7 @@
  },
  "texture-159-1": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-tavern review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-159-2": {
   "status": "accepted",
@@ -2273,7 +2273,7 @@
  },
  "texture-160-2": {
   "status": "accepted",
-  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-tavern review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-160-3": {
   "status": "accepted",
@@ -2313,11 +2313,11 @@
  },
  "texture-163-1": {
   "status": "accepted",
-  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-163-2": {
   "status": "accepted",
-  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-163-3": {
   "status": "accepted",
@@ -2469,7 +2469,7 @@
  },
  "texture-171-4": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-barn review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-172-0": {
   "status": "accepted",
@@ -2537,7 +2537,7 @@
  },
  "texture-309-3": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-309-4": {
   "status": "accepted",
@@ -2557,7 +2557,7 @@
  },
  "texture-310-3": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-castle review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-312-0": {
   "status": "accepted",
@@ -2565,7 +2565,7 @@
  },
  "texture-312-1": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-312-2": {
   "status": "accepted",
@@ -2581,7 +2581,7 @@
  },
  "texture-313-1": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-city-a review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-313-2": {
   "status": "accepted",
@@ -2701,7 +2701,7 @@
  },
  "texture-321-0": {
   "status": "accepted",
-  "note": "Patch accepted the set-21 review sheet on 2026-11-03."
+  "note": "Patch accepted the set-21 review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-321-1": {
   "status": "accepted",
@@ -2785,7 +2785,7 @@
  },
  "texture-324-1": {
   "status": "accepted",
-  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-dungeons-c review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-324-2": {
   "status": "accepted",
@@ -2961,7 +2961,7 @@
  },
  "texture-335-0": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-335-1": {
   "status": "accepted",
@@ -2977,7 +2977,7 @@
  },
  "texture-336-0": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-336-1": {
   "status": "accepted",
@@ -3193,7 +3193,7 @@
  },
  "texture-352-0": {
   "status": "accepted",
-  "note": "Patch accepted the set-52 review sheet on 2026-11-03."
+  "note": "Patch accepted the set-52 review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-352-1": {
   "status": "accepted",
@@ -3205,7 +3205,7 @@
  },
  "texture-354-0": {
   "status": "accepted",
-  "note": "Patch accepted the set-54 review sheet on 2026-11-03."
+  "note": "Patch accepted the set-54 review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-354-1": {
   "status": "accepted",
@@ -3329,7 +3329,7 @@
  },
  "texture-363-2": {
   "status": "accepted",
-  "note": "Patch accepted the interior-temple review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-temple review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-363-3": {
   "status": "accepted",
@@ -3401,11 +3401,11 @@
  },
  "texture-368-5": {
   "status": "accepted",
-  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-368-6": {
   "status": "accepted",
-  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-sewer review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-368-8": {
   "status": "accepted",
@@ -3733,7 +3733,7 @@
  },
  "texture-423-1": {
   "status": "accepted",
-  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-dungeons-b review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-423-2": {
   "status": "accepted",
@@ -3881,7 +3881,7 @@
  },
  "texture-435-0": {
   "status": "accepted",
-  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03."
+  "note": "Patch accepted the exterior-mages-guild review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-435-1": {
   "status": "accepted",
@@ -4017,7 +4017,7 @@
  },
  "texture-444-4": {
   "status": "accepted",
-  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03."
+  "note": "Patch accepted the interior-merchant-homes review sheet on 2026-11-03. Made again seamless where the game repeats it, #10860 (2026-11-16)."
  },
  "texture-448-0": {
   "status": "accepted",
