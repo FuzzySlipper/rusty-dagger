@@ -84,23 +84,9 @@ internal sealed partial class ImportToolFixture
                 foreach (string id in NamedQuestCorpusPublication.Selections.Keys)
                     result.Add(At($"output/daggerfall.quests.{id}.json"), NamedQuestCorpusPublication.Serialize(NamedQuestCorpusPublication.Create(id, Read<DaggerfallQuestPack>(Pack, "questSources"), Read<DaggerfallQuestOriginalSourceSet>(Records, "questOriginalSources"))));
                 break;
-            case "source-manifest":
-                var manifest = ImportPublicationManifestSerializer.Deserialize(File.ReadAllBytes(Path.Combine(WorldMedia, ImportPublicationManifestSerializer.ManifestRelativePath)));
-                result.Add(At("report.json"), SourceManifestSerializer.Serialize(SourceManifestPublication.ForPublication(manifest.Sources.Select(source => source.Path), Arena2, Path.GetFileName(Inventory), File.ReadAllBytes(Inventory)))); break;
             case "source-coverage":
                 // The staging tree's files replace the repository content's at the same path; records keep their own label.
-                Dictionary<string, string> content = new(StringComparer.Ordinal);
-                foreach (string root in new[] { Repo("content"), ImportedContent.Staged("") })
-                    foreach (string file in Directory.EnumerateFiles(Path.Combine(root, "worldrpg"), "*.json", SearchOption.AllDirectories))
-                        content["content/" + Path.GetRelativePath(root, file).Replace('\\', '/')] = file;
-                var inputs = SourceCoverageInputReader.Read([
-                    .. content.Select(pair => new SourceCoverageArtifact(pair.Key, pair.Value)),
-                    .. Directory.EnumerateFiles(TestData.ImportRecords, "*.json", SearchOption.AllDirectories)
-                        .Select(file => new SourceCoverageArtifact("import-records/" + Path.GetRelativePath(TestData.ImportRecords, file).Replace('\\', '/'), file))], Rows);
-                var imported = inputs.Consumers.Where(c => !c.ContextOnly && c.SourcePath.StartsWith("arena2/", StringComparison.Ordinal)).Select(c => c.SourcePath["arena2/".Length..]).Distinct().ToArray();
-                var request = new SourceManifestRequest("arena2", "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv", Arena2, imported, [], Rows.Where(row => row.Disposition == "excluded").Select(row => row.PathOrPattern.StartsWith("arena2/", StringComparison.Ordinal) ? row.PathOrPattern["arena2/".Length..] : row.PathOrPattern).ToArray());
-                var coverage = SourceCoverageReconciler.Build(SourceManifestBuilder.Scan(request, File.ReadAllBytes(Inventory)), inputs.Consumers, inputs.Quests, inputs.Unsupported, Rows);
-                result.Add(At("report.json"), SourceCoverageReconciler.Serialize(coverage)); break;
+                result.Add(At("report.json"), SourceCoverageReconciler.Serialize(Coverage())); break;
             default: throw new ArgumentException($"No expected builder output for {name}.");
         }
     }

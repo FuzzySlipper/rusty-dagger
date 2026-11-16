@@ -194,7 +194,8 @@ Rules for the tracked side:
   A payload section belongs to one of them: the reader refuses a section both carry.
 - In `src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv`, never renumber or recreate a `CNT-` ID;
   reclassify a file by changing its `family_id`. Only `Daggerfall.Source.Tool`'s
-  `source-manifest --update-inventory` writes the disposition column.
+  `source-inventory --update-inventory` writes the disposition column, from every
+  publication's sources together.
 - An edit to an importer revision input, including any of our tables in
   `inputs/`, makes every machine's data stale until the `data` lane has published
   it. Make one deliberately. An import step

@@ -31,6 +31,30 @@ public sealed record SourceCoverageReport(IReadOnlyList<SourceCoverageRecord> Re
 /// <summary>Joins the existing source inventory and producer evidence without promoting file reads to record coverage.</summary>
 public static class SourceCoverageReconciler
 {
+    /// <summary>
+    /// What every publication the product ships read out of the corpus, against the documented inventory. Each
+    /// artifact keeps its own citations and this joins them, so a source is imported when any publication reads it
+    /// and unused only when none does; no publication restates another's sources, and none speaks for the rest.
+    /// </summary>
+    public static SourceCoverageReport Reconcile(IEnumerable<SourceCoverageArtifact> artifacts, string arena2Directory,
+        string inventoryPath, ReadOnlySpan<byte> inventoryCsv)
+    {
+        ArgumentNullException.ThrowIfNull(artifacts);
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(inventoryCsv);
+        foreach (int number in Enumerable.Range(1, 28))
+            if (!inventory.Any(row => row.RowType == "family" && row.FamilyId == $"CNT-{number:D3}"))
+                throw new InvalidOperationException($"The source inventory omits required family CNT-{number:D3}.");
+        SourceCoverageInputs inputs = SourceCoverageInputReader.Read(artifacts, inventory);
+        string root = PublishedSourcePath.Arena2Root + "/";
+        string[] imported = [.. inputs.Consumers.Where(value => !value.ContextOnly && value.SourcePath.StartsWith(root, StringComparison.Ordinal))
+            .Select(value => value.SourcePath[root.Length..]).Distinct()];
+        string[] excluded = [.. inventory.Where(row => row.Disposition == "excluded")
+            .Select(row => row.PathOrPattern.StartsWith(root, StringComparison.Ordinal) ? row.PathOrPattern[root.Length..] : row.PathOrPattern)];
+        SourceManifest manifest = SourceManifestBuilder.Scan(
+            new SourceManifestRequest(PublishedSourcePath.Arena2Root, inventoryPath, arena2Directory, imported, [], excluded), inventoryCsv);
+        return Build(manifest, inputs.Consumers, inputs.Quests, inputs.Unsupported, inventory);
+    }
+
     public static SourceCoverageReport Build(SourceManifest manifest, IReadOnlyList<SourceCoverageConsumer> consumers,
         IReadOnlyList<SourceCoverageQuestHandoff>? quests = null, IReadOnlyList<SourceCoverageUnsupported>? unsupported = null,
         IReadOnlyList<SourceInventoryRow>? inventory = null)

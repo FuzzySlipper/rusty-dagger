@@ -69,15 +69,18 @@ public sealed class ResidualSourceInventoryTests
     {
         ResidualSourceInventory inventory = ReadInventory();
 
-        // Current publication closure includes palettes, menu images and child portraits from this residual set.
+        // Every publication's sources together include palettes, menu images, child portraits, the spell-effect
+        // sprite CIFs, the moons and two interface images from this residual set.
         // A readable source without an admitted consumer remains unused; a published source must
         // retain that consumer disposition rather than being reset by the residual classifier.
         Assert.Equal(
-            ["ART_PAL.COL", "CHGN00I0.IMG", "DIE_00I0.IMG", "KIDS00I0.CIF", "MAP.PAL", "NIGHTSKY.COL", "PAL.PAL", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG"],
+            ["ART_PAL.COL", "CHGN00I0.IMG", "DIE_00I0.IMG", "FIRE00C6.CIF", "FRST00C6.CIF", "ICON00I0.IMG", "KIDS00I0.CIF", "MAP.PAL", "MASK04I0.IMG",
+                "MJIC00C6.CIF", "MOON00I0.CFA", "MOON01I0.CFA", "NIGHTSKY.COL", "PAL.PAL", "PICK02I0.IMG", "PICK03I0.IMG", "POIS00C6.CIF", "PRIS00I0.IMG",
+                "SHOK00C6.CIF", "TITL00I0.IMG"],
             inventory.Imported.Select(file => file.Path).Order(StringComparer.Ordinal));
         Assert.All(inventory.Imported, file => Assert.Contains("a consumer claims it", file.Note, StringComparison.Ordinal));
 
-        Assert.Equal(110, inventory.Unused.Count());
+        Assert.Equal(101, inventory.Unused.Count());
         Assert.All(inventory.Unused, file => Assert.Contains("no consumer named here claims it", file.Note, StringComparison.Ordinal));
         Assert.All(inventory.Unused, file => Assert.NotEqual(string.Empty, file.Reader));
 
@@ -87,7 +90,7 @@ public sealed class ResidualSourceInventoryTests
         // never consult the field. A file no reader reads would be malformed here, so an empty set
         // is the assertion that the readers and the corpus agree.
         Assert.Empty(inventory.Malformed);
-        Assert.Contains(inventory.Unused, file => file.Path == "FIRE00C6.CIF" && file.Reader == "Arena2CanvasReader");
+        Assert.Contains(inventory.Imported, file => file.Path == "FIRE00C6.CIF" && file.Reader == "Arena2CanvasReader");
         Assert.Contains(inventory.Unused, file => file.Path == "FRAM00I0.IMG" && file.Reader == "Arena2CanvasReader");
 
         // A weapon CIF is a CIF by extension and a weapon file by name, and the weapon reader owns

@@ -8,8 +8,8 @@ namespace Daggerfall.Import.Tests;
 /// </summary>
 /// <remarks>
 /// The verification for the character task asks that every published media reference resolve to an
-/// admitted artifact. The manifest is the independent answer to that: it is written by the
-/// source-manifest command from the corpus itself, so checking the pack against it is not the pack
+/// admitted artifact. The manifest is the independent answer to that: it is the documented
+/// inventory, reconciled with the corpus by the source-inventory command, so checking the pack against it is not the pack
 /// agreeing with itself. What "admitted" means here is concrete and checkable - a file row for the
 /// exact source path exists - rather than a reading of a binding flag that nothing publishes as
 /// admitted yet.

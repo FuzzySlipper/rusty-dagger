@@ -288,7 +288,9 @@ public static class SourceManifestSerializer
 /// Builds the source manifest that records what one publication read out of the supplied corpus. It is an
 /// importer record beside the publication rather than an artifact inside it, because nothing at runtime
 /// reads it: which sources count as imported comes from the publication's own source list, so the record
-/// states what a consumer actually read rather than a second guess at it.
+/// states what a consumer actually read rather than a second guess at it. Its <c>unused</c> means unused by this
+/// publication; whether the product uses a source is the join of every publication's citations
+/// (<see cref="SourceCoverageReconciler.Reconcile"/>), which is what the inventory's disposition column records.
 /// </summary>
 public static class SourceManifestPublication
 {

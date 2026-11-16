@@ -242,12 +242,12 @@ public sealed class SourceManifestTests : IDisposable
         SourceManifestRecord supplied = Record("CNT-001.file.A.CIF");
         SourceManifestRecord gap = Record("CNT-001.file.GONE.CIF") with { Disposition = SourceRecordDisposition.SourceGap, Digest = null, ByteLength = 0 };
 
-        SourceInventoryReconciliation before = SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: false);
+        SourceInventoryReconciliation before = SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], [], update: false);
 
         Assert.Equal(2, before.Drift.Count);
         Assert.False(before.IsClean);
         Assert.Contains("uninspected", File.ReadAllText(inventoryFile), StringComparison.Ordinal);
-        SourceInventoryReconciliation updated = SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: true);
+        SourceInventoryReconciliation updated = SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], [], update: true);
         Assert.Equal(before.Drift, updated.Drift);
         string text = File.ReadAllText(inventoryFile);
         Assert.Contains("\r\n", text, StringComparison.Ordinal);
@@ -255,7 +255,7 @@ public sealed class SourceManifestTests : IDisposable
         Assert.Contains("scope,source-gap,note", text, StringComparison.Ordinal);
         // Every other field survives untouched, including a family row's free text.
         Assert.Contains("current-structural,keep me", text, StringComparison.Ordinal);
-        Assert.True(SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: false).IsClean);
+        Assert.True(SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], [], update: false).IsClean);
     }
 
     [Fact]
@@ -310,7 +310,7 @@ public sealed class SourceManifestTests : IDisposable
         // The scan resolved only A, so B's row must be reported as unresolved rather
         // than quietly counted as agreeing.
         SourceInventoryReconciliation reconciliation = SourceInventoryReconciler.Reconcile(
-            inventoryFile, [Record("CNT-001.file.A.CIF")], update: false);
+            inventoryFile, [Record("CNT-001.file.A.CIF")], [], update: false);
 
         Assert.Empty(reconciliation.Drift);
         Assert.Contains(reconciliation.Unreconciled, line => line.Contains("CNT-001.file.B.CIF", StringComparison.Ordinal));
@@ -463,7 +463,7 @@ public sealed class SourceManifestTests : IDisposable
             "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
             "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,uninspected,a note, with a comma"));
 
-        SourceInventoryReconciliation reconciliation = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], update: true);
+        SourceInventoryReconciliation reconciliation = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], [], update: true);
 
         Assert.Contains(reconciliation.Unreconciled, line => line.Contains("fields where 11 are documented", StringComparison.Ordinal));
         Assert.False(reconciliation.IsClean);
@@ -484,13 +484,13 @@ public sealed class SourceManifestTests : IDisposable
         // One row genuinely drifts and another cannot be resolved, so the update is
         // refused. The result must say so: a caller reporting "updated" here would
         // carry the wrong value forward believing it had been reconciled.
-        SourceInventoryReconciliation blocked = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], update: true);
+        SourceInventoryReconciliation blocked = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], [], update: true);
 
         Assert.False(blocked.Updated);
         Assert.True(blocked.UpdateBlocked);
         // A report-only run refuses nothing: it must not claim to have been blocked,
         // and a caller scanning for drift should not see a failure.
-        SourceInventoryReconciliation advisory = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], update: false);
+        SourceInventoryReconciliation advisory = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], [], update: false);
         Assert.False(advisory.Updated);
         Assert.False(advisory.UpdateBlocked);
         Assert.False(advisory.IsClean);
@@ -502,11 +502,79 @@ public sealed class SourceManifestTests : IDisposable
         File.WriteAllText(inventoryFile, Inventory(
             "CNT-001,family,CNT-001,cif,arena2/A.CIF,1,,A,scope,current-structural,note",
             "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,wrong-value,note"));
-        SourceInventoryReconciliation written = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], update: true);
+        SourceInventoryReconciliation written = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], [], update: true);
 
         Assert.True(written.Updated);
         Assert.False(written.UpdateBlocked);
         Assert.Contains("scope,imported,note", File.ReadAllText(inventoryFile), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_source_only_the_second_publication_reads_reconciles_as_imported()
+    {
+        string inventoryFile = TwoPublications(documentedB: "unused");
+
+        SourceCoverageReport coverage = SourceCoverageReconciler.Reconcile(PublicationArtifacts(), Path.Combine(root, "arena2"),
+            "inventory.csv", File.ReadAllBytes(inventoryFile));
+
+        // The world media reads A and the world blocks read B: neither speaks for the other.
+        Assert.Equal(SourceRecordDisposition.Imported, Assert.Single(coverage.Records, record => record.Source.Id == "CNT-001.file.A.CIF").Disposition);
+        Assert.Equal(SourceRecordDisposition.Imported, Assert.Single(coverage.Records, record => record.Source.Id == "CNT-001.file.B.CIF").Disposition);
+        SourceInventoryReconciliation written = SourceInventoryReconciler.Reconcile(inventoryFile, coverage, update: true);
+        Assert.True(written.Updated, string.Join("; ", written.Refused.Concat(written.Unreconciled)));
+        Assert.Contains("CNT-001.file.B.CIF,file,CNT-001,source-file,arena2/B.CIF,1,5,B,scope,imported,note", File.ReadAllText(inventoryFile), StringComparison.Ordinal);
+        Assert.True(SourceInventoryReconciler.Reconcile(inventoryFile, coverage, update: false).IsClean);
+    }
+
+    [Fact]
+    public void An_update_that_would_mark_unused_a_source_a_publication_reads_is_refused_naming_both()
+    {
+        string inventoryFile = TwoPublications(documentedB: "imported");
+        string contents = File.ReadAllText(inventoryFile);
+        SourceCoverageReport coverage = SourceCoverageReconciler.Reconcile(PublicationArtifacts(), Path.Combine(root, "arena2"),
+            "inventory.csv", File.ReadAllBytes(inventoryFile));
+        // One publication's own manifest calls B unused, since only the other publication reads it.
+        SourceManifest worldMedia = SourceManifestPublication.ForPublication(["arena2/A.CIF"], Path.Combine(root, "arena2"), "inventory.csv", File.ReadAllBytes(inventoryFile));
+        Assert.Equal(SourceRecordDisposition.Unused, Record(worldMedia, "CNT-001.file.B.CIF").Disposition);
+
+        SourceInventoryReconciliation refused = SourceInventoryReconciler.Reconcile(inventoryFile, worldMedia.Records,
+            [.. coverage.Records.SelectMany(record => record.Consumers)], update: true);
+
+        Assert.True(refused.UpdateBlocked);
+        Assert.False(refused.Updated);
+        string line = Assert.Single(refused.Refused);
+        Assert.Contains("CNT-001.file.B.CIF", line, StringComparison.Ordinal);
+        Assert.Contains("content/worldrpg/imports/world-blocks/import-manifest.json", line, StringComparison.Ordinal);
+        Assert.Equal(contents, File.ReadAllText(inventoryFile));
+    }
+
+    /// <summary>
+    /// Two supplied sources, A read by a publication in the repository's content and B by one only the generated
+    /// content holds, with an inventory carrying every family the coverage requires.
+    /// </summary>
+    private string TwoPublications(string documentedB)
+    {
+        Directory.CreateDirectory(Path.Combine(root, "arena2"));
+        Write(Path.Combine("arena2", "A.CIF"), "alpha"u8);
+        Write(Path.Combine("arena2", "B.CIF"), "bravo"u8);
+        WriteText("content/worldrpg/imports/shared/import-manifest.json", """{"sources":[{"path":"arena2/A.CIF"}]}""");
+        WriteText("staging/worldrpg/imports/world-blocks/import-manifest.json", """{"sources":[{"path":"arena2/B.CIF"}]}""");
+        string inventoryFile = Path.Combine(root, "inventory.csv");
+        File.WriteAllText(inventoryFile, Inventory([
+            .. Enumerable.Range(1, 28).Select(number => $"CNT-{number:D3},family,CNT-{number:D3},cif,arena2/F{number:D3},0,,F,scope,current-structural,note"),
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,arena2/A.CIF,1,5,A,scope,imported,note",
+            $"CNT-001.file.B.CIF,file,CNT-001,source-file,arena2/B.CIF,1,5,B,scope,{documentedB},note"]));
+        return inventoryFile;
+    }
+
+    private IReadOnlyList<SourceCoverageArtifact> PublicationArtifacts() =>
+        SourceCoverageArtifact.Collect(Path.Combine(root, "content"), Path.Combine(root, "staging"), Path.Combine(root, "records"));
+
+    private void WriteText(string path, string text)
+    {
+        string file = Path.Combine(root, path);
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        File.WriteAllText(file, text);
     }
 
     private static SourceManifestRecord Record(string id) => new(

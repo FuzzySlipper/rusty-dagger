@@ -27,10 +27,7 @@ internal sealed partial class ImportToolFixture : IDisposable
     internal string InventoryFile => Inventory;
     internal DaggerfallCinematicKind CinematicKind { get; init; } = DaggerfallCinematicKind.Vid;
     private string Authored => At("authored.json");
-    // The commands read publications from disk, so they are given the staging tree the data container was packed
-    // from: the source manifest states what the world media publication read. The authored UI art the classic
-    // media group lists is the product's tracked content.
-    private string WorldMedia => ImportedContent.Staged("worldrpg/imports/shared");
+    // The authored UI art the classic media group lists is the product's tracked content.
     private string AuthoredUiArt => Repo(global::Daggerfall.Import.Tool.AuthoredUi.ProductDirectory);
     private IReadOnlyList<SourceInventoryRow> Rows => SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Inventory));
 
@@ -47,26 +44,33 @@ internal sealed partial class ImportToolFixture : IDisposable
     }
 
     private void Copy(string source, string target) => File.Copy(Repo(source), target);
+    /// <summary>The sources only the world blocks or the imported payload read, never the world media.</summary>
+    internal static readonly string[] OtherPublicationsOnly =
+        ["CNT-001.file.MAPS.BSA", "CNT-002.file.CLIMATE.PAK", "CNT-013.file.FACTION.TXT", "CNT-027.file.FLATS.CFG"];
+
+    /// <summary>
+    /// Documents as unused the sources only publications other than the world media read, as an inventory written
+    /// from the world media's sources alone would.
+    /// </summary>
     internal void PrepareInventoryDrift()
     {
-        string[] lines = File.ReadAllLines(Inventory);
-        var sourcePaths = ImportPublicationManifestSerializer.Deserialize(File.ReadAllBytes(Path.Combine(WorldMedia,
-            ImportPublicationManifestSerializer.ManifestRelativePath))).Sources.Select(source => source.Path).ToHashSet(StringComparer.Ordinal);
-        var ids = Rows.Where(row => row.RowType == "family" || sourcePaths.Contains(row.PathOrPattern)).Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
-        string updated = string.Join('\n', new[] { lines[0] }.Concat(lines.Skip(1).Where(line => ids.Contains(line.Split(',')[0])))) + "\n";
-        string drift = string.Join('\n', updated.Split('\n').Select(line => line.StartsWith("CNT-006.file.ARCH3D.BSA,", StringComparison.Ordinal)
-            ? line.Replace(",imported,", ",uninspected,", StringComparison.Ordinal) : line));
-        File.WriteAllText(Inventory, drift);
+        File.WriteAllLines(Inventory, File.ReadAllLines(Inventory).Select(line => OtherPublicationsOnly.Contains(line.Split(',')[0])
+            ? string.Join(',', line.Split(',').Select((field, index) => index == 9 ? "unused" : field)) : line));
         File.SetLastWriteTimeUtc(Inventory, OldTime);
     }
+
+    /// <summary>The coverage of every publication, over the import's staging tree and records, against this fixture's inventory.</summary>
+    private SourceCoverageReport Coverage() => SourceCoverageReconciler.Reconcile(
+        SourceCoverageArtifact.Collect(Repo("content"), ImportedContent.Staged(""), TestData.ImportRecords),
+        Arena2, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv", File.ReadAllBytes(Inventory));
+
     internal byte[] ExpectedReconciledInventory()
     {
-        var manifest = SourceManifestSerializer.Deserialize(Expected("source-manifest").Values.Single());
         string scratch = Path.GetTempFileName();
         try
         {
             File.WriteAllBytes(scratch, File.ReadAllBytes(Inventory));
-            Assert.True(SourceInventoryReconciler.Reconcile(scratch, manifest.Records, update: true).Updated);
+            Assert.True(SourceInventoryReconciler.Reconcile(scratch, Coverage(), update: true).Updated);
             return File.ReadAllBytes(scratch);
         }
         finally { File.Delete(scratch); }
@@ -93,7 +97,7 @@ internal sealed partial class ImportToolFixture : IDisposable
             ["--quest-documents"] = Input("quests"), ["--quest-tables"] = Input("quest-tables.json"), ["--quest-list"] = Input("quest-list.json"),
             ["--item-templates"] = Input("item-templates.json"), ["--magic-item-templates"] = Input("magic-item-templates.json"),
             ["--item-groups"] = Input("item-groups.json"),
-            ["--output"] = At("report.json"), ["--repository"] = TestData.RepositoryRoot, ["--publication"] = WorldMedia,
+            ["--output"] = At("report.json"), ["--repository"] = TestData.RepositoryRoot,
             ["--ui-authored-assets"] = Repo("content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-authored-assets.json"), ["--ui-original"] = AuthoredUiArt,
             // Coverage reads the import's staging tree over the repository's content, with its import records.
             ["--content"] = ImportedContent.Staged(""), ["--import-records"] = TestData.ImportRecords,

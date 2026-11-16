@@ -3,7 +3,35 @@ using System.Text.Json;
 namespace Daggerfall.Import.Publication;
 
 /// <summary>One artifact the coverage reads: the label it is reported under and the file holding it.</summary>
-public sealed record SourceCoverageArtifact(string Label, string File);
+public sealed record SourceCoverageArtifact(string Label, string File)
+{
+    /// <summary>
+    /// Every artifact whose citations the coverage joins: the content the product sees and the import records.
+    /// </summary>
+    /// <remarks>
+    /// The product sees the repository's tracked content with the import's generated content over it, so a file the
+    /// generated root holds replaces the repository's file at the same path. Each artifact is labelled by where the
+    /// product or the importer finds it, whichever root it was read from: <c>content/</c> and its content-root-relative
+    /// path, or <c>import-records/</c> and its record-relative path.
+    /// </remarks>
+    public static IReadOnlyList<SourceCoverageArtifact> Collect(string repositoryContent, string generatedContent, string importRecords)
+    {
+        Dictionary<string, string> content = Json(repositoryContent, "worldrpg");
+        foreach ((string path, string file) in Json(generatedContent, "worldrpg")) content[path] = file;
+        return [.. content.Select(pair => new SourceCoverageArtifact("content/" + pair.Key, pair.Value)),
+            .. Json(importRecords, "").Select(pair => new SourceCoverageArtifact("import-records/" + pair.Key, pair.Value))];
+    }
+
+    /// <summary>Every JSON file below one directory of a root, by its root-relative path.</summary>
+    private static Dictionary<string, string> Json(string root, string directory)
+    {
+        string start = Path.Combine(root, directory);
+        return Directory.Exists(start)
+            ? Directory.EnumerateFiles(start, "*.json", SearchOption.AllDirectories)
+                .ToDictionary(file => Path.GetRelativePath(root, file).Replace('\\', '/'), file => file, StringComparer.Ordinal)
+            : new Dictionary<string, string>(StringComparer.Ordinal);
+    }
+}
 
 public sealed record SourceCoverageInputs(IReadOnlyList<SourceCoverageConsumer> Consumers,
     IReadOnlyList<SourceCoverageQuestHandoff> Quests, IReadOnlyList<SourceCoverageUnsupported> Unsupported);

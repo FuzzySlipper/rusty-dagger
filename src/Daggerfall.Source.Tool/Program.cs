@@ -14,7 +14,7 @@ internal static class Program
     internal static readonly IReadOnlyDictionary<string, ToolCommand> Commands = new ToolCommand[]
     {
         // Reports and reconciliation against the documented inventory.
-        SourceManifestCommand.Command,
+        SourceInventoryCommand.Command,
         MobileLedgerCommand.Command,
         MonsterArchiveCommand.Command,
         QuestSourcesCommand.Command,

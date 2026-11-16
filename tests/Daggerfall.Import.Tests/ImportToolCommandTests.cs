@@ -193,44 +193,45 @@ public sealed class ImportToolCommandTests
     }
 
     [ImportToolDataFact]
-    public void Source_manifest_reports_inventory_drift_then_updates_only_when_requested()
+    public void Source_inventory_reports_drift_then_updates_only_when_requested_from_every_publication()
     {
         using ImportToolFixture fixture = new();
         fixture.PrepareInventoryDrift();
         byte[] original = File.ReadAllBytes(fixture.InventoryFile);
-        var report = Run(fixture.Arguments("source-manifest"));
+        var report = Run(fixture.Arguments("source-inventory"));
         Assert.True(report.Code == 0, report.Error);
         Assert.Contains("disagreements to record", report.Error, StringComparison.Ordinal);
         Assert.Equal(original, File.ReadAllBytes(fixture.InventoryFile));
-        var expected = fixture.Expected("source-manifest");
-        expected.Add(fixture.InventoryFile, fixture.ExpectedReconciledInventory());
+        Dictionary<string, byte[]> expected = new(StringComparer.Ordinal) { [fixture.InventoryFile] = fixture.ExpectedReconciledInventory() };
         var before = fixture.Snapshot();
-        var updated = Run([.. fixture.Arguments("source-manifest"), "--update-inventory"]);
+        var updated = Run([.. fixture.Arguments("source-inventory"), "--update-inventory"]);
         Assert.True(updated.Code == 0, updated.Error);
         Assert.Contains("dispositions updated", updated.Error, StringComparison.Ordinal);
         fixture.AssertPublication(before, expected);
+        // The world media reads none of these; the world blocks or the imported payload do, so each is imported.
+        string[] rows = File.ReadAllLines(fixture.InventoryFile);
+        foreach (string id in ImportToolFixture.OtherPublicationsOnly)
+            Assert.Equal("imported", Assert.Single(rows, row => row.StartsWith(id + ",", StringComparison.Ordinal)).Split(',')[9]);
     }
 
     [ImportToolDataFact]
-    public void Source_manifest_refused_inventory_update_exits_one_and_preserves_the_inventory()
+    public void Source_inventory_refused_update_exits_one_and_preserves_the_inventory()
     {
         using ImportToolFixture fixture = new();
         fixture.PrepareInventoryDrift();
         File.AppendAllText(fixture.InventoryFile,
             "CNT-001.file.NEVER-PRESENT,file,CNT-001,source-file,arena2/NEVER-PRESENT-8279*.ZZZ,0,,,test,uninspected,unmatched pattern\n");
-        var expected = fixture.Expected("source-manifest");
         var before = fixture.Snapshot();
-        var refused = Run([.. fixture.Arguments("source-manifest"), "--update-inventory"]);
+        var refused = Run([.. fixture.Arguments("source-inventory"), "--update-inventory"]);
         Assert.Equal(1, refused.Code);
         Assert.Contains("NOT rewritten", refused.Error, StringComparison.Ordinal);
         Assert.DoesNotContain("dispositions updated", refused.Error, StringComparison.Ordinal);
-        fixture.AssertPublication(before, expected);
+        fixture.AssertUnchanged(before);
     }
 
     [ImportToolDataTheory]
     [InlineData("fighters-quest-corpus")]
     [InlineData("classic-quest-corpora")]
-    [InlineData("source-manifest")]
     [InlineData("source-coverage")]
     public void Explicit_writer_verbs_publish_exact_builder_output(string name)
     {
