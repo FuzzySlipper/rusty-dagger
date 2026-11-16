@@ -101,9 +101,17 @@ internal sealed record DaggerfallArtModel(DaggerfallArtFile File, IReadOnlyList<
 /// One material slot of a remodel: a classic texture identity (<c>material/texture-A-R</c>), drawn as the location's own
 /// surface for it with its refreshed art, climate, season and dungeon remaps, or else a PNG the art pack ships, opaque or,
 /// with <paramref name="Mask"/>, cut out where its alpha is under half, as a cutout layer of goods before a shelf's back.
-/// A classic texture may instead be drawn as one layer of a shell stack (<paramref name="Shell"/>).
+/// A classic texture may instead be drawn as one layer of a shell stack (<paramref name="Shell"/>). A slot with both an
+/// identity and a PNG is painted for that identity: it draws its own PNG, or, where the location draws the identity as
+/// another (a classic stone swapped by climate), the PNG <paramref name="Drawn"/> holds for that one, so a generated rock
+/// wears the town's stone as the classic it stands in for does.
 /// </summary>
-internal sealed record DaggerfallArtModelSlot(uint Slot, string? Material, DaggerfallArtFile? Texture, bool Mask = false, DaggerfallArtShell? Shell = null);
+internal sealed record DaggerfallArtModelSlot(uint Slot, string? Material, DaggerfallArtFile? Texture, bool Mask = false, DaggerfallArtShell? Shell = null,
+    IReadOnlyDictionary<string, DaggerfallArtFile>? Drawn = null)
+{
+    /// <summary>What a painted slot draws where the location draws its identity as <paramref name="drawn"/>.</summary>
+    internal DaggerfallArtFile Painted(string drawn) => Drawn?.GetValueOrDefault(drawn) ?? Texture!;
+}
 
 /// <summary>
 /// One layer of a remodel's shell stack, the ground cover's effect on a model's faces: the mesh draws its classic texture's
@@ -138,13 +146,14 @@ internal sealed record DaggerfallGroundCoverArt(DaggerfallArtFile Shell, int She
     IReadOnlyDictionary<int, (Vector3 Shells, Vector3 Tufts)> Grass, IReadOnlyDictionary<(int Archive, int Record), DaggerfallGroundRelief> Relief);
 
 /// <summary>
-/// A refreshed tree mesh standing in for a flora sprite: a prop mesh (bark and leaf parts, its vertex alpha the share each
-/// vertex flutters) and its own height in metres; the sprite's drawn height and where its foot stands, as shares of its
-/// frame height, which the mesh is drawn to; its bark and leaves, which a bare tree has none of; and the snow a winter
-/// tree's leaves carry: the share of their upward faces it covers, its linear colour and the leaf texture's texels a side.
+/// A refreshed nature mesh standing in for a flora sprite: a prop mesh (bark, leaf and stone parts, its vertex alpha the
+/// share each vertex flutters) and its own height in metres; the sprite's drawn height and where its foot stands, as shares
+/// of its frame height, which the mesh is drawn to; its bark and leaves, which a bare tree has no leaves of; its stone,
+/// which a rock wears and the wind does not move; and the snow a winter tree's leaves or a winter rock's stone carry: the
+/// share of their upward faces it covers, its linear colour and that texture's texels a side.
 /// </summary>
-internal sealed record DaggerfallTreeArt(DaggerfallArtFile Mesh, float MeshHeight, float Height, float Foot, DaggerfallArtFile Bark, DaggerfallArtFile? Leaves,
-    (float Share, Vector3 Colour, int Texels)? Snow = null);
+internal sealed record DaggerfallTreeArt(DaggerfallArtFile Mesh, float MeshHeight, float Height, float Foot, DaggerfallArtFile? Bark, DaggerfallArtFile? Leaves,
+    (float Share, Vector3 Colour, int Texels)? Snow = null, DaggerfallArtFile? Stone = null);
 
 /// <summary>
 /// A classic texture record's relief, the art set's one home for its texels' heights, which a ground layer's shells and a
@@ -421,16 +430,29 @@ internal sealed class DaggerfallArtReplacements
                     {
                         string? material = slot.TryGetProperty("material", out JsonElement named) ? named.GetString() : null;
                         DaggerfallArtFile? texture = slot.TryGetProperty("texture", out JsonElement shipped) ? File(shipped, $"A texture of {subject}") : null;
-                        if ((material is null) == (texture is null) || material is not null && !material.StartsWith("material/texture-", StringComparison.Ordinal))
+                        // A slot is classic (an identity), the pack's own (a texture), or painted for an identity (both).
+                        if (material is null && texture is null || material is not null && !material.StartsWith("material/texture-", StringComparison.Ordinal))
                             throw new InvalidOperationException($"Content pack '{packId}' states a slot of {subject} that names neither one classic texture identity nor one texture of its own.");
                         string? alpha = slot.TryGetProperty("alpha", out JsonElement cut) ? cut.GetString() : null;
-                        if (alpha is not (null or "mask") || alpha is not null && texture is null)
+                        if (alpha is not (null or "mask") || alpha is not null && (texture is null || material is not null))
                             throw new InvalidOperationException($"Content pack '{packId}' cuts out a slot of {subject} by '{alpha}': only a texture of its own is cut out, by \"mask\".");
                         DaggerfallArtShell? shell = slot.TryGetProperty("shell", out JsonElement stack)
                             ? new(stack.GetProperty("layer").GetInt32(), stack.GetProperty("layers").GetInt32()) : null;
-                        if (shell is not null && (material is null || shell.Layers is < 2 or > 16 || shell.Layer < 0 || shell.Layer >= shell.Layers))
+                        if (shell is not null && (material is null || texture is not null || shell.Layers is < 2 or > 16 || shell.Layer < 0 || shell.Layer >= shell.Layers))
                             throw new InvalidOperationException($"Content pack '{packId}' states a slot of {subject} as no layer of a shell stack of 2 to 16 drawing a classic texture.");
-                        return new DaggerfallArtModelSlot(slot.GetProperty("slot").GetUInt32(), material, texture, alpha == "mask", shell);
+                        Dictionary<string, DaggerfallArtFile>? drawn = null;
+                        if (slot.TryGetProperty("drawn", out JsonElement others))
+                        {
+                            // A painted slot's other textures stand for identities the location draws its own as.
+                            if (material is null || texture is null)
+                                throw new InvalidOperationException($"Content pack '{packId}' states textures by drawn identity for a slot of {subject} that is not painted for a classic identity.");
+                            drawn = new(StringComparer.Ordinal);
+                            foreach (JsonProperty other in others.EnumerateObject())
+                                drawn.Add(other.Name.StartsWith("material/texture-", StringComparison.Ordinal) ? other.Name
+                                    : throw new InvalidOperationException($"Content pack '{packId}' paints a slot of {subject} for '{other.Name}', which is no classic texture identity."),
+                                    File(other.Value, $"A texture of {subject}"));
+                        }
+                        return new DaggerfallArtModelSlot(slot.GetProperty("slot").GetUInt32(), material, texture, alpha == "mask", shell, drawn);
                     })];
                     if (slots.Length == 0 || slots.DistinctBy(slot => slot.Slot).Count() != slots.Length)
                         throw new InvalidOperationException($"Content pack '{packId}' states {subject} without its slots, each once.");
@@ -474,11 +496,17 @@ internal sealed class DaggerfallArtReplacements
                     JsonElement t = tree.Value, mesh = t.GetProperty("mesh");
                     if (key.Length != 2)
                         throw new InvalidOperationException($"Content pack '{packId}' states tree '{tree.Name}' without an archive and record.");
+                    DaggerfallArtFile? bark = t.TryGetProperty("bark", out JsonElement treeBark) ? File(treeBark, $"Tree {tree.Name}'s bark") : null;
+                    DaggerfallArtFile? stone = t.TryGetProperty("stone", out JsonElement treeStone) ? File(treeStone, $"Tree {tree.Name}'s stone") : null;
+                    // A mesh of neither would draw nothing its parts could be bound to.
+                    if (bark is null && stone is null)
+                        throw new InvalidOperationException($"Content pack '{packId}' states tree '{tree.Name}' with neither bark nor stone.");
                     trees.Add((int.Parse(key[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(key[1], System.Globalization.CultureInfo.InvariantCulture)),
                         new(File(mesh, $"Tree {tree.Name}'s mesh"), mesh.GetProperty("height").GetSingle(), t.GetProperty("height").GetSingle(),
-                            t.GetProperty("foot").GetSingle(), File(t.GetProperty("bark"), $"Tree {tree.Name}'s bark"),
+                            t.GetProperty("foot").GetSingle(), bark,
                             t.TryGetProperty("leaves", out JsonElement treeLeaves) ? File(treeLeaves, $"Tree {tree.Name}'s leaves") : null,
-                            t.TryGetProperty("snow", out JsonElement snow) ? (snow.GetProperty("share").GetSingle(), Tint(snow.GetProperty("colour")), snow.GetProperty("texels").GetInt32()) : null));
+                            t.TryGetProperty("snow", out JsonElement snow) ? (snow.GetProperty("share").GetSingle(), Tint(snow.GetProperty("colour")), snow.GetProperty("texels").GetInt32()) : null,
+                            stone));
                 }
             if (section.TryGetProperty("groundCover", out JsonElement cover))
             {

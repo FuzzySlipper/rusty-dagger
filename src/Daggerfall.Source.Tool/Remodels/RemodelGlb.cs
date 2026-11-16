@@ -9,10 +9,11 @@ namespace Daggerfall.Source.Tool.Remodels;
 /// One material of an authored remodel: the triangles it draws, each corner's position, normal and uv in the classic
 /// model's frame, and what it draws them with: a classic texture identity, or else the PNG the GLB carries for it, cut
 /// out where its alpha is under half when <paramref name="Mask"/>. A classic texture may be drawn as one layer of a
-/// shell stack (<paramref name="Shell"/>).
+/// shell stack (<paramref name="Shell"/>). With both an identity and a PNG it is painted for that identity, and
+/// <paramref name="Drawn"/> holds the PNG painted for each other identity a location may draw it as.
 /// </summary>
 internal sealed record RemodelPart(string? ClassicMaterial, byte[]? Png, IReadOnlyList<(Vector3 Position, Vector3 Normal, Vector2 Uv)> Corners, bool Mask = false,
-    RemodelShell? Shell = null);
+    RemodelShell? Shell = null, IReadOnlyDictionary<string, byte[]>? Drawn = null);
 
 /// <summary>
 /// One layer of a shell stack drawing a classic texture's relief, whose alpha is each texel's height: layer 0 is the
@@ -27,7 +28,10 @@ internal sealed record RemodelShell(int Layer, int Layers);
 /// Y up, as glTF is. A material named <c>texture-A-R</c> (or <c>material/texture-A-R</c>) draws that classic texture
 /// record, its uvs in whole repeats of the record with v down, as glTF's are, and one whose glTF <c>extras</c> state
 /// <c>"shell": {"layer": K, "layers": N}</c> draws it as layer K of an N-layer shell stack (<see cref="RemodelShell"/>), the
-/// slot's own <c>shell</c> in the art pack; any other material carries its own PNG base
+/// slot's own <c>shell</c> in the art pack. A classic-named material that carries a base colour too is painted for that
+/// identity: its PNG is drawn in place of the location's surface, and its <c>extras.drawn</c> names, by identity, the
+/// texture painted for each other identity the location may draw it as (a stone's climate swaps), the slot's own
+/// <c>drawn</c>. Any other material carries its own PNG base
 /// colour, opaque or, with glTF's <c>alphaMode</c> <c>MASK</c> at the default cutoff of half, cut out by its alpha. That PNG
 /// is written again as 8-bit RGBA, the only PNG the Engine admits as a texture, whatever 8-bit truecolour form the GLB
 /// carries it in. Only what an authoring tool writes for a static mesh is read; anything else is refused by name.
@@ -132,19 +136,42 @@ internal static class RemodelGlb
                 ? new(stack.GetProperty("layer").GetInt32(), stack.GetProperty("layers").GetInt32()) : null;
             if (shell is not null && (shell.Layers is < 2 or > 16 || shell.Layer < 0 || shell.Layer >= shell.Layers))
                 throw new InvalidDataException($"{label}'s material '{name}' is no layer of a shell stack of 2 to 16.");
-            if (System.Text.RegularExpressions.Regex.Match(name, @"^(?:material/)?texture-(\d+)-(\d+)$") is { Success: true } classic)
-                return alpha == "MASK"
-                    ? throw new InvalidDataException($"{label}'s material '{name}' cuts out a classic texture, which draws the location's own opaque surface or its shells' own cut.")
-                    : new($"material/texture-{classic.Groups[1].Value}-{classic.Groups[2].Value}", null, corners, Shell: shell);
+            JsonElement texture = default;
+            bool carries = material.TryGetProperty("pbrMetallicRoughness", out JsonElement pbr) && pbr.TryGetProperty("baseColorTexture", out texture);
+            if (Identity(name) is { } classic)
+            {
+                if (alpha == "MASK")
+                    throw new InvalidDataException($"{label}'s material '{name}' cuts out a classic texture, which draws the location's own opaque surface or its shells' own cut.");
+                if (!carries) return new(classic, null, corners, Shell: shell);
+                // Painted for its identity: a shell stack draws the location's relief, never a texture of the pack's own.
+                if (shell is not null)
+                    throw new InvalidDataException($"{label}'s material '{name}' stacks shells of a texture of its own: a shell stack draws a classic texture's relief.");
+                Dictionary<string, byte[]> drawn = new(StringComparer.Ordinal);
+                if (extras.ValueKind == JsonValueKind.Object && extras.TryGetProperty("drawn", out JsonElement others))
+                    foreach (JsonProperty other in others.EnumerateObject())
+                        drawn.Add(Identity(other.Name) ?? throw new InvalidDataException($"{label}'s material '{name}' is painted for '{other.Name}', which is no classic texture (texture-A-R)."),
+                            Png(other.Value.GetInt32(), $"{name}' for '{other.Name}"));
+                return new(classic, Png(texture.GetProperty("index").GetInt32(), name), corners, Drawn: drawn);
+            }
             if (shell is not null)
                 throw new InvalidDataException($"{label}'s material '{name}' stacks shells of a texture of its own: a shell stack draws a classic texture's relief.");
-            if (!material.TryGetProperty("pbrMetallicRoughness", out JsonElement pbr) || !pbr.TryGetProperty("baseColorTexture", out JsonElement texture))
+            if (!carries)
                 throw new InvalidDataException($"{label}'s material '{name}' names no classic texture (texture-A-R) and carries no base colour texture.");
-            JsonElement image = root.GetProperty("images")[root.GetProperty("textures")[texture.GetProperty("index").GetInt32()].GetProperty("source").GetInt32()];
+            return new(null, Png(texture.GetProperty("index").GetInt32(), name), corners, alpha == "MASK");
+        }
+
+        private static string? Identity(string name) =>
+            System.Text.RegularExpressions.Regex.Match(name, @"^(?:material/)?texture-(\d+)-(\d+)$") is { Success: true } classic
+                ? $"material/texture-{classic.Groups[1].Value}-{classic.Groups[2].Value}" : null;
+
+        /// <summary>The PNG a texture of the GLB carries, written again as 8-bit RGBA.</summary>
+        private byte[] Png(int index, string name)
+        {
+            JsonElement image = root.GetProperty("images")[root.GetProperty("textures")[index].GetProperty("source").GetInt32()];
             if (!image.TryGetProperty("bufferView", out JsonElement view) || image.GetProperty("mimeType").GetString() != "image/png")
                 throw new InvalidDataException($"{label}'s material '{name}' carries a texture that is not a PNG inside the GLB.");
             DeterministicPngImage pixels = DeterministicPngReader.ReadRgba8(View(view.GetInt32()).ToArray(), $"{label}'s material '{name}' texture");
-            return new(null, DeterministicPngEncoder.EncodeRgba8(pixels.Width, pixels.Height, pixels.Rgba), corners, alpha == "MASK");
+            return DeterministicPngEncoder.EncodeRgba8(pixels.Width, pixels.Height, pixels.Rgba);
         }
 
         private ReadOnlyMemory<byte> View(int index)

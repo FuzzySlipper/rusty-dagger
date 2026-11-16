@@ -96,10 +96,12 @@ public sealed class ModelMeshCommandTests
         // The node's translation places the faces.
         Assert.Equal(new Vector3(0, 1, 0), parts[0].Corners[0].Position);
 
-        (byte[] bytes, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell)> slots, int triangles, IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) =
-            ModelMeshCommand.Write("41209", parts, "packs/art/media/models");
+        (byte[] bytes, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> slots, int triangles,
+            IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) = ModelMeshCommand.Write("41209", parts, "packs/art/media/models");
         Assert.Equal(8, triangles);
-        Assert.Equal([("material/texture-67-0", 0, null), ("material/texture-85-0", 1, null), ("packs/art/media/models/41209-0.png", 2, null), ("packs/art/media/models/41209-1.png", 3, null)], slots);
+        Assert.Equal([("material/texture-67-0", 0, null), ("material/texture-85-0", 1, null), ("packs/art/media/models/41209-0.png", 2, null), ("packs/art/media/models/41209-1.png", 3, null)],
+            slots.Select(slot => (slot.Material, slot.Slot, slot.Shell)));
+        Assert.All(slots, slot => Assert.Null(slot.Paint));
         // One PNG drawn opaque and cut out is published once for each, written again as 8-bit RGBA with its colours kept.
         Assert.Equal([false, true], textures.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => pair.Value.Mask));
         Assert.All(textures.Values, texture =>
@@ -123,7 +125,7 @@ public sealed class ModelMeshCommandTests
         Assert.All(parts, part => Assert.StartsWith("material/texture-", part.ClassicMaterial, StringComparison.Ordinal));
         Assert.Equal([new RemodelShell(0, 3), new RemodelShell(1, 3), new RemodelShell(2, 3), null], parts.Select(part => part.Shell));
 
-        (byte[] bytes, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell)> slots, _, IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) =
+        (byte[] bytes, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> slots, _, IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) =
             ModelMeshCommand.Write("750", parts, "packs/art/media/models");
         Assert.Empty(textures);
         // Every layer is a slot of its own drawing the same classic texture, the mesh naming each by its layer.
@@ -135,6 +137,33 @@ public sealed class ModelMeshCommandTests
         IReadOnlyList<RemodelPart> holed = RemodelGlb.Read(Glb([("texture-33-0", null, Square(0), null, new RemodelShell(0, 3)), ("texture-33-0", null, Square(2), null, new RemodelShell(2, 3))]), "750.glb");
         Assert.Equal("The remodel of ARCH3D model 750 draws material/texture-33-0 in shell layers 0 of 3, 2 of 3: a stack has each of its layers.",
             Assert.Throws<InvalidOperationException>(() => ModelMeshCommand.Write("750", holed, "packs/art/media/models")).Message);
+    }
+
+    /// <summary>
+    /// A generated rock is painted for the classic stone it stands in for, and once more for each stone a location may draw
+    /// that one as, so it matches the town's stone where the classic's climate swap would change it.
+    /// </summary>
+    [Fact]
+    public void A_glb_material_painted_for_a_classic_identity_carries_a_texture_for_each_identity_it_may_be_drawn_as()
+    {
+        byte[] grey = Png(2, [90, 90, 90, 120, 120, 120]), pale = Png(2, [180, 180, 180, 200, 200, 200]), dark = Png(2, [60, 60, 60, 80, 80, 80]);
+        byte[] glb = Glb([("texture-141-2", grey, Square(0), null, null), ("texture-122-2", null, Square(1), null, null)],
+            new Dictionary<string, IReadOnlyDictionary<string, byte[]>> { ["texture-141-2"] = new Dictionary<string, byte[]> { ["texture-41-2"] = pale, ["texture-341-2"] = dark } });
+        IReadOnlyList<RemodelPart> parts = RemodelGlb.Read(glb, "41723.glb");
+        Assert.Equal(["material/texture-141-2", "material/texture-122-2"], parts.Select(part => part.ClassicMaterial));
+        Assert.NotNull(parts[0].Png);
+        Assert.Null(parts[1].Png);
+        Assert.Equal(["material/texture-341-2", "material/texture-41-2"], parts[0].Drawn!.Keys.Order(StringComparer.Ordinal));
+
+        (_, IReadOnlyList<(string Material, int Slot, RemodelShell? Shell, (string Identity, IReadOnlyDictionary<string, string> Drawn)? Paint)> slots, _, IReadOnlyDictionary<string, (byte[] Png, bool Mask)> textures) =
+            ModelMeshCommand.Write("41723", parts, "media/models");
+        // The painted slot is named by its own PNG, which the location draws for 141-2 itself; the classic one by its identity.
+        Assert.Equal([("material/texture-122-2", 0), ("media/models/41723-0.png", 1)], slots.Select(slot => (slot.Material, slot.Slot)));
+        (string identity, IReadOnlyDictionary<string, string> drawn) = slots[1].Paint!.Value;
+        Assert.Equal("material/texture-141-2", identity);
+        Assert.Null(slots[0].Paint);
+        Assert.Equal(3, textures.Count);
+        Assert.Equal([180, 180, 180, 255, 200, 200, 200, 255], DeterministicPngReader.ReadRgba8(textures[drawn["material/texture-41-2"]].Png, "pale").Rgba);
     }
 
     [Fact]
@@ -153,6 +182,7 @@ public sealed class ModelMeshCommandTests
     [InlineData("texture-33-0", false, null, "is no layer of a shell stack of 2 to 16", 0, 1)]
     [InlineData("texture-33-0", false, "MASK", "cuts out a classic texture", 1, 3)]
     [InlineData("leaves", true, null, "a shell stack draws a classic texture's relief", 1, 3)]
+    [InlineData("texture-141-2", true, null, "a shell stack draws a classic texture's relief", 1, 3)]
     public void A_glb_material_the_game_cannot_draw_is_refused(string name, bool png, string? alpha, string reason, int layer = 0, int layers = 0)
     {
         byte[] glb = Glb([(name, png ? Png(6, [1, 2, 3, 4, 5, 6, 7, 8]) : null, Square(0), alpha, layers == 0 ? null : new RemodelShell(layer, layers))]);
@@ -187,10 +217,12 @@ public sealed class ModelMeshCommandTests
     private static Vector3[] Square(float z) => [new(0, 0, z), new(1, 0, z), new(1, 1, z), new(0, 0, z), new(1, 1, z), new(0, 1, z)];
 
     /// <summary>
-    /// A GLB of one node, lifted 1 m, with a primitive per material; a material with a PNG carries it as its base colour, and
-    /// one with a shell layer states it in its extras.
+    /// A GLB of one node, lifted 1 m, with a primitive per material; a material with a PNG carries it as its base colour,
+    /// one with a shell layer states it in its extras, and one <paramref name="drawn"/> names carries its PNGs by identity
+    /// in its <c>extras.drawn</c>.
     /// </summary>
-    private static byte[] Glb(IReadOnlyList<(string Name, byte[]? Png, Vector3[] Corners, string? Alpha, RemodelShell? Shell)> materials)
+    private static byte[] Glb(IReadOnlyList<(string Name, byte[]? Png, Vector3[] Corners, string? Alpha, RemodelShell? Shell)> materials,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, byte[]>>? drawn = null)
     {
         List<byte> binary = [];
         List<object> views = [], accessors = [], primitives = [], images = [], textures = [], materialList = [];
@@ -218,6 +250,16 @@ public sealed class ModelMeshCommandTests
                 textures.Add(new { source = images.Count - 1 });
                 material["pbrMetallicRoughness"] = new { baseColorTexture = new { index = textures.Count - 1 } };
             }
+            if (drawn?.GetValueOrDefault(name) is { } others)
+                material["extras"] = new
+                {
+                    drawn = others.ToDictionary(pair => pair.Key, pair =>
+                    {
+                        images.Add(new { bufferView = View(pair.Value), mimeType = "image/png" });
+                        textures.Add(new { source = images.Count - 1 });
+                        return textures.Count - 1;
+                    }),
+                };
             materialList.Add(material);
             primitives.Add(new
             {

@@ -69,6 +69,9 @@ public sealed class ModelRemodelAssemblyTests
     [InlineData("""{"750": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "shell": {"layer": 0, "layers": 2}}]}}""", "as no layer of a shell stack of 2 to 16 drawing a classic texture")]
     [InlineData("""{"750": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-33-0", "shell": {"layer": 2, "layers": 2}}]}}""", "as no layer of a shell stack of 2 to 16 drawing a classic texture")]
     [InlineData("""{"750": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-33-0", "shell": {"layer": 0, "layers": 1}}]}}""", "as no layer of a shell stack of 2 to 16 drawing a classic texture")]
+    [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "drawn": {"material/texture-41-2": {"path": "remodel/b.png", "sha256": "HASH"}}}]}}""", "not painted for a classic identity")]
+    [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-141-2", "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "drawn": {"stone": {"path": "remodel/b.png", "sha256": "HASH"}}}]}}""", "which is no classic texture identity")]
+    [InlineData("""{"41209": {"path": "remodel/model.rstatmsh", "sha256": "HASH", "triangles": 1, "slots": [{"slot": 0, "material": "material/texture-141-2", "texture": {"path": "remodel/a.png", "sha256": "HASH"}, "shell": {"layer": 1, "layers": 3}}]}}""", "no layer of a shell stack")]
     public void A_remodel_without_a_usable_id_or_slot_is_refused_by_name(string models, string reason)
     {
         string json = models.Replace("ENTRY", Entry("""{"slot": 0, "material": "material/texture-67-0"}"""), StringComparison.Ordinal).Replace("HASH", HashHex, StringComparison.Ordinal);
@@ -122,6 +125,30 @@ public sealed class ModelRemodelAssemblyTests
         Assert.Equal(["446", "447"], charing.Geometry.Remodels.Keys.Order(StringComparer.Ordinal));
         // The gates are not drawn as static meshes, so the remodels reach them only through their states.
         Assert.DoesNotContain(charing.Geometry.Meshes, mesh => mesh.ModelId is "446" or "447");
+    }
+
+    /// <summary>
+    /// A generated rock painted for classic stone 141-2, with another texture for each stone the classic's climate swap
+    /// draws it as: temperate Charing draws 141-2 as 341-2, so its trough wears that one; Privateer's Hold draws 141-2 as
+    /// itself, so there it wears its own.
+    /// </summary>
+    [Fact]
+    public void A_painted_slot_draws_the_texture_for_the_identity_the_location_draws_it_as()
+    {
+        string painted = """{"slot": 0, "material": "material/texture-141-2", "texture": {"path": "remodel/stone.png", "sha256": "HASH"}, "drawn": {"""
+            + """ "material/texture-41-2": {"path": "remodel/stone-desert.png", "sha256": "HASH"}, "material/texture-341-2": {"path": "remodel/stone-temperate.png", "sha256": "HASH"}}}""";
+        DaggerfallArtReplacements art = Art(("{\"41209\": " + Entry(painted) + ", \"61027\": " + Entry(painted) + "}").Replace("HASH", HashHex, StringComparison.Ordinal));
+        DaggerfallArtModelSlot slot = art.Models["41209"].Slots[0];
+        Assert.Equal("material/texture-141-2", slot.Material);
+        Assert.Equal("remodel/stone-desert.png", slot.Painted("material/texture-41-2").Path);
+        Assert.Equal("remodel/stone.png", slot.Painted("material/texture-19-2").Path);
+
+        DaggerfallLocationAssembly assembly = AssemblyWith(art);
+        DaggerfallSiteRemodel trough = assembly.Assemble(DaggerfallWorldProfileIds.Exterior(Charing)).Geometry.Remodels["41209"];
+        Assert.Empty(trough.Materials);
+        Assert.Equal([(0U, "remodel/stone-temperate.png")], trough.Textures.Select(own => (own.MeshSlot, own.Path)));
+        DaggerfallSiteRemodel lever = assembly.Assemble(DaggerfallWorldProfileIds.Dungeon(PrivateersHold)).Geometry.Remodels["61027"];
+        Assert.Equal([(0U, "remodel/stone.png")], lever.Textures.Select(own => (own.MeshSlot, own.Path)));
     }
 
     [Fact]

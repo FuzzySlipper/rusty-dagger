@@ -226,39 +226,47 @@ internal sealed class DaggerfallFloraField : IDisposable
         }
     }
 
-    /// <summary>A record's tree mesh (<see cref="DaggerfallTreeMesh"/>): bark that bends as the sprites do, and leaves that flutter too.</summary>
+    /// <summary>
+    /// A record's nature mesh (<see cref="DaggerfallTreeMesh"/>): bark that bends as the sprites do, leaves that flutter too,
+    /// and stone that stands still; a winter tree's leaves and a winter rock's stone carry snow where they face up.
+    /// </summary>
     private Grown Tree(DaggerfallTreeArt tree, DaggerfallFloraLook look)
     {
         List<IDisposable> owned = [];
         try
         {
-            RenderResource bark = _engine.Graphics.OpenTexture(_engine.Content, tree.Bark.Path, tree.Bark.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
-            owned.Add(bark);
-            Material barkMaterial = _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(bark), .95f,
-                new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with { WindBend = _flats.FloraWindBend });
-            owned.Add(barkMaterial);
+            Material? barkMaterial = null;
+            if (tree.Bark is { } barkArt)
+            {
+                RenderResource bark = _engine.Graphics.OpenTexture(_engine.Content, barkArt.Path, barkArt.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
+                owned.Add(bark);
+                barkMaterial = _engine.Graphics.CreateMaterial(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(bark), .95f,
+                    new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with { WindBend = _flats.FloraWindBend });
+                owned.Add(barkMaterial);
+            }
+            Material? stoneMaterial = null;
+            if (tree.Stone is { } stoneArt)
+            {
+                RenderResource stone = _engine.Graphics.OpenTexture(_engine.Content, stoneArt.Path, stoneArt.Sha256, TextureFilter.Nearest, TextureWrap.Repeat).Handle;
+                owned.Add(stone);
+                stoneMaterial = _engine.Graphics.CreateMaterial(Snowed(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(stone), .95f,
+                    new Color(1, 1, 1, 1), Vector3.Zero, 0, false), tree, look));
+                owned.Add(stoneMaterial);
+            }
             // A bare tree has no leaves.
             Material? leafMaterial = null;
             if (tree.Leaves is { } leafArt)
             {
                 RenderResource leaves = _engine.Graphics.OpenTexture(_engine.Content, leafArt.Path, leafArt.Sha256, TextureFilter.NearestMipmapped).Handle;
                 owned.Add(leaves);
-                MaterialRequest request = new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(leaves), .9f,
+                leafMaterial = _engine.Graphics.CreateMaterial(Snowed(new MaterialRequest(new Color(1, 1, 1, 1), new RenderResourceReference(leaves), .9f,
                     new Color(1, 1, 1, 1), Vector3.Zero, 0, false) with
                 {
                     AlphaMode = MaterialAlphaMode.Mask, AlphaCutoff = .5f, WindBend = _flats.FloraWindBend, WindFlutter = LeafFlutter,
-                };
-                // A winter tree's leaves carry snow where they face up, as its sprite paints it.
-                if (tree.Snow is { } snow && look.TreeSnow is { } shader)
-                    request = request with
-                    {
-                        Shader = new MaterialShader(new RenderResourceReference(SnowShader(shader)), new Vector4(snow.Share, snow.Texels, SnowClumpTexels, 0),
-                            new Vector4(snow.Colour, 0), default, default, default, default, 0),
-                    };
-                leafMaterial = _engine.Graphics.CreateMaterial(request);
+                }, tree, look));
                 owned.Add(leafMaterial);
             }
-            MeshResource mesh = _engine.Graphics.CreateMeshResource(DaggerfallTreeMesh.Read(_engine.Content, tree, look.Size.Y, barkMaterial, leafMaterial));
+            MeshResource mesh = _engine.Graphics.CreateMeshResource(DaggerfallTreeMesh.Read(_engine.Content, tree, look.Size.Y, barkMaterial, leafMaterial, stoneMaterial));
             owned.Add(mesh);
             Appearance appearance = _engine.Graphics.CreateMeshAppearance(mesh);
             owned.Add(appearance);
@@ -273,6 +281,16 @@ internal sealed class DaggerfallFloraField : IDisposable
             throw;
         }
     }
+
+    /// <summary>A winter tree's leaves or a winter rock's stone with snow where they face up, as its sprite paints it.</summary>
+    private MaterialRequest Snowed(MaterialRequest request, DaggerfallTreeArt tree, DaggerfallFloraLook look) =>
+        tree.Snow is { } snow && look.TreeSnow is { } shader
+            ? request with
+            {
+                Shader = new MaterialShader(new RenderResourceReference(SnowShader(shader)), new Vector4(snow.Share, snow.Texels, SnowClumpTexels, 0),
+                    new Vector4(snow.Colour, 0), default, default, default, default, 0),
+            }
+            : request;
 
     /// <summary>The snow shader, opened the first time a winter tree grows and held while the field is.</summary>
     private RenderResource SnowShader(DaggerfallArtFile shader) =>

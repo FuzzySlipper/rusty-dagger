@@ -6,16 +6,18 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 namespace WorldRpg.Rulesets.Daggerfall.World;
 
 /// <summary>
-/// A tree mesh (<see cref="DaggerfallTreeArt"/>) as the flora field draws it: a prop mesh of bark and leaf parts, each
-/// with positions, normals, uvs, colours (alpha the share a vertex flutters) and triangles, drawn at its sprite's drawn
-/// height with its foot where the sprite's stands.
+/// A nature mesh (<see cref="DaggerfallTreeArt"/>) as the flora field draws it: a prop mesh of bark, leaf and stone parts,
+/// each with positions, normals, uvs, colours (alpha the share a vertex flutters) and triangles, drawn at its sprite's
+/// drawn height with its foot where the sprite's stands.
 /// </summary>
 internal static class DaggerfallTreeMesh
 {
     /// <param name="spriteHeight">The sprite's world height, of which the art's height and foot are shares.</param>
-    /// <param name="bark">The bark's material, drawn at slot 0.</param>
+    /// <param name="bark">The bark's material, none for a rock.</param>
     /// <param name="leaves">The leaves' material, none for a bare tree.</param>
-    internal static MeshResourceCreateRequest Read(IContentService content, DaggerfallTreeArt art, float spriteHeight, Material bark, Material? leaves)
+    /// <param name="stone">The stone's material, none for a tree.</param>
+    internal static MeshResourceCreateRequest Read(IContentService content, DaggerfallTreeArt art, float spriteHeight, Material? bark, Material? leaves,
+        Material? stone = null)
     {
         using ContentReference reference = content.ResolveReference(new ContentResolveRequest(art.Mesh.Path, art.Mesh.Sha256));
         using JsonDocument document = JsonDocument.Parse(ReadAll(content, reference));
@@ -32,9 +34,10 @@ internal static class DaggerfallTreeMesh
             string role = part.GetProperty("role").GetString()!;
             Material material = role switch
             {
-                "bark" => bark,
+                "bark" => bark ?? throw new InvalidDataException($"Tree mesh {art.Mesh.Path} has bark, but its art names no bark texture."),
                 "leaves" => leaves ?? throw new InvalidDataException($"Tree mesh {art.Mesh.Path} has leaves, but its art names no leaf texture."),
-                _ => throw new InvalidDataException($"Tree mesh {art.Mesh.Path} has a part of role '{role}', which is neither bark nor leaves."),
+                "stone" => stone ?? throw new InvalidDataException($"Tree mesh {art.Mesh.Path} has stone, but its art names no stone texture."),
+                _ => throw new InvalidDataException($"Tree mesh {art.Mesh.Path} has a part of role '{role}', which is neither bark, leaves nor stone."),
             };
             uint first = (uint)positions.Count, start = (uint)indices.Count;
             float[] p = Floats(part, "positions"), n = Floats(part, "normals"), uv = Floats(part, "uvs"), c = Floats(part, "colors");

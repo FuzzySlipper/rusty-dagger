@@ -211,7 +211,7 @@ internal sealed class DaggerfallLocationAssembly
         private readonly List<DaggerfallSiteSpatialPart> _spatial = [];
         private readonly List<(string Path, ContentSha256 Sha256, Transform Pose, IReadOnlyDictionary<uint, string> Materials, string ModelId)> _placedMeshes = [];
         // Each remodel the profile places, by ARCH3D id, with the textures its classic slots draw here.
-        private readonly Dictionary<string, (DaggerfallArtModel Art, IReadOnlyDictionary<uint, string> Textures)> _remodels = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, (DaggerfallArtModel Art, IReadOnlyDictionary<uint, string> Textures, IReadOnlyList<DaggerfallRemodelTexture> Own)> _remodels = new(StringComparer.Ordinal);
         private readonly SortedSet<string> _materials = new(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _winterTextures = new(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _rainTextures = new(StringComparer.Ordinal);
@@ -491,8 +491,7 @@ internal sealed class DaggerfallLocationAssembly
                     .Select(pair => new DaggerfallMeshMaterialBinding(pair.Key, slots[pair.Value]))];
             List<DaggerfallSiteMesh> meshes = [.. _placedMeshes.Select(mesh => new DaggerfallSiteMesh(mesh.Path, mesh.Sha256, mesh.Pose, Bindings(mesh.Materials)) { ModelId = mesh.ModelId })];
             Dictionary<string, DaggerfallSiteRemodel> remodels = _remodels.ToDictionary(pair => pair.Key, pair => new DaggerfallSiteRemodel(
-                pair.Value.Art.File.Path, pair.Value.Art.File.Sha256, Bindings(pair.Value.Textures),
-                [.. pair.Value.Art.Slots.Where(slot => slot.Texture is not null).Select(slot => new DaggerfallRemodelTexture(slot.Slot, slot.Texture!.Path, slot.Texture.Sha256, slot.Mask))])
+                pair.Value.Art.File.Path, pair.Value.Art.File.Sha256, Bindings(pair.Value.Textures), pair.Value.Own)
             {
                 Shells = pair.Value.Art.Slots.Where(slot => slot.Shell is not null).ToDictionary(slot => slot.Slot, slot => slot.Shell!),
             },
@@ -678,13 +677,19 @@ internal sealed class DaggerfallLocationAssembly
 
         /// <summary>
         /// Records the art pack's remodel of a placed model, once per profile: its slots that name classic texture identities
-        /// take the textures this location draws them with, as the classic's own slots do.
+        /// take the textures this location draws them with, as the classic's own slots do, and a slot painted for an identity
+        /// takes the texture painted for the identity this location draws it as.
         /// </summary>
         private void Remodel(string modelId)
         {
             if (_remodels.ContainsKey(modelId) || !owner._models.TryGetValue(modelId, out DaggerfallArtModel? art)) return;
-            _remodels.Add(modelId, (art, Textures(art.Slots.Where(slot => slot.Material is not null)
-                .Select(slot => KeyValuePair.Create(slot.Slot, slot.Material!)))));
+            _remodels.Add(modelId, (art, Textures(art.Slots.Where(slot => slot.Material is not null && slot.Texture is null)
+                .Select(slot => KeyValuePair.Create(slot.Slot, slot.Material!))),
+                [.. art.Slots.Where(slot => slot.Texture is not null).Select(slot =>
+                {
+                    DaggerfallArtFile file = slot.Material is null ? slot.Texture! : slot.Painted(Texture(slot.Material));
+                    return new DaggerfallRemodelTexture(slot.Slot, file.Path, file.Sha256, slot.Mask);
+                })]));
         }
 
         private string Texture(string material)
