@@ -269,7 +269,8 @@ internal sealed class DaggerfallFloraField : IDisposable
             Set(archive, layer, grown);
             // Far enough out to be small on screen, a tree mesh is a card the renderer bakes of it, as cheap as its sprite.
             if (grown.Mesh) _engine.Vegetation.SetLayerDetail(new VegetationLayerDetailRequest(_field!, layer,
-                new[] { VegetationLod.ImpostorOf(grown.Look, _tuning.TreeImpostorHeights * grown.Height) }, ImpostorBand, ReadOnlyMemory<VegetationThinningPoint>.Empty, 1));
+                new[] { VegetationLod.ImpostorOf(grown.Look, Math.Max(_tuning.TreeImpostorHeights * grown.Height, NearestImpostor)) }, ImpostorBand,
+                ReadOnlyMemory<VegetationThinningPoint>.Empty, 1));
         }
     }
 
@@ -295,6 +296,12 @@ internal sealed class DaggerfallFloraField : IDisposable
 
     /// <summary>How far a tree mesh and its card overlap, dithered, as one gives way to the other.</summary>
     private const float ImpostorBand = 6;
+    /// <summary>
+    /// The nearest a card takes over. The Engine refuses a level whose crossfade would begin at the eye (its start within
+    /// a band of it), and the desert's smallest plants, 0.15 m tall, would start theirs inside it at their heights; such a
+    /// mesh is drawn whole within a band of the eye and gives way over the next.
+    /// </summary>
+    private const float NearestImpostor = 2 * ImpostorBand;
     /// <summary>How far a tree's leaf cards circle in the wind at unit strength, times their vertex alpha, as rusty-craftsurvive's do.</summary>
     private const float LeafFlutter = .12f;
 

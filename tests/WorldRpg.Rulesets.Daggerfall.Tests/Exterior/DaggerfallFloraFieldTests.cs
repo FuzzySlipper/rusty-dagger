@@ -2,6 +2,8 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using Rusty.Engine;
+using Rusty.Engine.Testing;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -94,6 +96,34 @@ public sealed class DaggerfallFloraFieldTests
         Assert.False(field.GrowsPlaced((504, 3)));
     }
 
+    /// <summary>
+    /// The desert's smallest nature meshes (#10871): 503-22 draws 0.15 m tall, so a card twelve of its heights out would
+    /// start inside the band the Engine crossfades it over, and the Engine refused the whole layer's detail, faulting the
+    /// update on arrival in the Alik'r Desert (The Nhurche Tunnel). Grown in the real Engine from the art pack as it ships,
+    /// the desert's ground grows it.
+    /// </summary>
+    [Fact]
+    public void The_desert_s_smallest_mesh_grows_its_card_in_the_real_Engine()
+    {
+        string content = Path.Combine(TestData.RepositoryRoot, "content");
+        DaggerfallArtReplacements art = DaggerfallArtReplacements.Read(
+            File.ReadAllBytes(Path.Combine(content, "worldrpg", "packs", "daggerfall.art-replacements", "payload.json")), "daggerfall.art-replacements");
+        DaggerfallTreeArt plant = art.Trees[(503, 22)];
+        DaggerfallArtFlat flat = art.Flats[(503, 22)];
+        DaggerfallArtFile[] files = [plant.Mesh, flat.File, .. new[] { plant.Bark, plant.Leaves, plant.Stone }.OfType<DaggerfallArtFile>()];
+        Dictionary<string, ReadOnlyMemory<byte>> served = files.ToDictionary(file => file.Path, file => (ReadOnlyMemory<byte>)File.ReadAllBytes(Path.Combine(content, file.Path)));
+        DaggerfallFloraLook look = new(flat.File, Vector2.Zero, Vector2.One, new Vector2(.15F, .148F), new Vector2(.5F, 0)) { Tree = plant };
+
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions { Content = served });
+        host.Call(engine =>
+        {
+            using SpatialMovementSystem spatial = new(engine.Spatial, engine.Content, null, DaggerfallTuning.Defaults.Spatial);
+            using DaggerfallFloraField field = new(engine, Ground(climate: 224), DaggerfallFloraTuning.Default, DaggerfallFlatsTuning.Default, new Dictionary<int, float>());
+            field.Show(spatial.Session, Frame, new Vector3(100, 0, 100), false, (archive, record) => (archive, record) == (503, 22) ? look : null);
+            Assert.True(field.GrowsPlaced((503, 22)));
+        });
+    }
+
     private static void Show(DaggerfallFloraField field, bool winter) =>
         field.Show(new SpatialSession(new SpatialSessionHandle(1), static () => { }), Frame, new Vector3(100, 0, 100), winter, Looks);
 
@@ -151,18 +181,18 @@ public sealed class DaggerfallFloraFieldTests
         return EngineContextFake.Create(content, SpatialFake.Create(Hash, releases).Service, new AppearanceFake(releases));
     }
 
-    private static DaggerfallHorizonGround Ground()
+    private static DaggerfallHorizonGround Ground(int climate = 231)
     {
         const int side = 8;
         byte[] heights = new byte[side * side], samples = new byte[side * side * 25];
         Array.Fill(heights, (byte)90);
         Array.Fill(samples, (byte)40);
-        return new(new DaggerfallTerrainSet(side, side, heights, () => samples), (_, _) => 231, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default,
+        return new(new DaggerfallTerrainSet(side, side, heights, () => samples), (_, _) => climate, DaggerfallHorizonTuning.Default, DaggerfallGroundTuning.Default,
             new Dictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior>())
         {
             Materials = new(0, new Dictionary<int, DaggerfallHorizonGround.ArchiveMaterials>
             {
-                [302] = new(1, 1, 2, 3, true, false), [303] = new(4, 4, 5, 6, false, false), [402] = new(7, 8, 9, 10, false, true),
+                [2] = new(1, 1, 2, 3, false, false), [302] = new(1, 1, 2, 3, true, false), [303] = new(4, 4, 5, 6, false, false), [402] = new(7, 8, 9, 10, false, true),
             }),
         };
     }
