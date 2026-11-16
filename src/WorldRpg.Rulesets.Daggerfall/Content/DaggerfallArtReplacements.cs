@@ -87,7 +87,9 @@ internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 /// A refreshed mesh standing in for the classic sprite cut from one texture record: a GLB resting on the floor, and its
 /// footprint (its width across, x, in metres), from which it is drawn at the width of the sprite it replaces.
 /// </summary>
-internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, double Footprint);
+/// <param name="Glow">The GLB material slots whose emissive maps shine at the lamps' level, as a refreshed flat's
+/// emission map does: a lamp's glass and flame.</param>
+internal sealed record DaggerfallArtMesh(DaggerfallArtFile File, double Footprint, IReadOnlyList<uint> Glow);
 
 /// <summary>
 /// A remodel standing in for one classic ARCH3D model wherever an assembled location places it: an Engine static mesh in the
@@ -426,8 +428,12 @@ internal sealed class DaggerfallArtReplacements
                     double footprint = mesh.GetProperty("footprint").GetDouble();
                     if (!double.IsFinite(footprint) || footprint <= 0)
                         throw new InvalidOperationException($"Content pack '{packId}' states no usable footprint for the mesh replacing {replaces.Item1}/{replaces.Item2}.");
+                    uint[] glowing = mesh.TryGetProperty("glow", out JsonElement slots) ? [.. slots.EnumerateArray().Select(slot => slot.GetUInt32())] : [];
+                    // The Engine takes one set of factors per slot, so a slot named twice would fault the site that lights it.
+                    if (glowing.Distinct().Count() != glowing.Length)
+                        throw new InvalidOperationException($"Content pack '{packId}' names a glowing slot twice for the mesh replacing {replaces.Item1}/{replaces.Item2}.");
                     if (!meshes.TryAdd(replaces, new(new(mesh.GetProperty("path").GetString()!,
-                            DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), footprint)))
+                            DaggerfallContentHash.Parse(mesh.GetProperty("sha256").GetString()!, $"The refreshed mesh for {replaces.Item1}/{replaces.Item2}")), footprint, glowing)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two meshes for {replaces.Item1}/{replaces.Item2}.");
                 }
             if (section.TryGetProperty("models", out JsonElement modelArt))

@@ -56,7 +56,8 @@ pile resting on the floor, stands in for TEXTURE.380 record 1 (the corpse every 
 women alike, so it is no one in particular) and record 4 (the bone pile placed in dungeons). WORLD_MESHES names each such
 sprite mesh, which naming accepts; each entry is keyed by the record it replaces (`380-4`) and states the mesh's footprint,
 its width across (x) in metres, measured from the GLB, so the game draws it at the width of the classic sprite it
-replaces.
+replaces, and the GLB material slots that carry an emissive map (`glow`), which the game lights at the lamps' level as
+it does a refreshed lamp's emission map: a lamp post's glass and flame.
 
 The `surfaces` area promotes the walls, floors and ceilings (`surfaces`): each accepted final `texture-AAA-R`, from
 its family's folder under local/art/generated/surfaces (tools/surfaces/batch.py), stands in for classic TEXTURE.AAA record R as an
@@ -608,6 +609,16 @@ def glb_width(path):
     return round(max(b["max"][0] for b in bounds) - min(b["min"][0] for b in bounds), 3)
 
 
+def world_mesh_entry(final, archive, record):
+    """A sprite mesh's entry: the GLB as it is, its width as its footprint, and its material slots with an emissive map
+    (`glow`)."""
+    data = final.path.read_bytes()
+    gltf = json.loads(data[20:20 + int.from_bytes(data[12:16], "little")])
+    glow = [slot for slot, material in enumerate(gltf.get("materials", [])) if "emissiveTexture" in material]
+    return {"replaces": {"archive": archive, "record": record}, **write(f"{MEDIA}/effects/{final.key}", data),
+            "footprint": glb_width(final.path), **({"glow": glow} if glow else {})}
+
+
 def effect_units():
     """The `effects` area's units: each world effect by its media id, whose finals are its classic frames'; each sprite
     mesh by the classic record it replaces (ARCHIVE-RECORD); and the effect glow (`effectGlow`), made here."""
@@ -622,8 +633,7 @@ def effect_units():
         final = Final(None, name, ART / "generated" / "effects" / name)
         for archive, record in records:
             units[f"{archive}-{record}"] = Unit([final], lambda final=final, archive=archive, record=record: [
-                ("meshes", {"replaces": {"archive": archive, "record": record}, **write(f"{MEDIA}/effects/{final.key}", final.path.read_bytes()),
-                            "footprint": glb_width(final.path)})])
+                ("meshes", world_mesh_entry(final, archive, record))])
     units["effectGlow"] = Unit([], lambda: [("effectGlow", effect_glow())])
     return units
 

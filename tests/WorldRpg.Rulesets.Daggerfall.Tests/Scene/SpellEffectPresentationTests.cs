@@ -32,7 +32,8 @@ public sealed class SpellEffectPresentationTests
           "effectGlow": {"path": "refreshed/glow.png", "byteLength": 1, "sha256": "HASH"},
           "meshes": [
             {"replaces": {"archive": 380, "record": 1}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15},
-            {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15}],
+            {"replaces": {"archive": 380, "record": 4}, "path": "refreshed/corpse-bones.glb", "byteLength": 1, "sha256": "HASH", "footprint": 2.15},
+            {"replaces": {"archive": 210, "record": 28}, "path": "refreshed/lamp-post.glb", "byteLength": 1, "sha256": "HASH", "footprint": 0.7, "glow": [1]}],
           "flats": [
             {"replaces": {"archive": 212, "record": 0}, "path": "refreshed/well.png", "byteLength": 1, "sha256": "HASH", "width": 32, "height": 32,
              "frames": [{"x": 0, "y": 0, "width": 32, "height": 32}], "classic": {"x": 0.25, "y": 0.5, "width": 0.5, "height": 0.5}},
@@ -52,7 +53,9 @@ public sealed class SpellEffectPresentationTests
         content.Add("refreshed/fire-impact.png", Hash);
         content.Add("refreshed/glow.png", Hash);
         content.Add("refreshed/corpse-bones.glb", Hash);
+        content.Add("refreshed/lamp-post.glb", Hash);
         content.Add("sprite/corpse.png", Hash);
+        content.Add("sprite/lamp.png", Hash);
         content.Add("sprite/well.png", Hash);
         content.Add("refreshed/well.png", Hash);
         content.Add("refreshed/lamp.png", Hash);
@@ -204,7 +207,7 @@ public sealed class SpellEffectPresentationTests
         var (presentation, graphics, _) = Compose(() => refreshed, Corpse((380, 1)), animation);
         using DaggerfallSiteAppearance owned = presentation;
         using ActorsState actors = DefeatedActor();
-        Assert.Equal(["refreshed/corpse-bones.glb"], animation.OpenedPaths);
+        Assert.Equal(["refreshed/corpse-bones.glb", "refreshed/lamp-post.glb"], animation.OpenedPaths);
         Appearance mesh = Assert.Single(animation.Created);
 
         Publish(presentation, actors);
@@ -233,7 +236,7 @@ public sealed class SpellEffectPresentationTests
         using DaggerfallSiteAppearance owned = presentation;
         using ActorsState actors = ActorsWithNpc(11, HealthyMechanics(), new(2, 0, 3));
         // One model serves both records it replaces; this site gives the one placed pile its appearance.
-        Assert.Equal(["refreshed/corpse-bones.glb"], animation.OpenedPaths);
+        Assert.Equal(["refreshed/corpse-bones.glb", "refreshed/lamp-post.glb"], animation.OpenedPaths);
         Appearance mesh = Assert.Single(animation.Created);
 
         Publish(presentation, actors);
@@ -264,6 +267,40 @@ public sealed class SpellEffectPresentationTests
         Publish(presentation, actors);
         Appearance classic = Assert.Single(graphics.Snapshots[^1], fact => fact.Transform.Translation == new Vector3(4, .5F, 6)).Appearance;
         Assert.NotEqual(drawn, classic);
+    }
+
+    [Fact]
+    public void A_placed_lamp_mesh_shines_its_glowing_slots_at_the_lamps_level_and_no_other()
+    {
+        AnimationRecorder animation = AnimationRecorder.Create();
+        NormalizedBillboardSprite lamp = new("sprite/lamp.png", Hash, 8, 8, [new NormalizedAtlasFrame(0, 0, 0, 8, 8)], 0, new Vector2(.5F, 0F), new Vector2(.7F, 3.8F));
+        DaggerfallSiteDecoration post = new("flat-1", new WorldPoint(4, 0, 6), true, lamp, lamp, (210, 28), (210, 28));
+        var (presentation, _, _) = Compose(() => true, animation: animation, decorations: [post]);
+        using DaggerfallSiteAppearance owned = presentation;
+        Appearance mesh = Assert.Single(animation.Created);
+
+        // By day the glass is dark, whatever emission the GLB states.
+        AnimatedMeshMaterialFactorsRequest dark = Assert.Single(animation.FactorUpdates);
+        Assert.Equal(mesh, dark.Appearance);
+        MeshMaterialFactors glass = Assert.Single(dark.Factors.ToArray());
+        Assert.Equal((1u, false, true, Vector3.One, 0F), (glass.MaterialSlot, glass.OverrideBaseColor, glass.OverrideEmission, glass.EmissiveFactor, glass.EmissiveStrength));
+
+        presentation.UpdateLampGlow(2.5F);
+        glass = Assert.Single(animation.FactorUpdates[^1].Factors.ToArray());
+        Assert.Equal((1u, 2.5F), (glass.MaterialSlot, glass.EmissiveStrength));
+
+        presentation.UpdateLampGlow(0F);
+        Assert.Equal(0F, Assert.Single(animation.FactorUpdates[^1].Factors.ToArray()).EmissiveStrength);
+    }
+
+    [Fact]
+    public void A_mesh_naming_a_glowing_slot_twice_is_refused()
+    {
+        InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() => DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes(WithHash("""
+            {"artReplacements": {"images": [], "meshes": [
+              {"replaces": {"archive": 210, "record": 28}, "path": "refreshed/lamp-post.glb", "byteLength": 1, "sha256": "HASH", "footprint": 0.7, "glow": [1, 1]}]}}
+            """)), "test.art"));
+        Assert.Contains("glowing slot twice", refused.Message, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -15,6 +15,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private readonly Dictionary<string, RenderResource> decorationGlowMaps = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RenderResource> decorationTextures = new(StringComparer.Ordinal);
     private readonly List<Appearance> glowingDecorations = [];
+    private readonly List<(Appearance Mesh, IReadOnlyList<uint> Slots)> glowingMeshes = [];
     private float lampLevel;
 
     private sealed record DecorationVisual(DaggerfallSiteDecoration Definition, DecorationSprite Summer,
@@ -163,7 +164,12 @@ internal sealed partial class DaggerfallSiteAppearance
         lampLevel = level;
         foreach (Appearance lamp in glowingDecorations)
             appearance.SetSpriteEmission(new(lamp, level));
+        foreach ((Appearance mesh, IReadOnlyList<uint> slots) in glowingMeshes) LightMesh(mesh, slots);
     }
+
+    /// <summary>A refreshed mesh's glowing slots at the lamps' level: each shows its emissive map at that strength.</summary>
+    private void LightMesh(Appearance mesh, IReadOnlyList<uint> slots) => meshes!.UpdateAnimatedMeshMaterialFactors(new(mesh,
+        slots.Select(slot => new MeshMaterialFactors(slot, false, default, true, Vector3.One, lampLevel)).ToArray()));
 
     private void StartDecorationPlayback(DecorationSprite result, SpriteAtlas atlas, NormalizedBillboardSprite sprite)
     {
@@ -225,6 +231,7 @@ internal sealed partial class DaggerfallSiteAppearance
         decorationGlowMaps.Clear();
         decorationTextures.Clear();
         glowingDecorations.Clear();
+        glowingMeshes.Clear();
         return values;
     }
 }

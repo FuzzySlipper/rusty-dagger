@@ -24,7 +24,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private IPresentationService? particles;
     private RenderResource? particleGlow;
     private IAnimationService? meshes;
-    private readonly Dictionary<(int Archive, int Record), (RenderResource Model, double Footprint)> worldMeshes = [];
+    private readonly Dictionary<(int Archive, int Record), (RenderResource Model, DaggerfallArtMesh Art)> worldMeshes = [];
 
     /// <summary>
     /// Admits the refreshed set's world effects and particle glow, drawn whenever <paramref name="refreshed"/> answers
@@ -58,7 +58,7 @@ internal sealed partial class DaggerfallSiteAppearance
                 ownedResources.Add(model);
                 models.Add(mesh.File.Path, model);
             }
-            worldMeshes.Add((archive, record), (model, mesh.Footprint));
+            worldMeshes.Add((archive, record), (model, mesh));
         }
         foreach (ActorVisual visual in actors.Values) AttachCorpseMesh(visual);
         foreach (DecorationVisual flat in decorations) AttachDecorationMesh(flat);
@@ -66,24 +66,31 @@ internal sealed partial class DaggerfallSiteAppearance
     }
 
     /// <summary>
-    /// A refreshed mesh standing in for a classic sprite cut from <paramref name="source"/>, and the scale that draws it
-    /// at <paramref name="width"/>, the sprite's world width; null when the refreshed set has no mesh for it.
+    /// A refreshed mesh standing in for a classic sprite cut from <paramref name="source"/>, the scale that draws it at
+    /// <paramref name="width"/>, the sprite's world width, and its glowing slots; null when the refreshed set has no mesh for it.
     /// </summary>
-    private (Appearance Appearance, float Scale)? WorldMesh((int Archive, int Record)? source, float width) =>
+    private (Appearance Appearance, float Scale, IReadOnlyList<uint> Glow)? WorldMesh((int Archive, int Record)? source, float width) =>
         source is { } key && meshes is not null && worldMeshes.TryGetValue(key, out var mesh)
-            ? (meshes.CreateAnimatedMeshAppearance(new(mesh.Model)), (float)(width / mesh.Footprint)) : null;
+            ? (meshes.CreateAnimatedMeshAppearance(new(mesh.Model)), (float)(width / mesh.Art.Footprint), mesh.Art.Glow) : null;
 
     /// <summary>Gives an actor whose corpse sprite has a refreshed mesh its own appearance of that mesh.</summary>
     private void AttachCorpseMesh(ActorVisual visual)
     {
         if (visual.CorpseMesh is not null || visual.Sprite.Corpse is not { } corpse) return;
-        if (WorldMesh(corpse.SourceTexture, corpse.Size.X) is { } mesh) (visual.CorpseMesh, visual.CorpseMeshScale) = mesh;
+        if (WorldMesh(corpse.SourceTexture, corpse.Size.X) is { } mesh) (visual.CorpseMesh, visual.CorpseMeshScale, _) = mesh;
     }
 
-    /// <summary>Gives a placed decoration whose sprite has a refreshed mesh its own appearance of that mesh.</summary>
+    /// <summary>
+    /// Gives a placed decoration whose sprite has a refreshed mesh its own appearance of that mesh, whose glowing slots
+    /// shine at the lamps' level as a refreshed lamp's emission map does.
+    /// </summary>
     private void AttachDecorationMesh(DecorationVisual flat)
     {
-        if (flat.Mesh is null && WorldMesh(flat.Definition.Source, flat.Definition.Summer.Size.X) is { } mesh) (flat.Mesh, flat.MeshScale) = mesh;
+        if (flat.Mesh is not null || WorldMesh(flat.Definition.Source, flat.Definition.Summer.Size.X) is not { } mesh) return;
+        (flat.Mesh, flat.MeshScale, IReadOnlyList<uint> glow) = mesh;
+        if (glow.Count == 0) return;
+        glowingMeshes.Add((flat.Mesh, glow));
+        LightMesh(flat.Mesh, glow);
     }
 
     /// <summary>Gives a standing person the set has art for a refreshed sprite, at the classic size.</summary>
