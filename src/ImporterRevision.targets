@@ -13,8 +13,9 @@
        tracked terrain bake in inputs/relief is left out: the relief step takes it only when its record names the bake
        this code would make from the player's files, so it cannot change what the import writes. The
        import reads no Daggerfall Unity file and never the authored base payload; the ruleset joins the base pack's
-       sections to the imported ones when it loads. A command that does not feed the containers, the donor drift
-       check among them, lives in src/Daggerfall.Source.Tool, outside the hash. Build output is
+       sections to the imported ones when it loads. Our tables are derived data (DEC-13): one that moves into an
+       authored pack leaves inputs/ and this hash in the same change, and the source inventory is being retired
+       by #10894. A command that does not feed the containers lives in src/Daggerfall.Source.Tool, outside the hash. Build output is
        excluded; files are hashed by path and content with CRLF read as LF, so a Windows checkout of the same commit
        names the same revision. Daggerfall.Import.Tests' ImporterRevisionTests fail when a source file or repository
        path the import reaches lies outside these inputs. The generated file is rewritten only when the value

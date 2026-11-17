@@ -165,8 +165,9 @@ the one ignored folder. Its folders say what may be deleted:
   `src/Daggerfall.Import.Tool/inputs/`, the quest scripts among them as quest
   documents, each naming the Daggerfall Unity file and commit it was taken
   from; the import reads no Daggerfall Unity file and needs no donor checkout.
-  `dotnet run --project src/Daggerfall.Source.Tool -- donor-drift --donor DIR`
-  reports where they differ from a Daggerfall Unity checkout.
+  They are derived data, ours to edit in place (DEC-13), and the citations stay
+  as credit. `donor-drift`, which reports where they differ from a Daggerfall
+  Unity checkout, is being retired by #10894 and is no rule they must meet.
 
 A worktree links the main checkout's inputs, so its build and art files stay its
 own, and links its data to its own importer revision; on den machines evidence
@@ -193,10 +194,15 @@ worktree that linked a removed one runs `link` again; Windows asks for `cache`. 
 
 Rules for the tracked side:
 
-- Nothing converted from Daggerfall is ever committed, but for the terrain bake
-  in `src/Daggerfall.Import.Tool/inputs/relief/`, tracked by Patch's decision
-  (#10758), which is no licence for any other. An untracked file under
-  `content/` fails the architecture tests.
+- Only raw media from Daggerfall stays out of Git and out of releases: sprites
+  and textures, and sounds, video and bitmap fonts while they are Daggerfall
+  originals. A fact derived from the game or from Daggerfall Unity (tables,
+  formulas, timings, positions, quest text, collision, navigation, ARCH3D
+  geometry) may be extracted once into authored data and edited in place, as
+  the terrain bake in `src/Daggerfall.Import.Tool/inputs/relief/` was (#10758).
+  Credit to Bethesda Softworks and Daggerfall Unity stays. This is DEC-13 on
+  the wiki page `wiki/rusty-dagger/coverage-scope-and-decisions`. An untracked
+  file under `content/` fails the architecture tests.
 - A content pack is one folder, `content/worldrpg/packs/<id>/`: its `pack.json`,
   the `payload.json` it names and any media it owns. A tuning profile is
   `content/worldrpg/tuning/<id>/` the same way; bundles stay in `bundles/`. All the
@@ -205,10 +211,12 @@ Rules for the tracked side:
   `ui-authored-assets.json` is written by `authoring/tools/ui/ui-art-kit.py
   manifest`) and the held definition and models in `first-person/`.
 - `daggerfall.base` is authored and `daggerfall.imported` is generated. Two base
-  sections (`buildingNames`, `internalText`) were taken from Daggerfall Unity,
-  need nothing from arena2, and are checked by `donor-drift`.
+  sections (`buildingNames`, `internalText`) were taken once from Daggerfall
+  Unity and are edited in place (DEC-13).
   A payload section belongs to one of them: the reader refuses a section both carry.
-- In `src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv`, never renumber or recreate a `CNT-` ID;
+- DEC-13 tracks no source dispositions: the source manifest, its inventory and
+  reconciliation are being retired by #10894. Until then, in
+  `src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv`, never renumber or recreate a `CNT-` ID;
   reclassify a file by changing its `family_id`. Only `Daggerfall.Source.Tool`'s
   `source-inventory --update-inventory` writes the disposition column, from every
   publication's sources together.

@@ -3,10 +3,14 @@
 ## The Elder Scrolls II: Daggerfall data (not redistributed)
 
 The Daggerfall ruleset's content is derived from the game data of *The Elder Scrolls II: Daggerfall*
-(Bethesda Softworks). This repository does not contain or redistribute that data, or any file
-converted from it, but one: the terrain bake in `src/Daggerfall.Import.Tool/inputs/relief/`, eroded
-relief and rivers computed from the heightmap in `WOODS.WLD`, the climate and the locations, which the
-import takes in place of baking them again. The operator supplies their own copy of the game's `ARENA2` directory as
+(Bethesda Softworks). Rusty Dagger is inspired by that game, not a port of it, and plays only from the
+player's own copy. This repository does not contain or redistribute the game's raw media: its sprites
+and textures, and its sounds, video and bitmap fonts. Facts derived from the game, such as tables,
+formulas, timings, positions, quest text, collision, navigation and model geometry, are taken once into
+authored data of ours and edited in place (decision DEC-13 on the project wiki's
+`coverage-scope-and-decisions` page). The terrain bake in `src/Daggerfall.Import.Tool/inputs/relief/`
+is such data: eroded relief and rivers computed from the heightmap in `WOODS.WLD`, the climate and the
+locations, which the import takes in place of baking them again. The operator supplies their own copy of the game's `ARENA2` directory as
 `local/inputs/arena2`, and the import command converts it into the data container
 `local/data/daggerfall-data.rpak` on their machine (ignored by Git). The project wiki's
 `import-and-data-container` page says what is generated and what is authored.
@@ -17,8 +21,8 @@ A release (`rusty build --release`) carries the product, the Engine host with it
 licences in `share/third-party/`, the .NET runtime (MIT, its licence and notices in `dotnet/`), the game
 UI's typefaces with their licences (below), and the import tool with the tracked files it reads, among them
 our tables taken from Daggerfall Unity (below) and the terrain bake (above). It carries no Daggerfall
-Unity file, and nothing else derived from *The Elder Scrolls II: Daggerfall*: the player's import writes
-`daggerfall-data.rpak` and `music.rpak` on their own machine.
+Unity file and none of the game's raw media: the player's import writes `daggerfall-data.rpak` and
+`music.rpak` on their own machine.
 
 ## Music (not redistributed)
 
@@ -52,8 +56,9 @@ Daggerfall Unity file and commit it came from:
 - in the `buildingNames` and `internalText` sections of `content/worldrpg/packs/daggerfall.base/payload.json`:
   the region name banks and names (`MapsFile.cs`) and the internal string table (`Internal_Strings.csv`).
 
-`daggerfall-source-tool donor-drift --donor DIR` compares them with a Daggerfall Unity checkout. Daggerfall
-Unity is distributed under the following licence:
+They are ours to edit in place (DEC-13); the citations credit Daggerfall Unity, and the `donor-drift`
+comparison with a Daggerfall Unity checkout is being retired. Daggerfall Unity is distributed under the
+following licence:
 
 ```text
 MIT License
