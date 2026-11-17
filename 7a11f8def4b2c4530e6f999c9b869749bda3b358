@@ -1,0 +1,13 @@
+scripts/route.py main: FAILED (product): scripts/verify.sh failed
+rusty-dagger verify at 7a11f8def4b2c4530e6f999c9b869749bda3b358 FAILED in 14.3 min
+verify on den-m5, 14.3 min, FAIL: /home/agent/dev/rusty-dagger/local/build/route/main-7a11f8def4b2-20261116T223033/verify.log
+    lane: run a17d83f7c79d6fe809d695877746af7b of verify on den-m5 at 7a11f8def4b2c4530e6f999c9b869749bda3b358 (0 s)
+    lane: tooling took 10 s, peak memory 40 MiB
+    skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run `dotnet run --project src/Daggerfall.Source.Tool -- export-items`
+    Passed!  - Failed:     0, Passed:    12, Skipped:     0, Total:    12, Duration: 213 ms - WorldRpg.Architecture.Tests.dll (net10.0)
+    Failed Daggerfall.Import.Tests.DataContainerImportTests.Every_missing_input_is_named_before_anything_is_written [2 ms]
+    Failed Daggerfall.Import.Tests.Arena2ClassicMediaPublicationTests.RegeneratesTheSelectedClosureFromOperatorSuppliedArena2WhenAvailable [1 s]
+    Failed Daggerfall.Import.Tests.Arena2ClassicMediaPublicationTests.RegeneratesClosedClassicMediaBytesAndTypedSemanticMappings [425 ms]
+    Failed!  - Failed:     3, Passed:   694, Skipped:     0, Total:   697, Duration: 13 m 8 s - Daggerfall.Import.Tests.dll (net10.0)
+    lane: verify took 839 s, peak memory 9013 MiB
+    lane: verify failed (exit 1)
