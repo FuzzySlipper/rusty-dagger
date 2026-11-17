@@ -1,0 +1,255 @@
+{
+  "name": "M0B00Y15",
+  "displayName": "Hunt for Giant Rodents",
+  "sourceFile": "M0B00Y15.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>                            I am _qgiver_.",
+        "<ce>                I have a relatively menial job, if you",
+        "<ce>                are willing to take it. Actually, some",
+        "<ce>                members prefer these jobs because they",
+        "<ce>                pay just as well as the more difficult",
+        "<ce>                ones. A house here in town is infested",
+        "<ce>                by giant rodents. The wife claims they",
+        "<ce>                 are rats, the husband claims they are",
+        "<ce>                bats. Either way, they want them gone.",
+        "<ce>                          Are you interested?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>                  Obviously you have no love for the",
+        "<ce>                 Fighters Guild. I will make sure to",
+        "<ce>                   tell them what you really think."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>                    The bats have infested _house_.",
+        "<ce>                 Go there and kill them all and you'll",
+        "<ce>                 get your pay. I can only give you one",
+        "<ce>                        day to finish this one."
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>                    Killing bats, even giant ones,",
+        "<ce>                    doesn't take much skill, but it",
+        "<ce>                          pays the same, eh?"
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "<ce>                   Some idiot didn't repair her roof",
+        "<ce>                   for a couple of months. Now she's",
+        "<ce>                     got giant bats in her house."
+      ]
+    },
+    {
+      "id": 1006,
+      "lines": [
+        "<ce>                   Did you hear about the woman that",
+        "<ce>                    had to abandon her home? It was",
+        "<ce>                    overrun with giant bats and she",
+        "<ce>                  didn't have enough gold to pay the",
+        "<ce>                     Fighters Guild to kill them."
+      ]
+    },
+    {
+      "id": 1007,
+      "lines": [
+        "<ce>                 I heard the Fighters Guild sent some",
+        "<ce>                   %ra over to kill the bats in that",
+        "<ce>                 woman's home. Cost her a bundle, but",
+        "<ce>                 I suppose it's better than abandoning",
+        "<ce>                               her home."
+      ]
+    },
+    {
+      "id": 1008,
+      "lines": [
+        "<ce>                  So you killed the giant bats. Don't",
+        "<ce>                  get too full of yourself. They were",
+        "<ce>                           only giant bats."
+      ]
+    },
+    {
+      "id": 1009,
+      "lines": [
+        "<ce>                 You couldn't even take care of giant",
+        "<ce>                     bats. You are hopeless %pcn."
+      ]
+    },
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt:",
+        " The Fighters Guild of ___qgiver_",
+        " has asked me rid _house_",
+        " of the giant rats or bats that have",
+        " infested it. I have one day to get it done."
+      ]
+    },
+    {
+      "id": 1011,
+      "lines": [
+        "<ce>  You faintly hear the sound of several rats' claws",
+        "<ce>  scratching the ground. They seem to be drawing closer."
+      ]
+    },
+    {
+      "id": 1012,
+      "lines": [
+        "<ce>  You faintly hear the sound of several bats chittering.",
+        "<ce>  They seem to be drawing closer."
+      ]
+    },
+    {
+      "id": 1020,
+      "lines": [
+        "<ce>                That's most of them. The Fighters Guild",
+        "<ce>                     won't quibble over the rest."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 100,
+      "lines": [
+        "Item _reward_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 102,
+      "lines": [
+        "Person _qgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 104,
+      "lines": [
+        "Place _house_ local random"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 106,
+      "lines": [
+        "Clock _2dung_ 1.00:00 0 flag 1 range 0 1"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 108,
+      "lines": [
+        "Foe _monster_ is Giant_bat"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 109,
+      "lines": [
+        "Foe _rats_ is Giant_rat"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 112,
+      "lines": [
+        "start timer _2dung_ ",
+        "reveal _house_ ",
+        "log 1010 step 0 ",
+        "pick one of _monster1_ _monster2_ ",
+        "create npc at _house_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 118,
+      "lines": [
+        "_2dung_ task:",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 121,
+      "lines": [
+        "_mondead_ task:",
+        "killed 4 _rats_ ",
+        "killed 4 _monster_ ",
+        "say 1020 "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 126,
+      "lines": [
+        "_S.02_ task:",
+        "when _qgclicked_ and _mondead_ ",
+        "give pc _reward_ ",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 131,
+      "lines": [
+        "_clearclick_ task:",
+        "when _qgclicked_ and not _mondead_ ",
+        "clear _qgclicked_ _clearclick_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 135,
+      "lines": [
+        "_qgclicked_ task:",
+        "clicked npc _qgiver_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 138,
+      "lines": [
+        "_S.04_ task:",
+        "say 1011",
+        "create foe _rats_ every 2 minutes 7 times with 100% success "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 142,
+      "lines": [
+        "_monster1_ task:",
+        "pc at _house_ set _S.04_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 145,
+      "lines": [
+        "_monster2_ task:",
+        "pc at _house_ set _S.07_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 148,
+      "lines": [
+        "_S.07_ task:",
+        "say 1012",
+        "create foe _monster_ every 2 minutes 7 times with 100% success "
+      ]
+    }
+  ]
+}

@@ -1,9 +1,9 @@
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>
-/// The admitted classic entries that never enter ordinary offers, with the explicit donor summoning
-/// selection for the Daedric sources among them. Every admitted corpus contributes the entries its
-/// categories state as not offered or summon-only; a bundle that admits none has no such entries.
+/// The quests that never enter ordinary offers, with the explicit summoning selection for the Daedric quests among
+/// them: the quests of every corpus category stated as not offered or summon-only. A bundle whose corpora state none
+/// has no such quests.
 /// </summary>
 internal sealed class DaggerfallDisabledQuestSelection
 {
@@ -13,35 +13,35 @@ internal sealed class DaggerfallDisabledQuestSelection
     private DaggerfallDisabledQuestSelection(
         IReadOnlyDictionary<string, DaggerfallSummonQuestResolution> summons,
         IReadOnlySet<string> disabledSources,
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> receipts)
+        IReadOnlyList<DaggerfallQuestRuntimeReceipt> receipts)
     {
         _summons = summons;
         _disabledSources = disabledSources;
         Receipts = receipts;
     }
 
-    /// <summary>The runtime receipts of every entry withheld from ordinary offers, ordered by name.</summary>
-    internal IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> Receipts { get; }
+    /// <summary>The runtime receipts of every quest withheld from ordinary offers, ordered by name.</summary>
+    internal IReadOnlyList<DaggerfallQuestRuntimeReceipt> Receipts { get; }
 
-    /// <summary>A selection with no withheld entries, for a bundle that admits no corpus stating any.</summary>
+    /// <summary>A selection with no withheld quests, for a bundle whose corpora state none.</summary>
     internal static DaggerfallDisabledQuestSelection None { get; } = From([]);
 
-    internal static DaggerfallDisabledQuestSelection From(IEnumerable<DaggerfallClassicQuestCorpusReceipt> corpus)
+    /// <summary>The withheld quests, each with the availability its category states.</summary>
+    internal static DaggerfallDisabledQuestSelection From(IEnumerable<(string Availability, DaggerfallQuestRuntimeReceipt Receipt)> withheld)
     {
-        ArgumentNullException.ThrowIfNull(corpus);
-        DaggerfallClassicQuestCorpusReceipt[] withheld = [.. corpus.Where(receipt => !receipt.IsOrdinaryOffer)];
+        ArgumentNullException.ThrowIfNull(withheld);
+        (string Availability, DaggerfallQuestRuntimeReceipt Receipt)[] entries = [.. withheld];
         Dictionary<string, DaggerfallSummonQuestResolution> summons = new(StringComparer.Ordinal);
-        foreach (DaggerfallClassicQuestCorpusReceipt receipt in withheld.Where(receipt => receipt.Availability == DaggerfallClassicQuestCorpusContent.SummonOnly))
+        foreach ((_, DaggerfallQuestRuntimeReceipt status) in entries.Where(entry => entry.Availability == DaggerfallQuestContent.SummonOnly))
         {
-            DaggerfallFightersGuildQuestRuntimeReceipt status = receipt.Runtime;
-            // Two corpora summoning the same identity would leave one of them unreachable.
+            // Two categories summoning the same identity would leave one of them unreachable.
             if (!summons.TryAdd(status.Name, new(status.Name, status.SourceFile, status.Runnable, status.Diagnostics)))
-                throw new DaggerfallContentException([$"Admitted classic corpora summon '{status.Name}' more than once."]);
+                throw new DaggerfallContentException([$"Admitted quest corpora summon '{status.Name}' more than once."]);
         }
         return new(
             summons,
-            new HashSet<string>(withheld.Select(receipt => receipt.Runtime.SourceFile), StringComparer.Ordinal),
-            withheld.Select(receipt => receipt.Runtime).OrderBy(receipt => receipt.Name, StringComparer.Ordinal).ToArray());
+            new HashSet<string>(entries.Select(entry => entry.Receipt.SourceFile), StringComparer.Ordinal),
+            entries.Select(entry => entry.Receipt).OrderBy(receipt => receipt.Name, StringComparer.Ordinal).ToArray());
     }
 
     internal bool TryResolveSummon(string questName, out DaggerfallSummonQuestResolution? resolution)

@@ -569,85 +569,62 @@ public sealed class QuestWorldAdmissionTests
     internal static DaggerfallDefinitions Definitions(bool stackable = false, bool gold = false, bool secondPlace = false, bool endSource = false, bool secondItem = false,
         string[]? actions = null, bool person = false, bool atHome = false, bool rearmPlacement = false, string[][]? taskBlocks = null, string[]? messages = null, int? foeCount = null, int firstMessageId = 100, string? itemUsedMessage = null, bool personQuestor = false, bool potion = false, string? personInfo = null, string? personRumor = null, string? itemInfo = null, bool noAmbientRumors = false)
     {
-        // Rumors are read against the text section, so a rumor edit still reads the whole spliced payload;
-        // a quest-only edit is read against the shared base.
-        var root = noAmbientRumors ? TestPayload.Sections("questSources", "rumors") : TestPayload.Sections("questSources");
-        if (noAmbientRumors) foreach (var rumor in root["rumors"]!["entries"]!.AsArray()) rumor!["region"] = 0;
-        var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
-        var foe = declarations.First(value => value!["kind"]!.GetValue<string>() == "foe"
-            && value["targetSourceSpelling"]!.GetValue<string>() == "Giant_rat")!.DeepClone();
-        var item = gold ? declarations.First(value => value!["targetCanonicalId"]?.GetValue<string>() == "gold")!.DeepClone()
-            : declarations.Single(value => value!["sourceFile"]!.GetValue<string>() == (stackable ? "R0C11Y28.txt" : "S0000502.txt")
-            && value["symbol"]!["canonicalId"]!.GetValue<string>() == (stackable ? "i.09" : "reward"))!.DeepClone();
-        var place = declarations.First(value => value!["kind"]!.GetValue<string>() == "place")!.DeepClone();
-        foreach (var row in new[] { foe, item, place })
-        { row["sourceFile"] = "world-test.txt"; row["quest"] = "world-test"; declarations.Add(row); }
-        place["symbol"]!["canonicalId"] = "location"; place["symbol"]!["sourceSpelling"] = "_location_";
-        item["symbol"]!["canonicalId"] = "gift"; item["symbol"]!["sourceSpelling"] = "_gift_";
+        string item = gold ? "Item _gift_ gold" : stackable ? "Item _gift_ item class 15 subclass 13" : "Item _gift_ item class 4 subclass 3";
         if (potion)
         {
             var group = TestPayload.Definitions.ItemTemplateCatalog.Groups.Values.Single(group => group.TemplateIndices && group.Values.Contains(83));
-            item["item"]!["class"] = group.Id;
-            item["item"]!["subclass"] = null;
-            item["item"]!["template"] = 83;
-            item["item"]!["key"] = 221871;
+            item = $"Item _gift_ item class {group.Id} template 83 key 221871";
         }
-        if (itemInfo is not null) item["item"]!["anyInfoMessage"] = itemInfo;
-        if (itemUsedMessage is not null) item["item"]!["usedMessage"] = itemUsedMessage;
-        foe["symbol"]!["canonicalId"] = "enemy"; foe["symbol"]!["sourceSpelling"] = "_enemy_";
-        if (foeCount is not null) foe["foe"]!["count"] = foeCount.Value;
+        if (itemInfo is not null) item += $" anyInfo {itemInfo}";
+        if (itemUsedMessage is not null) item += $" used {itemUsedMessage}";
+        List<string> declarations = [foeCount is { } count ? $"Foe _enemy_ is {count} Giant_rat" : "Foe _enemy_ is Giant_rat", item, "Place _location_ remote dungeon8"];
         if (person)
         {
-            var npc = declarations.First(value => value!["kind"]!.GetValue<string>() == "person" && (personQuestor ? value["person"]!["group"]?.GetValue<string>() == "Questor" : value["person"]!["named"] is not null && value["person"]!["atHome"]!.GetValue<bool>()))!.DeepClone();
-            npc["quest"] = "world-test"; npc["sourceFile"] = "world-test.txt";
-            npc["symbol"]!["canonicalId"] = "person"; npc["symbol"]!["sourceSpelling"] = "_person_";
-            npc["person"]!["atHome"] = atHome; npc["person"]!["gender"] = "female";
-            if (personInfo is not null) { npc["parameters"]!.AsArray().Add("anyInfo"); npc["parameters"]!.AsArray().Add(personInfo); }
-            if (personRumor is not null) { npc["parameters"]!.AsArray().Add("rumors"); npc["parameters"]!.AsArray().Add(personRumor); }
+            string npc = (personQuestor ? "Person _person_ group Questor" : "Person _person_ named Queen_Akorithi") + (atHome ? " atHome" : "") + " female";
+            if (personInfo is not null) npc += $" anyInfo {personInfo}";
+            if (personRumor is not null) npc += $" rumors {personRumor}";
             declarations.Add(npc);
         }
-        if (secondItem)
-        {
-            var extraItem = item.DeepClone();
-            extraItem["symbol"]!["canonicalId"] = "other-item"; extraItem["symbol"]!["sourceSpelling"] = "_other-item_";
-            declarations.Add(extraItem);
-        }
-        if (secondPlace)
-        {
-            var destination = place.DeepClone();
-            destination["symbol"]!["canonicalId"] = "destination"; destination["symbol"]!["sourceSpelling"] = "_destination_";
-            declarations.Add(destination);
-        }
-        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
-            {"name":"world-test","displayName":"","sourceFile":"world-test.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
+        if (secondItem) declarations.Add(item.Replace("_gift_", "_other-item_", StringComparison.Ordinal));
+        if (secondPlace) declarations.Add("Place _destination_ remote dungeon8");
+        JsonArray records = TestPayload.QuestRecords();
+        records.Add(JsonNode.Parse("""
+            {"name":"world-test","displayName":"","sourceFile":"world-test.txt","messages":[],"blocks":[]}
             """));
+        JsonNode quest = records.Last()!;
         if (messages is not null)
-            root["questSources"]!["quests"]!.AsArray().Last()!["messages"] = new JsonArray(messages.Select((text, index) => (JsonNode)new JsonObject
-                { ["id"] = firstMessageId + index, ["firstLine"] = 1 + index, ["lines"] = new JsonArray(text) }).ToArray());
+            quest["messages"] = new JsonArray(messages.Select((text, index) => (JsonNode)new JsonObject
+                { ["id"] = firstMessageId + index, ["lines"] = new JsonArray(text) }).ToArray());
         if (endSource)
-            root["questSources"]!["quests"]!.AsArray().Last()!["blocks"] = JsonNode.Parse("""
-                [{"kind":"headless","firstLine":1,"lines":["end quest"],"global":null}]
+            quest["blocks"] = JsonNode.Parse("""
+                [{"kind":"headless","firstLine":1,"lines":["end quest"]}]
                 """);
         if (actions is not null)
-            root["questSources"]!["quests"]!.AsArray().Last()!["blocks"] = new JsonArray(new JsonObject
-                { ["kind"] = "headless", ["firstLine"] = 1, ["lines"] = JsonSerializer.SerializeToNode(actions), ["global"] = null });
+            quest["blocks"] = actions.Length == 0 ? new JsonArray() : new JsonArray(new JsonObject
+                { ["kind"] = "headless", ["firstLine"] = 1, ["lines"] = JsonSerializer.SerializeToNode(actions) });
         if (taskBlocks is not null)
         {
-            var blocks = root["questSources"]!["quests"]!.AsArray().Last()!["blocks"]!.AsArray();
+            var blocks = quest["blocks"]!.AsArray();
             for (int i = 0; i < taskBlocks.Length; i++) blocks.Add(new JsonObject
-                { ["kind"] = "task", ["firstLine"] = 100 + i * 10, ["lines"] = JsonSerializer.SerializeToNode(taskBlocks[i]), ["global"] = null });
+                { ["kind"] = "task", ["firstLine"] = 100 + i * 10, ["lines"] = JsonSerializer.SerializeToNode(taskBlocks[i]) });
         }
         if (rearmPlacement)
         {
-            var blocks = root["questSources"]!["quests"]!.AsArray().Last()!["blocks"]!.AsArray();
+            var blocks = quest["blocks"]!.AsArray();
             blocks.Insert(0, JsonNode.Parse("""
-                {"kind":"task","firstLine":100,"lines":["until _stop_ performed:","start task headless.1"],"global":null}
+                {"kind":"task","firstLine":100,"lines":["until _stop_ performed:","start task headless.1"]}
                 """));
             blocks.Insert(0, JsonNode.Parse("""
-                {"kind":"variable","firstLine":99,"lines":["variable _stop_"],"global":null}
+                {"kind":"variable","firstLine":99,"lines":["variable _stop_"]}
                 """));
         }
-        return noAmbientRumors ? DaggerfallBaseContent.Read(TestPayload.Splice(root.AsObject()), TestPayload.Data) : TestPayload.WithQuestSections(root.AsObject());
+        quest["blocks"]!.AsArray().Add(new JsonObject { ["kind"] = "resources", ["firstLine"] = 500, ["lines"] = JsonSerializer.SerializeToNode(declarations) });
+        DaggerfallDefinitions withQuests = TestPayload.WithQuests(records);
+        if (!noAmbientRumors) return withQuests;
+        // Rumors are read against the text section, so a rumor edit reads the whole spliced payload.
+        var root = TestPayload.Sections("rumors");
+        foreach (var rumor in root["rumors"]!["entries"]!.AsArray()) rumor!["region"] = 0;
+        return DaggerfallBaseContent.Read(TestPayload.Splice(root), TestPayload.Data).WithQuestSources(withQuests.QuestSources);
     }
 
     internal static DaggerfallSiteProfile WithMarker(DaggerfallSiteProfile source)

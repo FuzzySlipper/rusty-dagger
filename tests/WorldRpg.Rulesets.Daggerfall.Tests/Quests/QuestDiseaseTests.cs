@@ -60,14 +60,13 @@ public sealed class QuestDiseaseTests
 
     internal static DaggerfallDefinitions Definitions(params string[] actions)
     {
-        var root = TestPayload.Sections("questSources");
+        JsonArray root = TestPayload.QuestRecords();
         Add("quest-actions", actions); Add("quest-cure", ["cure Witches'_Pox"]);
-        root["questSources"]!["quests"]!.AsArray()[^2]!["blocks"]!.AsArray().Add(new JsonObject {
+        root[^2]!["blocks"]!.AsArray().Add(new JsonObject {
             ["kind"] = "task", ["firstLine"] = 100, ["lines"] = new JsonArray("done task:"), ["global"] = null });
-        return TestPayload.WithQuestSections(root.AsObject());
-        void Add(string name, string[] lines) => root["questSources"]!["quests"]!.AsArray().Add(new JsonObject {
-            ["name"] = name, ["displayName"] = "", ["sourceFile"] = name + ".txt", ["disposition"] = "compiled",
-            ["messages"] = new JsonArray(), ["diagnostics"] = new JsonArray(), ["blocks"] = new JsonArray(new JsonObject {
+        return TestPayload.WithQuests(root);
+        void Add(string name, string[] lines) => root.Add(new JsonObject {
+            ["name"] = name, ["displayName"] = "", ["sourceFile"] = name + ".txt", ["messages"] = new JsonArray(), ["blocks"] = new JsonArray(new JsonObject {
                 ["kind"] = "headless", ["firstLine"] = 1, ["lines"] = JsonSerializer.SerializeToNode(lines), ["global"] = null }) });
     }
     internal static void Start(DaggerfallSession session) => session.State.Quests.Start(new("actions", "quest-actions.txt", "quest-actions", DaggerfallQuestLifecycle.Active, null, [], []));

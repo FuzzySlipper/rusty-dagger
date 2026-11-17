@@ -95,11 +95,11 @@ public sealed class LycanthropySessionTests
     [Fact]
     public void Compiled_quest_cure_uses_the_session_owner_once_and_advances_shared_time()
     {
-        var root = TestPayload.Sections("questSources");
-        root["questSources"]!["quests"]!.AsArray().Add(System.Text.Json.Nodes.JsonNode.Parse("""
-            {"name":"curefixture","displayName":"Cure","sourceFile":"curefixture.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"headless","firstLine":1,"lines":["cure lycanthropy"],"global":null}],"diagnostics":[]}
+        System.Text.Json.Nodes.JsonArray root = TestPayload.QuestRecords();
+        root.Add(System.Text.Json.Nodes.JsonNode.Parse("""
+            {"name":"curefixture","displayName":"Cure","sourceFile":"curefixture.txt","messages":[],"blocks":[{"kind":"headless","firstLine":1,"lines":["cure lycanthropy"],"global":null}]}
             """));
-        var definitions = TestPayload.WithQuestSections(root.AsObject());
+        var definitions = TestPayload.WithQuests(root);
         using var s = Restore(null, definitions);
         s.State.RacialOverrides.Select(DaggerfallRacialKind.Werewolf, "curse", 0); Cast(s);
         long before = Minute(s);

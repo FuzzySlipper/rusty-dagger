@@ -537,15 +537,14 @@ public sealed class DaggerfallTravelSessionTests
     }
     private static readonly SharedFixture<DaggerfallDefinitions> DeadlineDefinitions = new(() =>
     {
-        JsonObject root = TestPayload.Sections("questSources");
-        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
-            {"name":"travel-deadline","displayName":"Travel deadline","sourceFile":"travel-deadline.txt","disposition":"compiled",
-            "messages":[{"id":10,"firstLine":1,"lines":["The deadline expired during travel."]}],
+        JsonArray root = TestPayload.QuestRecords();
+        root.Add(JsonNode.Parse("""
+            {"name":"travel-deadline","displayName":"Travel deadline","sourceFile":"travel-deadline.txt","messages":[{"id":10,"lines":["The deadline expired during travel."]}],
             "blocks":[{"kind":"clock","firstLine":2,"lines":["clock _deadline_ 1"],"global":null},
             {"kind":"task","firstLine":3,"lines":["_deadline_ task:","log 10 step 1","end quest"],"global":null},
-            {"kind":"headless","firstLine":6,"lines":["start timer _deadline_"],"global":null}],"diagnostics":[]}
+            {"kind":"headless","firstLine":6,"lines":["start timer _deadline_"],"global":null}]}
             """));
-        return TestPayload.WithQuestSections(root.AsObject());
+        return TestPayload.WithQuests(root);
     });
     private static readonly SharedFixture<(DaggerfallSiteProfile Profile, ResolvedCompositionIdentity Identity)> Inputs = new(() =>
         (ReadInputs(TestData.RepositoryRoot), TestSessions.Resolve(FullContent(TestData.RepositoryRoot),

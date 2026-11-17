@@ -1,0 +1,45 @@
+{
+  "name": "__DEMO02",
+  "sourceFile": "__DEMO02.txt",
+  "messages": [
+    {
+      "id": 1010,
+      "lines": [
+        "Wearing hat and shades"
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "variable",
+      "firstLine": 12,
+      "lines": [
+        "variable hat"
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 13,
+      "lines": [
+        "variable shades"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 16,
+      "lines": [
+        "setvar hat",
+        "setvar shades"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 19,
+      "lines": [
+        "_HatAndShades_ task:",
+        "when hat and shades",
+        "say 1010"
+      ]
+    }
+  ]
+}

@@ -47,7 +47,7 @@ public sealed class DaggerfallBasePayloadSplitTests
         Assert.Empty(imported.RootElement.EnumerateObject().Select(section => section.Name)
             .Intersect(authored.RootElement.EnumerateObject().Select(section => section.Name)));
         // Importer records nothing at runtime reads stay outside the runtime content root.
-        Assert.DoesNotContain(imported.RootElement.EnumerateObject(), section => section.Name is "geometry" or "questOriginalSources" or "blocks");
+        Assert.DoesNotContain(imported.RootElement.EnumerateObject(), section => section.Name is "geometry" or "blocks");
     }
 
     [Fact]

@@ -12,7 +12,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>
 /// Reads the base definitions from two payloads: the authored daggerfall.base payload (ruleset identity,
 /// vocabulary, actors, items, loot, encounters) and the daggerfall.imported payload the import tool
-/// generates from the operator's Arena2 files (catalogs, world records, text, quest sources).
+/// generates from the operator's Arena2 files (catalogs, world records, text). The quests are read
+/// from the quests packs (<see cref="DaggerfallQuestContent"/>) and joined with <see cref="DaggerfallDefinitions.WithQuestSources"/>.
 /// </summary>
 internal static partial class DaggerfallBaseContent
 {
@@ -178,7 +179,6 @@ internal static partial class DaggerfallBaseContent
             DaggerfallTerrainSet terrain = ReadTerrain(root, data, diagnostics);
             DaggerfallItemTemplateSet itemTemplatesCatalog = ReadItemTemplates(root, diagnostics);
             foreach (var recipe in magic.PotionRecipes.Values) recipe.Validate(itemTemplatesCatalog);
-            DaggerfallQuestSourceSet questSources = ReadQuestSources(root, diagnostics);
             DaggerfallCinematicSet cinematics = ReadCinematics(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, catalogs, mobiles, hud, diagnostics);
             ValidateCatalog(actors, armorValues, actions, lootTables, diagnostics);
@@ -198,7 +198,7 @@ internal static partial class DaggerfallBaseContent
                 || enemyRanged.MinimumDistance >= rangedAction.Reach)
                 diagnostics.Add("Enemy ranged setup requires an admitted bow, fungible arrows, positive quiver count and valid range band.");
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, questSources, cinematics, encounters)
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles, names, rumors, biographies, grids, books, factions, terrain, itemTemplatesCatalog, DaggerfallQuestSourceSet.None, cinematics, encounters)
             {
                 BuildingNames = buildingNames,
                 EnemySpells = enemySpells,
@@ -286,44 +286,6 @@ internal static partial class DaggerfallBaseContent
             (DaggerfallTextSet text, DaggerfallNameTablesSet names, DaggerfallRumorCatalogSet rumors, DaggerfallDialogueWorldRules dialogueWorldRules, DaggerfallBiographiesSet biographies, DaggerfallBooksSet books) = ReadTextAndKeyedSections(root, diagnostics);
             diagnostics.ThrowIfAny();
             return admitted.WithText(text, names, rumors, dialogueWorldRules, biographies, books);
-        }
-        catch (JsonException exception)
-        {
-            diagnostics.Add($"Base payload is not valid JSON: {exception.Message}");
-            throw diagnostics.Exception();
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or FormatException or OverflowException && exception is not DaggerfallContentException)
-        {
-            diagnostics.Add($"Base payload is malformed: {exception.Message}");
-            throw diagnostics.Exception();
-        }
-    }
-
-    /// <summary>The root sections only the quest source reader consults.</summary>
-    internal static readonly IReadOnlyList<string> QuestSectionNames = ["questSources", "questTables", "questCatalog"];
-
-    /// <summary>
-    /// Already-admitted definitions with their quest sections replaced by the ones this document carries.
-    /// The quest sections are read by <see cref="ReadQuestSources"/> alone, and no other section's reader
-    /// or cross-section check consults them or the set it returns, so reading the replacement here
-    /// admits exactly what <see cref="Read(ReadOnlyMemory{byte})"/> would for a payload carrying it
-    /// beside the admitted sections, without re-reading every other section. The document must carry
-    /// only quest sections: anything else would be silently ignored.
-    /// </summary>
-    internal static DaggerfallDefinitions ReadQuestSections(DaggerfallDefinitions admitted, ReadOnlyMemory<byte> sections)
-    {
-        DaggerfallContentDiagnostics diagnostics = new();
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(sections);
-            JsonElement root = Object(document.RootElement, "root", diagnostics);
-            diagnostics.ThrowIfAny();
-            RejectDuplicateProperties(root, "root", diagnostics);
-            foreach (JsonProperty section in root.EnumerateObject().Where(section => !QuestSectionNames.Contains(section.Name, StringComparer.Ordinal)))
-                diagnostics.Add($"Section '{section.Name}' is not a quest section; replacing quest sections cannot admit it.");
-            DaggerfallQuestSourceSet questSources = ReadQuestSources(root, diagnostics);
-            diagnostics.ThrowIfAny();
-            return admitted.WithQuestSources(questSources);
         }
         catch (JsonException exception)
         {
@@ -2675,11 +2637,6 @@ internal static partial class DaggerfallBaseContent
     }
 
     /// <summary>
-    /// Reads the normalized quest sources from the pack alone. A diagnosed quest resolves with
-    /// its diagnostics attached and must not run; a compiled quest with diagnostics is a
-    /// contradiction the pack must not state.
-    /// </summary>
-    /// <summary>
     /// Reads the cinematic identities from the pack alone. A bound cinematic without its caller or
     /// an unresolved one claiming a hook is a contradiction the pack must not state.
     /// </summary>
@@ -2748,190 +2705,6 @@ internal static partial class DaggerfallBaseContent
             artifact.Width <= 0 || artifact.Height <= 0 || artifact.FrameCount <= 0 || artifact.DurationSeconds <= 0)
             diagnostics.Add($"Cinematic '{source}' has an invalid packaged WebM artifact; expected '{expected}' with positive dimensions, frames, duration, bytes and SHA-256.");
         return artifact;
-    }
-
-    private static DaggerfallQuestCatalog ReadQuestCatalog(JsonElement root, DaggerfallContentDiagnostics diagnostics)
-    {
-        JsonElement catalog = Object(Property(root, "questCatalog", diagnostics), "questCatalog", diagnostics);
-        string path = Text(Object(Property(catalog, "source", diagnostics), "source", diagnostics), "path", diagnostics);
-        List<DaggerfallQuestCatalogRow> rows = [];
-        HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
-        foreach (JsonElement row in Array(catalog, "rows", diagnostics))
-        {
-            string name = Text(row, "name", diagnostics);
-            if (!names.Add(name)) diagnostics.Add($"Classic quest '{name}' appears twice in the catalog.");
-            rows.Add(new(name, Text(row, "group", diagnostics),
-                row.GetProperty("membership").ValueKind == JsonValueKind.Null ? null : Text(row, "membership", diagnostics),
-                Integer(row, "minimumRequirement", diagnostics), Text(row, "requirementKind", diagnostics),
-                row.GetProperty("adult").GetBoolean(), row.GetProperty("oneTime").GetBoolean(), row.GetProperty("active").GetBoolean(),
-                Text(row, "sourceDisposition", diagnostics), OptionalText(row, "notes"), Integer(row, "sourceLine", diagnostics)));
-        }
-        return new(path, rows.AsReadOnly());
-    }
-
-    private static DaggerfallQuestTables ReadQuestTables(JsonElement root, DaggerfallContentDiagnostics diagnostics)
-    {
-        JsonElement tables = Object(Property(root, "questTables", diagnostics), "questTables", diagnostics);
-        return new(ReadTable("globals", true), ReadTable("staticMessages", false), ReadPlaces(), ReadTable("sounds", false),
-            ReadTable("diseases", false), ReadTable("spells", false), ReadActorItemTables());
-
-        DaggerfallQuestActorItemTables ReadActorItemTables()
-        {
-            JsonElement actorItems = Object(Property(tables, "actorItemTables", diagnostics), "actorItemTables", diagnostics);
-            JsonElement items = Object(Property(actorItems, "items", diagnostics), "items", diagnostics);
-            JsonElement factions = Object(Property(actorItems, "factions", diagnostics), "factions", diagnostics);
-            JsonElement foes = Object(Property(actorItems, "foes", diagnostics), "foes", diagnostics);
-            return new(
-                new(Path(items), Array(items, "rows", diagnostics).Select(row => new DaggerfallQuestItemTableRow(
-                    Text(row, "name", diagnostics), Integer(row, "p1", diagnostics), Integer(row, "p2", diagnostics),
-                    Property(row, "active", diagnostics).GetBoolean(), Integer(row, "sourceLine", diagnostics))).ToArray(), Comments(items)),
-                new(Path(factions), Array(factions, "rows", diagnostics).Select(row => new DaggerfallQuestFactionTableRow(
-                    Text(row, "name", diagnostics), Integer(row, "p1", diagnostics), Text(row, "p2Text", diagnostics),
-                    Property(row, "p2", diagnostics).ValueKind == JsonValueKind.Null ? null : Integer(row, "p2", diagnostics),
-                    Integer(row, "p3", diagnostics), Property(row, "active", diagnostics).GetBoolean(),
-                    Integer(row, "sourceLine", diagnostics))).ToArray(), Comments(factions)),
-                new(Path(foes), Array(foes, "rows", diagnostics).Select(row => new DaggerfallQuestFoeTableRow(
-                    Integer(row, "id", diagnostics), Text(row, "name", diagnostics), Property(row, "active", diagnostics).GetBoolean(),
-                    Integer(row, "sourceLine", diagnostics))).ToArray(), Comments(foes)));
-
-            string Path(JsonElement table) => Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "path", diagnostics);
-            DaggerfallQuestTableComment[] Comments(JsonElement table) => Array(table, "comments", diagnostics)
-                .Select(comment => new DaggerfallQuestTableComment(Text(comment, "text", diagnostics), Integer(comment, "sourceLine", diagnostics))).ToArray();
-        }
-
-        DaggerfallQuestPlaces ReadPlaces()
-        {
-            JsonElement table = Object(Property(tables, "places", diagnostics), "places", diagnostics);
-            string path = Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "path", diagnostics);
-            List<DaggerfallQuestPlace> rows = [];
-            HashSet<string> names = new(StringComparer.OrdinalIgnoreCase);
-            foreach (JsonElement row in Array(table, "rows", diagnostics))
-            {
-                string name = Text(row, "name", diagnostics);
-                if (!names.Add(name)) { diagnostics.Add($"Quest place '{name}' is duplicated."); continue; }
-                JsonElement location = Property(row, "locationKey", diagnostics);
-                JsonElement transfer = Property(row, "teleportTransfer", diagnostics);
-                rows.Add(new(name, Text(row, "canonicalName", diagnostics), Integer(row, "p1", diagnostics),
-                    Integer(row, "p2", diagnostics), Integer(row, "p3", diagnostics),
-                    location.ValueKind == JsonValueKind.Null ? null : location.GetUInt32(),
-                    transfer.ValueKind == JsonValueKind.Null ? null : transfer.GetByte(), Integer(row, "sourceLine", diagnostics)));
-            }
-            foreach (DaggerfallQuestPlace row in rows)
-                if (!names.Contains(row.CanonicalName)) diagnostics.Add($"Quest place '{row.Name}' has missing canonical identity '{row.CanonicalName}'.");
-            return new(path, rows.AsReadOnly());
-        }
-
-        DaggerfallQuestTable ReadTable(string key, bool globals)
-        {
-            JsonElement table = Object(Property(tables, key, diagnostics), key, diagnostics);
-            string path = Text(Object(Property(table, "source", diagnostics), "source", diagnostics), "path", diagnostics);
-            List<DaggerfallQuestTableRow> rows = [];
-            Dictionary<string, int> aliases = new(StringComparer.OrdinalIgnoreCase);
-            foreach (JsonElement row in Array(table, "rows", diagnostics))
-            {
-                int id = Integer(row, "id", diagnostics);
-                string name = Text(row, "name", diagnostics);
-                int line = Integer(row, "sourceLine", diagnostics);
-                if (id < 0 || (globals && id >= DaggerfallVariableAddress.GlobalCount) || line <= 0)
-                    diagnostics.Add($"Quest table '{key}' has an invalid ID or source line for '{name}'.");
-                if (aliases.TryGetValue(name, out int previous) && previous != id)
-                    diagnostics.Add($"Quest table '{key}' alias '{name}' resolves to both {previous} and {id}.");
-                aliases[name] = id;
-                rows.Add(new(id, name, line));
-            }
-            if (rows.Count == 0 || (globals && rows.Select(row => row.Id).Distinct().Count() != DaggerfallVariableAddress.GlobalCount))
-                diagnostics.Add($"Quest table '{key}' is empty or omits global slots.");
-            return new(path, rows.AsReadOnly());
-        }
-    }
-
-    private static DaggerfallQuestSourceSet ReadQuestSources(JsonElement root, DaggerfallContentDiagnostics diagnostics)
-    {
-        if (!root.TryGetProperty("questSources", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
-        {
-            diagnostics.Add("Base payload publishes no questSources section; quest lookups resolve to nothing until it is republished.");
-            return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(new Dictionary<string, DaggerfallQuestSourceDefinition>(StringComparer.Ordinal)), ReadQuestTables(root, diagnostics), ReadQuestCatalog(root, diagnostics));
-        }
-
-        Dictionary<string, DaggerfallQuestSourceDefinition> quests = new(StringComparer.Ordinal);
-        foreach (JsonElement quest in Array(section, "quests", diagnostics))
-        {
-            string name = Text(quest, "name", diagnostics);
-            string sourceFile = Text(quest, "sourceFile", diagnostics);
-            string dispositionName = Text(quest, "disposition", diagnostics);
-            if (!TryReadName(dispositionName, out DaggerfallQuestDisposition disposition))
-            {
-                diagnostics.Add($"Quest '{name}' names the disposition '{dispositionName}', which the contract does not declare.");
-                continue;
-            }
-
-            List<DaggerfallQuestMessageDefinition> messages = [.. Array(quest, "messages", diagnostics)
-                .Select(message => new DaggerfallQuestMessageDefinition(
-                    Integer(message, "id", diagnostics), Integer(message, "firstLine", diagnostics),
-                    [.. Array(message, "lines", diagnostics).Select(line => line.GetString() ?? string.Empty)]))];
-            List<DaggerfallQuestBlockDefinition> blocks = [.. Array(quest, "blocks", diagnostics)
-                .Select(block => new DaggerfallQuestBlockDefinition(
-                    Text(block, "kind", diagnostics), Integer(block, "firstLine", diagnostics),
-                    [.. Array(block, "lines", diagnostics).Select(line => line.GetString() ?? string.Empty)],
-                    OptionalInteger(block, "global", diagnostics)))];
-            List<DaggerfallQuestDiagnosticDefinition> diags = [.. Array(quest, "diagnostics", diagnostics)
-                .Select(diag => new DaggerfallQuestDiagnosticDefinition(
-                    Integer(diag, "line", diagnostics), Text(diag, "text", diagnostics), Text(diag, "reason", diagnostics)))];
-            if (disposition == DaggerfallQuestDisposition.Compiled && diags.Count != 0)
-            {
-                diagnostics.Add($"Quest '{name}' is compiled with diagnostics attached.");
-            }
-
-            if (disposition == DaggerfallQuestDisposition.Diagnosed && diags.Count == 0)
-            {
-                diagnostics.Add($"Quest '{name}' is diagnosed with no diagnostic attached.");
-            }
-
-            if (!quests.TryAdd(sourceFile, new DaggerfallQuestSourceDefinition(
-                name, OptionalText(quest, "displayName"), sourceFile, disposition, messages, blocks, diags)))
-            {
-                diagnostics.Add($"Quest source file '{sourceFile}' is published twice, so one of them is unreachable.");
-            }
-        }
-
-        List<DaggerfallQuestResourceDefinition> resources = [];
-        List<DaggerfallQuestUnresolvedReferenceDefinition> unresolved = [];
-        if (section.TryGetProperty("resources", out JsonElement resourceSection) && resourceSection.ValueKind == JsonValueKind.Object)
-        {
-            foreach (JsonElement declaration in Array(resourceSection, "declarations", diagnostics))
-            {
-                JsonElement symbol = Object(Property(declaration, "symbol", diagnostics), "symbol", diagnostics);
-                DaggerfallQuestFoeOptions? foe = null;
-                DaggerfallQuestItemOptions? item = null;
-                DaggerfallQuestPersonOptions? person = null;
-                string[]? sites = null;
-                if (declaration.TryGetProperty("foe", out JsonElement f) && f.ValueKind == JsonValueKind.Object)
-                    foe = new(Integer(f, "count", diagnostics));
-                if (declaration.TryGetProperty("item", out JsonElement i) && i.ValueKind == JsonValueKind.Object)
-                    item = new(i.GetProperty("artifact").GetBoolean(), OptionalInteger(i, "class", diagnostics),
-                        OptionalInteger(i, "subclass", diagnostics), OptionalInteger(i, "template", diagnostics),
-                        OptionalInteger(i, "key", diagnostics), OptionalInteger(i, "rangeLow", diagnostics),
-                        OptionalInteger(i, "rangeHigh", diagnostics), OptionalText(i, "usedMessage"), OptionalText(i, "anyInfoMessage"));
-                if (declaration.TryGetProperty("person", out JsonElement p) && p.ValueKind == JsonValueKind.Object)
-                    person = new(OptionalText(p, "named", diagnostics), OptionalText(p, "faction", diagnostics), OptionalText(p, "factionType", diagnostics),
-                        OptionalText(p, "group", diagnostics), OptionalInteger(p, "face", diagnostics), OptionalText(p, "gender", diagnostics), OptionalText(p, "scope", diagnostics), p.GetProperty("atHome").GetBoolean());
-                if (declaration.TryGetProperty("place", out JsonElement place) && place.ValueKind == JsonValueKind.Object)
-                    sites = [.. Array(place, "sites", diagnostics).Select(site => Text(site, "canonicalId", diagnostics))];
-                resources.Add(new DaggerfallQuestResourceDefinition(
-                    Text(declaration, "quest", diagnostics), Text(declaration, "sourceFile", diagnostics), Integer(declaration, "sourceLine", diagnostics),
-                    Text(declaration, "kind", diagnostics), Text(symbol, "sourceSpelling", diagnostics), Text(symbol, "canonicalId", diagnostics),
-                    Text(declaration, "sourceText", diagnostics), OptionalText(declaration, "targetSourceSpelling"), OptionalText(declaration, "targetCanonicalId"), OptionalText(declaration, "placeKind"),
-                    [.. Array(declaration, "parameters", diagnostics).Select(parameter => parameter.GetString() ?? string.Empty)], foe, item, person, sites));
-            }
-            foreach (JsonElement reference in Array(resourceSection, "unresolved", diagnostics))
-            {
-                unresolved.Add(new DaggerfallQuestUnresolvedReferenceDefinition(
-                    Text(reference, "quest", diagnostics), Text(reference, "sourceFile", diagnostics), Integer(reference, "sourceLine", diagnostics),
-                    Text(reference, "sourceSpelling", diagnostics), Text(reference, "canonicalId", diagnostics)));
-            }
-        }
-
-        return new DaggerfallQuestSourceSet(new ReadOnlyDictionary<string, DaggerfallQuestSourceDefinition>(quests), ReadQuestTables(root, diagnostics), ReadQuestCatalog(root, diagnostics), resources, unresolved);
     }
 
     private static byte[] ReadGridCells(JsonElement section, string rowsKey, int width, int height, string what, DaggerfallContentDiagnostics diagnostics)    {

@@ -35,7 +35,7 @@ internal static class ImportCommand
          "WOODS.WLD", "FACTION.TXT", "FLATS.CFG", "SPELLS.STD", "MAGIC.DEF", "ANIM0000.VID", "AZURA.FLC"];
 
     /// <summary>Our own tables the steps read, under <see cref="ImportLayout.Inputs"/>.</summary>
-    private static readonly string[] InputFiles = ["races.json", "item-groups.json", "item-templates.json", "magic-item-templates.json", "spell-costs.json", "mobiles.json", "npc-captions.json", "quest-tables.json", "quest-list.json"];
+    private static readonly string[] InputFiles = ["races.json", "item-groups.json", "item-templates.json", "magic-item-templates.json", "spell-costs.json", "mobiles.json", "npc-captions.json"];
 
     public static ToolCommand Command { get; } = new("import",
     [
@@ -172,8 +172,6 @@ internal static class ImportCommand
             "--item-templates", Input("item-templates.json"), "--magic-item-templates", Input("magic-item-templates.json"),
             "--item-groups", Input("item-groups.json"), "--update");
         Add("paper-doll-media", "paper-doll-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--group", "worldrpg", "--update");
-        Add("quests", "quests", "--arena2", arena2, "--quest-documents", Input("quests"), "--quest-tables", Input("quest-tables.json"),
-            "--quest-list", Input("quest-list.json"), "--pack", imported, "--records", importRecords, "--inventory", Inventory, "--update");
         Add("videos", "videos", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
         if (inputs.Cinematics)
         {
@@ -181,23 +179,18 @@ internal static class ImportCommand
             Add("cinematic-media-flc", "cinematic-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--kind", "flc", "--update");
         }
 
-        // 3. Quest corpus payloads, read from the quest sections and the original-source selections above.
-        Add("fighters-quest-corpus", "fighters-quest-corpus", "--pack", imported, "--records", importRecords,
-            "--out", $"{ImportLayout.Payloads}/daggerfall.quests.fighters.json");
-        Add("classic-quest-corpora", "classic-quest-corpora", "--pack", imported, "--records", importRecords, "--out", ImportLayout.Payloads);
-
-        // 4. The product-wide world media every location draws from: every mesh, material texture, billboard
+        // 3. The product-wide world media every location draws from: every mesh, material texture, billboard
         //    and actor atlas, terrain texture, the classic sidecar and its audio clips, published once.
         Add("world-media", "world-media", "--arena2", arena2, "--ui-authored-assets", UiAssets, "--ui-original", UiOriginal, "--inventory", Inventory,
             "--pack", imported, "--classic-group", classicGroup, "--out", worldMedia,
             "--source-manifest", $"{records}/world-media.sources.json");
 
-        // 5. The per-block world publication: every RMB exterior, building interior and RDB block a location
+        // 4. The per-block world publication: every RMB exterior, building interior and RDB block a location
         //    places, normalized in its own frame, its static meshes placing the world media publication's meshes.
         Add("world-blocks", "world-blocks", "--arena2", arena2, "--pack", imported, "--buildings", buildings, "--shared", worldMedia, "--inventory", Inventory,
             "--out", ImportLayout.WorldBlocks, "--source-manifest", $"{records}/world-blocks.sources.json");
 
-        // 6. Reconcile every producer citation and raw-record ledger against the documented inventory, over the
+        // 5. Reconcile every producer citation and raw-record ledger against the documented inventory, over the
         //    content the product will see. This is import coverage, not runtime parity certification.
         Add("source-coverage", "source-coverage", "--arena2", arena2, "--inventory", Inventory, "--repository", ".",
             "--content", staging, "--import-records", records, "--output", $"{records}/source-coverage.json");
@@ -233,8 +226,6 @@ internal static class ImportCommand
 
         foreach (string file in InputFiles.Where(file => !IsFile(Path.Combine(ImportLayout.Inputs, file))))
             yield return $"tracked file '{ImportLayout.Inputs}/{file}'";
-        if (!IsDirectory(Path.Combine(ImportLayout.Inputs, "quests")))
-            yield return $"tracked directory '{ImportLayout.Inputs}/quests'";
 
         if (inputs.Cinematics)
             foreach (string tool in new[] { "ffmpeg", "ffprobe" }.Where(tool => FindOnPath(tool) is null))

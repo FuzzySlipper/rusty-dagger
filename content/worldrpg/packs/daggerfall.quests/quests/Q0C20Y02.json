@@ -1,0 +1,251 @@
+{
+  "name": "Q0C20Y02",
+  "displayName": "An Expensive Purchase",
+  "sourceFile": "Q0C20Y02.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>                   Thou art friend to ==questgiver_,",
+        "<ce>                          this we know. But to",
+        "<ce>                   help thee, a spell must be woven,",
+        "<ce>                    a spell that first must destroy",
+        "<ce>                     before it createth. Wilt thou",
+        "<ce>                       bring to us a _magicitem_",
+        "<ce>                     for our brew, so thou might be",
+        "<ce>                       blessed by its ruination?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>                   Too employed art thou to do this",
+        "<ce>                   task, even knowing its importance?",
+        "<ce>                   Unfortunate for ==questgiver_, and",
+        "<ce>                      unfortunate for thee, %pcn."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>                        The _magicitem_ we need",
+        "<ce>                   is held by ==other_. We require it",
+        "<ce>              before the day has dawned =1stparton_ times.",
+        "<ce>                  ==other_ can be found in ___other_.",
+        "<ce>                           Ask after _other_.",
+        "<ce>                   Let the gods and spirits guide thy",
+        "<ce>                              feet, %pcf."
+      ]
+    },
+    {
+      "id": 1003,
+      "lines": [
+        "<ce>                        The _magicitem_, %pcf.",
+        "<ce>                           Hast thou forgot?"
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>                    Ah, there is the _magicitem_ we",
+        "<ce>                 need for our spell. Quickly, sisters,",
+        "<ce>                   rend it and rip it and boil it in",
+        "<ce>                     a covered tub. Here have we a",
+        "<ce>                       lump of _reward_ for thee,",
+        "<ce>                        %pcn, to thank thee for",
+        "<ce>                          thy speed and valor."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "Remember that time when the Witches transformed our old %t into a snail?",
+        "<--->",
+        "The only thing worse than meeting ==questgiver_ is invoking their ire."
+      ]
+    },
+    {
+      "id": 1006,
+      "lines": [
+        "I heard a howl in the woods last night. I'd say the Witches are on a rampage.",
+        "<--->",
+        "Smell that sour smell in the breeze? That means ==questgiver_ are angry."
+      ]
+    },
+    {
+      "id": 1007,
+      "lines": [
+        "They say ==questgiver_ have been celebrating the completion of some scheme.",
+        "<--->",
+        "You can get drunk on the smell in the air. A blessing from happy witches."
+      ]
+    },
+    {
+      "id": 1008,
+      "lines": [
+        "Dost thou like thy _reward_, %pcf? It suits thee, I think."
+      ]
+    },
+    {
+      "id": 1009,
+      "lines": [
+        "<ce>                   Hast thou forgot the _magicitem_?",
+        "<ce>                      %oth, 'tis too late now. But",
+        "<ce>                  the ==questgiver_ art disappointed,",
+        "<ce>                          %pcf. Truly, we are."
+      ]
+    },
+    {
+      "id": 1010,
+      "lines": [
+        "<ce>                       The _magicitem_ you want?",
+        "<ce>                         Yours for a thousand.",
+        "<ce>                        Very good, here you go."
+      ]
+    },
+    {
+      "id": 1011,
+      "lines": [
+        "She is a very wise woman of ==questgiver_.",
+        "<--->",
+        "She's a woman not to be trifled with from ==questgiver_."
+      ]
+    },
+    {
+      "id": 1020,
+      "lines": [
+        "<ce>                        I ain't givin' up this",
+        "<ce>                          _magicitem_ for less",
+        "<ce>                         than 1000 gold pieces.",
+        "<ce>                        And I'm only willin' ta",
+        "<ce>                       do that for ==questgiver_."
+      ]
+    },
+    {
+      "id": 1025,
+      "lines": [
+        "%qdt:",
+        " _questgiver_ of",
+        " ==questgiver_ has sent me",
+        " off to get a _magicitem_",
+        " held by ==other_, by",
+        " a =other_ named _other_",
+        " in ___other_. I have",
+        " =1stparton_ days to get the",
+        " _magicitem_ and get back to",
+        " ___questgiver_."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 124,
+      "lines": [
+        "Item _reward_ gem"
+      ]
+    },
+    {
+      "kind": "item",
+      "firstLine": 125,
+      "lines": [
+        "Item _magicitem_ magic_item"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 127,
+      "lines": [
+        "Person _questgiver_ face 112 group Questor anyInfo 1011"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 128,
+      "lines": [
+        "Person _other_ factiontype Knightly_Guard remote"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 130,
+      "lines": [
+        "Clock _1stparton_ 00:00 0 flag 17 range 1 4"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 134,
+      "lines": [
+        "start timer _1stparton_ ",
+        "log 1025 step 0 ",
+        "create npc _other_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 138,
+      "lines": [
+        "_pcgetsgold_ task:",
+        "toting _magicitem_ and _questgiver_ clicked ",
+        "give pc _reward_ ",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 143,
+      "lines": [
+        "_pchasitem_ task:",
+        "clicked _other_ and at least 1000 gold otherwise do _S.07_ ",
+        "get item _magicitem_ ",
+        "say 1010 "
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 148,
+      "lines": [
+        "variable _npcclicked_"
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 149,
+      "lines": [
+        "variable _qgclicked_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 150,
+      "lines": [
+        "_1stparton_ task:",
+        "make _magicitem_ permanent ",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 154,
+      "lines": [
+        "variable _2ndparton_"
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 155,
+      "lines": [
+        "variable _queston_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 156,
+      "lines": [
+        "_S.07_ task:",
+        "say 1020 "
+      ]
+    }
+  ]
+}

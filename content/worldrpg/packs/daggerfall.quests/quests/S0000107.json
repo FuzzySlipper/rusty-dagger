@@ -1,0 +1,63 @@
+{
+  "name": "S0000107",
+  "sourceFile": "S0000107.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": []
+    },
+    {
+      "id": 1001,
+      "lines": []
+    },
+    {
+      "id": 1002,
+      "lines": []
+    },
+    {
+      "id": 1003,
+      "lines": []
+    },
+    {
+      "id": 1004,
+      "lines": []
+    },
+    {
+      "id": 1005,
+      "lines": []
+    },
+    {
+      "id": 1006,
+      "lines": []
+    },
+    {
+      "id": 1007,
+      "lines": []
+    },
+    {
+      "id": 1008,
+      "lines": []
+    },
+    {
+      "id": 1009,
+      "lines": []
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "person",
+      "firstLine": 45,
+      "lines": [
+        "Person _aubki_ named Queen_Aubk-i atHome"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 51,
+      "lines": [
+        "change repute with _aubki_ by +8 ",
+        "end quest "
+      ]
+    }
+  ]
+}

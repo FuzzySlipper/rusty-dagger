@@ -21,11 +21,12 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
     internal static readonly ContentPackRoleId ImportedRole = new("daggerfall.imported");
     /// <summary>The one pack carrying the classic block records sites and interiors are built from.</summary>
     internal static readonly ContentPackRoleId BlocksRole = new("daggerfall.blocks");
-    /// <summary>A categorized classic quest corpus; its categories state which entries are offered.</summary>
-    internal static readonly ContentPackRoleId QuestCorpusRole = new("daggerfall.quest-corpus");
-    internal static readonly ContentPackRoleId NamedQuestCorpusRole = new("daggerfall.named-quest-corpus");
-    /// <summary>The Fighters Guild receipt: the whole active guild group in catalog order, without categories.</summary>
-    internal static readonly ContentPackRoleId FightersGuildQuestCorpusRole = new("daggerfall.fighters-guild-quest-corpus");
+    /// <summary>
+    /// A quests pack: quest records in its <c>quests/</c> folder, and in its payload any of the quest catalog, tables and
+    /// corpora (<see cref="DaggerfallQuestContent"/>). A bundle may select several, such as the classic quests and a
+    /// scenario's own.
+    /// </summary>
+    internal static readonly ContentPackRoleId QuestsRole = new("daggerfall.quests");
     /// <summary>
     /// An optional pack that starts a new game elsewhere than the base pack's new-game definition: its own
     /// start, starting gold and opening quests. A bundle selects at most one.
@@ -143,14 +144,14 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             ILookup<ContentPackRoleId, ContentPack> roles = selected.ContentPacks.ToLookup(pack => pack.Role);
             foreach (ContentPack pack in selected.ContentPacks)
             {
-                if (pack.Role != BaseRole && pack.Role != ImportedRole && pack.Role != BlocksRole
-                    && pack.Role != QuestCorpusRole && pack.Role != FightersGuildQuestCorpusRole && pack.Role != NamedQuestCorpusRole
+                if (pack.Role != BaseRole && pack.Role != ImportedRole && pack.Role != BlocksRole && pack.Role != QuestsRole
                     && pack.Role != NewGameStartRole && pack.Role != ArtReplacementsRole)
                     throw new InvalidOperationException($"Content pack '{pack.Id.Value}' declares role '{pack.Role.Value}', which the Daggerfall ruleset does not interpret.");
             }
             DaggerfallData data = DaggerfallData.For(selected);
             DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
-                RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload, data);
+                RequireSingle(selected, roles, BaseRole).Payload, RequireSingle(selected, roles, ImportedRole).Payload, data)
+                .WithQuestSources(DaggerfallQuestContent.Read([.. roles[QuestsRole].Select(pack => QuestPackFiles(selected, pack))]));
             ContentPack[] startPacks = [.. roles[NewGameStartRole]];
             if (startPacks.Length > 1)
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {startPacks.Length} '{NewGameStartRole.Value}' content packs; a new game starts in one place.");
@@ -192,30 +193,27 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             // without one would leave the player's hands unpresented.
             if (inputs.ClassicPresentation.Viewmodel is null || inputs.ClassicPresentation.UnarmedVisual is null)
                 throw new InvalidOperationException("The base payload publishes no classic viewmodel selection for the session.");
-            DaggerfallQuestLanguage questLanguage = new();
-            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> fightersGuildQuests =
-                [.. roles[FightersGuildQuestCorpusRole].SelectMany(pack => DaggerfallFightersGuildQuestCorpusContent.Read(pack.Payload, definitions, questLanguage))];
-            DaggerfallClassicQuestCorpusReceipt[] classicCorpus =
-                [.. roles[QuestCorpusRole].SelectMany(pack => DaggerfallClassicQuestCorpusContent.Read(pack.Payload, definitions, questLanguage))];
-            DaggerfallDisabledQuestSelection disabledQuestSelection = DaggerfallDisabledQuestSelection.From(classicCorpus);
-            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> classicQuestReceipts =
-            [
-                .. classicCorpus.Where(receipt => receipt.IsOrdinaryOffer).Select(receipt => receipt.Runtime),
-                .. disabledQuestSelection.Receipts,
-                .. roles[NamedQuestCorpusRole].SelectMany(pack => DaggerfallNamedQuestCorpusContent.Read(pack.Payload, definitions, questLanguage)),
-            ];
+            DaggerfallQuestAdmission quests = DaggerfallQuestContent.Admit(definitions.QuestSources, new DaggerfallQuestLanguage());
             // The authored new-game definition names the quests a new game starts, so a bundle that does
-            // not admit one is refused by name rather than starting a game silently without it.
-            IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> questReceipts = [.. fightersGuildQuests, .. classicQuestReceipts];
-            string[] missingNewGameQuests = [.. definitions.NewGame.Quests.Where(file => !questReceipts.Any(receipt => receipt.SourceFile == file))];
+            // not carry one is refused by name rather than starting a game silently without it.
+            string[] missingNewGameQuests = [.. definitions.NewGame.Quests.Where(file => !definitions.QuestSources.Quests.ContainsKey(file))];
             if (missingNewGameQuests.Length != 0)
-                throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' admits no quest source for the new-game quests {string.Join(", ", missingNewGameQuests.Select(file => $"'{file}'"))}.");
+                throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' carries no quest record for the new-game quests {string.Join(", ", missingNewGameQuests.Select(file => $"'{file}'"))}.");
             DaggerfallPublishedClassicMedia classicMedia = DaggerfallPublishedClassicMedia.Read(data, inputs.ClassicPresentation);
             DaggerfallMusicBundle? music = DaggerfallMusicBundle.For(selected);
             DaggerfallHeldArt? heldArt = DaggerfallHeldArt.For(selected, DaggerfallAttackTuning.Default.Classes.Keys);
             DaggerfallTuning tuning = DaggerfallTuning.Read(selected.Tuning.Payload.Span);
-            return new DaggerfallAdmittedContent(definitions, blocks, inputs, start.Pose, profiles, questReceipts, disabledQuestSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music, heldArt, art);
+            return new DaggerfallAdmittedContent(definitions, blocks, inputs, start.Pose, profiles, quests.Receipts, quests.DisabledSelection, tuning, classicMedia, new DaggerfallSiteAudioBundles(data, profiles), data, music, heldArt, art);
         });
+
+    /// <summary>A quests pack's payload and the records in the <c>quests/</c> folder beside it.</summary>
+    private static DaggerfallQuestPackFiles QuestPackFiles(ResolvedGameComposition selected, ContentPack pack)
+    {
+        string folder = $"{pack.PayloadPath[..(pack.PayloadPath.LastIndexOf('/') + 1)]}{DaggerfallQuestContent.RecordsFolder}";
+        return new(pack.Id.Value, pack.Payload, [.. selected.Content.ReadDirectory(folder, false).ToArray()
+            .Where(file => file.RelativePath.EndsWith(".json", StringComparison.Ordinal))
+            .Select(file => new DaggerfallQuestRecordFile(file.RelativePath, file.Bytes))]);
+    }
 
     /// <summary>The one pack a bundle must select for a role every session reads exactly once.</summary>
     private static ContentPack RequireSingle(ResolvedGameComposition selected, ILookup<ContentPackRoleId, ContentPack> roles, ContentPackRoleId role)
@@ -232,7 +230,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
         DaggerfallSiteProfile Inputs,
         DaggerfallSiteAnchor? StartPose,
         DaggerfallSiteProfiles Profiles,
-        IReadOnlyList<DaggerfallFightersGuildQuestRuntimeReceipt> QuestReceipts,
+        IReadOnlyList<DaggerfallQuestRuntimeReceipt> QuestReceipts,
         DaggerfallDisabledQuestSelection DisabledQuestSelection,
         DaggerfallTuning Tuning,
         DaggerfallPublishedClassicMedia ClassicMedia,

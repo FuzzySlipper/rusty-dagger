@@ -1,0 +1,72 @@
+{
+  "name": "__DEMO20",
+  "sourceFile": "__DEMO20.txt",
+  "messages": [
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt",
+        "  You must find any home location",
+        "and also explore the wilderness."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "headless",
+      "firstLine": 18,
+      "lines": [
+        "log 1010 step 0"
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 20,
+      "lines": [
+        "variable _atAnyHome_"
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 21,
+      "lines": [
+        "variable _inWilderness_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 25,
+      "lines": [
+        "_entersAnywhere task:",
+        "when pc enters anywhere",
+        "clear _inWilderness_",
+        "clear _exitsAnywhere_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 32,
+      "lines": [
+        "_exitsAnywhere_ task:",
+        "when pc exits anywhere",
+        "setvar _inWilderness_",
+        "clear _atAnyHome_",
+        "clear _entersAnywhere_",
+        "clear _entersAnyHome_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 40,
+      "lines": [
+        "_entersAnyHome_ task:",
+        "when pc enters farmhome",
+        "when pc enters wealthyhome",
+        "when pc enters poorhome",
+        "when pc enters tavernhome",
+        "when pc enters templehome",
+        "setvar _atAnyHome_"
+      ]
+    }
+  ]
+}

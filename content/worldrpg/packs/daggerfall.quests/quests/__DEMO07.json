@@ -1,0 +1,95 @@
+{
+  "name": "__DEMO07",
+  "sourceFile": "__DEMO07.txt",
+  "messages": [
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt",
+        "    You are to meet _king_",
+        " at an inn, _dirtypit_ in __dirtypit_",
+        " and visit _queen_ in Castle Daggerfall."
+      ]
+    },
+    {
+      "id": 1030,
+      "lines": [
+        "Hey %pcn, you just clicked on _king_!"
+      ]
+    },
+    {
+      "id": 1035,
+      "lines": [
+        "Hey %pcn, you just clicked on _queen_!"
+      ]
+    },
+    {
+      "id": 1040,
+      "lines": [
+        "Well done, %pcn. You have clicked on the",
+        "King and Queen of Daggerfall."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "place",
+      "firstLine": 27,
+      "lines": [
+        "Place _dirtypit_ local tavern"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 29,
+      "lines": [
+        "Person _king_ named King_Gothryd"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 30,
+      "lines": [
+        "Person _queen_ named Queen_Aubk-i atHome"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 34,
+      "lines": [
+        "log 1010 step 0",
+        "create npc at _dirtypit_",
+        "place npc _king_ at _dirtypit_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 38,
+      "lines": [
+        "_clickedKing_ task:",
+        "clicked npc _king_",
+        "say 1030"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 42,
+      "lines": [
+        "_clickedQueen_ task:",
+        "clicked npc _queen_",
+        "say 1035"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 46,
+      "lines": [
+        "_clickedBoth_ task:",
+        "when _clickedKing_ and _clickedQueen_",
+        "say 1040",
+        "remove log step 0",
+        "end quest"
+      ]
+    }
+  ]
+}

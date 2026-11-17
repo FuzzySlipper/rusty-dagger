@@ -29,7 +29,7 @@ internal static class SourceCoverageCommand
         foreach (string line in reconciliation.Unreconciled) Console.Error.WriteLine($"inventory unresolved: {line}");
         foreach (string line in reconciliation.Refused) Console.Error.WriteLine($"inventory refused: {line}");
         PayloadFiles.WriteFile(args["--output"], SourceCoverageReconciler.Serialize(report));
-        Console.WriteLine($"source coverage: {report.Records.Count} records, {report.Families.Count} families, {report.QuestHandoffs.Count} original quest handoffs, {report.Unsupported.Count} unsupported media families");
+        Console.WriteLine($"source coverage: {report.Records.Count} records, {report.Families.Count} families, {report.Unsupported.Count} unsupported media families");
         foreach (var family in report.Families) Console.WriteLine($"  {family.FamilyId}: {family.Imported} imported, {family.RequiredPending} pending, {family.Unused} unused, {family.Duplicate} duplicate, {family.Excluded} excluded, {family.Malformed} malformed, {family.SourceGap} source-gap, {family.Unresolved} unresolved");
         foreach (string error in report.Errors) Console.Error.WriteLine(error);
         Console.WriteLine("Runtime parity is not certified; archive citations do not establish individual record normalization.");

@@ -3342,17 +3342,7 @@
       "daggerfall.base",
       "daggerfall.art-replacements",
       "daggerfall.blocks",
-      "daggerfall.quests.fighters",
-      "daggerfall.quests.mages",
-      "daggerfall.quests.temples",
-      "daggerfall.quests.social",
-      "daggerfall.quests.witches-commoners",
-      "daggerfall.quests.merchants-vampires",
-      "daggerfall.quests.disabled",
-      "daggerfall.quests.nobility",
-      "daggerfall.quests.story-early",
-      "daggerfall.quests.story-late",
-      "daggerfall.quests.cures"
+      "daggerfall.quests"
     ],
     "tuning": "daggerfall.defaults"
   },

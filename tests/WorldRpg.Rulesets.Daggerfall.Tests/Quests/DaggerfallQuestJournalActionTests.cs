@@ -15,7 +15,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     [Fact]
     public void Journal_preserves_write_order_across_restore_replaces_by_step_and_removes_only_that_identity()
     {
-        var source = Source() with { Messages = [new(10, 1, ["Same text."]), new(20, 2, ["Same text."])] };
+        var source = Source() with { Messages = [new(10, ["Same text."]), new(20, ["Same text."])] };
         var first = new DaggerfallQuestRuntimeInstance(Runtime(source).Capture() with { InstanceId = "z-first" }, Program(source));
         var second = new DaggerfallQuestRuntimeInstance(Runtime(source).Capture() with { InstanceId = "a-second" }, Program(source));
         var messages = Messages(source);
@@ -39,7 +39,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     [Fact]
     public void A_journal_entry_names_the_date_it_was_written()
     {
-        var source = Source() with { Messages = [new(10, 1, ["%qdt:", "The ship capsized."])] };
+        var source = Source() with { Messages = [new(10, ["%qdt:", "The ship capsized."])] };
         var quest = new DaggerfallQuestRuntimeInstance(Runtime(source).Capture(), Program(source));
         var messages = Messages(source);
         long written = (3 * DaggerfallCalendar.SecondsPerDay) + 3600;
@@ -55,7 +55,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     public void Compiled_remove_log_action_removes_its_step_when_messages_have_the_same_text()
     {
         var source = Source(Block("headless", 1, "log 10 9", "log 20 step 2", "remove log step 9")) with
-        { Messages = [new(10, 1, ["Same text."]), new(20, 2, ["Same text."])] };
+        { Messages = [new(10, ["Same text."]), new(20, ["Same text."])] };
         var runtime = Runtime(source);
         var messages = Messages(source);
         DaggerfallQuestTaskRunner.Advance(runtime, Program(source), new DaggerfallVariableStore(new Dictionary<string, int>()),
@@ -70,7 +70,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     {
         var source = Source(Block("variable", 1, "variable _stop_"),
             Block("task", 2, "until _stop_ performed:", "say 10", "say QuestComplete")) with
-        { Messages = [new(10, 1, ["Same text."]), new(1004, 2, ["Same text."])] };
+        { Messages = [new(10, ["Same text."]), new(1004, ["Same text."])] };
         var program = Program(source);
         var runtime = Runtime(source);
         var variables = new DaggerfallVariableStore(new Dictionary<string, int>());
@@ -139,12 +139,11 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
 
     private static DaggerfallDefinitions DefinitionsWithJournalFixture()
     {
-        JsonObject root = TestPayload.Sections("questSources");
-        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
-            {"name":"journal","displayName":"Journal","sourceFile":"journal.txt","disposition":"compiled",
-             "messages":[{"id":10,"firstLine":1,"lines":["Same text."]},{"id":20,"firstLine":2,"lines":["Same text."]},{"id":30,"firstLine":3,"lines":["%pcn wrote for _giver_."]}],
-             "blocks":[{"kind":"variable","firstLine":1,"lines":["variable _stop_"],"global":null},{"kind":"task","firstLine":2,"lines":["until _stop_ performed:","say 10","journal note 30"],"global":null},{"kind":"headless","firstLine":5,"lines":["log 10 9","log 20 step 2"],"global":null}],"diagnostics":[]}
+        JsonArray root = TestPayload.QuestRecords();
+        root.Add(JsonNode.Parse("""
+            {"name":"journal","displayName":"Journal","sourceFile":"journal.txt","messages":[{"id":10,"lines":["Same text."]},{"id":20,"lines":["Same text."]},{"id":30,"lines":["%pcn wrote for _giver_."]}],
+             "blocks":[{"kind":"variable","firstLine":1,"lines":["variable _stop_"],"global":null},{"kind":"task","firstLine":2,"lines":["until _stop_ performed:","say 10","journal note 30"],"global":null},{"kind":"headless","firstLine":5,"lines":["log 10 9","log 20 step 2"],"global":null}]}
             """));
-        return TestPayload.WithQuestSections(root.AsObject());
+        return TestPayload.WithQuests(root);
     }
 }

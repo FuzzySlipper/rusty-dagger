@@ -83,7 +83,6 @@ public sealed class DataContainerImportTests : IDisposable
 
         Assert.Contains(missing, entry => entry.StartsWith("Arena2 directory 'local/inputs/arena2'", StringComparison.Ordinal));
         Assert.Contains($"tracked file '{ImportLayout.Inputs}/mobiles.json'", missing);
-        Assert.Contains($"tracked directory '{ImportLayout.Inputs}/quests'", missing);
         Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/inputs/Sound'", StringComparison.Ordinal));
         Assert.Contains($"tracked file '{ImportLayout.Inventory}'", missing);
         // The import does not read the authored base payload, so its absence is no missing input.
@@ -273,13 +272,13 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void A_staged_default_outside_the_repository_root_is_refused_with_the_usage()
     {
-        ToolCommand corpora = Program.Commands["classic-quest-corpora"];
+        ToolCommand atlas = Program.Commands["atlas"];
 
-        ArgumentException refusal = Assert.Throws<ArgumentException>(() => corpora.Invoke(["classic-quest-corpora"]));
+        ArgumentException refusal = Assert.Throws<ArgumentException>(() => atlas.Invoke(["atlas"]));
 
-        Assert.Contains($"--pack defaults to '{ImportLayout.ImportedPayload}' in the repository root", refusal.Message, StringComparison.Ordinal);
-        Assert.Contains(corpora.Usage, refusal.Message, StringComparison.Ordinal);
-        Assert.Contains($"[--pack IMPORTED.json (default {ImportLayout.ImportedPayload})]", corpora.Usage, StringComparison.Ordinal);
+        Assert.Matches("--[a-z]+ defaults to '[^']+' in the repository root", refusal.Message);
+        Assert.Contains(atlas.Usage, refusal.Message, StringComparison.Ordinal);
+        Assert.Contains($"[--pack IMPORTED.json (default {ImportLayout.ImportedPayload})]", atlas.Usage, StringComparison.Ordinal);
     }
 
     [Fact]

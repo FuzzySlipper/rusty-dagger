@@ -1,0 +1,251 @@
+{
+  "name": "O0B2XY08",
+  "displayName": "A Prized Herb",
+  "sourceFile": "O0B2XY08.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>                         _qgiver_ is my name.",
+        "<ce>                      This one is a little touchy,",
+        "<ce>                        %pcf. I have _gold_ gold",
+        "<ce>                       for you if you will steal",
+        "<ce>                         some _drugs_ for me. I",
+        "<ce>                      assume you know what _drugs_",
+        "<ce>                      is? It's a highly addictive",
+        "<ce>                       herb. Do you want the job?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>                       If word leaks out of this",
+        "<ce>                      job, you know who I'll come",
+        "<ce>                           looking for %pcn."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>                           Go to __mansion_.",
+        "<ce>                            Find _mansion_.",
+        "<ce>                           Steal the _drugs_.",
+        "<ce>                Bring it back within =traveltime_ days,",
+        "<ce>                          and you'll get paid."
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>                    Just slip them into my pocket.",
+        "<ce>                     Good. I don't think anyone saw",
+        "<ce>                     you do it. Here's your _gold_",
+        "<ce>                              gold, %pcn."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "Everyone's wondering where the _drugs_ trade in __mansion_ is coming from."
+      ]
+    },
+    {
+      "id": 1006,
+      "lines": [
+        "There was a _drugs_ dealer living in _mansion_ in __mansion_ but he's moved."
+      ]
+    },
+    {
+      "id": 1007,
+      "lines": [
+        "_mansion_ in __mansion_ was robbed, but the owner isn't going to the magistrate."
+      ]
+    },
+    {
+      "id": 1008,
+      "lines": [
+        "Just be casual, %pcf. The _drugs_ deal is still hot in the air."
+      ]
+    },
+    {
+      "id": 1009,
+      "lines": [
+        "<ce>                         %oth, %pcf. I thought",
+        "<ce>                    I could trust you to get me that",
+        "<ce>                    _drugs_. Apparently, if you want",
+        "<ce>                     a job done right, kill the %ra",
+        "<ce>                         involved first. Go to",
+        "<ce>                             Oblivion, kid."
+      ]
+    },
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt:",
+        " _qgiver_ of the",
+        " Thieves Guild in  ___qgiver_",
+        " will pay me to steal some",
+        " _drugs_ from _mansion_",
+        " in __mansion_.",
+        " I have to get back to him in",
+        " =traveltime_ days for my money."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 88,
+      "lines": [
+        "Item _drugs_ drug"
+      ]
+    },
+    {
+      "kind": "item",
+      "firstLine": 89,
+      "lines": [
+        "Item _gold_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 91,
+      "lines": [
+        "Person _qgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 93,
+      "lines": [
+        "Place _mansion_ remote house1"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 95,
+      "lines": [
+        "Clock _traveltime_ 00:00 0 flag 17 range 0 2"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 97,
+      "lines": [
+        "Foe _F.00_ is Battle_mage"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 98,
+      "lines": [
+        "Foe _F.01_ is Iron_atronach"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 99,
+      "lines": [
+        "Foe _F.02_ is Daedra_seducer"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 100,
+      "lines": [
+        "Foe _F.03_ is Werewolf"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 103,
+      "lines": [
+        "place item _drugs_ at _mansion_ "
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 104,
+      "lines": [
+        "start timer _traveltime_ ",
+        "log 1010 step 0 ",
+        "pc at _mansion_ set _S.01_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 108,
+      "lines": [
+        "_traveltime_ task:",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 111,
+      "lines": [
+        "_S.01_ task:",
+        "pick one of _guard1_ _guard2_ _guard3_ _guard4_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 114,
+      "lines": [
+        "_questdone_ task:",
+        "toting _drugs_ and _qgiver_ clicked ",
+        "give pc _gold_ ",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 119,
+      "lines": [
+        "_guard1_ task:",
+        "create foe _F.00_ every 4 minutes 1 times with 10% success "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 122,
+      "lines": [
+        "_guard2_ task:",
+        "create foe _F.01_ every 4 minutes 1 times with 10% success "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 125,
+      "lines": [
+        "_guard3_ task:",
+        "create foe _F.02_ every 4 minutes 1 times with 10% success "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 128,
+      "lines": [
+        "_guard4_ task:",
+        "create foe _F.03_ every 4 minutes 1 times with 10% success "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 131,
+      "lines": [
+        "_S.07_ task:",
+        "clicked item _drugs_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 134,
+      "lines": [
+        "_S.08_ task:",
+        "when _S.07_ and _traveltime_ ",
+        "make _drugs_ permanent "
+      ]
+    }
+  ]
+}

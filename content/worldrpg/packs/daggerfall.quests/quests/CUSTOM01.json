@@ -1,0 +1,223 @@
+{
+  "name": "CUSTOM01",
+  "displayName": "From Dusk Till Dead",
+  "sourceFile": "CUSTOM01.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>I hope you're not afraid of the dark, %pcn...",
+        "<ce>Some necromancer is raising hordes of zombies",
+        "<ce>and skeletons at ___graveyard_.",
+        "<ce>We have a contract to end this villain's life",
+        "<ce>and put a stop to their evil deeds.",
+        "<ce>There's _reward_ gold in it for you."
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>Necromancers are tricky business, %pcn.",
+        "<ce>I don't blame you for passing on this one."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>Great. Go to ___graveyard_",
+        "<ce>after dark and slay zombies and skeletons",
+        "<ce>in the graveyard outside until",
+        "<ce>the necromancer is enraged enough",
+        "<ce>to come out of hiding and face you.",
+        "<ce>You'll have =timeLimit_ days to get back to me when done.",
+        "<ce>I'll have your _reward_ gold waiting for you."
+      ]
+    },
+    {
+      "id": 1003,
+      "lines": [
+        "<ce>I'm disappointed in you, %pcn.",
+        "<ce>Now I have to give the contract to someone more reliable."
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>Good job, hero. You've saved many innocent lives."
+      ]
+    },
+    {
+      "id": 1020,
+      "lines": [
+        "<ce>As this undead falls, you feel the ground",
+        "<ce>vibrate underfoot. The necromancer is here!"
+      ]
+    },
+    {
+      "id": 1030,
+      "lines": [
+        "<ce>\"You'll pay... with your... soul!\"",
+        "<ce>The necromancer slumps to the ground.",
+        "<ce>Their undead army will disperse and",
+        "<ce>no longer threaten nearby villages."
+      ]
+    },
+    {
+      "id": 1040,
+      "lines": [
+        "%qdt:",
+        " The Fighters Guild of",
+        " ___questgiver_ has hired",
+        " me to kill a troublesome necromancer",
+        " at their lair, ___graveyard_.",
+        " I am to slay skeletons and zombies",
+        " in the graveyard outside at night",
+        " until the fiend emerges from hiding.",
+        " I have =timeLimit_ days time to kill the necromancer",
+        " and return to collect my payment."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 61,
+      "lines": [
+        "Item _reward_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 63,
+      "lines": [
+        "Person _questgiver_ group Questor male"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 65,
+      "lines": [
+        "Place _graveyard_ remote graveyard"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 67,
+      "lines": [
+        "Clock _timeLimit_ 00:00 0 flag 17 range 0 2"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 69,
+      "lines": [
+        "Foe _zombie_ is Zombie"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 70,
+      "lines": [
+        "Foe _skeleton_ is Skeletal_warrior"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 71,
+      "lines": [
+        "Foe _necromancer_ is Battle_mage"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 74,
+      "lines": [
+        "start timer _timeLimit_",
+        "reveal _graveyard_",
+        "pc at _graveyard_ set _onsite_",
+        "log 1040 step 0"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 79,
+      "lines": [
+        "_timeLimit_ task:",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 82,
+      "lines": [
+        "variable _onsite_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 83,
+      "lines": [
+        "_daytime_ task:",
+        "daily from 05:00 to 18:00"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 86,
+      "lines": [
+        "_attackPlayer_ task:",
+        "when _onsite_ and not _daytime_ and not _necromancerDead_",
+        "create foe _zombie_ every 5 minutes indefinitely with 60% success",
+        "create foe _skeleton_ every 5 minutes indefinitely with 60% success"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 91,
+      "lines": [
+        "_summonNecromancer_ task:",
+        "killed 4 _zombie_",
+        "killed 4 _skeleton_",
+        "say 1020",
+        "create foe _necromancer_ every 1 minutes 1 times with 100% success"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 97,
+      "lines": [
+        "_necromancerDead_ task:",
+        "killed _necromancer_",
+        "say 1030"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 101,
+      "lines": [
+        "_questorClicked_ task:",
+        "clicked npc _questgiver_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 104,
+      "lines": [
+        "_clearclick_ task:",
+        "when _questorClicked_ and not _necromancerDead_",
+        "say 1003",
+        "clear _questorClicked_ _clearclick_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 109,
+      "lines": [
+        "_rewardPlayer_ task:",
+        "when _questorClicked_ and _necromancerDead_",
+        "give pc _reward_",
+        "end quest"
+      ]
+    }
+  ]
+}

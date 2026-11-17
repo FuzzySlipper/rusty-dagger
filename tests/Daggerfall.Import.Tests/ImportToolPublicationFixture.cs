@@ -74,16 +74,6 @@ internal sealed partial class ImportToolFixture
                 }
                 finally { if (Directory.Exists(scratch)) Directory.Delete(scratch, true); }
                 Section("cinematics", cinematicPack with { Cinematics = updated }); break;
-            case "quests": ExpectedQuestSections(sections, records); break;
-            case "fighters-quest-corpus":
-                result.Add(At("output"), FightersGuildQuestCorpusPublication.Serialize(FightersGuildQuestCorpusPublication.Create(Read<DaggerfallQuestCatalog>(Pack, "questCatalog"), Read<DaggerfallQuestPack>(Pack, "questSources"), Read<DaggerfallQuestOriginalSourceSet>(Records, "questOriginalSources")))); break;
-            case "classic-quest-corpora":
-                foreach (var spec in ClassicQuestCorpusPublication.Specifications)
-                    result.Add(At($"output/daggerfall.quests.{spec.Id}.json"), ClassicQuestCorpusPublication.Serialize(ClassicQuestCorpusPublication.Create(spec.Id, Read<DaggerfallQuestCatalog>(Pack, "questCatalog"), Read<DaggerfallQuestPack>(Pack, "questSources"), Read<DaggerfallQuestOriginalSourceSet>(Records, "questOriginalSources"))));
-                // The same verb publishes the named story and cure selections beside the offer corpora.
-                foreach (string id in NamedQuestCorpusPublication.Selections.Keys)
-                    result.Add(At($"output/daggerfall.quests.{id}.json"), NamedQuestCorpusPublication.Serialize(NamedQuestCorpusPublication.Create(id, Read<DaggerfallQuestPack>(Pack, "questSources"), Read<DaggerfallQuestOriginalSourceSet>(Records, "questOriginalSources"))));
-                break;
             case "source-coverage":
                 // The staging tree's files replace the repository content's at the same path; records keep their own label.
                 result.Add(At("report.json"), SourceCoverageReconciler.Serialize(Coverage())); break;
@@ -92,20 +82,4 @@ internal sealed partial class ImportToolFixture
     }
 
     private Arena2ClassicMediaProfile ClassicProfile() => AuthoredUiAssetSet.Read(File.ReadAllBytes(Repo("content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-authored-assets.json")), file => File.ReadAllBytes(Path.Combine(AuthoredUiArt, file)));
-
-    private void ExpectedQuestSections(Dictionary<string, string> sections, Dictionary<string, string> records)
-    {
-        T Input<T>(string file) where T : class => TakenTable.Read<T>(File.ReadAllBytes(TestData.Input(file)), file);
-        DaggerfallQuestTables tables = Input<QuestTablesInput>("quest-tables.json").Tables;
-        DaggerfallQuestCatalog catalog = Input<QuestListInput>("quest-list.json").Catalog;
-        QuestDocumentInput[] quests = [.. Directory.EnumerateFiles(TestData.Input("quests"), "*.json").Order(StringComparer.Ordinal)
-            .Select(file => Input<QuestDocumentInput>(Path.Combine("quests", Path.GetFileName(file))))];
-        var pack = DaggerfallQuestPackBuilder.Build([.. quests.Select(quest => quest.Document).OfType<QuestSourceDocument>()], [],
-            PublishedSourcePath.Donor("Assets/StreamingAssets/Quests"), new byte[quests.Sum(quest => quest.Source.ByteLength)], Rows);
-        var originals = DaggerfallQuestOriginalSourceBuilder.Build(Arena2, QuestSourceInventory.Enumerate(Directory.EnumerateFiles(Arena2).Where(file => file.EndsWith(".QBN", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".QRC", StringComparison.OrdinalIgnoreCase)).Select(Path.GetFileName).OfType<string>().ToArray(), Path.GetFileName(Path.TrimEndingDirectorySeparator(Arena2))), pack);
-        sections.Add("questCatalog", JsonSerializer.Serialize(catalog, PublishedJson.Section));
-        sections.Add("questTables", JsonSerializer.Serialize(tables, PublishedJson.Section));
-        sections.Add("questSources", JsonSerializer.Serialize(pack, PublishedJson.Section));
-        records.Add("questOriginalSources", JsonSerializer.Serialize(originals, PublishedJson.Section));
-    }
 }

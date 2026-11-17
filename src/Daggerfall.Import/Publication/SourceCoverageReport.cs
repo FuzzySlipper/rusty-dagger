@@ -10,9 +10,6 @@ public sealed record SourceCoverageRecord(SourceManifestRecord Source, SourceRec
     IReadOnlyList<SourceCoverageConsumer> Consumers, IReadOnlyList<SourceCoverageConsumer> ArchiveContext,
     bool HasRecordEvidence, string Detail);
 
-public sealed record SourceCoverageQuestHandoff(string Stem, string Selection, string Availability,
-    string? BinaryPath, string? ResourcePath, string? RewrittenSource, IReadOnlyList<string> CorpusArtifacts);
-
 public sealed record SourceCoverageFamilyEvidence(string FamilyId, string DocumentedDisposition,
     IReadOnlyList<string> SourcePaths, IReadOnlyList<SourceCoverageConsumer> Consumers);
 
@@ -20,7 +17,7 @@ public sealed record SourceCoverageUnsupported(string Artifact, string Family, I
 
 /// <summary>Import coverage evidence, never certification that the game implements the source behavior.</summary>
 public sealed record SourceCoverageReport(IReadOnlyList<SourceCoverageRecord> Records,
-    IReadOnlyList<SourceManifestFamilyCount> Families, IReadOnlyList<SourceCoverageQuestHandoff> QuestHandoffs,
+    IReadOnlyList<SourceManifestFamilyCount> Families,
     IReadOnlyList<SourceCoverageUnsupported> Unsupported, IReadOnlyList<string> Errors,
     IReadOnlyList<SourceCoverageFamilyEvidence> FamilyEvidence)
 {
@@ -52,11 +49,11 @@ public static class SourceCoverageReconciler
             .Select(row => row.PathOrPattern.StartsWith(root, StringComparison.Ordinal) ? row.PathOrPattern[root.Length..] : row.PathOrPattern)];
         SourceManifest manifest = SourceManifestBuilder.Scan(
             new SourceManifestRequest(PublishedSourcePath.Arena2Root, inventoryPath, arena2Directory, imported, [], excluded), inventoryCsv);
-        return Build(manifest, inputs.Consumers, inputs.Quests, inputs.Unsupported, inventory);
+        return Build(manifest, inputs.Consumers, inputs.Unsupported, inventory);
     }
 
     public static SourceCoverageReport Build(SourceManifest manifest, IReadOnlyList<SourceCoverageConsumer> consumers,
-        IReadOnlyList<SourceCoverageQuestHandoff>? quests = null, IReadOnlyList<SourceCoverageUnsupported>? unsupported = null,
+        IReadOnlyList<SourceCoverageUnsupported>? unsupported = null,
         IReadOnlyList<SourceInventoryRow>? inventory = null)
     {
         ArgumentNullException.ThrowIfNull(manifest);
@@ -133,7 +130,6 @@ public static class SourceCoverageReconciler
             family.DocumentedDisposition, records.Where(value => value.Source.FamilyId == family.FamilyId)
                 .Select(value => value.Source with { Disposition = value.Disposition }))).ToArray();
         return new(records, familyCounts,
-            [.. (quests ?? []).OrderBy(value => value.Stem, StringComparer.Ordinal)],
             [.. (unsupported ?? []).OrderBy(value => value.Artifact, StringComparer.Ordinal).ThenBy(value => value.Family, StringComparer.Ordinal)],
             [.. errors.Distinct().Order(StringComparer.Ordinal)],
             [.. familyRows.GroupBy(row => row.FamilyId).OrderBy(group => group.Key, StringComparer.Ordinal).Select(group =>

@@ -1,0 +1,199 @@
+{
+  "name": "00B00Y00",
+  "displayName": "The Price of Knowledge",
+  "sourceFile": "00B00Y00.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>      We have but one rule at the School of Julianos -- knowledge",
+        "<ce>        is to be shared. Unfortunately, we have a former member",
+        "<ce>        of our order who has forsaken this rule and needs to be",
+        "<ce>        punished. If we offered you _reward_ gold pieces, would",
+        "<ce>        you pursue and slay this erstwhile member of our School?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>       Disappointing. Well, we'll find someone else doubtlessly."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>                      Good. The prodigal one is a",
+        "<ce>                      nightblade called =monster_",
+        "<ce>                who has taken refuge in %g3 laboratory,",
+        "<ce>                      ___mondung_. If you have not",
+        "<ce>             returned in =1stparton_ days with _monster_'s",
+        "<ce>      blood on your hands, we will assume you have failed or have",
+        "<ce>                       joined =monster_ and your",
+        "<ce>        reward will be forfeited to someone who will not fail. I",
+        "<ce>          trust I've made myself clear. Good luck and goodbye."
+      ]
+    },
+    {
+      "id": 1003,
+      "lines": [
+        "While that nightblade lives, I am not interested in chatting on any subject, %pcf."
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>                           Very nice, %pcf.",
+        "<ce>              Very nice indeed. Here is your _reward_ gold",
+        "<ce>                  pieces. We are very grateful to you."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "I hear there's a nightblade in ___mondung_, selling spells for money.",
+        "<--->",
+        "Renegade spellcasters are very dangerous. I hope they get that _monster_."
+      ]
+    },
+    {
+      "id": 1006,
+      "lines": [
+        "=monster_ has supposedly moved on, still selling spells for money.",
+        "<--->",
+        "I hear the School of Julianos has unleashed the Knights Mentor after someone."
+      ]
+    },
+    {
+      "id": 1007,
+      "lines": [
+        "They finally got that _monster_. You can't have undisciplined mages loose.",
+        "<--->",
+        "Pity about them catching that _monster_. I hear he had a lot of juicy dirt."
+      ]
+    },
+    {
+      "id": 1008,
+      "lines": [
+        "<ce>              You're %pcn. Good job with that =monster_,",
+        "<ce>                you remember, the renegade spellcaster?"
+      ]
+    },
+    {
+      "id": 1009,
+      "lines": [
+        "<ce>                Hmmph. You really blew that job to slay",
+        "<ce>            the renegade spellcaster =monster_, didn't you?"
+      ]
+    },
+    {
+      "id": 1030,
+      "lines": [
+        "%qdt:",
+        " The School of Julianos in ___questgiver_",
+        " has hired me to kill a prodigal",
+        " _monster_ of their temple,",
+        " =monster_. I have =1stparton_ days to",
+        " get to %g3 hideout, ___mondung_,",
+        " and back to the School."
+      ]
+    },
+    {
+      "id": 1031,
+      "lines": [
+        "<ce>                       You have slain =monster_.",
+        "<ce>                       The School will be proud."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 94,
+      "lines": [
+        "Item _reward_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 96,
+      "lines": [
+        "Person _questgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 98,
+      "lines": [
+        "Place _mondung_ remote dungeon9"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 100,
+      "lines": [
+        "Clock _1stparton_ 00:00 0 flag 17 range 0 2"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 102,
+      "lines": [
+        "Foe _monster_ is Nightblade"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 105,
+      "lines": [
+        "start timer _1stparton_ ",
+        "reveal _mondung_ ",
+        "log 1030 step 0 ",
+        "place foe _monster_ at _mondung_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 110,
+      "lines": [
+        "_pcgetsgold_ task:",
+        "when _qgclicked_ and _mondead_ ",
+        "give pc _reward_ ",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 115,
+      "lines": [
+        "_mondead_ task:",
+        "killed 1 _monster_ saying 1031 "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 118,
+      "lines": [
+        "_qgclicked_ task:",
+        "clicked npc _questgiver_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 121,
+      "lines": [
+        "_1stparton_ task:",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 124,
+      "lines": [
+        "_clearclick_ task:",
+        "when _qgclicked_ and not _mondead_",
+        "say 1003 ",
+        "clear _qgclicked_ _clearclick_ "
+      ]
+    }
+  ]
+}

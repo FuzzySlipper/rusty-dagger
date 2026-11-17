@@ -164,17 +164,16 @@ public sealed class DaggerfallRestSessionTests
     [Fact]
     public void A_quest_prompt_raised_during_rest_stops_the_rest_before_further_time_passes()
     {
-        JsonObject root = TestPayload.Sections("questSources");
-        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
-            {"name":"rest-prompt","displayName":"Rest prompt","sourceFile":"rest-prompt.txt","disposition":"compiled",
-            "messages":[{"id":1010,"firstLine":1,"lines":["Will you help?"]}],
+        JsonArray root = TestPayload.QuestRecords();
+        root.Add(JsonNode.Parse("""
+            {"name":"rest-prompt","displayName":"Rest prompt","sourceFile":"rest-prompt.txt","messages":[{"id":1010,"lines":["Will you help?"]}],
             "blocks":[{"kind":"clock","firstLine":2,"lines":["clock _ask_ 30"],"global":null},
             {"kind":"variable","firstLine":3,"lines":["variable _yes_"],"global":null},
             {"kind":"variable","firstLine":4,"lines":["variable _no_"],"global":null},
             {"kind":"task","firstLine":5,"lines":["_ask_ task:","prompt 1010 yes _yes_ no _no_"],"global":null},
-            {"kind":"headless","firstLine":7,"lines":["start timer _ask_"],"global":null}],"diagnostics":[]}
+            {"kind":"headless","firstLine":7,"lines":["start timer _ask_"],"global":null}]}
             """));
-        DaggerfallDefinitions definitions = TestPayload.WithQuestSections(root.AsObject());
+        DaggerfallDefinitions definitions = TestPayload.WithQuests(root);
         DaggerfallSiteProfile inputs = ReadInputs(TestData.RepositoryRoot);
         DaggerfallSkyMedia sky = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
         List<string> releases = [];

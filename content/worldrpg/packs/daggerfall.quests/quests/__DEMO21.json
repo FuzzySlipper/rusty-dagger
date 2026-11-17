@@ -1,0 +1,54 @@
+{
+  "name": "__DEMO21",
+  "sourceFile": "__DEMO21.txt",
+  "messages": [
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt",
+        "    Survive the wave of rats until they flee!"
+      ]
+    },
+    {
+      "id": 1030,
+      "lines": [
+        "The rats all scurry back to their holes!"
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "foe",
+      "firstLine": 18,
+      "lines": [
+        "Foe _rat_ is Giant_rat"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 19,
+      "lines": [
+        "Clock _timer1_ 0.0:15"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 22,
+      "lines": [
+        "log 1010 step 0",
+        "create foe _rat_ every 2 minutes indefinitely with 100% success ",
+        "start timer _timer1_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 26,
+      "lines": [
+        "_timer1_ task:",
+        "say 1030",
+        "remove foe _rat_",
+        "end quest"
+      ]
+    }
+  ]
+}

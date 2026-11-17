@@ -290,16 +290,12 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal DaggerfallItemTemplateSet ItemTemplateCatalog { get; } = itemTemplateCatalog;
 
     /// <summary>
-    /// The normalized quest sources, loaded from the pack alone: each source file resolves to
-    /// its messages, blocks and whether it may run.
+    /// The quests the selected quests packs carry (<see cref="DaggerfallQuestContent"/>): each source file resolves
+    /// to its messages, blocks and whether it may run. The base payloads carry none, so it is empty until joined.
     /// </summary>
     internal DaggerfallQuestSourceSet QuestSources { get; private set; } = questSources;
 
-    /// <summary>
-    /// These definitions with other quest sources and every other section shared. Only
-    /// <see cref="DaggerfallBaseContent.ReadQuestSections"/> calls it, after reading the replacement
-    /// through the same reader the full payload uses.
-    /// </summary>
+    /// <summary>These definitions joined with the quests read from the selected quests packs, every other section shared.</summary>
     internal DaggerfallDefinitions WithQuestSources(DaggerfallQuestSourceSet questSources)
     {
         var replaced = (DaggerfallDefinitions)MemberwiseClone();

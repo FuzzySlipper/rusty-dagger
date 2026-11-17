@@ -17,7 +17,6 @@ internal static class Program
         SourceInventoryCommand.Command,
         MobileLedgerCommand.Command,
         MonsterArchiveCommand.Command,
-        QuestSourcesCommand.Command,
         TextureLeavesCommand.Command,
         ResidualPathsCommand.Command,
         MapArtCommand.Command,

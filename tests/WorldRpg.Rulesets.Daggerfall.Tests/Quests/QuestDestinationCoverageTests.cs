@@ -30,16 +30,16 @@ public sealed class QuestDestinationCoverageTests(ITestOutputHelper output)
         QuestDestinationExpansion expansion = new(definitions, sites, allocator);
 
         HashSet<DaggerfallWorldProfileKey> everything = [];
-        foreach (ContentPack pack in world.ContentPacks.Where(pack => pack.Role == DaggerfallRuleset.QuestCorpusRole
-            || pack.Role == DaggerfallRuleset.NamedQuestCorpusRole || pack.Role == DaggerfallRuleset.FightersGuildQuestCorpusRole).OrderBy(pack => pack.Id.Value))
+        foreach (DaggerfallQuestCorpusDefinition corpus in definitions.QuestSources.Corpora.OrderBy(corpus => corpus.Id, StringComparer.Ordinal))
         {
-            HashSet<string> files = [.. JsonNode.Parse(pack.Payload.Span)!["quests"]!.AsArray().Select(quest => quest!["sourceFile"]!.GetValue<string>())];
+            HashSet<string> names = [.. corpus.Categories.SelectMany(category => category.Names)];
+            HashSet<string> files = [.. definitions.QuestSources.Quests.Values.Where(quest => names.Contains(quest.Name)).Select(quest => quest.SourceFile)];
             DaggerfallQuestResourceDefinition[] places = [.. definitions.QuestSources.Resources.Where(value => value.Kind == "place" && files.Contains(value.SourceFile))];
             HashSet<DaggerfallWorldProfileKey> destinations = [];
             foreach (DaggerfallQuestResourceDefinition place in places) destinations.UnionWith(expansion.Selectable(place));
             DaggerfallWorldProfileKey[] unresolved = [.. destinations.Where(key => !world.Profiles.Contains(key))];
-            Assert.True(unresolved.Length == 0, $"{pack.Id.Value}: {unresolved.Length} destinations have no catalog profile, e.g. {unresolved.FirstOrDefault().LogicalId}.");
-            output.WriteLine(string.Join(" | ", pack.Id.Value, $"quests {files.Count}", $"places {places.Length}",
+            Assert.True(unresolved.Length == 0, $"{corpus.Id}: {unresolved.Length} destinations have no catalog profile, e.g. {unresolved.FirstOrDefault().LogicalId}.");
+            output.WriteLine(string.Join(" | ", corpus.Id, $"quests {files.Count}", $"places {places.Length}",
                 string.Join(" ", places.GroupBy(place => place.PlaceKind).OrderBy(group => group.Key).Select(group => $"{group.Key} {group.Count()}")),
                 $"locations {destinations.Select(key => key.Site).Distinct().Count()}",
                 $"profiles {destinations.Count} (interiors {destinations.Count(key => key.Kind == DaggerfallWorldProfileKind.Interior)}, "

@@ -140,16 +140,17 @@ public sealed class CommittedBundleCompositionTests
     }
 
     [Fact]
-    public void A_bundle_that_admits_no_source_for_a_new_game_quest_is_refused_by_name()
+    public void A_bundle_that_carries_no_record_for_a_new_game_quest_is_refused_by_name()
     {
-        // The introduction is published by the late story corpus; a bundle without it
-        // would otherwise start a game that silently lacks it.
+        // The introduction is a record of the quests pack; a bundle without it would otherwise
+        // start a game that silently lacks it.
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithBundle(bundle =>
         {
             JsonArray packs = bundle["contentPacks"]!.AsArray();
-            packs.Remove(packs.Single(pack => pack!["id"]!.GetValue<string>() == "daggerfall.quests.story-late"));
+            packs.Remove(packs.Single(pack => pack!["id"]!.GetValue<string>() == "daggerfall.quests"));
         }));
-        Assert.Contains("admits no quest source for the new-game quests '_BRISIEN.txt'", error.Message, StringComparison.Ordinal);
+        Assert.Contains("carries no quest record for the new-game quests", error.Message, StringComparison.Ordinal);
+        Assert.Contains("'_BRISIEN.txt'", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -166,19 +167,6 @@ public sealed class CommittedBundleCompositionTests
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => CreateWithPackRole("daggerfall.base", "daggerfall.blocks"));
 
         Assert.Contains("selects 0 'daggerfall.base' content packs", error.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void An_unknown_corpus_id_is_admitted_from_what_its_payload_states()
-    {
-        string root = TestData.RepositoryRoot;
-        JsonObject payload = JsonNode.Parse(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.mages.json")))!.AsObject();
-        payload["id"] = "a-corpus-no-code-names";
-
-        IReadOnlyList<DaggerfallClassicQuestCorpusReceipt> receipts = DaggerfallClassicQuestCorpusContent.Read(Encoding.UTF8.GetBytes(payload.ToJsonString()), TestPayload.Definitions, new DaggerfallQuestLanguage());
-
-        Assert.NotEmpty(receipts);
-        Assert.All(receipts, receipt => Assert.True(receipt.IsOrdinaryOffer));
     }
 
     [Fact]

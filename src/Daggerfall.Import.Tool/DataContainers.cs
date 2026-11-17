@@ -39,16 +39,13 @@ internal static class ImportLayout
     /// <summary>The imported payload: every base section the commands derive.</summary>
     public const string ImportedPayload = $"{Staging}/worldrpg/payloads/daggerfall.imported.json";
 
-    /// <summary>The directory the quest corpus payloads are written into.</summary>
-    public const string Payloads = $"{Staging}/worldrpg/payloads";
-
     /// <summary>The block payload the runtime reads: building fields, map positions and automap footprints.</summary>
     public const string BuildingsPayload = $"{Staging}/worldrpg/payloads/daggerfall.blocks.json";
 
     /// <summary>The complete block document, an importer record whose use sites geometry reads.</summary>
     public const string BlockDocument = $"{Records}/daggerfall.blocks.json";
 
-    /// <summary>The importer records nothing at runtime reads: the mesh inventory and the original quest-source selections.</summary>
+    /// <summary>The importer records nothing at runtime reads: the mesh inventory.</summary>
     public const string ImportRecords = $"{Records}/daggerfall.import-records.json";
 
     /// <summary>The classic media group the classic, sky, character and paper-doll media are written into.</summary>
@@ -164,13 +161,10 @@ internal static class DataContainers
         [
             Pack("daggerfall.imported", "daggerfall.imported", dependsOnBase: false),
             Pack("daggerfall.blocks", "daggerfall.blocks"),
-            Pack("daggerfall.quests.fighters", "daggerfall.fighters-guild-quest-corpus", "Retained Fighters Guild quest corpus receipt."),
-            .. ClassicQuestCorpusPublication.Specifications.Select(specification => Pack($"daggerfall.quests.{specification.Id}", "daggerfall.quest-corpus")),
-            .. NamedQuestCorpusPublication.Selections.Keys.Select(id => Pack($"daggerfall.quests.{id}", "daggerfall.named-quest-corpus")),
         ];
         return [.. packs.OrderBy(pack => (string)pack["id"]!, StringComparer.Ordinal)];
 
-        static JsonObject Pack(string id, string role, string? description = null, bool dependsOnBase = true)
+        static JsonObject Pack(string id, string role, bool dependsOnBase = true)
         {
             JsonObject pack = new()
             {
@@ -180,7 +174,6 @@ internal static class DataContainers
                 ["role"] = role,
                 ["dependencies"] = dependsOnBase ? new JsonArray(new JsonObject { ["id"] = "daggerfall.base" }) : new JsonArray(),
             };
-            if (description is not null) pack["description"] = description;
             pack["payload"] = $"worldrpg/payloads/{id}.json";
             return pack;
         }

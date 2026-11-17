@@ -53,32 +53,6 @@ internal static class DonorTakes
             TakenFrom source = Taken(donor, $"{TextDirectory}/Internal_Flats.csv", out _);
             return new NpcCaptionTable(source, DonorNpcCaptions.Read(File.ReadAllBytes(Path.Combine(donor, TextDirectory, "Internal_Flats.csv")), source.Path));
         }),
-        Input("quest-tables.json", donor => new QuestTablesInput("", QuestTables(donor))),
-        Input("quest-list.json", donor => new QuestListInput("", DonorQuestList.Read(File.ReadAllBytes(Path.Combine(donor, QuestTableDirectory, "QuestList-Classic.txt")),
-            PublishedSourcePath.Donor($"{QuestTableDirectory}/QuestList-Classic.txt"), Directory.EnumerateFiles(Path.Combine(donor, QuestDirectory), "*.txt")))),
-        new($"{ImportLayout.Inputs}/quests/", QuestDocuments, donor =>
-        {
-            DaggerfallQuestTables tables = QuestTables(donor);
-            JsonObject documents = [];
-            foreach (string path in Directory.EnumerateFiles(Path.Combine(donor, QuestDirectory), "*.txt").Order(StringComparer.Ordinal))
-            {
-                string fileName = Path.GetFileName(path);
-                TakenFrom source = Taken(donor, $"{QuestDirectory}/{fileName}", out string text);
-                QuestDocumentInput document;
-                try
-                {
-                    document = new(source, DonorQuestScript.Read(text, fileName, tables.StaticMessages.Lookup, tables.Globals.Lookup), null);
-                }
-                catch (Arena2FormatException exception)
-                {
-                    document = new(source, null, new QuestRefusal(exception.Offset, exception.Message));
-                }
-
-                documents[Path.GetFileNameWithoutExtension(fileName)] = JsonSerializer.SerializeToNode(document, PublishedJson.Section);
-            }
-
-            return documents;
-        }),
         Section("buildingNames", donor => DonorBuildingNames.Build(File.ReadAllBytes(Path.Combine(donor, "Assets/Scripts/API/MapsFile.cs")),
             PublishedSourcePath.Donor("Assets/Scripts/API/MapsFile.cs"))),
         Section("internalText", donor => DonorInternalText.Build(File.ReadAllBytes(Path.Combine(donor, $"{TextDirectory}/Internal_Strings.csv")),
@@ -89,32 +63,6 @@ internal static class DonorTakes
     internal const string BasePayload = "content/worldrpg/packs/daggerfall.base/payload.json";
 
     private const string TextDirectory = "Assets/StreamingAssets/Text/Master Localization CSV Files";
-    private const string QuestDirectory = "Assets/StreamingAssets/Quests";
-    private const string QuestTableDirectory = "Assets/StreamingAssets/Tables";
-
-    /// <summary>The quest tables as the donor's <c>Quests-*.txt</c> files state them.</summary>
-    private static DaggerfallQuestTables QuestTables(string donor)
-    {
-        (byte[] Bytes, string Label) Table(string name) =>
-            (File.ReadAllBytes(Path.Combine(donor, QuestTableDirectory, $"Quests-{name}.txt")), PublishedSourcePath.Donor($"{QuestTableDirectory}/Quests-{name}.txt"));
-        DaggerfallQuestTable Read(string name, bool globals = false) => Table(name) is var (bytes, label) ? DonorQuestTable.Read(bytes, label, globals) : null!;
-        (byte[] items, string itemsLabel) = Table("Items");
-        (byte[] factions, string factionsLabel) = Table("Factions");
-        (byte[] foes, string foesLabel) = Table("Foes");
-        (byte[] places, string placesLabel) = Table("Places");
-        return new(Read("GlobalVars", globals: true), Read("StaticMessages"), DonorQuestPlaces.Read(places, placesLabel), Read("Sounds"),
-            Read("Diseases"), Read("Spells"), DonorQuestActorItemTables.Read(items, itemsLabel, factions, factionsLabel, foes, foesLabel));
-    }
-
-    /// <summary>Our quest documents, one per script, by the script's name.</summary>
-    private static JsonNode QuestDocuments(string repository)
-    {
-        JsonObject documents = [];
-        foreach (string path in Directory.EnumerateFiles(Path.Combine(repository, ImportLayout.Inputs, "quests"), "*.json").Order(StringComparer.Ordinal))
-            documents[Path.GetFileNameWithoutExtension(path)] = JsonNode.Parse(File.ReadAllBytes(path));
-        return documents;
-    }
-
     /// <summary>A section of the base pack's payload.</summary>
     private static DonorTake Section<T>(string section, Func<string, T> fromDonor) => new(
         $"{BasePayload} section {section}",

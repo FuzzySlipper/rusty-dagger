@@ -384,27 +384,17 @@ public sealed class QuestItemLifecycleTests
     private static DaggerfallQuestResourceState Item(DaggerfallState state) => state.Quests.All.Single().Resources.Single();
     private static DaggerfallDefinitions Definitions(bool stackable, bool gold, bool actions)
     {
-        var root = TestPayload.Sections("questSources");
-        var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
-        var item = gold ? declarations.First(value => value!["targetCanonicalId"]?.GetValue<string>() == "gold")!.DeepClone()
-            : declarations.Single(value => value!["sourceFile"]!.GetValue<string>() == (stackable ? "R0C11Y28.txt" : "S0000502.txt")
-                && value["symbol"]!["canonicalId"]!.GetValue<string>() == (stackable ? "i.09" : "reward"))!.DeepClone();
-        item["sourceFile"] = "items.txt"; item["quest"] = "items";
-        item["symbol"]!["canonicalId"] = "gift"; item["symbol"]!["sourceSpelling"] = "_gift_";
-        item["item"]!["usedMessage"] = "1010";
-        declarations.Add(item);
-        if (!gold)
-        {
-            item["item"]!["class"] = 3;
-            item["item"]!["template"] = stackable ? 131 : 116;
-        }
+        JsonArray root = TestPayload.QuestRecords();
+        string declaration = gold ? "Item _gift_ gold used 1010"
+            : stackable ? "Item _gift_ item class 3 subclass 13 template 131 used 1010" : "Item _gift_ item class 3 subclass 3 template 116 used 1010";
         var source = JsonNode.Parse("""
-            {"name":"items","displayName":"","sourceFile":"items.txt","disposition":"compiled","messages":[{"id":1010,"firstLine":1,"lines":["Here is the item."]}],"blocks":[],"diagnostics":[]}
+            {"name":"items","displayName":"","sourceFile":"items.txt","messages":[{"id":1010,"lines":["Here is the item."]}],"blocks":[]}
             """)!;
-        if (actions) source["blocks"] = JsonNode.Parse("""
-            [{"kind":"headless","firstLine":2,"lines":["get item _gift_ saying 1010","have _gift_ set _seen_"],"global":null},{"kind":"variable","firstLine":4,"lines":["variable _seen_"],"global":null}]
-            """);
-        root["questSources"]!["quests"]!.AsArray().Add(source);
-        return TestPayload.WithQuestSections(root.AsObject());
+        source["blocks"]!.AsArray().Add(new JsonObject { ["kind"] = "item", ["firstLine"] = 1, ["lines"] = new JsonArray(declaration) });
+        if (actions) foreach (JsonNode? block in JsonNode.Parse("""
+            [{"kind":"headless","firstLine":2,"lines":["get item _gift_ saying 1010","have _gift_ set _seen_"]},{"kind":"variable","firstLine":4,"lines":["variable _seen_"]}]
+            """)!.AsArray().ToArray()) source["blocks"]!.AsArray().Add(block!.DeepClone());
+        root.Add(source);
+        return TestPayload.WithQuests(root);
     }
 }

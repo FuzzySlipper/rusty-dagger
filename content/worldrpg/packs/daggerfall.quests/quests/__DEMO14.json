@@ -1,0 +1,66 @@
+{
+  "name": "__DEMO14",
+  "sourceFile": "__DEMO14.txt",
+  "messages": [
+    {
+      "id": 1011,
+      "lines": [
+        "_someperson_ can be found in _tavern_."
+      ]
+    },
+    {
+      "id": 1012,
+      "lines": [
+        "This is a short anyInfo message about item resource..."
+      ]
+    },
+    {
+      "id": 1013,
+      "lines": [
+        "You should ask around for _someitem_..."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "person",
+      "firstLine": 23,
+      "lines": [
+        "Person _someperson_ face 81 faction The_Thieves_Guild anyInfo 1011"
+      ]
+    },
+    {
+      "kind": "item",
+      "firstLine": 24,
+      "lines": [
+        "Item _someitem_ trinket anyInfo 1012"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 25,
+      "lines": [
+        "Place _tavern_ local tavern"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 28,
+      "lines": [
+        "dialog link for item _someitem_",
+        "create npc _someperson_ ",
+        "place npc _someperson_ at _tavern_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 32,
+      "lines": [
+        "_S.00_ task:",
+        "clicked npc _someperson_",
+        "say 1013",
+        "add dialog for item _someitem_"
+      ]
+    }
+  ]
+}

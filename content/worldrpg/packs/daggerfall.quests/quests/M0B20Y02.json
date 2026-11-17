@@ -1,0 +1,271 @@
+{
+  "name": "M0B20Y02",
+  "displayName": "Pack of Giants",
+  "sourceFile": "M0B20Y02.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>                  Yeah, I got a little job for you. I",
+        "<ce>                   wouldn't give this to just anyone,",
+        "<ce>                  but I know you do good work. There's",
+        "<ce>                 this pack of giants that want killing.",
+        "<ce>                 Pay is pretty standard, _reward_ gold",
+        "<ce>                         pieces. You up for it?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>                      Awright, whatever. Sounded",
+        "<ce>                    like your kind of thing is all."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>                      Good deal, %pcf. Our client",
+        "<ce>                 places the giants at their stronghold,",
+        "<ce>                       ___mondung_. He says there",
+        "<ce>                   are six of 'em, and he ain't gonna",
+        "<ce>                    pay unless all six are stiffed,",
+        "<ce>                      and in =1stparton_ days. Got",
+        "<ce>                            it, %pcf? Good."
+      ]
+    },
+    {
+      "id": 1003,
+      "lines": [
+        "<ce>                   You know, until those six giants",
+        "<ce>                  ain't breathing no more, there ain't",
+        "<ce>                         no time for chattin'."
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>                     %oth, them giants didn't know",
+        "<ce>                     what him 'em, did they, %pcf?",
+        "<ce>                Here's your _reward_ gold, as promised."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "There's a bunch of giants in ___mondung_, but they don't bother anyone.",
+        "<--->",
+        "I hear the %t wants those giants in ___mondung_ dead once and for all."
+      ]
+    },
+    {
+      "id": 1006,
+      "lines": [
+        "Something scared those giants off. Wonder what it could've been.",
+        "<--->",
+        "If I were one of those giants, I would've ran off too. Too much traffic."
+      ]
+    },
+    {
+      "id": 1007,
+      "lines": [
+        "I wonder how soon it'll be before a new group of giants move into ___mondung_.",
+        "<--->",
+        "I kinda feel sorry for those giants. They didn't really bother anyone."
+      ]
+    },
+    {
+      "id": 1008,
+      "lines": [
+        "<ce>                    Giants are tough. You did well",
+        "<ce>                   %pcf. You'll go far in the guild."
+      ]
+    },
+    {
+      "id": 1009,
+      "lines": [
+        "<ce>                   Giants were too much for you huh?",
+        "<ce>                    Maybe the guild should have sent",
+        "<ce>                     you out after pygmies instead."
+      ]
+    },
+    {
+      "id": 1010,
+      "lines": [
+        "<ce>                      All of the giants are dead."
+      ]
+    },
+    {
+      "id": 1020,
+      "lines": [
+        "<ce>                       This is GIANT territory!",
+        "<ce>                       Go back to your puny lands",
+        "<ce>                                %ra fly!",
+        "                                     <--->",
+        "<ce>                        I ate a %ra yesterday.",
+        "<ce>                            It tasted good.",
+        "                                     <--->",
+        "<ce>                      Smash you! Smash you flat!"
+      ]
+    },
+    {
+      "id": 1030,
+      "lines": [
+        "%qdt:",
+        " The Fighters Guild of",
+        " ___questgiver_ has hired me",
+        " to kill a tribe of six giants in",
+        " their hideout, ___mondung_. I",
+        " need to have the assignment accomplished and be",
+        " back in =1stparton_ days to get my payment."
+      ]
+    },
+    {
+      "id": 1080,
+      "lines": [
+        "<ce>                       Hey %pct, if it's killing",
+        "<ce>                        you're looking for, take",
+        "<ce>                        this map to ___newdung_.",
+        "<ce>                          Plenty of it there."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 112,
+      "lines": [
+        "Item _reward_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 114,
+      "lines": [
+        "Person _questgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 116,
+      "lines": [
+        "Place _mondung_ remote dungeon13"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 117,
+      "lines": [
+        "Place _newdung_ remote dungeon"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 119,
+      "lines": [
+        "Clock _1stparton_ 00:00 0 flag 17 range 0 2"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 121,
+      "lines": [
+        "Foe _monster_ is Giant"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 124,
+      "lines": [
+        "start timer _1stparton_ ",
+        "reveal _mondung_ ",
+        "log 1030 step 0 ",
+        "pick one of _map_ _nomap_ _nomap_ _nomap_ ",
+        "pc at _mondung_ set _S.01_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 130,
+      "lines": [
+        "_pcgetsgold_ task:",
+        "when _qgclicked_ and _mondead_ ",
+        "give pc _reward_ ",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 135,
+      "lines": [
+        "_S.01_ task:",
+        "create foe _monster_ every 15 minutes 15 times with 50% success "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 138,
+      "lines": [
+        "_mondead_ task:",
+        "killed 6 _monster_ ",
+        "say 1010 "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 142,
+      "lines": [
+        "_qgclicked_ task:",
+        "clicked npc _questgiver_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 145,
+      "lines": [
+        "_1stparton_ task:",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 148,
+      "lines": [
+        "_S.05_ task:",
+        "injured _monster_ saying 1020 "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 151,
+      "lines": [
+        "_clearclick_ task:",
+        "when _qgclicked_ and not _mondead_ ",
+        "clear _qgclicked_ _clearclick_ "
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 155,
+      "lines": [
+        "variable _map_"
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 156,
+      "lines": [
+        "variable _nomap_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 157,
+      "lines": [
+        "_S.09_ task:",
+        "when _map_ and _pcgetsgold_ ",
+        "reveal _newdung_ readmap",
+        "    say 1080 "
+      ]
+    }
+  ]
+}

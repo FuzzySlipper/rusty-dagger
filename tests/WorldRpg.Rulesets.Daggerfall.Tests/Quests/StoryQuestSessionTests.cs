@@ -218,7 +218,7 @@ public sealed class StoryQuestSessionTests
         using var title = fixture.Start(fixture.StartProfile, composition => composition with
         {
             NewGameQuests = ["_TUTOR__.txt", "_BRISIEN.txt"],
-            QuestAdmission = new(DaggerfallNamedQuestCorpusContent.Read(NamedQuestCorpusTests.Payload("story-late"), TestPayload.Definitions, new DaggerfallQuestLanguage())),
+            QuestAdmission = new(TestPayload.QuestAdmission.Receipts),
         });
         Assert.Empty(title.State.Quests.All);
         NewGameSessionTests.Commit(title);
@@ -269,9 +269,11 @@ public sealed class StoryQuestSessionTests
     [InlineData("story-early")]
     [InlineData("story-late")]
     [InlineData("cures")]
-    public void Retained_named_corpus_has_no_unsupported_program_lines(string id)
+    public void Named_categories_have_no_unsupported_program_lines(string id)
     {
-        var receipts = DaggerfallNamedQuestCorpusContent.Read(NamedQuestCorpusTests.Payload(id), TestPayload.Definitions, new DaggerfallQuestLanguage());
+        HashSet<string> names = [.. TestPayload.Definitions.QuestSources.Corpora.SelectMany(corpus => corpus.Categories).Single(category => category.Id == id).Names];
+        var receipts = TestPayload.QuestAdmission.Receipts.Where(receipt => names.Contains(receipt.Name)).ToArray();
+        Assert.Equal(names.Count, receipts.Length);
         Assert.True(receipts.All(receipt => receipt.Runnable), string.Join('\n', receipts.Where(receipt => !receipt.Runnable)
             .SelectMany(receipt => receipt.Diagnostics.Select(diagnostic => $"{receipt.SourceFile}:{diagnostic.Line}: {diagnostic.Text}: {diagnostic.Reason}"))));
     }

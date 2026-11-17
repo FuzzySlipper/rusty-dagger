@@ -1,0 +1,323 @@
+{
+  "name": "C0B10Y15",
+  "displayName": "The Relic",
+  "sourceFile": "C0B10Y15.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>                     %pct, __questgiver_ needs you",
+        "<ce>                  for a dangerous mission to retrieve",
+        "<ce>                    one of the lost _item_s of %god.",
+        "<ce>                    You will have to defy the power",
+        "<ce>                    of =lich_, its creator who then",
+        "<ce>                   betrayed the temple and sank into",
+        "<ce>                   evil.  He is now a lich, and still",
+        "<ce>                  guards the _item_.  Are you willing?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>                  I understand.  A lich is a fearsome",
+        "<ce>                   opponent for one of your youth and",
+        "<ce>                     inexperience.  Perhaps as you",
+        "<ce>                      mature you will take this up",
+        "<ce>                       again.  %god go with you."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>                  I admire your courage, but tremble",
+        "<ce>                  to think of the danger you are about",
+        "<ce>                   to face.  =lich_ guards his _item_",
+        "<ce>                   of %god in ___mondung_.  Remember,",
+        "<ce>                   there is no need to slay the lich,",
+        "<ce>                  just retrieve the _item_ and return",
+        "<ce>                       it to __questgiver_ here.",
+        "<ce>                     If we have no word from you in",
+        "<ce>                    =qtime_ days, we will chant the",
+        "<ce>                     Song of the Departed for you.",
+        "<ce>                    %god's blessings upon you, %pcn."
+      ]
+    },
+    {
+      "id": 1003,
+      "lines": [
+        "<ce>                I understand your reluctance to depart,",
+        "<ce>                    %pcf, but waiting will not make",
+        "<ce>                          the danger any less."
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>                   Praise to great %god!  I had not",
+        "<ce>                    allowed myself to hope that you",
+        "<ce>                        would actually succeed.",
+        "<ce>                     %god's favor will surely shine",
+        "<ce>                     upon you for this deed.  As a",
+        "<ce>                      small token of the Temple's",
+        "<ce>                     gratitude, please accept this",
+        "<ce>                          enchanted _reward_."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "<ce>        __questgiver_ hopes to recover their long-lost _item_,",
+        "<ce>        but who will they find willing to face the lich =lich_?"
+      ]
+    },
+    {
+      "id": 1006,
+      "lines": [
+        "<ce>            I hear that __questgiver_ now believes that the",
+        "<ce>               _item_ was never in ___mondung_ after all."
+      ]
+    },
+    {
+      "id": 1007,
+      "lines": [
+        "<ce>         Did you hear about the %ra who went into ___mondung_",
+        "<ce>               and returned with __questgiver_'s _item_?"
+      ]
+    },
+    {
+      "id": 1008,
+      "lines": [
+        "<ce>                %pcf, you are always welcome here after",
+        "<ce>                         you braved that lich!"
+      ]
+    },
+    {
+      "id": 1009,
+      "lines": [
+        "<ce>              I do not blame you for failing to retrieve",
+        "<ce>                 our _item_ from ___mondung_, but I am",
+        "<ce>              disappointed that you accepted an assignment",
+        "<ce>                      that you could not complete."
+      ]
+    },
+    {
+      "id": 1015,
+      "lines": [
+        "<ce>                A sinister voice whispers from nowhere,",
+        "<ce>                                    ",
+        "<ce>               \"The _item_ does not belong to you or the",
+        "<ce>                   sentimental fools of __questgiver_.",
+        "<ce>              I therefore reclaim what is rightfully mine.\"",
+        "<ce>                                    ",
+        "<ce>                          The _item_ vanishes."
+      ]
+    },
+    {
+      "id": 1020,
+      "lines": [
+        "%qdt:",
+        " __questgiver_ of ___questgiver_",
+        " has sent me to retrieve a sacred",
+        " object, a _item_, from ___mondung_.",
+        " The catch is that it is guarded by",
+        " =lich_, a lich.  I do not have to",
+        " slay =lich_, however, just retrieve",
+        " the _item_ and return to _questgiver_",
+        " within =qtime_ days."
+      ]
+    },
+    {
+      "id": 1030,
+      "lines": [
+        "<ce>                    This is surely __questgiver_'s",
+        "<ce>                           long-lost _item_."
+      ]
+    },
+    {
+      "id": 1035,
+      "lines": [
+        "<ce>                     What?  You not only retrieved",
+        "<ce>                   the sacred _item_, but also killed",
+        "<ce>                  the evil =lich_?  You are truly one",
+        "<ce>                   of %god's favored ones.  You will",
+        "<ce>                     surely rise far in our order."
+      ]
+    },
+    {
+      "id": 1040,
+      "lines": [
+        "<ce>                        =lich_ hisses in fury:",
+        "<ce>                                    ",
+        "<ce>                       \"You dogs of __questgiver_",
+        "<ce>                       will never have my _item_!",
+        "<ce>                        I made it and I will keep",
+        "<ce>                       it.  Nothing will stop me,",
+        "<ce>                          not even the grave.\""
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 138,
+      "lines": [
+        "Item _item_ talisman"
+      ]
+    },
+    {
+      "kind": "item",
+      "firstLine": 139,
+      "lines": [
+        "Item _reward_ magic_item"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 141,
+      "lines": [
+        "Person _questgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 143,
+      "lines": [
+        "Place _mondung_ remote dungeon"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 145,
+      "lines": [
+        "Clock _qtime_ 00:00 0 flag 17 range 0 2"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 146,
+      "lines": [
+        "Clock _shortdelay_ 00:02 0 flag 1 range 0 1"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 148,
+      "lines": [
+        "Foe _lich_ is Lich"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 151,
+      "lines": [
+        "place item _item_ at _mondung_ "
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 152,
+      "lines": [
+        "start timer _qtime_ ",
+        "reveal _mondung_ ",
+        "log 1020 step 0 ",
+        "place foe _lich_ at _mondung_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 157,
+      "lines": [
+        "_qtime_ task:",
+        "have _item_ set _S.07_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 160,
+      "lines": [
+        "_S.01_ task:",
+        "toting _item_ and _questgiver_ clicked ",
+        "give pc _reward_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 164,
+      "lines": [
+        "_qgclicked_ task:",
+        "clicked npc _questgiver_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 167,
+      "lines": [
+        "_clearclick_ task:",
+        "when _qgclicked_ and not _S.01_",
+        "say 1003",
+        "clear _qgclicked_ _clearclick_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 172,
+      "lines": [
+        "_S.02_ task:",
+        "killed 1 _lich_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 175,
+      "lines": [
+        "_S.03_ task:",
+        "when _S.01_ and _S.02_ ",
+        "say 1035 ",
+        "change repute with _questgiver_ by +7 "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 180,
+      "lines": [
+        "_pickupitem_ task:",
+        "clicked item _item_ ",
+        "start timer _shortdelay_ ",
+        "say 1030 "
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 185,
+      "lines": [
+        "variable _shortdelay_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 186,
+      "lines": [
+        "_S.06_ task:",
+        "when _shortdelay_ and not _S.02_ ",
+        "say 1040 "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 190,
+      "lines": [
+        "_S.07_ task:",
+        "say 1015 "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 193,
+      "lines": [
+        "_S.08_ task:",
+        "    when _S.01_ or _qtime_",
+        "    end quest"
+      ]
+    }
+  ]
+}

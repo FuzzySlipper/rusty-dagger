@@ -1,51 +1,50 @@
+using System.Text.Json.Nodes;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// The normalized quest sources through the pack: compiled quests resolve with messages and
-/// blocks, diagnosed quests resolve with their diagnostics and must not run.
+/// The quest records the classic quests pack carries, as the ruleset reads them: each resolves with its messages and
+/// blocks, a name two records share diagnoses both, and an edit to a record is read as written, with nothing to import.
 /// </summary>
 public sealed class DaggerfallQuestSourcesContentTests
 {
     [Fact]
     public void Resolves_compiled_and_diagnosed_quests()
     {
-        DaggerfallDefinitions definitions = Definitions();
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
 
         Assert.Equal(265, definitions.QuestSources.Quests.Count);
         Assert.Equal(263, definitions.QuestSources.Quests.Values.Count(quest => quest.Disposition == DaggerfallQuestDisposition.Compiled));
 
-        // A compiled quest resolves with its messages, blocks and source lines.
+        // A compiled quest resolves with its messages, blocks and line labels.
         DaggerfallQuestSourceDefinition quest = definitions.QuestSources.Resolve("00B00Y00.txt");
         Assert.Equal(DaggerfallQuestDisposition.Compiled, quest.Disposition);
         Assert.NotEmpty(quest.Messages);
         Assert.NotEmpty(quest.Blocks);
         Assert.Empty(quest.Diagnostics);
-        Assert.All(quest.Messages, message => Assert.True(message.FirstLine > 0));
         Assert.All(quest.Blocks, block => Assert.True(block.FirstLine > 0 && block.Lines.Count > 0));
 
-        // The published compiler result preserves action order as content. It is not an
-        // executable action program: the later quest lifecycle owner interprets these lines.
+        // The record keeps action order as content; the quest runner compiles it.
         DaggerfallQuestBlockDefinition headless = quest.Blocks.Single(block => block.Kind == "headless");
         Assert.Equal(["start timer _1stparton_ ", "reveal _mondung_ ", "log 1030 step 0 ", "place foe _monster_ at _mondung_ "], headless.Lines);
         DaggerfallQuestBlockDefinition task = quest.Blocks.First(block => block.Kind == "task");
         Assert.Equal(["_pcgetsgold_ task:", "when _qgclicked_ and _mondead_ ", "give pc _reward_ ", "end quest "], task.Lines);
 
-        // The diagnosed pair shares one semantic id; both resolve with diagnostics attached.
+        // __DEMO03.txt names itself __DEMO02, so neither record is the one source that name resolves to.
         DaggerfallQuestSourceDefinition demo2 = definitions.QuestSources.Resolve("__DEMO02.txt");
         DaggerfallQuestSourceDefinition demo3 = definitions.QuestSources.Resolve("__DEMO03.txt");
         Assert.Equal(DaggerfallQuestDisposition.Diagnosed, demo2.Disposition);
         Assert.Equal(DaggerfallQuestDisposition.Diagnosed, demo3.Disposition);
         Assert.Equal(demo2.Name, demo3.Name);
-        Assert.All(new[] { demo2, demo3 }, demo => Assert.Contains(demo.Diagnostics, diagnostic => diagnostic.Line > 0 && diagnostic.Reason.Contains("2 sources", StringComparison.Ordinal)));
+        Assert.All(new[] { demo2, demo3 }, demo => Assert.Contains(demo.Diagnostics, diagnostic => diagnostic.Reason.Contains("2 sources", StringComparison.Ordinal)));
     }
 
     [Fact]
-    public void Published_tables_preserve_all_slots_aliases_and_provenance()
+    public void Tables_keep_every_slot_and_alias()
     {
-        DaggerfallQuestTables tables = Definitions().QuestSources.Tables;
+        DaggerfallQuestTables tables = TestPayload.Definitions.QuestSources.Tables;
         Assert.Equal(66, tables.Globals.Rows.Count);
         Assert.Equal(Enumerable.Range(0, 64), tables.Globals.Rows.Select(row => row.Id).Distinct().Order());
         Assert.Equal(5, tables.Globals.Lookup["Unused1"]);
@@ -56,49 +55,45 @@ public sealed class DaggerfallQuestSourcesContentTests
         Assert.Equal(new[] { 0 }.Concat(Enumerable.Range(1000, 11)).Append(1045), tables.StaticMessages.Rows.Select(row => row.Id).Distinct().Order());
         Assert.Equal(new[] { "RumorsPostfailure", "RumorsPostFailure" }, tables.StaticMessages.Rows.Where(row => row.Id == 1006).Select(row => row.Name));
         Assert.Equal(1006, tables.StaticMessages.Lookup["rumorspostfailure"]);
-        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Tables/Quests-GlobalVars.txt", tables.Globals.SourcePath);
-        Assert.Equal("daggerfall-unity/Assets/StreamingAssets/Tables/Quests-StaticMessages.txt", tables.StaticMessages.SourcePath);
-        Assert.All(tables.Globals.Rows.Concat(tables.StaticMessages.Rows), row => Assert.True(row.SourceLine > 0));
     }
 
     [Fact]
-    public void Replacing_quest_sections_admits_and_refuses_what_the_whole_payload_read_does()
+    public void An_edited_record_declares_what_its_lines_say()
     {
-        // A quest-only edit read against the admitted base resolves the same sources as the spliced
-        // payload read whole, and every other section stays the admitted one.
-        System.Text.Json.Nodes.JsonObject added = TestPayload.Sections("questSources");
-        added["questSources"]!["quests"]!.AsArray().Add(System.Text.Json.Nodes.JsonNode.Parse("""
-            {"name":"replaced","displayName":"Replaced","sourceFile":"replaced.txt","disposition":"compiled","messages":[{"id":10,"firstLine":1,"lines":["Done."]}],"blocks":[{"kind":"headless","firstLine":2,"lines":["end quest"],"global":null}],"diagnostics":[]}
-            """));
-        DaggerfallDefinitions whole = DaggerfallBaseContent.Read(TestPayload.Splice(added));
-        DaggerfallDefinitions replaced = TestPayload.WithQuestSections(added);
-        Assert.Equal(whole.QuestSources.Quests.Keys.Order(StringComparer.Ordinal), replaced.QuestSources.Quests.Keys.Order(StringComparer.Ordinal));
-        Assert.Equal(whole.QuestSources.Resources.Count, replaced.QuestSources.Resources.Count);
-        Assert.Equal(whole.QuestSources.Tables.Globals.Rows.Count, replaced.QuestSources.Tables.Globals.Rows.Count);
-        Assert.Equal(whole.QuestSources.Catalog.Rows.Count, replaced.QuestSources.Catalog.Rows.Count);
-        Assert.Equal(["Done."], replaced.QuestSources.Resolve("replaced.txt").Messages.Single().Lines);
-        Assert.Same(TestPayload.Definitions.Locations, replaced.Locations);
-        Assert.Same(TestPayload.Definitions.Text, replaced.Text);
-        Assert.Equal(265, TestPayload.Definitions.QuestSources.Quests.Count);
+        JsonArray records = TestPayload.QuestRecords();
+        JsonNode curevam = records.Single(record => record!["sourceFile"]!.GetValue<string>() == "$CUREVAM.txt")!;
+        JsonNode foe = curevam["blocks"]!.AsArray().Single(block => block!["lines"]![0]!.GetValue<string>() == "Foe _bloodfather_ is Ancient_vampire")!;
+        foe["lines"]![0] = "Foe _bloodfather_ is 2 Ancient_vampire";
 
-        // A malformed quest edit is refused with the diagnostics the whole read reports.
-        System.Text.Json.Nodes.JsonObject malformed = TestPayload.Sections("questSources");
-        malformed["questSources"]!["quests"]!.AsArray().Add(System.Text.Json.Nodes.JsonNode.Parse("""
-            {"name":"flawed","displayName":"","sourceFile":"flawed.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[{"line":1,"text":"x","reason":"y"}]}
-            """));
-        DaggerfallContentException wholeFailure = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(malformed)));
-        DaggerfallContentException replacedFailure = Assert.Throws<DaggerfallContentException>(() => TestPayload.WithQuestSections(malformed));
-        Assert.Equal(wholeFailure.Diagnostics, replacedFailure.Diagnostics);
-        Assert.Contains("Quest 'flawed' is compiled with diagnostics attached.", replacedFailure.Diagnostics);
+        DaggerfallQuestResourceDefinition declared = TestPayload.WithQuests(records).QuestSources.Resources
+            .Single(resource => resource.SourceFile == "$CUREVAM.txt" && resource.CanonicalId == "bloodfather");
 
-        // Only quest sections can be replaced this way; another section would be silently ignored.
-        DaggerfallContentException foreign = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.ReadQuestSections(
-            TestPayload.Definitions, System.Text.Encoding.UTF8.GetBytes("""{"rumors":{}}""")));
-        Assert.Contains(foreign.Diagnostics, diagnostic => diagnostic.Contains("'rumors' is not a quest section", StringComparison.Ordinal));
+        Assert.Equal(2, declared.Foe!.Count);
+        Assert.Equal("ancient_vampire", declared.TargetCanonicalId);
+        Assert.Equal(1, TestPayload.Definitions.QuestSources.Resources
+            .Single(resource => resource.SourceFile == "$CUREVAM.txt" && resource.CanonicalId == "bloodfather").Foe!.Count);
     }
 
-    private static DaggerfallDefinitions Definitions()
+    [Fact]
+    public void A_record_with_a_misspelt_member_or_a_line_label_two_blocks_share_is_refused()
     {
-        return TestPayload.Definitions;
+        JsonArray misspelt = TestPayload.QuestRecords();
+        misspelt.Add(JsonNode.Parse("""{"name":"flawed","sourceFile":"flawed.txt","mesages":[],"blocks":[]}"""));
+        DaggerfallContentException unknown = Assert.Throws<DaggerfallContentException>(() => TestPayload.WithQuests(misspelt));
+        Assert.Contains(unknown.Diagnostics, diagnostic => diagnostic.StartsWith("Quest record 'quests/265.json' is malformed", StringComparison.Ordinal));
+
+        // A saved headless task, disease or keyed draw is named by its line label, so a label names one line.
+        JsonArray shared = TestPayload.QuestRecords();
+        shared.Add(JsonNode.Parse("""
+            {"name":"shared","sourceFile":"shared.txt","messages":[],
+             "blocks":[{"kind":"headless","firstLine":1,"lines":["end quest","say 10"]},{"kind":"variable","firstLine":2,"lines":["variable _x_"]}]}
+            """));
+        DaggerfallContentException labels = Assert.Throws<DaggerfallContentException>(() => TestPayload.WithQuests(shared));
+        Assert.Contains("Quest record 'quests/265.json''s variable block at line 2 labels line 2, which another block labels too.", labels.Diagnostics);
+
+        JsonArray twice = TestPayload.QuestRecords();
+        twice.Add(twice[0]!.DeepClone());
+        Assert.Contains(Assert.Throws<DaggerfallContentException>(() => TestPayload.WithQuests(twice)).Diagnostics,
+            diagnostic => diagnostic.Contains("a quest has one record", StringComparison.Ordinal));
     }
 }

@@ -70,20 +70,12 @@ public sealed class QuestResourceSelectionTests
     [Fact]
     public void Ordinary_start_retains_selected_items_foes_and_names_in_encoded_save_without_minting_entity_ids()
     {
-        JsonObject root = TestPayload.Sections("questSources");
-        var declarationRows = root["questSources"]!["resources"]!["declarations"]!.AsArray();
-        var item = declarationRows.Single(value => value!["sourceFile"]!.GetValue<string>() == "S0000502.txt"
-            && value["symbol"]!["canonicalId"]!.GetValue<string>() == "reward")!.DeepClone();
-        var foe = declarationRows.First(value => value!["kind"]!.GetValue<string>() == "foe")!.DeepClone();
-        foreach (var row in new[] { item, foe })
-        {
-            row["quest"] = "selected"; row["sourceFile"] = "selected.txt";
-            declarationRows.Add(row);
-        }
-        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
-            {"name":"selected","displayName":"","sourceFile":"selected.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
+        JsonArray root = TestPayload.QuestRecords();
+        root.Add(JsonNode.Parse("""
+            {"name":"selected","displayName":"","sourceFile":"selected.txt","messages":[],
+             "blocks":[{"kind":"item","firstLine":1,"lines":["Item _reward_ item class 4 subclass 3"]},{"kind":"foe","firstLine":2,"lines":["Foe _bloodfather_ is Ancient_vampire"]}]}
             """));
-        var definitions = TestPayload.WithQuestSections(root.AsObject());
+        var definitions = TestPayload.WithQuests(root);
         DaggerfallQuestInstances quests = new(definitions, RandomMinimum.Create());
         quests.BindResourceAllocator(Allocator(definitions));
         var first = quests.Start(new("first", "selected.txt", "selected", DaggerfallQuestLifecycle.Active, null, [], []));

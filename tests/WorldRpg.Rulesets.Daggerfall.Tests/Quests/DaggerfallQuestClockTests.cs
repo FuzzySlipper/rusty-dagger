@@ -130,7 +130,7 @@ public sealed class DaggerfallQuestClockTests
     public void A_prompt_opened_by_an_earlier_deadline_holds_a_later_deadline_task_in_the_same_interval()
     {
         DaggerfallQuestSourceDefinition source = new("test", string.Empty, "prompted.txt", DaggerfallQuestDisposition.Compiled,
-            [new(1010, 1, ["Will you help?"])],
+            [new(1010, ["Will you help?"])],
             [Clock(1, "clock _early_ 1"),
              Clock(2, "clock _late_ 2"),
              // The later deadline's task precedes the prompting task, so a task pass would reach it.
@@ -163,7 +163,7 @@ public sealed class DaggerfallQuestClockTests
         // The ordinary instance owner advances clocks with its message and lifecycle owners; a deadline
         // task that writes the journal or starts a task must run exactly as it does on the ordinary step.
         DaggerfallQuestSourceDefinition source = new("test", string.Empty, "deadline.txt", DaggerfallQuestDisposition.Compiled,
-            [new(1010, 1, ["Time has run out."])],
+            [new(1010, ["Time has run out."])],
             [Clock(1, "clock _deadline_ 1"),
              Block("task", 2, "_deadline_ task:", "log 1010 step 2", "start task _late_"),
              Block("variable", 4, "variable _late_")], []);

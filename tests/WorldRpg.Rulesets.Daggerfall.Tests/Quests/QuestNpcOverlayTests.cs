@@ -214,22 +214,17 @@ public sealed class QuestNpcOverlayTests
 
     internal static DaggerfallDefinitions Definitions(string[] actions, bool rearm = false, string[][]? taskBlocks = null)
     {
-        var root = TestPayload.Sections("questSources");
-        var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
-        var person = declarations.First(value => value!["kind"]!.GetValue<string>() == "person" && value["person"]!["group"]?.GetValue<string>() == "Questor")!.DeepClone();
-        person["quest"] = "overlay"; person["sourceFile"] = "overlay.txt";
-        person["symbol"]!["canonicalId"] = "contact"; person["symbol"]!["sourceSpelling"] = "_contact_";
-        declarations.Add(person);
-        var blocks = new JsonArray();
+        JsonArray root = TestPayload.QuestRecords();
+        var blocks = new JsonArray(JsonNode.Parse("""{"kind":"person","firstLine":500,"lines":["Person _contact_ group Questor"]}"""));
         if (rearm)
         {
             blocks.Add(JsonNode.Parse("""{"kind":"variable","firstLine":99,"lines":["variable _stop_"],"global":null}"""));
             blocks.Add(JsonNode.Parse("""{"kind":"task","firstLine":100,"lines":["until _stop_ performed:","start task headless.1"],"global":null}"""));
         }
-        blocks.Add(new JsonObject { ["kind"] = "headless", ["firstLine"] = 1, ["lines"] = JsonSerializer.SerializeToNode(actions), ["global"] = null });
+        if (actions.Length != 0) blocks.Add(new JsonObject { ["kind"] = "headless", ["firstLine"] = 1, ["lines"] = JsonSerializer.SerializeToNode(actions) });
         if (taskBlocks is not null)
             for (int i = 0; i < taskBlocks.Length; i++) blocks.Add(new JsonObject { ["kind"] = "task", ["firstLine"] = 200 + i * 20, ["lines"] = JsonSerializer.SerializeToNode(taskBlocks[i]), ["global"] = null });
-        root["questSources"]!["quests"]!.AsArray().Add(new JsonObject { ["name"] = "overlay", ["displayName"] = "", ["sourceFile"] = "overlay.txt", ["disposition"] = "compiled", ["messages"] = new JsonArray(new JsonObject { ["id"] = 100, ["firstLine"] = 1, ["lines"] = new JsonArray("A companion joins you.") }), ["blocks"] = blocks, ["diagnostics"] = new JsonArray() });
-        return TestPayload.WithQuestSections(root.AsObject());
+        root.Add(new JsonObject { ["name"] = "overlay", ["displayName"] = "", ["sourceFile"] = "overlay.txt", ["messages"] = new JsonArray(new JsonObject { ["id"] = 100, ["lines"] = new JsonArray("A companion joins you.") }), ["blocks"] = blocks });
+        return TestPayload.WithQuests(root);
     }
 }

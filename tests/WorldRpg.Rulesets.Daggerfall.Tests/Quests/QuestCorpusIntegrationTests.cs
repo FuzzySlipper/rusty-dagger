@@ -8,7 +8,7 @@ public sealed class QuestCorpusIntegrationTests
     private static string[] RequiredSources()
     {
         var sources = TestPayload.Definitions.QuestSources;
-        return [.. sources.Catalog.Rows.Where(row => row.SourceDisposition == "present").Select(row => row.Name + ".txt"),
+        return [.. sources.Catalog.Rows.Select(row => row.Name + ".txt").Where(sources.Quests.ContainsKey),
             .. sources.Quests.Keys.Where(file => file.StartsWith("S000", StringComparison.Ordinal) || file is "_TUTOR__.txt" or "_BRISIEN.txt" or "$CUREVAM.txt" or "$CUREWER.txt")];
     }
 
@@ -71,7 +71,7 @@ public sealed class QuestCorpusIntegrationTests
     public void Every_retained_classic_source_branch_uses_a_compiled_operation()
     {
         var sources = TestPayload.Definitions.QuestSources;
-        string[] required = [.. sources.Catalog.Rows.Where(row => row.SourceDisposition == "present").Select(row => row.Name + ".txt"),
+        string[] required = [.. sources.Catalog.Rows.Select(row => row.Name + ".txt").Where(sources.Quests.ContainsKey),
             .. sources.Quests.Keys.Where(file => file.StartsWith("S000", StringComparison.Ordinal) || file is "_TUTOR__.txt" or "_BRISIEN.txt" or "$CUREVAM.txt" or "$CUREWER.txt")];
         var unsupported = required.SelectMany(file => DaggerfallQuestTaskCompiler.Assess(sources.Resolve(file))
             .Select(diagnostic => $"{file}:{diagnostic.Line}: {diagnostic.Text}: {diagnostic.Reason}")).ToArray();

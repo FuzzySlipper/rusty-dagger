@@ -90,18 +90,12 @@ public sealed class QuestPersonSelectionTests
     [Fact]
     public void Ordinary_start_saves_each_Person_selection_and_explicit_quest_giver()
     {
-        var root = TestPayload.Sections("questSources");
-        var rows = root["questSources"]!["resources"]!["declarations"]!.AsArray();
-        foreach (string symbol in new[] { "qgiver", "vamp" })
-        {
-            var row = rows.Single(value => value!["sourceFile"]!.GetValue<string>() == "R0C11Y28.txt"
-                && value["symbol"]!["canonicalId"]!.GetValue<string>() == symbol)!.DeepClone();
-            row["sourceFile"] = "people.txt"; row["quest"] = "people"; rows.Add(row);
-        }
-        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
-            {"name":"people","displayName":"","sourceFile":"people.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
+        JsonArray root = TestPayload.QuestRecords();
+        root.Add(JsonNode.Parse("""
+            {"name":"people","displayName":"","sourceFile":"people.txt","messages":[],"blocks":[{"kind":"person","firstLine":1,
+             "lines":["Person _qgiver_ group Questor","Person _vamp_ face 1 factiontype Vampire_Clan local anyInfo 1016 rumors 1017"]}]}
             """));
-        var definitions = TestPayload.WithQuestSections(root.AsObject());
+        var definitions = TestPayload.WithQuests(root);
         var site = definitions.Locations.Records.First(value => value.Region == 17);
         var giver = Giver();
         DaggerfallQuestInstances quests = new(definitions, RandomMinimum.Create());
@@ -176,15 +170,12 @@ public sealed class QuestPersonSelectionTests
     [Fact]
     public void Ordinary_Person_home_claim_excludes_the_next_selection_and_survives_encoded_save_and_completion()
     {
-        JsonObject root = TestPayload.Sections("questSources");
-        var declaration = root["questSources"]!["resources"]!["declarations"]!.AsArray().Single(value =>
-            value!["sourceFile"]!.GetValue<string>() == "R0C11Y28.txt" && value["symbol"]!["canonicalId"]!.GetValue<string>() == "vamp")!.DeepClone();
-        declaration["quest"] = "homes"; declaration["sourceFile"] = "homes.txt";
-        root["questSources"]!["resources"]!["declarations"]!.AsArray().Add(declaration);
-        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
-            {"name":"homes","displayName":"","sourceFile":"homes.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"headless","firstLine":1,"lines":["create npc _vamp_"],"global":null}],"diagnostics":[]}
+        JsonArray root = TestPayload.QuestRecords();
+        root.Add(JsonNode.Parse("""
+            {"name":"homes","displayName":"","sourceFile":"homes.txt","messages":[],"blocks":[{"kind":"headless","firstLine":1,"lines":["create npc _vamp_"]},
+             {"kind":"person","firstLine":2,"lines":["Person _vamp_ face 1 factiontype Vampire_Clan local anyInfo 1016 rumors 1017"]}]}
             """));
-        var definitions = TestPayload.WithQuestSections(root.AsObject());
+        var definitions = TestPayload.WithQuests(root);
         var blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
         bool Eligible(DaggerfallSiteBuildingSource building) => building.Source.BuildingType is >= 17 and <= 20
             && building.Source.FactionId is not (42 or 108) && blocks.QuestMarkers.TryGetValue(new(building.Source.Id.SourceKey, building.Source.Id.Index), out var markers)

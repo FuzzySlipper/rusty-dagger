@@ -1,0 +1,196 @@
+{
+  "name": "B0B40Y09",
+  "displayName": "Killing a Giant",
+  "sourceFile": "B0B40Y09.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>                      I've just gotten word of a",
+        "<ce>                      _monster_ raiding farms and",
+        "<ce>                       devouring cattle. My name?",
+        "<ce>                       A thousand apologies %pcf.",
+        "<ce>                        I am _qgiver_. Will you",
+        "<ce>                         go slay the _monster_?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>                     Where are the noble knights?",
+        "<ce>                      Have they all vanished from",
+        "<ce>                           %reg? Begone %pcn."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>                     The _monster_ has made a den",
+        "<ce>                         out of ___dungeon_. Go",
+        "<ce>                        there and kill him. You",
+        "<ce>                      might find other _monster_s",
+        "<ce>                     there. Kill them if you must,",
+        "<ce>                       but be sure to get the one",
+        "<ce>                       with the bear claw branded",
+        "<ce>                      on his arm. I can only give",
+        "<ce>                           you =2dung_ days."
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>                     Now you are a true _monster_",
+        "<ce>                       killer, %pcf! And to think",
+        "<ce>                       I got to shake your hand."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "Giants are not generally all that aggressive. But the one in ___dungeon_ sure is."
+      ]
+    },
+    {
+      "id": 1006,
+      "lines": [
+        "I hear the ___dungeon_ giant moved down south. They must be cursing us there."
+      ]
+    },
+    {
+      "id": 1007,
+      "lines": [
+        "The %kno saved %reg again. A %ra of their order killed the ___dungeon_ giant."
+      ]
+    },
+    {
+      "id": 1008,
+      "lines": [
+        "Hullo, %pcf the Giant-Killer. What can I do for you?"
+      ]
+    },
+    {
+      "id": 1009,
+      "lines": [
+        "Come back when you know how to slay one lousy giant, %pcf."
+      ]
+    },
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt:",
+        " _qgiver_ of",
+        " __qgiver_ in ___qgiver_",
+        " told me of a _monster_ that needs",
+        " slaying in ___dungeon_.",
+        " I only have =2dung_ days."
+      ]
+    },
+    {
+      "id": 1011,
+      "lines": [
+        "<ce>                     A bear claw brand is clearly",
+        "<ce>                      visible on the upper arm of",
+        "<ce>                      the _monster_. This must be",
+        "<ce>                       the one _qgiver_ spoke of."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 88,
+      "lines": [
+        "Item _gold_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 90,
+      "lines": [
+        "Person _qgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 91,
+      "lines": [
+        "Person _local_ face 207 group Resident2 female local"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 93,
+      "lines": [
+        "Place _dungeon_ remote dungeon13"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 95,
+      "lines": [
+        "Clock _2dung_ 00:00 0 flag 17 range 0 2"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 97,
+      "lines": [
+        "Foe _monster_ is Giant"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 100,
+      "lines": [
+        "start timer _2dung_ ",
+        "reveal _dungeon_ ",
+        "log 1010 step 0 ",
+        "place foe _monster_ at _dungeon_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 105,
+      "lines": [
+        "_2dung_ task:",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 108,
+      "lines": [
+        "_S.01_ task:",
+        "killed 1 _monster_ saying 1011 "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 111,
+      "lines": [
+        "_S.02_ task:",
+        "clicked npc _qgiver_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 114,
+      "lines": [
+        "_success_ task:",
+        "when _S.02_ and _S.01_ ",
+        "give pc nothing",
+        "change repute with _local_ by +4 ",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 120,
+      "lines": [
+        "_clearclick_ task:",
+        "when _S.02_ and not _S.01_ ",
+        "clear _S.02_ _clearclick_ "
+      ]
+    }
+  ]
+}

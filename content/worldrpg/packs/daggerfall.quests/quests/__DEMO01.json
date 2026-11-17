@@ -1,0 +1,14 @@
+{
+  "name": "__DEMO01",
+  "sourceFile": "__DEMO01.txt",
+  "messages": [],
+  "blocks": [
+    {
+      "kind": "headless",
+      "firstLine": 12,
+      "lines": [
+        "juggle 5 apples every 2 seconds drop 40%"
+      ]
+    }
+  ]
+}

@@ -82,15 +82,14 @@ public sealed class CalendarIntervalReconciliationTests
 
     private static readonly SharedFixture<DaggerfallDefinitions> ClockDefinitions = new(() =>
     {
-        JsonObject root = TestPayload.Sections("questSources");
-        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
-            {"name":"clocked-training","displayName":"Clocked training","sourceFile":"clocked-training.txt","disposition":"compiled",
-            "messages":[],
+        JsonArray root = TestPayload.QuestRecords();
+        root.Add(JsonNode.Parse("""
+            {"name":"clocked-training","displayName":"Clocked training","sourceFile":"clocked-training.txt","messages":[],
             "blocks":[{"kind":"clock","firstLine":1,"lines":["clock _deadline_ 30"],"global":null},
             {"kind":"variable","firstLine":2,"lines":["variable _hit_"],"global":null},
             {"kind":"task","firstLine":3,"lines":["_deadline_ task:","start task _hit_"],"global":null},
-            {"kind":"headless","firstLine":5,"lines":["start timer _deadline_","train pc LongBlade"],"global":null}],"diagnostics":[]}
+            {"kind":"headless","firstLine":5,"lines":["start timer _deadline_","train pc LongBlade"],"global":null}]}
             """));
-        return TestPayload.WithQuestSections(root.AsObject());
+        return TestPayload.WithQuests(root);
     });
 }

@@ -1,0 +1,42 @@
+{
+  "name": "__DEMO15",
+  "sourceFile": "__DEMO15.txt",
+  "messages": [
+    {
+      "id": 1011,
+      "lines": [
+        "_someperson_ used to possess _someitem_."
+      ]
+    },
+    {
+      "id": 1012,
+      "lines": [
+        "It is said that _someitem_ has magical powers."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "person",
+      "firstLine": 17,
+      "lines": [
+        "Person _someperson_ face 81 faction The_Thieves_Guild anyInfo 1011"
+      ]
+    },
+    {
+      "kind": "item",
+      "firstLine": 18,
+      "lines": [
+        "Item _someitem_ trinket anyInfo 1012"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 21,
+      "lines": [
+        "dialog link for person _someperson_ item _someitem_",
+        "add dialog for person _someperson_"
+      ]
+    }
+  ]
+}

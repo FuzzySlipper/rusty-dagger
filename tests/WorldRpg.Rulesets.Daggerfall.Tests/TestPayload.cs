@@ -14,7 +14,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 internal static class TestPayload
 {
     private static readonly SharedFixture<DaggerfallData> SharedData = new(() => TestSessions.Data(TestSessions.StagedContent(TestData.RepositoryRoot, out _)));
-    private static readonly SharedFixture<DaggerfallDefinitions> Shared = new(() => DaggerfallBaseContent.Read(Combined.Value, Data));
+    private static readonly SharedFixture<DaggerfallDefinitions> Shared = new(() => DaggerfallBaseContent.Read(Combined.Value, Data)
+        .WithQuestSources(DaggerfallQuestContent.Read([QuestPack()])));
     private static readonly SharedFixture<byte[]> Combined = new(() => DaggerfallBaseContent.Combine(
         TestContentFiles.Read(TestData.PackPayload("daggerfall.base")), TestContentFiles.Read(PayloadPath("daggerfall.imported.json"))));
 
@@ -114,15 +115,31 @@ internal static class TestPayload
         return result;
     }
 
+    private static readonly SharedFixture<DaggerfallQuestAdmission> SharedQuestAdmission = new(() => DaggerfallQuestContent.Admit(Definitions.QuestSources, new DaggerfallQuestLanguage()));
+
+    /// <summary>Whether each classic quest runs and which are withheld, as the ruleset admits them.</summary>
+    internal static DaggerfallQuestAdmission QuestAdmission => SharedQuestAdmission.Value;
+
+    /// <summary>The classic quests pack, as the ruleset reads it from the checkout's tracked content.</summary>
+    internal static DaggerfallQuestPackFiles QuestPack() => new("daggerfall.quests", TestContentFiles.Read(TestData.PackPayload("daggerfall.quests")),
+        [.. Directory.EnumerateFiles(System.IO.Path.Combine(QuestPackFolder, DaggerfallQuestContent.RecordsFolder), "*.json").Order(StringComparer.Ordinal)
+            .Select(file => new DaggerfallQuestRecordFile(System.IO.Path.GetRelativePath(QuestPackFolder, file), TestContentFiles.Read(file)))]);
+
+    private static string QuestPackFolder => System.IO.Path.GetDirectoryName(TestData.PackPayload("daggerfall.quests"))!;
+
+    /// <summary>The classic quest records, parsed afresh for a fact that edits or adds some.</summary>
+    internal static System.Text.Json.Nodes.JsonArray QuestRecords() =>
+        [.. QuestPack().Records.Select(file => System.Text.Json.Nodes.JsonNode.Parse(file.Bytes.Span))];
+
     /// <summary>
-    /// The shared base definitions with the quest sections replaced by the edited ones from
-    /// <see cref="Sections"/>; a quest section the edit does not carry keeps the joined payload's bytes.
-    /// The ruleset reads the replacement through its own quest reader against the admitted base, so a
-    /// fact that only edits quest sources reads those few megabytes instead of splicing and re-reading
-    /// the whole payload.
+    /// The shared base definitions with the classic quests pack's records replaced by <paramref name="records"/>, read
+    /// through the ruleset's own quests reader, so an edited or added record is read as a pack would carry it.
     /// </summary>
-    internal static DaggerfallDefinitions WithQuestSections(System.Text.Json.Nodes.JsonObject sections) =>
-        DaggerfallBaseContent.ReadQuestSections(Definitions, SectionDocument(DaggerfallBaseContent.QuestSectionNames, "quest", sections));
+    internal static DaggerfallDefinitions WithQuests(System.Text.Json.Nodes.JsonArray records) =>
+        Definitions.WithQuestSources(DaggerfallQuestContent.Read([QuestPack() with
+        {
+            Records = [.. records.Select((record, index) => new DaggerfallQuestRecordFile($"quests/{index}.json", System.Text.Encoding.UTF8.GetBytes(record!.ToJsonString())))],
+        }]));
 
     /// <summary>
     /// The shared base definitions with the text section, and the sections whose keys resolve through it,

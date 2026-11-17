@@ -37,9 +37,6 @@ public sealed class NormalizedContractRoundTripTests
         ("factions", typeof(DaggerfallFactions)),
         ("terrain", typeof(DaggerfallTerrain)),
         ("itemTemplates", typeof(DaggerfallItemTemplates)),
-        ("questCatalog", typeof(Normalized.DaggerfallQuestCatalog)),
-        ("questTables", typeof(Normalized.DaggerfallQuestTables)),
-        ("questSources", typeof(DaggerfallQuestPack)),
         ("cinematics", typeof(DaggerfallCinematicPack)),
     ];
 

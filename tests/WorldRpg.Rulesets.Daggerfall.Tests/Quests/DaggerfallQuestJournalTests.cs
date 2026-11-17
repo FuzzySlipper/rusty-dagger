@@ -112,34 +112,29 @@ public sealed class DaggerfallQuestJournalTests
 
     private static DaggerfallDefinitions JournalDefinitions()
     {
-        JsonObject root = TestPayload.Sections("questSources");
-        JsonArray quests = root["questSources"]!["quests"]!.AsArray();
+        JsonArray quests = TestPayload.QuestRecords();
         quests.Add(JsonNode.Parse("""
-            {"name":"timed","displayName":"Timed errand","sourceFile":"timed.txt","disposition":"compiled",
-             "messages":[{"id":10,"firstLine":1,"lines":["Bring the ring within =limit_ days."]},{"id":11,"firstLine":2,"lines":["The ring is in the crypt."]}],
+            {"name":"timed","displayName":"Timed errand","sourceFile":"timed.txt","messages":[{"id":10,"lines":["Bring the ring within =limit_ days."]},{"id":11,"lines":["The ring is in the crypt."]}],
              "blocks":[{"kind":"clock","firstLine":1,"lines":["clock _limit_ 2.00:00"],"global":null},
                        {"kind":"clock","firstLine":2,"lines":["clock _hidden_ 1.00:00"],"global":null},
                        {"kind":"task","firstLine":3,"lines":["_limit_ task:","end quest"],"global":null},
                        {"kind":"task","firstLine":5,"lines":["_hidden_ task:","end quest"],"global":null},
-                       {"kind":"headless","firstLine":7,"lines":["log 10 step 0","log 11 step 1","start timer _limit_","start timer _hidden_"],"global":null}],"diagnostics":[]}
+                       {"kind":"headless","firstLine":7,"lines":["log 10 step 0","log 11 step 1","start timer _limit_","start timer _hidden_"],"global":null}]}
             """));
         quests.Add(JsonNode.Parse("""
-            {"name":"plain","displayName":"","sourceFile":"plain.txt","disposition":"compiled",
-             "messages":[{"id":10,"firstLine":1,"lines":["Speak to the smith."]}],
+            {"name":"plain","displayName":"","sourceFile":"plain.txt","messages":[{"id":10,"lines":["Speak to the smith."]}],
              "blocks":[{"kind":"clock","firstLine":1,"lines":["clock _limit_ 1.00:00"],"global":null},
                        {"kind":"task","firstLine":2,"lines":["_limit_ task:","end quest"],"global":null},
-                       {"kind":"headless","firstLine":4,"lines":["log 10 step 0","start timer _limit_"],"global":null}],"diagnostics":[]}
+                       {"kind":"headless","firstLine":4,"lines":["log 10 step 0","start timer _limit_"],"global":null}]}
             """));
         quests.Add(JsonNode.Parse("""
-            {"name":"short","displayName":"Short errand","sourceFile":"short.txt","disposition":"compiled",
-             "messages":[{"id":10,"firstLine":1,"lines":["The errand is done."]}],
-             "blocks":[{"kind":"headless","firstLine":1,"lines":["log 10 step 0","end quest"],"global":null}],"diagnostics":[]}
+            {"name":"short","displayName":"Short errand","sourceFile":"short.txt","messages":[{"id":10,"lines":["The errand is done."]}],
+             "blocks":[{"kind":"headless","firstLine":1,"lines":["log 10 step 0","end quest"],"global":null}]}
             """));
         quests.Add(JsonNode.Parse("""
-            {"name":"silent","displayName":"Silent errand","sourceFile":"silent.txt","disposition":"compiled",
-             "messages":[],
-             "blocks":[{"kind":"headless","firstLine":1,"lines":["end quest"],"global":null}],"diagnostics":[]}
+            {"name":"silent","displayName":"Silent errand","sourceFile":"silent.txt","messages":[],
+             "blocks":[{"kind":"headless","firstLine":1,"lines":["end quest"],"global":null}]}
             """));
-        return TestPayload.WithQuestSections(root.AsObject());
+        return TestPayload.WithQuests(quests);
     }
 }

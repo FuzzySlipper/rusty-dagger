@@ -160,7 +160,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     {
         string[] choices = ["3 _a_", "4 _b_", "19 _c_", "20 _d_"];
         DaggerfallQuestSourceDefinition source = new("test", string.Empty, "multi.txt", DaggerfallQuestDisposition.Compiled,
-            [new(1010, 1, ["Choose."])],
+            [new(1010, ["Choose."])],
             [Block("variable", 1, "variable _a_"), Block("variable", 2, "variable _b_"),
              Block("variable", 3, "variable _c_"), Block("variable", 4, "variable _d_"),
              Block("task", 5, "_source_ task:", "promptmulti 1010 " + string.Join(' ', choices.Take(count)), "clear _source_")], []);
@@ -207,7 +207,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     public void Direct_message_operations_keep_journal_prompt_choice_and_delivery_state_through_a_save()
     {
         DaggerfallQuestSourceDefinition source = new("test", string.Empty, "test.txt", DaggerfallQuestDisposition.Compiled,
-            [new(1010, 1, ["Dear %pcn, _giver_ of ==giver_ in ___town_. Find =monster_ at __dungeon_."])],
+            [new(1010, ["Dear %pcn, _giver_ of ==giver_ in ___town_. Find =monster_ at __dungeon_."])],
         [
             Block("variable", 1, "variable _yes_"),
             Block("variable", 2, "variable _no_"),
@@ -243,7 +243,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     public void Rearmed_prompt_records_distinct_occurrences_and_restores_both_answers()
     {
         DaggerfallQuestSourceDefinition source = new("test", string.Empty, "rearmed.txt", DaggerfallQuestDisposition.Compiled,
-            [new(1010, 1, ["Choose."])],
+            [new(1010, ["Choose."])],
             [Block("variable", 1, "variable _yes_"), Block("variable", 2, "variable _no_"),
                 Block("task", 3, "_source_ task:", "prompt 1010 yes _yes_ no _no_", "clear _source_")], []);
         DaggerfallQuestTaskProgram program = Program(source);
@@ -274,7 +274,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     public void Stale_prompt_rejection_keeps_the_pending_choice_visible()
     {
         DaggerfallQuestSourceDefinition source = new("test", string.Empty, "stale.txt", DaggerfallQuestDisposition.Compiled,
-            [new(1010, 1, ["Choose."])],
+            [new(1010, ["Choose."])],
             [Block("variable", 1, "variable _no_"),
                 Block("headless", 3, "prompt 1010 yes _missing_ no _no_")], []);
         DaggerfallQuestTaskProgram program = Program(source);
@@ -323,7 +323,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
         Assert.Null(prompt.MessageId);
         Assert.Equal("QuestorOffer", prompt.MessageAlias);
         DaggerfallQuestSourceDefinition withMessage = new("test", string.Empty, source.SourceFile, DaggerfallQuestDisposition.Compiled,
-            [new(1010, 1, ["An offered quest."])], source.Blocks, []);
+            [new(1010, ["An offered quest."])], source.Blocks, []);
         DaggerfallQuestMessages messages = Messages(withMessage, new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase) { ["QuestorOffer"] = 1010 });
         Assert.True(messages.TryResolveMessage(Runtime(withMessage), null, "QuestorOffer", out int resolved, out string? diagnostic));
         Assert.Equal(1010, resolved);
@@ -334,7 +334,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     public void Persisted_prompt_alias_must_resolve_to_its_compiled_source_message()
     {
         DaggerfallQuestSourceDefinition source = new("test", string.Empty, "alias.txt", DaggerfallQuestDisposition.Compiled,
-            [new(1010, 1, ["Offer."]), new(1011, 2, ["Different valid message."])],
+            [new(1010, ["Offer."]), new(1011, ["Different valid message."])],
             [Block("headless", 3, "prompt QuestorOffer yes _yes_ no _no_")], []);
         DaggerfallQuestTaskProgram program = Program(source);
         DaggerfallQuestRuntimeInstance runtime = Runtime(source);
@@ -351,7 +351,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     public void Journal_removal_rumor_and_terminal_popup_execute_in_source_order()
     {
         DaggerfallQuestSourceDefinition source = new("test", string.Empty, "delivery.txt", DaggerfallQuestDisposition.Compiled,
-            [new(1010, 1, ["Message."])],
+            [new(1010, ["Message."])],
             [Block("headless", 1, "log 1010 step 3", "remove log step 3", "rumor mill 1010", "end quest saying 1010")], []);
         DaggerfallQuestRuntimeInstance runtime = Runtime(source);
         DaggerfallQuestMessages messages = Messages(source);
@@ -368,7 +368,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     public void Quest_message_macros_use_all_retained_resource_arms_before_shared_global_macros()
     {
         DaggerfallQuestSourceDefinition source = new("test", string.Empty, "macros.txt", DaggerfallQuestDisposition.Compiled,
-            [new(1010, 1, ["%pcn meets _giver_ of ==giver_ in __dungeon_, ___town_, and ____realm_: =monster_ (=#giver_).", "Sincerely _giver_", "<--->", "unused variant"])], [], []);
+            [new(1010, ["%pcn meets _giver_ of ==giver_ in __dungeon_, ___town_, and ____realm_: =monster_ (=#giver_).", "Sincerely _giver_", "<--->", "unused variant"])], [], []);
         DaggerfallQuestRuntimeInstance runtime = Runtime(source);
         DaggerfallQuestMessages messages = Messages(source);
         DaggerfallQuestMessageContext context = new(new(new(Name: "Nulfaga"), new(), new(), new(), new(), new()),
@@ -397,7 +397,7 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
     public void Ordered_tasks_evaluate_and_not_then_end_with_the_retained_message()
     {
         DaggerfallQuestSourceDefinition source = new("test", string.Empty, "test.txt", DaggerfallQuestDisposition.Compiled,
-            [new(42, 1, ["Done."])],
+            [new(42, ["Done."])],
             [Block("variable", 1, "variable _a_"),
              Block("variable", 2, "variable _b_"),
              Block("headless", 4, "start task _a_"),
@@ -915,53 +915,49 @@ public sealed partial class DaggerfallQuestTaskRuntimeTests
 
     private static DaggerfallDefinitions DefinitionsWithEndingFixture(bool retiredItem = false)
     {
-        JsonObject root = TestPayload.Sections("questSources");
-        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
-            {"name":"ending","displayName":"Ending","sourceFile":"ending.txt","disposition":"compiled",
-             "messages":[{"id":10,"firstLine":1,"lines":["%pcn met _giver_."]},{"id":1010,"firstLine":2,"lines":["Did you use the painting?"]},{"id":20,"firstLine":3,"lines":["%pcn finished for _giver_."]},{"id":30,"firstLine":4,"lines":["%pcn declined for _giver_."]}],
-             "blocks":[{"kind":"task","firstLine":1,"lines":["_final_ task:","prompt 1010 yes _yes_ no _no_"],"global":null},{"kind":"task","firstLine":4,"lines":["_yes_ task:","log 20 step 2"],"global":null},{"kind":"task","firstLine":7,"lines":["_no_ task:","log 30 step 2"],"global":null},{"kind":"headless","firstLine":10,"lines":["log 10 step 1","start task _final_","end quest"],"global":null}],"diagnostics":[]}
+        JsonArray root = TestPayload.QuestRecords();
+        root.Add(JsonNode.Parse("""
+            {"name":"ending","displayName":"Ending","sourceFile":"ending.txt","messages":[{"id":10,"lines":["%pcn met _giver_."]},{"id":1010,"lines":["Did you use the painting?"]},{"id":20,"lines":["%pcn finished for _giver_."]},{"id":30,"lines":["%pcn declined for _giver_."]}],
+             "blocks":[{"kind":"task","firstLine":1,"lines":["_final_ task:","prompt 1010 yes _yes_ no _no_"],"global":null},{"kind":"task","firstLine":4,"lines":["_yes_ task:","log 20 step 2"],"global":null},{"kind":"task","firstLine":7,"lines":["_no_ task:","log 30 step 2"],"global":null},{"kind":"headless","firstLine":10,"lines":["log 10 step 1","start task _final_","end quest"],"global":null}]}
             """));
         if (retiredItem)
         {
-            root["questSources"]!["quests"]!.AsArray().Last()!["messages"]![0]!["lines"]![0] = "%pcn met _giver_ with _gift_.";
-            root["questSources"]!["resources"]!["declarations"]!.AsArray().Add(JsonNode.Parse("""
-                {"quest":"ending","sourceFile":"ending.txt","sourceLine":30,"kind":"item","symbol":{"sourceSpelling":"_gift_","canonicalId":"gift"},"sourceText":"Item _gift_ shortsword","targetSourceSpelling":"shortsword","targetCanonicalId":"shortsword","placeKind":null,"parameters":[],"foe":null,"item":{"artifact":false,"class":null,"subclass":null,"template":116,"key":null,"rangeLow":null,"rangeHigh":null,"usedMessage":null,"anyInfoMessage":null},"person":null,"place":null}
-                """));
+            root.Last()!["messages"]![0]!["lines"]![0] = "%pcn met _giver_ with _gift_.";
+            root.Last()!["blocks"]!.AsArray().Add(JsonNode.Parse("""{"kind":"item","firstLine":30,"lines":["Item _gift_ shortsword template 116"]}"""));
         }
-        return TestPayload.WithQuestSections(root.AsObject());
+        return TestPayload.WithQuests(root);
     }
 
     private static DaggerfallDefinitions DefinitionsWithLifecycleFixtures(bool hasRewardMessage = true)
     {
-        JsonObject root = TestPayload.Sections("questSources");
-        JsonArray quests = root["questSources"]!["quests"]!.AsArray();
+        JsonArray quests = TestPayload.QuestRecords();
         quests.Add(JsonNode.Parse("""
-            {"name":"startparent","displayName":"Start parent","sourceFile":"startparent.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"headless","firstLine":11,"lines":["start quest independentchild","end quest"],"global":null}],"diagnostics":[]}
+            {"name":"startparent","displayName":"Start parent","sourceFile":"startparent.txt","messages":[],"blocks":[{"kind":"headless","firstLine":11,"lines":["start quest independentchild","end quest"],"global":null}]}
             """));
         quests.Add(JsonNode.Parse("""
-            {"name":"runparent","displayName":"Run parent","sourceFile":"runparent.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _success_"],"global":null},{"kind":"variable","firstLine":2,"lines":["variable _failure_"],"global":null},{"kind":"headless","firstLine":3,"lines":["run quest runchild then _success_ or _failure_"],"global":null}],"diagnostics":[]}
+            {"name":"runparent","displayName":"Run parent","sourceFile":"runparent.txt","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _success_"],"global":null},{"kind":"variable","firstLine":2,"lines":["variable _failure_"],"global":null},{"kind":"headless","firstLine":3,"lines":["run quest runchild then _success_ or _failure_"],"global":null}]}
             """));
         quests.Add(JsonNode.Parse("""
-            {"name":"independentchild","displayName":"Independent child","sourceFile":"independentchild.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _idle_"],"global":null}],"diagnostics":[]}
+            {"name":"independentchild","displayName":"Independent child","sourceFile":"independentchild.txt","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _idle_"],"global":null}]}
             """));
         quests.Add(JsonNode.Parse("""
-            {"name":"runchild","displayName":"Run child","sourceFile":"runchild.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _idle_"],"global":null}],"diagnostics":[]}
+            {"name":"runchild","displayName":"Run child","sourceFile":"runchild.txt","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _idle_"],"global":null}]}
             """));
         quests.Add(JsonNode.Parse("""
-            {"name":"endparent","displayName":"End parent","sourceFile":"endparent.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _success_"],"global":null},{"kind":"variable","firstLine":2,"lines":["variable _failure_"],"global":null},{"kind":"headless","firstLine":3,"lines":["run quest endchild then _success_ or _failure_"],"global":null}],"diagnostics":[]}
+            {"name":"endparent","displayName":"End parent","sourceFile":"endparent.txt","messages":[],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _success_"],"global":null},{"kind":"variable","firstLine":2,"lines":["variable _failure_"],"global":null},{"kind":"headless","firstLine":3,"lines":["run quest endchild then _success_ or _failure_"],"global":null}]}
             """));
         quests.Add(JsonNode.Parse("""
-            {"name":"endchild","displayName":"End child","sourceFile":"endchild.txt","disposition":"compiled","messages":[],"blocks":[{"kind":"headless","firstLine":1,"lines":["end quest"],"global":null}],"diagnostics":[]}
+            {"name":"endchild","displayName":"End child","sourceFile":"endchild.txt","messages":[],"blocks":[{"kind":"headless","firstLine":1,"lines":["end quest"],"global":null}]}
             """));
         quests.Add(JsonNode.Parse("""
-            {"name":"trainquest","displayName":"Train quest","sourceFile":"trainquest.txt","disposition":"compiled","messages":[{"id":1004,"firstLine":1,"lines":["Complete."]}],"blocks":[{"kind":"headless","firstLine":1,"lines":["train pc LongBlade"],"global":null}],"diagnostics":[]}
+            {"name":"trainquest","displayName":"Train quest","sourceFile":"trainquest.txt","messages":[{"id":1004,"lines":["Complete."]}],"blocks":[{"kind":"headless","firstLine":1,"lines":["train pc LongBlade"],"global":null}]}
             """));
         quests.Add(JsonNode.Parse("""
-            {"name":"rearmtraining","displayName":"Rearm training","sourceFile":"rearmtraining.txt","disposition":"compiled","messages":[{"id":1004,"firstLine":1,"lines":["Complete."]}],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _stop_"],"global":null},{"kind":"task","firstLine":2,"lines":["until _stop_ performed:","start task _source_"],"global":null},{"kind":"task","firstLine":4,"lines":["_source_ task:","train pc LongBlade","clear _source_"],"global":null}],"diagnostics":[]}
+            {"name":"rearmtraining","displayName":"Rearm training","sourceFile":"rearmtraining.txt","messages":[{"id":1004,"lines":["Complete."]}],"blocks":[{"kind":"variable","firstLine":1,"lines":["variable _stop_"],"global":null},{"kind":"task","firstLine":2,"lines":["until _stop_ performed:","start task _source_"],"global":null},{"kind":"task","firstLine":4,"lines":["_source_ task:","train pc LongBlade","clear _source_"],"global":null}]}
             """));
         if (!hasRewardMessage)
             quests.Single(quest => quest!["sourceFile"]!.GetValue<string>() == "trainquest.txt")!["messages"] = new JsonArray();
-        return TestPayload.WithQuestSections(root.AsObject());
+        return TestPayload.WithQuests(quests);
     }
 
     private static DaggerfallQuestSourceDefinition Source(params DaggerfallQuestBlockDefinition[] blocks) =>

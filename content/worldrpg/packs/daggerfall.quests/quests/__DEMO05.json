@@ -1,0 +1,55 @@
+{
+  "name": "__DEMO05",
+  "sourceFile": "__DEMO05.txt",
+  "messages": [
+    {
+      "id": 1010,
+      "lines": [
+        "%qdt",
+        "    You have been summoned to _TestBuilding_",
+        " at __TestBuilding_ in ____TestBuilding_.",
+        " Please make haste, %pcn. There's no time to lose!"
+      ]
+    },
+    {
+      "id": 1050,
+      "lines": [
+        "You have arrived at _TestBuilding_ in __TestBuilding_."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "place",
+      "firstLine": 21,
+      "lines": [
+        "Place _TestBuilding_ remote house2"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 25,
+      "lines": [
+        "log 1010 step 0"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 29,
+      "lines": [
+        "_PlayerArrived_ task:",
+        "pc at _TestBuilding_ set _ShowResult_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 34,
+      "lines": [
+        "_ShowResult_ task:",
+        "say 1050",
+        "remove log step 0",
+        "end quest"
+      ]
+    }
+  ]
+}

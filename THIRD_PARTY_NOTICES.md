@@ -50,9 +50,11 @@ Daggerfall Unity file and commit it came from:
 - in `src/Daggerfall.Import.Tool/inputs/`, which the import reads and a release ships beside the import
   tool: the race exposure flags (`RaceTemplate.cs`), the item groups (`ItemEnums.cs`, `ItemHelper.cs`,
   `ItemsFile.cs`), the item and magic-item templates (`ItemTemplates.txt`, `MagicItemTemplates.txt`),
-  the spell-cost tables (`FormulaHelper.cs`), the static mobile table (`EnemyBasics.cs`), the flat-caption
-  table (`Internal_Flats.csv`), the classic quest list and quest tables (`StreamingAssets/Tables`), and the rewritten classic quest scripts of
-  `StreamingAssets/Quests`, each as a quest document of ours carrying the same text;
+  the spell-cost tables (`FormulaHelper.cs`), the static mobile table (`EnemyBasics.cs`) and the flat-caption
+  table (`Internal_Flats.csv`);
+- in `content/worldrpg/packs/daggerfall.quests/`: the classic quest list and quest tables (`StreamingAssets/Tables`)
+  and the rewritten classic quest scripts of `StreamingAssets/Quests`, each as a quest record of ours carrying
+  the same lines, the pack's description naming the commit;
 - in the `buildingNames` and `internalText` sections of `content/worldrpg/packs/daggerfall.base/payload.json`:
   the region name banks and names (`MapsFile.cs`) and the internal string table (`Internal_Strings.csv`).
 

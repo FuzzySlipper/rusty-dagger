@@ -17,37 +17,7 @@
       "id": "daggerfall.blocks"
     },
     {
-      "id": "daggerfall.quests.fighters"
-    },
-    {
-      "id": "daggerfall.quests.mages"
-    },
-    {
-      "id": "daggerfall.quests.temples"
-    },
-    {
-      "id": "daggerfall.quests.social"
-    },
-    {
-      "id": "daggerfall.quests.witches-commoners"
-    },
-    {
-      "id": "daggerfall.quests.merchants-vampires"
-    },
-    {
-      "id": "daggerfall.quests.disabled"
-    },
-    {
-      "id": "daggerfall.quests.nobility"
-    },
-    {
-      "id": "daggerfall.quests.story-early"
-    },
-    {
-      "id": "daggerfall.quests.story-late"
-    },
-    {
-      "id": "daggerfall.quests.cures"
+      "id": "daggerfall.quests"
     },
     {
       "id": "daggerfall.town-start"

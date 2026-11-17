@@ -154,39 +154,21 @@ public sealed class QuestDestinationSessionTests
     /// </summary>
     private static DaggerfallDefinitions Definitions()
     {
-        JsonObject root = TestPayload.Sections("questSources");
-        JsonArray declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
-        JsonArray quests = root["questSources"]!["quests"]!.AsArray();
-        JsonNode Find(Func<JsonNode, bool> match) => declarations.First(value => match(value!))!;
-        string Text(JsonNode node, string property) => node[property]!.GetValue<string>();
-        JsonNode foe = Find(value => Text(value, "kind") == "foe" && Text(value, "targetSourceSpelling") == "Giant_rat");
-        JsonNode item = Find(value => Text(value, "sourceFile") == "S0000502.txt" && value["symbol"]!["canonicalId"]!.GetValue<string>() == "reward");
-        JsonNode person = Find(value => Text(value, "kind") == "person" && value["person"]!["named"] is not null && value["person"]!["atHome"]!.GetValue<bool>());
-        foreach ((string quest, string file, string source, string? action) in new[]
+        JsonArray root = TestPayload.QuestRecords();
+        foreach ((string quest, string place, string? action) in new[]
         {
-            ("remote-building", "C0B00Y01.txt", "Place _tavern_ remote tavern", (string?)null),
-            ("remote-dungeon", "K0C00Y07.txt", "Place _mondung_ remote dungeon", null),
-            ("permanent", "S0000008.txt", "Place _daggerfall_ permanent DaggerfallCastle2", "teleport pc to _destination_"),
+            ("remote-building", "Place _destination_ remote tavern", (string?)null),
+            ("remote-dungeon", "Place _destination_ remote dungeon", null),
+            ("permanent", "Place _destination_ permanent DaggerfallCastle2", "teleport pc to _destination_"),
         })
         {
-            JsonNode place = Find(value => Text(value, "sourceFile") == file && Text(value, "sourceText") == source);
-            foreach ((JsonNode declaration, string symbol) in new[] { (place, "destination"), (foe, "enemy"), (item, "gift"), (person, "person") })
+            JsonArray blocks = [new JsonObject { ["kind"] = "place", ["firstLine"] = 10, ["lines"] = new JsonArray(place, "Foe _enemy_ is Giant_rat",
+                "Item _gift_ item class 4 subclass 3", "Person _person_ named Queen_Akorithi female") }];
+            if (action is not null) blocks.Add(new JsonObject { ["kind"] = "headless", ["firstLine"] = 1, ["lines"] = new JsonArray(action) });
+            root.Add(new JsonObject
             {
-                JsonNode added = declaration.DeepClone();
-                added["quest"] = quest;
-                added["sourceFile"] = quest + ".txt";
-                added["symbol"]!["canonicalId"] = symbol;
-                added["symbol"]!["sourceSpelling"] = $"_{symbol}_";
-                if (symbol == "person") { added["person"]!["atHome"] = false; added["person"]!["gender"] = "female"; }
-                declarations.Add(added);
-            }
-            JsonArray blocks = action is null ? [] : [new JsonObject { ["kind"] = "headless", ["firstLine"] = 1, ["lines"] = new JsonArray(action), ["global"] = null }];
-            quests.Add(new JsonObject
-            {
-                ["name"] = quest, ["displayName"] = "", ["sourceFile"] = quest + ".txt", ["disposition"] = "compiled",
-                ["messages"] = new JsonArray(), ["blocks"] = blocks, ["diagnostics"] = new JsonArray(),
-            });
+                ["name"] = quest, ["displayName"] = "", ["sourceFile"] = quest + ".txt", ["messages"] = new JsonArray(), ["blocks"] = blocks, });
         }
-        return TestPayload.WithQuestSections(root);
+        return TestPayload.WithQuests(root);
     }
 }

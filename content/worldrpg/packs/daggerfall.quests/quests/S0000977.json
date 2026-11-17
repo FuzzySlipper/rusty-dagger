@@ -1,0 +1,156 @@
+{
+  "name": "S0000977",
+  "displayName": "Curse of Daggerfall",
+  "sourceFile": "S0000977.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": []
+    },
+    {
+      "id": 1001,
+      "lines": []
+    },
+    {
+      "id": 1002,
+      "lines": []
+    },
+    {
+      "id": 1003,
+      "lines": []
+    },
+    {
+      "id": 1004,
+      "lines": []
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "Ghosts are haunting the streets of Daggerfall.",
+        "<--->",
+        "Don't walk the streets of Daggerfall at night.",
+        "<--->",
+        "<ce>      The ghost of King Lysandus haunts his old capital at night.",
+        "<ce>                           No one knows why."
+      ]
+    },
+    {
+      "id": 1006,
+      "lines": []
+    },
+    {
+      "id": 1007,
+      "lines": []
+    },
+    {
+      "id": 1008,
+      "lines": []
+    },
+    {
+      "id": 1009,
+      "lines": []
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "place",
+      "firstLine": 52,
+      "lines": [
+        "Place _daggerfall_ permanent DaggerfallCity1"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 54,
+      "lines": [
+        "Clock _delay_ 00:04 00:15 flag 12 range 0 0"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 55,
+      "lines": [
+        "Clock _S.05_ 00:01 0 flag 9 range 0 1"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 57,
+      "lines": [
+        "Foe _F.00_ is Ghost"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 58,
+      "lines": [
+        "Foe _wraith_ is Wraith"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 61,
+      "lines": [
+        "pc at _daggerfall_ set _S.02_ "
+      ]
+    },
+    {
+      "kind": "global",
+      "firstLine": 63,
+      "lines": [
+        "LiftedCurse _S.00_",
+        "end quest "
+      ],
+      "global": 0
+    },
+    {
+      "kind": "task",
+      "firstLine": 66,
+      "lines": [
+        "_S.01_ task:",
+        "daily from 05:00 to 19:00 "
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 69,
+      "lines": [
+        "variable _S.02_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 70,
+      "lines": [
+        "_S.03_ task:",
+        "when not _S.01_ and _S.02_ ",
+        "create foe _wraith_ every 21 minutes indefinitely with 50% success ",
+        "create foe _F.00_ every 31 minutes indefinitely with 50% success ",
+        "play sound vengence 5 0"
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 76,
+      "lines": [
+        "variable _delay_"
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 77,
+      "lines": [
+        "variable _S.05_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 78,
+      "lines": [
+        "_S.06_ task:",
+        "when _S.01_ or not _S.02_ ",
+        "clear _S.03_ "
+      ]
+    }
+  ]
+}

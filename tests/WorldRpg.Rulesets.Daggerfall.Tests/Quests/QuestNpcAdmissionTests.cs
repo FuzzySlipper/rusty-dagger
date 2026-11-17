@@ -184,24 +184,19 @@ public sealed class QuestNpcAdmissionTests
 
     internal static DaggerfallDefinitions Definitions(bool explicitGiver = false, string[][]? taskBlocks = null)
     {
-        var root = TestPayload.Sections("questSources");
-        var declarations = root["questSources"]!["resources"]!["declarations"]!.AsArray();
-        var person = declarations.First(value => value!["kind"]!.GetValue<string>() == "person"
-            && (explicitGiver ? value["person"]!["group"]?.GetValue<string>() == "Questor"
-                : value["person"]!["named"] is not null && value["person"]!["atHome"]!.GetValue<bool>()))!.DeepClone();
-        person["quest"] = "npc"; person["sourceFile"] = "npc.txt";
-        person["person"]!["gender"] = "female";
-        declarations.Add(person);
-        root["questSources"]!["quests"]!.AsArray().Add(JsonNode.Parse("""
-            {"name":"npc","displayName":"","sourceFile":"npc.txt","disposition":"compiled","messages":[],"blocks":[],"diagnostics":[]}
+        JsonArray root = TestPayload.QuestRecords();
+        string symbol = explicitGiver ? "questgiver" : "ruler";
+        string person = explicitGiver ? "Person _questgiver_ group Questor female" : "Person _ruler_ named Queen_Akorithi atHome female";
+        root.Add(JsonNode.Parse("""
+            {"name":"npc","displayName":"","sourceFile":"npc.txt","messages":[],"blocks":[]}
             """));
+        root.Last()!["blocks"]!.AsArray().Add(new JsonObject { ["kind"] = "person", ["firstLine"] = 1, ["lines"] = new JsonArray(person) });
         if (taskBlocks is not null)
         {
-            var blocks = root["questSources"]!["quests"]!.AsArray().Last()!["blocks"]!.AsArray();
-            string symbol = person["symbol"]!["canonicalId"]!.GetValue<string>();
+            var blocks = root.Last()!["blocks"]!.AsArray();
             for (int i = 0; i < taskBlocks.Length; i++) blocks.Add(new JsonObject { ["kind"] = "task", ["firstLine"] = 10 + i * 10,
                 ["lines"] = System.Text.Json.JsonSerializer.SerializeToNode(taskBlocks[i].Select(line => line.Replace("_person_", symbol))), ["global"] = null });
         }
-        return TestPayload.WithQuestSections(root.AsObject());
+        return TestPayload.WithQuests(root);
     }
 }

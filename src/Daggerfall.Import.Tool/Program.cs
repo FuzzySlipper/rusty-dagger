@@ -41,11 +41,7 @@ internal static class Program
         ReliefCommand.Command,
         AtlasCommand.Command,
         ItemsCommand.Command,
-        QuestsCommand.Command,
         VideosCommand.Command,
-        // Quest corpus payloads.
-        FightersQuestCorpusCommand.Command,
-        ClassicQuestCorporaCommand.Command,
         // The product-wide world media, then the per-block world publication that places it.
         WorldMediaCommand.Command,
         WorldBlocksCommand.Command,

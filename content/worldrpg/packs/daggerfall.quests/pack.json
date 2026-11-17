@@ -1,0 +1,11 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.quests",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.quests",
+  "dependencies": [
+    { "id": "daggerfall.base" }
+  ],
+  "description": "The classic quests: one record per quest in quests/ (its messages and QBN blocks), the classic quest list, the quest tables and the corpora that say how each quest is offered. Taken once from Daggerfall Unity's quest scripts and tables (Assets/StreamingAssets/Quests and Tables, MIT, commit 81e89e90c27bc3c1a7a61871e545fad129174dec), themselves Daggerfall's quests by Bethesda Softworks; edited here in place.",
+  "payload": "worldrpg/packs/daggerfall.quests/payload.json"
+}

@@ -33,8 +33,7 @@ public sealed record SourceCoverageArtifact(string Label, string File)
     }
 }
 
-public sealed record SourceCoverageInputs(IReadOnlyList<SourceCoverageConsumer> Consumers,
-    IReadOnlyList<SourceCoverageQuestHandoff> Quests, IReadOnlyList<SourceCoverageUnsupported> Unsupported);
+public sealed record SourceCoverageInputs(IReadOnlyList<SourceCoverageConsumer> Consumers, IReadOnlyList<SourceCoverageUnsupported> Unsupported);
 
 /// <summary>Reads existing producer citations and ledgers; patterns remain context, not proof of individual records.</summary>
 public static class SourceCoverageInputReader
@@ -51,9 +50,7 @@ public static class SourceCoverageInputReader
     public static SourceCoverageInputs Read(IEnumerable<SourceCoverageArtifact> artifacts, IReadOnlyList<SourceInventoryRow> inventory)
     {
         List<SourceCoverageConsumer> consumers = [];
-        List<SourceCoverageQuestHandoff> quests = [];
         List<SourceCoverageUnsupported> unsupported = [];
-        Dictionary<string, List<string>> corpora = new(StringComparer.Ordinal);
         foreach ((string artifact, string file) in artifacts.OrderBy(value => value.Label, StringComparer.Ordinal))
         {
             bool offline = artifact.StartsWith("import-records/", StringComparison.Ordinal);
@@ -81,16 +78,6 @@ public static class SourceCoverageInputReader
                 foreach (var movie in movies.EnumerateArray())
                     if (movie.TryGetProperty("artifact", out var media) && media.ValueKind == JsonValueKind.Object)
                         AddReference("arena2/" + movie.GetProperty("fileName").GetString(), "cinematics");
-            if (root.TryGetProperty("questOriginalSources", out var original))
-                foreach (JsonElement quest in original.GetProperty("quests").EnumerateArray())
-                {
-                    foreach (string field in new[] { "binaryPath", "resourcePath" })
-                        if (Text(quest, field) is { } path && inventory.Any(row => row.RowType == "file" && row.PathOrPattern == "arena2/" + path))
-                            AddReference("arena2/" + path, "questOriginalSources");
-                    quests.Add(new(quest.GetProperty("stem").GetString()!, quest.GetProperty("selection").GetString()!,
-                        quest.GetProperty("availability").GetString()!, Text(quest, "binaryPath"), Text(quest, "resourcePath"),
-                        Text(quest, "rewrittenSourceFile"), []));
-                }
             // The existing producer ledgers enumerate every raw block/model record, including unusable ones.
             if (root.TryGetProperty("geometry", out var geometry)) ReadLedger(geometry, "geometry");
             if (offline && root.TryGetProperty("records", out _) && root.TryGetProperty("sources", out var ledgerSources)
@@ -100,23 +87,11 @@ public static class SourceCoverageInputReader
                 foreach (JsonElement entry in unreadable.EnumerateArray())
                     unsupported.Add(new(artifact, entry.GetProperty("family").GetString()!,
                         [.. entry.GetProperty("files").EnumerateArray().Select(value => value.GetString()!)], entry.GetProperty("reason").GetString()!));
-            if (root.TryGetProperty("catalogSource", out _) && root.TryGetProperty("quests", out _)) ReadCorpus(root);
             if (root.TryGetProperty("books", out var books) && books.TryGetProperty("books", out var bookRecords))
                 foreach (JsonElement book in bookRecords.EnumerateArray())
                     if (Text(book, "disposition") != "notSupplied")
                         AddReference("arena2/books/" + book.GetProperty("fileName").GetString(), "books");
 
-            void ReadCorpus(JsonElement corpus)
-            {
-                if (!corpus.TryGetProperty("quests", out var receipts)) return;
-                foreach (JsonElement receipt in receipts.EnumerateArray())
-                {
-                    if (!receipt.TryGetProperty("sourceFingerprint", out _)) continue;
-                    string name = receipt.GetProperty("name").GetString()!;
-                    if (!corpora.TryGetValue(name, out var artifacts)) corpora[name] = artifacts = [];
-                    artifacts.Add(artifact);
-                }
-            }
             void ReadLedger(JsonElement ledger, string section)
             {
                 foreach (JsonElement record in ledger.GetProperty("records").EnumerateArray())
@@ -161,8 +136,8 @@ public static class SourceCoverageInputReader
                 if (value.ValueKind != JsonValueKind.String) return;
                 string source = value.GetString()!;
                 if (source.StartsWith("arena2/", StringComparison.Ordinal)) { AddReference(source, section); return; }
-                // Media producers cite bare Arena2 leaves; quest corpus sourceFile is donor .txt,
-                // so only an unambiguous admitted inventory match can become an Arena2 citation.
+                // Media producers cite bare Arena2 leaves, so only an unambiguous admitted inventory match
+                // can become an Arena2 citation.
                 string[] matches = [.. inventory.Where(row => row.RowType == "file"
                     && row.PathOrPattern.StartsWith("arena2/", StringComparison.Ordinal)
                     && string.Equals(row.PathOrPattern.Split('/')[^1], source, StringComparison.OrdinalIgnoreCase))
@@ -186,8 +161,6 @@ public static class SourceCoverageInputReader
         }
         return new([.. consumers.Distinct().OrderBy(value => value.SourcePath, StringComparer.Ordinal)
                 .ThenBy(value => value.Artifact, StringComparer.Ordinal).ThenBy(value => value.Section, StringComparer.Ordinal).ThenBy(value => value.ArchiveOrdinal)],
-            [.. quests.Select(quest => quest with { CorpusArtifacts = corpora.TryGetValue(quest.Stem, out var artifacts)
-                ? [.. artifacts.Distinct().Order(StringComparer.Ordinal)] : [] }).OrderBy(value => value.Stem, StringComparer.Ordinal)],
             unsupported);
     }
     private static string? Text(JsonElement value, string name) => value.TryGetProperty(name, out var field)

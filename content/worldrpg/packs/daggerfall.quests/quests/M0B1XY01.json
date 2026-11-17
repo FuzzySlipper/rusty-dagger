@@ -1,0 +1,255 @@
+{
+  "name": "M0B1XY01",
+  "displayName": "Hunt for Harpies",
+  "sourceFile": "M0B1XY01.txt",
+  "messages": [
+    {
+      "id": 1000,
+      "lines": [
+        "<ce>                I like you, kid. This assignment ain't",
+        "<ce>                 for just anyone. Seems there's a flock",
+        "<ce>                 of flyin' carnivores -- harpies -- who",
+        "<ce>               are making a bunch of travelling merchants",
+        "<ce>                real nervous. Will _reward_ gold get you",
+        "<ce>                       over to ___mondung_ and a",
+        "<ce>                      little hackin' 'n slashin'?"
+      ]
+    },
+    {
+      "id": 1001,
+      "lines": [
+        "<ce>                         Too bad. Seemed like",
+        "<ce>                   a pretty damn generous deal to me."
+      ]
+    },
+    {
+      "id": 1002,
+      "lines": [
+        "<ce>                  Okay then. There are five of these",
+        "<ce>                        beauties in ___mondung_,",
+        "<ce>               and they all gotta be dead in =1stparton_",
+        "<ce>                 days or no deal. And a word of advice:",
+        "<ce>                 you get back here in =1stparton_ days",
+        "<ce>                         but get to ___mondung_",
+        "<ce>                      as soon as possible or those",
+        "<ce>                harpies are gonna migrate and you'll be",
+        "<ce>                  outta luck. Okay kid, good luck and",
+        "<ce>                            get outta here."
+      ]
+    },
+    {
+      "id": 1003,
+      "lines": [
+        "<ce>                   Listen kid, I know I'm a charmer,",
+        "<ce>                     but them harpies are waiting,",
+        "<ce>                     and make sure to get all five",
+        "<ce>                            of 'em, get it?"
+      ]
+    },
+    {
+      "id": 1004,
+      "lines": [
+        "<ce>               Awright, kid, good goin'. That's _reward_",
+        "<ce>                     gold your way. Not too shabby."
+      ]
+    },
+    {
+      "id": 1005,
+      "lines": [
+        "Someone went up to check out ___mondung_ recently and was torn to shreds.",
+        "<--->",
+        "I only hope those harpies keep migrating south."
+      ]
+    },
+    {
+      "id": 1006,
+      "lines": [
+        "I hear the harpies soiled their nest at ___mondung_ and had to move on.",
+        "<--->",
+        "Those harpies are following the merchants' caravans like a moveable feast."
+      ]
+    },
+    {
+      "id": 1007,
+      "lines": [
+        "The harpies were a real economic problem. Things should get better now.",
+        "<--->",
+        "I hear they found thousands and thousands of eggs over in that harpy nest."
+      ]
+    },
+    {
+      "id": 1008,
+      "lines": [
+        "<ce>                      Hey! The %ra who took care",
+        "<ce>                       of those Harpies is back."
+      ]
+    },
+    {
+      "id": 1009,
+      "lines": [
+        "<ce>                   You're the %ra that couldn't even",
+        "<ce>               take care of a bunch of Harpies. Pathetic."
+      ]
+    },
+    {
+      "id": 1020,
+      "lines": [
+        "<ce>                   That's five. That should be enough",
+        "<ce>                         to hold _questgiver_."
+      ]
+    },
+    {
+      "id": 1030,
+      "lines": [
+        "%qdt:",
+        " The Fighters Guild",
+        " of ___questgiver_ has hired me",
+        " to exterminate a nest of harpies",
+        " that has infested ___mondung_",
+        " I need to have at least five of them dead and",
+        " be back in =1stparton_ days if I want to",
+        " collect my reward."
+      ]
+    },
+    {
+      "id": 1080,
+      "lines": [
+        "<ce>                  Hey, since you've been so helpful,",
+        "<ce>                      here's a map to ___newdung_.",
+        "<ce>                    All the killing and looting you",
+        "<ce>                         can stand.  My treat."
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "kind": "item",
+      "firstLine": 107,
+      "lines": [
+        "Item _reward_ gold"
+      ]
+    },
+    {
+      "kind": "person",
+      "firstLine": 109,
+      "lines": [
+        "Person _questgiver_ group Questor"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 111,
+      "lines": [
+        "Place _mondung_ remote dungeon10"
+      ]
+    },
+    {
+      "kind": "place",
+      "firstLine": 112,
+      "lines": [
+        "Place _newdung_ remote dungeon"
+      ]
+    },
+    {
+      "kind": "clock",
+      "firstLine": 114,
+      "lines": [
+        "Clock _1stparton_ 00:00 0 flag 17 range 0 2"
+      ]
+    },
+    {
+      "kind": "foe",
+      "firstLine": 116,
+      "lines": [
+        "Foe _monster_ is Harpy"
+      ]
+    },
+    {
+      "kind": "headless",
+      "firstLine": 119,
+      "lines": [
+        "start timer _1stparton_ ",
+        "reveal _mondung_ ",
+        "log 1030 step 0 ",
+        "pick one of _map_ _nomap_ _nomap_ ",
+        "pc at _mondung_ set _S.04_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 125,
+      "lines": [
+        "_pcgetsgold_ task:",
+        "when _qgclicked_ and _mondead_ ",
+        "give pc _reward_ ",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 130,
+      "lines": [
+        "_mondead_ task:",
+        "killed 5 _monster_ saying 1020 "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 133,
+      "lines": [
+        "_qgclicked_ task:",
+        "clicked npc _questgiver_ "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 136,
+      "lines": [
+        "_1stparton_ task:",
+        "end quest "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 139,
+      "lines": [
+        "_S.04_ task:",
+        "create foe _monster_ every 15 minutes 20 times with 50% success "
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 142,
+      "lines": [
+        "_clearclick_ task:",
+        "when _qgclicked_ and not _mondead_",
+        "say 1003 ",
+        "clear _qgclicked_ _clearclick_ "
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 147,
+      "lines": [
+        "variable _map_"
+      ]
+    },
+    {
+      "kind": "variable",
+      "firstLine": 148,
+      "lines": [
+        "variable _nomap_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 149,
+      "lines": [
+        "_S.08_ task:",
+        "when _map_ and _pcgetsgold_ ",
+        "reveal _newdung_ readmap",
+        "    say 1080 "
+      ]
+    }
+  ]
+}

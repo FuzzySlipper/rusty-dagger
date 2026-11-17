@@ -68,14 +68,13 @@ public sealed class QuestEnvironmentTests
     /// <summary>A quest whose first block is its start-up and each further block a task.</summary>
     private static DaggerfallDefinitions TaskDefinitions(string[] headless, params string[][] tasks)
     {
-        JsonObject root = TestPayload.Sections("questSources");
+        JsonArray root = TestPayload.QuestRecords();
         JsonArray blocks = [new JsonObject { ["kind"] = "headless", ["firstLine"] = 1, ["lines"] = JsonSerializer.SerializeToNode(headless), ["global"] = null }];
         for (int index = 0; index < tasks.Length; index++)
             blocks.Add(new JsonObject { ["kind"] = "task", ["firstLine"] = 10 * (index + 1), ["lines"] = JsonSerializer.SerializeToNode(tasks[index]), ["global"] = null });
-        root["questSources"]!["quests"]!.AsArray().Add(new JsonObject {
-            ["name"] = "quest-actions", ["displayName"] = "", ["sourceFile"] = "quest-actions.txt", ["disposition"] = "compiled",
-            ["messages"] = new JsonArray(), ["diagnostics"] = new JsonArray(), ["blocks"] = blocks });
-        return TestPayload.WithQuestSections(root);
+        root.Add(new JsonObject {
+            ["name"] = "quest-actions", ["displayName"] = "", ["sourceFile"] = "quest-actions.txt", ["messages"] = new JsonArray(), ["blocks"] = blocks });
+        return TestPayload.WithQuests(root);
     }
 
     /// <summary>Counts the trace warnings that name one token while it is attached.</summary>

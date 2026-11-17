@@ -10,26 +10,16 @@ public sealed class SourceCoverageInputTests : IDisposable
     public void Dispose() => Directory.Delete(root, true);
 
     [Fact]
-    public void Actual_producer_shapes_link_books_original_quests_and_flat_corpus_receipts()
+    public void Actual_producer_shapes_link_books()
     {
         string pack = Write("content/pack.json", """
             {"books":{"source":{"path":"arena2/books"},"books":[
              {"fileName":"BOK00000.TXT","disposition":"read"},{"fileName":"BOK00001.TXT","disposition":"notSupplied"}]}}
             """);
-        string original = Write("import-records/original.json", """
-            {"questOriginalSources":{"quests":[{"stem":"Q","selection":"rewrittenText","availability":"not binary execution",
-              "binaryPath":"Q.QBN","resourcePath":"Q.QRC","rewrittenSourceFile":"Q.txt"}]}}
-            """);
-        string corpus = Write("content/quests.json", """
-            {"catalogSource":"donor/list","quests":[{"name":"Q","sourceFingerprint":"abc"}]}
-            """);
-        var inputs = SourceCoverageInputReader.Read(root, [pack, original, corpus],
-            [Row("family", "CNT-015", "arena2/books"), Row("file", "CNT-015", "arena2/books/BOK00000.TXT"), Row("file", "CNT-017", "arena2/Q.QBN")]);
+        var inputs = SourceCoverageInputReader.Read(root, [pack],
+            [Row("family", "CNT-015", "arena2/books"), Row("file", "CNT-015", "arena2/books/BOK00000.TXT")]);
         Assert.DoesNotContain(inputs.Consumers, consumer => consumer.SourcePath.EndsWith("BOK00001.TXT", StringComparison.Ordinal));
         Assert.Contains(inputs.Consumers, consumer => consumer.SourcePath.EndsWith("BOK00000.TXT", StringComparison.Ordinal) && !consumer.ContextOnly);
-        Assert.Contains(inputs.Consumers, consumer => consumer.SourcePath == "arena2/Q.QBN" && consumer.OfflineOnly);
-        Assert.DoesNotContain(inputs.Consumers, consumer => consumer.SourcePath == "arena2/Q.QRC");
-        Assert.Equal("content/quests.json", Assert.Single(Assert.Single(inputs.Quests).CorpusArtifacts));
     }
 
     [Fact]

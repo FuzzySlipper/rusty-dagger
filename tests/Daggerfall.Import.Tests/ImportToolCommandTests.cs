@@ -230,8 +230,6 @@ public sealed class ImportToolCommandTests
     }
 
     [ImportToolDataTheory]
-    [InlineData("fighters-quest-corpus")]
-    [InlineData("classic-quest-corpora")]
     [InlineData("source-coverage")]
     public void Explicit_writer_verbs_publish_exact_builder_output(string name)
     {

@@ -234,17 +234,17 @@ public sealed class SoundCatalogTests
         new(405, "audio.player.death"),
     ];
 
-    [GeneratedContentFact]
+    [CorpusFact]
     public void Every_quest_sound_resolves_its_numeric_id_in_the_shared_publication()
     {
-        using var payload = System.Text.Json.JsonDocument.Parse(ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
-        var root = payload.RootElement;
-        var sounds = root.GetProperty("questTables").GetProperty("sounds").GetProperty("rows").EnumerateArray()
+        string pack = Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.quests");
+        using var payload = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(Path.Combine(pack, "payload.json")));
+        var sounds = payload.RootElement.GetProperty("questTables").GetProperty("sounds").EnumerateArray()
             .ToDictionary(row => row.GetProperty("name").GetString()!, row => row.GetProperty("id").GetUInt32(), StringComparer.OrdinalIgnoreCase);
         var publication = PublishFromCorpus();
         var requested = new HashSet<uint>();
-        foreach (var quest in root.GetProperty("questSources").GetProperty("quests").EnumerateArray())
-        foreach (var block in quest.GetProperty("blocks").EnumerateArray())
+        foreach (string file in Directory.EnumerateFiles(Path.Combine(pack, "quests"), "*.json"))
+        foreach (var block in System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(file)).RootElement.GetProperty("blocks").EnumerateArray())
         foreach (var source in block.GetProperty("lines").EnumerateArray())
         {
             string[] words = source.GetString()!.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);

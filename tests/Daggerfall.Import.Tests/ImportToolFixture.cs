@@ -94,7 +94,6 @@ internal sealed partial class ImportToolFixture : IDisposable
             ["--races"] = Input("races.json"), ["--spell-costs"] = Input("spell-costs.json"), ["--mobiles"] = Input("mobiles.json"), ["--npc-captions"] = Input("npc-captions.json"),
             ["--archive"] = Path.Combine(Arena2, "MONSTER.BSA"), ["--monster"] = Path.Combine(Arena2, "MONSTER.BSA"),
             ["--document"] = At("blocks.json"), ["--buildings"] = At("buildings.json"), ["--blocks"] = At("blocks.json"),
-            ["--quest-documents"] = Input("quests"), ["--quest-tables"] = Input("quest-tables.json"), ["--quest-list"] = Input("quest-list.json"),
             ["--item-templates"] = Input("item-templates.json"), ["--magic-item-templates"] = Input("magic-item-templates.json"),
             ["--item-groups"] = Input("item-groups.json"),
             ["--output"] = At("report.json"), ["--repository"] = TestData.RepositoryRoot,

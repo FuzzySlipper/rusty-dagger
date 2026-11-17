@@ -9,9 +9,8 @@ public sealed class DaggerfallDisabledQuestSelectionTests
     [Fact]
     public void Disabled_entries_never_become_ordinary_offers_and_summon_identities_resolve_explicitly()
     {
-        string root = TestData.RepositoryRoot;
         DaggerfallDefinitions definitions = TestPayload.Definitions;
-        DaggerfallDisabledQuestSelection selection = DaggerfallDisabledQuestSelection.From(DaggerfallClassicQuestCorpusContent.Read(TestContentFiles.ReadCopy(Path.Combine(root, "content/worldrpg/payloads/daggerfall.quests.disabled.json")), definitions, new DaggerfallQuestLanguage()));
+        DaggerfallDisabledQuestSelection selection = TestPayload.QuestAdmission.DisabledSelection;
         Assert.True(selection.TryResolveSummon("80C0XY00", out DaggerfallSummonQuestResolution? resolved));
         Assert.Equal("80C0XY00.txt", resolved!.SourceFile);
         Assert.False(selection.IsOrdinaryOffer("80C0XY00"));
