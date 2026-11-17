@@ -42,8 +42,8 @@ internal sealed partial class DaggerfallSession
 {
     /// <summary>Starts a new game at the composition's start site: the one construction path for a new session.</summary>
     /// <param name="variants">
-    /// The location variants a new game's opening quests select (<see cref="DaggerfallQuestInstances.OpeningWorldVariants"/>):
-    /// the session's view of the catalog starts with them, and the start site is built with its own, as a restored game's is.
+    /// The location variants a new game's opening quests selected as they started (<see cref="CreateNewGame"/>): the
+    /// session's view of the catalog starts with them, and the start site is built with its own, as a restored game's is.
     /// </param>
     internal static DaggerfallSession StartNew(IEngineContext engine, DaggerfallSessionComposition composition, DaggerfallWorldVariantSave[]? variants = null)
     {

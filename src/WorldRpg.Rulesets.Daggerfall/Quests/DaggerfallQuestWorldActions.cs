@@ -65,22 +65,9 @@ internal static partial class DaggerfallQuestTaskCompiler
 
 internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestItemDrops
 {
-    /// <summary>
-    /// The location variants the startup blocks of these quests select, as a save records them: a new game builds its
-    /// start site with them, so a variant its opening quest selects for the place it begins in shows from the first
-    /// build rather than from the next. The quests still run their world updates when they start, to the same effect.
-    /// </summary>
-    internal DaggerfallWorldVariantSave[] OpeningWorldVariants(IEnumerable<string> sourceFiles, IEnumerable<DaggerfallSiteRecord> records)
-    {
-        Dictionary<DaggerfallSiteId, string> selected = [];
-        foreach (string sourceFile in sourceFiles)
-            foreach (DaggerfallQuestTaskOperation operation in Program(sourceFile).Tasks.Where(task => task.Kind == DaggerfallQuestTaskKind.Headless)
-                .SelectMany(task => task.Operations).Where(operation => operation.Kind == DaggerfallQuestTaskOperationKind.WorldUpdate))
-                if (operation.WorldUpdate!.Site(records) is { } site)
-                    if (operation.WorldUpdate.Variant == "-") selected.Remove(site);
-                    else selected[site] = operation.WorldUpdate.Variant;
-        return [.. selected.OrderBy(value => value.Key.Region).ThenBy(value => value.Key.Index).Select(value => new DaggerfallWorldVariantSave(value.Key.Region, value.Key.Index, value.Value))];
-    }
+    /// <summary>Whether any of these quests states a world update anywhere, which only running it can tell is taken.</summary>
+    internal bool StateWorldUpdates(IEnumerable<string> sourceFiles) => sourceFiles.Any(sourceFile => Program(sourceFile).Tasks
+        .Any(task => task.Operations.Any(operation => operation.Kind == DaggerfallQuestTaskOperationKind.WorldUpdate)));
 
     private Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestTaskOperation, bool>? _worldAction;
     internal void BindWorldActions(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestTaskOperation, bool> apply) => _worldAction = apply;

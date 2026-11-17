@@ -1576,37 +1576,55 @@ internal sealed partial class DaggerfallSession
     /// The new game's list: the committed character's kit and spells are made before the title session is replaced, so
     /// a refusal leaves the title as it was; the new session (built at the bundle's start site) then stands the
     /// character where it begins, commits its choices, swaps the player definition's loadout for the kit, applies the
-    /// background's standing, teaches the spells, fills the tracks and starts the new-game quests, whose opening world
-    /// updates it was already built with. A load restores its own inventory instead.
+    /// background's standing, teaches the spells, fills the tracks and starts the new-game quests. When an opening quest
+    /// selects a variant of the start place as it starts, the game is begun again with that selection, so the place is
+    /// built with it. A load restores its own inventory instead.
     /// </summary>
     public IGameSession CreateNewGame()
     {
         DaggerfallCharacterCreationChoices choices = _creation.NewGameChoices(_newGameInitialized);             // Character
         DaggerfallStartingKit kit = DaggerfallStartingKit.Make(_definitions, _random, choices, State.Character.Career);   // Items
         string[] spells = _creation.NewGameSpells(State.Character.Career, choices.CustomCareer is not null);   // Character
-        // The opening quests' world updates are known before the start site is built, so it is built with them.
-        var replacement = StartNew(_engine, _composition,
-            State.Quests.OpeningWorldVariants(_composition.NewGameQuests, _site.Records));                    // Session, Quests'
-
+        DaggerfallSession game = Begin(null);
+        if (!State.Quests.StateWorldUpdates(_composition.NewGameQuests)) return game;
+        // An opening quest that updates the world updates it as it starts, which only running it can tell: its startup
+        // runs now as the first update would run it, and a variant it selects for the place the game begins in is built
+        // into a new game begun again with that selection, as a load builds with its saved one.
+        DaggerfallWorldVariantSave[] selected;
         try
         {
-            // An authored start pose is where the factory stood the player; without one the start profile receives a new
-            // character as the donor does (a dungeon's Enter marker).
-            if (_composition.StartPose is null) replacement._sites.PlaceNewCharacter();                        // Interiors
-            replacement._creation.CommitNewCharacter(choices);                                                 // Character
-            DaggerfallStartingKit.ClearLoadout(replacement.State.Inventory, replacement.State.Equipment,
-                replacement.State.ItemInstances, replacement.State.Actors.Entities);                           // Items
-            kit.Grant(replacement.State.Inventory, replacement.State.ItemInstances, replacement._uniqueItems,
-                replacement.State.Actors.Entities, replacement.EquipmentMoves, replacement.State.Currency.ReceiveGold);   // Items, its gold Economy's
-            replacement.State.Social.ApplyBackground(replacement._definitions, replacement.State.Character.Career,
-                choices.Background!);                                                                          // Society
-            replacement._creation.CompleteNewCharacter(spells, replacement.State.Actors.Player.Stats);         // Character
-            replacement._newGameInitialized = true;                                                            // Session
-            replacement.State.Quests.StartNewGame(_composition.NewGameQuests);                                 // Quests
-            replacement.Presentation.SetOutcome($"New game initialized for {choices.Name}.");                  // UiProjection
-            return replacement;
+            game.State.Quests.Advance(game.State.Variables, game._time.Calendar);                            // Quests
+            selected = game._sites.RequireProfiles().CaptureVariants();                                        // Content
         }
-        catch { replacement.Dispose(); throw; }
+        catch { game.Dispose(); throw; }
+        DaggerfallSiteId? start = game._sites.Projection.Inputs.Site;
+        if (!selected.Any(variant => start == new DaggerfallSiteId(variant.Region, variant.Location))) return game;
+        game.Dispose();
+        return Begin(selected);
+
+        DaggerfallSession Begin(DaggerfallWorldVariantSave[]? variants)
+        {
+            var replacement = StartNew(_engine, _composition, variants);                                       // Session
+            try
+            {
+                // An authored start pose is where the factory stood the player; without one the start profile receives a new
+                // character as the donor does (a dungeon's Enter marker).
+                if (_composition.StartPose is null) replacement._sites.PlaceNewCharacter();                    // Interiors
+                replacement._creation.CommitNewCharacter(choices);                                             // Character
+                DaggerfallStartingKit.ClearLoadout(replacement.State.Inventory, replacement.State.Equipment,
+                    replacement.State.ItemInstances, replacement.State.Actors.Entities);                       // Items
+                kit.Grant(replacement.State.Inventory, replacement.State.ItemInstances, replacement._uniqueItems,
+                    replacement.State.Actors.Entities, replacement.EquipmentMoves, replacement.State.Currency.ReceiveGold);   // Items, its gold Economy's
+                replacement.State.Social.ApplyBackground(replacement._definitions, replacement.State.Character.Career,
+                    choices.Background!);                                                                      // Society
+                replacement._creation.CompleteNewCharacter(spells, replacement.State.Actors.Player.Stats);     // Character
+                replacement._newGameInitialized = true;                                                        // Session
+                replacement.State.Quests.StartNewGame(_composition.NewGameQuests);                             // Quests
+                replacement.Presentation.SetOutcome($"New game initialized for {choices.Name}.");              // UiProjection
+                return replacement;
+            }
+            catch { replacement.Dispose(); throw; }
+        }
     }
 
     /// <summary>
