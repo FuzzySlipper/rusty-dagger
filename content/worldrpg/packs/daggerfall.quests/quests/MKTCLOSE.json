@@ -1,0 +1,107 @@
+{
+  "name": "MKTCLOSE",
+  "displayName": "Market Closed",
+  "sourceFile": "MKTCLOSE.txt",
+  "messages": [
+    {
+      "id": 1010,
+      "lines": [
+        "<ce>     A notice is nailed to a post across the market lane:",
+        "<ce>",
+        "<ce>               BY ORDER OF THE REEVE OF CHARING",
+        "<ce>      The market square is closed. A strongbox holding the",
+        "<ce>      stallholders' takings was stolen in the night. It will",
+        "<ce>      be well rewarded to whoever brings it to _warden_,",
+        "<ce>         the market warden, who waits at _inn_.",
+        "<ce>            The square opens again at first light."
+      ]
+    },
+    {
+      "id": 1011,
+      "lines": [
+        "<ce>   The reeve has shut the market square until that strongbox turns up.",
+        "                                     <--->",
+        "<ce>      _warden_ is sitting in _inn_, cursing the night watch.",
+        "                                     <--->",
+        "<ce>  Somebody was seen carrying a box into _hideout_ in the small hours."
+      ]
+    },
+    {
+      "id": 1012,
+      "lines": [
+        "<ce>               The strongbox! And the lock still whole.",
+        "<ce>            The reeve will be glad of this, and so am I.",
+        "<ce>         Here, _gold_ gold, as the notice said. I'll have",
+        "<ce>             those carts out of the lane within the hour."
+      ]
+    },
+    {
+      "id": 1013,
+      "lines": [
+        "<ce>      At first light the reeve's men drag the carts and crates",
+        "<ce>      out of the market lane. Charing's market square is open",
+        "<ce>      again, strongbox or no."
+      ]
+    },
+    {
+      "id": 1014,
+      "lines": [
+        "%qdt:",
+        " Charing's market square is barred: a strongbox",
+        " of the stallholders' takings was stolen in the",
+        " night. _warden_, the market warden, waits at",
+        " _inn_ and will reward whoever returns it.",
+        " The square opens again at first light."
+      ]
+    }
+  ],
+  "blocks": [
+    { "kind": "item", "firstLine": 40, "lines": ["Item _strongbox_ item class 1 template 90"] },
+    { "kind": "item", "firstLine": 41, "lines": ["Item _gold_ gold range 100 to 150"] },
+    { "kind": "person", "firstLine": 43, "lines": ["Person _warden_ face 117 group Group_6.0 male local anyInfo 1011 rumors 1011"] },
+    { "kind": "place", "firstLine": 45, "lines": ["Place _inn_ local tavern"] },
+    { "kind": "place", "firstLine": 46, "lines": ["Place _hideout_ local house2"] },
+    { "kind": "clock", "firstLine": 48, "lines": ["Clock _dawn_ 21:00"] },
+    {
+      "kind": "headless",
+      "firstLine": 50,
+      "lines": [
+        "worldupdate location at 4 in region 17 variant closed",
+        "start timer _dawn_",
+        "place npc _warden_ at _inn_",
+        "place item _strongbox_ at _hideout_",
+        "dialog link for location _hideout_ person _warden_",
+        "say 1010",
+        "log 1014 step 0"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 58,
+      "lines": [
+        "_returned_ task:",
+        "toting _strongbox_ and _warden_ clicked saying 1012",
+        "give pc _gold_",
+        "start task _reopen_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 63,
+      "lines": [
+        "_dawn_ task:",
+        "say 1013",
+        "start task _reopen_"
+      ]
+    },
+    {
+      "kind": "task",
+      "firstLine": 67,
+      "lines": [
+        "_reopen_ task:",
+        "worldupdate location at 4 in region 17 variant -",
+        "end quest"
+      ]
+    }
+  ]
+}

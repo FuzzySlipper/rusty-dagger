@@ -43,7 +43,7 @@ internal sealed class AssembledWorld
         DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(TestSessions.Data(full));
         Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(TestSessions.Data(full), media, Definitions));
         Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(TestSessions.Data(full), media));
-        WorldBlocks = new DaggerfallWorldBlocks(TestSessions.Data(full));
+        WorldBlocks = new DaggerfallWorldBlocks(TestSessions.Data(full), WorldVariants(full, Definitions));
         DaggerfallLocationAssembly assembly = new(Definitions, WorldBlocks, () => product.Value, () => meshes.Value);
         Profiles = DaggerfallSiteProfiles.Resolve(assembly, null);
         Source = Profiles.Require(DaggerfallWorldProfileIds.Dungeon(PrivateersHold));
@@ -68,9 +68,10 @@ internal sealed class AssembledWorld
     /// A new game in Privateer's Hold, walked out through its exit onto its assembled exterior: with no
     /// entrance to return through, the player lands in front of the island's dungeon entrance.
     /// </summary>
+    /// <param name="variant">A location variant of <paramref name="destination"/> the run may draw, so its content is admitted too.</param>
     internal AssembledWorldRun Start(DaggerfallSiteId destination, DaggerfallSiteBuildingId? building = null, bool loadingScreen = false,
-        IRandomService? random = null) =>
-        LeaveHold(new(this, (RulesetSavePayload?)null, destination, building, loadingScreen, random));
+        IRandomService? random = null, string? variant = null) =>
+        LeaveHold(new(this, (RulesetSavePayload?)null, destination, building, loadingScreen, random, variant));
 
     /// <summary>
     /// <see cref="Start(DaggerfallSiteId, DaggerfallSiteBuildingId?)"/> over the real Engine content, spatial, graphics and
@@ -99,8 +100,9 @@ internal sealed class AssembledWorld
         return run;
     }
 
-    internal AssembledWorldRun Restore(RulesetSavePayload save, DaggerfallSiteId destination, DaggerfallSiteBuildingId? building = null) =>
-        new(this, save, destination, building);
+    internal AssembledWorldRun Restore(RulesetSavePayload save, DaggerfallSiteId destination, DaggerfallSiteBuildingId? building = null,
+        string? variant = null) =>
+        new(this, save, destination, building, variant: variant);
 
     /// <summary>A save restored over the real Engine services of <paramref name="engine"/>, as loading it in the running product does.</summary>
     internal AssembledWorldRun Restore(IEngineContext engine, IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files, RulesetSavePayload save) =>
@@ -122,11 +124,11 @@ internal sealed class AssembledWorldRun : IDisposable
     private ulong _step;
 
     internal AssembledWorldRun(AssembledWorld world, RulesetSavePayload? save, DaggerfallSiteId destination, DaggerfallSiteBuildingId? building,
-        bool loadingScreen = false, IRandomService? random = null)
+        bool loadingScreen = false, IRandomService? random = null, string? variant = null)
     {
         _world = world;
         List<string> releases = [];
-        ContentFake content = Content(world, destination, building, releases);
+        ContentFake content = Content(world, destination, building, releases, variant);
         Spatial = SpatialFake.Create(world.Source.Geometry.Spatial[0].Sha256, releases);
         // The player stays where a test places them, so a door is used from where they stood.
         Spatial.KeepPosition = true;
@@ -223,11 +225,14 @@ internal sealed class AssembledWorldRun : IDisposable
             yield return (path, content.Body(path) ?? TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content", path)));
     }
 
-    private static ContentFake Content(AssembledWorld world, DaggerfallSiteId destination, DaggerfallSiteBuildingId? building, List<string> releases)
+    private static ContentFake Content(AssembledWorld world, DaggerfallSiteId destination, DaggerfallSiteBuildingId? building, List<string> releases,
+        string? variant = null)
     {
         ContentFake content = new(releases);
         PopulateContent(content, world.Source);
         foreach (DaggerfallSiteProfile profile in Profiles(world, destination, building)) Admit(content, profile);
+        if (variant is not null)
+            Admit(content, world.Profiles.ForSession([new(destination.Region, destination.Index, variant)]).Require(DaggerfallWorldProfileIds.Exterior(destination)));
         return content;
     }
 

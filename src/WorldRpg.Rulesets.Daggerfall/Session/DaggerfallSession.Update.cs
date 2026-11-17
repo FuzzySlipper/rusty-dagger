@@ -1576,15 +1576,18 @@ internal sealed partial class DaggerfallSession
     /// The new game's list: the committed character's kit and spells are made before the title session is replaced, so
     /// a refusal leaves the title as it was; the new session (built at the bundle's start site) then stands the
     /// character where it begins, commits its choices, swaps the player definition's loadout for the kit, applies the
-    /// background's standing, teaches the spells, fills the tracks and starts the new-game quests. A load restores its
-    /// own inventory instead.
+    /// background's standing, teaches the spells, fills the tracks and starts the new-game quests, whose opening world
+    /// updates it was already built with. A load restores its own inventory instead.
     /// </summary>
     public IGameSession CreateNewGame()
     {
         DaggerfallCharacterCreationChoices choices = _creation.NewGameChoices(_newGameInitialized);             // Character
         DaggerfallStartingKit kit = DaggerfallStartingKit.Make(_definitions, _random, choices, State.Character.Career);   // Items
         string[] spells = _creation.NewGameSpells(State.Character.Career, choices.CustomCareer is not null);   // Character
-        var replacement = StartNew(_engine, _composition);                                                     // Session
+        // The opening quests' world updates are known before the start site is built, so it is built with them.
+        var replacement = StartNew(_engine, _composition,
+            State.Quests.OpeningWorldVariants(_composition.NewGameQuests, _site.Records));                    // Session, Quests'
+
         try
         {
             // An authored start pose is where the factory stood the player; without one the start profile receives a new

@@ -1,0 +1,12 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.market-closed",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.new-game-start",
+  "dependencies": [
+    { "id": "daggerfall.base" },
+    { "id": "daggerfall.quests" }
+  ],
+  "description": "Developer scenario: a new game begins in Charing's west market lane at nine in the morning, facing the square, with gold for the town and one opening quest, Market Closed (MKTCLOSE), which bars the lane until dawn or until its stolen strongbox is returned to the market warden. Begin starts play at once, with a quick-started character and no opening cinematics.",
+  "payload": "worldrpg/packs/daggerfall.market-closed/payload.json"
+}

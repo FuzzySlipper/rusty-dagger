@@ -17,7 +17,8 @@ using static WorldRpg.Rulesets.Daggerfall.DaggerfallDeveloperReplies;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// Developer movement (world.teleport, move, forward, travel, enter, goto, where, stand, scout, find, spawn). Every
+/// Developer movement (world.teleport, move, forward, travel, enter, goto, where, stand, scout, find, spawn), and the
+/// world variant a place draws (world.variant), selected through the catalog view a quest's world update uses. Every
 /// landing goes through the site lifecycle's one relocation owner, as quest teleports, recall and guild teleport do: the
 /// player is stood on the floor, the exterior's residency follows, and a change of place is an ordinary site transition.
 /// A journey lands as guild teleport does, with no time, cost or encounter; a building is entered as its door enters
@@ -93,6 +94,22 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         if (ResolvePlace(place, out DaggerfallSiteProfile? exterior) is { } unresolved) return Refused(unresolved);
         if (!ArriveAt(exterior!)) return Refused($"{exterior!.ProfileKey.LogicalId} could not be admitted.");
         return Where();
+    }
+
+    public DebugCommandResult Variant(string place, string variant)
+    {
+        if (hold.Refusal() is { } refusal) return Refused(refusal);
+        if (ResolvePlace(place, out DaggerfallSiteProfile? exterior) is { } unresolved) return Refused(unresolved);
+        if (variant != "-" && !variant.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '.' or '-'))
+            return Refused($"'{variant}' is no variant a quest's world update could name.");
+        DaggerfallSiteId selected = exterior!.Site!.Value;
+        DaggerfallSiteProfiles profiles = sites.RequireProfiles();
+        profiles.SetLocationVariant(selected, variant);
+        string name = site.Require(selected).Name;
+        if (variant == "-") return DebugCommandResult.Success($"{name} ({selected}) draws its base from its next build.");
+        return profiles.Carries(selected, variant)
+            ? DebugCommandResult.Success($"{name} ({selected}) draws variant '{variant}' from its next build.")
+            : DebugCommandResult.Success($"{name} ({selected}) holds variant '{variant}', which no selected pack carries, so its base still shows.");
     }
 
     public DebugCommandResult Enter(string place, string building)

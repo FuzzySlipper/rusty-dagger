@@ -1,0 +1,29 @@
+{
+  "kind": "worldrpg.game-bundle",
+  "id": "daggerfall.market-closed",
+  "title": "Developer: Charing market closed",
+  "ruleset": "daggerfall",
+  "contentPacks": [
+    {
+      "id": "daggerfall.imported"
+    },
+    {
+      "id": "daggerfall.base"
+    },
+    {
+      "id": "daggerfall.art-replacements"
+    },
+    {
+      "id": "daggerfall.blocks"
+    },
+    {
+      "id": "daggerfall.quests"
+    },
+    {
+      "id": "daggerfall.market-closed"
+    }
+  ],
+  "tuning": {
+    "id": "daggerfall.defaults"
+  }
+}

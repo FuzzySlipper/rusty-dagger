@@ -6,6 +6,6 @@
   "dependencies": [
     { "id": "daggerfall.base" }
   ],
-  "description": "The classic quests: one record per quest in quests/ (its messages and QBN blocks), the classic quest list, the quest tables and the corpora that say how each quest is offered. Taken once from Daggerfall Unity's quest scripts and tables (Assets/StreamingAssets/Quests and Tables, MIT, commit 81e89e90c27bc3c1a7a61871e545fad129174dec), themselves Daggerfall's quests by Bethesda Softworks; edited here in place.",
+  "description": "The classic quests and our own (Market Closed, MKTCLOSE): one record per quest in quests/ (its messages and QBN blocks), the classic quest list, the quest tables and the corpora that say how each quest is offered, and in worldVariants the location variants a quest's world update selects with the block-variant recipes they draw, whose block documents and collision are baked into variants/ by daggerfall-source-tool world-variant-bake (run it after editing a recipe). Taken once from Daggerfall Unity's quest scripts and tables (Assets/StreamingAssets/Quests and Tables, MIT, commit 81e89e90c27bc3c1a7a61871e545fad129174dec), themselves Daggerfall's quests by Bethesda Softworks; edited here in place.",
   "payload": "worldrpg/packs/daggerfall.quests/payload.json"
 }

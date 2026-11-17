@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Normalized;
@@ -247,6 +248,20 @@ public sealed record DaggerfallWorldBlock(
     DaggerfallWorldBlockSpatial? Spatial,
     IReadOnlyList<DaggerfallWorldBlockModel> Models)
 {
+    /// <summary>
+    /// The variant this document is of its RMB exterior (<see cref="Normalization.WorldBlockVariantRecipe"/>), or null for
+    /// the block as the source places it. A variant keeps the base block's identities, and is not written for the base.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Variant { get; init; }
+
+    /// <summary>
+    /// A variant's stamp of the base block it was baked over: the digest of the base block's document as the world block
+    /// publication writes it, so a reader can tell a variant drawn over a block that has changed since.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ContentDigest? BaseDigest { get; init; }
+
     /// <summary>Recoverable source defects with their observed values and normalization decisions.</summary>
     public IReadOnlyList<string> SourceWarnings { get; init; } = [];
 

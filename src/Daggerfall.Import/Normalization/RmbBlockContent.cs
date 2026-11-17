@@ -46,7 +46,7 @@ internal sealed class RmbModelFrame
     private const byte PropObjectType = 3;
 
     /// <summary>How far RMBLayout.AddProps lowers a block's own models: its <c>propsOffsetY</c>, four raw units.</summary>
-    private const float BlockModelOffsetMetres = -4F * Arena2SourceTransform.SourceUnitMetres;
+    internal const float BlockModelOffsetMetres = -4F * Arena2SourceTransform.SourceUnitMetres;
 
     private readonly RmbModelParent parent;
     private readonly Arena2ImportPoint parentOrigin;
@@ -150,6 +150,9 @@ internal sealed class RmbBlockContent
     /// <summary>The donor's source Y for the nature flats it stands on the ground grid.</summary>
     private const int GroundSceneryY = 2;
 
+    /// <summary>The raw source Z the block's own objects are offset to: the far edge of its grid square.</summary>
+    private const int MiscOriginZ = 4096;
+
     /// <summary>The source automap is one 64-by-64 grid per block.</summary>
     public const int AutomapSide = 64;
 
@@ -166,11 +169,13 @@ internal sealed class RmbBlockContent
         return x is >= 0 and < AutomapSide && y is >= 0 and < AutomapSide ? (y * AutomapSide) + x : null;
     }
 
-    private RmbBlockContent(string sourceKey, RmbBlockSummary summary, RmbBlockPlacements placements)
+    private RmbBlockContent(string sourceKey, RmbBlockSummary summary, RmbBlockPlacements placements, string? variant = null,
+        IReadOnlySet<int>? removedMisc = null)
     {
         SourceKey = sourceKey;
         Summary = summary;
         Placements = placements;
+        Variant = variant;
         List<RmbBlockModel> models = [];
         List<RmbBlockFlat> flats = [];
         List<RmbBlockPerson> people = [];
@@ -193,9 +198,9 @@ internal sealed class RmbBlockContent
         }
 
         // The donor offsets the block's own objects to the far edge of its grid square.
-        Arena2ImportPoint miscOrigin = Arena2SourceTransform.ToRmbImportPoint(0, 0, 4096);
+        Arena2ImportPoint miscOrigin = Arena2SourceTransform.ToRmbImportPoint(0, 0, MiscOriginZ);
         foreach ((RmbModelPlacement model, int ordinal) in placements.MiscModels.Select((model, ordinal) => (model, ordinal)))
-            models.Add(new(RmbModelFrame.Block(model, miscOrigin), null, ordinal, 0, $"{slug}/misc"));
+            if (removedMisc?.Contains(ordinal) != true) models.Add(new(RmbModelFrame.Block(model, miscOrigin), null, ordinal, 0, $"{slug}/misc"));
         foreach ((RmbFlatPlacement flat, int ordinal) in placements.MiscFlats.Select((flat, ordinal) => (flat, ordinal)))
             flats.Add(new(ordinal, flat.TextureArchive, flat.TextureRecord,
                 Add(miscOrigin, Arena2SourceTransform.ToRmbImportPoint(flat.X, flat.Y, flat.Z)), flat));
@@ -226,6 +231,9 @@ internal sealed class RmbBlockContent
     }
 
     public string SourceKey { get; }
+
+    /// <summary>The authored variant this content is of the source block, or null for the block as the source places it.</summary>
+    public string? Variant { get; }
 
     public RmbBlockSummary Summary { get; }
 
@@ -263,6 +271,36 @@ internal sealed class RmbBlockContent
         if (!RmbBlockSummaryReader.TryRead(bytes, blocks.Source, 0, bytes.Length, out RmbBlockSummary? summary, out string reason) || summary is null)
             throw new InvalidOperationException($"RMB block '{sourceKey}' cannot be read: {reason}.");
         return new(sourceKey, summary, RmbPlacementReader.Read(bytes, 0, summary, blocks.Source));
+    }
+
+    /// <summary>
+    /// This block with an authored variant's edits to its own models: the misc ordinals it removes are left out, keeping
+    /// every other placement's ordinal and so its identity, and the models it adds follow the source's, numbered on from
+    /// them. Everything else (buildings, flats, people, ground, automap) is the source block's.
+    /// </summary>
+    internal RmbBlockContent WithVariant(string variant, IReadOnlySet<int> removedMisc, IReadOnlyList<RmbModelPlacement> addedMisc)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(variant);
+        if (Variant is not null) throw new InvalidOperationException($"RMB block '{SourceKey}' is already variant '{Variant}'.");
+        foreach (int ordinal in removedMisc.Where(ordinal => ordinal < 0 || ordinal >= Placements.MiscModels.Count))
+            throw new InvalidOperationException($"RMB block '{SourceKey}' has no own model {ordinal} for variant '{variant}' to remove.");
+        return new(SourceKey, Summary, Placements with { MiscModels = [.. Placements.MiscModels, .. addedMisc] }, variant, removedMisc);
+    }
+
+    /// <summary>
+    /// The source placement of one of the block's own models whose published pose (<see cref="RmbModelFrame.Block"/> then
+    /// the right-handed flip) is <paramref name="position"/> and <paramref name="yawDegrees"/>, snapped to the source's grid.
+    /// </summary>
+    internal static RmbModelPlacement MiscPlacement(string modelId, NormalizedVector3 position, float yawDegrees)
+    {
+        // The inverse of Block's arithmetic: the misc origin (0, 0, 4096 raw), the props' offset down, Y and Z flipped.
+        int x = Raw(position.X / Arena2SourceTransform.SourceUnitMetres);
+        int y = Raw(-(position.Y - RmbModelFrame.BlockModelOffsetMetres) / Arena2SourceTransform.SourceUnitMetres);
+        int z = Raw((-position.Z / Arena2SourceTransform.SourceUnitMetres) - MiscOriginZ);
+        short yaw = checked((short)Raw(-yawDegrees * 2048F / 360F));
+        return new(modelId, 0, x, y, z, yaw);
+
+        static int Raw(float value) => checked((int)MathF.Round(value, MidpointRounding.AwayFromZero));
     }
 
     /// <summary>

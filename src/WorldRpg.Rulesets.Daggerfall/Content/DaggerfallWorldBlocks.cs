@@ -9,10 +9,15 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>Which half of the world a published block is.</summary>
 internal enum DaggerfallWorldBlockKind { RmbExterior, RmbInterior, Rdb }
 
-/// <summary>A published block's identity: its kind, its source record and, for an RMB interior, its building.</summary>
-internal readonly record struct DaggerfallWorldBlockKey(DaggerfallWorldBlockKind Kind, string SourceKey, int? BuildingIndex = null)
+/// <summary>
+/// A published block's identity: its kind, its source record and, for an RMB interior, its building; for an RMB exterior,
+/// the baked variant of it a location variant draws (<see cref="DaggerfallWorldVariantContent"/>), or null for the block as
+/// the source places it.
+/// </summary>
+internal readonly record struct DaggerfallWorldBlockKey(DaggerfallWorldBlockKind Kind, string SourceKey, int? BuildingIndex = null, string? Variant = null)
 {
-    public override string ToString() => BuildingIndex is int building ? $"{Kind} {SourceKey} building {building}" : $"{Kind} {SourceKey}";
+    public override string ToString() => BuildingIndex is int building ? $"{Kind} {SourceKey} building {building}"
+        : Variant is { } variant ? $"{Kind} {SourceKey} variant '{variant}'" : $"{Kind} {SourceKey}";
 }
 
 /// <summary>A block's collision and navigation artifact: its content path in the bundle and its digest.</summary>
@@ -107,7 +112,8 @@ internal sealed class DaggerfallWorldBlockDocument
 /// <summary>
 /// The per-block world publication, read lazily from its root in the data container. Nothing is read at
 /// composition: the index is read the first time a location needs a block, and each block document only
-/// when a location that places it is assembled, so no block body is held once the documents are interpreted.
+/// when a location that places it is assembled, so no block body is held once the documents are interpreted. A block
+/// variant's document is read the same way from the quests pack that bakes it.
 /// </summary>
 internal sealed class DaggerfallWorldBlocks
 {
@@ -119,12 +125,21 @@ internal sealed class DaggerfallWorldBlocks
     internal const string IndexPath = "blocks.json";
 
     private readonly DaggerfallData _content;
+    private readonly DaggerfallWorldVariantContent _variants;
     private readonly object _gate = new();
     private IReadOnlyDictionary<DaggerfallWorldBlockKey, IndexEntry>? _index;
 
     private sealed record IndexEntry(string Key, string Document, string? Spatial);
 
-    internal DaggerfallWorldBlocks(DaggerfallData content) => _content = content ?? throw new ArgumentNullException(nameof(content));
+    /// <param name="variants">The selected packs' world variants, whose baked block documents a key with a variant reads; none when null.</param>
+    internal DaggerfallWorldBlocks(DaggerfallData content, DaggerfallWorldVariantContent? variants = null)
+    {
+        _content = content ?? throw new ArgumentNullException(nameof(content));
+        _variants = variants ?? DaggerfallWorldVariantContent.None;
+    }
+
+    /// <summary>The selected packs' world variants.</summary>
+    internal DaggerfallWorldVariantContent Variants => _variants;
 
     /// <summary>The content path a bundle-relative path names, as the Engine resolves it while the bundle is open.</summary>
     internal static string ContentPath(string relativePath) => $"{Root}/{relativePath}";
@@ -158,7 +173,8 @@ internal sealed class DaggerfallWorldBlocks
 
     /// <summary>
     /// Reads the documents of the given blocks in one bundle opening. A block the publication does not
-    /// carry, or a document that does not read, is reported by name; nothing is skipped.
+    /// carry, or a document that does not read, is reported by name; nothing is skipped. A block variant is read from the
+    /// pack that bakes it, and one baked over a base block other than the one the publication carries now is warned of.
     /// </summary>
     internal IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> Read(IEnumerable<DaggerfallWorldBlockKey> keys)
     {
@@ -170,6 +186,12 @@ internal sealed class DaggerfallWorldBlocks
         Dictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> documents = [];
         foreach (DaggerfallWorldBlockKey key in requested)
         {
+            if (key.Variant is not null)
+            {
+                if (ReadVariant(key, bundle, index, diagnostics) is { } variant) documents.Add(key, variant);
+                continue;
+            }
+
             if (!index.TryGetValue(key, out IndexEntry? entry))
             {
                 diagnostics.Add($"The per-block world publication carries no block for {key}.");
@@ -184,11 +206,49 @@ internal sealed class DaggerfallWorldBlocks
                 continue;
             }
 
-            if (ReadDocument(key, entry, bytes, diagnostics) is { } document) documents.Add(key, document);
+            if (ReadDocument(key, entry, ContentPath, bytes, diagnostics) is { } document) documents.Add(key, document);
         }
 
         diagnostics.ThrowIfAny();
         return documents;
+    }
+
+    /// <summary>
+    /// A block variant's baked document, read from the pack that bakes it with its spatial artifact beside it. Its stamp of
+    /// the base block is compared with the base document the publication carries: a variant baked over a block the import
+    /// has changed since still reads, as the edit it was, and the warning names it so it is baked again.
+    /// </summary>
+    private DaggerfallWorldBlockDocument? ReadVariant(DaggerfallWorldBlockKey key, DaggerfallDataRoot bundle,
+        IReadOnlyDictionary<DaggerfallWorldBlockKey, IndexEntry> index, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (key.Kind != DaggerfallWorldBlockKind.RmbExterior || _variants.Block(key.SourceKey, key.Variant!) is not { } baked)
+        {
+            diagnostics.Add($"No selected quests pack bakes {key}.");
+            return null;
+        }
+
+        ReadOnlyMemory<byte> bytes;
+        try { bytes = _content.ReadBytes(baked.DocumentPath); }
+        catch (FileNotFoundException exception)
+        {
+            diagnostics.Add($"Block document '{baked.DocumentPath}' of {key} cannot be read: {exception.Message}");
+            return null;
+        }
+
+        string? stamp;
+        using (JsonDocument document = JsonDocument.Parse(bytes)) stamp = DaggerfallBaseContent.OptionalText(document.RootElement, "baseDigest", diagnostics);
+        DaggerfallWorldBlockKey baseKey = key with { Variant = null };
+        if (index.TryGetValue(baseKey, out IndexEntry? baseEntry))
+        {
+            string current = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bundle.ReadBytes(baseEntry.Document).Span));
+            if (stamp != current)
+                System.Diagnostics.Trace.TraceWarning($"Block variant '{baked.DocumentPath}' of quests pack '{baked.Pack}' was baked over another '{key.SourceKey}' "
+                    + $"than the one {_content.Source} publishes (baked over {stamp ?? "nothing stated"}, published {current}): it draws its edits over the block as "
+                    + "it was then. Run daggerfall-source-tool world-variant-bake.");
+        }
+        else diagnostics.Add($"Block variant '{baked.DocumentPath}' edits {baseKey}, which the per-block world publication does not carry.");
+
+        return ReadDocument(key, null, relativePath => $"{baked.Root}/{relativePath}", bytes, diagnostics);
     }
 
     private IReadOnlyDictionary<DaggerfallWorldBlockKey, IndexEntry> RequireIndex(DaggerfallDataRoot bundle)
@@ -243,17 +303,22 @@ internal sealed class DaggerfallWorldBlocks
     private static readonly string[] SectionNames =
         ["questMarkers", "population", "staticNpcs", "propertyContainers", "lights", "billboards", "actors", "randomEnemies", "treasures", "actions", "waterVolumes"];
 
-    private static DaggerfallWorldBlockDocument? ReadDocument(DaggerfallWorldBlockKey key, IndexEntry entry, ReadOnlyMemory<byte> bytes, DaggerfallContentDiagnostics diagnostics)
+    /// <param name="entry">The block's index entry, which the document must agree with; null for a pack's baked variant, which has none.</param>
+    /// <param name="contentPath">The content path of a path the document names relative to its root.</param>
+    private static DaggerfallWorldBlockDocument? ReadDocument(DaggerfallWorldBlockKey key, IndexEntry? entry, Func<string, string> contentPath,
+        ReadOnlyMemory<byte> bytes, DaggerfallContentDiagnostics diagnostics)
     {
-        string owner = $"Block '{entry.Key}'";
+        string owner = $"Block '{entry?.Key ?? key.ToString()}'";
         try
         {
             using JsonDocument document = JsonDocument.Parse(bytes);
             JsonElement root = DaggerfallBaseContent.Object(document.RootElement, owner, diagnostics);
-            if (DaggerfallBaseContent.Text(root, "key", diagnostics) != entry.Key
+            string publishedKey = DaggerfallBaseContent.Text(root, "key", diagnostics);
+            if ((entry is not null && publishedKey != entry.Key)
                 || Kind(DaggerfallBaseContent.Text(root, "kind", diagnostics)) != key.Kind
                 || DaggerfallBaseContent.Text(root, "sourceKey", diagnostics) != key.SourceKey
-                || DaggerfallBaseContent.OptionalInteger(root, "buildingIndex", diagnostics) != key.BuildingIndex)
+                || DaggerfallBaseContent.OptionalInteger(root, "buildingIndex", diagnostics) != key.BuildingIndex
+                || DaggerfallBaseContent.OptionalText(root, "variant", diagnostics) != key.Variant)
             {
                 diagnostics.Add($"{owner} does not state the identity its index entry gives it.");
                 return null;
@@ -263,13 +328,13 @@ internal sealed class DaggerfallWorldBlocks
             if (root.TryGetProperty("spatial", out JsonElement spatialValue) && spatialValue.ValueKind != JsonValueKind.Null)
             {
                 string relativePath = DaggerfallBaseContent.Text(spatialValue, "relativePath", diagnostics);
-                if (!StringComparer.Ordinal.Equals(relativePath, entry.Spatial))
+                if (entry is not null && !StringComparer.Ordinal.Equals(relativePath, entry.Spatial))
                     diagnostics.Add($"{owner} names spatial artifact '{relativePath}' where its index entry names '{entry.Spatial}'.");
-                spatial = new(ContentPath(relativePath),
+                spatial = new(contentPath(relativePath),
                     DaggerfallContentHash.Parse(DaggerfallBaseContent.Text(spatialValue, "contentDigest", diagnostics), $"{owner} spatial artifact"),
                     DaggerfallBaseContent.Text(spatialValue, "navigationId", diagnostics));
             }
-            else if (entry.Spatial is not null) diagnostics.Add($"{owner} states no spatial artifact where its index entry names '{entry.Spatial}'.");
+            else if (entry?.Spatial is not null) diagnostics.Add($"{owner} states no spatial artifact where its index entry names '{entry.Spatial}'.");
 
             List<DaggerfallWorldBlockModel> models = [];
             foreach (JsonElement value in DaggerfallBaseContent.Array(root, "models", diagnostics))
@@ -345,7 +410,7 @@ internal sealed class DaggerfallWorldBlocks
             return new DaggerfallWorldBlockDocument
             {
                 Key = key,
-                PublishedKey = entry.Key,
+                PublishedKey = publishedKey,
                 Spatial = spatial,
                 Bounds = OptionalBounds(root, "bounds", owner, diagnostics),
                 Models = models,

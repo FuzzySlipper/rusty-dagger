@@ -26,13 +26,13 @@ internal sealed partial class DaggerfallSiteProfiles
     }
 
     /// <summary>
-    /// Selects a location variant, which a quest's world update names and the save keeps. No variant content is
-    /// published: as in the donor when a variant has none, the selection holds and the base location shows.
+    /// Selects a location variant, which a quest's world update names and the save keeps; the dash clears it. The location
+    /// draws it from its next build, when this view next resolves it (<see cref="TryGet"/>). As in the donor, a variant
+    /// no selected pack carries still holds, and the base location shows.
     /// </summary>
     internal void SetLocationVariant(DaggerfallSiteId site, string variant)
     {
         if (variant == "-") { _selectedVariants.Remove(site); return; }
-        System.Diagnostics.Trace.TraceWarning($"World location '{site}' has no published variant '{variant}'; its base content shows.");
         _selectedVariants[site] = variant;
     }
 

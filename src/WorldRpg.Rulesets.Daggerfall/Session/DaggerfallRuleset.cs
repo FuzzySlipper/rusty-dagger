@@ -173,7 +173,10 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             DaggerfallLeftOutMedia.Check(data, art);
             // The refreshed doll draws a masking item with its own mask, never the classic one.
             art?.RequireOwnMasks(definitions.CharacterPresentation);
-            DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data), () => productMedia.Value, () => meshes.Value, art?.Models);
+            // A quest's world update selects a location variant the quests packs carry, baked as block documents beside them.
+            DaggerfallWorldVariantContent variants = DaggerfallWorldVariantContent.Read([.. roles[QuestsRole].Select(pack => DaggerfallWorldVariantContent.Files(selected.Content, pack.Id.Value, pack.PayloadPath, pack.Payload))],
+                definitions.Locations.Records);
+            DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data, variants), () => productMedia.Value, () => meshes.Value, art?.Models);
             // Every resolved profile names its classic images against the published manifests, and an interior
             // names its building against the block catalog: each is joined when the profile is resolved, before
             // a transition touches the source, so the publication it disagrees with is named.

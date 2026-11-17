@@ -5,7 +5,27 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal sealed record DaggerfallQuestWorldUpdate(string Kind, int? Region, int? Location, string? LocationName, string Variant);
+internal sealed record DaggerfallQuestWorldUpdate(string Kind, int? Region, int? Location, string? LocationName, string Variant)
+{
+    /// <summary>
+    /// The location the update names in the catalog: by region and index, or by name in a region, which the donor logs
+    /// and skips when it resolves to no location or to several (null). A location by index the catalog lacks is refused.
+    /// </summary>
+    internal DaggerfallSiteId? Site(IEnumerable<DaggerfallSiteRecord> records)
+    {
+        if (Kind == "locationnew")
+        {
+            DaggerfallSiteRecord[] named = [.. records.Where(value => value.Region == Region && value.Name == LocationName)];
+            if (named.Length == 1) return named[0].Id;
+            System.Diagnostics.Trace.TraceWarning($"WorldUpdate location '{LocationName}' in region {Region} resolves to {named.Length} admitted locations; no variant is set.");
+            return null;
+        }
+
+        DaggerfallSiteId site = new(Region!.Value, Location!.Value);
+        return records.Any(value => value.Id == site) ? site
+            : throw new NotSupportedException($"WorldUpdate location '{site}' is absent from the canonical catalog.");
+    }
+}
 
 internal static partial class DaggerfallQuestTaskCompiler
 {
@@ -45,6 +65,23 @@ internal static partial class DaggerfallQuestTaskCompiler
 
 internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestItemDrops
 {
+    /// <summary>
+    /// The location variants the startup blocks of these quests select, as a save records them: a new game builds its
+    /// start site with them, so a variant its opening quest selects for the place it begins in shows from the first
+    /// build rather than from the next. The quests still run their world updates when they start, to the same effect.
+    /// </summary>
+    internal DaggerfallWorldVariantSave[] OpeningWorldVariants(IEnumerable<string> sourceFiles, IEnumerable<DaggerfallSiteRecord> records)
+    {
+        Dictionary<DaggerfallSiteId, string> selected = [];
+        foreach (string sourceFile in sourceFiles)
+            foreach (DaggerfallQuestTaskOperation operation in Program(sourceFile).Tasks.Where(task => task.Kind == DaggerfallQuestTaskKind.Headless)
+                .SelectMany(task => task.Operations).Where(operation => operation.Kind == DaggerfallQuestTaskOperationKind.WorldUpdate))
+                if (operation.WorldUpdate!.Site(records) is { } site)
+                    if (operation.WorldUpdate.Variant == "-") selected.Remove(site);
+                    else selected[site] = operation.WorldUpdate.Variant;
+        return [.. selected.OrderBy(value => value.Key.Region).ThenBy(value => value.Key.Index).Select(value => new DaggerfallWorldVariantSave(value.Key.Region, value.Key.Index, value.Value))];
+    }
+
     private Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestTaskOperation, bool>? _worldAction;
     internal void BindWorldActions(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestTaskOperation, bool> apply) => _worldAction = apply;
     bool IDaggerfallQuestTaskLifecycle.WorldAction(DaggerfallQuestRuntimeInstance instance, DaggerfallQuestTaskOperation operation) =>
@@ -106,24 +143,7 @@ internal sealed class DaggerfallQuestWorldActions(DaggerfallSiteContext director
         {
             var update = operation.WorldUpdate!;
             var worldProfiles = profiles() ?? throw new NotSupportedException("WorldUpdate requires an admitted site catalog.");
-            DaggerfallSiteId site;
-            if (update.Kind == "locationnew")
-            {
-                var named = directory.Records.Where(value => value.Region == update.Region && value.Name == update.LocationName).ToArray();
-                // The donor logs an unresolved new location and continues; nothing is selected.
-                if (named.Length != 1)
-                {
-                    System.Diagnostics.Trace.TraceWarning($"WorldUpdate location '{update.LocationName}' in region {update.Region} resolves to {named.Length} admitted locations; no variant is set.");
-                    return true;
-                }
-                site = named[0].Id;
-            }
-            else
-            {
-                site = new(update.Region!.Value, update.Location!.Value);
-                _ = directory.Records.SingleOrDefault(value => value.Id == site) ?? throw new NotSupportedException($"WorldUpdate location '{site}' is absent from the canonical catalog.");
-            }
-            worldProfiles.SetLocationVariant(site, update.Variant);
+            if (update.Site(directory.Records) is { } site) worldProfiles.SetLocationVariant(site, update.Variant);
             return true;
         }
         if (operation.Kind == DaggerfallQuestTaskOperationKind.RevealPlace)

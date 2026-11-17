@@ -3,7 +3,7 @@ using Daggerfall.Source.Tool.Commands;
 namespace Daggerfall.Source.Tool;
 
 /// <summary>
-/// The source tool: reference sets for image generation and the art pack's ARCH3D remodel meshes. Nothing here
+/// The source tool: reference sets for image generation, the art pack's ARCH3D remodel meshes and the baked world variants a pack commits. Nothing here
 /// feeds the data containers; the import and its steps are <c>Daggerfall.Import.Tool</c>'s.
 /// </summary>
 internal static class Program
@@ -14,6 +14,8 @@ internal static class Program
     {
         // The art pack's ARCH3D remodels, written and held to the classic's volume at promotion.
         ModelMeshCommand.Command,
+        // A content pack's world variants, baked as block documents with their collision and navigation for the pack.
+        WorldVariantBakeCommand.Command,
         // Local image-generation reference sets (never product content).
         ReferenceExportCommands.Items,
         ReferenceExportCommands.Spells,

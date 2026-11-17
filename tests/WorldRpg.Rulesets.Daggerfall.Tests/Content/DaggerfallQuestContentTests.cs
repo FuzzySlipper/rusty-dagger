@@ -99,7 +99,7 @@ public sealed class DaggerfallQuestContentTests
             """))]);
 
         DaggerfallQuestSourceSet sources = DaggerfallQuestContent.Read([TestPayload.QuestPack(), scenario]);
-        Assert.Equal(266, sources.Quests.Count);
+        Assert.Equal(267, sources.Quests.Count);
         Assert.Equal("A scenario", sources.Resolve("scenario.txt").DisplayName);
         Assert.True(DaggerfallQuestContent.Admit(sources, new DaggerfallQuestLanguage()).Receipts.Single(receipt => receipt.SourceFile == "scenario.txt").Runnable);
 

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
+using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Normalization;
 
@@ -56,6 +57,9 @@ public sealed class WorldBlockNormalizer
     /// <summary>The publication key of an RMB exterior, an RMB interior and an RDB block.</summary>
     public static string RmbExteriorKey(string sourceKey) => $"rmb/{PublishedIds.Slug(sourceKey)}/exterior";
 
+    /// <summary>The publication key of an authored variant of an RMB exterior (<see cref="RmbBlockContent.WithVariant"/>).</summary>
+    public static string RmbExteriorVariantKey(string sourceKey, string variant) => $"rmb/{PublishedIds.Slug(sourceKey)}/exterior-variant-{PublishedIds.Slug(variant)}";
+
     public static string RmbInteriorKey(string sourceKey, int buildingIndex) => $"rmb/{PublishedIds.Slug(sourceKey)}/interior-{buildingIndex.ToString(CultureInfo.InvariantCulture)}";
 
     public static string RdbKey(string sourceKey) => $"rdb/{PublishedIds.Slug(sourceKey)}";
@@ -66,9 +70,56 @@ public sealed class WorldBlockNormalizer
     /// <summary>Normalizes one RMB block's exterior in its own frame.</summary>
     public WorldBlockNormalization RmbExterior(string sourceKey) => RmbExterior(ReadRmb(sourceKey));
 
+    /// <summary>
+    /// Normalizes an authored variant of an RMB exterior (<see cref="WorldBlockVariantRecipe"/>) as the base is normalized,
+    /// so its collision and navigation are derived the same way and every placement it keeps keeps its id, and stamps it
+    /// with the digest of the base block's published document (<see cref="DaggerfallWorldBlock.BaseDigest"/>).
+    /// </summary>
+    /// <remarks>
+    /// A recipe that removes anything but one of the block's own models is refused, and so is one whose edits change how
+    /// the placements it keeps are trimmed: the world media publication trims the source block's placements only, so a
+    /// kept placement an added model covers, or one a removed model no longer covers, would draw a mesh cut for the base
+    /// block. An added model an earlier placement covers is refused the same way, since no trimmed mesh of it is published.
+    /// </remarks>
+    public WorldBlockNormalization RmbExteriorVariant(WorldBlockVariantRecipe recipe)
+    {
+        ArgumentNullException.ThrowIfNull(recipe);
+        recipe.Validate();
+        string owner = $"Variant '{recipe.Variant}' of RMB block '{recipe.Block}'";
+        RmbBlockContent source = ReadRmb(recipe.Block);
+        Dictionary<string, int> own = source.ExteriorModels.Where(model => model.BuildingIndex is null)
+            .ToDictionary(model => RmbPlacementTrims.PlacementId(source.SourceKey, null, model.Ordinal), model => model.Ordinal, StringComparer.Ordinal);
+        HashSet<int> removed = [];
+        foreach (string id in recipe.Remove)
+            removed.Add(own.TryGetValue(id, out int ordinal) ? ordinal
+                : throw new InvalidOperationException($"{owner} removes '{id}', which is not one of the block's own models; a building's models stay the base block's."));
+        RmbBlockContent variant = source.WithVariant(recipe.Variant, removed,
+            [.. recipe.Add.Select(model => RmbBlockContent.MiscPlacement(model.Model, model.Position, model.YawDegrees))]);
+
+        HashSet<string> kept = [.. variant.ExteriorModels.Select(model => RmbPlacementTrims.PlacementId(source.SourceKey, model.BuildingIndex, model.Ordinal))];
+        Dictionary<string, RmbPlacementTrim> before = RmbPlacementTrims.Read(source, RmbMesh, (_, _) => default)
+            .Where(trim => kept.Contains(trim.PlacementId)).ToDictionary(trim => trim.PlacementId, StringComparer.Ordinal);
+        Dictionary<string, RmbPlacementTrim> after = RmbPlacementTrims.Read(variant, RmbMesh, (_, _) => default)
+            .ToDictionary(trim => trim.PlacementId, StringComparer.Ordinal);
+        string[] changed = [.. before.Keys.Union(after.Keys)
+            .Where(id => !before.TryGetValue(id, out RmbPlacementTrim? was) || !after.TryGetValue(id, out RmbPlacementTrim? now) || !SameFaces(was, now))
+            .Order(StringComparer.Ordinal)];
+        if (changed.Length != 0)
+            throw new InvalidOperationException($"{owner} changes which faces of {string.Join(", ", changed)} an earlier "
+                + "placement covers; the world media publication trims the source block's placements only, so move the edit clear of them.");
+
+        ContentDigest baseDigest = ContentDigest.Compute(Arena2WorldBlocksPublication.DocumentBytes(RmbExterior(source).Block));
+        WorldBlockNormalization normalized = RmbExterior(variant);
+        return normalized with { Block = normalized.Block with { BaseDigest = baseDigest } };
+
+        static bool SameFaces(RmbPlacementTrim was, RmbPlacementTrim now) => was.Faces.Count == now.Faces.Count
+            && was.Faces.Zip(now.Faces).All(pair => pair.First.TextureArchive == pair.Second.TextureArchive && pair.First.TextureRecord == pair.Second.TextureRecord
+                && pair.First.Polygon.SequenceEqual(pair.Second.Polygon));
+    }
+
     internal WorldBlockNormalization RmbExterior(RmbBlockContent content)
     {
-        string key = RmbExteriorKey(content.SourceKey);
+        string key = content.Variant is { } variant ? RmbExteriorVariantKey(content.SourceKey, variant) : RmbExteriorKey(content.SourceKey);
         var decoration = flatFacts.Read(content);
         string slug = PublishedIds.Slug(content.SourceKey);
         List<DaggerfallWorldBlockModel> models = [];
@@ -133,6 +184,7 @@ public sealed class WorldBlockNormalizer
             Spatial(key, geometry, cell => RmbBlockContent.IsClearOutdoorGroundCell(cell, navigation.CellSize, clear));
         DaggerfallWorldBlock block = new(key, DaggerfallWorldBlockKind.RmbExterior, content.SourceKey, Ordinal(content.SourceKey), null, blockBounds, spatial, models)
         {
+            Variant = content.Variant,
             Doors = doors,
             TransitionDoors = transitions,
             Gates = gates,

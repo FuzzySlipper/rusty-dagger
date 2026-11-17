@@ -1,0 +1,8 @@
+{
+  "ruleset": "daggerfall",
+  "start": { "profile": "17/4/exterior", "position": [312.4, 0, -362.8], "yawRadians": 1.5708 },
+  "gold": 5000,
+  "quests": ["MKTCLOSE.txt"],
+  "startHour": 9,
+  "quickEntry": true
+}

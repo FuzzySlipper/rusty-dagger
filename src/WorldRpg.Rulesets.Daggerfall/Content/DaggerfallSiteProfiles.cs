@@ -111,8 +111,9 @@ internal sealed record DaggerfallRelocationDestination(
 
 /// <summary>
 /// Resolves a world profile when it is first needed: the location's exterior, building interior or dungeon assembled
-/// from the catalog and the per-block publication. A resolved profile is kept for the composition's lifetime; a profile
-/// the catalog does not place is refused by name.
+/// from the catalog and the per-block publication, with the location variant the session's quests selected for it. A
+/// resolved profile is kept for the composition's lifetime, each variant apart from the base; a profile the catalog does
+/// not place is refused by name.
 /// </summary>
 internal sealed partial class DaggerfallSiteProfiles
 {
@@ -139,10 +140,15 @@ internal sealed partial class DaggerfallSiteProfiles
     /// </summary>
     internal bool Contains(DaggerfallWorldProfileKey key) => _catalog.Contains(key);
 
+    /// <summary>Whether a selected pack carries this variant of the location, so selecting it redraws the location's exterior.</summary>
+    internal bool Carries(DaggerfallSiteId site, string variant) => _catalog.Carries(site, variant);
+
     /// <summary>Whether this profile has been resolved yet; resolution is lazy.</summary>
     internal bool IsResolved(DaggerfallWorldProfileKey key) => _catalog.IsResolved(key);
 
-    internal bool TryGet(DaggerfallWorldProfileKey key, out DaggerfallSiteProfile profile) => _catalog.TryResolve(key, out profile!);
+    /// <summary>The profile as this session sees it: assembled with the variant a quest selected for its location, if any.</summary>
+    internal bool TryGet(DaggerfallWorldProfileKey key, out DaggerfallSiteProfile profile) =>
+        _catalog.TryResolve(key, _selectedVariants.GetValueOrDefault(key.Site), out profile!);
 
     internal DaggerfallSiteProfile Require(DaggerfallWorldProfileKey key) => TryGet(key, out DaggerfallSiteProfile profile)
         ? profile
@@ -181,6 +187,9 @@ internal sealed partial class DaggerfallSiteProfiles
     private sealed class Catalog
     {
         private readonly Dictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> _resolved = [];
+        private readonly Dictionary<(DaggerfallWorldProfileKey Profile, string Variant), DaggerfallSiteProfile> _variants = [];
+        private readonly HashSet<(DaggerfallSiteId Site, string Variant)> _missingVariants = [];
+        private readonly HashSet<DaggerfallWorldProfileKey> _seeded = [];
         private readonly Dictionary<string, DaggerfallWorldProfileKey> _seededByLogicalId = new(StringComparer.Ordinal);
         private readonly DaggerfallLocationAssembly? _assembly;
         private readonly Action<DaggerfallSiteProfile>? _admit;
@@ -196,6 +205,7 @@ internal sealed partial class DaggerfallSiteProfiles
                 if (profile.Site is null) throw new ArgumentException("A seeded world profile must name its Daggerfall site.", nameof(seeded));
                 DaggerfallWorldProfileKey key = profile.ProfileKey.Validate();
                 if (!_resolved.TryAdd(key, Admit(profile))) throw new ArgumentException($"The seeded profiles repeat world profile '{key.LogicalId}'.");
+                _seeded.Add(key);
             }
 
             foreach (IGrouping<string, DaggerfallWorldProfileKey> named in _resolved.Keys.GroupBy(key => key.LogicalId, StringComparer.Ordinal))
@@ -204,6 +214,8 @@ internal sealed partial class DaggerfallSiteProfiles
 
         /// <summary>The one seeded profile a logical id names, for a fixture id outside the location scheme.</summary>
         internal bool TrySeededLogicalId(string logicalId, out DaggerfallWorldProfileKey key) => _seededByLogicalId.TryGetValue(logicalId, out key);
+
+        internal bool Carries(DaggerfallSiteId site, string variant) => _assembly?.Varies(DaggerfallWorldProfileIds.Exterior(site), variant) == true;
 
         internal bool IsResolved(DaggerfallWorldProfileKey key)
         {
@@ -215,10 +227,28 @@ internal sealed partial class DaggerfallSiteProfiles
             lock (_gate) return _resolved.ContainsKey(key) || _assembly?.Places(key) == true;
         }
 
-        internal bool TryResolve(DaggerfallWorldProfileKey key, out DaggerfallSiteProfile? profile)
+        /// <summary>
+        /// Resolves a profile, with a location variant when one is selected and a selected pack carries it for this
+        /// profile. A variant no pack carries leaves the base showing, as in the donor, with one warning naming it.
+        /// </summary>
+        internal bool TryResolve(DaggerfallWorldProfileKey key, string? variant, out DaggerfallSiteProfile? profile)
         {
             lock (_gate)
             {
+                if (variant is not null && !_seeded.Contains(key) && _assembly?.Places(key) == true)
+                {
+                    if (_variants.TryGetValue((key, variant), out profile)) return true;
+                    if (_assembly.Varies(key, variant))
+                    {
+                        profile = Admit(_assembly.Assemble(key, variant));
+                        _variants.Add((key, variant), profile);
+                        return true;
+                    }
+
+                    if (key.Kind == DaggerfallWorldProfileKind.Exterior && _missingVariants.Add((key.Site, variant)))
+                        System.Diagnostics.Trace.TraceWarning($"World location '{key.Site}' has no variant '{variant}' in the selected packs; its base content shows.");
+                }
+
                 if (_resolved.TryGetValue(key, out profile)) return true;
                 if (_assembly?.Places(key) != true) return false;
                 profile = Admit(_assembly.Assemble(key));

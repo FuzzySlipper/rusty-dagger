@@ -4,7 +4,7 @@ namespace WorldRpg.Kit;
 
 /// <summary>
 /// Developer movement around the current session's world: a pose in the scene, a place on the map, a
-/// building there, or a named person or door. The ruleset resolves names and lands the player through
+/// building there, or a named person or door; and the world variant a place draws, as a quest's world update selects it. The ruleset resolves names and lands the player through
 /// the same site and movement owners ordinary travel and doors use, so the next save holds the result.
 /// These exist only as live-debug commands; no game surface offers them. Each <see cref="DebugCommandAttribute"/>
 /// here is the command: the Engine's catalogue is generated from it and calls the ruleset's owner that implements this.
@@ -28,6 +28,9 @@ public interface IDeveloperPlacementCommands : IDebugCommandModule
 
     [DebugCommand("world.travel", Description = "Developer: land at a map place by name (quoted when it has spaces) or region/index, instantly and free.")]
     DebugCommandResult Travel(string place);
+
+    [DebugCommand("world.variant", Description = "Developer: select a map place's (name or region/index) world VARIANT as a quest's world update does, or - for its base; the place draws it from its next build, and the save keeps it.")]
+    DebugCommandResult Variant(string place, string variant);
 
     [DebugCommand("world.enter", Description = "Developer: land inside a building of a place, from its doorstep: world.enter PLACE BUILDING, the building by name or block-x/block-y/index. Refused when no clear spot stands at its door.")]
     DebugCommandResult Enter(string place, string building);

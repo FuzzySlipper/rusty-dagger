@@ -21,6 +21,9 @@ public static class Arena2WorldBlocksPublication
     /// <summary>The block index's path in the publication.</summary>
     public const string IndexRelativePath = "blocks.json";
 
+    /// <summary>One block's document as the publication writes it, which a variant's <see cref="DaggerfallWorldBlock.BaseDigest"/> stamps.</summary>
+    public static byte[] DocumentBytes(DaggerfallWorldBlock block) => JsonSerializer.SerializeToUtf8Bytes(block, PublishedJson.SectionCompact);
+
     /// <summary>Every RMB block a location places, once each, in name order.</summary>
     public static IReadOnlyList<string> PlacedRmbBlocks(DaggerfallLocations locations)
     {
@@ -100,7 +103,7 @@ public static class Arena2WorldBlocksPublication
         foreach (WorldBlockNormalization block in normalized.OrderBy(value => value.Block.Key, StringComparer.Ordinal))
         {
             string document = $"{block.Block.Key}.json";
-            artifacts.Add(new(document, JsonSerializer.SerializeToUtf8Bytes(block.Block, PublishedJson.SectionCompact),
+            artifacts.Add(new(document, DocumentBytes(block.Block),
                 block.Spatial is null ? null : [block.Spatial.RelativePath]));
             if (block.Spatial is not null) artifacts.Add(new(block.Spatial.RelativePath, block.Spatial.Bytes.Span));
             entries.Add(new(block.Block.Key, block.Block.Kind, block.Block.SourceKey, block.Block.BuildingIndex, document, block.Spatial?.RelativePath));

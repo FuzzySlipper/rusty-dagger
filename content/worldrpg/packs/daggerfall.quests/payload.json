@@ -1537,5 +1537,29 @@
         {"id": "cures", "availability": "named", "names": ["$CUREVAM", "$CUREWER"]}
       ]
     }
-  ]
+  ],
+  "worldVariants": {
+    "blocks": [
+      {
+        "block": "MARKAA01.RMB",
+        "variant": "closed",
+        "remove": [
+          "model/markaa01-rmb/misc/1", "model/markaa01-rmb/misc/2", "model/markaa01-rmb/misc/3",
+          "model/markaa01-rmb/misc/4", "model/markaa01-rmb/misc/5", "model/markaa01-rmb/misc/6",
+          "model/markaa01-rmb/misc/7", "model/markaa01-rmb/misc/8", "model/markaa01-rmb/misc/9"
+        ],
+        "add": [
+          { "model": "41214", "position": { "x": 19.6, "y": 0.875, "z": -52.0 }, "yawDegrees": 0 },
+          { "model": "41239", "position": { "x": 19.6, "y": 0.925, "z": -55.78 }, "yawDegrees": 180 },
+          { "model": "41833", "position": { "x": 22.3, "y": 1.05, "z": -52.6 }, "yawDegrees": 10 },
+          { "model": "41832", "position": { "x": 22.3, "y": 2.75, "z": -52.7 }, "yawDegrees": 35 },
+          { "model": "41834", "position": { "x": 22.2, "y": 0.65, "z": -55.4 }, "yawDegrees": 80 },
+          { "model": "41739", "position": { "x": 17.4, "y": 1.275, "z": -54.2 }, "yawDegrees": 90 }
+        ]
+      }
+    ],
+    "locations": [
+      { "region": 17, "location": 4, "variant": "closed", "blocks": [ { "x": 3, "y": 3, "variant": "closed" } ] }
+    ]
+  }
 }

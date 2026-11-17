@@ -184,6 +184,29 @@ public sealed class DeveloperWorldCommandsTests
     }
 
     [Fact]
+    public void A_variant_selected_by_name_draws_from_the_places_next_build_is_saved_and_clears_with_a_dash()
+    {
+        AssembledWorld world = Shared.Value;
+        using AssembledWorldRun run = world.Start(Charing, variant: "closed");
+        IDeveloperPlacementCommands commands = run.Session.Commands<IDeveloperPlacementCommands>();
+        DaggerfallWorldProfileKey exterior = DaggerfallWorldProfileIds.Exterior(Charing);
+        DaggerfallSiteProfile open = world.Profiles.Require(exterior);
+
+        Assert.Equal("Charing (17/4) holds variant 'flooded', which no selected pack carries, so its base still shows.", commands.Variant("17/4", "flooded").Message);
+        DebugCommandResult closed = commands.Variant("Charing", "closed");
+        Assert.True(closed.Succeeded, closed.Message);
+        Assert.Equal("Charing (17/4) draws variant 'closed' from its next build.", closed.Message);
+        Assert.Equal(new DaggerfallWorldVariantSave(Charing.Region, Charing.Index, "closed"), Assert.Single(DaggerfallSavePayload.Read(run.Session.CaptureSave()).WorldVariants));
+        Assert.True(commands.Travel("Charing").Succeeded);
+        Assert.NotSame(open, run.Session.Sites.Projection.Inputs);
+        Assert.Contains(run.Session.Sites.Projection.Inputs.Geometry.Spatial, part => part.Id == "block/3/3" && !open.Geometry.Spatial.Contains(part));
+
+        Assert.Equal("Charing (17/4) draws its base from its next build.", commands.Variant("Charing", "-").Message);
+        Assert.Empty(DaggerfallSavePayload.Read(run.Session.CaptureSave()).WorldVariants);
+        Assert.False(commands.Variant("Charing", "a b").Succeeded);
+    }
+
+    [Fact]
     public void Commands_list_the_places_a_name_matches_and_refuse_a_dead_player()
     {
         AssembledWorld world = Shared.Value;

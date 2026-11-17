@@ -277,10 +277,12 @@ internal sealed class DaggerfallQuestRuntimeAdmission
         !_receipts.TryGetValue(sourceFile, out DaggerfallQuestRuntimeReceipt? receipt) || receipt.Runnable;
 }
 
+/// <summary>A quests pack's payload; its <c>worldVariants</c> are read by <see cref="DaggerfallWorldVariantContent"/>.</summary>
 internal sealed record DaggerfallQuestPackDocument(
     IReadOnlyList<DaggerfallQuestCatalogRow>? QuestCatalog = null,
     DaggerfallQuestTablesDocument? QuestTables = null,
-    IReadOnlyList<DaggerfallQuestCorpusDefinition>? QuestCorpora = null);
+    IReadOnlyList<DaggerfallQuestCorpusDefinition>? QuestCorpora = null,
+    JsonElement? WorldVariants = null);
 
 internal sealed record DaggerfallQuestCatalogDocument(IReadOnlyList<DaggerfallQuestCatalogRow> Rows);
 

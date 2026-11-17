@@ -50,6 +50,10 @@ public sealed class CommittedBundleCompositionTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, start);
+        // A new game builds its start with the variant its opening quests select, so each variant the quests pack carries
+        // for the start's place is served too.
+        foreach (string variant in QuestPackVariants(startKey.Site))
+            if (Assembly.Value.Varies(startKey, variant)) PopulateContent(content, Assembly.Value.Assemble(startKey, variant));
         // An exterior start streams the assembled exteriors around it.
         if (start.Site is { } site && start.ProfileKey == DaggerfallWorldProfileIds.Exterior(site))
             foreach (DaggerfallSiteProfile near in new AssembledWorld().NearbyExteriors(site)) AssembledWorldRun.Admit(content, near);
@@ -73,6 +77,17 @@ public sealed class CommittedBundleCompositionTests
             Assert.Equal(start.Site, session.Site.Active);
             product.Shutdown();
         }
+    }
+
+    /// <summary>The location variants the shipped quests pack states for a place, by name.</summary>
+    private static IEnumerable<string> QuestPackVariants(DaggerfallSiteId site)
+    {
+        using JsonDocument payload = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/packs/daggerfall.quests/payload.json")));
+        return payload.RootElement.TryGetProperty("worldVariants", out JsonElement variants)
+            ? [.. variants.GetProperty("locations").EnumerateArray()
+                .Where(value => value.GetProperty("region").GetInt32() == site.Region && value.GetProperty("location").GetInt32() == site.Index)
+                .Select(value => value.GetProperty("variant").GetString()!)]
+            : [];
     }
 
     /// <summary>

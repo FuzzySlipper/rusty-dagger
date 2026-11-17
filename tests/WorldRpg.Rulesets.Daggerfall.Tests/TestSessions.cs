@@ -136,8 +136,18 @@ internal static class TestSessions
         DaggerfallWorldMedia media = DaggerfallWorldMedia.Read(data);
         Lazy<DaggerfallProductMedia> product = new(() => DaggerfallSiteContent.ReadProductMedia(data, media, TestPayload.Definitions));
         Lazy<IReadOnlyDictionary<string, DaggerfallWorldMesh>> meshes = new(() => DaggerfallLocationAssembly.ReadMeshIndex(data, media));
-        return new DaggerfallLocationAssembly(TestPayload.Definitions, new DaggerfallWorldBlocks(data), () => product.Value, () => meshes.Value);
+        return new DaggerfallLocationAssembly(TestPayload.Definitions, new DaggerfallWorldBlocks(data, WorldVariants(FullContent(TestData.RepositoryRoot))),
+            () => product.Value, () => meshes.Value);
     });
+
+    /// <summary>The shipped quests pack's world variants, read against the shipped locations as the ruleset reads them.</summary>
+    internal static DaggerfallWorldVariantContent WorldVariants(ProductContent content, DaggerfallDefinitions? definitions = null)
+    {
+        const string payload = "worldrpg/packs/daggerfall.quests/payload.json";
+        Assert.True(content.TryReadFile(payload, out ProductContentFile file), $"The content carries no '{payload}'.");
+        return DaggerfallWorldVariantContent.Read([DaggerfallWorldVariantContent.Files(content, "daggerfall.quests", payload, file.Bytes)],
+            (definitions ?? TestPayload.Definitions).Locations.Records);
+    }
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<DaggerfallWorldProfileKey, DaggerfallSiteProfile> AssembledProfiles = new();
 

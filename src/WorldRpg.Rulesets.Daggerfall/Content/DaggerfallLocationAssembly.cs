@@ -105,8 +105,30 @@ internal sealed class DaggerfallLocationAssembly
         };
     }
 
-    /// <summary>Assembles one profile, reading only the blocks it places. Anything the publication lacks is named.</summary>
-    internal DaggerfallSiteProfile Assemble(DaggerfallWorldProfileKey key)
+    /// <summary>
+    /// Whether a location variant changes how this profile assembles: a selected pack carries the variant for the
+    /// profile's location, and the profile is its exterior, or the interior of a building in a cell the variant places
+    /// another block in. A block variant redraws a block's outside only.
+    /// </summary>
+    internal bool Varies(DaggerfallWorldProfileKey key, string variant)
+    {
+        if (_blocks.Variants.Location(key.Site, variant) is not { } cells) return false;
+        return key.Kind switch
+        {
+            DaggerfallWorldProfileKind.Exterior => true,
+            DaggerfallWorldProfileKind.Interior => DaggerfallWorldProfileIds.TryParse(key.LogicalId, out _, out DaggerfallSiteBuildingId? building)
+                && building is { } placed && cells.GetValueOrDefault((placed.BlockX, placed.BlockY))?.Block is not null,
+            _ => false,
+        };
+    }
+
+    /// <summary>
+    /// Assembles one profile, reading only the blocks it places; with a <paramref name="variant"/> a selected pack carries
+    /// for the location (<see cref="Varies"/>), each cell it names places its block, or draws its block variant, as
+    /// Daggerfall Unity swaps a location's record or a block's data while a quest holds the variant. Anything the
+    /// publication or the packs lack is named.
+    /// </summary>
+    internal DaggerfallSiteProfile Assemble(DaggerfallWorldProfileKey key, string? variant = null)
     {
         if (_definitions.AssembledSites is not { } presentation)
             throw new InvalidOperationException($"Profile '{key.LogicalId}' cannot be assembled: the base payload publishes no assembledSites presentation.");
@@ -116,8 +138,18 @@ internal sealed class DaggerfallLocationAssembly
             throw new InvalidOperationException($"Profile '{key.LogicalId}' names location {key.Site}, which the catalog does not carry.");
         if (record!.Climate is not int climate)
             throw new InvalidOperationException($"Location {key.Site} ('{record.Name}') publishes no climate, so its textures cannot be chosen.");
+        Dictionary<(int X, int Y), string> drawn = [];
+        if (variant is not null)
+        {
+            if (!Varies(key, variant)) throw new InvalidOperationException($"Profile '{key.LogicalId}' has no variant '{variant}' in the selected packs.");
+            IReadOnlyDictionary<(int X, int Y), DaggerfallWorldVariantCell> cells = _blocks.Variants.Location(key.Site, variant)!;
+            record = Swapped(record, variant, cells);
+            foreach (((int X, int Y) cell, DaggerfallWorldVariantCell value) in cells)
+                if (value.Variant is { } blockVariant) drawn.Add(cell, blockVariant);
+        }
+
         DaggerfallContentDiagnostics diagnostics = new();
-        Builder builder = new(this, key, record, climate, presentation, diagnostics);
+        Builder builder = new(this, key, record, climate, presentation, diagnostics, drawn);
         switch (key.Kind)
         {
             case DaggerfallWorldProfileKind.Exterior: builder.Exterior(); break;
@@ -133,11 +165,43 @@ internal sealed class DaggerfallLocationAssembly
 
     private bool TryRecord(DaggerfallSiteId site, out DaggerfallSiteRecord? record) => _records.Value.TryGetValue(site, out record);
 
+    /// <summary>
+    /// The location's record with the blocks a location variant places in its cells. A block placed in another's cell
+    /// must state the same building slots, each of the same kind and with an interior exactly where the block it replaces
+    /// has one: the location's buildings (their names, factions and quests) are the catalog's by slot, so a slot that
+    /// changed kind or lost its interior would name a building that is not there.
+    /// </summary>
+    private DaggerfallSiteRecord Swapped(DaggerfallSiteRecord record, string variant, IReadOnlyDictionary<(int X, int Y), DaggerfallWorldVariantCell> cells)
+    {
+        DaggerfallSiteExterior exterior = record.Exterior!;
+        (DaggerfallSiteBlock Placed, string Block)[] swaps = [.. exterior.Blocks
+            .Select(block => (Placed: block, Block: cells.GetValueOrDefault((block.X, block.Y))?.Block))
+            .Where(swap => swap.Block is not null && swap.Block != swap.Placed.SourceName)
+            .Select(swap => (swap.Placed, swap.Block!))];
+        if (swaps.Length == 0) return record;
+        IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> documents = _blocks.Read(swaps
+            .SelectMany(swap => new[] { swap.Placed.SourceName, swap.Block })
+            .Select(block => new DaggerfallWorldBlockKey(DaggerfallWorldBlockKind.RmbExterior, block)));
+        DaggerfallContentDiagnostics diagnostics = new();
+        foreach ((DaggerfallSiteBlock placed, string block) in swaps)
+        {
+            static (int, int, bool)[] Slots(DaggerfallWorldBlockDocument document) =>
+                [.. document.Buildings.OrderBy(building => building.Index).Select(building => (building.Index, building.BuildingType, building.HasInterior))];
+            if (!Slots(documents[new(DaggerfallWorldBlockKind.RmbExterior, block)]).SequenceEqual(Slots(documents[new(DaggerfallWorldBlockKind.RmbExterior, placed.SourceName)])))
+                diagnostics.Add($"Location variant '{variant}' of {record.Id} places '{block}' in cell ({placed.X}, {placed.Y}), whose building slots are not those of the '{placed.SourceName}' it replaces.");
+        }
+
+        diagnostics.ThrowIfAny();
+        Dictionary<DaggerfallSiteBlock, string> replaced = swaps.ToDictionary(swap => swap.Placed, swap => swap.Block);
+        return record with { Exterior = exterior with { Blocks = [.. exterior.Blocks.Select(block => replaced.TryGetValue(block, out string? swapped) ? block with { SourceName = swapped } : block)] } };
+    }
+
     /// <summary>An exterior's blocks in grid order.</summary>
     private static DaggerfallSiteBlock[] PlacedBlocks(DaggerfallSiteExterior exterior) =>
         [.. exterior.Blocks.OrderBy(block => block.X).ThenBy(block => block.Y).ThenBy(block => block.SourceName, StringComparer.Ordinal)];
 
-    private static DaggerfallWorldBlockKey ExteriorBlockKey(DaggerfallSiteBlock block) => new(DaggerfallWorldBlockKind.RmbExterior, block.SourceName);
+    private static DaggerfallWorldBlockKey ExteriorBlockKey(DaggerfallSiteBlock block, string? variant = null) =>
+        new(DaggerfallWorldBlockKind.RmbExterior, block.SourceName, Variant: variant);
 
     /// <summary>The exterior block a building stands in, or null where its location places none there.</summary>
     private static DaggerfallSiteBlock? BuildingBlock(DaggerfallSiteExterior exterior, DaggerfallSiteBuildingId building) =>
@@ -202,8 +266,10 @@ internal sealed class DaggerfallLocationAssembly
     }
 
     /// <summary>One profile's assembly: its geometry, material table and normalized world sections.</summary>
+    /// <param name="variantCells">The exterior cells whose block draws a block variant, each with its name; empty for the base.</param>
     private sealed class Builder(DaggerfallLocationAssembly owner, DaggerfallWorldProfileKey key, DaggerfallSiteRecord record, int climate,
-        DaggerfallAssembledSiteDefinition presentation, DaggerfallContentDiagnostics diagnostics)
+        DaggerfallAssembledSiteDefinition presentation, DaggerfallContentDiagnostics diagnostics,
+        IReadOnlyDictionary<(int X, int Y), string> variantCells)
     {
         private readonly DaggerfallProductMedia _media = owner._media();
         private readonly int _groundClimate = owner._definitions.Grids.ClimateAtWorldPixel(record.MapPixelX, record.MapPixelY).Value;
@@ -249,11 +315,12 @@ internal sealed class DaggerfallLocationAssembly
         {
             DaggerfallSiteExterior exterior = record.Exterior!;
             DaggerfallSiteBlock[] placed = PlacedBlocks(exterior);
-            IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> blocks = owner._blocks.Read(placed.Select(ExteriorBlockKey));
+            DaggerfallWorldBlockKey Key(DaggerfallSiteBlock block) => ExteriorBlockKey(block, variantCells.GetValueOrDefault((block.X, block.Y)));
+            IReadOnlyDictionary<DaggerfallWorldBlockKey, DaggerfallWorldBlockDocument> blocks = owner._blocks.Read(placed.Select(Key));
             HashSet<(int X, int Z)> clear = [];
             foreach (DaggerfallSiteBlock block in placed)
             {
-                DaggerfallWorldBlockDocument document = blocks[ExteriorBlockKey(block)];
+                DaggerfallWorldBlockDocument document = blocks[Key(block)];
                 Vector3 origin = RmbBlockOrigin(block);
                 Place(document, $"block/{block.X}/{block.Y}", block.X * RmbBlockCells, -(block.Y * RmbBlockCells));
                 foreach (DaggerfallWorldBlockModel model in DrawnModels(key.Kind, document)) Draw(model, origin);

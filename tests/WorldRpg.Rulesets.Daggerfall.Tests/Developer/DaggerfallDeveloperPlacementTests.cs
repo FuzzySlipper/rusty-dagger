@@ -46,7 +46,7 @@ public sealed class DaggerfallDeveloperPlacementTests
     {
         DaggerfallDeveloperPlacement title = Placement(new PlayerControlState(null, 0f, 0f), ProductMode.Title);
         foreach (DebugCommandResult refused in new[] { title.Teleport(0, 0, 0, force: true), title.Move(1, 0, 0), title.Forward(1),
-            title.Travel("Charing"), title.Enter("Charing", "Temple of Kynareth"), title.GoTo("Door"), title.Stand(1, 1), title.Scout("grass", 1) })
+            title.Travel("Charing"), title.Enter("Charing", "Temple of Kynareth"), title.GoTo("Door"), title.Stand(1, 1), title.Scout("grass", 1), title.Variant("Charing", "closed") })
         {
             Assert.Equal(DebugCommandStatus.Failed, refused.Status);
             Assert.Equal("No game is running.", refused.Message);

@@ -41,11 +41,18 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed partial class DaggerfallSession
 {
     /// <summary>Starts a new game at the composition's start site: the one construction path for a new session.</summary>
-    internal static DaggerfallSession StartNew(IEngineContext engine, DaggerfallSessionComposition composition)
+    /// <param name="variants">
+    /// The location variants a new game's opening quests select (<see cref="DaggerfallQuestInstances.OpeningWorldVariants"/>):
+    /// the session's view of the catalog starts with them, and the start site is built with its own, as a restored game's is.
+    /// </param>
+    internal static DaggerfallSession StartNew(IEngineContext engine, DaggerfallSessionComposition composition, DaggerfallWorldVariantSave[]? variants = null)
     {
         ArgumentNullException.ThrowIfNull(composition);
-        composition = composition with { Profiles = composition.Profiles?.ForSession() };
-        return new DaggerfallSession(engine, composition, composition.StartSite, restore: null).AdmitComposition(engine, composition);
+        composition = composition with { Profiles = composition.Profiles?.ForSession(variants) };
+        DaggerfallSiteProfile start = variants is { Length: > 0 } && composition.Profiles is { } profiles
+            ? profiles.Require(composition.StartSite.ProfileKey)
+            : composition.StartSite;
+        return new DaggerfallSession(engine, composition, start, restore: null).AdmitComposition(engine, composition);
     }
 
     /// <summary>
