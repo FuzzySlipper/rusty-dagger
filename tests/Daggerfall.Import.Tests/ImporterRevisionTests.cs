@@ -49,8 +49,7 @@ public sealed class ImporterRevisionTests
                 "src/Daggerfall.Source.Tool/ReferenceExports/ItemReferenceExport.cs",
                 "src/Daggerfall.Source.Tool/Commands/MapArtCommand.cs",
                 "src/Daggerfall.Source.Tool/Program.cs",
-                // The drift check reads Daggerfall Unity; the import never does.
-                "src/Daggerfall.Source.Tool/Donor/DonorTakes.cs",
+                "src/Daggerfall.Source.Tool/Remodels/RemodelGlb.cs",
                 "content/worldrpg/packs/daggerfall.art-replacements/payload.json",
                 "content/worldrpg/packs/daggerfall.art-replacements/media/ui/screens--title.webp",
                 "content/worldrpg/packs/daggerfall.art-replacements/first-person/daggerfall.held.json",

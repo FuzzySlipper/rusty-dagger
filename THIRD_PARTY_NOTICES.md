@@ -44,23 +44,21 @@ text sits beside them:
 
 [Daggerfall Unity](https://github.com/Interkarma/daggerfall-unity) is this project's behaviour and
 content reference. No Daggerfall Unity code is compiled into the product, and the repository carries no
-Daggerfall Unity file. Values were taken once from its files into tables of our own, each naming the
-Daggerfall Unity file and commit it came from:
+Daggerfall Unity file. Values were taken once from its files into data of our own:
 
-- in `src/Daggerfall.Import.Tool/inputs/`, which the import reads and a release ships beside the import
-  tool: the race exposure flags (`RaceTemplate.cs`), the item groups (`ItemEnums.cs`, `ItemHelper.cs`,
-  `ItemsFile.cs`), the item and magic-item templates (`ItemTemplates.txt`, `MagicItemTemplates.txt`),
-  the spell-cost tables (`FormulaHelper.cs`), the static mobile table (`EnemyBasics.cs`) and the flat-caption
-  table (`Internal_Flats.csv`);
+- in the `itemTemplates`, `magic`, `mobiles`, `catalogs` and `factions` sections of
+  `content/worldrpg/packs/daggerfall.base/payload.json`: the race exposure flags (`RaceTemplate.cs`), the item
+  groups (`ItemEnums.cs`, `ItemHelper.cs`, `ItemsFile.cs`), the item and magic-item templates
+  (`ItemTemplates.txt`, `MagicItemTemplates.txt`), the spell-cost tables (`FormulaHelper.cs`), the static mobile
+  table (`EnemyBasics.cs`) and the flat-caption table (`Internal_Flats.csv`);
 - in `content/worldrpg/packs/daggerfall.quests/`: the classic quest list and quest tables (`StreamingAssets/Tables`)
   and the rewritten classic quest scripts of `StreamingAssets/Quests`, each as a quest record of ours carrying
   the same lines, the pack's description naming the commit;
 - in the `buildingNames` and `internalText` sections of `content/worldrpg/packs/daggerfall.base/payload.json`:
   the region name banks and names (`MapsFile.cs`) and the internal string table (`Internal_Strings.csv`).
 
-They are ours to edit in place (DEC-13); the citations credit Daggerfall Unity, and the `donor-drift`
-comparison with a Daggerfall Unity checkout is being retired. Daggerfall Unity is distributed under the
-following licence:
+They are ours to edit in place (DEC-13), and this notice credits Daggerfall Unity for them. Daggerfall Unity
+is distributed under the following licence:
 
 ```text
 MIT License

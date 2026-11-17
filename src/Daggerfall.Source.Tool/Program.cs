@@ -19,7 +19,6 @@ internal static class Program
         TextureLeavesCommand.Command,
         ResidualPathsCommand.Command,
         MapArtCommand.Command,
-        DonorDriftCommand.Command,
         // The art pack's ARCH3D remodels, written and held to the classic's volume at promotion.
         ModelMeshCommand.Command,
         // Local image-generation reference sets (never product content).

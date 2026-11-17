@@ -4,7 +4,6 @@ using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
-using Daggerfall.Source.Tool.Donor;
 
 namespace Daggerfall.Import.Tests;
 

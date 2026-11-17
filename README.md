@@ -162,15 +162,14 @@ the one ignored folder. Its folders say what may be deleted:
   store's `ship/` root (beside `lan/`), which holds what ships but lives outside
   GitHub, finals only. `pull` and `link` take it from there; after a rebuild,
   `scripts/data-sync.sh ship` replaces it there for every checkout.
-- The values the import takes from Daggerfall Unity are tables of our own in
-  `src/Daggerfall.Import.Tool/inputs/`, each naming the Daggerfall Unity file
-  and commit it was taken from; the import reads no Daggerfall Unity file and
-  needs no donor checkout. The quests are no import input: they are the
-  `daggerfall.quests` pack, one record per quest in its `quests/` folder, read
-  by the ruleset at load, so an edit to one plays without an import.
-  They are derived data, ours to edit in place (DEC-13), and the citations stay
-  as credit. `donor-drift`, which reports where they differ from a Daggerfall
-  Unity checkout, is being retired by #10894 and is no rule they must meet.
+- The values taken from Daggerfall Unity and the classic tables are authored
+  data: the classic tables and the game's text are sections of the
+  `daggerfall.base` pack's payload, and the quests are the `daggerfall.quests`
+  pack, one record per quest in its `quests/` folder. The ruleset reads them at
+  load, so an edit plays without an import, and none is an import input. They
+  are ours to edit in place (DEC-13); the credit to Daggerfall Unity stays in
+  `THIRD_PARTY_NOTICES.md`, and nothing checks them against a Daggerfall Unity
+  checkout.
 
 A worktree links the main checkout's inputs, so its build and art files stay its
 own, and links its data to its own importer revision; on den machines evidence
@@ -268,9 +267,6 @@ Only verify needs these; a machine that only runs the game can skip them:
 - For `--play`, a Chromium: `chromium` on `PATH`, or `RUSTY_CHROMIUM_PATH` naming
   one, such as Playwright's (`npx playwright install chromium`; add `--with-deps`
   once, with sudo, for its system libraries).
-- `DAGGER_DONOR_ROOT` naming a Daggerfall Unity checkout
-  (`git clone https://github.com/Interkarma/daggerfall-unity`). Without it the
-  tests that compare our tables with the donor skip, with the reason.
 - python3 with numpy, scipy and Pillow for the art pipeline's tests, which skip
   without them.
 

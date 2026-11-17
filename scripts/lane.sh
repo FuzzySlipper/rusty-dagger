@@ -43,7 +43,6 @@ export PATH=$HOME/.local/bin:$HOME/.dotnet:$PATH MSBUILDDISABLENODEREUSE=1
 commit=$(git rev-parse HEAD)
 kept=$(dirname "$root")/kept
 inputs_source=${DAGGER_INPUTS_SOURCE:-den-agents:dev/rusty-dagger/local/inputs}
-donor_source=${DAGGER_DONOR_SOURCE:-den-agents:/home/research/daggerfall-unity}
 # The store, through the NAS mount where the worker has one and over ssh through den-agents where it does not.
 store=/mnt/den-nas-backup/data/rusty-dagger/lan
 [[ -d $store ]] || store=den-agents:$store
@@ -103,8 +102,6 @@ elif [[ $have != "$wanted" || $whole != whole ]]; then
   [[ $have == "$wanted" && $whole == whole ]] ||
     { echo "lane: the data pulled from $DAGGER_DATA_STORE is at ${have:-no revision} ($whole), not $wanted" >&2; exit 3; }
 fi
-rsync -rtl --delete "$donor_source/" "$kept/daggerfall-unity/"
-export DAGGER_DONOR_ROOT=$kept/daggerfall-unity
 step "inputs and data ready for importer revision $wanted"
 
 # A test host may hold at most this much, resident plus swapped: a runaway would otherwise take the worker down

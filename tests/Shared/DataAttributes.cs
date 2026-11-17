@@ -28,22 +28,3 @@ internal sealed class CinematicTheoryAttribute : TheoryAttribute
 {
     public CinematicTheoryAttribute(params string[] entries) => Skip = TestData.MissingCorpus(entries) ?? TestData.MissingFfmpeg();
 }
-
-/// <summary>A fact that compares with a Daggerfall Unity checkout's named entries; it runs only when one is named.</summary>
-internal sealed class DonorFactAttribute : FactAttribute
-{
-    public DonorFactAttribute(params string[] entries) => Skip = TestData.MissingDonor(entries);
-}
-
-/// <summary>A theory that compares with a Daggerfall Unity checkout's named entries; it runs only when one is named.</summary>
-internal sealed class DonorTheoryAttribute : TheoryAttribute
-{
-    public DonorTheoryAttribute(params string[] entries) => Skip = TestData.MissingDonor(entries);
-}
-
-/// <summary>A fact that needs both the Arena2 corpus and the donor checkout.</summary>
-internal sealed class CorpusAndDonorFactAttribute : FactAttribute
-{
-    public CorpusAndDonorFactAttribute(string[] corpus, string[] donor) =>
-        Skip = TestData.MissingCorpus(corpus) is { } missing ? missing : TestData.MissingDonor(donor);
-}

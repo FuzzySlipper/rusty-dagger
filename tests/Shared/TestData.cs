@@ -1,14 +1,12 @@
 namespace WorldRpg.Tests.Support;
 
 /// <summary>
-/// Where tests find the repository, our tables beside the importer, the operator-supplied Arena2 corpus a clean
-/// checkout does not carry, and a Daggerfall Unity checkout, which only the tests that compare with the donor read.
-/// The corpus can be relocated through its environment variable; the donor is named only by its own.
+/// Where tests find the repository, our tables beside the importer, and the operator-supplied Arena2 corpus a clean
+/// checkout does not carry, which can be relocated through its environment variable.
 /// </summary>
 internal static class TestData
 {
     public const string CorpusVariable = "DAGGER_ARENA2";
-    public const string DonorVariable = "DAGGER_DONOR_ROOT";
 
     private static readonly Lazy<string> FoundRoot = new(FindRepositoryRoot);
 
@@ -18,9 +16,6 @@ internal static class TestData
     /// <summary>The Arena2 corpus: <c>DAGGER_ARENA2</c> when set, else <c>local/inputs/arena2</c> in the repository.</summary>
     public static string CorpusRoot => Configured(CorpusVariable) ?? Path.Combine(RepositoryRoot, "local", "inputs", "arena2");
 
-    /// <summary>A Daggerfall Unity checkout, named by <c>DAGGER_DONOR_ROOT</c>; the repository carries none.</summary>
-    public static string? DonorRoot => Configured(DonorVariable);
-
     /// <summary>One of our tables the import reads, under <c>src/Daggerfall.Import.Tool/inputs</c>.</summary>
     public static string Input(string relative) => Path.Combine(RepositoryRoot, "src", "Daggerfall.Import.Tool", "inputs", relative);
 
@@ -28,8 +23,6 @@ internal static class TestData
 
     /// <summary>A tracked content pack's payload, <c>content/worldrpg/packs/PACK/payload.json</c>.</summary>
     public static string PackPayload(string pack) => Path.Combine(RepositoryRoot, "content", "worldrpg", "packs", pack, "payload.json");
-
-    public static string Donor(string relative) => Path.Combine(DonorRoot ?? throw new InvalidOperationException($"Set {DonorVariable} to a Daggerfall Unity checkout."), relative);
 
     /// <summary>The one command that converts the operator's Arena2 files into the data containers and records.</summary>
     public const string RegenerationCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound";
@@ -65,11 +58,6 @@ internal static class TestData
 
     /// <summary>Why a test needing these corpus entries cannot run, or null when they are all present.</summary>
     internal static string? MissingCorpus(string[] entries) => Missing("Arena2 corpus", CorpusRoot, CorpusVariable, entries);
-
-    /// <summary>Why a test needing these donor entries cannot run, or null when they are all present.</summary>
-    internal static string? MissingDonor(string[] entries) => DonorRoot is { } root
-        ? Missing("Daggerfall Unity checkout", root, DonorVariable, entries)
-        : $"no Daggerfall Unity checkout is named; set {DonorVariable} to one to compare our tables with it.";
 
     private static string? Missing(string label, string root, string variable, string[] entries)
     {
