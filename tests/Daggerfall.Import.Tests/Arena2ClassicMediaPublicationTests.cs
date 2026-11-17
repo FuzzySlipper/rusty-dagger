@@ -20,12 +20,11 @@ public sealed class Arena2ClassicMediaPublicationTests
 
         // Five service screens and their donor companions are thirteen more artifacts and resources, and
         // the spell icon atlas and the targeting and element tiles two more, and the five casting hands
-        // five: naming an image admits it.
-        Assert.Equal(86 + first.Audio.Count, first.Artifacts.Count);
+        // five: naming an image admits it. A potion draws its recipe's bottle from the paper-doll media, so no
+        // icon is published per recipe.
+        Assert.Equal(66 + first.Audio.Count, first.Artifacts.Count);
         Assert.Equal(first.Artifacts.Count, first.MediaManifest.Resources.Count);
         Assert.Empty(first.MapMedia);
-        // Fourteen more admitted source files, because those images are read as well as named.
-        Assert.Equal(63, first.Sources.Count);
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath).OrderBy(path => path, StringComparer.Ordinal), first.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath), second.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.All(first.Artifacts.Zip(second.Artifacts), pair => Assert.Equal(pair.First.Bytes.ToArray(), pair.Second.Bytes.ToArray()));
@@ -115,9 +114,8 @@ public sealed class Arena2ClassicMediaPublicationTests
         // Six windows, one mode screen, the service panels the donor windows read and the two spell atlases, each part of a
         // screen the donor composes from several images published under its own media identity.
         Assert.Equal(27, first.UiImages.Count);
-        // The potion recipes' bottles and gold: every item with a template draws its template's image instead.
-        Assert.Equal(21, first.InventoryIcons.Count);
-        Assert.Equal(15, first.InventoryIcons.Single(icon => icon.ItemId == "potion.4975678").SourceRecordOrdinal);
+        // Only gold: every item with a template draws its template's image, a potion its recipe's bottle among them.
+        Assert.Single(first.InventoryIcons);
         Assert.Equal(240, first.Font.Glyphs.Count);
         // All five font tables publish with the donor's consumer for each; the default face stays
         // the selected font the profile names.
@@ -145,7 +143,6 @@ public sealed class Arena2ClassicMediaPublicationTests
 
         byte[] wave = Artifact(first, "media/audio/clips/audio-melee-dagger-swing.wav");
         AssertWave(wave);
-        Assert.Equal("arena2/DAGGER.SND", first.Sources.Single(source => source.SourcePath == "arena2/DAGGER.SND").SourcePath);
     }
 
     [Fact]
@@ -423,8 +420,6 @@ public sealed class Arena2ClassicMediaPublicationTests
         Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(CreateInputs(), profile);
 
         Assert.Equal(png, Artifact(publication, "packs/daggerfall.art-replacements/authored-ui/inventory-skin-panel-slate-v1.png"));
-        Assert.Equal("authored-ui/ui-authored-assets.json", publication.AuthoredUiManifestSource!.SourcePath);
-        Assert.Contains(publication.Sources, source => source.SourcePath == "authored-ui/ui-original/inventory-panel-slate-v1.png");
         ClassicAuthoredUiAssetManifest asset = Assert.Single(publication.AuthoredUiAssets);
         Assert.Equal("ui-original/inventory-panel-slate-v1.png", asset.SourceLabel);
         NormalizedMediaDescriptor descriptor = publication.MediaManifest.Resources.Single(resource => resource.Id == asset.Id);
@@ -472,8 +467,7 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "FIRE00C6.CIF"), Read(arena2, "FRST00C6.CIF"), Read(arena2, "POIS00C6.CIF"), Read(arena2, "SHOK00C6.CIF"), Read(arena2, "MJIC00C6.CIF")));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
-        Assert.Equal(67 + 86 + publication.Audio.Count, publication.Artifacts.Count);
-        Assert.Equal(55 + 76 + 2, publication.Sources.Count);
+        Assert.Equal(67 + 66 + publication.Audio.Count, publication.Artifacts.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
         // All twelve archives decode: the two spares and the werecreature form carry the same

@@ -17,7 +17,7 @@ public sealed record PaperDollItemImage(int Archive, int Record, IReadOnlyDictio
 public sealed record PaperDollArtifact(string MediaId, string RelativePath, byte[] Bytes, int Width, int Height);
 
 /// <summary>The paper doll's worn-item images, the other items' inventory images, and the artifacts they name.</summary>
-public sealed record PaperDollItemPass(IReadOnlyList<PaperDollItemImage> Images, IReadOnlyList<PaperDollArtifact> Artifacts, IReadOnlyList<string> Sources)
+public sealed record PaperDollItemPass(IReadOnlyList<PaperDollItemImage> Images, IReadOnlyList<PaperDollArtifact> Artifacts)
 {
     /// <summary>The media identity of every published inventory image (<c>item.ARCHIVE.RECORD</c>).</summary>
     public IReadOnlyList<string> Icons { get; init; } = [];
@@ -131,13 +131,11 @@ public static class PaperDollItemPublication
         ArgumentNullException.ThrowIfNull(palette);
         List<PaperDollItemImage> images = [];
         List<PaperDollArtifact> artifacts = [];
-        List<string> sources = [];
         foreach (int number in Archives.Order())
         {
             string source = $"arena2/TEXTURE.{number:000}";
             if (!archives.TryGetValue(number, out ReadOnlyMemory<byte> bytes))
                 throw new InvalidOperationException($"The worn items are drawn from {source}, which the supplied corpus does not carry.");
-            sources.Add(source);
             TextureArchive archive = TextureArchive.Parse(bytes.Span, source);
             bool clothing = number is >= 235 and <= 242;
             bool artifactTexture = ArtifactArchives.Contains(number);
@@ -187,11 +185,11 @@ public static class PaperDollItemPublication
             }
         }
 
-        return new PaperDollItemPass(images, artifacts, sources) { Icons = PublishIcons(archives, palette, artifacts, sources) };
+        return new PaperDollItemPass(images, artifacts) { Icons = PublishIcons(archives, palette, artifacts) };
     }
 
     /// <summary>Publishes every record of the inventory image archives once, as stored (frame 0, the mask colour transparent).</summary>
-    private static string[] PublishIcons(IReadOnlyDictionary<int, ReadOnlyMemory<byte>> archives, Arena2Palette palette, List<PaperDollArtifact> artifacts, List<string> sources)
+    private static string[] PublishIcons(IReadOnlyDictionary<int, ReadOnlyMemory<byte>> archives, Arena2Palette palette, List<PaperDollArtifact> artifacts)
     {
         List<string> icons = [];
         foreach (int number in IconArchives)
@@ -199,7 +197,6 @@ public static class PaperDollItemPublication
             string source = $"arena2/TEXTURE.{number:000}";
             if (!archives.TryGetValue(number, out ReadOnlyMemory<byte> bytes))
                 throw new InvalidOperationException($"The items' inventory images are drawn from {source}, which the supplied corpus does not carry.");
-            sources.Add(source);
             TextureArchive archive = TextureArchive.Parse(bytes.Span, source);
             for (int record = 0; record < archive.RecordCount; record++)
             {
@@ -282,6 +279,6 @@ public static class PaperDollItemPublication
         }
 
         JsonArray icons = [.. pass.Icons.Select(id => (JsonNode)id)];
-        return new JsonObject { ["sources"] = new JsonArray([.. pass.Sources.Select(source => (JsonNode)source)]), ["items"] = images, ["icons"] = icons };
+        return new JsonObject { ["items"] = images, ["icons"] = icons };
     }
 }

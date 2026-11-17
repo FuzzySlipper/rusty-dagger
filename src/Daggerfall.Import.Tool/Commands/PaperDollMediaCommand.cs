@@ -25,7 +25,7 @@ internal static class PaperDollMediaCommand
 
         Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(Path.Combine(arena2, CharacterMediaReferences.ArtPalette)), $"arena2/{CharacterMediaReferences.ArtPalette}");
         PaperDollItemPass pass = PaperDollItemPublication.Publish(archives, palette);
-        Console.WriteLine($"paper doll: {pass.Images.Count} worn-item records, {pass.Icons.Count} inventory images; {pass.Sources.Count} archives, {pass.Artifacts.Count} images, {pass.Images.Count(image => image.MaskMediaId is not null)} with a mask, {pass.Artifacts.Sum(artifact => (long)artifact.Bytes.Length) / 1024} KiB");
+        Console.WriteLine($"paper doll: {pass.Images.Count} worn-item records, {pass.Icons.Count} inventory images; {pass.Artifacts.Count} images, {pass.Images.Count(image => image.MaskMediaId is not null)} with a mask, {pass.Artifacts.Sum(artifact => (long)artifact.Bytes.Length) / 1024} KiB");
         if (!args.Switch("--update")) return Options.ReportOnly("these artifacts and the paperDoll section");
 
         string outRoot = Path.Combine(args["--out"], args["--group"]);

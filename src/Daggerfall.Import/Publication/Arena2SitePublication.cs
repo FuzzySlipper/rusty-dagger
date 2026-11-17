@@ -104,10 +104,8 @@ public static class Arena2SitePublication
         {
             (GeometryPublication geometry, Arena2DungeonMediaPublication dungeonMedia, Arena2ClassicMediaPublication classicMedia) = PublishMedia(
                 sources, meshIds, media, textures, leaves => PlacementTrims(sources, locations, leaves));
-            ImportProvenance provenance = new(WorldMediaImporterId, [.. sources.DungeonSources
-                .Select(source => new LogicalSourceRecord(source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length))]);
             return new Arena2WorldMediaPublication(
-                Arena2MediaBundlePublication.CreateWorldMedia(provenance, dungeonMedia, classicMedia, geometry, classicGroup),
+                Arena2MediaBundlePublication.CreateWorldMedia(WorldMediaImporterId, dungeonMedia, classicMedia, geometry, classicGroup),
                 textures,
                 geometry.Summary) { PlacementMeshes = geometry.PlacementMeshes.Count };
         });

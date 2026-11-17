@@ -31,7 +31,6 @@ public sealed record DaggerfallTerrainPrefixByte(int Index, IReadOnlyList<int> V
 }
 
 /// <summary>The normalized wilderness terrain: the heightmap every coordinate reads and the cell samples behind it.</summary>
-/// <param name="Source">The source the contract was read from.</param>
 /// <param name="Width">The heightmap width.</param>
 /// <param name="Height">The heightmap height.</param>
 /// <param name="Heightmap">The heightmap rows in order, each tiling the full width.</param>
@@ -45,7 +44,6 @@ public sealed record DaggerfallTerrainPrefixByte(int Index, IReadOnlyList<int> V
 /// <param name="Prefix">The value domain of every cell-prefix byte.</param>
 /// <param name="DataSection">The donor-unread data section, base-64.</param>
 public sealed record DaggerfallTerrain(
-    PublishedSource Source,
     int Width,
     int Height,
     IReadOnlyList<DaggerfallGridRow> Heightmap,
@@ -65,8 +63,6 @@ public sealed record DaggerfallTerrain(
 
     public void Validate()
     {
-        ArgumentNullException.ThrowIfNull(Source);
-        Source.Validate();
         if (Width != WoodsReader.MapWidth || Height != WoodsReader.MapHeight)
         {
             throw new InvalidOperationException($"Terrain covers {Width}x{Height} for a {WoodsReader.MapWidth}x{WoodsReader.MapHeight} map.");
@@ -174,7 +170,6 @@ public static class DaggerfallTerrainBuilder
         }
 
         DaggerfallTerrain terrain = new(
-            PublishedSource.Of(label, bytes),
             WoodsReader.MapWidth,
             WoodsReader.MapHeight,
             rows,

@@ -103,20 +103,19 @@ public static class Arena2MediaBundlePublication
     /// terrain artifact and the classic sidecar, with the classic artifacts the classic media group does not
     /// already publish. A location binds each mesh slot to these descriptors by media identity.
     /// </summary>
-    /// <param name="provenance">The mesh, palette and texture sources the world media pass read.</param>
+    /// <param name="importerId">The importer identity the publication manifest records.</param>
     /// <param name="classicGroup">
     /// The classic media group's artifacts by group-relative path. A classic artifact the group carries is
     /// referenced through the group and must be the same bytes; a different body is a concrete collision
     /// between two product-wide publications and is refused.
     /// </param>
     public static ImportPublicationPlan CreateWorldMedia(
-        ImportProvenance provenance,
+        string importerId,
         Arena2DungeonMediaPublication dungeonMedia,
         Arena2ClassicMediaPublication classicMedia,
         GeometryPublication geometry,
         IReadOnlyDictionary<string, ImportPublicationManifestArtifact> classicGroup)
     {
-        ArgumentNullException.ThrowIfNull(provenance);
         ArgumentNullException.ThrowIfNull(dungeonMedia);
         ArgumentNullException.ThrowIfNull(classicMedia);
         ArgumentNullException.ThrowIfNull(geometry);
@@ -125,7 +124,6 @@ public static class Arena2MediaBundlePublication
         ValidateDungeonMedia(dungeonMedia);
         ValidateClassicMedia(classicMedia);
         ValidateClassicWorldVisuals(classicMedia.WorldVisuals, geometry);
-        ImportProvenance mergedProvenance = MergeProvenance(provenance, classicMedia.Sources);
 
         DungeonMediaManifestSidecar dungeonSidecar = CreateDungeonSidecar(dungeonMedia);
         ClassicMediaManifestSidecar classicSidecar = CreateClassicSidecar(classicMedia);
@@ -164,7 +162,7 @@ public static class Arena2MediaBundlePublication
                 SerializeSidecar(classicSidecar),
                 classicArtifacts.Select(artifact => artifact.RelativePath).ToArray()),
         ];
-        return ImportPublicationPlan.Create(mergedProvenance, artifacts);
+        return ImportPublicationPlan.Create(importerId, artifacts);
     }
 
     /// <summary>
@@ -532,34 +530,6 @@ public static class Arena2MediaBundlePublication
         }
     }
 
-    private static ImportProvenance MergeProvenance(ImportProvenance dungeon, IReadOnlyList<LogicalSourceRecord> classicSources)
-    {
-        ArgumentNullException.ThrowIfNull(dungeon);
-        ArgumentNullException.ThrowIfNull(classicSources);
-        dungeon.Validate();
-        Dictionary<string, LogicalSourceRecord> sources = new(StringComparer.Ordinal);
-        foreach (LogicalSourceRecord source in dungeon.Sources.Concat(classicSources).OrderBy(source => source.SourcePath, StringComparer.Ordinal))
-        {
-            ArgumentNullException.ThrowIfNull(source);
-            source.Validate();
-            if (!sources.TryGetValue(source.SourcePath, out LogicalSourceRecord? existing))
-            {
-                sources.Add(source.SourcePath, source);
-                continue;
-            }
-
-            if (existing.ByteLength != source.ByteLength
-                || existing.ContentDigest != source.ContentDigest)
-            {
-                throw new InvalidOperationException($"Logical source '{source.SourcePath}' does not agree across normalized import passes.");
-            }
-        }
-
-        return new(
-            dungeon.ImporterId,
-            sources.Values.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray());
-    }
-
     /// <summary>Creates the dungeon sidecar: every billboard and actor the media publication carries, in identity order.</summary>
     private static DungeonMediaManifestSidecar CreateDungeonSidecar(Arena2DungeonMediaPublication publication)
     {
@@ -785,7 +755,6 @@ public static class Arena2MediaBundlePublication
     private static void ValidateClassicMedia(Arena2ClassicMediaPublication publication)
     {
         ArgumentNullException.ThrowIfNull(publication.Artifacts);
-        ArgumentNullException.ThrowIfNull(publication.Sources);
         ArgumentNullException.ThrowIfNull(publication.WeaponMedia);
         ArgumentNullException.ThrowIfNull(publication.Effects);
         ArgumentNullException.ThrowIfNull(publication.Audio);
@@ -793,11 +762,6 @@ public static class Arena2MediaBundlePublication
         ArgumentNullException.ThrowIfNull(publication.InventoryIcons);
         ValidateArtifacts(publication.Artifacts, "classic media");
         IReadOnlyDictionary<string, NormalizedMediaDescriptor> media = ValidateMediaManifest(publication.MediaManifest, publication.Artifacts, "classic media");
-        foreach (LogicalSourceRecord source in publication.Sources)
-        {
-            source.Validate();
-        }
-        NormalizedImportDocument.ValidateUnique(publication.Sources, source => source.SourcePath, "classic media logical source");
 
         ValidateWeaponMedia(publication.WeaponMedia, media, "Classic");
 
@@ -887,17 +851,10 @@ public static class Arena2MediaBundlePublication
             if (string.IsNullOrWhiteSpace(asset.Generator) || string.IsNullOrWhiteSpace(asset.Prompt)
                 || !media.TryGetValue(asset.Id, out NormalizedMediaDescriptor? descriptor)
                 || descriptor.Kind != NormalizedMediaKind.UserInterface
-                || !StringComparer.Ordinal.Equals(descriptor.RelativePath, asset.RelativePath)
-                || !publication.Sources.Any(source => StringComparer.Ordinal.Equals(source.SourcePath, $"authored-ui/{asset.SourceLabel}")))
+                || !StringComparer.Ordinal.Equals(descriptor.RelativePath, asset.RelativePath))
             {
-                throw new InvalidOperationException("Classic authored UI metadata must agree with a canonical UI descriptor and retained provenance.");
+                throw new InvalidOperationException("Classic authored UI metadata must agree with a canonical UI descriptor.");
             }
-        }
-
-        if (publication.AuthoredUiManifestSource is not null
-            && !publication.Sources.Contains(publication.AuthoredUiManifestSource))
-        {
-            throw new InvalidOperationException("Classic authored UI manifest provenance must be retained by the publication source set.");
         }
     }
 

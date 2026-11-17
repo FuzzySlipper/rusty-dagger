@@ -106,19 +106,15 @@ public static class Arena2WorldBlocksPublication
             entries.Add(new(block.Block.Key, block.Block.Kind, block.Block.SourceKey, block.Block.BuildingIndex, document, block.Spatial?.RelativePath));
         }
 
-        PublishedSource[] published = [.. sources.Sources.Select(source => PublishedSource.Of(source.Label, source.Bytes.Span))];
         DaggerfallWorldBlockIndex index = new(
             meshPublication,
             new(rmb.Length, interiors, rdb.Length),
             entries,
-            unplaced,
-            published);
+            unplaced);
         artifacts.Add(new(IndexRelativePath, JsonSerializer.SerializeToUtf8Bytes(index, PublishedJson.SectionCompact),
             [.. entries.Select(entry => entry.Document).Order(StringComparer.Ordinal)]));
-        ImportProvenance provenance = new(ImporterId,
-            [.. sources.Sources.Select(source => new LogicalSourceRecord(source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length))]);
         string[] meshes = [.. normalized.SelectMany(block => block.Block.Models).Select(model => model.MeshArtifactId).OfType<string>()
             .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
-        return new(ImportPublicationPlan.Create(provenance, artifacts), index, meshes);
+        return new(ImportPublicationPlan.Create(ImporterId, artifacts), index, meshes);
     }
 }

@@ -130,13 +130,6 @@ public sealed class ClassicMediaGroup
                 };
             }
 
-            LogicalSourceRecord source = Publication.Sources.Single(source => string.Equals(source.SourcePath, $"arena2/{image.SourceFile}", StringComparison.Ordinal));
-            entry["source"] = new JsonObject
-            {
-                ["path"] = source.SourcePath,
-                ["byteLength"] = source.ByteLength,
-                ["sha256"] = source.ContentDigest.Value,
-            };
             return entry;
         }
 

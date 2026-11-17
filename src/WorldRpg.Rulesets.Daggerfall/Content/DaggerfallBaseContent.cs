@@ -1116,11 +1116,6 @@ internal static partial class DaggerfallBaseContent
     }
 
     /// <summary>
-    /// Reads the item-template ledger and requires that every one of the 288 classic targets
-    /// carries a provenance and a disposition, that the summary agrees with the entries, and
-    /// that no target claims a native fact while the native source is absent.
-    /// </summary>
-    /// <summary>
     /// Reads the published text section, with the base pack's internal text beside it. Every value resolves by the key its own
     /// source gave it, carries the language of the source it was read from, and states whether it was
     /// readable — so a lookup answers with text, with a reason there is none, or with a miss, and never
@@ -1167,9 +1162,6 @@ internal static partial class DaggerfallBaseContent
             DaggerfallTextKey key = new(kind, id);
             string source = Text(record, "source", diagnostics);
             int index = Integer(record, "index", diagnostics);
-            long offset = Long(record, "offset", diagnostics);
-            if (offset < 0) diagnostics.Add($"Published text key '{key}' begins at the negative source byte {offset}.");
-            int byteLength = Integer(record, "byteLength", diagnostics);
             int subrecords = Integer(record, "subrecords", diagnostics);
             string stateName = Text(record, "state", diagnostics);
             string reason = EmptyAllowedText(record, "reason", diagnostics);
@@ -1198,17 +1190,17 @@ internal static partial class DaggerfallBaseContent
                 diagnostics.Add($"Published text key '{key}' states the state '{stateName}', which the contract does not declare.");
             }
 
-            // A value is either read or it is not, and the two say different things: a read value's bytes
-            // are described, and a malformed one's reason is the fact. One claiming both would leave a
-            // consumer unable to tell an empty value from a value that was never readable.
-            if (state == DaggerfallTextState.Read && (byteLength < 1 || reason.Length != 0))
+            // A value is either read or it is not, and the two say different things: a read value carries its
+            // text, and a malformed one's reason is the fact. One claiming both would leave a consumer unable to
+            // tell an empty value from a value that was never readable.
+            if (state == DaggerfallTextState.Read && reason.Length != 0)
             {
-                diagnostics.Add($"Published text key '{key}' is readable but spans {byteLength} bytes, or states a reason it is not readable.");
+                diagnostics.Add($"Published text key '{key}' is readable and states a reason it is not readable.");
             }
 
-            if (state == DaggerfallTextState.Malformed && (string.IsNullOrWhiteSpace(reason) || byteLength != 0 || subrecords != 0))
+            if (state == DaggerfallTextState.Malformed && (string.IsNullOrWhiteSpace(reason) || subrecords != 0))
             {
-                diagnostics.Add($"Published text key '{key}' is malformed in {byteLength} bytes and {subrecords} variants, or states no reason.");
+                diagnostics.Add($"Published text key '{key}' is malformed in {subrecords} variants, or states no reason.");
             }
 
             List<string> symbols = [];
@@ -1255,7 +1247,7 @@ internal static partial class DaggerfallBaseContent
 
             if (index <= previousIndex) diagnostics.Add($"Published text source '{source}' carries '{key}' at ordinal {index} after ordinal {previousIndex}, so its values are not in source order.");
             previousIndex = index;
-            values[key] = new DaggerfallTextValue(key, source, owner.Language, index, offset, byteLength, subrecords, state, reason, symbols, tokens);
+            values[key] = new DaggerfallTextValue(key, source, owner.Language, index, subrecords, state, reason, symbols, tokens);
         }
 
         // The macro index is derived from the values: each symbol any value carries, with how many carry it.
@@ -1276,16 +1268,7 @@ internal static partial class DaggerfallBaseContent
             return new DaggerfallBuildingNameInputs([]);
         }
 
-        JsonElement source = Object(Property(section, "source", diagnostics), "buildingNames.source", diagnostics);
-        string path = Text(source, "path", diagnostics);
-        long byteLength = Long(source, "byteLength", diagnostics);
-        int regions = Array(section, "regionNameBanks", diagnostics).Count();
         // The bank is chosen by region index, so the table covers exactly the regions the locations publish.
-        if (string.IsNullOrWhiteSpace(path) || byteLength <= 0 || regions != regionCount)
-        {
-            diagnostics.Add($"Building-name source must name a non-empty donor path, retain bytes, and cover the {regionCount} published regions.");
-        }
-
         List<int> banks = [.. Array(section, "regionNameBanks", diagnostics).Select(entry =>
         {
             if (entry.ValueKind == JsonValueKind.Number && entry.TryGetInt32(out int value) && value is 0 or 1) return value;

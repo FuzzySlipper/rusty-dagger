@@ -29,8 +29,6 @@ public sealed class DaggerfallTextSetTests
         Assert.Equal("en", value.Language);
         Assert.Equal("STRENGTH", value.TextRuns.First());
         Assert.Equal(0, value.Index);
-        Assert.Equal(8456L, value.Offset);
-        Assert.Equal(284, value.ByteLength);
         Assert.Equal(1, value.Subrecords);
         Assert.Equal(DaggerfallTextState.Read, value.State);
 
@@ -39,7 +37,6 @@ public sealed class DaggerfallTextSetTests
         Assert.Equal(DaggerfallTextResolution.Resolved, text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Resource, "1201"), out DaggerfallTextValue? shared));
         Assert.Equal("Paralysis", shared!.TextRuns.First());
         Assert.Equal("Paralysis", text.Require(new DaggerfallTextKey(DaggerfallTextKind.Resource, "1202")).TextRuns.First());
-        Assert.Equal(shared.Offset, text.Require(new DaggerfallTextKey(DaggerfallTextKind.Resource, "1202")).Offset);
         Assert.Equal(5, text.Require(new DaggerfallTextKey(DaggerfallTextKind.Resource, "11")).Subrecords);
 
         DaggerfallTextValue stores = text.Require(new DaggerfallTextKey(DaggerfallTextKind.Internal, "StoresA"));
@@ -166,7 +163,7 @@ public sealed class DaggerfallTextSetTests
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
             Payload(payload => Records(payload)[0]!.AsObject()["reason"] = "because the fixture says so")));
 
-        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("or states a reason it is not readable", StringComparison.Ordinal));
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("is readable and states a reason it is not readable", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -191,17 +188,6 @@ public sealed class DaggerfallTextSetTests
 
         Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("states the state '1', which the contract does not declare", StringComparison.Ordinal));
         Assert.Equal(DaggerfallTextState.Read, Definitions(payload => Records(payload)[0]!.AsObject()["state"] = "Read").Text.Require(new DaggerfallTextKey(DaggerfallTextKind.Resource, "0")).State);
-    }
-
-    [Fact]
-    public void Rejects_a_value_that_begins_at_a_negative_source_byte()
-    {
-        // The source's offsets are unsigned, so a published value at a negative byte describes a position
-        // nothing could have read.
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => Records(payload)[0]!.AsObject()["offset"] = -5)));
-
-        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("begins at the negative source byte -5", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -263,15 +249,6 @@ public sealed class DaggerfallTextSetTests
             })));
 
         Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("or states no reason", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void Rejects_a_readable_value_that_spans_no_bytes()
-    {
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => Records(payload)[0]!.AsObject()["byteLength"] = 0)));
-
-        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("is readable but spans 0 bytes", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -464,7 +441,6 @@ public sealed class DaggerfallTextSetTests
     {
         record["state"] = "malformed";
         record["reason"] = "the fixture states the record could not be read";
-        record["byteLength"] = 0;
         record["subrecords"] = 0;
         record["tokens"] = new JsonArray();
     }

@@ -100,43 +100,6 @@ public sealed class ContentDigestJsonConverter : JsonConverter<ContentDigest>
     }
 }
 
-/// <summary>One logical source record; paths are intentionally portable, never host paths.</summary>
-public sealed record LogicalSourceRecord(string SourcePath, ContentDigest ContentDigest, long ByteLength)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalPath(SourcePath, nameof(SourcePath));
-        ContentDigest.Validate();
-        if (ByteLength <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(ByteLength), ByteLength, "A logical source must retain its positive caller byte length.");
-        }
-    }
-}
-
-/// <summary>
-/// Aggregate importer provenance without machine-local or time-varying fields. Which importer source produced
-/// it is recorded once, in the data container's description, so a document's bytes change only with its content.
-/// </summary>
-public sealed record ImportProvenance(string ImporterId, IReadOnlyList<LogicalSourceRecord> Sources)
-{
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalId(ImporterId, nameof(ImporterId));
-        ArgumentNullException.ThrowIfNull(Sources);
-        if (Sources.Count == 0)
-        {
-            throw new InvalidOperationException("Import provenance must identify at least one logical source.");
-        }
-
-        NormalizedImportDocument.ValidateUnique(Sources, source => source.SourcePath, "logical source");
-        foreach (LogicalSourceRecord source in Sources)
-        {
-            source.Validate();
-        }
-    }
-}
-
 public readonly record struct NormalizedVector2(float X, float Y)
 {
     public void Validate(string name)

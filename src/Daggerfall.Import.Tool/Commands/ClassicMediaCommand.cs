@@ -29,7 +29,7 @@ internal static class ClassicMediaCommand
         DaggerfallSoundCatalog catalog = media.SoundCatalog;
         int admitted = catalog.Clips.Count(clip => clip.Disposition == DaggerfallSoundClipDisposition.Admitted);
         int readable = catalog.Clips.Count(clip => clip.Disposition == DaggerfallSoundClipDisposition.ReadableNoConsumer);
-        Console.WriteLine($"classic media: {media.Publication.Artifacts.Count} artifacts, {media.Publication.Sources.Count} sources, {media.Publication.UiImages.Count} UI images");
+        Console.WriteLine($"classic media: {media.Publication.Artifacts.Count} artifacts, {media.Publication.UiImages.Count} UI images");
         Console.WriteLine($"sound catalog: {catalog.Clips.Count} clips, {admitted} admitted, {readable} readable with no consumer, {catalog.Clips.Count - admitted - readable} unsupported");
         if (!args.Switch("--update")) return Options.ReportOnly("these artifacts");
 

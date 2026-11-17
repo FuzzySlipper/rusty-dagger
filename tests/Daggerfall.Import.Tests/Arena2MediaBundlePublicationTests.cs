@@ -11,11 +11,8 @@ namespace Daggerfall.Import.Tests;
 public sealed class Arena2MediaBundlePublicationTests
 {
     [Fact]
-    public void RejectsConflictingSourceProvenanceAndDuplicateMediaPaths()
+    public void RejectsDuplicateMediaPaths()
     {
-        Arena2ClassicMediaPublication conflict = CreateClassicMedia(sourceDigest: ContentDigest.Compute("different"u8));
-        Assert.Throws<InvalidOperationException>(() => CreateWorldMedia(conflict));
-
         Arena2ClassicMediaPublication duplicate = CreateClassicMedia(artifactPath: "media/dungeon/materials/minimal.png");
         Assert.Throws<ArgumentException>(() => CreateWorldMedia(duplicate));
     }
@@ -155,7 +152,6 @@ public sealed class Arena2MediaBundlePublicationTests
         Arena2ClassicMediaPublication classic = CreateClassicMedia();
         ImportPublicationArtifact grouped = classic.Artifacts.Single(artifact => artifact.RelativePath == "media/classic/weapon.png");
         ImportPublicationPlan world = CreateWorldMedia(classic, group: ClassicGroup(grouped));
-        Assert.Equal(world.Manifest.Sources.OrderBy(source => source.Path, StringComparer.Ordinal).Select(source => source.Path), world.Manifest.Sources.Select(source => source.Path));
 
         string[] paths = [.. world.Artifacts.Select(artifact => artifact.RelativePath)];
         Assert.Contains("media/dungeon/materials/minimal.png", paths);
@@ -196,12 +192,8 @@ public sealed class Arena2MediaBundlePublicationTests
         Arena2ClassicMediaPublication classic,
         Arena2DungeonMediaPublication? dungeonMedia = null,
         IReadOnlyDictionary<string, ImportPublicationManifestArtifact>? group = null) =>
-        Arena2MediaBundlePublication.CreateWorldMedia(WorldProvenance(), dungeonMedia ?? CreateDungeonMedia(), classic, CreateGeometry(),
+        Arena2MediaBundlePublication.CreateWorldMedia(Arena2SitePublication.WorldMediaImporterId, dungeonMedia ?? CreateDungeonMedia(), classic, CreateGeometry(),
             group ?? new Dictionary<string, ImportPublicationManifestArtifact>(StringComparer.Ordinal));
-
-    private static ImportProvenance WorldProvenance() => new(
-        Arena2SitePublication.WorldMediaImporterId,
-        [new LogicalSourceRecord("arena2/ARCH3D.BSA", ContentDigest.Compute("arch"u8), 4), new LogicalSourceRecord("arena2/PAL.PAL", ContentDigest.Compute("palette"u8), 7)]);
 
     private static Dictionary<string, ImportPublicationManifestArtifact> ClassicGroup(ImportPublicationArtifact artifact) => new(StringComparer.Ordinal)
     {
@@ -251,7 +243,7 @@ public sealed class Arena2MediaBundlePublicationTests
         return new([artifact], [], manifest, [billboard], []);
     }
 
-    private static Arena2ClassicMediaPublication CreateClassicMedia(ContentDigest? sourceDigest = null, string? artifactPath = null)
+    private static Arena2ClassicMediaPublication CreateClassicMedia(string? artifactPath = null)
     {
         ImportPublicationArtifact uiArtifact = new(artifactPath ?? "media/classic/minimal.bin", "classic"u8);
         const string mediaId = "classic.minimal";
@@ -303,9 +295,6 @@ public sealed class Arena2MediaBundlePublicationTests
         return new(
             artifacts,
             manifest,
-            [new LogicalSourceRecord("arena2/PAL.PAL", sourceDigest ?? ContentDigest.Compute("palette"u8), 7),
-             new LogicalSourceRecord("arena2/WEAPON02.CIF", ContentDigest.Compute("weapon"u8), 6)],
-            null,
             [new ClassicWeaponMediaManifest(weaponMediaId, actions)],
             effects,
             [],

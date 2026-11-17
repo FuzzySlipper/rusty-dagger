@@ -51,27 +51,6 @@ public sealed class ImportPublicationArtifact
     public ContentDigest ContentHash => ContentDigest.Compute(bytes);
 }
 
-/// <summary>
-/// One source file a publication or a published section was read from: its logical path in the
-/// <see cref="PublishedSourcePath"/> vocabulary, the digest of the bytes read and their length. Every
-/// section, closure manifest and applied overlay states its sources in this one shape.
-/// </summary>
-public sealed record PublishedSource(string Path, ContentDigest ContentDigest, long ByteLength)
-{
-    /// <summary>The source fact for bytes read under a logical path.</summary>
-    public static PublishedSource Of(string path, ReadOnlySpan<byte> bytes) => new(path, ContentDigest.Compute(bytes), bytes.Length);
-
-    public void Validate()
-    {
-        NormalizedImportDocument.RequireLogicalPath(Path, nameof(Path));
-        ContentDigest.Validate();
-        if (ByteLength <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(ByteLength), ByteLength, $"Source '{Path}' states no bytes.");
-        }
-    }
-}
-
 /// <summary>One deterministic artifact entry in the canonical publication manifest.</summary>
 public sealed record ImportPublicationManifestArtifact(string RelativePath, ContentDigest ContentHash, long ByteLen, IReadOnlyList<string> DependsOnPaths)
 {
@@ -114,20 +93,17 @@ public sealed record ImportInvocation(IReadOnlyList<string> Command)
 }
 
 /// <summary>
-/// Canonical statement of an import result: the command line that produced it, the sources it read, and the
-/// artifacts it wrote. It excludes timestamps and the importer revision, which the
+/// Canonical statement of an import result: the command line that produced it and the artifacts it wrote. It excludes timestamps and the importer revision, which the
 /// data container's description records once; the command is recorded as the caller spelled it, so a caller
 /// that passes repository-relative paths keeps the manifest host-independent.
 /// </summary>
 public sealed record CanonicalImportManifest(
     string ImporterId,
     IReadOnlyList<string> Command,
-    IReadOnlyList<PublishedSource> Sources,
     IReadOnlyList<ImportPublicationManifestArtifact> Artifacts)
 {
     public CanonicalImportManifest Canonicalize() => this with
     {
-        Sources = Sources.OrderBy(source => source.Path, StringComparer.Ordinal).ToArray(),
         Artifacts = Artifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).Select(artifact => artifact.Canonicalize()).ToArray(),
     };
 
@@ -138,16 +114,9 @@ public sealed record CanonicalImportManifest(
     public void Validate()
     {
         NormalizedImportDocument.RequireLogicalId(ImporterId, nameof(ImporterId));
-        ArgumentNullException.ThrowIfNull(Sources);
         ArgumentNullException.ThrowIfNull(Artifacts);
         Invocation.Validate();
-        ValidateUnique(Sources, source => source.Path, "source path");
         ValidateUnique(Artifacts, artifact => artifact.RelativePath, "artifact path");
-        foreach (PublishedSource source in Sources)
-        {
-            source.Validate();
-        }
-
         foreach (ImportPublicationManifestArtifact artifact in Artifacts)
         {
             artifact.Validate();
@@ -272,11 +241,10 @@ public sealed class ImportPublicationPlan
 
     public IReadOnlyList<ImportPublicationArtifact> Artifacts => artifacts;
 
-    public static ImportPublicationPlan Create(ImportProvenance provenance, IEnumerable<ImportPublicationArtifact> artifacts, ImportInvocation? invocation = null)
+    public static ImportPublicationPlan Create(string importerId, IEnumerable<ImportPublicationArtifact> artifacts, ImportInvocation? invocation = null)
     {
-        ArgumentNullException.ThrowIfNull(provenance);
+        NormalizedImportDocument.RequireLogicalId(importerId, nameof(importerId));
         ArgumentNullException.ThrowIfNull(artifacts);
-        provenance.Validate();
         invocation ??= ImportInvocation.None;
         invocation.Validate();
 
@@ -294,9 +262,8 @@ public sealed class ImportPublicationPlan
         ValidateUniquePaths(materialized);
         ImportPublicationArtifact[] orderedContent = materialized.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).ToArray();
         CanonicalImportManifest manifest = new(
-            provenance.ImporterId,
+            importerId,
             invocation.Command.ToArray(),
-            provenance.Sources.Select(source => new PublishedSource(source.SourcePath, source.ContentDigest, source.ByteLength)).ToArray(),
             orderedContent.Select(artifact => new ImportPublicationManifestArtifact(artifact.RelativePath, artifact.ContentHash, artifact.Bytes.Length, artifact.DependsOnPaths)).ToArray());
         manifest.Validate();
         byte[] manifestBytes = ImportPublicationManifestSerializer.Serialize(manifest);
@@ -314,12 +281,7 @@ public sealed class ImportPublicationPlan
     {
         ArgumentNullException.ThrowIfNull(invocation);
         return Create(
-            new ImportProvenance(
-                Manifest.ImporterId,
-                Manifest.Sources.Select(source => new LogicalSourceRecord(
-                    source.Path,
-                    source.ContentDigest,
-                    source.ByteLength)).ToArray()),
+            Manifest.ImporterId,
             artifacts.Where(artifact => artifact.RelativePath != ImportPublicationManifestSerializer.ManifestRelativePath),
             invocation);
     }

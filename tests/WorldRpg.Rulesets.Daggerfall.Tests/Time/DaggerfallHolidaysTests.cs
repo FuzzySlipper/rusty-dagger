@@ -43,6 +43,6 @@ public sealed class DaggerfallHolidaysTests
     }
 
     private static DaggerfallTextResolver Text(params (DaggerfallTextKey Key, string Text)[] lines) => new(new DaggerfallTextSet(
-        lines.ToDictionary(line => line.Key, line => new DaggerfallTextValue(line.Key, "test", "en", 0, 0, line.Text.Length, 1,
+        lines.ToDictionary(line => line.Key, line => new DaggerfallTextValue(line.Key, "test", "en", 0, 1,
             DaggerfallTextState.Read, string.Empty, [], [new(DaggerfallTextCode.Text, line.Text, null, null)])), []));
 }

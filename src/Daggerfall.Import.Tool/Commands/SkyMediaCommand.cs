@@ -46,7 +46,7 @@ internal static class SkyMediaCommand
             Options.Arena2Label(artPaletteName));
 
         SkyMediaPublication publication = SkyMediaPublication.Create(day, night, nightPalette, moons, artPalette);
-        Console.WriteLine($"sky media: {publication.Manifest.Sources.Count} day sources, {publication.Manifest.Resources.Count} day panoramas, {publication.Manifest.NightResources.Count} night backgrounds, {publication.Artifacts.Count} artifacts");
+        Console.WriteLine($"sky media: {publication.Manifest.Resources.Count} day panoramas, {publication.Manifest.NightResources.Count} night backgrounds, {publication.Artifacts.Count} artifacts");
         Console.WriteLine($"sky curve: {string.Join(", ", SkyMediaPublication.DaylightFrameCurve.Select(knot => $"{knot.Time:0.###}->{knot.Value:0.###}"))}");
         if (!args.Switch("--update")) return Options.ReportOnly("these sky artifacts");
 

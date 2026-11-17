@@ -586,23 +586,18 @@ public sealed class PublishedContentDeliveryTests
 
         // A slot is what a consumer binds, so the published inventory has to name one for every UI
         // image the pack carries, together with the media identity and the bytes it was decoded to.
-        Dictionary<string, List<(string Path, string Sha256, string MediaId, string SourcePath, string SourceSha256)>> slots = new(StringComparer.Ordinal);
+        Dictionary<string, List<(string Path, string Sha256, string MediaId)>> slots = new(StringComparer.Ordinal);
         foreach (JsonElement artifact in inventory.GetProperty("artifacts").EnumerateArray())
         {
             if (!artifact.TryGetProperty("slot", out JsonElement slot)) continue;
             string mediaId = artifact.GetProperty("mediaId").GetString()!;
             Assert.StartsWith("worldrpg/media/ui/", artifact.GetProperty("path").GetString()!, StringComparison.Ordinal);
             Assert.NotEmpty(mediaId);
-            JsonElement source = artifact.GetProperty("source");
-            string sourcePath = source.GetProperty("path").GetString()!;
-            string sourceSha256 = source.GetProperty("sha256").GetString()!;
-            Assert.StartsWith("arena2/", sourcePath, StringComparison.Ordinal);
-            Assert.True(source.GetProperty("byteLength").GetInt64() > 0);
-            if (!slots.TryGetValue(slot.GetString()!, out List<(string Path, string Sha256, string MediaId, string SourcePath, string SourceSha256)>? filled)) slots[slot.GetString()!] = filled = [];
+            if (!slots.TryGetValue(slot.GetString()!, out List<(string Path, string Sha256, string MediaId)>? filled)) slots[slot.GetString()!] = filled = [];
             // One artifact per media identity: a slot may hold several, but the same identity twice
             // would leave a consumer unable to tell which bytes belong to which part.
             Assert.DoesNotContain(filled, entry => entry.MediaId == mediaId);
-            filled.Add((artifact.GetProperty("path").GetString()!, artifact.GetProperty("sha256").GetString()!, mediaId, sourcePath, sourceSha256));
+            filled.Add((artifact.GetProperty("path").GetString()!, artifact.GetProperty("sha256").GetString()!, mediaId));
         }
 
         Assert.Equal(
@@ -636,9 +631,9 @@ public sealed class PublishedContentDeliveryTests
         Assert.Contains("window.bank.panel", Media("bank"));
 
         // Every published part resolves to delivered bytes that still hash to the recorded digest.
-        foreach ((string slot, List<(string Path, string Sha256, string MediaId, string SourcePath, string SourceSha256)> parts) in slots)
+        foreach ((string slot, List<(string Path, string Sha256, string MediaId)> parts) in slots)
         {
-            foreach ((string path, string sha256, _, _, _) in parts)
+            foreach ((string path, string sha256, _) in parts)
             {
                 string file = Path.Combine(root, "content", path);
                 Assert.True(TestContentFiles.Exists(file), $"Published UI slot '{slot}' names '{path}', which is not part of the delivered content.");
@@ -647,29 +642,6 @@ public sealed class PublishedContentDeliveryTests
         }
 
         string[] Media(string slot) => [.. slots[slot].Select(entry => entry.MediaId)];
-    }
-
-    /// <summary>
-    /// Provenance, separately from the delivered bytes: each UI slot's inventory entry names the original
-    /// IMG it decodes and the hash of those input bytes, and the operator's corpus still has them.
-    /// </summary>
-    [CorpusFact]
-    public void Published_ui_slot_sources_hash_to_the_recorded_corpus_bytes()
-    {
-        JsonElement inventory = JsonDocument.Parse(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/media/classic-media-inventory.json"))).RootElement;
-        int checkedSources = 0;
-        foreach (JsonElement artifact in inventory.GetProperty("artifacts").EnumerateArray())
-        {
-            if (!artifact.TryGetProperty("slot", out JsonElement slot)) continue;
-            JsonElement source = artifact.GetProperty("source");
-            string sourcePath = source.GetProperty("path").GetString()!;
-            string input = TestData.Corpus(sourcePath["arena2/".Length..]);
-            Assert.True(TestContentFiles.Exists(input), $"Published UI slot '{slot.GetString()}' names missing source '{sourcePath}'.");
-            Assert.Equal(source.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(TestContentFiles.ReadCopy(input))));
-            checkedSources++;
-        }
-
-        Assert.True(checkedSources > 0, "The inventory names no UI slot sources to check.");
     }
 
     /// <summary>

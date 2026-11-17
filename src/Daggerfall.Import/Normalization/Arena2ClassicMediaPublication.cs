@@ -974,8 +974,6 @@ public sealed record ClassicFontManifest(
 public sealed record Arena2ClassicMediaPublication(
     IReadOnlyList<ImportPublicationArtifact> Artifacts,
     NormalizedMediaManifest MediaManifest,
-    IReadOnlyList<LogicalSourceRecord> Sources,
-    LogicalSourceRecord? AuthoredUiManifestSource,
     IReadOnlyList<ClassicWeaponMediaManifest> WeaponMedia,
     IReadOnlyList<ClassicEffectManifest> Effects,
     IReadOnlyList<ClassicAudioManifest> Audio,
@@ -1384,12 +1382,11 @@ public sealed record Arena2ClassicMediaPublication(
                 .Select(artifact => new ImportPublicationArtifact(artifact.RelativePath, artifact.Bytes, mediaId: artifact.Id)),
             .. visualArtifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal),
         ];
-        LogicalSourceRecord? authoredManifestSource = CreateAuthoredManifestSource(resolved.AuthoredUiManifest, effectiveOptions.MaximumSourceBytes);
+        if (resolved.AuthoredUiManifest is { } authoredManifest)
+            RequirePortableSourceBytes(authoredManifest.SourceLabel, authoredManifest.Bytes, effectiveOptions.MaximumSourceBytes, nameof(profile));
         return new(
             artifacts,
             mediaManifest,
-            MergeSources(source.LogicalSources, resolved.AuthoredUiAssets, authoredManifestSource),
-            authoredManifestSource,
             weaponMedia,
             effects,
             audio,
@@ -1924,44 +1921,6 @@ public sealed record Arena2ClassicMediaPublication(
         return overlays;
     }
 
-    private static IReadOnlyList<LogicalSourceRecord> MergeSources(
-        IReadOnlyList<LogicalSourceRecord> arena2Sources,
-        IReadOnlyList<ClassicAuthoredUiAsset> authoredUiAssets,
-        LogicalSourceRecord? authoredManifestSource)
-    {
-        List<LogicalSourceRecord> result = [.. arena2Sources];
-        if (authoredManifestSource is not null)
-        {
-            result.Add(authoredManifestSource);
-        }
-
-        foreach (ClassicAuthoredUiAsset asset in authoredUiAssets)
-        {
-            result.Add(new(
-                $"authored-ui/{asset.SourceLabel}",
-                ContentDigest.Compute(asset.PngBytes),
-                asset.PngBytes.LongLength));
-        }
-
-        NormalizedImportDocument.ValidateUnique(result, source => source.SourcePath, "classic media logical source");
-        foreach (LogicalSourceRecord source in result)
-        {
-            source.Validate();
-        }
-
-        return result.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray();
-    }
-
-    private static LogicalSourceRecord? CreateAuthoredManifestSource(ClassicAuthoredUiManifestInput? input, long maximumSourceBytes)
-    {
-        if (input is null) return null;
-        RequirePortableSourceBytes(input.SourceLabel, input.Bytes, maximumSourceBytes, nameof(input));
-        return new(
-            $"authored-ui/{input.SourceLabel}",
-            ContentDigest.Compute(input.Bytes),
-            input.Bytes.LongLength);
-    }
-
     private static ResolvedProfile ResolveProfile(Arena2ClassicMediaProfile profile)
     {
         IReadOnlyList<ClassicWeaponActionPresentation> weaponActions = profile.WeaponActions ?? DaggerWeaponActionSources
@@ -2302,7 +2261,7 @@ public sealed record Arena2ClassicMediaPublication(
 
     private sealed class SourceBytes
     {
-        private SourceBytes(Arena2ClassicMediaInputs inputs, IReadOnlyList<LogicalSourceRecord> logicalSources)
+        private SourceBytes(Arena2ClassicMediaInputs inputs)
         {
             Weapon01Cif = inputs.Weapon01Cif;
             Weapon02Cif = inputs.Weapon02Cif;
@@ -2369,7 +2328,6 @@ public sealed record Arena2ClassicMediaPublication(
                 ["FIRE00C6.CIF"] = inputs.Fire00C6Cif, ["FRST00C6.CIF"] = inputs.Frst00C6Cif, ["POIS00C6.CIF"] = inputs.Pois00C6Cif,
                 ["SHOK00C6.CIF"] = inputs.Shok00C6Cif, ["MJIC00C6.CIF"] = inputs.Mjic00C6Cif,
             };
-            LogicalSources = logicalSources;
         }
 
         public byte[] Weapon01Cif { get; }
@@ -2435,7 +2393,6 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] FmapPalCol { get; }
         public byte[] MapPalCol { get; }
         public IReadOnlyList<ClassicMissileTextureLeaf> MissileTextureLeaves { get; }
-        public IReadOnlyList<LogicalSourceRecord> LogicalSources { get; }
 
         public static SourceBytes From(Arena2ClassicMediaInputs inputs, long maximumSourceBytes)
         {
@@ -2463,18 +2420,15 @@ public sealed record Arena2ClassicMediaPublication(
                 ..inputs.MapMedia.Select(file => (file.FileName, file.Bytes)),
                 ..inputs.MissileTextureLeaves.Select(leaf => ($"TEXTURE.{leaf.Archive:000}", leaf.Bytes)),
             ];
-            List<LogicalSourceRecord> logicalSources = new(sources.Length);
             foreach ((string fileName, byte[] bytes) in sources)
             {
                 if (bytes is null || bytes.Length == 0 || bytes.LongLength > maximumSourceBytes)
                 {
                     throw new ArgumentException($"Classic media source '{fileName}' must be present and within the source-byte quota.", nameof(inputs));
                 }
-
-                logicalSources.Add(new($"arena2/{fileName}", ContentDigest.Compute(bytes), bytes.LongLength));
             }
 
-            return new(inputs, logicalSources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray());
+            return new(inputs);
         }
 
         public byte[] RequireWeapon(string fileName) => fileName switch

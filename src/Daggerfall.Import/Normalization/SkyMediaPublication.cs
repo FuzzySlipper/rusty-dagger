@@ -317,10 +317,8 @@ public sealed record SkyMoonResource(string Id, string Moon, string RelativePath
 
 /// <summary>Complete product-wide day-sky metadata and generated resource closure.</summary>
 public sealed record SkyMediaManifest(
-    IReadOnlyList<PublishedSource> Sources,
     IReadOnlyList<SkyPanoramaResource> Resources,
     IReadOnlyList<SkyPanoramaSelection> Selections,
-    IReadOnlyList<PublishedSource> NightSources,
     IReadOnlyList<SkyNightResource> NightResources,
     IReadOnlyList<SkyCurveKnot> DaylightFrameCurve,
     IReadOnlyList<SkyClearedResource> ClearedResources,
@@ -330,10 +328,8 @@ public sealed record SkyMediaManifest(
     public SkyMediaManifest Canonicalize() => this with
     {
         Moons = Moons.OrderBy(moon => moon.Id, StringComparer.Ordinal).ToArray(),
-        Sources = Sources.OrderBy(source => source.Path, StringComparer.Ordinal).ToArray(),
         Resources = Resources.OrderBy(resource => resource.Id, StringComparer.Ordinal).ToArray(),
         Selections = Selections.OrderBy(selection => selection.SkyIndex).ThenBy(selection => selection.TimeFrame).ToArray(),
-        NightSources = NightSources.OrderBy(source => source.Path, StringComparer.Ordinal).ToArray(),
         NightResources = NightResources.OrderBy(resource => resource.Id, StringComparer.Ordinal).ToArray(),
         DaylightFrameCurve = DaylightFrameCurve.OrderBy(knot => knot.Time).ToArray(),
         ClearedResources = ClearedResources.OrderBy(resource => resource.Id, StringComparer.Ordinal).ToArray(),
@@ -341,27 +337,21 @@ public sealed record SkyMediaManifest(
 
     public void Validate()
     {
-        ArgumentNullException.ThrowIfNull(Sources);
         ArgumentNullException.ThrowIfNull(Resources);
         ArgumentNullException.ThrowIfNull(Selections);
-        ArgumentNullException.ThrowIfNull(NightSources);
         ArgumentNullException.ThrowIfNull(NightResources);
         ArgumentNullException.ThrowIfNull(DaylightFrameCurve);
-        if (Sources.Count != SkyFileDecoder.FileCount || Resources.Count != SkyFileDecoder.FileCount * SkyFileDecoder.FramesPerRecord * 2
-            || Selections.Count != SkyFileDecoder.FileCount * 64 || (NightSources.Count != 0 && NightSources.Count != 4)
-            || NightResources.Count != NightSources.Count || DaylightFrameCurve.Count != 7)
+        if (Resources.Count != SkyFileDecoder.FileCount * SkyFileDecoder.FramesPerRecord * 2
+            || Selections.Count != SkyFileDecoder.FileCount * 64 || (NightResources.Count != 0 && NightResources.Count != 4)
+            || DaylightFrameCurve.Count != 7)
         {
-            throw new InvalidOperationException("The sky publication must close over all day sources, panoramas, time frames, optional four night sources and the frame curve.");
+            throw new InvalidOperationException("The sky publication must close over all day panoramas, time frames, optional four night backgrounds and the frame curve.");
         }
 
-        NormalizedImportDocument.ValidateUnique(Sources, source => source.Path, "sky source");
-        NormalizedImportDocument.ValidateUnique(NightSources, source => source.Path, "night sky source");
         NormalizedImportDocument.ValidateUnique(Resources, resource => resource.Id, "sky panorama");
         NormalizedImportDocument.ValidateUnique(NightResources, resource => resource.Id, "night sky resource");
-        foreach (PublishedSource source in Sources) source.Validate();
         foreach (SkyPanoramaResource resource in Resources) resource.Validate();
         foreach (SkyPanoramaSelection selection in Selections) selection.Validate();
-        foreach (PublishedSource source in NightSources) source.Validate();
         foreach (SkyNightResource resource in NightResources) resource.Validate();
         foreach (SkyCurveKnot knot in DaylightFrameCurve) knot.Validate();
         foreach (SkyClearedResource resource in ClearedResources) resource.Validate();
@@ -391,7 +381,7 @@ public sealed record SkyMediaManifest(
             throw new InvalidOperationException("A sky publishes its star catalogue.");
 
         HashSet<int> nightIndexes = NightResources.Select(resource => resource.NightIndex).ToHashSet();
-        if (NightSources.Count != 0 && (nightIndexes.Count != 4 || nightIndexes.Any(index => index is < 0 or >= 4)))
+        if (NightResources.Count != 0 && (nightIndexes.Count != 4 || nightIndexes.Any(index => index is < 0 or >= 4)))
             throw new InvalidOperationException("Night sky resources must cover NITE00 through NITE03 exactly.");
 
         HashSet<int> sourceIndexes = Resources.Select(resource => resource.SkyIndex).ToHashSet();
@@ -413,8 +403,7 @@ public sealed record SkyMediaManifest(
 /// <summary>Offline publication of all source day skies as ordinary 2:1 RGBA panorama resources.</summary>
 public sealed record SkyMediaPublication(
     IReadOnlyList<ImportPublicationArtifact> Artifacts,
-    SkyMediaManifest Manifest,
-    IReadOnlyList<PublishedSource> Sources)
+    SkyMediaManifest Manifest)
 {
     public const string ManifestRelativePath = "media/sky/manifest.json";
     public const int PanoramaWidth = 1024;
@@ -456,11 +445,9 @@ public sealed record SkyMediaPublication(
         List<ImportPublicationArtifact> artifacts = [];
         List<SkyPanoramaResource> resources = [];
         List<SkyClearedResource> cleared = [];
-        List<PublishedSource> provenance = [];
         foreach (SkyMediaSource source in sources)
         {
             SkyFileDocument document = SkyFileDecoder.Decode(source.SkyIndex, source.Bytes.Span, source.SourcePath);
-            provenance.Add(PublishedSource.Of(source.SourcePath, source.Bytes.Span));
             for (int frame = 0; frame < SkyFileDecoder.FramesPerRecord; frame++)
             {
                 for (int swap = 0; swap < 2; swap++)
@@ -500,7 +487,6 @@ public sealed record SkyMediaPublication(
             throw new InvalidOperationException("Night sky publication requires NITE00I0.IMG through NITE03I0.IMG exactly once.");
 
         List<SkyNightResource> nightResources = [];
-        List<PublishedSource> nightProvenance = [];
         foreach (NightSkyMediaSource source in nightSources)
         {
             IndexedImg image = ImgDecoder.DecodeHeaderless(source.Bytes.Span, source.SourcePath);
@@ -524,7 +510,6 @@ public sealed record SkyMediaPublication(
                 NightWidth, NightHeight, source.NightIndex, source.SourcePath, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length,
                 nightPalette.SourcePath, nightPalette.SourceHash, nightPalette.ByteLength, SkyNightStarPolicy.Donor,
                 SeamFixed: true, ClearColor: SkyNightPanoramaEncoder.ClearColor(rgba)));
-            nightProvenance.Add(PublishedSource.Of(source.SourcePath, source.Bytes.Span));
         }
 
         SkyMoonResource[] moonResources = [.. (moons ?? []).Select(moon => PublishMoon(artifacts, moon,
@@ -555,12 +540,12 @@ public sealed record SkyMediaPublication(
 
         byte[] stars = SkyStarCatalogue.Json();
         artifacts.Add(new(SkyStarCatalogue.RelativePath, stars, mediaId: SkyStarCatalogue.Id));
-        SkyMediaManifest manifest = new SkyMediaManifest(provenance, resources, selections, nightProvenance, nightResources,
+        SkyMediaManifest manifest = new SkyMediaManifest(resources, selections, nightResources,
             DaylightFrameCurve, cleared, moonResources, new(SkyStarCatalogue.Id, SkyStarCatalogue.RelativePath, ContentDigest.Compute(stars), stars.LongLength)).Canonicalize();
         manifest.Validate();
         byte[] manifestBytes = JsonSerializer.SerializeToUtf8Bytes(manifest, PublishedJson.Section);
         artifacts.Add(new(ManifestRelativePath, [.. manifestBytes, (byte)'\n']));
-        return new(artifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).ToArray(), manifest, provenance);
+        return new(artifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).ToArray(), manifest);
     }
 
     /// <summary>Lays a moon's frames into one atlas. Palette index 0 is the sky around the disc, and clear.</summary>

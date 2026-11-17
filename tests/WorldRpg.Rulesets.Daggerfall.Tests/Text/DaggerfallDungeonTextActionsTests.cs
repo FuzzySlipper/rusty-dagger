@@ -150,7 +150,7 @@ public sealed class DaggerfallDungeonTextActionsTests
     internal static DaggerfallTextValue Internal(string id, string text) => Value(new(DaggerfallTextKind.Internal, id), text);
 
     private static DaggerfallTextValue Value(DaggerfallTextKey key, string text) =>
-        new(key, "test", "en", 0, 0, text.Length, 1, DaggerfallTextState.Read, string.Empty, [],
+        new(key, "test", "en", 0, 1, DaggerfallTextState.Read, string.Empty, [],
             [new(DaggerfallTextCode.Text, text, null, null)]);
 
     internal static DaggerfallTextContext Context(string player) =>

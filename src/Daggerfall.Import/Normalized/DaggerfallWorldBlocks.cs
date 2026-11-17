@@ -337,5 +337,4 @@ public sealed record DaggerfallWorldBlockIndex(
     string MeshPublication,
     DaggerfallWorldBlockCounts Counts,
     IReadOnlyList<DaggerfallWorldBlockEntry> Blocks,
-    IReadOnlyList<string> UnplacedRmbBlocks,
-    IReadOnlyList<PublishedSource> Sources);
+    IReadOnlyList<string> UnplacedRmbBlocks);

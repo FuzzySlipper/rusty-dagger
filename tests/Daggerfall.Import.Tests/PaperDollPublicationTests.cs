@@ -94,7 +94,6 @@ public sealed class PaperDollPublicationTests
         {
             int records = TextureArchive.Parse(archives[number].Span, $"arena2/TEXTURE.{number}").RecordCount;
             Assert.Equal(Enumerable.Range(0, records).Select(record => $"item.{number}.{record}"), pass.Icons.Where(id => id.StartsWith($"item.{number}.", StringComparison.Ordinal)));
-            Assert.Contains($"arena2/TEXTURE.{number:000}", pass.Sources);
         }
         Assert.Equal(pass.Icons.Count, pass.Icons.Distinct().Count());
         IndexedTextureFrame arrow = TextureArchive.Parse(archives[207].Span, "arena2/TEXTURE.207").DecodeFrame(16, 0);

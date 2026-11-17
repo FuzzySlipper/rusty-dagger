@@ -65,8 +65,6 @@ internal sealed record DaggerfallTextValue(
     string Source,
     string Language,
     int Index,
-    long Offset,
-    int ByteLength,
     int Subrecords,
     DaggerfallTextState State,
     string Reason,

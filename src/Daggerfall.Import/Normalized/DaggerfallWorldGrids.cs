@@ -74,10 +74,9 @@ public sealed record DaggerfallGridRun(int Count, int Value)
 }
 
 /// <summary>One normalized climate grid: every cell the source states, sentinel column kept.</summary>
-/// <param name="Source">The source the grid was read from.</param>
 /// <param name="Rows">The rows in order, each tiling the full width including the sentinel column.</param>
 /// <param name="Values">The distinct cell values with the climate each names, in first-appearance order.</param>
-public sealed record DaggerfallClimateGrid(PublishedSource Source, IReadOnlyList<DaggerfallGridRow> Rows, IReadOnlyList<DaggerfallClimateValue> Values)
+public sealed record DaggerfallClimateGrid(IReadOnlyList<DaggerfallGridRow> Rows, IReadOnlyList<DaggerfallClimateValue> Values)
 {
     /// <summary>
     /// The exterior climate and season texture swaps: every source archive and record range a location in
@@ -88,8 +87,6 @@ public sealed record DaggerfallClimateGrid(PublishedSource Source, IReadOnlyList
 
     public void Validate()
     {
-        ArgumentNullException.ThrowIfNull(Source);
-        Source.Validate();
         if (Rows.Count != PakMap.Height)
         {
             throw new InvalidOperationException($"Climate grid carries {Rows.Count} rows for a {PakMap.Height}-row grid.");
@@ -158,15 +155,12 @@ public sealed record DaggerfallClimateValue(int Value, string Name, DaggerfallCl
 public sealed record DaggerfallClimateSwap(int Archive, ClassicClimateBase Climate, ClassicClimateSeason Season, int FirstRecord, int? LastRecord, int TargetArchive);
 
 /// <summary>One normalized politic grid: every cell the source states, sentinel column kept.</summary>
-/// <param name="Source">The source the grid was read from.</param>
 /// <param name="Rows">The rows in order, each tiling the full width including the sentinel column.</param>
 /// <param name="Values">The distinct cell values with the region each names, in first-appearance order.</param>
-public sealed record DaggerfallPoliticGrid(PublishedSource Source, IReadOnlyList<DaggerfallGridRow> Rows, IReadOnlyList<DaggerfallPoliticValue> Values)
+public sealed record DaggerfallPoliticGrid(IReadOnlyList<DaggerfallGridRow> Rows, IReadOnlyList<DaggerfallPoliticValue> Values)
 {
     public void Validate()
     {
-        ArgumentNullException.ThrowIfNull(Source);
-        Source.Validate();
         if (Rows.Count != PakMap.Height)
         {
             throw new InvalidOperationException($"Politic grid carries {Rows.Count} rows for a {PakMap.Height}-row grid.");
@@ -258,7 +252,6 @@ public static class DaggerfallWorldGridsBuilder
     {
         PakMap map = PakDecoder.Decode(bytes, label);
         return new DaggerfallClimateGrid(
-            PublishedSource.Of(label, bytes),
             Rows(map),
             ClimateValues(map))
         {
@@ -297,7 +290,6 @@ public static class DaggerfallWorldGridsBuilder
     {
         PakMap map = PakDecoder.Decode(bytes, label);
         return new DaggerfallPoliticGrid(
-            PublishedSource.Of(label, bytes),
             Rows(map),
             PoliticValues(map));
     }
