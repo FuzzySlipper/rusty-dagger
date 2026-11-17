@@ -133,12 +133,12 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
         session.PublishInitial();
         Dictionary<string, object?> initial = Assert.IsType<Dictionary<string, object?>>(engine.Published());
 
-        // A refreshed wall with windows draws its glass through the mask the import cut from the classic wall (until #10891).
-        string[] glass = [.. site.Materials.SelectMany(material => new[] { material.SummerGlass, material.WinterGlass, material.RainGlass })
-            .OfType<ContentArtifact>().Select(mask => mask.Path).Distinct()];
-        Assert.NotEmpty(glass);
-        Assert.Contains(site.Materials, material => material.SummerGlass is not null && art.Surface(material.TexturePath) is not null);
-        Assert.All(glass, path => Assert.Contains(path, content.Opened));
+        // A refreshed wall with windows glows through its own glass, which the art pack carries, and opens none the import cut
+        // from the classic wall.
+        NormalizedMaterial[] windows = [.. site.Materials.Where(material => material.SummerGlass is not null && art.Surface(material.TexturePath) is not null)];
+        Assert.NotEmpty(windows);
+        Assert.All(windows, material => Assert.Contains(art.Surface(material.TexturePath)!.Glass!.Path, content.Opened));
+        Assert.All(windows, material => Assert.DoesNotContain(material.SummerGlass!.Path, content.Opened));
         Assert.Contains(graphics.MaterialRequests.Values, request => !request.EmissionMap.Equals(default(RenderResourceReference)));
 
         // A helmet's refreshed layer hides the hair beneath it through its own mask, which the art pack carries.

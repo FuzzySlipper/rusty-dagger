@@ -117,6 +117,45 @@ public sealed class ActorSpritePresentationTests
         Assert.Contains("winter-glass.png", graphics.OpenedResourcePaths);
     }
 
+    /// <summary>
+    /// A refreshed window glows through its own glass, and the glass the import cut from the classic window is opened only
+    /// when classic art draws the wall; a refreshed surface over a classic window without glass of its own is refused by name.
+    /// </summary>
+    [Fact]
+    public void A_refreshed_window_glows_through_its_own_glass_and_opens_the_classic_glass_only_for_classic_art()
+    {
+        List<string> releases = []; var graphics = new AppearanceFake(releases); var source = MediaInputs();
+        var profile = new DaggerfallSiteProfile(source.Project, source.Geometry, source.WorldAppearance, source.InitialLook,
+            [new NormalizedMaterial(0, "materials/texture-312-3.png", Hash) { SummerGlass = new("materials/texture-312-3-glass.png", Hash) }], source.ActorSprites);
+        ContentFake content = MediaContent(releases);
+        foreach (string path in new[] { "materials/texture-312-3.png", "materials/texture-312-3-glass.png", "refreshed/surfaces/texture-312-3.png", "refreshed/surfaces/texture-312-3-glass.png" })
+            content.Add(path, Hash);
+        DaggerfallArtReplacements Art(string glass) => DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes($$$"""
+            {"artReplacements": {"images": [], "surfaces": [{"replaces": {"archive": 312, "record": 3},
+              "path": "refreshed/surfaces/texture-312-3.png", "byteLength": 1, "sha256": "0000000000000001000000000000000200000000000000030000000000000004",
+              "width": 128, "height": 256{{{glass}}}}]}}
+            """), "test.art");
+        DaggerfallArtReplacements art = Art(""", "glass": {"path": "refreshed/surfaces/texture-312-3-glass.png", "byteLength": 1, "sha256": "0000000000000001000000000000000200000000000000030000000000000004", "width": 128, "height": 256}""");
+        bool refreshed = true;
+        using var presentation = new DaggerfallSiteAppearance(content, graphics, profile,
+            configure: site => site.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => refreshed));
+        Assert.Contains("refreshed/surfaces/texture-312-3-glass.png", graphics.OpenedResourcePaths);
+        Assert.DoesNotContain("materials/texture-312-3-glass.png", graphics.OpenedResourcePaths);
+        presentation.UpdateWindowGlass(Vector3.One, .8f);
+        MaterialRequest own = Assert.Single(graphics.MaterialUpdates).Replacement;
+        Assert.Equal(.8f, own.EmissionIntensity);
+
+        using ActorsState actors = EmptyActors();
+        refreshed = false;
+        presentation.Publish(actors);
+        Assert.Contains("materials/texture-312-3-glass.png", graphics.OpenedResourcePaths);
+        Assert.NotEqual(own.EmissionMap, graphics.MaterialUpdates[^1].Replacement.EmissionMap);
+
+        InvalidOperationException refused = Assert.Throws<InvalidOperationException>(() => new DaggerfallSiteAppearance(content, graphics, profile,
+            configure: site => site.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, Art(""), () => true)));
+        Assert.Contains("materials/texture-312-3.png", refused.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void A_surface_with_no_glass_takes_no_update_when_the_windows_light()
     {

@@ -76,6 +76,11 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
   after that, promotion keeps what the payload holds, so promote with `main` first. A redone effect with other frames
   is refused until its `sequence` fits: set it with `--set ID NAME VALUE` (a JSON value, marked set by hand), or
   take every value from the classic again with `--recompute ID`. Promotion says when new art kept an old placement.
+- A window surface (a record the import cuts classic glass for: `texture-A-R-glass.png` in its materials) is promoted with
+  its own glass: name the refreshed panes' colours, and a box if the wall shares one, in `tools/surfaces/glass.json`
+  (`glass.py --suggest KEY` proposes them), run `tools/surfaces/glass.py KEY`, and judge `glass.py --sheet OUT.png KEY`
+  by day, night and winter before promoting. A winter record names its own. Promotion refuses a window without glass and
+  keeps the glass it has on a re-promote; the game refuses a refreshed window whose entry states none.
 - Promotion writes into the art pack's folder and rewrites
   `src/Daggerfall.Import.Tool/inputs/replaced-classic.json`, the classic identities the pack replaces, which a
   player's import leaves out: commit both with

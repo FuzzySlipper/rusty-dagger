@@ -967,15 +967,17 @@ public sealed class PublishedContentDeliveryTests
         Assert.All(items.SelectMany(replacement => new[] { replacement.World, replacement.DyeMask?.World }).OfType<DaggerfallArtWorldImage>(), world =>
             Assert.Equal([8, 6, 0, 0, 0], content.ReadBytes(world.File.Path).Span[24..29].ToArray()));
 
-        // Refreshed walls, floors and ceilings stand in for classic texture records, each an 8-bit RGBA PNG of its stated size.
+        // Refreshed walls, floors and ceilings stand in for classic texture records, each an 8-bit RGBA PNG of its stated size,
+        // and a window's own glass too, the size of its surface.
         JsonElement[] surfaces = [.. section.GetProperty("surfaces").EnumerateArray()];
         Assert.NotEmpty(surfaces);
         Assert.Equal(surfaces.Length, art.Surfaces.Count);
-        Assert.All(art.Surfaces.Values, surface =>
+        Assert.Contains(art.Surfaces.Values, surface => surface.Glass is not null);
+        Assert.All(art.Surfaces.Values.SelectMany(surface => new[] { (surface, surface.File), (surface, surface.Glass) }).Where(file => file.Item2 is not null), file =>
         {
-            ReadOnlySpan<byte> png = content.ReadBytes(surface.File.Path).Span;
+            ReadOnlySpan<byte> png = content.ReadBytes(file.Item2!.Path).Span;
             Assert.Equal([8, 6, 0, 0, 0], png[24..29].ToArray());
-            Assert.Equal((surface.Width, surface.Height), (BinaryPrimitives.ReadInt32BigEndian(png[16..20]), BinaryPrimitives.ReadInt32BigEndian(png[20..24])));
+            Assert.Equal((file.surface.Width, file.surface.Height), (BinaryPrimitives.ReadInt32BigEndian(png[16..20]), BinaryPrimitives.ReadInt32BigEndian(png[20..24])));
         });
 
         // Refreshed flats stand in for classic records, each an 8-bit RGBA atlas of its stated size; a flat that gives light
@@ -1017,6 +1019,7 @@ public sealed class PublishedContentDeliveryTests
         JsonElement[] files = [.. owners, .. owners.Where(owner => owner.TryGetProperty("world", out _)).Select(owner => owner.GetProperty("world")),
             .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"),
             .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces,
+            .. surfaces.Where(surface => surface.TryGetProperty("glass", out _)).Select(surface => surface.GetProperty("glass")),
             .. flats, .. flats.Where(flat => flat.TryGetProperty("emission", out _)).Select(flat => flat.GetProperty("emission")),
             .. people.DistinctBy(person => person.GetProperty("path").GetString()),
             .. new[] { "shell", "shader", "tuft", "surfaceShader" }.Select(file => section.GetProperty("groundCover").GetProperty(file)),

@@ -174,7 +174,8 @@ internal sealed record DaggerfallArtShell(int Layer, int Layers)
 /// A refreshed surface texture standing in for one classic texture record that walls, floors and ceilings draw: an RGBA
 /// PNG the renderer repeats over the same faces the classic record covers.
 /// </summary>
-internal sealed record DaggerfallArtSurface(DaggerfallArtFile File, int Width, int Height);
+/// <param name="Glass">For a window, its own glass: white where the windows glow at night over black, on the surface's UVs.</param>
+internal sealed record DaggerfallArtSurface(DaggerfallArtFile File, int Width, int Height, DaggerfallArtFile? Glass = null);
 
 /// <summary>
 /// The refreshed ground cover: a tileable shell texture whose alpha is each texel's blade height, this many texels square and
@@ -565,8 +566,10 @@ internal sealed class DaggerfallArtReplacements
                     int width = surface.GetProperty("width").GetInt32(), height = surface.GetProperty("height").GetInt32();
                     if (width <= 0 || height <= 0)
                         throw new InvalidOperationException($"Content pack '{packId}' states an empty surface for {replaces.Item1}/{replaces.Item2}.");
+                    DaggerfallArtFile? glass = surface.TryGetProperty("glass", out JsonElement mask)
+                        ? File(mask, $"The glass of the refreshed surface for {replaces.Item1}/{replaces.Item2}") : null;
                     if (!surfaces.TryAdd(replaces, new(new(surface.GetProperty("path").GetString()!,
-                            DaggerfallContentHash.Parse(surface.GetProperty("sha256").GetString()!, $"The refreshed surface for {replaces.Item1}/{replaces.Item2}")), width, height)))
+                            DaggerfallContentHash.Parse(surface.GetProperty("sha256").GetString()!, $"The refreshed surface for {replaces.Item1}/{replaces.Item2}")), width, height, glass)))
                         throw new InvalidOperationException($"Content pack '{packId}' names two surfaces for {replaces.Item1}/{replaces.Item2}.");
                 }
             foreach ((string name, string kind, Dictionary<(int Archive, int Record), DaggerfallArtFlat> sprites) in new[] { ("flats", "flat", flats), ("people", "person", people) })

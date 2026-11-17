@@ -982,25 +982,13 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             throw new ArgumentException("Door visuals require the selected door runtime.", nameof(parts));
         foreach (NormalizedMaterial material in inputs.Materials)
         {
-            Dictionary<string, RenderResource> masks = new(StringComparer.Ordinal);
-            RenderResource? Glass(ContentArtifact? mask)
-            {
-                if (mask is null) return null;
-                if (!masks.TryGetValue(mask.Path, out RenderResource? resource))
-                {
-                    resource = appearance.OpenTexture(content, mask.Path, mask.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate).Handle;
-                    locationResources.Add(resource);
-                    masks.Add(mask.Path, resource);
-                }
-                return resource;
-            }
-            // Refreshed walls keep the classic's windows, so the glass masks the import cut from the classic serve both art sets.
-            SurfaceMaterial surface = new(material, [Glass(material.SummerGlass), Glass(material.WinterGlass), Glass(material.RainGlass)]);
+            SurfaceMaterial surface = new(material);
             AttachRefreshedSurface(surface);
-            // A material starts in the summer of the art set drawn now, so refreshed art opens no classic texture it draws over.
+            // A material starts in the summer of the art set drawn now, so refreshed art opens no classic texture or glass it draws over.
             surface.Current = DrawnSurface(surface, 0, drawRefreshedEffects());
-            surface.Level = surface.Glass[0] is null ? 0F : windowLevel;
-            surface.Material = appearance.CreateMaterial(SurfaceRequest(surface.Current, surface.Glass[0]));
+            surface.CurrentGlass = DrawnGlass(surface, 0, drawRefreshedEffects());
+            surface.Level = surface.CurrentGlass is null ? 0F : windowLevel;
+            surface.Material = appearance.CreateMaterial(SurfaceRequest(surface.Current, surface.CurrentGlass));
             locationMaterials.Add(surface.Material);
             materials.Add(surface.Material);
             materialsBySlot.Add(material.Slot, surface.Material);

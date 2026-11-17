@@ -55050,7 +55050,14 @@
     "byteLength": 22928,
     "sha256": "54b888eea96afdfdeebcb3c5548cd29d4d5e79f604c7d11ae613f2a84b294374",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-009-3-glass.png",
+     "byteLength": 594,
+     "sha256": "5b52ea203c29bfbd096c808e0f244d7f23e35aa292475aebbc068addd164105e",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -55105,7 +55112,14 @@
     "byteLength": 29922,
     "sha256": "7cc3e27cdfdd8e08f13ae0a102ef70b1afd15cd9793599165e3a553e3454386a",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-012-3-glass.png",
+     "byteLength": 1406,
+     "sha256": "79b545f0b0e6ca53b579d9af93f7ba02eb7d7650189f6c5377c64febe26a34c9",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -55138,7 +55152,14 @@
     "byteLength": 38171,
     "sha256": "4012121bafe7de61168860bced70b1717d9a89ca05cdee754591950be453bfd2",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-014-3-glass.png",
+     "byteLength": 1436,
+     "sha256": "49f7a2335dbd9772db47fec9a31b19d071b24ae76cc6905cd83ac56cf2c0d9ff",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -55534,7 +55555,14 @@
     "byteLength": 16558,
     "sha256": "ec16a11fd05fb349e9bc5996314bc4499b74c89060e23c978ccc5cf2a920ad51",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-026-3-glass.png",
+     "byteLength": 631,
+     "sha256": "d75f80b3124d2fd09122b42ba433830ed7b1b64aec328a7ac67182d3ed59dd39",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -55677,7 +55705,14 @@
     "byteLength": 33654,
     "sha256": "c10d458eec42a44f46c5d239fd3add9d8e996b2f0ab92fcbd9c642728400eca8",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-035-3-glass.png",
+     "byteLength": 1683,
+     "sha256": "444e909986cd130a779ae0592ac3c3a6df8368574c935d72274aa3137ff72426",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -55776,7 +55811,14 @@
     "byteLength": 32279,
     "sha256": "df54af85d046af1143c8a474e3d34f36423865a23838fa150ae81b5552e0493c",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-038-3-glass.png",
+     "byteLength": 1473,
+     "sha256": "eef681f2e15e9b60bebf8498cd297c06a43d0696175f8ea7ddf63dc79879cd97",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -55919,7 +55961,14 @@
     "byteLength": 40549,
     "sha256": "168b84fbef7530606578a6160cdf6d0e4253601c4a3918204f9873f0a95e9682",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-042-3-glass.png",
+     "byteLength": 1489,
+     "sha256": "a2065342902a782edb2da3781affe3bf38cf14db7570376a39eba972e662ccef",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -56414,7 +56463,14 @@
     "byteLength": 24561,
     "sha256": "cd5d006491b6a30a0fac71cfdfcfd2b062fc33af4c7bebae110c94679dc3f2fd",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-058-3-glass.png",
+     "byteLength": 2307,
+     "sha256": "c983222b439f9e32bc24be986e1087f09bd6a6d2bf6bc9d84f5b1a00adbc9904",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -56502,7 +56558,14 @@
     "byteLength": 38761,
     "sha256": "ba85460f9a962a932b1545894c8205c4e94ddfab393d6970feee87cc429ec75d",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-061-3-glass.png",
+     "byteLength": 1682,
+     "sha256": "4b20a63bbeb601da0054891e366e14aad1c2892f7c46b57771bc22590a97a752",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -56590,7 +56653,14 @@
     "byteLength": 26585,
     "sha256": "032fbd08b1fb05de51b9e77e963d39874b11600f989e2fc7da3f37aa87f358ce",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-064-3-glass.png",
+     "byteLength": 650,
+     "sha256": "9b4523df6d4e40fd7f6d266a202fc634c5110b993133a7518efb685651f37891",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -57118,7 +57188,14 @@
     "byteLength": 20933,
     "sha256": "56cac9dca7384f3cb0e806d77b88b431640a19a679a32cbb3c0e47db1f00a1ff",
     "width": 128,
-    "height": 128
+    "height": 128,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-075-0-glass.png",
+     "byteLength": 492,
+     "sha256": "0961b7972121663a703dcefa329a681eeb31caa314608ff4656978d1678346ee",
+     "width": 128,
+     "height": 128
+    }
    },
    {
     "replaces": {
@@ -57129,7 +57206,14 @@
     "byteLength": 15227,
     "sha256": "88850ada7f9468e7569625639dda6fbcac8505c1531d7fef14c72be92ce9258f",
     "width": 128,
-    "height": 128
+    "height": 128,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-077-2-glass.png",
+     "byteLength": 487,
+     "sha256": "01319c587373f2245f83432d855e8da1e8b6307cfe7129e52b021a4a196d592d",
+     "width": 128,
+     "height": 128
+    }
    },
    {
     "replaces": {
@@ -57140,7 +57224,14 @@
     "byteLength": 19007,
     "sha256": "6fa1ca36d7573b7823e9b2cd4f0c7b26ced4dae59ce259ddf365a911fb855a27",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-079-0-glass.png",
+     "byteLength": 1516,
+     "sha256": "60416188c018904acb677728963fcb8f85bb9609e7711c4a78f08e982d3cca27",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -57162,7 +57253,14 @@
     "byteLength": 29072,
     "sha256": "663cd1fe234194573b5369722f756a754d5a36c12510e4a9db746f295cc98125",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-079-2-glass.png",
+     "byteLength": 1435,
+     "sha256": "448496789323ee34205e5b7e4b129e8e1a4ca81fcd7fd3c4d3b647b1d5de588f",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -57184,7 +57282,14 @@
     "byteLength": 22241,
     "sha256": "b0c1b66a89cb69242deb4ac66beb300ddca1aad62492d6e2bb3df48f50b93d80",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-080-0-glass.png",
+     "byteLength": 1449,
+     "sha256": "e5e359e55c10684de680b1361a1787723e7d0aff84eb2dd1e83d100121b5aa2a",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -57206,7 +57311,14 @@
     "byteLength": 28961,
     "sha256": "289752ebb8a110b4ad930799f9011c1ddc344d2e93d23e639de25e24b1666334",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-080-2-glass.png",
+     "byteLength": 1381,
+     "sha256": "8b1e0999f966a76a1559cc5f118273306a1e7bd535c8624eb47cf4ae7c1f144b",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -57250,7 +57362,14 @@
     "byteLength": 24793,
     "sha256": "4792ea811241851dec4a5b4212635afb64f1286185309a8ebcc7458ae24558a2",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-082-0-glass.png",
+     "byteLength": 1538,
+     "sha256": "fb6826919eedea585cb8fa4bf0ba2db48b73caa574b2e746dbfc1063ad403afd",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -57305,7 +57424,14 @@
     "byteLength": 25176,
     "sha256": "5510df62b17348fca3e04e3d7b337f99d01d3b32a6b6ca45c8643ade6dbe84af",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-083-0-glass.png",
+     "byteLength": 1411,
+     "sha256": "eeb65ef498f48647990d4839d23878dcb62e7a733d3a06fde7bcd04d833d301c",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -60000,7 +60126,14 @@
     "byteLength": 28556,
     "sha256": "ebc6ec2e55d30178d965b169a470c2d2f2dae0f07a9e7bc180f36c63824317b5",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-109-3-glass.png",
+     "byteLength": 827,
+     "sha256": "b3c03e52f2c4c23d32b5ee0c19594bd36a5faa7b8a9c2e2519186c9db190d507",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -60055,7 +60188,14 @@
     "byteLength": 27618,
     "sha256": "878073f1f56e7a66edd89657089a40cf5bc0050bdfd89e19325282e7d4764cca",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-110-3-glass.png",
+     "byteLength": 771,
+     "sha256": "1372a4c807f18d2f32c8aeb5ffa9b61106a09ea313e00040835b69f2adc43a1c",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -60099,7 +60239,14 @@
     "byteLength": 37426,
     "sha256": "5dee7166900bd15b4943898a884dd73b37b584c47dfe56385dbf7b924d55553d",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-112-3-glass.png",
+     "byteLength": 1127,
+     "sha256": "57c84d39364d50a0b597ae56d898310d8f763438899fa1b6d11a38c9c8325e82",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -60143,7 +60290,14 @@
     "byteLength": 36706,
     "sha256": "c9d678b49897a6a26691952cafd250aefb441964b759b726834c60c6c7acc46e",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-113-3-glass.png",
+     "byteLength": 1110,
+     "sha256": "86ee7217b5695f6cb6e577857206090218f26c511abe1985e25a9044fef4d4f6",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -60176,7 +60330,14 @@
     "byteLength": 33080,
     "sha256": "3c1d6c79637fc3a233faeca63700516570db639d09bc5072b3c7717b28c69e6f",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-114-3-glass.png",
+     "byteLength": 1564,
+     "sha256": "6030b7d4d2f49edf4a0a6fb30ba8ee2f9e89da3c40804be4e140c38c2d2e941f",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -60209,7 +60370,14 @@
     "byteLength": 29918,
     "sha256": "f2824dc1f9bf5c9737b7eb6918d6621f591c2ea0abe6e4b24c7d566c456794f3",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-115-3-glass.png",
+     "byteLength": 1513,
+     "sha256": "6ee6380a6aa0741643ef90778e1724c11d573257ac303df8be36e4b00173f685",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -60693,7 +60861,14 @@
     "byteLength": 28378,
     "sha256": "d2da459e4974df59914c9690b07076fcd5182fb60ca6cb0da0d66bf053a69b65",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-126-3-glass.png",
+     "byteLength": 1433,
+     "sha256": "4c4bd780894640464d4f354db0abbb9f7b5365a30c906910333ca6208ca49b55",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -60737,7 +60912,14 @@
     "byteLength": 28205,
     "sha256": "8abdfdab0f4021316e8eca38c8def2bc6544876977cb549685dfafeeb915d6f7",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-127-3-glass.png",
+     "byteLength": 1411,
+     "sha256": "ad8950ca3c70f3a48be6a88739b9eb2fd0c2fc7923890b13917332440fa7044d",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -61078,7 +61260,14 @@
     "byteLength": 50729,
     "sha256": "d7e52e8c05aba503b37174f440270a6def965201e2c6a56b647f21d3135c9f9a",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-135-3-glass.png",
+     "byteLength": 1531,
+     "sha256": "102c356acb72a5bd8ee1b303caa60fb25a7e59299de1b92effea72e73192a4c0",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -61122,7 +61311,14 @@
     "byteLength": 42573,
     "sha256": "2a7b9fde73a6ef031afbe74bb256c34147d1f45d822585b46b7b3c36139f41a6",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-136-3-glass.png",
+     "byteLength": 1484,
+     "sha256": "e260c5deacc24763b8cd30738d5ade212042562eb15a70e78af818055dacec61",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -61221,7 +61417,14 @@
     "byteLength": 41421,
     "sha256": "5e45f598116d105f0702259e35aa4d683514706738fed19b6a1d301481359ed5",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-138-3-glass.png",
+     "byteLength": 1554,
+     "sha256": "1f6c3a4267bab967ad101248e21a0f36bfeaddbd201b8fd8d5f035e5ce4e3eb2",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -61265,7 +61468,14 @@
     "byteLength": 37238,
     "sha256": "1c222ad69df31d76038de14ba91971278c57634dfc846946123567bb8b134ff3",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-139-3-glass.png",
+     "byteLength": 1251,
+     "sha256": "7a4a013d7f91175630e23567fa66b72a827d64617274ec6393de5f901d3588ce",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -61408,7 +61618,14 @@
     "byteLength": 34568,
     "sha256": "307ed2351c467dc655fd71088e68de18df8a9d8fef3dcdaf329ea808286878b4",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-142-3-glass.png",
+     "byteLength": 1490,
+     "sha256": "e561cc0a13f8c6f191f3fa26d78483a4fe8473e10c7999afd528e38e6bd9c4c1",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -61452,7 +61669,14 @@
     "byteLength": 28974,
     "sha256": "55fd5092c7c75cbd2a03f59e0a31e34262c9eedff3020b6b827c00da9ef6405c",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-143-3-glass.png",
+     "byteLength": 1178,
+     "sha256": "a8d2f6237cabc9d35cbfc75227c5f54fa72160b95c7bce4e9bfe01f2a2b0d857",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -61782,7 +62006,14 @@
     "byteLength": 21609,
     "sha256": "96347b7fa6a5302adcbe042b18134c951f6146a03b8382e29e94671a69d8795c",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-151-3-glass.png",
+     "byteLength": 697,
+     "sha256": "3f33741b0d36558291c18dc74babf34c0464136809936861cb3d73760be9ecda",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -61903,7 +62134,14 @@
     "byteLength": 23945,
     "sha256": "426f75b72d2fb66ec6c15c4996482126ba45c3f96f8eb95fbc3bab6dcb231151",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-154-3-glass.png",
+     "byteLength": 841,
+     "sha256": "26ee028446f74f61a7c6cc1f4cbcadab1af55c728864db595ec7baecbcfa8ac9",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -62002,7 +62240,14 @@
     "byteLength": 22431,
     "sha256": "ed38b641a8b7fe3821b370e3b789841feceeb1ac51e8e0dc859698c5c9353f29",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-158-3-glass.png",
+     "byteLength": 656,
+     "sha256": "0d593433d811f4fd62299c91542c3bce75dfe5a7c5f93ad0606b9f236d095c04",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -62046,7 +62291,14 @@
     "byteLength": 22661,
     "sha256": "6c906cb35f5492f441fa2cf7c16308a0768c3755d34cedc0944414db3b2ae694",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-159-3-glass.png",
+     "byteLength": 762,
+     "sha256": "af7a4a56d239f9af099d6b6eed188e32ba5711a0a2472985d69eb473e6252199",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -62134,7 +62386,14 @@
     "byteLength": 31334,
     "sha256": "1aa406c5ec6793c3d2b04954f8eac6d43724ec1e0e6b15e5287f138415b1927d",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-161-3-glass.png",
+     "byteLength": 693,
+     "sha256": "f6a5c792c4c6b059cab7f8ba9b515ad19982bd2b35840431c8902f7a9a010dde",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -62167,7 +62426,14 @@
     "byteLength": 30234,
     "sha256": "f0702f2ab4420bdaf79b21dfd1e2cb2179bde443bcca6769669ff8b9f9b1f3bb",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-162-3-glass.png",
+     "byteLength": 735,
+     "sha256": "74244258637fef2642d7c0fb5b3eec2905d472de1d8d9783de94a8e97ff70dd8",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -62255,7 +62521,14 @@
     "byteLength": 41906,
     "sha256": "f3c70f22019eefe90449707354e68f716dd0e59b869f29a5a0121a187a22dc71",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-164-3-glass.png",
+     "byteLength": 1308,
+     "sha256": "c0f65189564d5eec78628e1a1e25f858a5e7d9bb44bced5bbb862621cad53e30",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -62288,7 +62561,14 @@
     "byteLength": 38896,
     "sha256": "c0ad49f694e19db75a012b13e09ffaa17b857eb042a2e575bc9129c316813d00",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-165-3-glass.png",
+     "byteLength": 1225,
+     "sha256": "4fca8da588d1837a84ce61b334980ac7638e65f7ffc7af99fef7e74428eeeea8",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -62596,7 +62876,14 @@
     "byteLength": 16360,
     "sha256": "573af38c72086b3ff05fc6c6c39a9566d66991c56839f93739653620247ed9fd",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-171-2-glass.png",
+     "byteLength": 675,
+     "sha256": "c95f2e4141a79492719e0ba31856c05d9c7f4531941a2163fd2c9aa4095a40ec",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -62651,7 +62938,14 @@
     "byteLength": 14778,
     "sha256": "98d7ef41445249d6f26e34b8147375af474f5359fe619eb3c515ec820a7eb7a6",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-172-3-glass.png",
+     "byteLength": 596,
+     "sha256": "9af9937f4d38b09b1be98c36fb603da48a90e0d846dfaef7e239212a61441450",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -64631,7 +64925,14 @@
     "byteLength": 28556,
     "sha256": "ebc6ec2e55d30178d965b169a470c2d2f2dae0f07a9e7bc180f36c63824317b5",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-309-3-glass.png",
+     "byteLength": 827,
+     "sha256": "b3c03e52f2c4c23d32b5ee0c19594bd36a5faa7b8a9c2e2519186c9db190d507",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -64686,7 +64987,14 @@
     "byteLength": 27618,
     "sha256": "878073f1f56e7a66edd89657089a40cf5bc0050bdfd89e19325282e7d4764cca",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-310-3-glass.png",
+     "byteLength": 771,
+     "sha256": "1372a4c807f18d2f32c8aeb5ffa9b61106a09ea313e00040835b69f2adc43a1c",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -64730,7 +65038,14 @@
     "byteLength": 23020,
     "sha256": "e1b727a634fe686bbd776173ef2ebba9309acc722a714d30b6376a0f75ac5b99",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-312-3-glass.png",
+     "byteLength": 611,
+     "sha256": "8080ff9cd556dcd801d10c762d8d13fc812216d9ca175ffc5aa9308305e9b652",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -64774,7 +65089,14 @@
     "byteLength": 23783,
     "sha256": "f9f8796fbb4fda10acd0e7523599038f738686b533a005040ac36ca0eb685760",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-313-3-glass.png",
+     "byteLength": 611,
+     "sha256": "8080ff9cd556dcd801d10c762d8d13fc812216d9ca175ffc5aa9308305e9b652",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -64807,7 +65129,14 @@
     "byteLength": 34014,
     "sha256": "5beb8f3b81d281af05a8ffbd69789916fcf9d07237583025d87c2e11e8954d8c",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-314-3-glass.png",
+     "byteLength": 1423,
+     "sha256": "37521a42881cebd02c8d88d241f4432125b1954eb065b26ce00e17e5b15f5b81",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -64840,7 +65169,14 @@
     "byteLength": 31743,
     "sha256": "6bea36af5b8037e6170bd8174bbe195683f2122ca2b746ba6124edc3a0e37047",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-315-3-glass.png",
+     "byteLength": 1313,
+     "sha256": "910bbd64ac87ed91bc259cdcf1d937a45dc4cd6e5a11a72dd1c40924b87279d9",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -65379,7 +65715,14 @@
     "byteLength": 21954,
     "sha256": "ab49fb3912b615701824f956d3a6f12f9627dfb6592eb3ae1fc81f263dc88a00",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-326-3-glass.png",
+     "byteLength": 817,
+     "sha256": "aa4306341d0da86e82ab2178582752a007c27af49f90911d7ad54a91da113369",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -65423,7 +65766,14 @@
     "byteLength": 24761,
     "sha256": "c9f704f8b9c5475adb76cc74d73dc0b228daa56f9ffc33409a9cc44e48a273b1",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-327-3-glass.png",
+     "byteLength": 831,
+     "sha256": "91c48fb105cb9df8db3df0c8e8f77a398a6b30e78e969bcc19c159893a2b0c73",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -65830,7 +66180,14 @@
     "byteLength": 41554,
     "sha256": "241b0615c2567aa1843fbb81b0df60542de34235b4ea2718b2b8e473e71135b6",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-335-3-glass.png",
+     "byteLength": 1478,
+     "sha256": "9553821e7277bbe21b9d2150f508c1ba8fc00dde5522fd2f6208ee8891a219ee",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -65874,7 +66231,14 @@
     "byteLength": 35259,
     "sha256": "792af6e86f562028a63aa9864f742b3ee43a01b040b509c552174559e701ae5b",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-336-3-glass.png",
+     "byteLength": 1391,
+     "sha256": "8ce149f478e90daa9c250cca0d4f4b7c40c8966ea4e4b33c5c68d5ecc3149ec6",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -65973,7 +66337,14 @@
     "byteLength": 26673,
     "sha256": "406a267f2c154118d81d45a3face0ca4906c9559b578911372a361bf1a0763dc",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-338-3-glass.png",
+     "byteLength": 1224,
+     "sha256": "af28bb2999c7add54d61d8278a1fb67a186b0eeb86f41f9ebccf59b8159a2cae",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -66017,7 +66388,14 @@
     "byteLength": 26692,
     "sha256": "c11056309ef688f33cf221827bbe582ac2b85739f594983c7fc2959a521c09d1",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-339-3-glass.png",
+     "byteLength": 1182,
+     "sha256": "17dac705fb4e73f5a9486e3bb96e3c5bb54c241d64bc42329f26b1bec65fe03c",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -66160,7 +66538,14 @@
     "byteLength": 22344,
     "sha256": "a8995c2659fafa4ec9137953b778927a59ccbffa42768e3fec6940ef94f06a33",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-342-3-glass.png",
+     "byteLength": 1332,
+     "sha256": "3c7ad2a354028feb7b0d903704f18caf9c3c70446e5613a0d4ec6cd3be22057a",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -66204,7 +66589,14 @@
     "byteLength": 25015,
     "sha256": "7d9623597aa548ef48b7f59bbb50ed0036c7455ab35669df1a8b26a72b13b33d",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-343-3-glass.png",
+     "byteLength": 1349,
+     "sha256": "25c077198616e274ed95bab2233d0e78fa2b8479cf4c229d6b94be6b99d395f3",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -66424,7 +66816,14 @@
     "byteLength": 10164,
     "sha256": "97b012f340cf18e002f6ad94da5d505f19e392df696552a92d4f4e59ef775b3d",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-351-3-glass.png",
+     "byteLength": 780,
+     "sha256": "4930fe15672fc876929b281199484ae2fbd91dfa01129eae31b95c5890dee5d4",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -66611,7 +67010,14 @@
     "byteLength": 36691,
     "sha256": "12ed01bc050f521242b4e27336a6222b4ac328afc4872353d2b3e40e8f0af5ca",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-358-3-glass.png",
+     "byteLength": 2112,
+     "sha256": "ccc8c47eaadc1614598b865a0952d7ed9cf9759041c54d9005dea952195dd03c",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -66655,7 +67061,14 @@
     "byteLength": 33834,
     "sha256": "3ebec2ea5aa38ab0eebb8c692fcc7aa43855341479856165f7904e75f85423f6",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-359-3-glass.png",
+     "byteLength": 2177,
+     "sha256": "a2115ef6dd4c41c84ca743d203df082695d0e74a6b9e4ce5bfe33b769a543153",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -66743,7 +67156,14 @@
     "byteLength": 44996,
     "sha256": "8ef30366e3f67c7ebabcc4cbe9cc8ff4704129a520f99ec3bca5cc96d455c14b",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-361-3-glass.png",
+     "byteLength": 1683,
+     "sha256": "6f47d78e5ad59b1bea7fc68782dc00e16345ebd97037e196479a7ff879babf99",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -66776,7 +67196,14 @@
     "byteLength": 42665,
     "sha256": "1fa94f01b1c5173501986407bae46310e5dece7e77893eca0a3229fba40d0ae2",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-362-3-glass.png",
+     "byteLength": 1613,
+     "sha256": "0dc9a3297fd02dcef6837cd284fec6398d93cfbe3eb8dad5e88dd1cd0fc11e76",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -66864,7 +67291,14 @@
     "byteLength": 21994,
     "sha256": "9fe674b82edaac93d32b3f262c87a40e5f5eb6894bde83aad2fc9063b18986ca",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-364-3-glass.png",
+     "byteLength": 1436,
+     "sha256": "40fda3a43e87c2a4580c22302a70fa5fd79c8370e9de288437733a96c332b263",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -66897,7 +67331,14 @@
     "byteLength": 22077,
     "sha256": "f7ff56bfa6006f890bf8a22470e8bf782dc49b7cfe4b4789a77ba36fa53cb541",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-365-3-glass.png",
+     "byteLength": 1408,
+     "sha256": "c15a0380cd34aa0ab7ebf8279bdb5752fa64e8b7f5310c9bed5d3dc8fb0d69a3",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -69229,7 +69670,14 @@
     "byteLength": 43470,
     "sha256": "a8e6f66e1c5161472ca08c766137524daf26a70997f51b42f8d0c5e7f4dcfbf7",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-409-3-glass.png",
+     "byteLength": 1211,
+     "sha256": "818aee2867cbd052306a935cf295e6fe73595621695f784511eeb70fd8aa6f19",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -69284,7 +69732,14 @@
     "byteLength": 39287,
     "sha256": "c468eebbb9b7a11e55c9209a1b32370bde13e518d34b4e8be398b91a74eee902",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-410-3-glass.png",
+     "byteLength": 1211,
+     "sha256": "818aee2867cbd052306a935cf295e6fe73595621695f784511eeb70fd8aa6f19",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -69328,7 +69783,14 @@
     "byteLength": 45220,
     "sha256": "facbbd1d1b33073dec2d89f0b1cfd252eb2c7eff7fee7dcb21e1a79a0f4234ca",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-412-3-glass.png",
+     "byteLength": 1513,
+     "sha256": "9d5c60e899d8fe9d3f1bdcbe600bf0cbd2f21686825adce8a7625c00c0e62da5",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -69372,7 +69834,14 @@
     "byteLength": 40807,
     "sha256": "73264aeed47c198cbd8521af8c26e278fd3da4fc2cc09c2df9987fd6089d33e3",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-413-3-glass.png",
+     "byteLength": 1434,
+     "sha256": "ceaec35f4fc04d19a903ec0b7fbb5dd4524c4d73ffe88c4de55f963ffba7b703",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -69405,7 +69874,14 @@
     "byteLength": 42277,
     "sha256": "6dd2ebe690398c1be259db34ef9df018417f933433fbab88e28a908b76862cb4",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-414-3-glass.png",
+     "byteLength": 1426,
+     "sha256": "80bc9e27b133d12e4dbd5fcdaef41cc4719a48b6eafdad1d248596b57253b49b",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -69438,7 +69914,14 @@
     "byteLength": 38598,
     "sha256": "5dfe27aeb90af5e7b3fdb43c5f295dd72b43f7aeb87dce57080695c0d45e6035",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-415-3-glass.png",
+     "byteLength": 1298,
+     "sha256": "5a337dcb1ceab3176173e93b9424883a375a91f715dff756ac9c697491db86ab",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -69867,7 +70350,14 @@
     "byteLength": 36259,
     "sha256": "23e01500c0bdbe2277c9bf63a5c738b6a9a6c1dc9b7ae933a8d11129fb971390",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-426-3-glass.png",
+     "byteLength": 1724,
+     "sha256": "d58792341df60482fa25f8209479c30d536d9d833bb15c73d208fc3a28ea616e",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -69911,7 +70401,14 @@
     "byteLength": 30833,
     "sha256": "8c79a97c4fc554bf6607be460c4208ddde25dbf5fd719a97526b504238ec4e97",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-427-3-glass.png",
+     "byteLength": 1214,
+     "sha256": "d7cf1b06617bcc0c31e6cc51e7da1279d445db81b6cc0d0afdb7daf8f55d14ad",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -70186,7 +70683,14 @@
     "byteLength": 41554,
     "sha256": "241b0615c2567aa1843fbb81b0df60542de34235b4ea2718b2b8e473e71135b6",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-435-3-glass.png",
+     "byteLength": 1478,
+     "sha256": "9553821e7277bbe21b9d2150f508c1ba8fc00dde5522fd2f6208ee8891a219ee",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -70285,7 +70789,14 @@
     "byteLength": 36175,
     "sha256": "1a12858803876de55fcf3dffe9531a45d93db7ae21c25710c992beb1c86bc754",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-438-3-glass.png",
+     "byteLength": 1456,
+     "sha256": "7841e716b295465617fbad21a155b8f91986f381cbfacf2fc9d5b065f2f32437",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -70329,7 +70840,14 @@
     "byteLength": 35004,
     "sha256": "f205df4a9b677f3a0c70e1fcd1053998e0b231bdda1cb77f5183f9f6fbee24b7",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-439-3-glass.png",
+     "byteLength": 1360,
+     "sha256": "d3187df85ed023a245c7f7b5d0a9e02561948d947b05d8b55b84d3575396ac48",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -70428,7 +70946,14 @@
     "byteLength": 42507,
     "sha256": "3c796e46a3379a7c3c631dd9e90acf1663bdf97994c859dd5b2fdb67f3cbeec5",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-442-3-glass.png",
+     "byteLength": 1418,
+     "sha256": "9f4fd11f926ffe6676251495f497df43af396f06dc97567d2cbab9551f690ed5",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -70472,7 +70997,14 @@
     "byteLength": 40175,
     "sha256": "d7f5552a590f922c7815c65a0b8ae59c37928a2bcfdcf727be35c853775cd410",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-443-3-glass.png",
+     "byteLength": 1412,
+     "sha256": "6a635e92e7fff97ad13f3b8024d4081f5f4737fc8600ff9f915bfd3fa00943be",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -70802,7 +71334,14 @@
     "byteLength": 32744,
     "sha256": "1947757aff13fb141788c46eacb4e975c05dcd8d6385903bcbcd20c843a0feb4",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-458-3-glass.png",
+     "byteLength": 1341,
+     "sha256": "7e4d384050c595cfe13c777eba0674838ee48a7acf8c971de84c9d108bdf11d3",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -70846,7 +71385,14 @@
     "byteLength": 30812,
     "sha256": "351b7f5ab8df2c842ef21ad9263ca78186486aa5796f283c12598c34625f5c5c",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-459-3-glass.png",
+     "byteLength": 1373,
+     "sha256": "17252ddcdd2576120b88ece6f4ffbae66cbee48ed04d0a9812d0fd1293767326",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -70934,7 +71480,14 @@
     "byteLength": 32833,
     "sha256": "01f10abb9b9fbb908325f30d84d44b88f481b3a67c0d0eed0972f645edc1bf25",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-461-3-glass.png",
+     "byteLength": 1093,
+     "sha256": "7f9a709584e0a57f3c4cf285df213e1a71d1ba72cd71104336876dd5c57f6445",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -70967,7 +71520,14 @@
     "byteLength": 32833,
     "sha256": "01f10abb9b9fbb908325f30d84d44b88f481b3a67c0d0eed0972f645edc1bf25",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-462-3-glass.png",
+     "byteLength": 1093,
+     "sha256": "7f9a709584e0a57f3c4cf285df213e1a71d1ba72cd71104336876dd5c57f6445",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -71055,7 +71615,14 @@
     "byteLength": 47063,
     "sha256": "012666c9a3a3730520faa5f719dabee95063f15300f74b224853ed9460c3864b",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-464-3-glass.png",
+     "byteLength": 1607,
+     "sha256": "dc6b00d6727f96c55bfd026c755306f330661faeadd62633fe85417a031bda74",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {
@@ -71088,7 +71655,14 @@
     "byteLength": 41773,
     "sha256": "9c2b3ba257e951dbccaa4f9fd242ae5ae15f002ed551a17d50612bf143ebcc84",
     "width": 128,
-    "height": 256
+    "height": 256,
+    "glass": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/surfaces/texture-465-3-glass.png",
+     "byteLength": 1520,
+     "sha256": "df9cec0fb2f872f23143a6cd4d32f2bd0fc812ff3d50cf79be3750df6bfebcb4",
+     "width": 128,
+     "height": 256
+    }
    },
    {
     "replaces": {

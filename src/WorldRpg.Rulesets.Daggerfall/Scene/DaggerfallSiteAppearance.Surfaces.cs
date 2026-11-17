@@ -8,9 +8,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <summary>
 /// The location's surfaces: each material draws its classic texture record in the current season (summer, winter or
 /// rain, as the climate swap published them), or while refreshed art is drawn, that record's refreshed surface where the
-/// set has one. A season or art change updates only the materials whose texture changes. A window's glass mask stays
-/// bound to its material, so nightfall changes only the emission's level, in either art set: refreshed walls keep the
-/// classic's window layout, so the classic's mask covers their glass. A classic texture of several frames, as a hearth's
+/// set has one. A season or art change updates only the materials whose texture changes. A window glows at night through
+/// the glass mask of the texture it draws: a refreshed window's own, which the art set must state, and the mask the import
+/// cut from a classic window only while that is drawn, so nightfall changes only the emission's level. A classic texture of several frames, as a hearth's
 /// fire, draws each in turn, stepped on the remodel strips' clock.
 /// <para>
 /// Outdoors, a refreshed surface whose record's relief has a depth (<see cref="DaggerfallGroundRelief.Depth"/>), a
@@ -37,12 +37,13 @@ internal sealed partial class DaggerfallSiteAppearance
     /// <summary>
     /// One location material: its classic texture path per season (summer, winter, rain; a season without a variant repeats
     /// summer) and its classic resource per season, opened the first time classic art draws it; the refreshed resource per
-    /// season once the art set is admitted (none where it has none); the resource it draws now, on a window the glass mask
-    /// per season and the one it holds now, and outdoors the relief image and depth per season where that season's record
+    /// season once the art set is admitted (none where it has none); the resource it draws now, on a window the classic glass
+    /// mask per season, opened the first time classic art draws it, the refreshed one per season, and the one it holds now,
+    /// and outdoors the relief image and depth per season where that season's record
     /// has building relief, and the shader it draws now. A classic texture of several frames holds each frame's resource,
     /// opened the first time classic art draws it, which it draws in every season, and the frame it shows.
     /// </summary>
-    private sealed class SurfaceMaterial(NormalizedMaterial source, RenderResource?[] glass)
+    private sealed class SurfaceMaterial(NormalizedMaterial source)
     {
         internal NormalizedMaterial Source { get; } = source;
         internal RenderResource?[]? Frames { get; } = source.Frames is { } frames ? new RenderResource?[frames.Textures.Count] : null;
@@ -52,8 +53,10 @@ internal sealed partial class DaggerfallSiteAppearance
         internal RenderResource?[] Classic { get; } = new RenderResource?[3];
         internal RenderResource?[]? Refreshed { get; set; }
         internal RenderResource Current { get; set; } = null!;
-        internal RenderResource?[] Glass { get; } = glass;
-        internal RenderResource? CurrentGlass { get; set; } = glass[0];
+        internal ContentArtifact?[] ClassicGlassFiles { get; } = [source.SummerGlass, source.WinterGlass, source.RainGlass];
+        internal RenderResource?[] ClassicGlass { get; } = new RenderResource?[3];
+        internal RenderResource?[]? RefreshedGlass { get; set; }
+        internal RenderResource? CurrentGlass { get; set; }
         internal float Level { get; set; }
         internal (RenderResource Image, float Depth)?[] Relief { get; } = new (RenderResource, float)?[3];
         internal MaterialShader Shader { get; set; }
@@ -81,6 +84,22 @@ internal sealed partial class DaggerfallSiteAppearance
         locationResources.Add(resource);
         return resource;
     }
+
+    /// <summary>
+    /// A season's classic glass mask, opened the first time classic art draws it (a season without its own repeats summer's,
+    /// as the import publishes it); null where the classic texture is no window.
+    /// </summary>
+    private RenderResource? ClassicGlass(SurfaceMaterial surface, int season)
+    {
+        if (surface.ClassicGlassFiles[season] is not { } mask) return null;
+        if (surface.ClassicGlass[season] is { } opened) return opened;
+        int same = Array.FindIndex(surface.ClassicGlassFiles, file => file?.Path == mask.Path);
+        return surface.ClassicGlass[season] = surface.ClassicGlass[same] ??= OpenSurface(mask);
+    }
+
+    /// <summary>The glass a surface glows through in a season: the refreshed surface's own where it draws one, else the classic texture's.</summary>
+    private RenderResource? DrawnGlass(SurfaceMaterial surface, int season, bool refreshed) =>
+        refreshed && surface.Refreshed?[season] is not null ? surface.RefreshedGlass![season] : ClassicGlass(surface, season);
 
     /// <summary>The texture a surface draws in a season: its refreshed one in refreshed art where the set has it, else its classic one.</summary>
     private RenderResource DrawnSurface(SurfaceMaterial surface, int season, bool refreshed) =>
@@ -134,17 +153,22 @@ internal sealed partial class DaggerfallSiteAppearance
     {
         if (surfaceArt is null || surface.Paths.All(path => surfaceArt.Surface(path) is null)) return;
         Dictionary<string, RenderResource> opened = new(StringComparer.Ordinal);
-        surface.Refreshed = [.. surface.Paths.Select<string, RenderResource?>((path, season) =>
+        RenderResource Open(DaggerfallArtFile file)
         {
-            if (surfaceArt.Surface(path) is not { } refreshed) return null;
-            if (!opened.TryGetValue(refreshed.File.Path, out RenderResource? resource))
+            if (!opened.TryGetValue(file.Path, out RenderResource? resource))
             {
-                resource = appearance.OpenTexture(content, refreshed.File.Path, refreshed.File.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate).Handle;
+                resource = appearance.OpenTexture(content, file.Path, file.Sha256, TextureFilter.Nearest, TextureWrap.Repeat, admittingOffUpdate).Handle;
                 locationResources.Add(resource);
-                opened.Add(refreshed.File.Path, resource);
+                opened.Add(file.Path, resource);
             }
             return resource;
-        })];
+        }
+        surface.Refreshed = [.. surface.Paths.Select(path => surfaceArt.Surface(path) is { } refreshed ? Open(refreshed.File) : null)];
+        // A refreshed window glows through its own glass; one over a classic window that states none is refused, never lit by the classic's.
+        surface.RefreshedGlass = [.. surface.Paths.Select<string, RenderResource?>((path, season) =>
+            surfaceArt.Surface(path) is not { } refreshed || surface.ClassicGlassFiles[season] is null ? null
+                : refreshed.Glass is { } glass ? Open(glass)
+                : throw new InvalidOperationException($"The refreshed surface for '{path}' draws over a window but states no glass of its own."))];
         if (surfaceShader is null) return;
         for (int season = 0; season < surface.Relief.Length; season++)
             if (surfaceArt.Relief(surface.Paths[season]) is { Depth: { } depth } relief && surfaceArt.Surface(surface.Paths[season]) is not null)
@@ -167,7 +191,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private void ApplySurface(SurfaceMaterial surface, int season)
     {
         RenderResource wanted = DrawnSurface(surface, season, surfacesRefreshed);
-        RenderResource? glass = surface.Glass[season];
+        RenderResource? glass = DrawnGlass(surface, season, surfacesRefreshed);
         float level = glass is null ? 0F : windowLevel;
         MaterialShader shader = surfacesRefreshed && surfacesStrength > 0 && surfaceShader is { } relief && surface.Relief[season] is { } height
             ? reliefTuning.Shader(relief, height.Image, height.Depth, surfacesStrength) : default;

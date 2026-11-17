@@ -316,9 +316,9 @@ def world_image(image, height, doll=False):
     return reduce.crunch_sprites([image], (max(1, round(image.width * k)), max(1, round(image.height * k))))[0]
 
 
-# The placement each entry had in the payload before this run, by what it replaces, its image's hash and its own mask;
-# and what --recompute names (an id, or "all"), which takes those values from the original again.
-KEPT, KEPT_ART, KEPT_MASK, RECOMPUTE = {}, {}, {}, set()
+# The placement each entry had in the payload before this run, by what it replaces, its image's hash and its own mask; a
+# window surface's own glass, by its record; and what --recompute names (an id, or "all"), which takes those values from the original again.
+KEPT, KEPT_ART, KEPT_MASK, KEPT_GLASS, RECOMPUTE = {}, {}, {}, {}, set()
 
 
 def own(replaces, names, original):
@@ -827,14 +827,30 @@ def classic_size(media):
     return {"width": right - left, "height": bottom - top}
 
 
+GLASS = ART / "generated/surfaces/glass"   # glass.py's finals, each the surface's own glass mask
+
+
+def window_glass(area, key, archive, record):
+    """A window surface's own glass mask, from its glass.py final, as `glass`; without a final the entry keeps the glass it
+    has. A window record, one the import cuts classic glass for, is refused without either."""
+    if (GLASS / f"{key}.png").exists():
+        return {"glass": world_png(Image.open(GLASS / f"{key}.png"), f"{MEDIA}/{area}/{key}-glass.png")}
+    if (archive, record) in KEPT_GLASS:
+        return {"glass": KEPT_GLASS[(archive, record)]}
+    if staged(f"worldrpg/imports/shared/media/dungeon/materials/texture-{archive}-{record}-glass.png").exists():
+        raise SystemExit(f"{key} is a window: cut its glass with authoring/tools/surfaces/glass.py first.")
+    return {}
+
+
 def surface_units(area):
     """The `surfaces` or `terrain` area's units: each final `texture-AAA-R`, from its family's folder, by the classic
-    texture record it replaces."""
-    held = {path.stem: path for path in (ART / "generated" / area).glob("*/texture-*.png") if path.parent.name != "raw"}
+    texture record it replaces, with a window's own glass."""
+    held = {path.stem: path for path in (ART / "generated" / area).glob("*/texture-*.png") if path.parent.name not in ("raw", "glass")}
 
     def build(final):
         archive, record = map(int, SURFACE.fullmatch(final.key).groups())
-        return [("surfaces", {"replaces": {"archive": archive, "record": record}, **world_png(Image.open(final.path), f"{MEDIA}/{area}/{final.key}.png")})]
+        return [("surfaces", {"replaces": {"archive": archive, "record": record}, **world_png(Image.open(final.path), f"{MEDIA}/{area}/{final.key}.png"),
+                              **window_glass(area, final.key, archive, record)})]
     return {key: Unit([final], lambda final=final: build(final))
             for key in sorted(ledger(area)) for final in [Final(area, key, held.get(key, ART / "generated" / area / f"{key}.png"))]}
 
@@ -1153,12 +1169,14 @@ def main(argv=None):
         ap.error("give an --area to promote or a --set")
     if a.key and not a.area:
         ap.error("--key promotes within the --area named")
-    KEPT.clear(), KEPT_ART.clear(), KEPT_MASK.clear(), RECOMPUTE.clear()
+    KEPT.clear(), KEPT_ART.clear(), KEPT_MASK.clear(), KEPT_GLASS.clear(), RECOMPUTE.clear()
     RECOMPUTE.update(a.recompute)
     payload = json.loads(PAYLOAD.read_text()) if PAYLOAD.exists() else {"artReplacements": {"images": []}}
     placed = lambda: [(identity, entry) for identity, entry in placed_entries(payload) if "placement" in entry]
     for identity, entry in placed():
         KEPT[identity], KEPT_ART[identity], KEPT_MASK[identity] = entry["placement"], entry.get("sha256"), entry.get("mask")
+    KEPT_GLASS.update({(entry["replaces"]["archive"], entry["replaces"]["record"]): entry["glass"]
+                       for entry in payload["artReplacements"].get("surfaces", []) if "glass" in entry})
     with tempfile.TemporaryDirectory() as stage:
         STAGE = Path(stage)
         stale, matched = set(), set()
