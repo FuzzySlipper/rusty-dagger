@@ -29,7 +29,9 @@ internal sealed partial class ImportToolFixture : IDisposable
     {
         Directory.CreateDirectory(Root);
         File.WriteAllBytes(Pack, ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
-        File.Copy(ImportedContent.RecordPath("daggerfall.blocks.json"), At("blocks.json"));
+        // Written from its bytes, not copied: a linked worktree's imported data is read-only, and a copy keeps that mode,
+        // so the blocks command could not rewrite its block document here.
+        File.WriteAllBytes(At("blocks.json"), ImportedContent.Record("daggerfall.blocks.json"));
         File.WriteAllBytes(At("buildings.json"), ImportedContent.Read("worldrpg/payloads/daggerfall.blocks.json"));
         Copy("content/worldrpg/packs/daggerfall.base/payload.json", Authored);
         foreach (string file in Directory.EnumerateFiles(Root, "*", SearchOption.AllDirectories)) File.SetLastWriteTimeUtc(file, OldTime);
