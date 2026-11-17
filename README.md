@@ -1,5 +1,8 @@
 # Rusty Dagger
 
+Daggerfall was a 1996 classic CRPG by Bethesda Softworks. Daggerfall Unity remasters it.
+Mods remix it. Rusty Dagger covers it.
+
 Rusty Dagger is the reference repository and proving product for **WorldRpg**, an
 opinionated construction kit and host for world-centric, real-time, first-person
 systemic RPGs. Daggerfall is its compiled ruleset, compatibility corpus and
