@@ -2983,13 +2983,6 @@ internal static partial class DaggerfallBaseContent
     }
 
     /// <summary>
-    /// Reads the normalized reference catalogs and rejects what a consumer could not
-    /// resolve: duplicate or non-contiguous keys, a career naming a skill or element the
-    /// catalogs do not carry, and a reference to an actor or item the pack does not
-    /// define. Runtime code never opens a source file; the provenance it carries is a
-    /// citation the import tool already reconciled against the documented inventory.
-    /// </summary>
-    /// <summary>
     /// Reads the imported catalogs and joins them to the authored vocabulary here, not in the import: the
     /// import publishes the classic attribute and skill indices, and the vocabulary names them in index order,
     /// so an authored edit to the vocabulary reaches the game without making the imported data stale.

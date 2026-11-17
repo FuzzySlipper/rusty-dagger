@@ -147,23 +147,6 @@ public sealed class TextureLeafInventoryTests
         Assert.Equal([0x89, 0x50, 0x4e, 0x47], first[..4]);
     }
 
-    [CorpusFact]
-    public void The_documented_inventory_carries_exactly_the_supplied_texture_leaves()
-    {
-        // The inventory is the authority for which leaves exist, so the corpus and the
-        // document are checked against each other in both directions.
-        TextureLeafInventory inventory = ReadInventory();
-        HashSet<string> documented = [.. Daggerfall.Import.Publication.SourceManifestBuilder
-            .ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")))
-            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-018"))
-            .Select(row => Path.GetFileName(row.PathOrPattern))];
-        string[] supplied = [.. inventory.Leaves.Where(leaf => leaf.Path.Length != 0).Select(leaf => leaf.Path)];
-
-        Assert.Equal(472, documented.Count);
-        Assert.DoesNotContain(supplied, path => !documented.Contains(path));
-        Assert.DoesNotContain(documented, path => !supplied.Contains(path, StringComparer.Ordinal));
-    }
-
     [Fact]
     public void Refuses_a_supplied_leaf_without_a_path()
     {

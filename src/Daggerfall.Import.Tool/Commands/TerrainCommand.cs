@@ -10,12 +10,12 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </summary>
 internal static class TerrainCommand
 {
-    public static ToolCommand Command { get; } = new("terrain", [Options.Arena2, Options.Pack, Options.ContentRoot, Options.Inventory, Options.Update], Run);
+    public static ToolCommand Command { get; } = new("terrain", [Options.Arena2, Options.Pack, Options.ContentRoot, Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {
         DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(
-            File.ReadAllBytes(Path.Combine(args["--arena2"], "WOODS.WLD")), Options.Arena2Label("WOODS.WLD"), Options.ReadInventory(args));
+            File.ReadAllBytes(Path.Combine(args["--arena2"], "WOODS.WLD")), Options.Arena2Label("WOODS.WLD"));
         Console.WriteLine($"terrain: {terrain.Heightmap.Count} heightmap rows, {terrain.CellCount} cells from {terrain.CellBase} stride {terrain.CellStride}, {terrain.Prefix.Count} prefix domains");
         if (!args.Switch("--update")) return Options.ReportOnly("this terrain");
         PayloadFiles.WriteFile(Path.Combine(Path.GetFullPath(args[Options.ContentRoot.Name]), terrain.Samples), terrain.SampleBytes);

@@ -2,9 +2,8 @@ namespace Daggerfall.Import.Publication;
 
 /// <summary>
 /// The one vocabulary every published source path is written in, whatever directory the operator supplied
-/// the bytes from: an Arena2 file is <c>arena2/NAME</c>. The documented inventory
-/// (<c>content-source-manifest.csv</c>, beside the importer) spells its rows the same way, so a section that checks its
-/// label against the inventory compares like with like.
+/// the bytes from: an Arena2 file is <c>arena2/NAME</c>, so a published section does not change with where the
+/// operator keeps the corpus.
 /// </summary>
 public static class PublishedSourcePath
 {

@@ -212,16 +212,12 @@ Rules for the tracked side:
   `media/<area>/`, the authored UI kit in `authored-ui/` (its
   `ui-authored-assets.json` is written by `authoring/tools/ui/ui-art-kit.py
   manifest`) and the held definition and models in `first-person/`.
-- `daggerfall.base` is authored and `daggerfall.imported` is generated. Two base
-  sections (`buildingNames`, `internalText`) were taken once from Daggerfall
-  Unity and are edited in place (DEC-13).
-  A payload section belongs to one of them: the reader refuses a section both carry.
-- DEC-13 tracks no source dispositions: the source manifest, its inventory and
-  reconciliation are being retired by #10894. Until then, in
-  `src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv`, never renumber or recreate a `CNT-` ID;
-  reclassify a file by changing its `family_id`. Only `Daggerfall.Source.Tool`'s
-  `source-inventory --update-inventory` writes the disposition column, from every
-  publication's sources together.
+- `daggerfall.base` is authored and `daggerfall.imported` is generated. A
+  payload section belongs to one of them: the reader refuses a section both carry.
+- Nothing records where a fact came from or checks it against arena2 or
+  Daggerfall Unity (DEC-13). The `CNT-` families on the wiki page
+  `wiki/rusty-dagger/content-sources` are reference, not a register the import
+  enforces.
 - An edit to an importer revision input, including the files in `inputs/`, makes every machine's data stale until the `data` lane has published
   it. Make one deliberately. An import step
   never reads the authored base payload: a join between authored and imported

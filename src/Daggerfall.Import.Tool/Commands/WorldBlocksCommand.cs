@@ -19,8 +19,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class WorldBlocksCommand
 {
     public static ToolCommand Command { get; } = new("world-blocks",
-        [Options.Arena2, Options.Pack, PublicationInputs.Shared, CommandOption.Staged(PublicationInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldBlocks), Options.Inventory,
-            CommandOption.Staged(PublicationInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-blocks.sources.json"),
+        [Options.Arena2, Options.Pack, PublicationInputs.Shared, CommandOption.Staged(PublicationInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldBlocks),
             CommandOption.Staged("--buildings", "PAYLOAD.json", ImportLayout.BuildingsPayload)], Run);
 
     private static int Run(CommandArguments args)
@@ -39,7 +38,6 @@ internal static class WorldBlocksCommand
         RequireSharedMeshes(publication, args[PublicationInputs.Shared.Name]);
         ImportPublicationPlan plan = publication.Plan.WithInvocation(PublicationInputs.Invocation(args));
         PublicationInputs.PrintComparison(ImportPublicationWriter.Write(plan, Path.GetFullPath(args[PublicationInputs.Output.Name])));
-        PublicationInputs.WriteSourceManifest(args, plan);
         DaggerfallWorldBlockCounts counts = publication.Index.Counts;
         long bytes = plan.Artifacts.Sum(artifact => (long)artifact.Bytes.Length);
         long spatial = plan.Artifacts.Where(artifact => artifact.RelativePath.EndsWith(SpatialArtifactBinary.Extension, StringComparison.Ordinal)).Sum(artifact => (long)artifact.Bytes.Length);

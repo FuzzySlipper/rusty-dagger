@@ -254,7 +254,7 @@ public sealed record BlockRecordInventory(string Source, int DeclaredRecords, IR
 /// </remarks>
 public static class BlockRecordInventoryReader
 {
-    /// <summary>Where the documented inventory places the block archive.</summary>
+    /// <summary>The block archive's file name in the corpus.</summary>
     public const string FileName = "BLOCKS.BSA";
 
     /// <summary>

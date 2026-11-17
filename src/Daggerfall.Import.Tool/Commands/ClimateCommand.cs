@@ -11,14 +11,13 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </summary>
 internal static class ClimateCommand
 {
-    public static ToolCommand Command { get; } = new("climate", [Options.Arena2, Options.Pack, Options.Inventory, Options.Update], Run);
+    public static ToolCommand Command { get; } = new("climate", [Options.Arena2, Options.Pack, Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {
         string arena2 = args["--arena2"];
-        IReadOnlyList<SourceInventoryRow> inventory = Options.ReadInventory(args);
-        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(File.ReadAllBytes(Path.Combine(arena2, "CLIMATE.PAK")), Options.Arena2Label("CLIMATE.PAK"), inventory);
-        DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(File.ReadAllBytes(Path.Combine(arena2, "POLITIC.PAK")), Options.Arena2Label("POLITIC.PAK"), inventory);
+        DaggerfallClimateGrid climate = DaggerfallWorldGridsBuilder.BuildClimate(File.ReadAllBytes(Path.Combine(arena2, "CLIMATE.PAK")), Options.Arena2Label("CLIMATE.PAK"));
+        DaggerfallPoliticGrid politic = DaggerfallWorldGridsBuilder.BuildPolitic(File.ReadAllBytes(Path.Combine(arena2, "POLITIC.PAK")), Options.Arena2Label("POLITIC.PAK"));
 
         Console.WriteLine($"climate: {climate.Rows.Count} rows, {climate.Values.Count} distinct values ({climate.Values.Count(value => value.Disposition == DaggerfallClimateDisposition.Named)} named)");
         Console.WriteLine($"politic: {politic.Rows.Count} rows, {politic.Values.Count} distinct values ({politic.Values.Count(value => value.Disposition == DaggerfallPoliticDisposition.Region)} regions, {politic.Values.Count(value => value.Disposition == DaggerfallPoliticDisposition.Ocean)} ocean, {politic.Values.Count(value => value.Disposition == DaggerfallPoliticDisposition.Unresolved)} unresolved)");

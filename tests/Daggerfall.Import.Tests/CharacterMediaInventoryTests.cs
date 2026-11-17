@@ -130,22 +130,6 @@ public sealed class CharacterMediaInventoryTests
     }
 
     [CorpusFact]
-    public void The_documented_inventory_carries_the_families_it_claims()
-    {
-        // The family counts come from the manifest's CNT-021 row; this checks the corpus against
-        // the documented vector in both directions rather than trusting either side, which is
-        // what keeps this table from being a second, unchecked source.
-        string line = File.ReadLines(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv"))
-            .Single(value => value.StartsWith("CNT-021,family,", StringComparison.Ordinal));
-        int[] documented = [.. line.Split(',')[5].Split(';', StringSplitOptions.TrimEntries).Select(int.Parse)];
-
-        CharacterMediaInventory inventory = ReadInventory();
-        int[] measured = [.. CharacterMediaInventory.DocumentedFamilies.Select(entry => inventory.Family(entry.Prefix).Count())];
-        Assert.Equal(CharacterMediaInventory.DocumentedFamilies.Length, documented.Length);
-        Assert.Equal(documented, measured);
-    }
-
-    [CorpusFact]
     public void Derives_each_canvas_palette_and_refuses_one_that_is_not_supplied()
     {
         CharacterMediaInventory inventory = ReadInventory();

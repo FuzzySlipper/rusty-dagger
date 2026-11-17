@@ -540,9 +540,8 @@ public sealed class WorldBlockTests
     {
         // Every building slot of a placed RMB block is a building of each location placing it, so the block building
         // catalog the runtime joins locations to must carry them all, and the block's city map, or the import stops.
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")));
         DaggerfallBlockBuildingSet catalog = DaggerfallBlockBuildingSet.From(DaggerfallBlocksBuilder.Build(
-            File.ReadAllBytes(Path.Combine(TestData.CorpusRoot, "BLOCKS.BSA")), PublishedSourcePath.Arena2("BLOCKS.BSA"), inventory));
+            File.ReadAllBytes(Path.Combine(TestData.CorpusRoot, "BLOCKS.BSA")), PublishedSourcePath.Arena2("BLOCKS.BSA")));
         HashSet<string> mapped = [.. catalog.Maps.Select(map => map.Block)];
         string block = catalog.Buildings.Select(building => building.Block).First(mapped.Contains);
         DaggerfallLocations locations = new([new DaggerfallLocationMap(0, 0, "Fixture", 1, 128 * 300, 128 * 200, 0, 8, true)

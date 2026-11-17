@@ -104,7 +104,7 @@ public sealed record Arch3dMeshInventory(string Source, int DeclaredRecords, IRe
 /// </remarks>
 public static class Arch3dInventoryReader
 {
-    /// <summary>Where the documented inventory places the mesh archive.</summary>
+    /// <summary>The mesh archive's file name in the corpus.</summary>
     public const string FileName = "ARCH3D.BSA";
 
     /// <summary>Reads every record the supplied archive declares.</summary>

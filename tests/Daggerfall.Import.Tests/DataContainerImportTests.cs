@@ -83,7 +83,7 @@ public sealed class DataContainerImportTests : IDisposable
 
         Assert.Contains(missing, entry => entry.StartsWith("Arena2 directory 'local/inputs/arena2'", StringComparison.Ordinal));
         Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/inputs/Sound'", StringComparison.Ordinal));
-        Assert.Contains($"tracked file '{ImportLayout.Inventory}'", missing);
+        Assert.Contains($"tracked file '{ImportLayout.RootMarker}'", missing);
         // The import does not read the authored base payload, so its absence is no missing input.
         Assert.DoesNotContain(missing, entry => entry.Contains("daggerfall.base", StringComparison.Ordinal));
 
@@ -105,7 +105,7 @@ public sealed class DataContainerImportTests : IDisposable
     public void An_import_with_missing_inputs_is_refused_without_writing()
     {
         Directory.CreateDirectory(Path.Combine(root, ImportLayout.Inputs));
-        File.WriteAllText(Path.Combine(root, ImportLayout.Inventory), "id\n");
+        File.WriteAllText(Path.Combine(root, ImportLayout.RootMarker), "{}\n");
         string before = Directory.GetCurrentDirectory();
 
         InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(() => Program.Commands["import"].Invoke(
@@ -142,7 +142,7 @@ public sealed class DataContainerImportTests : IDisposable
         // Neither a tool without its inputs nor one in a directory with no product.rpak is in a release.
         Assert.Null(ImportLayout.FindRelease(tool));
         Directory.CreateDirectory(Path.Combine(tool, ImportLayout.Inputs));
-        File.WriteAllText(Path.Combine(tool, ImportLayout.Inventory), "id\n");
+        File.WriteAllText(Path.Combine(tool, ImportLayout.RootMarker), "{}\n");
         Assert.Null(ImportLayout.FindRelease(tool));
 
         File.WriteAllBytes(Path.Combine(release, "product.rpak"), []);
@@ -195,7 +195,7 @@ public sealed class DataContainerImportTests : IDisposable
         // one that build output lies in.
         string repository = Directory.CreateDirectory(Path.Combine(root, "repo")).FullName;
         Directory.CreateDirectory(Path.Combine(repository, ImportLayout.Inputs));
-        File.WriteAllText(Path.Combine(repository, ImportLayout.Inventory), "id\n");
+        File.WriteAllText(Path.Combine(repository, ImportLayout.RootMarker), "{}\n");
         string output = Directory.CreateDirectory(Path.Combine(repository, "src", "Daggerfall.Import.Tool", "bin", "Debug", "net10.0")).FullName;
         Assert.Equal(repository, ImportLayout.EnclosingRepository(output));
         Assert.Null(ImportLayout.EnclosingRepository(Directory.CreateDirectory(Path.Combine(root, "elsewhere")).FullName));
@@ -243,7 +243,7 @@ public sealed class DataContainerImportTests : IDisposable
         Assert.All(steps.SelectMany(step => step.Arguments).Where(argument => argument.StartsWith("content/", StringComparison.Ordinal)),
             argument => Assert.Contains(argument, new[] { AuthoredUi.ProductDirectory, AuthoredUi.ManifestFile }));
         Assert.Equal(["music-tracks", "classic-media"], steps.Take(2).Select(step => step.Label));
-        Assert.Equal("source-coverage", steps[^1].Label);
+        Assert.Equal("world-blocks", steps[^1].Label);
     }
 
     [Fact]
@@ -263,7 +263,7 @@ public sealed class DataContainerImportTests : IDisposable
             }
         }
 
-        Assert.True(staged > 40, $"only {staged} staged options were checked");
+        Assert.True(staged > 25, $"only {staged} staged options were checked");
         Assert.Equal(ImportLayout.ImportedPayload, Program.Commands["locations"].Options.Single(option => option.Name == "--pack").Default);
     }
 

@@ -20,59 +20,22 @@ internal sealed partial class ImportToolFixture : IDisposable
     private string Repo(string path) => Path.Combine(TestData.RepositoryRoot, path);
     private string At(string path) => Path.Combine(Root, path);
     private string Pack => At("pack.json");
-    private string Records => At("records.json");
-    private string Inventory => At("content-source-manifest.csv");
-    internal string InventoryFile => Inventory;
     internal DaggerfallCinematicKind CinematicKind { get; init; } = DaggerfallCinematicKind.Vid;
     private string Authored => At("authored.json");
     // The authored UI art the classic media group lists is the product's tracked content.
     private string AuthoredUiArt => Repo(global::Daggerfall.Import.Tool.AuthoredUi.ProductDirectory);
-    private IReadOnlyList<SourceInventoryRow> Rows => SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Inventory));
 
     internal ImportToolFixture()
     {
         Directory.CreateDirectory(Root);
         File.WriteAllBytes(Pack, ImportedContent.Read("worldrpg/payloads/daggerfall.imported.json"));
-        File.Copy(ImportedContent.RecordPath("daggerfall.import-records.json"), Records);
         File.Copy(ImportedContent.RecordPath("daggerfall.blocks.json"), At("blocks.json"));
         File.WriteAllBytes(At("buildings.json"), ImportedContent.Read("worldrpg/payloads/daggerfall.blocks.json"));
         Copy("content/worldrpg/packs/daggerfall.base/payload.json", Authored);
-        Copy("src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv", Inventory);
         foreach (string file in Directory.EnumerateFiles(Root, "*", SearchOption.AllDirectories)) File.SetLastWriteTimeUtc(file, OldTime);
     }
 
     private void Copy(string source, string target) => File.Copy(Repo(source), target);
-    /// <summary>The sources only the world blocks or the imported payload read, never the world media.</summary>
-    internal static readonly string[] OtherPublicationsOnly =
-        ["CNT-001.file.MAPS.BSA", "CNT-002.file.CLIMATE.PAK", "CNT-013.file.FACTION.TXT", "CNT-027.file.FLATS.CFG"];
-
-    /// <summary>
-    /// Documents as unused the sources only publications other than the world media read, as an inventory written
-    /// from the world media's sources alone would.
-    /// </summary>
-    internal void PrepareInventoryDrift()
-    {
-        File.WriteAllLines(Inventory, File.ReadAllLines(Inventory).Select(line => OtherPublicationsOnly.Contains(line.Split(',')[0])
-            ? string.Join(',', line.Split(',').Select((field, index) => index == 9 ? "unused" : field)) : line));
-        File.SetLastWriteTimeUtc(Inventory, OldTime);
-    }
-
-    /// <summary>The coverage of every publication, over the import's staging tree and records, against this fixture's inventory.</summary>
-    private SourceCoverageReport Coverage() => SourceCoverageReconciler.Reconcile(
-        SourceCoverageArtifact.Collect(Repo("content"), ImportedContent.Staged(""), TestData.ImportRecords),
-        Arena2, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv", File.ReadAllBytes(Inventory));
-
-    internal byte[] ExpectedReconciledInventory()
-    {
-        string scratch = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllBytes(scratch, File.ReadAllBytes(Inventory));
-            Assert.True(SourceInventoryReconciler.Reconcile(scratch, Coverage(), update: true).Updated);
-            return File.ReadAllBytes(scratch);
-        }
-        finally { File.Delete(scratch); }
-    }
     private byte[] Source(string file) => File.ReadAllBytes(Path.Combine(Arena2, file));
     private static string Label(string file) => PublishedSourcePath.Arena2(file);
 
@@ -80,14 +43,11 @@ internal sealed partial class ImportToolFixture : IDisposable
     {
         Dictionary<string, string> values = new(StringComparer.Ordinal)
         {
-            ["--arena2"] = Arena2, ["--pack"] = Pack, ["--authored"] = Authored, ["--records"] = Records,
-            ["--inventory"] = Inventory, ["--out"] = At("output"), ["--group"] = "worldrpg", ["--language"] = "en",
-            ["--monster"] = Path.Combine(Arena2, "MONSTER.BSA"),
+            ["--arena2"] = Arena2, ["--pack"] = Pack, ["--authored"] = Authored,
+            ["--out"] = At("output"), ["--group"] = "worldrpg", ["--language"] = "en",
             ["--document"] = At("blocks.json"), ["--buildings"] = At("buildings.json"), ["--blocks"] = At("blocks.json"),
-            ["--output"] = At("report.json"), ["--repository"] = TestData.RepositoryRoot,
+            ["--repository"] = TestData.RepositoryRoot,
             ["--ui-authored-assets"] = Repo("content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-authored-assets.json"), ["--ui-original"] = AuthoredUiArt,
-            // Coverage reads the import's staging tree over the repository's content, with its import records.
-            ["--content"] = ImportedContent.Staged(""), ["--import-records"] = TestData.ImportRecords,
         };
         List<string> args = [name];
         // A staged option is passed too: its default is the repository's staging tree, which these private roots replace.
@@ -121,7 +81,7 @@ internal sealed partial class ImportToolFixture : IDisposable
     internal Dictionary<string, byte[]> Expected(string name)
     {
         Dictionary<string, byte[]> result = new(StringComparer.Ordinal);
-        Dictionary<string, string> sections = new(StringComparer.Ordinal), recordSections = new(StringComparer.Ordinal);
+        Dictionary<string, string> sections = new(StringComparer.Ordinal);
         void Section<T>(string id, T value) => sections.Add(id, JsonSerializer.Serialize(value, PublishedJson.Section));
         switch (name)
         {
@@ -132,28 +92,23 @@ internal sealed partial class ImportToolFixture : IDisposable
                 foreach ((string path, byte[] bytes) in DaggerfallLocationDetails.Files(locations)) result.Add(At(Path.Combine("output", path.Replace('/', Path.DirectorySeparatorChar))), bytes);
                 break;
             case "climate":
-                Section("climate", DaggerfallWorldGridsBuilder.BuildClimate(Source("CLIMATE.PAK"), Label("CLIMATE.PAK"), Rows));
-                Section("politic", DaggerfallWorldGridsBuilder.BuildPolitic(Source("POLITIC.PAK"), Label("POLITIC.PAK"), Rows)); break;
+                Section("climate", DaggerfallWorldGridsBuilder.BuildClimate(Source("CLIMATE.PAK"), Label("CLIMATE.PAK")));
+                Section("politic", DaggerfallWorldGridsBuilder.BuildPolitic(Source("POLITIC.PAK"), Label("POLITIC.PAK"))); break;
             case "terrain":
-                DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(Source("WOODS.WLD"), Label("WOODS.WLD"), Rows);
+                DaggerfallTerrain terrain = DaggerfallTerrainBuilder.Build(Source("WOODS.WLD"), Label("WOODS.WLD"));
                 Section("terrain", terrain);
                 result.Add(At(Path.Combine("output", terrain.Samples.Replace('/', Path.DirectorySeparatorChar))), terrain.SampleBytes);
                 break;
             case "blocks":
-                var blocks = DaggerfallBlocksBuilder.Build(Source("BLOCKS.BSA"), Label("BLOCKS.BSA"), Rows);
+                var blocks = DaggerfallBlocksBuilder.Build(Source("BLOCKS.BSA"), Label("BLOCKS.BSA"));
                 result.Add(At("blocks.json"), Encoding.UTF8.GetBytes(JsonSerializer.Serialize(blocks, PublishedJson.SectionCompact) + "\n"));
                 result.Add(At("buildings.json"), Encoding.UTF8.GetBytes(JsonSerializer.Serialize(DaggerfallBlockBuildingSet.From(blocks), PublishedJson.SectionCompact) + "\n")); break;
-            case "geometry":
-                var blockInputs = JsonSerializer.Deserialize<DaggerfallBlocks>(File.ReadAllBytes(At("blocks.json")), PublishedJson.SectionRead)!;
-                var geometry = DaggerfallGeometryBuilder.Build(Source("ARCH3D.BSA"), Label("ARCH3D.BSA"), Rows, DaggerfallGeometryBuilder.UseSites(blockInputs));
-                recordSections.Add("geometry", JsonSerializer.Serialize(geometry, PublishedJson.Section)); break;
             case "videos": Section("cinematics", DaggerfallCinematicPackBuilder.Build(Directory.EnumerateFiles(Arena2).Order(StringComparer.OrdinalIgnoreCase)
                 .Where(file => file.EndsWith(".VID", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".FLC", StringComparison.OrdinalIgnoreCase))
-                .Select(file => (Path.GetFileName(file), file.EndsWith(".VID", StringComparison.OrdinalIgnoreCase) ? DaggerfallCinematicKind.Vid : DaggerfallCinematicKind.Flc, new FileInfo(file).Length, Digest(File.ReadAllBytes(file)))).ToArray(), PublishedSourcePath.Arena2Root, Rows)); break;
-            default: ExpectedOther(name, result, sections, recordSections); break;
+                .Select(file => (Path.GetFileName(file), file.EndsWith(".VID", StringComparison.OrdinalIgnoreCase) ? DaggerfallCinematicKind.Vid : DaggerfallCinematicKind.Flc, new FileInfo(file).Length, Digest(File.ReadAllBytes(file)))).ToArray())); break;
+            default: ExpectedOther(name, result, sections); break;
         }
         if (sections.Count > 0) result.Add(Pack, Encoding.UTF8.GetBytes(TopLevelJsonSectionRewriter.ReplaceOrAppend(File.ReadAllText(Pack), sections.ToDictionary(pair => pair.Key, pair => pair.Value.TrimEnd(), StringComparer.Ordinal))));
-        if (recordSections.Count > 0) result.Add(Records, Encoding.UTF8.GetBytes(TopLevelJsonSectionRewriter.ReplaceOrAppend(File.ReadAllText(Records), recordSections.ToDictionary(pair => pair.Key, pair => pair.Value.TrimEnd(), StringComparer.Ordinal))));
         return result;
     }
 

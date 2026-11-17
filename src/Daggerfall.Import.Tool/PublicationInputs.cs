@@ -7,7 +7,6 @@ namespace Daggerfall.Import.Tool;
 internal static class PublicationInputs
 {
     public static readonly CommandOption Output = CommandOption.Required("--out", "OUTPUT_DIR");
-    public static readonly CommandOption SourceManifest = CommandOption.Required("--source-manifest", "FILE");
     public static readonly CommandOption Shared = CommandOption.Staged("--shared", "WORLD_MEDIA_DIR", ImportLayout.WorldMedia);
     public static readonly CommandOption ClassicGroup = CommandOption.Staged("--classic-group", "CLASSIC_GROUP_DIR", ImportLayout.ClassicGroup);
 
@@ -27,22 +26,6 @@ internal static class PublicationInputs
 
     /// <summary>The command line a publication manifest records: the tool's own arguments as the caller spelled them.</summary>
     public static ImportInvocation Invocation(CommandArguments args) => new(["daggerfall-import-tool", .. args.Raw]);
-
-    /// <summary>
-    /// Writes the publication's source manifest to the import records: the corpus scanned against the documented
-    /// inventory, with every source the publication read recorded as imported. Nothing at runtime reads it, so it
-    /// stays outside the runtime content root; the publication's recorded command names where it is.
-    /// </summary>
-    public static void WriteSourceManifest(CommandArguments args, ImportPublicationPlan plan)
-    {
-        string inventoryFile = args[Options.Inventory.Name];
-        SourceManifest manifest = SourceManifestPublication.ForPublication(
-            plan.Manifest.Sources.Select(source => source.Path), args[Options.Arena2.Name], Path.GetFileName(inventoryFile), File.ReadAllBytes(inventoryFile));
-        // One publication's subset cannot reconcile the product-wide inventory. The final source-coverage
-        // command compares that inventory with all published content and offline records together.
-        PayloadFiles.WriteFile(args[SourceManifest.Name], SourceManifestSerializer.Serialize(manifest));
-        Console.WriteLine($"source manifest: {manifest.Records.Count} records written to {args[SourceManifest.Name]}");
-    }
 
     /// <summary>Prints what a plan comparison found, naming the artifacts: a count alone cannot say what moved.</summary>
     public static void PrintComparison(ImportPublicationComparison comparison)

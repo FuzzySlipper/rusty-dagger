@@ -64,21 +64,12 @@ public sealed record DaggerfallCinematicRecord(
     }
 }
 
-/// <summary>The normalized cinematic provenance pack: raw-media identities, never media bytes.</summary>
-/// <param name="VidSource">The provenance the VID files were read from.</param>
-/// <param name="FlcSource">The provenance the FLC files were read from.</param>
+/// <summary>The normalized cinematic pack: raw-media identities, never media bytes.</summary>
 /// <param name="Cinematics">The cinematics in file order.</param>
-public sealed record DaggerfallCinematicPack(
-    DaggerfallTextSource VidSource,
-    DaggerfallTextSource FlcSource,
-    IReadOnlyList<DaggerfallCinematicRecord> Cinematics)
+public sealed record DaggerfallCinematicPack(IReadOnlyList<DaggerfallCinematicRecord> Cinematics)
 {
     public void Validate()
     {
-        ArgumentNullException.ThrowIfNull(VidSource);
-        ArgumentNullException.ThrowIfNull(FlcSource);
-        VidSource.Validate();
-        FlcSource.Validate();
         NormalizedImportDocument.ValidateUnique(Cinematics, cinematic => cinematic.FileName, "cinematics");
         foreach (DaggerfallCinematicRecord cinematic in Cinematics)
         {
@@ -103,19 +94,13 @@ public sealed record DaggerfallCinematicPack(
 }
 
 /// <summary>
-/// Builds the cinematic provenance pack from supplied video files. Digests identify the bytes;
+/// Builds the cinematic pack from supplied video files. Digests identify the bytes;
 /// story hooks follow the donor's callers: the new-game opening names three VIDs, the Daedric
 /// summons table names sixteen FLCs, and everything else stays unresolved rather than assuming
 /// an ending mapping. No media bytes are published and no playback is ported.
 /// </summary>
 public static class DaggerfallCinematicPackBuilder
 {
-    /// <summary>The inventory family VID cinematic sources are documented under.</summary>
-    public const string VidFamily = "CNT-025";
-
-    /// <summary>The inventory family FLC cinematic sources are documented under.</summary>
-    public const string FlcFamily = "CNT-026";
-
     /// <summary>The new-game opening: the three VIDs the donor plays in order.</summary>
     public static readonly IReadOnlyList<string> OpeningSequence = ["ANIM0000.VID", "ANIM0011.VID", "DAG2.VID"];
 
@@ -143,17 +128,10 @@ public static class DaggerfallCinematicPackBuilder
         new("AZURA.FLC", 16, "T0C00Y00", 81),
     ];
 
-    /// <summary>Builds the cinematic provenance pack.</summary>
-    public static DaggerfallCinematicPack Build(
-        IReadOnlyList<(string FileName, DaggerfallCinematicKind Kind, long ByteLength, string Digest)> files,
-        string label,
-        IReadOnlyList<SourceInventoryRow> inventory)
+    /// <summary>Builds the cinematic pack.</summary>
+    public static DaggerfallCinematicPack Build(IReadOnlyList<(string FileName, DaggerfallCinematicKind Kind, long ByteLength, string Digest)> files)
     {
         ArgumentNullException.ThrowIfNull(files);
-        ArgumentException.ThrowIfNullOrWhiteSpace(label);
-        ArgumentNullException.ThrowIfNull(inventory);
-        SourceInventoryRow vid = SourceInventoryRow.RequireFamily(inventory, VidFamily);
-        SourceInventoryRow flc = SourceInventoryRow.RequireFamily(inventory, FlcFamily);
 
         Dictionary<string, DaedricHook> hooks = DaedricHooks.ToDictionary(hook => hook.FileName, StringComparer.OrdinalIgnoreCase);
         List<DaggerfallCinematicRecord> cinematics = [];
@@ -173,10 +151,7 @@ public static class DaggerfallCinematicPackBuilder
             }
         }
 
-        DaggerfallCinematicPack pack = new(
-            new DaggerfallTextSource(DaggerfallTextKind.Resource, vid.PathOrPattern, "en", files.Where(file => file.Kind == DaggerfallCinematicKind.Vid).Sum(file => file.ByteLength), 0, cinematics.Count(record => record.Kind == DaggerfallCinematicKind.Vid)),
-            new DaggerfallTextSource(DaggerfallTextKind.Resource, flc.PathOrPattern, "en", files.Where(file => file.Kind == DaggerfallCinematicKind.Flc).Sum(file => file.ByteLength), 0, cinematics.Count(record => record.Kind == DaggerfallCinematicKind.Flc)),
-            cinematics);
+        DaggerfallCinematicPack pack = new(cinematics);
         pack.Validate();
         return pack;
     }

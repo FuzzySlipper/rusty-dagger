@@ -21,9 +21,9 @@ public sealed class BlockPlacementTests
     public void Placements_repeat_counts_and_resolve_models()
     {
         JsonDocument payload = JsonDocument.Parse(ImportedContent.Record("daggerfall.blocks.json"));
-        JsonDocument pack = JsonDocument.Parse(ImportedContent.Record("daggerfall.import-records.json"));
-
-        HashSet<int> models = [.. pack.RootElement.GetProperty("geometry").GetProperty("records").EnumerateArray().Select(record => record.GetProperty("recordId").GetInt32())];
+        // Every number the supplied mesh archive indexes a record by.
+        HashSet<int> models = [.. Arch3dInventoryReader.Read(File.ReadAllBytes(TestData.Corpus(Arch3dInventoryReader.FileName)), "arena2/ARCH3D.BSA")
+            .Records.Select(record => (int)record.RecordId)];
         int rdbModels = 0, rdbFlats = 0, rdbLights = 0, rdbDoors = 0;
         int rmbModels = 0, rmbFlats = 0, rmbSections = 0, rmbPeople = 0, rmbDoors = 0;
         foreach (JsonElement record in payload.RootElement.GetProperty("records").EnumerateArray())

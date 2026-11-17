@@ -447,33 +447,6 @@ public sealed class CharacterMediaPublicationTests
     }
 
     /// <summary>
-    /// The documented character-media inventory and the supplied corpus have to agree, which is what the
-    /// tool's <c>--inventory</c> argument is for: a documented file the corpus lacks would make the
-    /// publication account for a family the source does not carry, and a supplied file with no row is
-    /// content this publication would emit without a record.
-    /// </summary>
-    [CorpusFact]
-    public void TheDocumentedInventoryAndTheSuppliedCorpusAgree()
-    {
-        IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(
-            File.ReadAllBytes(Path.Combine(TestData.RepositoryRoot, "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv")));
-        string[] documented = [.. rows
-            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-021"))
-            .Select(row => System.IO.Path.GetFileName(row.PathOrPattern))
-            .Order(StringComparer.OrdinalIgnoreCase)];
-        Assert.Equal(93, documented.Length);
-
-        string arena2 = TestData.CorpusRoot;
-        string[] supplied = [.. Directory.EnumerateFiles(arena2)
-            .Select(path => System.IO.Path.GetFileName(path))
-            .Where(name => name is { Length: > 0 } && CharacterMediaInventory.IsDocumentedFamily(name))
-            .Select(name => name!)
-            .Order(StringComparer.OrdinalIgnoreCase)];
-
-        Assert.Equal(documented, supplied);
-    }
-
-    /// <summary>
     /// A file no reader opens inside a family this run publishes from is a file-level gap, not a format
     /// nothing reads: an entry claiming otherwise would be false in the same run that reads its siblings.
     /// </summary>

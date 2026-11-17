@@ -17,8 +17,8 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class WorldMediaCommand
 {
     public static ToolCommand Command { get; } = new("world-media",
-        [Options.Arena2, CommandOption.Staged(PublicationInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldMedia), AuthoredUi.Manifest, AuthoredUi.Originals, Options.Inventory, Options.Pack,
-            CommandOption.Staged(PublicationInputs.SourceManifest.Name, "FILE", $"{ImportLayout.Records}/world-media.sources.json"), PublicationInputs.ClassicGroup], Run);
+        [Options.Arena2, CommandOption.Staged(PublicationInputs.Output.Name, "OUTPUT_DIR", ImportLayout.WorldMedia), AuthoredUi.Manifest, AuthoredUi.Originals, Options.Pack,
+            PublicationInputs.ClassicGroup], Run);
 
     private static int Run(CommandArguments args)
     {
@@ -30,7 +30,6 @@ internal static class WorldMediaCommand
             PayloadFiles.ReadSection<DaggerfallLocations>(args[Options.Pack.Name], "locations"));
         ImportPublicationPlan plan = publication.Plan.WithInvocation(PublicationInputs.Invocation(args));
         PublicationInputs.PrintComparison(ImportPublicationWriter.Write(plan, Path.GetFullPath(args[PublicationInputs.Output.Name])));
-        PublicationInputs.WriteSourceManifest(args, plan);
         Arena2WorldTextureSelection textures = publication.Textures;
         Console.WriteLine($"world media: {plan.Artifacts.Count} artifacts, {plan.Artifacts.Sum(artifact => (long)artifact.Bytes.Length)} bytes");
         Console.WriteLine($"  textures: {textures.Materials.Count} material records and {textures.Billboards.Count} billboard records from {textures.Archives.Count} leaves");

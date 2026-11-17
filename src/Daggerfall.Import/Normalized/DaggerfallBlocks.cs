@@ -389,12 +389,11 @@ public sealed record DaggerfallBlockBuildingPlacements(
     DaggerfallBlockHalfPlacements Interior);
 
 /// <summary>One archive the published blocks were read from.</summary>
-/// <param name="RecordId">The inventory's identity for the family.</param>
-/// <param name="Path">The logical path the inventory documents it at.</param>
+/// <param name="Path">The logical path it was read under.</param>
 /// <param name="ByteLength">The bytes the archive occupies.</param>
 /// <param name="DeclaredLength">The record count the archive's own header declares.</param>
 /// <param name="Records">How many records the publication carries for it.</param>
-public sealed record DaggerfallBlockSource(string RecordId, string Path, long ByteLength, int DeclaredLength, int Records);
+public sealed record DaggerfallBlockSource(string Path, long ByteLength, int DeclaredLength, int Records);
 
 /// <summary>
 /// The published block inventory: every record the supplied archive declares, what its name says it is,
@@ -823,30 +822,18 @@ internal static class DaggerfallBlockValidation
 }
 
 /// <summary>
-/// Builds the published block inventory from the supplied archive and the documented inventory.
+/// Builds the published block inventory from the supplied archive.
 /// </summary>
 /// <remarks>
-/// The inventory decides the source's identity: the caller's label has to be the path the documented
-/// record places the archive at, so a publication cannot cite blocks to a file the repository does not
-/// document. Nothing here decodes a placement, a ground tile or an automap: this is the inventory the
-/// dungeon, exterior and geometry tasks name when they publish what these records contain.
+/// Nothing here decodes a placement, a ground tile or an automap: this is the inventory the dungeon, exterior and
+/// geometry publications name when they publish what these records contain.
 /// </remarks>
 public static class DaggerfallBlocksBuilder
 {
-    /// <summary>The inventory family the block archive is documented under.</summary>
-    public const string BlocksFamily = "CNT-005";
-
     /// <summary>Reads the supplied archive and publishes every record it declares.</summary>
-    public static DaggerfallBlocks Build(byte[] bytes, string label, IReadOnlyList<SourceInventoryRow> inventory)
+    public static DaggerfallBlocks Build(byte[] bytes, string label)
     {
         ArgumentNullException.ThrowIfNull(bytes);
-        ArgumentNullException.ThrowIfNull(inventory);
-        SourceInventoryRow family = SourceInventoryRow.RequireFamily(inventory, BlocksFamily);
-        if (!StringComparer.Ordinal.Equals(family.PathOrPattern, label))
-        {
-            throw new InvalidOperationException($"The block archive was read as '{label}', but the documented inventory places {BlocksFamily} at '{family.PathOrPattern}'.");
-        }
-
         BlockRecordInventory catalog = BlockRecordInventoryReader.Read(bytes, label);
         List<DaggerfallBlockRecord> records = [];
         foreach (BlockRecord record in catalog.Records)
@@ -869,7 +856,7 @@ public static class DaggerfallBlocksBuilder
         }
 
         DaggerfallBlocks published = new(
-            [new DaggerfallBlockSource(family.Id, label, bytes.LongLength, catalog.DeclaredRecords, catalog.Records.Count)],
+            [new DaggerfallBlockSource(label, bytes.LongLength, catalog.DeclaredRecords, catalog.Records.Count)],
             records);
         published.Validate();
         return published;

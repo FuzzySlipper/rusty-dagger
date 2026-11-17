@@ -9,7 +9,7 @@ namespace Daggerfall.Import.Tests;
 
 internal sealed partial class ImportToolFixture
 {
-    private void ExpectedOther(string name, Dictionary<string, byte[]> result, Dictionary<string, string> sections, Dictionary<string, string> records)
+    private void ExpectedOther(string name, Dictionary<string, byte[]> result, Dictionary<string, string> sections)
     {
         void Section<T>(string id, T value) => sections.Add(id, JsonSerializer.Serialize(value, PublishedJson.Section));
         void Artifacts(string root, IEnumerable<ImportPublicationArtifact> artifacts)
@@ -35,7 +35,7 @@ internal sealed partial class ImportToolFixture
                 var characters = CharacterPresentationGroup.Create(Directory.EnumerateFiles(Arena2).Select(Path.GetFileName).OfType<string>()
                     .Where(CharacterMediaInventory.IsDocumentedFamily).Order(StringComparer.Ordinal).Select(file => (file, (ReadOnlyMemory<byte>)Source(file))).ToArray(),
                     Directory.EnumerateFiles(Arena2, "*.COL").Order(StringComparer.Ordinal).ToDictionary(file => Path.GetFileName(file), file => PaletteDecoder.Decode(File.ReadAllBytes(file), Label(Path.GetFileName(file))), StringComparer.Ordinal),
-                    File.ReadAllBytes(Inventory), Path.GetFileName(Path.TrimEndingDirectorySeparator(Arena2)));
+                    Path.GetFileName(Path.TrimEndingDirectorySeparator(Arena2)));
                 foreach (var artifact in characters.Pass.Artifacts) result.Add(At("output/worldrpg/" + artifact.RelativePath), artifact.Bytes);
                 result.Add(At("output/worldrpg/" + CharacterMediaPublisher.IndexRelativePath), CharacterMediaPublisher.WriteIndex(characters.Pass, characters.References, "worldrpg"));
                 Section("characterPresentation", characters.Presentation); break;
@@ -62,9 +62,6 @@ internal sealed partial class ImportToolFixture
                 }
                 finally { if (Directory.Exists(scratch)) Directory.Delete(scratch, true); }
                 Section("cinematics", cinematicPack with { Cinematics = updated }); break;
-            case "source-coverage":
-                // The staging tree's files replace the repository content's at the same path; records keep their own label.
-                result.Add(At("report.json"), SourceCoverageReconciler.Serialize(Coverage())); break;
             default: throw new ArgumentException($"No expected builder output for {name}.");
         }
     }

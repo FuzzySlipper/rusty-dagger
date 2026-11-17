@@ -110,7 +110,7 @@ internal sealed class CommandArguments
     {
         if (values.TryGetValue(name, out string? value)) return value;
         if (Command.Options.FirstOrDefault(option => option.Name == name)?.Default is not { } staged) return null;
-        return File.Exists(ImportLayout.Inventory)
+        return File.Exists(ImportLayout.RootMarker)
             ? staged
             : throw Invalid($"{name} defaults to '{staged}' in the repository root, and '{Directory.GetCurrentDirectory()}' is not one; run from the repository root or pass {name}.");
     }

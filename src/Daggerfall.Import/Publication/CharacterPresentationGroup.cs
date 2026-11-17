@@ -21,14 +21,12 @@ public sealed class CharacterPresentationGroup
         CharacterMediaInventory characters,
         CharacterMediaPassResult pass,
         CharacterMediaReferenceSet references,
-        DaggerfallCharacterPresentation presentation,
-        IReadOnlyList<string> undocumented)
+        DaggerfallCharacterPresentation presentation)
     {
         Characters = characters;
         Pass = pass;
         References = references;
         Presentation = presentation;
-        Undocumented = undocumented;
     }
 
     public CharacterMediaInventory Characters { get; }
@@ -40,28 +38,19 @@ public sealed class CharacterPresentationGroup
 
     public DaggerfallCharacterPresentation Presentation { get; }
 
-    /// <summary>Corpus files the documented inventory does not name; they are published and reported.</summary>
-    public IReadOnlyList<string> Undocumented { get; }
-
     /// <summary>
     /// Publishes the supplied character media and builds the presentation section from it.
     /// </summary>
-    /// <param name="sources">The corpus files of the documented character families, by file name.</param>
+    /// <param name="sources">The corpus files of the character families, by file name.</param>
     /// <param name="palettes">The corpus palettes, by file name.</param>
-    /// <param name="inventoryCsv">The documented inventory, checked against the corpus in both directions.</param>
-    /// <param name="corpusLabel">The corpus directory name the inventory's source records cite.</param>
+    /// <param name="corpusLabel">The corpus directory name an error names.</param>
     public static CharacterPresentationGroup Create(
         IReadOnlyList<(string Path, ReadOnlyMemory<byte> Bytes)> sources,
         IReadOnlyDictionary<string, Arena2Palette> palettes,
-        ReadOnlySpan<byte> inventoryCsv,
         string corpusLabel)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(palettes);
-        // A documented file the corpus lacks is a source gap, and a corpus file the inventory does not
-        // document is one this publication would emit without a record.
-        string[] undocumented = [.. CharacterMediaPublisher.ReconcileDocumentedInventory(inventoryCsv, sources.Select(entry => entry.Path))];
-
         // The publication pass runs first over the corpus as it stands, so the artifacts exist before any
         // reference claims one. The consumer is then derived from the pack's own identity: the character
         // sheet resolves the race the player's actor declares and a portrait per career, so those files are
@@ -103,7 +92,7 @@ public sealed class CharacterPresentationGroup
             .Concat(presentation.RacialForms.Where(form => form.HeadPlacement is null).Select(form => form.HeadMediaId))];
         if (unplaced.Length != 0)
             throw new InvalidOperationException($"{unplaced.Length} paper-doll layer(s) have no placement read from their source header: {string.Join(", ", unplaced.Take(8))}.");
-        return new(characters, pass, referenced, presentation, undocumented);
+        return new(characters, pass, referenced, presentation);
     }
 
     /// <summary>

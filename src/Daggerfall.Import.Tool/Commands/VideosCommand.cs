@@ -11,7 +11,7 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </summary>
 internal static class VideosCommand
 {
-    public static ToolCommand Command { get; } = new("videos", [Options.Arena2, Options.Pack, Options.Inventory, Options.Update], Run);
+    public static ToolCommand Command { get; } = new("videos", [Options.Arena2, Options.Pack, Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {
@@ -27,7 +27,7 @@ internal static class VideosCommand
             files.Add((fileName, kind.Value, bytes.LongLength, Convert.ToHexString(SHA256.HashData(bytes))));
         }
 
-        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files, PublishedSourcePath.Arena2Root, Options.ReadInventory(args));
+        DaggerfallCinematicPack pack = DaggerfallCinematicPackBuilder.Build(files);
         Console.WriteLine($"videos: {pack.Cinematics.Count} cinematics, {pack.Cinematics.Count(record => record.Binding == DaggerfallCinematicBinding.Bound)} bound");
         if (!args.Switch("--update")) return Options.ReportOnly("these identities");
         PayloadFiles.WriteSection(args["--pack"], "cinematics", pack);

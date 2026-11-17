@@ -9,7 +9,7 @@ namespace Daggerfall.Import.Tool;
 /// </summary>
 /// <remarks>
 /// Every file here is an input of the importer revision, so only what the import runs belongs here: a command
-/// that reads the classic sources for anything else (reference exports, inventory reports) lives in
+/// that reads the classic sources for anything else (reference exports, remodel meshes) lives in
 /// <c>Daggerfall.Source.Tool</c>, where an edit leaves the imported data current.
 /// </remarks>
 internal static class Program
@@ -29,7 +29,6 @@ internal static class Program
         // The imported payload's sections, the block document and the import records.
         LocationsCommand.Command,
         BlocksCommand.Command,
-        GeometryCommand.Command,
         ClimateCommand.Command,
         TerrainCommand.Command,
         ReliefCommand.Command,
@@ -38,8 +37,6 @@ internal static class Program
         // The product-wide world media, then the per-block world publication that places it.
         WorldMediaCommand.Command,
         WorldBlocksCommand.Command,
-        // Reconciles every producer citation against the documented inventory.
-        SourceCoverageCommand.Command,
     }.ToDictionary(command => command.Name, StringComparer.Ordinal);
 
     internal static int Main(string[] args)

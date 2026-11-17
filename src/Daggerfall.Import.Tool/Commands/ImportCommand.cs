@@ -26,7 +26,6 @@ namespace Daggerfall.Import.Tool.Commands;
 /// </remarks>
 internal static class ImportCommand
 {
-    private const string Inventory = ImportLayout.Inventory;
     private const string UiAssets = AuthoredUi.ManifestFile;
     private const string UiOriginal = AuthoredUi.ProductDirectory;
 
@@ -123,11 +122,9 @@ internal static class ImportCommand
     {
         string arena2 = inputs.Arena2;
         const string staging = ImportLayout.Staging;
-        const string records = ImportLayout.Records;
         const string imported = ImportLayout.ImportedPayload;
         const string blocks = ImportLayout.BlockDocument;
         const string buildings = ImportLayout.BuildingsPayload;
-        const string importRecords = ImportLayout.ImportRecords;
         const string worldMedia = ImportLayout.WorldMedia;
         const string classicGroup = ImportLayout.ClassicGroup;
         List<Step> steps = [];
@@ -145,17 +142,16 @@ internal static class ImportCommand
         // 2. The imported payload's sections, in dependency order, with the block document and the import
         //    records. None reads the authored payload: the ruleset joins it to these sections when it loads, and the
         //    classic tables and the game's text are authored data there (DEC-13).
-        Add("character-presentation", "character-presentation", "--arena2", arena2, "--inventory", Inventory, "--pack", imported,
+        Add("character-presentation", "character-presentation", "--arena2", arena2, "--pack", imported,
             "--out", staging, "--group", "worldrpg", "--update");
         Add("locations", "locations", "--arena2", arena2, "--pack", imported, "--out", staging, "--update");
-        Add("blocks", "blocks", "--arena2", arena2, "--document", blocks, "--buildings", buildings, "--inventory", Inventory, "--update");
-        Add("geometry", "geometry", "--arena2", arena2, "--blocks", blocks, "--records", importRecords, "--inventory", Inventory, "--update");
-        Add("climate", "climate", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
-        Add("terrain", "terrain", "--arena2", arena2, "--pack", imported, "--out", staging, "--inventory", Inventory, "--update");
+        Add("blocks", "blocks", "--arena2", arena2, "--document", blocks, "--buildings", buildings, "--update");
+        Add("climate", "climate", "--arena2", arena2, "--pack", imported, "--update");
+        Add("terrain", "terrain", "--arena2", arena2, "--pack", imported, "--out", staging, "--update");
         Add("relief", "relief", "--arena2", arena2, "--pack", imported, "--out", staging, "--keep", ImportLayout.KeptRelief, "--update");
         Add("atlas", "atlas", "--pack", imported, "--out", staging, "--update");
         Add("paper-doll-media", "paper-doll-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--group", "worldrpg", "--update");
-        Add("videos", "videos", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
+        Add("videos", "videos", "--arena2", arena2, "--pack", imported, "--update");
         if (inputs.Cinematics)
         {
             Add("cinematic-media-vid", "cinematic-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--kind", "vid", "--update");
@@ -164,19 +160,13 @@ internal static class ImportCommand
 
         // 3. The product-wide world media every location draws from: every mesh, material texture, billboard
         //    and actor atlas, terrain texture, the classic sidecar and its audio clips, published once.
-        Add("world-media", "world-media", "--arena2", arena2, "--ui-authored-assets", UiAssets, "--ui-original", UiOriginal, "--inventory", Inventory,
-            "--pack", imported, "--classic-group", classicGroup, "--out", worldMedia,
-            "--source-manifest", $"{records}/world-media.sources.json");
+        Add("world-media", "world-media", "--arena2", arena2, "--ui-authored-assets", UiAssets, "--ui-original", UiOriginal,
+            "--pack", imported, "--classic-group", classicGroup, "--out", worldMedia);
 
         // 4. The per-block world publication: every RMB exterior, building interior and RDB block a location
         //    places, normalized in its own frame, its static meshes placing the world media publication's meshes.
-        Add("world-blocks", "world-blocks", "--arena2", arena2, "--pack", imported, "--buildings", buildings, "--shared", worldMedia, "--inventory", Inventory,
-            "--out", ImportLayout.WorldBlocks, "--source-manifest", $"{records}/world-blocks.sources.json");
-
-        // 5. Reconcile every producer citation and raw-record ledger against the documented inventory, over the
-        //    content the product will see. This is import coverage, not runtime parity certification.
-        Add("source-coverage", "source-coverage", "--arena2", arena2, "--inventory", Inventory, "--repository", ".",
-            "--content", staging, "--import-records", records, "--output", $"{records}/source-coverage.json");
+        Add("world-blocks", "world-blocks", "--arena2", arena2, "--pack", imported, "--buildings", buildings, "--shared", worldMedia,
+            "--out", ImportLayout.WorldBlocks);
         return steps;
     }
 
@@ -210,7 +200,7 @@ internal static class ImportCommand
             foreach (string tool in new[] { "ffmpeg", "ffprobe" }.Where(tool => FindOnPath(tool) is null))
                 yield return $"{tool} on PATH (--cinematics converts the cinematics with it)";
         if (inputs.Music is { } music && !IsDirectory(music)) yield return $"music folder '{music}' (a folder of <track>.<ext> recordings, or leave out --music)";
-        foreach (string file in new[] { Inventory, UiAssets }.Where(file => !IsFile(file)))
+        foreach (string file in new[] { ClassicArt.ListFile, UiAssets }.Where(file => !IsFile(file)))
             yield return $"tracked file '{file}'";
         if (!IsDirectory(UiOriginal)) yield return $"tracked directory '{UiOriginal}'";
     }

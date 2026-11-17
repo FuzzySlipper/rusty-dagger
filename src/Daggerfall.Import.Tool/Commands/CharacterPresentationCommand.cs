@@ -13,7 +13,7 @@ namespace Daggerfall.Import.Tool.Commands;
 internal static class CharacterPresentationCommand
 {
     public static ToolCommand Command { get; } = new("character-presentation",
-        [Options.Arena2, Options.Inventory, Options.Pack, Options.ContentRoot, Options.Group, Options.Update], Run);
+        [Options.Arena2, Options.Pack, Options.ContentRoot, Options.Group, Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {
@@ -31,7 +31,7 @@ internal static class CharacterPresentationCommand
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToDictionary(path => Path.GetFileName(path), path => PaletteDecoder.Decode(File.ReadAllBytes(path), $"arena2/{Path.GetFileName(path)}"), StringComparer.Ordinal);
         CharacterPresentationGroup group = CharacterPresentationGroup.Create(
-            sources, palettes, File.ReadAllBytes(args["--inventory"]), Options.CorpusLabel(arena2));
+            sources, palettes, Options.CorpusLabel(arena2));
         Report(group);
         if (!args.Switch("--update")) return Options.ReportOnly("these artifacts and references");
 
@@ -75,8 +75,6 @@ internal static class CharacterPresentationCommand
         Console.WriteLine($"character presentation: {group.Characters.Files.Count} supplied files, {pass.Artifacts.Count} published canvases, {pass.Refusals.Count} refused, {presentation.Layers.Count} layers over {races.Length} race values, {presentation.Faces.Count} faction faces, {presentation.ChildFaces.Count} child faces, {presentation.Careers.Count} class portraits");
         Console.WriteLine($"  binding: {admitted} reference(s) bound by {CharacterMediaReferences.CharacterSheetConsumer}, {pending} required-pending; {pass.UnreadableFamilies.Count} unreadable family entry(ies)");
         foreach (string refusal in pass.Refusals.Take(2)) Console.WriteLine($"  refusal: {refusal}");
-        Console.WriteLine($"  inventory: {group.Characters.Files.Count - group.Undocumented.Count} documented supplied file(s) reconciled with the corpus");
-        foreach (string file in group.Undocumented) Console.WriteLine($"  warning: '{file}' is in the corpus and not in the documented inventory");
         foreach (int race in races) Console.WriteLine($"  race value {race}: {presentation.Layers.Count(layer => layer.DonorRaceId == race)} layers");
         foreach (DaggerfallRaceWithoutMedia gap in presentation.RacesWithoutMedia.Take(4)) Console.WriteLine($"  gap at race value {gap.DonorRaceId}: {gap.Reason}");
     }

@@ -42,11 +42,8 @@ internal static class ImportLayout
     /// <summary>The block payload the runtime reads: building fields, map positions and automap footprints.</summary>
     public const string BuildingsPayload = $"{Staging}/worldrpg/payloads/daggerfall.blocks.json";
 
-    /// <summary>The complete block document, an importer record whose use sites geometry reads.</summary>
+    /// <summary>The complete block document, an importer record nothing at runtime reads.</summary>
     public const string BlockDocument = $"{Records}/daggerfall.blocks.json";
-
-    /// <summary>The importer records nothing at runtime reads: the mesh inventory.</summary>
-    public const string ImportRecords = $"{Records}/daggerfall.import-records.json";
 
     /// <summary>The classic media group the classic, sky, character and paper-doll media are written into.</summary>
     public const string ClassicGroup = $"{Staging}/worldrpg";
@@ -70,7 +67,7 @@ internal static class ImportLayout
     public const string Inputs = "src/Daggerfall.Import.Tool/inputs";
 
     /// <summary>The tracked file that marks the repository root the import works in.</summary>
-    public const string Inventory = $"{Inputs}/content-source-manifest.csv";
+    public const string RootMarker = ClassicArt.ListFile;
 
     /// <summary>
     /// The release the tool was installed into by <c>rusty build --release</c>, which puts it in
@@ -78,18 +75,18 @@ internal static class ImportLayout
     /// </summary>
     public static string? ReleaseDirectory { get; } = FindRelease(AppContext.BaseDirectory);
 
-    /// <summary>The nearest directory above this one that holds the repository's inventory, or null.</summary>
+    /// <summary>The nearest directory above this one that holds the repository's root marker, or null.</summary>
     internal static string? EnclosingRepository(string directory)
     {
         for (DirectoryInfo? current = new(directory); current is not null; current = current.Parent)
-            if (File.Exists(Path.Combine(current.FullName, Inventory))) return current.FullName;
+            if (File.Exists(Path.Combine(current.FullName, RootMarker))) return current.FullName;
         return null;
     }
 
     internal static string? FindRelease(string toolDirectory)
     {
         string release = Path.GetFullPath(Path.Combine(toolDirectory, "..", ".."));
-        return File.Exists(Path.Combine(release, "product.rpak")) && File.Exists(Path.Combine(toolDirectory, Inventory)) ? release : null;
+        return File.Exists(Path.Combine(release, "product.rpak")) && File.Exists(Path.Combine(toolDirectory, RootMarker)) ? release : null;
     }
 
     /// <summary>
@@ -134,11 +131,11 @@ internal static class ImportLayout
     {
         string repository = Path.GetFullPath(args.Optional("--repository")
             ?? (ReleaseDirectory is not null ? AppContext.BaseDirectory
-                : File.Exists(Path.Combine(Directory.GetCurrentDirectory(), Inventory)) ? Directory.GetCurrentDirectory()
+                : File.Exists(Path.Combine(Directory.GetCurrentDirectory(), RootMarker)) ? Directory.GetCurrentDirectory()
                 : EnclosingRepository(AppContext.BaseDirectory) ?? Directory.GetCurrentDirectory()));
-        return File.Exists(Path.Combine(repository, Inventory))
+        return File.Exists(Path.Combine(repository, RootMarker))
             ? repository
-            : throw args.Invalid($"'{repository}' is not the repository root: it has no '{Inventory}'. Run from the repository or pass --repository.");
+            : throw args.Invalid($"'{repository}' is not the repository root: it has no '{RootMarker}'. Run from the repository or pass --repository.");
     }
 }
 

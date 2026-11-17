@@ -142,35 +142,6 @@ public sealed class ImportToolCommandTests
         fixture.AssertPublication(before, expected);
     }
 
-    [ImportToolDataTheory]
-    [InlineData("monster-archive")]
-    [InlineData("texture-leaves")]
-    [InlineData("residual-paths")]
-    [InlineData("map-art")]
-    public void Report_only_verbs_leave_all_supplied_outputs_untouched(string name)
-    {
-        using ImportToolFixture fixture = new();
-        string[] args = fixture.Arguments(name);
-        var before = fixture.Snapshot();
-        var result = Run(args);
-        Assert.True(result.Code == 0, result.Error);
-        Assert.NotEmpty(result.Output);
-        fixture.AssertUnchanged(before);
-    }
-
-    [ImportToolDataTheory]
-    [InlineData("map-art")]
-    [InlineData("texture-leaves")]
-    public void Report_inventory_reconciliation_is_executed_without_writing(string name)
-    {
-        using ImportToolFixture fixture = new();
-        var before = fixture.Snapshot();
-        var result = Run([.. fixture.Arguments(name), "--inventory", fixture.InventoryFile]);
-        Assert.True(result.Code == 0, result.Error);
-        Assert.Contains("documented", result.Output, StringComparison.Ordinal);
-        fixture.AssertUnchanged(before);
-    }
-
     [ImportToolDataFact(Cinematics = true)]
     public void Flc_report_writes_nothing_and_update_publishes_the_selected_kind()
     {
@@ -182,57 +153,6 @@ public sealed class ImportToolCommandTests
         fixture.AssertUnchanged(before);
         var update = Run([.. fixture.Arguments("cinematic-media"), "--update"]);
         Assert.True(update.Code == 0, update.Error);
-        fixture.AssertPublication(before, expected);
-    }
-
-    [ImportToolDataFact]
-    public void Source_inventory_reports_drift_then_updates_only_when_requested_from_every_publication()
-    {
-        using ImportToolFixture fixture = new();
-        fixture.PrepareInventoryDrift();
-        byte[] original = File.ReadAllBytes(fixture.InventoryFile);
-        var report = Run(fixture.Arguments("source-inventory"));
-        Assert.True(report.Code == 0, report.Error);
-        Assert.Contains("disagreements to record", report.Error, StringComparison.Ordinal);
-        Assert.Equal(original, File.ReadAllBytes(fixture.InventoryFile));
-        Dictionary<string, byte[]> expected = new(StringComparer.Ordinal) { [fixture.InventoryFile] = fixture.ExpectedReconciledInventory() };
-        var before = fixture.Snapshot();
-        var updated = Run([.. fixture.Arguments("source-inventory"), "--update-inventory"]);
-        Assert.True(updated.Code == 0, updated.Error);
-        Assert.Contains("dispositions updated", updated.Error, StringComparison.Ordinal);
-        fixture.AssertPublication(before, expected);
-        // The world media reads none of these; the world blocks or the imported payload do, so each is imported.
-        string[] rows = File.ReadAllLines(fixture.InventoryFile);
-        foreach (string id in ImportToolFixture.OtherPublicationsOnly)
-            Assert.Equal("imported", Assert.Single(rows, row => row.StartsWith(id + ",", StringComparison.Ordinal)).Split(',')[9]);
-    }
-
-    [ImportToolDataFact]
-    public void Source_inventory_refused_update_exits_one_and_preserves_the_inventory()
-    {
-        using ImportToolFixture fixture = new();
-        fixture.PrepareInventoryDrift();
-        File.AppendAllText(fixture.InventoryFile,
-            "CNT-001.file.NEVER-PRESENT,file,CNT-001,source-file,arena2/NEVER-PRESENT-8279*.ZZZ,0,,,test,uninspected,unmatched pattern\n");
-        var before = fixture.Snapshot();
-        var refused = Run([.. fixture.Arguments("source-inventory"), "--update-inventory"]);
-        Assert.Equal(1, refused.Code);
-        Assert.Contains("NOT rewritten", refused.Error, StringComparison.Ordinal);
-        Assert.DoesNotContain("dispositions updated", refused.Error, StringComparison.Ordinal);
-        fixture.AssertUnchanged(before);
-    }
-
-    [ImportToolDataTheory]
-    [InlineData("source-coverage")]
-    public void Explicit_writer_verbs_publish_exact_builder_output(string name)
-    {
-        using ImportToolFixture fixture = new();
-        string[] args = fixture.Arguments(name);
-        var expected = fixture.Expected(name);
-        Assert.NotEmpty(expected);
-        var before = fixture.Snapshot();
-        var result = Run(args);
-        Assert.True(result.Code == 0, result.Error);
         fixture.AssertPublication(before, expected);
     }
 

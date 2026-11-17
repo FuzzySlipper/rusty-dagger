@@ -39,7 +39,7 @@ public sealed class ImporterRevisionTests
                 "src/Daggerfall.Import/Publication/WorldBlocksPublication.cs",
                 "src/Daggerfall.Import.Tool/Commands/ImportCommand.cs",
                 "src/Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj",
-                "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv",
+                "src/Daggerfall.Import.Tool/inputs/replaced-classic.json",
                 "content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-authored-assets.json",
                 "src/Daggerfall.Import.Tool/inputs/item-templates.json",
                 "content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-title-v2.png",
@@ -134,11 +134,9 @@ public sealed class ImporterRevisionTests
                 .Select(option => option.Default!);
             foreach (string value in step.Arguments.Skip(1).Concat(defaults))
             {
-                // local/ holds the operator's own files and what the import writes. source-coverage reads the whole
-                // repository only to reconcile the inventory: it writes its report to the records, never the container.
-                // The tracked terrain bake is a cache its record checks (ImportLayout.KeptRelief), and the relief step writes it.
-                if (value.StartsWith("local/", StringComparison.Ordinal) || (value == "." && step.Label == "source-coverage")
-                    || value == ImportLayout.KeptRelief) continue;
+                // local/ holds the operator's own files and what the import writes. The tracked terrain bake is a cache
+                // its record checks (ImportLayout.KeptRelief), and the relief step writes it.
+                if (value.StartsWith("local/", StringComparison.Ordinal) || value == ImportLayout.KeptRelief) continue;
                 string full = Path.GetFullPath(Path.Combine(Root, value));
                 IEnumerable<string> files = File.Exists(full) ? [full]
                     : Directory.Exists(full) ? Directory.EnumerateFiles(full, "*", SearchOption.AllDirectories)
@@ -153,7 +151,6 @@ public sealed class ImporterRevisionTests
 
         Assert.True(outside.Count == 0, $"import steps read repository files outside the importer revision: {string.Join(", ", outside.Distinct().Take(20))}");
         Assert.DoesNotContain("content/worldrpg/packs/daggerfall.base/payload.json", checkedPaths);
-        Assert.Contains(ImportLayout.Inventory, checkedPaths);
         Assert.Contains(AuthoredUi.ManifestFile, checkedPaths);
         Assert.Contains(checkedPaths, path => path.StartsWith(AuthoredUi.ProductDirectory + "/", StringComparison.Ordinal));
         // The pack, not a step, reads the art pack's replaced classic identities: which files the data container leaves out.

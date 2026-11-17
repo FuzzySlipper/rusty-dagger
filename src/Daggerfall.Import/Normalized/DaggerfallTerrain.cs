@@ -123,14 +123,9 @@ public sealed record DaggerfallTerrain(
 /// </summary>
 public static class DaggerfallTerrainBuilder
 {
-    /// <summary>The inventory family the wilderness file is documented under.</summary>
-    public const string TerrainFamily = "CNT-004";
-
     /// <summary>Builds the terrain contract.</summary>
-    public static DaggerfallTerrain Build(ReadOnlySpan<byte> bytes, string label, IReadOnlyList<SourceInventoryRow> inventory)
+    public static DaggerfallTerrain Build(ReadOnlySpan<byte> bytes, string label)
     {
-        ArgumentNullException.ThrowIfNull(inventory);
-        SourceInventoryRow family = SourceInventoryRow.RequireFamily(inventory, TerrainFamily);
         WoodsFile woods = WoodsReader.Read(bytes, label);
 
         List<DaggerfallGridRow> rows = [];
@@ -179,7 +174,7 @@ public static class DaggerfallTerrainBuilder
         }
 
         DaggerfallTerrain terrain = new(
-            PublishedSource.Of(GetFilePath(inventory, label), bytes),
+            PublishedSource.Of(label, bytes),
             WoodsReader.MapWidth,
             WoodsReader.MapHeight,
             rows,
@@ -194,11 +189,5 @@ public static class DaggerfallTerrainBuilder
         };
         terrain.Validate();
         return terrain;
-    }
-
-    private static string GetFilePath(IReadOnlyList<SourceInventoryRow> inventory, string label)
-    {
-        return inventory.FirstOrDefault(row => row.FamilyId == TerrainFamily && StringComparer.Ordinal.Equals(row.PathOrPattern, label))?.PathOrPattern
-            ?? throw new InvalidOperationException($"The documented inventory does not carry '{label}', so the terrain cites no provenance.");
     }
 }

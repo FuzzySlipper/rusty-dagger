@@ -90,7 +90,7 @@ public sealed class ReliefBakeRevisionTests
                 "src/Daggerfall.Import/Daggerfall.Import.csproj",
                 "src/Daggerfall.Import.Tool/Commands/ReliefCommand.cs",
                 "src/Daggerfall.Import.Tool/KeptRelief.cs",
-                "src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv",
+                "src/Daggerfall.Import.Tool/inputs/replaced-classic.json",
                 "src/Daggerfall.Import.Tool/inputs/relief/record.json",
             ];
             foreach (string path in bake.Concat(elsewhere)) Write(tree, path, "original");

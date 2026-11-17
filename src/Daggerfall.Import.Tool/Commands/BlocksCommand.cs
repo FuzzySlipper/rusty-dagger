@@ -9,21 +9,20 @@ namespace Daggerfall.Import.Tool.Commands;
 /// <summary>
 /// Enumerates the classic block archive into the block document, so the tasks that publish dungeons,
 /// exteriors and geometry start from one inventory of what the corpus carries rather than decoding the
-/// archive again and disagreeing about what a name means. The complete document is an importer record
-/// (the geometry inventory reads its use sites); the runtime reads building fields and compact automap footprints, which are
-/// published on their own as the <c>daggerfall.blocks</c> payload.
+/// archive again and disagreeing about what a name means. The complete document is an importer record; the runtime
+/// reads building fields and compact automap footprints, which are published on their own as the
+/// <c>daggerfall.blocks</c> payload.
 /// </summary>
 internal static class BlocksCommand
 {
     public static ToolCommand Command { get; } = new("blocks",
-        [Options.Arena2, CommandOption.Staged("--document", "BLOCKS.json", ImportLayout.BlockDocument), CommandOption.Staged("--buildings", "PAYLOAD.json", ImportLayout.BuildingsPayload), Options.Inventory, Options.Update], Run);
+        [Options.Arena2, CommandOption.Staged("--document", "BLOCKS.json", ImportLayout.BlockDocument), CommandOption.Staged("--buildings", "PAYLOAD.json", ImportLayout.BuildingsPayload), Options.Update], Run);
 
     private static int Run(CommandArguments args)
     {
         DaggerfallBlocks blocks = DaggerfallBlocksBuilder.Build(
             File.ReadAllBytes(Path.Combine(args["--arena2"], BlockRecordInventoryReader.FileName)),
-            Options.Arena2Label(BlockRecordInventoryReader.FileName),
-            Options.ReadInventory(args));
+            Options.Arena2Label(BlockRecordInventoryReader.FileName));
 
         DaggerfallBlockSource publishedSource = blocks.Sources[0];
         Console.WriteLine($"blocks: {blocks.Records.Count} records from {publishedSource.Path}, declared {publishedSource.DeclaredLength}, {blocks.Records.Count(record => record.State == DaggerfallBlockState.Malformed)} malformed");

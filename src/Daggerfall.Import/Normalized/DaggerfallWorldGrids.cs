@@ -229,9 +229,6 @@ public sealed record DaggerfallPoliticValue(int Value, int Region, DaggerfallPol
 /// </summary>
 public static class DaggerfallWorldGridsBuilder
 {
-    public const string ClimateFamilyId = "CNT-002";
-    public const string PoliticFamilyId = "CNT-003";
-
     /// <summary>The donor's climate names by cell value.</summary>
     public static readonly IReadOnlyDictionary<int, string> ClimateNames = new Dictionary<int, string>
     {
@@ -257,9 +254,8 @@ public static class DaggerfallWorldGridsBuilder
     public const int RegionCount = 62;
 
     /// <summary>Builds the climate grid and the rows it tiles.</summary>
-    public static DaggerfallClimateGrid BuildClimate(ReadOnlySpan<byte> bytes, string label, IReadOnlyList<SourceInventoryRow> inventory)
+    public static DaggerfallClimateGrid BuildClimate(ReadOnlySpan<byte> bytes, string label)
     {
-        RequireFile(inventory, ClimateFamilyId, label);
         PakMap map = PakDecoder.Decode(bytes, label);
         return new DaggerfallClimateGrid(
             PublishedSource.Of(label, bytes),
@@ -297,9 +293,8 @@ public static class DaggerfallWorldGridsBuilder
     }
 
     /// <summary>Builds the politic grid and the rows it tiles.</summary>
-    public static DaggerfallPoliticGrid BuildPolitic(ReadOnlySpan<byte> bytes, string label, IReadOnlyList<SourceInventoryRow> inventory)
+    public static DaggerfallPoliticGrid BuildPolitic(ReadOnlySpan<byte> bytes, string label)
     {
-        RequireFile(inventory, PoliticFamilyId, label);
         PakMap map = PakDecoder.Decode(bytes, label);
         return new DaggerfallPoliticGrid(
             PublishedSource.Of(label, bytes),
@@ -392,12 +387,5 @@ public static class DaggerfallWorldGridsBuilder
         }
 
         return values;
-    }
-
-    private static void RequireFile(IReadOnlyList<SourceInventoryRow> inventory, string familyId, string label)
-    {
-        ArgumentNullException.ThrowIfNull(inventory);
-        _ = inventory.FirstOrDefault(row => row.FamilyId == familyId && StringComparer.Ordinal.Equals(row.PathOrPattern, label))
-            ?? throw new InvalidOperationException($"The documented inventory does not carry '{label}', so the grids cite no provenance.");
     }
 }
