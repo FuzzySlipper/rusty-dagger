@@ -108,7 +108,12 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     picker.edit(detail.field, detail.label);
   };
   shell.addEventListener(EDIT_TEXT_EVENT, onEditText);
-  const quests = shell.querySelector<HTMLElement>('.dagger-quests')!;
+  const quests = shell.querySelector<HTMLElement>('section.dagger-quests')!;
+  // A conversation is modal, so whatever it opens over is inert. Quest messages that need an answer while one is
+  // open (an offer for work, the reply after it) open as their own dialog above it, as the donor's message box
+  // stacks over the talk window; answered, the conversation goes on beneath.
+  const questsOverTalk = shell.querySelector<HTMLDialogElement>('dialog.dagger-quests')!;
+  questsOverTalk.addEventListener('cancel', event => event.preventDefault());
   const choices = mountChoices(shell, quests, send);
   const death = mountDeath(shell, send);
   const dungeonText = mountDungeonText(shell, send);
@@ -142,7 +147,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       back: menu.back, panel: menu.stepPanel, page: menu.page, pageHint: menu.pageHint }),
     navigation.register({ name: 'summoning-offer', root: dialogue.summoningOffer, layer: 80, isOpen: () => dialogue.summoningOffer.open }),
     navigation.register({ name: 'legal', root: choices.legal, layer: 70, isOpen: () => !choices.legal.hidden }),
-    navigation.register({ name: 'quests', root: quests, layer: 60, isOpen: () => questAnswerRequired && !dead }),
+    navigation.register({ name: 'quests', root: quests, layer: 60, isOpen: () => questAnswerRequired && !dead && !questsOverTalk.open }),
+    navigation.register({ name: 'quests-over-talk', root: questsOverTalk, layer: 60, isOpen: () => questsOverTalk.open }),
     navigation.register({ name: 'dialogue', root: dialogue.window, layer: 50, isOpen: () => dialogue.window.open,
       back: dialogue.back, panel: dialogue.panel, initialFocus: dialogue.initialFocus }),
     ...choices.cancellable.map(service => navigation.register({ name: service.getAttribute('aria-label')!, root: service, layer: 45,
@@ -237,12 +243,16 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
       if (!dead && !entry.isTitle() && !menu.dialog.open) radial.open();
     }
     useGlints(isGlints(value.inventory?.glints) ? value.inventory.glints : null);
-    renderQuestMessages(quests, value.quests, send);
     dialogue.update(value, dead, spellbook);
-
-    // The Engine owns pointer lock; the product tells it whether any current surface needs a cursor.
     questAnswerRequired = Boolean(value.quests?.offer || value.quests?.pending
       || value.quests?.deliveries.some(message => message.delivery === 'popup' || message.delivery === 'letter'));
+    const overTalk = questAnswerRequired && !dead && dialogue.window.open;
+    renderQuestMessages(overTalk ? questsOverTalk : quests, value.quests, send);
+    renderQuestMessages(overTalk ? quests : questsOverTalk, undefined, send);
+    if (overTalk && !questsOverTalk.open) questsOverTalk.showModal();
+    else if (!overTalk && questsOverTalk.open) questsOverTalk.close();
+
+    // The Engine owns pointer lock; the product tells it whether any current surface needs a cursor.
     interaction.setProjectionNeedsCursor(value.mode === 'title' || value.mode === 'dead' || value.mode === 'paused' || value.mode === 'modal'
       || hud.cinematicPlaying() || questAnswerRequired
       || Boolean(value.dungeonText || value.legal || value.createItem || value.identify || value.teleport || value.dispel));

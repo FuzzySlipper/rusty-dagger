@@ -313,6 +313,9 @@ body, dialog { font-family: var(--font-body); }
 .dagger-entry-parts img { image-rendering: pixelated; }
 
 .dagger-quests:not(:empty) { position: absolute; left: 50%; top: 7.5rem; transform: translateX(-50%); z-index: 20; display: grid; gap: .75rem; width: var(--panel-narrow); max-height: calc(100vh - 13.75rem); overflow-y: auto; pointer-events: auto; }
+/* Over a conversation the same messages open as their own modal dialog, laid out as in play. */
+dialog.dagger-quests { inset: 7.5rem auto auto 50%; margin: 0; padding: 0; border: 0; background: none; color: inherit; max-width: none; }
+dialog.dagger-quests:not([open]) { display: none; }
 .dagger-quest-message { display: grid; gap: .5rem; padding: 1rem 1.25rem; line-height: 1.5; }
 /* pre-line keeps the record's line breaks but drops the leading spaces the classic text used to
    centre a line, which would otherwise indent it in a proportional font. */

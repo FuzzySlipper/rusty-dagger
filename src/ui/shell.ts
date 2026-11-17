@@ -187,4 +187,4 @@ const SHELL_MARKUP = `
         <button class="dagger-dialogue-back" type="button" hidden>Back to services</button>
         <button class="dagger-dialogue-close" type="button">End conversation</button>
       </div>
-    </dialog><dialog class="dagger-daedric-offer dagger-frame" aria-label="Daedric quest offer"></dialog>`;
+    </dialog><dialog class="dagger-daedric-offer dagger-frame" aria-label="Daedric quest offer"></dialog><dialog class="dagger-quests" aria-label="Quest"></dialog>`;

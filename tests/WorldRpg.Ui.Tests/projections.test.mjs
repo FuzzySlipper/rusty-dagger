@@ -1514,6 +1514,53 @@ test('a quest prompt takes focus and the pad answers it; Back does not dismiss i
   } finally { f.dispose(); }
 });
 
+test('a quest offered in conversation opens above it and is answered at once; the conversation goes on', () => {
+  const f = fixture();
+  try {
+    const dialogue = { ...TALK, revision: 'talk-9', targetLabel: 'Agryn Buckingston', greeting: 'Hello.', tone: 'normal', question: null,
+      reply: 'There is work.', topics: [{ id: 'work', label: 'Work' }], diagnostics: [] };
+    const activation = { mode: 'talk', message: '', applied: true, dialogue };
+    const journal = { active: [], finished: [] };
+    const talk = f.root.querySelector('.dagger-dialogue');
+    const over = f.root.querySelector('dialog.dagger-quests');
+    const inPlay = f.root.querySelector('section.dagger-quests');
+    f.publish({ activation, quests: { escortFaces: [], deliveries: [], journal, pending: null } });
+    assert.equal(talk.open, true);
+    assert.equal(over.open, false, 'Nothing to answer opens nothing over the conversation.');
+
+    // The offer opens after the conversation, so it stacks above its modal and is not left inert beneath it.
+    const offer = { instance: 'quest:7', text: 'Bring back the symbol.', diagnostics: [] };
+    f.publish({ activation, quests: { offer, escortFaces: [], deliveries: [], journal, pending: null } });
+    assert.equal(over.open, true, 'The offer opens as its own dialog above the conversation.');
+    assert.equal(inPlay.children.length, 0, 'The offer is not drawn under the conversation.');
+    assert.equal(over.contains(document.activeElement), true, 'The offer takes focus.');
+    const before = f.actions.length;
+    f.pressEscape();
+    assert.equal(f.actions.length, before, 'Escape neither declines the offer nor ends the conversation.');
+    assert.equal(over.open, true);
+    over.querySelector('.dagger-confirm-accept').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'quest-offer-answer', questInstance: 'quest:7', confirm: true });
+
+    // The reply to an answer is read over the conversation too; dismissed, the conversation is where it was.
+    const reply = { instance: 'quest:7', message: 1004, delivery: 'popup', heading: 'Message', text: 'Get it back within 38 days.', signoff: null,
+      diagnostics: [], promptId: null, options: [], entryId: 'quest-message:7' };
+    f.publish({ activation, quests: { escortFaces: [], deliveries: [reply], journal, pending: null } });
+    assert.equal(over.open, true);
+    over.querySelector('.dagger-quest-popup button').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'quest-dismiss', questInstance: 'quest:7', questDelivery: 'quest-message:7' });
+    f.publish({ activation, quests: { escortFaces: [], deliveries: [], journal, pending: null } });
+    assert.equal(over.open, false);
+    assert.equal(over.children.length, 0);
+    assert.equal(talk.open, true, 'The conversation goes on after the answer.');
+
+    // With no conversation, an offer is drawn where play draws quest messages.
+    f.publish({ quests: { offer, escortFaces: [], deliveries: [], journal, pending: null } });
+    assert.equal(talk.open, false);
+    assert.equal(over.open, false);
+    assert.ok(inPlay.querySelector('.dagger-confirm-accept'));
+  } finally { f.dispose(); }
+});
+
 test('a snapshot that arrives every update keeps the focused control, and a changed list keeps the player in place', () => {
   const f = fixture();
   try {
