@@ -1,0 +1,13 @@
+scripts/route.py main: FAILED (product): scripts/verify.sh failed
+rusty-dagger verify at 1dec79c1ee8647ea41e7d94f94533058edffa5f7 FAILED in 16.2 min
+verify on den-k8, 16.2 min, FAIL: /home/agent/dev/rusty-dagger/local/build/route/main-1dec79c1ee86-20261116T210034/verify.log
+    lane: run fcea4ec3f85a4a9a1ee37f6edfaa1ae0 of verify on den-k8 at 1dec79c1ee8647ea41e7d94f94533058edffa5f7 (0 s)
+    lane: tooling took 10 s, peak memory 38 MiB
+    skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run `dotnet run --project src/Daggerfall.Source.Tool -- export-items`
+    Passed!  - Failed:     0, Passed:    12, Skipped:     0, Total:    12, Duration: 272 ms - WorldRpg.Architecture.Tests.dll (net10.0)
+    Failed Daggerfall.Import.Tests.ImporterRevisionTests.Every_repository_path_an_import_step_reads_is_a_revision_input [1 s]
+    Failed Daggerfall.Import.Tests.ImportToolCommandTests.Report_only_verbs_leave_all_supplied_outputs_untouched(name: "quest-sources") [55 ms]
+    Failed Daggerfall.Import.Tests.ImportToolCommandTests.Report_inventory_reconciliation_is_executed_without_writing(name: "quest-sources") [127 ms]
+    Failed!  - Failed:     3, Passed:   788, Skipped:     0, Total:   791, Duration: 14 m 43 s - Daggerfall.Import.Tests.dll (net10.0)
+    lane: verify took 949 s, peak memory 11500 MiB
+    lane: verify failed (exit 1)
