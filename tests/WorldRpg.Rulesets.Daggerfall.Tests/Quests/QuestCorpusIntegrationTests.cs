@@ -85,8 +85,7 @@ public sealed class QuestCorpusIntegrationTests
     /// The macros the corpus still leaves empty, which #10901 receives: each fixed one leaves this list, and any
     /// other that resolves empty fails the test. %qdt is here for the letters; a logged message is dated by its entry.
     /// </summary>
-    private static readonly string[] KnownEmptyMacros = ["%G", "%G1", "%G3", "%di", "%fn", "%g", "%g1", "%g2", "%g2-", "%g2-self", "%g2self", "%g3",
-        "%g3-self", "%god-", "%jok", "%kno", "%mn", "%n", "%nam", "%nrn", "%pct", "%qdat", "%qdt", "%reg", "%rn", "%rt", "%t"];
+    private static readonly string[] KnownEmptyMacros = [];
 
     [Fact]
     public void Every_shipped_quest_message_macro_resolves_to_text()

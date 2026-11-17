@@ -234,6 +234,22 @@ internal sealed class DaggerfallDialogueDirections(
         return true;
     }
 
+    /// <summary>
+    /// The way to a quest's place, which its messages' %di read (QuestMCP.Direction): the building's hint when it stands
+    /// in the town the player is in, otherwise the compass word from this site to that one on the map.
+    /// </summary>
+    internal string? QuestPlace(DaggerfallSiteId place, DaggerfallSiteBuildingId? building)
+    {
+        if (site.ActiveSite is not { } active || !site.TryFind(place, out DaggerfallSiteRecord? target)) return null;
+        if (active.Id == place && building is { } inside && activeProfile().Kind != DaggerfallWorldProfileKind.Dungeon)
+        {
+            try { return BuildingHint(place, inside); }
+            catch (InvalidOperationException) { return null; }
+        }
+        return active.MapPixelX == target.MapPixelX && active.MapPixelY == target.MapPixelY ? "here"
+            : DaggerfallCompass.Word(MathF.Atan2(target.MapPixelX - active.MapPixelX, active.MapPixelY - target.MapPixelY));
+    }
+
     private string BuildingHint(DaggerfallSiteId place, DaggerfallSiteBuildingId building)
     {
         // Inside a building the directions start at its door on the map, as the donor's do from the

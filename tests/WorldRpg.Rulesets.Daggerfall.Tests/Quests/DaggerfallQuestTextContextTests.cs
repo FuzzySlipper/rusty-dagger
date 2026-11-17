@@ -28,11 +28,10 @@ public sealed class DaggerfallQuestTextContextTests
             { Tasks = DaggerfallQuestTaskCompiler.InitialState(program) }, program);
         DaggerfallTextContext current = DaggerfallTextContext.Empty;
         DaggerfallQuestTextContext texts = new(definitions, sites, new DaggerfallNpcRegistry(), new DaggerfallItemInstances(),
-            _ => throw new InvalidOperationException("No live item is bound."), () => current, () => null, RandomMinimum.Create());
+            _ => throw new InvalidOperationException("No live item is bound."), () => current, () => null, RandomMinimum.Create(), _ => null, (_, _) => null);
 
         DaggerfallQuestMessageContext context = texts.For(instance);
 
-        Assert.Same(current.Player, context.Text.Player);
         Assert.Same(current.Location, context.Text.Location);
         DaggerfallQuestResourceTextContext named = context.Resources[place.CanonicalId];
         Assert.Equal(site.Name, named.Name);
@@ -60,7 +59,7 @@ public sealed class DaggerfallQuestTextContextTests
             DaggerfallQuestLifecycle.Active, null, [], []) { QuestorId = priest, Tasks = DaggerfallQuestTaskCompiler.InitialState(program) }, program);
         DaggerfallInteriorBuilding? building = new(0, 0, new("TEMPAA01.RMB", 0), 15, 98);
         DaggerfallQuestTextContext texts = new(definitions, sites, npcs, new DaggerfallItemInstances(),
-            _ => throw new InvalidOperationException("No live item is bound."), () => DaggerfallTextContext.Empty, () => building, RandomMinimum.Create());
+            _ => throw new InvalidOperationException("No live item is bound."), () => DaggerfallTextContext.Empty, () => building, RandomMinimum.Create(), _ => null, (_, _) => null);
         DaggerfallQuestMessages messages = new(definitions, RandomMinimum.Create());
         // The message as read: its centred lines joined by single spaces.
         string Render(int message) => string.Join(' ', messages.RenderDelivery(instance, new("quest:1", message, DaggerfallQuestMessageDelivery.Popup),
@@ -75,5 +74,73 @@ public sealed class DaggerfallQuestTextContextTests
         building = null;
         Assert.EndsWith("the favor of Kynareth.", Render(1004));
         Assert.Equal(definitions.QuestSources.Tables.RegionTemples[17], 36);
+    }
+
+    [Fact]
+    public void A_pronoun_reads_the_last_person_the_message_named_and_a_direction_its_last_place()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallQuestSourceDefinition source = new("pronouns", "", "pronouns.txt", DaggerfallQuestDisposition.Compiled,
+            [new(1000, ["%G is waiting, %di of here. _woman_ said %g2self that %g3 house is at __woman_, %di of here.", "_man_ said %g2 that %G1 knew."])], [], []);
+        DaggerfallQuestMessages messages = new(new DaggerfallTextResolver(definitions.Text), new Dictionary<string, DaggerfallQuestSourceDefinition> { ["pronouns.txt"] = source });
+        DaggerfallQuestTaskProgram program = DaggerfallQuestTaskCompiler.Compile(source);
+        DaggerfallQuestRuntimeInstance instance = new(new DaggerfallQuestInstanceSave("quest:1", source.SourceFile, source.Name,
+            DaggerfallQuestLifecycle.Active, null, [], []) { Tasks = DaggerfallQuestTaskCompiler.InitialState(program) }, program);
+        DaggerfallTextStoryContext Words(bool female) => DaggerfallTextContext.Empty.Story with
+        {
+            Pronoun = female ? "she" : "he", ObjectPronoun = female ? "her" : "him",
+            ReflexivePronoun = female ? "herself" : "himself", PossessiveAdjective = female ? "her" : "his",
+        };
+        DaggerfallQuestMessageContext context = new(DaggerfallTextContext.Empty with { Story = Words(false) },
+            new Dictionary<string, DaggerfallQuestResourceTextContext>(StringComparer.Ordinal)
+            {
+                ["woman"] = new(Name: "Agnes", NameTwo: "The Rusty Guard") { Pronouns = Words(true), Direction = "north" },
+                ["man"] = new(Name: "Bob") { Pronouns = Words(false) },
+            });
+
+        var rendered = messages.RenderDelivery(instance, new("quest:1", 1000, DaggerfallQuestMessageDelivery.Popup), context);
+
+        Assert.Empty(rendered.Diagnostics);
+        // Before any person the words are the male ones; a %di before any place reads the one the message names next.
+        Assert.Equal("He is waiting, north of here. Agnes said herself that her house is at The Rusty Guard, north of here.\nBob said him that He knew.",
+            rendered.Text);
+    }
+
+    [Fact]
+    public void A_quest_names_its_region_rulers_order_guild_title_names_and_a_joke_and_keeps_them_on_every_redraw()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallSiteRecord town = definitions.Locations.Records.First(site => site.Id.Region == 17);
+        DaggerfallSiteContext sites = new(definitions.Locations, town.Id, null, []);
+        DaggerfallQuestSourceDefinition source = definitions.QuestSources.Resolve("C0C00Y12.txt");
+        DaggerfallQuestTaskProgram program = DaggerfallQuestTaskCompiler.Compile(source);
+        // A Knights of the Dragon quest, in Daggerfall's region.
+        DaggerfallQuestRuntimeInstance instance = new(new DaggerfallQuestInstanceSave("quest:1", source.SourceFile, source.Name,
+            DaggerfallQuestLifecycle.Active, null, [], []) { FactionId = 368, Tasks = DaggerfallQuestTaskCompiler.InitialState(program) }, program);
+        DaggerfallTextContext current = DaggerfallTextContext.Empty with
+        {
+            Player = new(Name: "Nameless"), Calendar = new(Date: "Sundas the 1st of Midyear, 3E405"), Location = new(Region: "Daggerfall"),
+        };
+        DaggerfallQuestTextContext texts = new(definitions, sites, new DaggerfallNpcRegistry(), new DaggerfallItemInstances(),
+            _ => throw new InvalidOperationException("No live item is bound."), () => current, () => null, SummonRandom.Create(),
+            faction => faction == 368 ? "Squire" : null, (_, _) => null);
+
+        DaggerfallTextContext text = texts.For(instance).Text;
+
+        Assert.Equal("Daggerfall", text.Faction.RegionInContext);
+        Assert.Equal("King", text.Faction.RegentTitle);
+        Assert.Equal("King Gothryd", text.Faction.RegentName);
+        Assert.Equal("King Gothryd", text.Faction.CurrentRegionLeader);
+        Assert.Equal("Knights of the Dragon", text.Faction.FactionOrder);
+        Assert.Equal("Squire", text.Player.GuildTitle);
+        Assert.Equal("Sundas the 1st of Midyear, 3E405", text.Story.QuestDate);
+        Assert.True(definitions.Text.Resolve(new(DaggerfallTextKind.Resource, "200"), out DaggerfallTextValue? jokes) == DaggerfallTextResolution.Resolved);
+        Assert.Contains(text.Story.Joke, jokes!.TextRuns);
+        Assert.All(new[] { text.Story.Name, text.Story.MaleName, text.Story.FemaleName }, name => Assert.False(string.IsNullOrWhiteSpace(name)));
+        Assert.Equal(text, texts.For(instance).Text);
+        // Not a member of the quest's guild, the player is named instead (MacroHelper.GuildTitle).
+        Assert.Equal("Nameless", new DaggerfallQuestTextContext(definitions, sites, new DaggerfallNpcRegistry(), new DaggerfallItemInstances(),
+            _ => throw new InvalidOperationException("No live item is bound."), () => current, () => null, SummonRandom.Create(),
+            _ => null, (_, _) => null).For(instance).Text.Player.GuildTitle);
     }
 }

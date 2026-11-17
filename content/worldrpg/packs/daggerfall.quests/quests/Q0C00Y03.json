@@ -80,7 +80,7 @@
     {
       "id": 1007,
       "lines": [
-        "==qgiver_ didn't kidnap _child_ -- %g %g3-self says they didn't.",
+        "==qgiver_ didn't kidnap _child_ -- %g %g2self says they didn't.",
         "<--->",
         "If you can trust _child_'s word, %g was helped not hurt by ==qgiver_."
       ]

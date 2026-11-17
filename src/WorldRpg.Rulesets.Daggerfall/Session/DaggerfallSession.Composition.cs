@@ -655,7 +655,10 @@ internal sealed partial class DaggerfallSession
             SpellMaker = new DaggerfallSpellMaker(definitions, State.Effects.Catalog, State.Npcs, State.ConcreteGuildServices,
                 State.Services, State.Character, State.Inventory, State.Actors.Player.Stats, () => _time.Calendar);
             _questTexts = new DaggerfallQuestTextContext(definitions, _site, State.Npcs, State.ItemInstances,
-                item => DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, item), CurrentTextContext, CurrentInteriorBuilding, engine.Random);
+                item => DaggerfallInventoryPresentation.DescribeCreatedItem(definitions, item), CurrentTextContext, CurrentInteriorBuilding, engine.Random,
+                faction => State.Social.GuildEligibility(faction) is { IsMember: true } membership
+                    ? DaggerfallGuildRankTitles.Title(faction, membership.Rank, State.Character.Identity.Gender == DaggerfallCharacterGender.Female) : null,
+                (place, building) => DialogueDirections.QuestPlace(place, building));
             State.Quests.BindTextContext(_questTexts.For);
             DaggerfallNames questNames = new(definitions, engine.Random);
             npcs.BindNames(npc => questNames.NpcName(npc.Appearance, npc.Site.Region));

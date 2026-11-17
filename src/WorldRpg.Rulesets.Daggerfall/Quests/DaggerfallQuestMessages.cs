@@ -58,7 +58,17 @@ internal sealed record DaggerfallQuestMessagesSave(
 /// <summary>Every non-global resource spelling the retained quest message grammar selects.</summary>
 internal sealed record DaggerfallQuestResourceTextContext(
     string? Name = null, string? NameTwo = null, string? NameThree = null, string? NameFour = null,
-    string? Details = null, string? Binding = null, string? Faction = null, string? NpcVampireClan = null);
+    string? Details = null, string? Binding = null, string? Faction = null, string? NpcVampireClan = null)
+{
+    /// <summary>
+    /// The words %g, %g2, %g2self and %g3 read once a message has named this resource: its person's gender, the male
+    /// words for anything else (QuestMCP's pronouns of the last resource referenced). Read again with each render.
+    /// </summary>
+    [JsonIgnore] public DaggerfallTextStoryContext? Pronouns { get; init; }
+
+    /// <summary>The way to this place from the player, which %di reads once a message has named it (QuestMCP.Direction).</summary>
+    [JsonIgnore] public string? Direction { get; init; }
+}
 
 /// <summary>The only text values a quest delivery may read: global session context and explicit bound resources.</summary>
 internal sealed record DaggerfallQuestMessageContext(
@@ -112,7 +122,7 @@ internal sealed class DaggerfallQuestMessages
     // The donor tests the long name forms first. Keeping that order stops '__foo_' being consumed as
     // a shorter spelling and makes every retained name, faction, binding, and detail arm explicit.
     private static readonly Regex ResourceMacro = new(
-        "(?<token>____(?<name4>[a-zA-Z0-9.-]+)_|___(?<name3>[a-zA-Z0-9.-]+)_|__(?<name2>[a-zA-Z0-9.-]+)_|_(?<name1>[a-zA-Z0-9.-]+)_|==(?<faction>[a-zA-Z0-9.-]+)_|=#(?<binding>[a-zA-Z0-9.-]+)_|=(?<details>[a-zA-Z0-9.-]+)_)|(?<npcClan>%vcn)(?![a-zA-Z0-9])",
+        "(?<token>____(?<name4>[a-zA-Z0-9.-]+)_|___(?<name3>[a-zA-Z0-9.-]+)_|__(?<name2>[a-zA-Z0-9.-]+)_|_(?<name1>[a-zA-Z0-9.-]+)_|==(?<faction>[a-zA-Z0-9.-]+)_|=#(?<binding>[a-zA-Z0-9.-]+)_|=(?<details>[a-zA-Z0-9.-]+)_)|(?<npcClan>%vcn)(?![a-zA-Z0-9])|(?<lastReferenced>%[gG](?:2self|1|2|3)?|%di)(?![a-zA-Z0-9])",
         RegexOptions.CultureInvariant);
     private readonly DaggerfallTextResolver _text;
     private readonly IReadOnlyDictionary<string, DaggerfallQuestSourceDefinition> _sources;
@@ -504,8 +514,30 @@ internal sealed class DaggerfallQuestMessages
 
         DaggerfallTextKey key = new(DaggerfallTextKind.Resource, $"quest:{sourceFile}:{messageId}");
         string? referencedClan = null;
+        // Pronouns and %di read the last resource and place the message named before them, so they expand in this pass. The
+        // donor remembers the last place across a quest's messages; a %di before this message names one reads the place
+        // it names next.
+        DaggerfallQuestResourceTextContext? lastResource = null;
+        DaggerfallQuestResourceTextContext? lastPlace = ResourceMacro.Matches(text).Select(match => match.Groups.Cast<Group>()
+                .FirstOrDefault(group => group.Success && group.Name is "name4" or "name3" or "name2" or "name1" or "faction" or "binding" or "details"))
+            .Select(group => group is not null && context.Resources.TryGetValue(DaggerfallQuestInstanceSave.Canonical(group.Value, "quest message resource"),
+                out var named) ? named : null)
+            .FirstOrDefault(named => named?.Direction is not null);
         text = ResourceMacro.Replace(text, match =>
         {
+            if (match.Groups["lastReferenced"].Success)
+            {
+                // Classic capitalises a pronoun at a sentence start by writing %G; the donor has no such macro.
+                string spelled = match.Value.ToLowerInvariant();
+                DaggerfallTextContext referenced = context.Text with
+                {
+                    Story = lastResource?.Pronouns ?? context.Text.Story,
+                    Location = context.Text.Location with { Direction = lastPlace?.Direction },
+                };
+                var lastText = _text.ResolveRaw(spelled, key, referenced);
+                issues.AddRange(lastText.Diagnostics.Select(diagnostic => $"{diagnostic.Kind}: {diagnostic.Detail}"));
+                return match.Value[1] == 'G' && lastText.Text.Length > 0 ? char.ToUpperInvariant(lastText.Text[0]) + lastText.Text[1..] : lastText.Text;
+            }
             if (match.Groups["npcClan"].Success)
             {
                 if (referencedClan is null) return match.Value;
@@ -518,6 +550,7 @@ internal sealed class DaggerfallQuestMessages
                 .First(group => group.Success && group.Name is "name4" or "name3" or "name2" or "name1" or "faction" or "binding" or "details").Value,
                 "quest message resource");
             referencedClan = context.Resources.TryGetValue(symbol, out var resource) ? resource.NpcVampireClan : null;
+            if (resource is not null) { lastResource = resource; if (resource.Direction is not null) lastPlace = resource; }
             string expanded = ExpandResource(match, context.Resources, delivery, issues);
             if (match.Groups["name1"].Success && !string.IsNullOrWhiteSpace(resource?.Name)) resourceNamed?.Invoke(symbol);
             return expanded;
