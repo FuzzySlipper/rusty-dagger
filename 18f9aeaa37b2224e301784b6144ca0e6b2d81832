@@ -1,0 +1,19 @@
+scripts/route.py main: FAILED (product): scripts/verify.sh failed
+rusty-dagger verify at 18f9aeaa37b2224e301784b6144ca0e6b2d81832 FAILED in 26.6 min
+verify on den-nimo, 26.6 min, FAIL: /home/agent/dev/rusty-dagger/local/build/route/main-18f9aeaa37b2-20261117T010033/verify.log
+    lane: run 0c17909812875a429e61823488823525 of verify on den-nimo at 18f9aeaa37b2224e301784b6144ca0e6b2d81832 (0 s)
+    lane: tooling took 10 s, peak memory 38 MiB
+    skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run `dotnet run --project src/Daggerfall.Source.Tool -- export-items`
+    Passed!  - Failed:     0, Passed:    12, Skipped:     0, Total:    12, Duration: 214 ms - WorldRpg.Architecture.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:   506, Skipped:     0, Total:   506, Duration: 12 m 3 s - Daggerfall.Import.Tests.dll (net10.0)
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallAudioBundleTests.Opens_the_exact_named_audio_resource_without_admitting_its_body_to_the_snapshot [10 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallAudioBundleTests.Composed_appearance_defers_audio_until_its_first_cue_then_reuses_and_releases_the_clip [< 1 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.StaticNpcAdmissionTests.Failed_later_static_admission_rolls_back_the_whole_batch_and_can_retry [2 s]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.StaticNpcAdmissionTests.Failed_static_appearance_admission_releases_the_candidate_and_can_retry [4 s]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallCinematicPresentationTests.An_unconverted_cinematic_counts_as_skipped_and_native_failure_still_releases_the_content_lease [42 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallCinematicPresentationTests.Replacement_ignores_old_completion_and_skip_and_disposal_clean_up_current_playback [40 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallCinematicPresentationTests.Normal_reference_is_released_after_play_and_completion_releases_playback [51 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallCinematicPresentationTests.Opening_plays_the_donor_order_and_each_terminal_result_advances_once [63 ms]
+    Failed!  - Failed:     8, Passed:  4387, Skipped:     8, Total:  4403, Duration: 13 m 1 s - WorldRpg.Rulesets.Daggerfall.Tests.dll (net10.0)
+    lane: verify took 1566 s, peak memory 16278 MiB
+    lane: verify failed (exit 1)
