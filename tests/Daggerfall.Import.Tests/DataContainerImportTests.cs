@@ -444,8 +444,9 @@ public sealed class DataContainerImportTests : IDisposable
         string[] leftOut =
         [
             "worldrpg/media/ui/title.png", "worldrpg/media/ui/spell-icons.png", "worldrpg/media/ui/spell-selectors.png",
-            "worldrpg/media/character/paper-doll/235-22-red.png",
+            "worldrpg/media/character/paper-doll/235-22-red.png", "worldrpg/media/character/paper-doll/235-22-mask.png",
             "worldrpg/imports/shared/media/dungeon/materials/texture-0-40.png", "worldrpg/imports/shared/media/dungeon/materials/texture-0-40-frame-1.png",
+            "worldrpg/imports/shared/media/dungeon/materials/texture-0-40-glass.png",
             "worldrpg/imports/shared/media/dungeon/terrain/texture-0-40.png", "worldrpg/imports/shared/media/dungeon/billboards/texture-210-3.png",
             "worldrpg/imports/shared/media/dungeon/billboards/texture-380-1.png", "worldrpg/imports/shared/media/dungeon/actors/mobile-5-corpse.png",
             "worldrpg/imports/shared/media/dungeon/billboards/texture-216-0.png",
@@ -453,8 +454,8 @@ public sealed class DataContainerImportTests : IDisposable
         ];
         string[] kept =
         [
-            "worldrpg/media/ui/death.png", "worldrpg/media/character/paper-doll/235-22-mask.png", "worldrpg/media/character/paper-doll/item-200-10.png",
-            "worldrpg/imports/shared/media/dungeon/materials/texture-0-40-glass.png", "worldrpg/imports/shared/media/dungeon/materials/texture-0-41.png",
+            "worldrpg/media/ui/death.png", "worldrpg/media/character/paper-doll/item-200-10.png",
+            "worldrpg/imports/shared/media/dungeon/materials/texture-0-41.png",
             "worldrpg/imports/shared/media/dungeon/billboards/texture-0-40.png", "worldrpg/imports/shared/media/dungeon/actors/mobile-6-corpse.png",
             "worldrpg/imports/shared/geometry/mesh-445.rstatmsh", "worldrpg/media/sky/resources/sky-00-frame-00-clear.png",
         ];

@@ -72,10 +72,9 @@ internal static class ClassicArt
     private static IEnumerable<string> Files(string staging, HashSet<string> media, Dictionary<string, HashSet<string>> records, HashSet<string> models)
     {
         // Published UI and character art, by the media identity its inventory states. A worn record's images are its dyes and
-        // metals; its mask, which clears the hair beneath, is the classic's own until the art pack carries one (#10773). A
-        // spell atlas is drawn only for a cell without its own image.
+        // metals and its mask, which the art pack draws for itself. A spell atlas is drawn only for a cell without its own image.
         bool Drawn(string id) => media.Contains(id)
-            || id.StartsWith("paper-doll.", StringComparison.Ordinal) && !id.EndsWith(".mask", StringComparison.Ordinal)
+            || id.StartsWith("paper-doll.", StringComparison.Ordinal)
                 && id.Split('.') is { Length: 4 } parts && media.Contains(string.Join('.', parts[..3]))
             || id == "spell.icons" && Enumerable.Range(0, 69).All(cell => media.Contains($"spell.icon.{cell}"))
             || id == "spell.selectors" && Enumerable.Range(0, 5).All(cell => media.Contains($"spell.target.{cell}") && media.Contains($"spell.element.{cell}"));
@@ -85,15 +84,15 @@ internal static class ClassicArt
                 if (artifact.TryGetProperty("mediaId", out JsonElement id) && id.GetString() is { } mediaId && Drawn(mediaId))
                     yield return artifact.GetProperty("path").GetString()!;
 
-        // World media by texture record: a surface is drawn anew as a material (with its frames, not its window glass, which
-        // refreshed walls keep) and a ground tile; a flat, a person or a sprite mesh as a billboard; a corpse a mesh
-        // replaces as each creature's corpse atlas cut from it.
+        // World media by texture record: a surface is drawn anew as a material (with its frames and its window glass, which a
+        // refreshed window carries for itself) and a ground tile; a flat, a person or a sprite mesh as a billboard; a corpse a
+        // mesh replaces as each creature's corpse atlas cut from it.
         const string shared = "worldrpg/imports/shared";
         JsonElement dungeon = Read(staging, $"{shared}/media/dungeon/manifest.json");
         foreach (JsonElement resource in dungeon.GetProperty("media").GetProperty("resources").EnumerateArray())
         {
             string id = resource.GetProperty("id").GetString()!;
-            string? kind = id.StartsWith("material/", StringComparison.Ordinal) && !id.EndsWith("-glass", StringComparison.Ordinal) ? "surfaces"
+            string? kind = id.StartsWith("material/", StringComparison.Ordinal) ? "surfaces"
                 : id.StartsWith("terrain/", StringComparison.Ordinal) ? "surfaces"
                 : id.StartsWith("sprite/texture-", StringComparison.Ordinal) ? "billboard"
                 : null;
