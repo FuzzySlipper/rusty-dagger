@@ -70,7 +70,8 @@ the one ignored folder. Its folders say what may be deleted:
 - A checkout needs the data of its own importer revision: import once, and again
   after a pull that changes the importer revision. Its
   inputs are `src/Daggerfall.Import` and `src/Daggerfall.Import.Tool`, whose
-  `inputs/` holds the source inventory and our tables (not the terrain bake in
+  `inputs/` holds the source inventory and the list of classic art the art pack
+  draws anew (not the terrain bake in
   `inputs/relief/`, which cannot change what it writes), and the authored UI art
   with its manifest (`src/ImporterRevision.targets` lists them). The import never
   reads the authored base payload, so editing it needs no import. The entry screen says when the data is missing, damaged or
@@ -222,8 +223,7 @@ Rules for the tracked side:
   reclassify a file by changing its `family_id`. Only `Daggerfall.Source.Tool`'s
   `source-inventory --update-inventory` writes the disposition column, from every
   publication's sources together.
-- An edit to an importer revision input, including any of our tables in
-  `inputs/`, makes every machine's data stale until the `data` lane has published
+- An edit to an importer revision input, including the files in `inputs/`, makes every machine's data stale until the `data` lane has published
   it. Make one deliberately. An import step
   never reads the authored base payload: a join between authored and imported
   sections belongs in the ruleset's content reader. A command that does not feed the containers goes in

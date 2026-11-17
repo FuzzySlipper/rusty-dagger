@@ -247,32 +247,21 @@ public sealed class CharacterMediaInventoryTests
         HashSet<string> supplied = [CharacterMediaReferences.ArtPalette, CharacterMediaReferences.NightskyPalette];
         CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, supplied);
 
-        // The eight playable races carry the donor's one-based values, as the catalog does.
-        DaggerfallRaceKey[] races =
-        [
-            new("breton", 1, Source()), new("redguard", 2, Source()), new("nord", 3, Source()), new("dark-elf", 4, Source()),
-            new("high-elf", 5, Source()), new("wood-elf", 6, Source()), new("khajiit", 7, Source()), new("argonian", 8, Source()),
-        ];
-        // The classic corpus supplies three class portraits, named for the classes they depict.
-        Dictionary<string, string> careers = new(StringComparer.Ordinal)
-        {
-            ["class00"] = "Mage", ["class01"] = "Rogue", ["class02"] = "Warrior",
-            ["class03"] = "Battle Mage", ["class04"] = "Nightblade",
-        };
-        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(inventory, supplied, races, careers);
+        // The layers are keyed by the eight playable race values, one-based; the ruleset joins its races to them.
+        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(inventory, supplied);
 
-        // Donor value minus one is the media index: Breton's background is SCBG00, Redguard's SCBG01.
-        Assert.Equal("SCBG00I0.IMG", presentation.Layers.Single(layer => layer.Race == "breton" && layer.Layer == "background").SourceFile);
-        Assert.Equal("SCBG01I0.IMG", presentation.Layers.Single(layer => layer.Race == "redguard" && layer.Layer == "background").SourceFile);
-        Assert.Equal("BODY00I0.IMG", presentation.Layers.Single(layer => layer.Race == "breton" && layer.Layer == "body.male.unclothed").SourceFile);
-        Assert.Equal("BODY17I1.IMG", presentation.Layers.Single(layer => layer.Race == "argonian" && layer.Layer == "body.female.clothed").SourceFile);
+        // The value minus one is the media index: race value 1's (Breton's) background is SCBG00, value 2's SCBG01.
+        Assert.Equal("SCBG00I0.IMG", presentation.Layers.Single(layer => layer.DonorRaceId == 1 && layer.Layer == "background").SourceFile);
+        Assert.Equal("SCBG01I0.IMG", presentation.Layers.Single(layer => layer.DonorRaceId == 2 && layer.Layer == "background").SourceFile);
+        Assert.Equal("BODY00I0.IMG", presentation.Layers.Single(layer => layer.DonorRaceId == 1 && layer.Layer == "body.male.unclothed").SourceFile);
+        Assert.Equal("BODY17I1.IMG", presentation.Layers.Single(layer => layer.DonorRaceId == 8 && layer.Layer == "body.female.clothed").SourceFile);
 
         // Every layer resolves to a published canvas, and the section refuses one that does not.
         HashSet<string> published = [.. set.Canvases.Select(reference => reference.MediaId)];
         presentation.Validate(published);
         DaggerfallCharacterPresentation broken = presentation with
         {
-            Layers = [.. presentation.Layers, new DaggerfallCharacterLayer("breton", 1, "head.male.99", "character.head.male.00.99", "FACE00I0.CIF", CharacterMediaReferences.ArtPalette, MediaBinding.Admitted, CharacterMediaInventory.UnstatedConsumer)],
+            Layers = [.. presentation.Layers, new DaggerfallCharacterLayer(1, "head.male.99", "character.head.male.00.99", "FACE00I0.CIF", CharacterMediaReferences.ArtPalette, MediaBinding.Admitted, CharacterMediaInventory.UnstatedConsumer)],
         };
         InvalidOperationException dangling = Assert.Throws<InvalidOperationException>(() => broken.Validate(published));
         Assert.Contains("resolve to nothing", dangling.Message, StringComparison.Ordinal);
@@ -293,7 +282,7 @@ public sealed class CharacterMediaInventoryTests
             Careers = [portrait with { Binding = MediaBinding.Admitted }, .. presentation.Careers.Skip(1)],
         };
         InvalidOperationException danglingCareer = Assert.Throws<InvalidOperationException>(() => brokenCareer.Validate(published.Where(id => id != portrait.MediaId).ToHashSet(StringComparer.Ordinal)));
-        Assert.Contains($"Career '{portrait.CareerId}'", danglingCareer.Message, StringComparison.Ordinal);
+        Assert.Contains($"Class portrait '{portrait.Portrait}'", danglingCareer.Message, StringComparison.Ordinal);
         // A pending reference needs no artifact: that is the stated gap the faction faces are.
         Assert.All(presentation.Faces, value => Assert.Equal(MediaBinding.RequiredPending, value.Binding));
         presentation.Validate(published.Where(id => presentation.Faces.All(face => face.MediaId != id)).ToHashSet(StringComparer.Ordinal));
@@ -335,25 +324,15 @@ public sealed class CharacterMediaInventoryTests
         Assert.All(presentation.Careers, portrait => Assert.Equal(CharacterMediaInventory.UnstatedConsumer, portrait.Consumer));
         Assert.All(presentation.Layers, layer => Assert.Equal(CharacterMediaReferences.ArtPalette, layer.Palette));
 
-        // A race value with no paper-doll subclass is recorded rather than mapped onto the next index.
-        // A career the corpus does not depict says so rather than borrowing another class's art.
-        Assert.Equal(3, presentation.Careers.Count);
-        Assert.Equal(["class00", "class01", "class02"], presentation.Careers.Select(portrait => portrait.CareerId));
+        // The classic corpus supplies three class portraits, each published under the class it depicts; the ruleset gives
+        // each to the career of that name.
+        Assert.Equal(["MAGE", "ROGUE", "WARRIOR"], presentation.Careers.Select(portrait => portrait.Portrait));
         Assert.Equal("character.portrait.mage.0", presentation.Careers[0].MediaId);
         Assert.Equal(("MAGE.CEL", 15), (presentation.Careers[0].SourceFile, presentation.Careers[0].FrameCount));
         Assert.Equal(("ROGUE.CEL", 10), (presentation.Careers[1].SourceFile, presentation.Careers[1].FrameCount));
         Assert.Equal(("WARRIOR.CEL", 15), (presentation.Careers[2].SourceFile, presentation.Careers[2].FrameCount));
-        Assert.Equal(["class03", "class04"], presentation.CareersWithoutPortrait.Select(entry => entry.CareerId));
-        Assert.All(presentation.CareersWithoutPortrait, entry => Assert.Contains("no class portrait named for", entry.Reason, StringComparison.Ordinal));
-
-        DaggerfallCharacterPresentation beyond = DaggerfallCharacterPresentationBuilder.Build(
-            inventory, supplied, [.. races, new DaggerfallRaceKey("vampire", 9, Source())], careers);
-        Assert.DoesNotContain(beyond.Layers, layer => layer.Race == "vampire");
-        Assert.Contains(beyond.RacesWithoutMedia, entry => entry.Race == "vampire" && entry.Reason.Contains("no subclass", StringComparison.Ordinal));
+        Assert.Empty(presentation.RacesWithoutMedia);
     }
-
-    /// <summary>The documented source every race in this fixture comes from.</summary>
-    private static DaggerfallCatalogSource Source() => new("src/Daggerfall.Import.Tool/inputs/content-source-manifest.csv");
 
     [CorpusFact]
     public void Reports_the_same_records_whatever_order_the_sources_arrive_in()

@@ -190,7 +190,7 @@ public sealed class DaggerfallTransferEffectsTests
             Setting = new("setting", 11, subtype, 0, 0, 1, 0, 0, 1, 10, 10, 0, 0, 1);
             var spell = new DaggerfallSpellDefinition("spell", 1, false, "Transfer", element, range, 0, 0, Enumerable.Repeat(Setting, count).ToArray()) { IsCustom = custom };
             var row = new DaggerfallMagicEffectCostDefinition(11, subtype, 1, "destruction", 1, 1, 0, 0, DaggerfallMagicCostMetadata.For(11, subtype));
-            var catalog = new DaggerfallMagicCatalogSet(new Dictionary<string, DaggerfallSpellDefinition> { ["spell"] = spell }, new Dictionary<string, DaggerfallMagicItemDefinition>(), [], [],
+            var catalog = new DaggerfallMagicCatalogSet(new Dictionary<string, DaggerfallSpellDefinition> { ["spell"] = spell }, new Dictionary<string, DaggerfallMagicItemDefinition>(),
                 new Dictionary<(int, int), DaggerfallMagicEffectCostDefinition> { [(11, subtype)] = row }, new Dictionary<string, DaggerfallEnchantmentSetting>());
             DaggerfallEffectLifecycle effects = null!;
             effects = new(Actors, new([.. DaggerfallTransferEffects.Definitions(new(new CombatResolution()), Results.Add, _ => Hostile, (a, b, _) => Attacks.Add((a, b))),

@@ -71,8 +71,7 @@ internal sealed record DaggerfallMobileDefinition(
 /// </summary>
 internal sealed record DaggerfallMobileCatalogSet(
     IReadOnlyDictionary<int, DaggerfallMobileDefinition> Mobiles,
-    IReadOnlyDictionary<string, DaggerfallMobileDefinition> ByActor,
-    IReadOnlyList<string> SourcePaths)
+    IReadOnlyDictionary<string, DaggerfallMobileDefinition> ByActor)
 {
     /// <summary>
     /// Every mobile the donor defines and nothing in this product carries. A human mobile is not listed

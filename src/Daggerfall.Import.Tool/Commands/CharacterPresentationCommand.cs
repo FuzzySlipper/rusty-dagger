@@ -31,7 +31,7 @@ internal static class CharacterPresentationCommand
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToDictionary(path => Path.GetFileName(path), path => PaletteDecoder.Decode(File.ReadAllBytes(path), $"arena2/{Path.GetFileName(path)}"), StringComparer.Ordinal);
         CharacterPresentationGroup group = CharacterPresentationGroup.Create(
-            sources, palettes, File.ReadAllBytes(args["--inventory"]), PayloadFiles.ReadGeneratedText(packFile), Options.CorpusLabel(arena2));
+            sources, palettes, File.ReadAllBytes(args["--inventory"]), Options.CorpusLabel(arena2));
         Report(group);
         if (!args.Switch("--update")) return Options.ReportOnly("these artifacts and references");
 
@@ -71,13 +71,13 @@ internal static class CharacterPresentationCommand
             + presentation.ChildFaces.Count(face => face.Binding == MediaBinding.RequiredPending)
             + presentation.Careers.Count(portrait => portrait.Binding == MediaBinding.RequiredPending);
         int admitted = presentation.Layers.Count + presentation.Faces.Count + presentation.ChildFaces.Count + presentation.Careers.Count - pending;
-        string[] races = [.. presentation.Layers.Select(layer => layer.Race).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
-        Console.WriteLine($"character presentation: {group.Characters.Files.Count} supplied files, {pass.Artifacts.Count} published canvases, {pass.Refusals.Count} refused, {presentation.Layers.Count} layers over {races.Length} races, {presentation.Faces.Count} faction faces, {presentation.ChildFaces.Count} child faces, {presentation.Careers.Count} career portraits, {presentation.CareersWithoutPortrait.Count} careers without one");
+        int[] races = [.. presentation.Layers.Select(layer => layer.DonorRaceId).Distinct().Order()];
+        Console.WriteLine($"character presentation: {group.Characters.Files.Count} supplied files, {pass.Artifacts.Count} published canvases, {pass.Refusals.Count} refused, {presentation.Layers.Count} layers over {races.Length} race values, {presentation.Faces.Count} faction faces, {presentation.ChildFaces.Count} child faces, {presentation.Careers.Count} class portraits");
         Console.WriteLine($"  binding: {admitted} reference(s) bound by {CharacterMediaReferences.CharacterSheetConsumer}, {pending} required-pending; {pass.UnreadableFamilies.Count} unreadable family entry(ies)");
         foreach (string refusal in pass.Refusals.Take(2)) Console.WriteLine($"  refusal: {refusal}");
         Console.WriteLine($"  inventory: {group.Characters.Files.Count - group.Undocumented.Count} documented supplied file(s) reconciled with the corpus");
         foreach (string file in group.Undocumented) Console.WriteLine($"  warning: '{file}' is in the corpus and not in the documented inventory");
-        foreach (string race in races) Console.WriteLine($"  {race}: {presentation.Layers.Count(layer => layer.Race == race)} layers");
-        foreach (DaggerfallRaceWithoutMedia gap in presentation.RacesWithoutMedia.Take(4)) Console.WriteLine($"  gap {gap.Race}: {gap.Reason}");
+        foreach (int race in races) Console.WriteLine($"  race value {race}: {presentation.Layers.Count(layer => layer.DonorRaceId == race)} layers");
+        foreach (DaggerfallRaceWithoutMedia gap in presentation.RacesWithoutMedia.Take(4)) Console.WriteLine($"  gap at race value {gap.DonorRaceId}: {gap.Reason}");
     }
 }

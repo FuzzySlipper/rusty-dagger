@@ -125,8 +125,6 @@ public sealed class HudSnapshotContractTests
             source.Actions,
             source.LootTables,
             source.HudResources,
-            source.DonorErrata,
-            source.ItemTemplates,
             source.CharacterPresentation,
             locations,
             source.Text,

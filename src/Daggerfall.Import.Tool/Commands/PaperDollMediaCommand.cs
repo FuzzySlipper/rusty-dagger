@@ -4,9 +4,8 @@ using Daggerfall.Import.Publication;
 namespace Daggerfall.Import.Tool.Commands;
 
 /// <summary>
-/// Publishes the paper doll's worn-item images - every record an item template can reach, in every dye,
-/// placed in the doll - and the <c>paperDoll</c> section the ruleset resolves a worn item through. It reads
-/// the item template section, so it runs after the <c>items</c> command.
+/// Publishes the paper doll's worn-item images - every record of the worn-item archives, in every dye, placed in
+/// the doll - the items' inventory images, and the <c>paperDoll</c> section the ruleset resolves an item through.
 /// </summary>
 internal static class PaperDollMediaCommand
 {
@@ -17,21 +16,16 @@ internal static class PaperDollMediaCommand
     {
         string arena2 = args["--arena2"];
         string packFile = args["--pack"];
-        var itemTemplates = PayloadFiles.ReadGenerated(packFile)["itemTemplates"]
-            ?? throw new InvalidOperationException($"'{packFile}' carries no itemTemplates section: run the items command first.");
-        var templates = PaperDollItemPublication.ReadTemplates(itemTemplates);
-        var icons = PaperDollItemPublication.ReadIconTemplates(itemTemplates);
         Dictionary<int, ReadOnlyMemory<byte>> archives = [];
-        foreach (int number in PaperDollItemPublication.ArchivesFor(icons))
+        foreach (int number in PaperDollItemPublication.Archives.Concat(PaperDollItemPublication.IconArchives))
         {
             string path = Path.Combine(arena2, $"TEXTURE.{number:000}");
             if (File.Exists(path)) archives[number] = File.ReadAllBytes(path);
         }
 
         Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(Path.Combine(arena2, CharacterMediaReferences.ArtPalette)), $"arena2/{CharacterMediaReferences.ArtPalette}");
-        PaperDollItemPass pass = PaperDollItemPublication.Publish(archives, palette, templates, icons);
-        Console.WriteLine($"paper doll: {templates.Count} worn-item templates reach {pass.Images.Count} records, {pass.Icons.Count} other templates have inventory images; {pass.Sources.Count} archives, {pass.Artifacts.Count} images, {pass.Images.Count(image => image.MaskMediaId is not null)} with a mask, {pass.Artifacts.Sum(artifact => (long)artifact.Bytes.Length) / 1024} KiB");
-        foreach (string gap in pass.Unpublished) Console.WriteLine($"paper doll: no inventory image, {gap}");
+        PaperDollItemPass pass = PaperDollItemPublication.Publish(archives, palette);
+        Console.WriteLine($"paper doll: {pass.Images.Count} worn-item records, {pass.Icons.Count} inventory images; {pass.Sources.Count} archives, {pass.Artifacts.Count} images, {pass.Images.Count(image => image.MaskMediaId is not null)} with a mask, {pass.Artifacts.Sum(artifact => (long)artifact.Bytes.Length) / 1024} KiB");
         if (!args.Switch("--update")) return Options.ReportOnly("these artifacts and the paperDoll section");
 
         string outRoot = Path.Combine(args["--out"], args["--group"]);

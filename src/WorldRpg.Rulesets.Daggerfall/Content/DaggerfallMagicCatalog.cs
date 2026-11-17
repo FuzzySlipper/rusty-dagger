@@ -191,9 +191,6 @@ internal sealed record DaggerfallMagicItemDefinition(
             : throw new InvalidOperationException($"Magic template '{Key}' names donor group {Group}, which publishes no item templates.")];
 }
 
-/// <summary>A published record that carried no spell, kept so the catalog states what it did not carry.</summary>
-internal sealed record DaggerfallMagicDisposition(long Offset, string Kind, string Reason);
-
 /// <summary>
 /// The published magical catalogs a spell or enchantment consumer resolves through. This is loaded from
 /// the pack alone: no source file is read to resolve a spell, its effects or an item's enchantment links.
@@ -201,8 +198,6 @@ internal sealed record DaggerfallMagicDisposition(long Offset, string Kind, stri
 internal sealed record DaggerfallMagicCatalogSet(
     IReadOnlyDictionary<string, DaggerfallSpellDefinition> Spells,
     IReadOnlyDictionary<string, DaggerfallMagicItemDefinition> MagicItems,
-    IReadOnlyList<DaggerfallMagicDisposition> Dispositions,
-    IReadOnlyList<string> SourcePaths,
     IReadOnlyDictionary<(int Type, int SubType), DaggerfallMagicEffectCostDefinition> EffectCosts,
     IReadOnlyDictionary<string, DaggerfallEnchantmentSetting> EnchantmentSettings)
 {

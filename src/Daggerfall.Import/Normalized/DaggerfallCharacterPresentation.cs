@@ -3,15 +3,13 @@ using Daggerfall.Import.Arena2;
 namespace Daggerfall.Import.Normalized;
 
 /// <summary>One presentation layer a race is drawn from, as published pack data.</summary>
-/// <param name="Race">The catalog race identity the layer belongs to.</param>
-/// <param name="DonorRaceId">The donor's own race value, which is one-based.</param>
+/// <param name="DonorRaceId">The classic race value the media is drawn for, which is one-based; the ruleset joins its races to it.</param>
 /// <param name="Layer">The role: a background, a body, or a numbered head.</param>
 /// <param name="MediaId">The stable identity of the canvas, as the publication derives it.</param>
 /// <param name="SourceFile">The supplied source file the artifact comes from.</param>
 /// <param name="Palette">The palette the canvas is read with.</param>
 /// <param name="Binding">Whether a published consumer binds it, or it is still required-pending.</param>
 public sealed record DaggerfallCharacterLayer(
-    string Race,
     int DonorRaceId,
     string Layer,
     string MediaId,
@@ -96,27 +94,21 @@ public sealed record DaggerfallCharacterFile(string Path, string Family, int Can
 public sealed record DaggerfallFactionFace(int Index, string MediaId, string SourceFile, string Palette, MediaBinding Binding, string Consumer);
 
 /// <summary>
-/// One career's portrait: the class art the character-creation and sheet views draw.
+/// One class portrait: the class art the character-creation and sheet views draw for the career named for it.
 /// </summary>
-/// <param name="CareerId">The catalog career identity.</param>
+/// <param name="Portrait">The class the animation is named for (<c>MAGE</c>, from <c>MAGE.CEL</c>); the ruleset gives it to the career of that name.</param>
 /// <param name="MediaId">The published identity of the portrait's first frame.</param>
 /// <param name="SourceFile">The supplied source file, an animation whose frames are the portrait.</param>
 /// <param name="Palette">The palette the frames are painted in, which a container-palette animation carries itself.</param>
 /// <param name="FrameCount">How many frames the portrait animates through.</param>
 /// <param name="Binding">Whether a consumer binds it, or it is still required-pending.</param>
 /// <param name="Consumer">The consumer the inventory recorded, which states that none binds it yet when none does.</param>
-public sealed record DaggerfallCareerPortrait(string CareerId, string MediaId, string SourceFile, string Palette, int FrameCount, MediaBinding Binding, string Consumer);
+public sealed record DaggerfallCareerPortrait(string Portrait, string MediaId, string SourceFile, string Palette, int FrameCount, MediaBinding Binding, string Consumer);
 
-/// <summary>A career the corpus supplies no portrait for, kept explicit.</summary>
-/// <param name="CareerId">The catalog career identity.</param>
-/// <param name="Reason">Why it has no portrait.</param>
-public sealed record DaggerfallCareerWithoutPortrait(string CareerId, string Reason);
-
-/// <summary>A race the corpus supplies no presentation media for, kept explicit.</summary>
-/// <param name="Race">The catalog race identity.</param>
-/// <param name="DonorRaceId">The donor's own race value.</param>
-/// <param name="Reason">Why it has no layers, naming what would have to supply them.</param>
-public sealed record DaggerfallRaceWithoutMedia(string Race, int DonorRaceId, string Reason);
+/// <summary>A classic race value whose media the corpus does not fully supply, kept explicit.</summary>
+/// <param name="DonorRaceId">The classic race value.</param>
+/// <param name="Reason">Why it lacks a layer, naming what would have to supply it.</param>
+public sealed record DaggerfallRaceWithoutMedia(int DonorRaceId, string Reason);
 
 /// <summary>
 /// The character presentation section of the pack: every race's paper-doll layers as data a
@@ -135,7 +127,6 @@ public sealed record DaggerfallCharacterPresentation(
     IReadOnlyList<DaggerfallCharacterLayer> Layers,
     IReadOnlyList<DaggerfallFactionFace> Faces,
     IReadOnlyList<DaggerfallCareerPortrait> Careers,
-    IReadOnlyList<DaggerfallCareerWithoutPortrait> CareersWithoutPortrait,
     IReadOnlyList<DaggerfallCharacterFile> Files,
     IReadOnlyList<DaggerfallRaceWithoutMedia> RacesWithoutMedia,
     IReadOnlyList<string> Sources)
@@ -168,12 +159,11 @@ public sealed record DaggerfallCharacterPresentation(
         }
         foreach (DaggerfallCharacterLayer layer in Layers)
         {
-            NormalizedImportDocument.RequireLogicalId(layer.Race, nameof(layer.Race));
             NormalizedImportDocument.RequireLogicalId(layer.MediaId, nameof(layer.MediaId));
             ArgumentException.ThrowIfNullOrWhiteSpace(layer.Layer);
             ArgumentException.ThrowIfNullOrWhiteSpace(layer.SourceFile);
             ArgumentException.ThrowIfNullOrWhiteSpace(layer.Palette);
-            RequireBoundReference(publishedMediaIds, layer.Binding, layer.MediaId, $"Race '{layer.Race}' layer '{layer.Layer}'");
+            RequireBoundReference(publishedMediaIds, layer.Binding, layer.MediaId, $"Race value {layer.DonorRaceId} layer '{layer.Layer}'");
         }
 
         foreach (DaggerfallFactionFace face in Faces.Concat(ChildFaces))
@@ -189,7 +179,7 @@ public sealed record DaggerfallCharacterPresentation(
             NormalizedImportDocument.RequireLogicalId(portrait.MediaId, nameof(portrait.MediaId));
             ArgumentException.ThrowIfNullOrWhiteSpace(portrait.SourceFile);
             ArgumentException.ThrowIfNullOrWhiteSpace(portrait.Palette);
-            RequireBoundReference(publishedMediaIds, portrait.Binding, portrait.MediaId, $"Career '{portrait.CareerId}' portrait");
+            RequireBoundReference(publishedMediaIds, portrait.Binding, portrait.MediaId, $"Class portrait '{portrait.Portrait}'");
         }
     }
 
@@ -219,16 +209,14 @@ internal sealed class FileAndCanvas : IEqualityComparer<(string File, int Canvas
 }
 
 /// <summary>
-/// Builds the character presentation section from the character-media inventory and the catalog's
-/// races.
+/// Builds the character presentation section from the character-media inventory, keyed by the media's own
+/// race values and class names: the races and careers are authored data the ruleset joins to them at load.
 /// </summary>
 /// <remarks>
-/// The donor's race values are one-based (Breton is 1) while its paper-doll file names are zero-based
-/// (<c>BODY00I0.IMG</c> is Breton's male body), so the layer a race is drawn from is its donor value
-/// minus one. Values outside the eight playable races have no paper-doll subclass at all — the donor's
-/// list continues with racial overrides whose media is bound separately below — and those races are recorded as
-/// having none rather than being mapped onto the next index, which would draw one race with another's
-/// art.
+/// The classic race values are one-based (Breton is 1) while the paper-doll file names are zero-based
+/// (<c>BODY00I0.IMG</c> is Breton's male body), so the layers of race value N are drawn from files N minus
+/// one. Only the eight playable race values have paper-doll media; the ruleset reports a race outside them
+/// as having none rather than drawing it with another race's art.
 /// </remarks>
 public static class DaggerfallCharacterPresentationBuilder
 {
@@ -255,8 +243,6 @@ public static class DaggerfallCharacterPresentationBuilder
 
     /// <param name="inventory">The supplied files, as the inventory enumerated them.</param>
     /// <param name="suppliedPalettes">The palette files the caller supplies, by file name.</param>
-    /// <param name="races">The catalog races a layer is keyed by.</param>
-    /// <param name="careers">The catalog careers a portrait is matched to, by identity and name.</param>
     /// <param name="unpublishable">
     /// The supplied files whose canvases the publication could not emit, by file name, with the reason. A
     /// file here is recorded as unreadable even though its container was read: a format this repository
@@ -270,14 +256,10 @@ public static class DaggerfallCharacterPresentationBuilder
     public static DaggerfallCharacterPresentation Build(
         CharacterMediaInventory inventory,
         IReadOnlySet<string> suppliedPalettes,
-        IReadOnlyList<DaggerfallRaceKey> races,
-        IReadOnlyDictionary<string, string> careers,
         IReadOnlyDictionary<string, string>? unpublishable = null,
         IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? sources = null)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        ArgumentNullException.ThrowIfNull(races);
-        ArgumentNullException.ThrowIfNull(careers);
         IReadOnlyDictionary<string, string> unread = unpublishable ?? new Dictionary<string, string>(StringComparer.Ordinal);
         CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, suppliedPalettes, sources);
         // Looked up by source file and canvas index rather than by a second derivation of the media
@@ -292,16 +274,9 @@ public static class DaggerfallCharacterPresentationBuilder
         PaperDollPlacements placements = new(sources);
         List<DaggerfallCharacterLayer> layers = [];
         List<DaggerfallRaceWithoutMedia> without = [];
-        foreach (DaggerfallRaceKey race in races.OrderBy(race => race.DonorRaceId))
+        for (int race = FirstDonorRaceId; race <= LastDonorRaceId; race++)
         {
-            if (race.DonorRaceId is < FirstDonorRaceId or > LastDonorRaceId)
-            {
-                without.Add(new DaggerfallRaceWithoutMedia(race.Id, race.DonorRaceId,
-                    $"The donor's paper-doll media covers race values {FirstDonorRaceId} to {LastDonorRaceId}; value {race.DonorRaceId} has no subclass and therefore no art, so none is claimed for it."));
-                continue;
-            }
-
-            int media = race.DonorRaceId - 1;
+            int media = race - 1;
             List<(string Layer, string File, int Canvas)> expected =
             [
                 ("background", $"SCBG{media:00}I0.IMG", 0),
@@ -323,12 +298,12 @@ public static class DaggerfallCharacterPresentationBuilder
                 // nothing.
                 if (!canvases.TryGetValue((file, canvasIndex), out CharacterCanvasReference? canvas))
                 {
-                    without.Add(new DaggerfallRaceWithoutMedia(race.Id, race.DonorRaceId,
+                    without.Add(new DaggerfallRaceWithoutMedia(race,
                         $"Layer '{layer}' needs '{file}' canvas {canvasIndex}, which the supplied corpus does not carry."));
                     continue;
                 }
 
-                layers.Add(new DaggerfallCharacterLayer(race.Id, race.DonorRaceId, layer, canvas.MediaId, canvas.Path, canvas.Palette, canvas.Binding, ConsumerOf(canvas))
+                layers.Add(new DaggerfallCharacterLayer(race, layer, canvas.MediaId, canvas.Path, canvas.Palette, canvas.Binding, ConsumerOf(canvas))
                 {
                     Placement = layer == "background" ? null : placements.Of(file, canvasIndex),
                 });
@@ -350,9 +325,8 @@ public static class DaggerfallCharacterPresentationBuilder
             .OrderBy(canvas => canvas.CanvasIndex)
             .Select(canvas => new DaggerfallFactionFace(canvas.CanvasIndex, canvas.MediaId, System.IO.Path.GetFileName(canvas.Path), canvas.Palette, canvas.Binding, ConsumerOf(canvas)))];
 
-        // A career's portrait is the class animation named for it, which is how the classic corpus
-        // stores the three it supplies; a career the corpus does not depict says so rather than
-        // borrowing another class's art.
+        // A class portrait is an animation named for its class, which is how the classic corpus stores the three
+        // it supplies; the ruleset gives each to the career of that name, and a career none depicts has none.
         Dictionary<string, List<CharacterCanvasReference>> portraits = new(StringComparer.OrdinalIgnoreCase);
         foreach (CharacterCanvasReference canvas in set.Canvases.Where(canvas => canvas.Path.EndsWith(".CEL", StringComparison.OrdinalIgnoreCase)))
         {
@@ -366,23 +340,11 @@ public static class DaggerfallCharacterPresentationBuilder
             frames.Add(canvas);
         }
 
-        List<DaggerfallCareerPortrait> careerPortraits = [];
-        List<DaggerfallCareerWithoutPortrait> careersWithout = [];
-        foreach ((string career, string name) in careers.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+        List<DaggerfallCareerPortrait> careerPortraits = [.. portraits.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase).Select(entry =>
         {
-            // The corpus names a class portrait for the class, while a catalog career is identified by
-            // its record position and carries the class name as its name: the name is what matches,
-            // and a space in it is not part of the file name.
-            if (portraits.TryGetValue(name.Replace(" ", string.Empty, StringComparison.Ordinal), out List<CharacterCanvasReference>? frames))
-            {
-                CharacterCanvasReference first = frames.OrderBy(frame => frame.CanvasIndex).First();
-                careerPortraits.Add(new DaggerfallCareerPortrait(career, first.MediaId, System.IO.Path.GetFileName(first.Path), first.Palette, frames.Count, first.Binding, ConsumerOf(first)));
-                continue;
-            }
-
-            careersWithout.Add(new DaggerfallCareerWithoutPortrait(career,
-                $"The corpus supplies no class portrait named for '{name}'; the three it supplies depict the classes they are named for, and none of them is this one."));
-        }
+            CharacterCanvasReference first = entry.Value.OrderBy(frame => frame.CanvasIndex).First();
+            return new DaggerfallCareerPortrait(entry.Key.ToUpperInvariant(), first.MediaId, System.IO.Path.GetFileName(first.Path), first.Palette, entry.Value.Count, first.Binding, ConsumerOf(first));
+        })];
 
         List<DaggerfallRacialForm> racialForms = [];
         foreach (var (id, headFile, bodyFile) in new[] { ("werewolf", "WERE01I0.IMG", "WOLF00I0.IMG"), ("wereboar", "WERE00I0.IMG", "BOAR00I0.IMG") })
@@ -393,12 +355,12 @@ public static class DaggerfallCharacterPresentationBuilder
         }
         var vampireBackground = set.Canvases.SingleOrDefault(value => System.IO.Path.GetFileName(value.Path) == "SCBG08I0.IMG");
         if (vampireBackground is not null)
-            foreach (var race in races.Where(value => value.DonorRaceId is >= FirstDonorRaceId and <= LastDonorRaceId))
+            for (int race = FirstDonorRaceId; race <= LastDonorRaceId; race++)
             foreach (string gender in new[] { "female", "male" })
             {
-                int index = race.DonorRaceId - 1 + (gender == "male" ? 8 : 0);
+                int index = race - 1 + (gender == "male" ? 8 : 0);
                 var head = set.Canvases.SingleOrDefault(value => System.IO.Path.GetFileName(value.Path) == "VAMP00I0.CIF" && value.CanvasIndex == index);
-                if (head is not null) racialForms.Add(new($"vampire.{race.Id}.{gender}", head.MediaId, vampireBackground.MediaId) { HeadPlacement = placements.Of("VAMP00I0.CIF", index) });
+                if (head is not null) racialForms.Add(new($"vampire.{race}.{gender}", head.MediaId, vampireBackground.MediaId) { HeadPlacement = placements.Of("VAMP00I0.CIF", index) });
             }
         HashSet<string> referenced =
         [
@@ -438,7 +400,6 @@ public static class DaggerfallCharacterPresentationBuilder
             [.. layers.OrderBy(layer => layer.DonorRaceId).ThenBy(layer => layer.Layer, StringComparer.Ordinal)],
             faces,
             careerPortraits,
-            careersWithout,
             files,
             without,
             [inventory.Source, .. set.Unavailable.Select(entry => entry.Path).Order(StringComparer.Ordinal)]) { ChildFaces = childFaces, RacialForms = racialForms };

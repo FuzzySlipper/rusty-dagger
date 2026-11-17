@@ -49,13 +49,11 @@ public sealed class CharacterPresentationGroup
     /// <param name="sources">The corpus files of the documented character families, by file name.</param>
     /// <param name="palettes">The corpus palettes, by file name.</param>
     /// <param name="inventoryCsv">The documented inventory, checked against the corpus in both directions.</param>
-    /// <param name="importedPayloadJson">The imported payload whose catalogs name the races and careers.</param>
     /// <param name="corpusLabel">The corpus directory name the inventory's source records cite.</param>
     public static CharacterPresentationGroup Create(
         IReadOnlyList<(string Path, ReadOnlyMemory<byte> Bytes)> sources,
         IReadOnlyDictionary<string, Arena2Palette> palettes,
         ReadOnlySpan<byte> inventoryCsv,
-        string importedPayloadJson,
         string corpusLabel)
     {
         ArgumentNullException.ThrowIfNull(sources);
@@ -63,7 +61,6 @@ public sealed class CharacterPresentationGroup
         // A documented file the corpus lacks is a source gap, and a corpus file the inventory does not
         // document is one this publication would emit without a record.
         string[] undocumented = [.. CharacterMediaPublisher.ReconcileDocumentedInventory(inventoryCsv, sources.Select(entry => entry.Path))];
-        (IReadOnlyList<DaggerfallRaceKey> races, IReadOnlyDictionary<string, string> careers) = CatalogKeys(importedPayloadJson);
 
         // The publication pass runs first over the corpus as it stands, so the artifacts exist before any
         // reference claims one. The consumer is then derived from the pack's own identity: the character
@@ -98,7 +95,7 @@ public sealed class CharacterPresentationGroup
         }
 
         CharacterMediaInventory characters = CharacterMediaInventory.Enumerate(sources, bound, CharacterMediaReferences.CharacterSheetConsumer, corpusLabel);
-        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(characters, suppliedPalettes, races, careers, pass.UnpublishableFiles, corpus);
+        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(characters, suppliedPalettes, pass.UnpublishableFiles, corpus);
         presentation.Validate(pass.PublishedMediaIds);
         // The doll draws a body or head where its header puts it; one the header could not be read for would
         // be drawn at a guess.
@@ -107,27 +104,6 @@ public sealed class CharacterPresentationGroup
         if (unplaced.Length != 0)
             throw new InvalidOperationException($"{unplaced.Length} paper-doll layer(s) have no placement read from their source header: {string.Join(", ", unplaced.Take(8))}.");
         return new(characters, pass, referenced, presentation, undocumented);
-    }
-
-    /// <summary>The races the catalogs publish, which the layers are keyed by, and each career's name, which names its portrait.</summary>
-    private static (IReadOnlyList<DaggerfallRaceKey> Races, IReadOnlyDictionary<string, string> Careers) CatalogKeys(string importedPayloadJson)
-    {
-        JsonNode catalogs = JsonNode.Parse(importedPayloadJson)!["catalogs"]
-            ?? throw new InvalidOperationException("The imported payload carries no catalogs section, which names the races and careers: run the catalogs command first.");
-        DaggerfallRaceKey[] races = [.. catalogs["races"]!.AsArray().Select(value =>
-        {
-            JsonObject race = value!.AsObject();
-            JsonObject source = race["source"]!.AsObject();
-            return new DaggerfallRaceKey(
-                race["id"]!.GetValue<string>(),
-                race["donorRaceId"]!.GetValue<int>(),
-                new DaggerfallCatalogSource(source["path"]!.GetValue<string>()));
-        })];
-        Dictionary<string, string> careers = catalogs["careers"]!.AsArray().ToDictionary(
-            value => value!["id"]!.GetValue<string>(),
-            value => value!["name"]!.GetValue<string>(),
-            StringComparer.Ordinal);
-        return (races, careers);
     }
 
     /// <summary>

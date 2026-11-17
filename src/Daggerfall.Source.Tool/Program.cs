@@ -15,7 +15,6 @@ internal static class Program
     {
         // Reports and reconciliation against the documented inventory.
         SourceInventoryCommand.Command,
-        MobileLedgerCommand.Command,
         MonsterArchiveCommand.Command,
         TextureLeavesCommand.Command,
         ResidualPathsCommand.Command,

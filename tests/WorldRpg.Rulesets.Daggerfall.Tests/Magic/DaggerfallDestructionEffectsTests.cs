@@ -228,7 +228,7 @@ public sealed class DaggerfallDestructionEffectsTests
             var spell = new DaggerfallSpellDefinition("spell", 1, false, "Destruction", element, 2, 0, 0, Enumerable.Repeat(setting,count).ToArray());
             var cost = new DaggerfallMagicEffectCostDefinition(setting.Type, setting.SubType, 1, "destruction", 10, 1, 0, 0,
                 DaggerfallMagicCostMetadata.For(setting.Type, setting.SubType));
-            Catalog = new(new Dictionary<string,DaggerfallSpellDefinition> { ["spell"] = spell }, new Dictionary<string,DaggerfallMagicItemDefinition>(), [], [],
+            Catalog = new(new Dictionary<string,DaggerfallSpellDefinition> { ["spell"] = spell }, new Dictionary<string,DaggerfallMagicItemDefinition>(),
                 new Dictionary<(int,int),DaggerfallMagicEffectCostDefinition> { [(setting.Type,setting.SubType)] = cost }, new Dictionary<string,DaggerfallEnchantmentSetting>());
             DaggerfallEffectLifecycle effects = null!;
             var definitions = DaggerfallDestructionEffects.Definitions(new(new CombatResolution()), result => { HealthResults.Add(result); AfterHealth?.Invoke(); }, TrackResults.Add,

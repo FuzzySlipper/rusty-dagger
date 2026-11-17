@@ -26,18 +26,12 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal(22, definitions.LootTables.Count);
         Assert.Equal(12, definitions.ArmorValuesByMaterial.Count);
         Assert.NotEmpty(definitions.RequireActor(new DaggerfallActorId("player")).Loadout);
-        string expectedFingerprint = TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
-        // The fixture records the pack's semantic content, so it moves when the pack's meaning moves: the
-        // archer gaining a ranged policy and the actions carrying their own reach are exactly that.
-        string observedFingerprint = DaggerfallBaseContent.Fingerprint(definitions);
-        Assert.True(expectedFingerprint == observedFingerprint, $"Observed semantic fingerprint: {observedFingerprint}");
         // One authored quiver policy supplies every bow-capable class, including placed archers.
         DaggerfallActorDefinition archerDefinition = definitions.RequireActor(new DaggerfallActorId("archer"));
         Assert.Empty(archerDefinition.Loadout);
         Assert.Equal(new DaggerfallItemId("arrow"), definitions.EnemyRanged.ArrowItem);
         Assert.Equal(12, definitions.EnemyRanged.StartingArrows);
         Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41, 42 }, definitions.Actors.Values.Where(actor => actor.Kind == "monster").Select(actor => actor.MobileId!.Value).Order());
-        Assert.Equal(new[] { "mobile-39-horse-is-explicitly-absent", "chain2-material-alias-is-not-authored", "bows-retain-donor-both-hands-policy", "loot-matrix-uses-fall-exe-errata", "ranged-shots-preroll-and-omit-intervening-actor-collision" }.Order(), definitions.DonorErrata.Select(erratum => erratum.Id).Order());
         Assert.Equal("both", definitions.Items[new DaggerfallItemId("iron-short-bow")].Weapon!.Handedness);
         Assert.Equal("right-hand", definitions.RequireActor(new DaggerfallActorId("player")).Loadout[0].EquipSlot!.Value.Value);
         Assert.Equal(8, definitions.RequireActor(new DaggerfallActorId("player")).HitPointsPerLevel);
@@ -139,44 +133,21 @@ public sealed class DaggerfallCatalogContentTests
     }
 
     [Fact]
-    public void RequiresAProvenanceAndDispositionForEveryItemTemplateTarget()
+    public void Reads_a_template_modelled_on_another_as_an_ordinary_row()
     {
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallItemTemplateSet templates = TestPayload.Definitions.ItemTemplateCatalog;
 
-        // FALL.EXE is not supplied, so every one of the classic 288 targets resolves to the
-        // donor's exported table and says what its entry rests on. The ledger is what keeps a
-        // migrated item value from reading as a decoded native template fact.
-        Assert.Equal(288, definitions.ItemTemplates.Targets.Count);
-        Assert.Equal(Enumerable.Range(0, 288), definitions.ItemTemplates.Targets.Select(target => target.Index));
-        Assert.All(definitions.ItemTemplates.Targets, target =>
-        {
-            Assert.False(string.IsNullOrWhiteSpace(target.Provenance));
-            Assert.Equal(DaggerfallItemTemplateLedger.SubstituteDisposition, target.Disposition);
-        });
-        Assert.Equal("absent", definitions.ItemTemplates.SourceStatus);
-        Assert.False(definitions.ItemTemplates.SourceSupplied);
-        Assert.False(definitions.ItemTemplates.PublishedNativeDecoding);
-        Assert.Equal("catalog-migration", definitions.ItemTemplates.PublishedValueProvenance);
-        Assert.Equal(279, definitions.ItemTemplates.Targets.Count(target => target.DonorGroups.Count != 0));
-        Assert.Equal([99, 100, 101, 246, 250, 251, 266, 272, 273], definitions.ItemTemplates.Targets.Where(target => target.DonorGroups.Count == 0).Select(target => target.Index));
-        // A group the donor maps to a different id space is published apart from the
-        // template groups: the artifact ids share the range but index MAGIC.DEF.
-        Assert.Contains("Artifacts", definitions.ItemTemplates.Targets[0].DonorReferenceGroups);
-        Assert.DoesNotContain("Artifacts", definitions.ItemTemplates.Targets[0].DonorGroups);
-        Assert.Equal("available", definitions.ItemTemplates.SubstituteStatus);
-        Assert.Contains("ItemTemplates.txt", definitions.ItemTemplates.SubstitutePath, StringComparison.Ordinal);
-    }
+        // The mace is lighter than the classic's and drawn under its own refreshed name; the club is a template of its
+        // own with the classic mace's values, which reads the classic's per-template tables (sounds, equip delay) by the
+        // mace's index.
+        DaggerfallItemTemplateDefinition mace = templates.Resolve(124), club = templates.Resolve(288);
+        Assert.Equal((3.0, "mace", (int?)null), (mace.BaseWeight, mace.RefreshedArt, mace.ClassicModel));
+        Assert.Equal(("Club", 4.5, 124, 124), (club.Name, club.BaseWeight, club.ClassicModel, club.ClassicIndex));
 
-    [Theory]
-    [InlineData("\"id\":\"implicit-values\"", "\"id\":\"\"")]
-    [InlineData("\"evidence\":\"daggerfall-unity/Assets/Scripts/Game/Items/ItemEnums.cs declares None = -1 in ItemGroups and ArtifactsSubTypes.\"", "\"evidence\":\"\"")]
-    [InlineData("\"status\":\"available\"", "\"status\":\"unclear\"")]
-    public void RejectsABaselineRuleOrSubstituteThatDoesNotSayWhatItRestsOn(string before, string after)
-    {
-        Assert.True(TestPayload.Contains(before), "The fixture's text is not in the payload.");
-        byte[] tampered = TestPayload.Replaced((before, after));
-
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(tampered));
+        System.Text.Json.Nodes.JsonObject payload = TestPayload.Sections("itemTemplates");
+        payload["itemTemplates"]!["templates"]!.AsArray().Single(row => row!["index"]!.GetValue<int>() == 288)!["classicModel"] = 999;
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
+        Assert.Contains("modelled on template 999", error.Message, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -206,86 +177,12 @@ public sealed class DaggerfallCatalogContentTests
     }
 
     [Theory]
-    [InlineData("\"itemTemplateLedger\"", "\"itemTemplateLedgerAbsent\"")]
-    [InlineData("\"provenance\":\"no-donor-group\"", "\"provenance\":\"\"")]
-    [InlineData("\"disposition\":\"substitute\"", "\"disposition\":\"decoded\"")]
-    [InlineData("\"targets\":288", "\"targets\":287")]
-    [InlineData("\"referencedByDonorGroups\":279", "\"referencedByDonorGroups\":278")]
-    [InlineData("\"nativeTemplatesDecoded\":0", "\"nativeTemplatesDecoded\":279")]
-    [InlineData("\"nativeDecoding\":false", "\"nativeDecoding\":true")]
-    [InlineData("\"count\":31,", "\"count\":30,")]
-    public void RejectsAnItemTemplateLedgerThatMisstatesItsOwnCoverage(string before, string after)
-    {
-        Assert.True(TestPayload.Contains(before), "The fixture's text is not in the payload.");
-        byte[] tampered = TestPayload.Replaced((before, after));
-
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(tampered));
-    }
-
-    [Theory]
-    [InlineData("\"status\":\"absent\"", "\"status\":\"Absent\"")]
-    [InlineData("\"disposition\":\"substitute\"", "\"disposition\":\"banana\"")]
-    [InlineData("\"nativeDecoding\":false", "\"nativeDecoding\":\"false\"")]
-    [InlineData("\"donorGroups\":[", "\"donorGroups\":[123, ")]
-    public void RejectsALedgerThatLeavesItsVocabulary(string before, string after)
-    {
-        // A near miss must not pass as a state: 'Absent' is not the absent status, 'banana'
-        // is not a disposition, and a string is not a boolean. Each would otherwise be read
-        // as something it does not say.
-        Assert.True(TestPayload.Contains(before), "The fixture's text is not in the payload.");
-        byte[] tampered = TestPayload.Replaced((before, after));
-
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(tampered));
-    }
-
-    [Fact]
-    public void AcceptsTheFullDispositionVocabularyOnceTheSourceIsPresent()
-    {
-        // The vocabulary is closed rather than collapsed to one value: a supplied source is
-        // what lets a target be malformed or decoded, and the ledger must be able to say so.
-        byte[] tampered = TestPayload.Replaced(
-            ("\"status\":\"absent\"", "\"status\":\"present\""),
-            ("\"disposition\":\"substitute\"", "\"disposition\":\"malformed\""));
-
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(tampered);
-
-        Assert.All(definitions.ItemTemplates.Targets, target => Assert.Equal("malformed", target.Disposition));
-    }
-
-    [Fact]
-    public void RejectsAResolvedTargetWithNeitherTheByteSourceNorASubstitute()
-    {
-        // Decoding needs the byte source or a marked substitute behind it. With the
-        // substitute withdrawn and a target resolved, the ledger claims a fact with nothing
-        // behind it — which is the one thing this task must never publish.
-        byte[] tampered = TestPayload.Replaced(
-            ("\"status\":\"available\"", "\"status\":\"missing\""),
-            ("\"disposition\":\"unresolved\"", "\"disposition\":\"decoded\""));
-
-        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(tampered));
-    }
-
-    [Theory]
     [InlineData("\"preferredRestState\": \"ratIdle\"", "\"preferredRestState\": \"\"")]
     [InlineData("\"move\": 10", "\"move\": 0")]
     [InlineData("\"move\": 10", "\"move\": \"fast\"")]
     public void RejectsMalformedActorPresentationDefinitions(string before, string after)
     {
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Replaced((before, after))));
-    }
-
-    [Fact]
-    public void SemanticFingerprintDoesNotDependOnTheProcessCulture()
-    {
-        DaggerfallDefinitions definitions = TestPayload.Definitions;
-        CultureInfo original = CultureInfo.CurrentCulture;
-        try
-        {
-            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
-            string expectedFingerprint = TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
-            Assert.Equal(expectedFingerprint, DaggerfallBaseContent.Fingerprint(definitions));
-        }
-        finally { CultureInfo.CurrentCulture = original; }
     }
 
     [Theory]

@@ -182,7 +182,7 @@ public sealed class DaggerfallMagicCostPolicyTests
             magnitudeBaseLow, magnitudeBaseHigh, magnitudeLevelBase, magnitudeLevelHigh, magnitudePerLevel);
 
     private static DaggerfallMagicCatalogSet Catalog(DaggerfallSpellEffectDefinition effect, DaggerfallMagicEffectCostDefinition row) =>
-        new(new Dictionary<string, DaggerfallSpellDefinition>(), new Dictionary<string, DaggerfallMagicItemDefinition>(), [], [],
+        new(new Dictionary<string, DaggerfallSpellDefinition>(), new Dictionary<string, DaggerfallMagicItemDefinition>(),
             new Dictionary<(int Type, int SubType), DaggerfallMagicEffectCostDefinition> { [(effect.Type, effect.SubType)] = row }, new Dictionary<string, DaggerfallEnchantmentSetting>());
 
     private static DaggerfallDefinitions Load()

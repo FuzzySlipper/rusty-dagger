@@ -13,13 +13,14 @@ public sealed class DaggerfallClassicSelectionTests
 {
     [Theory]
     // The dagger's template naming an effect sprite.
-    [InlineData("\"weaponMediaId\":\"weapon.dagger.steel\"", "\"weaponMediaId\":\"effect.blood.0\"",
-        "Weapon 'iron-dagger' draws no classic weapon art: its template 113 names 'effect.blood.0', which is not admitted weaponSprite media.")]
-    // The club's template made from the arrow's, which names no first-person art.
-    [InlineData("\"basedOn\": 124", "\"basedOn\": 131", "Weapon 'iron-club' draws no classic weapon art: its template 288 names none.")]
-    public void A_weapon_whose_template_names_no_classic_weapon_art_is_refused_at_load(string before, string after, string diagnostic)
+    [InlineData(113, "effect.blood.0", "Weapon 'iron-dagger' draws no classic weapon art: its template 113 names 'effect.blood.0', which is not admitted weaponSprite media.")]
+    // The club's template naming no first-person art.
+    [InlineData(288, "", "Weapon 'iron-club' draws no classic weapon art: its template 288 names none.")]
+    public void A_weapon_whose_template_names_no_classic_weapon_art_is_refused_at_load(int template, string weaponMediaId, string diagnostic)
     {
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(TestPayload.Replaced((before, after)));
+        System.Text.Json.Nodes.JsonObject payload = TestPayload.Sections("itemTemplates");
+        payload["itemTemplates"]!["templates"]!.AsArray().Single(row => row!["index"]!.GetValue<int>() == template)!["weaponMediaId"] = weaponMediaId;
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(TestPayload.Splice(payload));
 
         DaggerfallContentException refused = Assert.Throws<DaggerfallContentException>(() =>
             NormalizedMediaValidationTests.Read(FullContent(TestData.RepositoryRoot), definitions));

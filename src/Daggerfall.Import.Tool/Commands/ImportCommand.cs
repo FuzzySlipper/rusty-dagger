@@ -31,11 +31,8 @@ internal static class ImportCommand
     private const string UiOriginal = AuthoredUi.ProductDirectory;
 
     private static readonly string[] Arena2Files =
-        ["MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "MONSTER.BSA", "DAGGER.SND", "TEXT.RSC", "CLASSES.DAT", "CLIMATE.PAK", "POLITIC.PAK",
-         "WOODS.WLD", "FACTION.TXT", "FLATS.CFG", "SPELLS.STD", "MAGIC.DEF", "ANIM0000.VID", "AZURA.FLC"];
-
-    /// <summary>Our own tables the steps read, under <see cref="ImportLayout.Inputs"/>.</summary>
-    private static readonly string[] InputFiles = ["races.json", "item-groups.json", "item-templates.json", "magic-item-templates.json", "spell-costs.json", "mobiles.json", "npc-captions.json"];
+        ["MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "DAGGER.SND", "TEXT.RSC", "CLIMATE.PAK", "POLITIC.PAK",
+         "WOODS.WLD", "FACTION.TXT", "FLATS.CFG", "ANIM0000.VID", "AZURA.FLC"];
 
     public static ToolCommand Command { get; } = new("import",
     [
@@ -125,7 +122,6 @@ internal static class ImportCommand
     internal static IReadOnlyList<Step> Steps(Inputs inputs)
     {
         string arena2 = inputs.Arena2;
-        static string Input(string file) => $"{ImportLayout.Inputs}/{file}";
         const string staging = ImportLayout.Staging;
         const string records = ImportLayout.Records;
         const string imported = ImportLayout.ImportedPayload;
@@ -147,30 +143,18 @@ internal static class ImportCommand
         Add("sky-media", "sky-media", "--arena2", arena2, "--out", staging, "--group", "worldrpg", "--update");
 
         // 2. The imported payload's sections, in dependency order, with the block document and the import
-        //    records. None reads the authored payload: the ruleset joins it to these sections when it loads.
-        Add("catalogs", "catalogs", "--arena2", arena2, "--inventory", Inventory, "--pack", imported,
-            "--races", Input("races.json"), "--update");
-        Add("item-template-ledger", "item-template-ledger", "--item-groups", Input("item-groups.json"), "--inventory", Inventory,
-            "--pack", imported, "--update");
+        //    records. None reads the authored payload: the ruleset joins it to these sections when it loads, and the
+        //    classic tables (items, magic, mobiles, careers, factions) are authored data there (DEC-13).
         Add("character-presentation", "character-presentation", "--arena2", arena2, "--inventory", Inventory, "--pack", imported,
             "--out", staging, "--group", "worldrpg", "--update");
         Add("locations", "locations", "--arena2", arena2, "--pack", imported, "--out", staging, "--update");
-        Add("magic-catalog", "magic-catalog", "--arena2", arena2, "--pack", imported,
-            "--spell-costs", Input("spell-costs.json"), "--update");
-        Add("mobile-catalog", "mobile-catalog", "--mobiles", Input("mobiles.json"),
-            "--pack", imported, "--archive", $"{arena2}/MONSTER.BSA", "--update");
         Add("text", "text", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--language", "en", "--update");
         Add("blocks", "blocks", "--arena2", arena2, "--document", blocks, "--buildings", buildings, "--inventory", Inventory, "--update");
         Add("geometry", "geometry", "--arena2", arena2, "--blocks", blocks, "--records", importRecords, "--inventory", Inventory, "--update");
         Add("climate", "climate", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
-        Add("factions", "factions", "--arena2", arena2, "--pack", imported, "--inventory", Inventory,
-            "--npc-captions", Input("npc-captions.json"), "--update");
         Add("terrain", "terrain", "--arena2", arena2, "--pack", imported, "--out", staging, "--inventory", Inventory, "--update");
         Add("relief", "relief", "--arena2", arena2, "--pack", imported, "--out", staging, "--keep", ImportLayout.KeptRelief, "--update");
         Add("atlas", "atlas", "--pack", imported, "--out", staging, "--update");
-        Add("items", "items", "--arena2", arena2, "--pack", imported, "--inventory", Inventory,
-            "--item-templates", Input("item-templates.json"), "--magic-item-templates", Input("magic-item-templates.json"),
-            "--item-groups", Input("item-groups.json"), "--update");
         Add("paper-doll-media", "paper-doll-media", "--arena2", arena2, "--pack", imported, "--out", staging, "--group", "worldrpg", "--update");
         Add("videos", "videos", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
         if (inputs.Cinematics)
@@ -223,9 +207,6 @@ internal static class ImportCommand
                 yield return $"Arena2 sky file '{inputs.Arena2}/{file}'";
             if (!IsDirectory(Path.Combine(inputs.Arena2, "books"))) yield return $"Arena2 books directory '{inputs.Arena2}/books'";
         }
-
-        foreach (string file in InputFiles.Where(file => !IsFile(Path.Combine(ImportLayout.Inputs, file))))
-            yield return $"tracked file '{ImportLayout.Inputs}/{file}'";
 
         if (inputs.Cinematics)
             foreach (string tool in new[] { "ffmpeg", "ffprobe" }.Where(tool => FindOnPath(tool) is null))

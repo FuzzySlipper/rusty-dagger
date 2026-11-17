@@ -294,7 +294,7 @@ public sealed class DaggerfallDiseasePolicyTests
     }
 
     private static DaggerfallRaceDefinition Race(DaggerfallDiseaseCareerTolerance tolerance, int flag) =>
-        new("one-rule-race", 0, new DaggerfallCatalogCitation("test"))
+        new("one-rule-race", 0)
         {
             ResistanceFlags = tolerance == DaggerfallDiseaseCareerTolerance.Resistant ? flag : 0,
             ImmunityFlags = tolerance == DaggerfallDiseaseCareerTolerance.Immune ? flag : 0,
@@ -591,7 +591,7 @@ public sealed class DaggerfallDiseasePolicyTests
 
     private static DaggerfallCareerDefinition Career(int resistance = 0, int immunity = 0, int low = 0, int critical = 0) =>
         new("disease-career", "Disease career", [], [], [], [], [], 75, 2000, 1f, [], [], resistance, immunity, low, critical, 0, DaggerfallCareerSpecials.None, [],
-            [], new DaggerfallCatalogCitation("test"));
+            []);
 
     private static System.Text.Json.JsonElement Json(string value)
     {

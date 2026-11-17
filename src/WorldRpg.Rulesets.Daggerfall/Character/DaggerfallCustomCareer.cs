@@ -131,7 +131,7 @@ internal static class DaggerfallCustomCareerPolicy
         DaggerfallCareerDefinition career = new(CareerId, choices.Name.Trim(), choices.PrimarySkills, choices.MajorSkills, choices.MinorSkills,
             attributeBase.Attributes, attributeBase.AttributeValues, choices.HitPointsPerLevel, multiplier,
             0.3f + (2.7f * (difficulty + 12) / 52f), Elements(resistance), Elements(immunity), resistance, immunity, lowTolerance, criticalWeakness,
-            attackModifierFlags, Specials(choices), expertProficiencies, forbidden, new DaggerfallCatalogCitation("custom:character-creation"));
+            attackModifierFlags, Specials(choices), expertProficiencies, forbidden);
         return new(career, choices.Advantages, choices.Disadvantages, forbidden);
     }
 

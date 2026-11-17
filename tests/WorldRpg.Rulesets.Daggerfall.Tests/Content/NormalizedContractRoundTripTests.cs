@@ -24,7 +24,6 @@ public sealed class NormalizedContractRoundTripTests
     /// <summary>Every imported payload section a record type writes, by section name.</summary>
     private static readonly (string Section, Type Record)[] RecordSections =
     [
-        ("catalogs", typeof(DaggerfallCatalogs)),
         ("characterPresentation", typeof(DaggerfallCharacterPresentation)),
         ("locations", typeof(DaggerfallLocations)),
         ("text", typeof(DaggerfallText)),
@@ -34,9 +33,7 @@ public sealed class NormalizedContractRoundTripTests
         ("books", typeof(DaggerfallBooks)),
         ("climate", typeof(DaggerfallClimateGrid)),
         ("politic", typeof(DaggerfallPoliticGrid)),
-        ("factions", typeof(DaggerfallFactions)),
         ("terrain", typeof(DaggerfallTerrain)),
-        ("itemTemplates", typeof(DaggerfallItemTemplates)),
         ("cinematics", typeof(DaggerfallCinematicPack)),
     ];
 
@@ -44,7 +41,7 @@ public sealed class NormalizedContractRoundTripTests
     /// The sections an importer document builder writes without a record type. Their names are fixed in
     /// that builder, so the ruleset's read of the published section is the check.
     /// </summary>
-    private static readonly string[] BuilderSections = ["itemTemplateLedger", "magic", "mobiles", "paperDoll"];
+    private static readonly string[] BuilderSections = ["paperDoll"];
 
     [Fact]
     public void Every_imported_section_is_written_by_an_importer_contract_this_suite_names()
@@ -85,33 +82,7 @@ public sealed class NormalizedContractRoundTripTests
         byte[] authored = TestContentFiles.ReadCopy(TestData.PackPayload("daggerfall.base"));
         byte[] rewrittenPayload = RewriteImportedPayload(rewrittenSections);
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(authored, rewrittenPayload, TestPayload.Data);
-        Assert.NotEmpty(definitions.Catalogs.Careers);
-    }
-
-    /// <summary>
-    /// The mobile catalog is a builder section, so its loot inputs are joined here directly: the importer's
-    /// builder writes each donor mobile's loot key and map chance from the donor table, and the ruleset's
-    /// read, which corpse loot rolls from, must carry the same values for every mobile.
-    /// </summary>
-    [Fact]
-    public void Mobile_loot_inputs_the_importer_writes_read_back_through_the_ruleset()
-    {
-        global::Daggerfall.Import.Arena2.MobileTable mobileTable = TakenTable.Read<global::Daggerfall.Import.Arena2.MobileTable>(
-            TestContentFiles.ReadCopy(TestData.Input("mobiles.json")), "mobiles.json");
-        byte[] authored = TestContentFiles.ReadCopy(TestData.PackPayload("daggerfall.base"));
-        global::Daggerfall.Import.Arena2.Arena2MobileCatalogPublication publication = global::Daggerfall.Import.Arena2.Arena2MobileCatalogDocument.Build(mobileTable);
-        string mobiles = JsonNode.Parse(publication.Json)!.ToJsonString(PublishedJson.SectionCompact);
-        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(authored, RewriteImportedPayload(
-            new Dictionary<string, string>(StringComparer.Ordinal) { ["mobiles"] = mobiles }), TestPayload.Data);
-
-        IReadOnlyList<global::Daggerfall.Import.Arena2.Arena2MobileTableEntry> table = mobileTable.Mobiles;
-        Assert.Equal(
-            table.Select(entry => (entry.Id, entry.LootTableKey, entry.MapChance)).OrderBy(value => value.Id),
-            definitions.Mobiles.Mobiles.Values.Select(mobile => (mobile.DonorId, mobile.LootTableKey, mobile.MapChance)).OrderBy(value => value.DonorId));
-        // The donor's own values: the Lich's 4, the keyed Monk's 1 and the keyless City Watch's 0.
-        Assert.Equal(4, definitions.Mobiles.Mobiles[32].MapChance);
-        Assert.Equal(("T", 1), (definitions.Mobiles.Mobiles[140].LootTableKey, definitions.Mobiles.Mobiles[140].MapChance));
-        Assert.Equal(((string?)null, 0), (definitions.Mobiles.Mobiles[146].LootTableKey, definitions.Mobiles.Mobiles[146].MapChance));
+        Assert.NotEmpty(definitions.CharacterPresentation.Races);
     }
 
     [Fact]

@@ -12,15 +12,14 @@ internal static class PublicationInputs
     public static readonly CommandOption ClassicGroup = CommandOption.Staged("--classic-group", "CLASSIC_GROUP_DIR", ImportLayout.ClassicGroup);
 
     /// <summary>
-    /// What the world media publishes beyond the meshes and texture leaves: the actors the imported mobile catalog
-    /// says the runtime may spawn, the people, nature and terrain it may materialize anywhere, and the authored UI art.
+    /// What the world media publishes beyond the meshes and texture leaves: every mobile's sprite the runtime may spawn,
+    /// the people, nature and terrain it may materialize anywhere, and the authored UI art.
     /// </summary>
-    public static Arena2SiteMedia Media(CommandArguments args, Arena2ClassicMediaProfile classicMedia)
+    public static Arena2SiteMedia Media(Arena2SiteSources sources, Arena2ClassicMediaProfile classicMedia)
     {
-        string imported = PayloadFiles.ReadGeneratedText(args[Options.Pack.Name]);
-        return new(Arena2SitePublication.RuntimeActorResources(imported), classicMedia)
+        return new(Arena2SitePublication.RuntimeActorResources(), classicMedia)
         {
-            RuntimeNpcResources = Arena2SitePublication.RuntimeNpcResources(imported),
+            RuntimeNpcResources = Arena2SitePublication.RuntimeNpcResources(sources),
             RuntimeNatureResources = Arena2SitePublication.RuntimeNatureResources(),
             RuntimeTerrainResources = Arena2SitePublication.RuntimeTerrainResources(),
         };

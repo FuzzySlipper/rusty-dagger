@@ -1,20 +1,9 @@
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
-/// <summary>How a native template target is accounted for: the ledger's vocabulary.</summary>
-internal enum DaggerfallItemTemplateDisposition
-{
-    Substitute,
-    Unresolved,
-    Decoded,
-    Malformed,
-    Unsupported,
-}
-
-/// <summary>One published item template: substitute fields with group, stack and reference facts.</summary>
+/// <summary>One item template: its values with group, stack and reference facts.</summary>
 /// <param name="Index">The template index.</param>
 /// <param name="Name">The template name.</param>
-/// <param name="Groups">The donor groups that claim the index, primary first.</param>
-/// <param name="Disposition">How the target resolved.</param>
+/// <param name="Groups">The classic groups that claim the index, primary first.</param>
 /// <param name="BaseWeight">The base weight.</param>
 /// <param name="HitPoints">The base condition.</param>
 /// <param name="CapacityOrTarget">The capacity or target value.</param>
@@ -37,7 +26,6 @@ internal sealed record DaggerfallItemTemplateDefinition(
     int Index,
     string Name,
     IReadOnlyList<string> Groups,
-    DaggerfallItemTemplateDisposition Disposition,
     double BaseWeight,
     int HitPoints,
     int CapacityOrTarget,
@@ -58,8 +46,8 @@ internal sealed record DaggerfallItemTemplateDefinition(
     int DrawOrderOrEffect)
 {
     /// <summary>
-    /// For a template the ruleset adds past the classic catalog (<c>authoredItemTemplates</c>), the classic
-    /// template it is modelled on; null for a classic template.
+    /// For a template made from another (the club, from the mace), the template it is modelled on where the classic
+    /// keeps per-template tables; null for a template of its own.
     /// </summary>
     internal int? ClassicModel { get; init; }
 

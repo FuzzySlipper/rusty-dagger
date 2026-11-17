@@ -29,8 +29,8 @@ Two areas promote icons rather than their own finals, each standing in for a cla
 
   - `items`: the inventory images of the templates the paper doll does not draw (`item.ARCHIVE.RECORD`, named in
     the staged `paperDoll.icons` section), each from the accepted `items` final of its record, and every icon the
-    classic media publishes for an item without a template (`inventoryIcons`, `inventory.icon.ITEM`: the potion
-    recipes' bottles and gold) from the accepted final of the record it draws. A worn item's icon is its paper-doll
+    classic media publishes for an item without a template (`inventoryIcons`, `inventory.icon.ITEM`: gold) from the
+    accepted final of the record it draws; a potion draws its recipe's bottle, an `item.205.RECORD` image. A worn item's icon is its paper-doll
     image, which the `worn` area already replaces. An icon whose record has no accepted final stays classic.
   - `spells`: each accepted spell icon `icons--icon-NNN--icon` as `spell.icon.N`, cell N of the classic
     `spell.icons` atlas, and each accepted targeting and element tile as `spell.target.N` and `spell.element.N`, tile N
@@ -598,7 +598,7 @@ def item_units():
     its record."""
     images = [(published["mediaId"], published["textureArchive"], published["sourceRecordOrdinal"], f"items/{published['itemId']}")
               for published in json.load(open(CLASSIC_MANIFEST))["inventoryIcons"]]
-    for media in sorted({media for icon in json.load(open(IMPORTED))["paperDoll"]["icons"] for media in icon["mediaIds"]}):
+    for media in sorted(set(json.load(open(IMPORTED))["paperDoll"]["icons"])):
         archive, record = map(int, ITEM_IMAGE.fullmatch(media).groups())
         images.append((media, archive, record, f"items/{media}"))
 

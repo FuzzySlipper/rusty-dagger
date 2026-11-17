@@ -45,7 +45,6 @@ public sealed class EnemyCombatSessionTests
         // A shot carries further than a swing, and the erratum that named the gap is gone: the capability
         // it recorded now exists, so leaving it would be a claim the corpus no longer supports.
         Assert.True(shot.Reach > definitions.Actions["monster-strike"].Reach, "a shot must carry further than a swing");
-        Assert.DoesNotContain(definitions.DonorErrata, erratum => erratum.Id == "archer-ranged-attack-is-not-implemented");
         // The thief is the opposite case: no donor damage range either, but the donor's own enemy setup
         // gives it a melee policy, which is why it is authored rather than dispositioned away.
         DaggerfallMobileDefinition thief = definitions.Mobiles.Mobiles[138];

@@ -8,29 +8,11 @@ namespace Daggerfall.Import.Tests;
 
 /// <summary>
 /// The paper doll's placements and worn-item images: each canvas at its header offset less the donor's
-/// paper-doll origin, every record an item template reaches in every dye, and the mask published apart.
+/// paper-doll origin, every record of the worn-item archives in every dye, the mask published apart, and every
+/// record of the inventory image archives.
 /// </summary>
 public sealed class PaperDollPublicationTests
 {
-    [Fact]
-    public void A_template_reaches_its_variants_its_cloak_interior_and_its_right_hand_record_across_bodies()
-    {
-        PaperDollItemTemplate helm = new(107, "Armor", 245, 27, 6, false, false);
-        PaperDollItemTemplate longsword = new(120, "Weapons", 234, 12, 0, true, false);
-        PaperDollItemTemplate claymore = new(122, "Weapons", 234, 4, 0, false, false);
-        PaperDollItemTemplate cloak = new(154, "MensClothing", 239, 21, 6, false, true);
-        IReadOnlyDictionary<int, IReadOnlySet<int>> reach = PaperDollItemPublication.ReachableRecords([helm, longsword, claymore, cloak]);
-
-        // Armour is drawn from a female (245-248) or male (249-252) archive per body morphology.
-        Assert.Equal([245, 246, 247, 248, 249, 250, 251, 252], reach.Keys.Where(key => key >= 245).Order());
-        Assert.Equal([27, 28, 29, 30, 31, 32], reach[251].Order());
-        // A one-handed weapon in the right hand is the next record; a two-handed one has only its own.
-        Assert.Equal([4, 12, 13], reach[234].Order());
-        // A cloak's first record is its interior and its variants follow it, for every body morphology.
-        Assert.Equal([21, 22, 23, 24, 25, 26, 27], reach[241].Order());
-        Assert.Equal([239, 240, 241, 242], reach.Keys.Where(key => key is >= 239 and <= 242).Order());
-    }
-
     [CorpusFact("BODY00I0.IMG", "FACE00I0.CIF", "SCBG00I0.IMG")]
     public void Places_the_body_and_head_at_their_header_offsets_less_the_paper_doll_origin()
     {
@@ -41,10 +23,9 @@ public sealed class PaperDollPublicationTests
         CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate([.. sources.Select(entry => (entry.Key, entry.Value))],
             new HashSet<string>(StringComparer.Ordinal), "no published consumer yet", "arena2");
         DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(inventory,
-            new HashSet<string>([CharacterMediaReferences.ArtPalette, CharacterMediaReferences.NightskyPalette]),
-            [new DaggerfallRaceKey("breton", 1, new DaggerfallCatalogSource("arena2/test"))], new Dictionary<string, string>(), sources: sources);
+            new HashSet<string>([CharacterMediaReferences.ArtPalette, CharacterMediaReferences.NightskyPalette]), sources: sources);
 
-        DaggerfallCharacterLayer Layer(string name) => presentation.Layers.Single(layer => layer.Race == "breton" && layer.Layer == name);
+        DaggerfallCharacterLayer Layer(string name) => presentation.Layers.Single(layer => layer.DonorRaceId == 1 && layer.Layer == name);
         // BODY00I0's header puts it at (222, 41) on the inventory screen; the doll starts at (200, 8).
         Assert.Equal(new DaggerfallPaperDollPlacement(22, 33, 69, 145), Layer("body.male.unclothed").Placement);
         Assert.Equal(new DaggerfallPaperDollPlacement(46, 9, 20, 27), Layer("head.male.0").Placement);
@@ -53,17 +34,18 @@ public sealed class PaperDollPublicationTests
         Assert.Equal(new DaggerfallPaperDollFrame(110, 184, -8, -7, 125, 198), presentation.PaperDoll);
     }
 
-    [CorpusFact("ART_PAL.COL", "TEXTURE.234", "TEXTURE.237", "TEXTURE.251", "TEXTURE.432", "TEXTURE.433")]
-    public void Publishes_each_reached_record_placed_dyed_and_masked_as_the_donor_draws_it()
+    [CorpusFact("ART_PAL.COL", "TEXTURE.234", "TEXTURE.237", "TEXTURE.251", "TEXTURE.432", "TEXTURE.433", "TEXTURE.207", "TEXTURE.254")]
+    public void Publishes_every_worn_record_placed_dyed_and_masked_as_the_donor_draws_it()
     {
-        Dictionary<int, ReadOnlyMemory<byte>> archives = PaperDollItemPublication.Archives.ToDictionary(number => number, number => Read($"TEXTURE.{number:000}"));
+        Dictionary<int, ReadOnlyMemory<byte>> archives = PaperDollItemPublication.Archives.Concat(PaperDollItemPublication.IconArchives)
+            .ToDictionary(number => number, number => Read($"TEXTURE.{number:000}"));
         Arena2Palette palette = PaletteDecoder.Decode(Read("ART_PAL.COL").Span, "arena2/ART_PAL.COL");
-        PaperDollItemPass pass = PaperDollItemPublication.Publish(archives, palette,
-        [
-            new(107, "Armor", 245, 27, 6, false, false),
-            new(120, "Weapons", 234, 12, 0, true, false),
-            new(202, "WomensClothing", 235, 50, 5, false, false),
-        ], []);
+        PaperDollItemPass pass = PaperDollItemPublication.Publish(archives, palette);
+
+        // Every record of every worn-item archive is published, whichever template draws it.
+        foreach (int number in PaperDollItemPublication.Archives)
+            Assert.Equal(Enumerable.Range(0, TextureArchive.Parse(archives[number].Span, $"arena2/TEXTURE.{number}").RecordCount),
+                pass.Images.Where(image => image.Archive == number).Select(image => image.Record));
 
         PaperDollItemImage Image(int archive, int record) => pass.Images.Single(image => image.Archive == archive && image.Record == record);
 
@@ -88,7 +70,7 @@ public sealed class PaperDollPublicationTests
         Assert.Equal(PaperDollItemPublication.MediaId(237, 50), Image(237, 50).Dyes["blue"]);
         Assert.Equal(10, Image(237, 50).Dyes.Count);
 
-        // The artifact archives are published whole, whatever the templates reach, each record undyed.
+        // The artifact archives' records are published undyed.
         foreach (int number in PaperDollItemPublication.ArtifactArchives)
         {
             int records = TextureArchive.Parse(archives[number].Span, $"arena2/TEXTURE.{number}").RecordCount;
@@ -100,57 +82,25 @@ public sealed class PaperDollPublicationTests
         Assert.True(TextureArchive.Parse(archives[432].Span, "arena2/TEXTURE.432").RecordCount > 26);
     }
 
-    [Fact]
-    public void Every_template_the_doll_does_not_draw_takes_the_inventory_image_the_donor_draws()
+    [CorpusFact("ART_PAL.COL", "TEXTURE.207", "TEXTURE.209", "TEXTURE.254")]
+    public void Publishes_every_record_of_the_inventory_image_archives_once()
     {
-        static JsonObject Template(int index, string group, int player, int playerRecord, int world, int worldRecord, int variants = 0) => new()
-        {
-            ["index"] = index, ["name"] = $"template {index}", ["groups"] = new JsonArray(group), ["variants"] = variants, ["isOneHanded"] = false,
-            ["playerTextureArchive"] = player, ["playerTextureRecord"] = playerRecord, ["worldTextureArchive"] = world, ["worldTextureRecord"] = worldRecord,
-        };
-        JsonObject section = new()
-        {
-            ["templates"] = new JsonArray(
-                Template(102, "Armor", 245, 3, 0, 0),               // drawn on the doll: its paper-doll image is its icon
-                Template(131, "Weapons", 0, 0, 207, 16),            // an arrow: no player texture, so the world texture
-                Template(17, "PlantIngredients1", 999, 1, 254, 17), // an ingredient takes its world texture whatever else it has
-                Template(277, "Books", 209, 2, 209, 8, 3),          // a book: its player record plus each variant
-                Template(1, "Gems", 0, 0, 254, 1),                  // no player texture: the world texture
-                Template(287, "Maps", 0, 0, 0, 0)),                 // no texture at all: no image
-        };
-
-        Assert.Equal(
-        [
-            new ItemIconTemplate(131, 207, [16]), new ItemIconTemplate(17, 254, [17]), new ItemIconTemplate(277, 209, [2, 3, 4]), new ItemIconTemplate(1, 254, [1]),
-        ], PaperDollItemPublication.ReadIconTemplates(section), new IconComparer());
-    }
-
-    [CorpusFact("ART_PAL.COL", "TEXTURE.207", "TEXTURE.209", "TEXTURE.234", "TEXTURE.432", "TEXTURE.433")]
-    public void Publishes_the_other_templates_inventory_images_once_each_and_names_them_by_variant()
-    {
-        Dictionary<int, ReadOnlyMemory<byte>> archives = new[] { 207, 209, 234, 432, 433 }.ToDictionary(number => number, number => Read($"TEXTURE.{number:000}"));
+        Dictionary<int, ReadOnlyMemory<byte>> archives = PaperDollItemPublication.Archives.Concat(PaperDollItemPublication.IconArchives)
+            .ToDictionary(number => number, number => Read($"TEXTURE.{number:000}"));
         Arena2Palette palette = PaletteDecoder.Decode(Read("ART_PAL.COL").Span, "arena2/ART_PAL.COL");
-        PaperDollItemPass pass = PaperDollItemPublication.Publish(archives, palette, [new(120, "Weapons", 234, 12, 0, true, false)],
-            [new(131, 207, [16]), new(277, 209, [2, 3, 4]), new(278, 209, [2]), new(251, 209, [9999])]);
+        PaperDollItemPass pass = PaperDollItemPublication.Publish(archives, palette);
 
-        Assert.Equal(new[] { "item.209.2", "item.209.3", "item.209.4" }, pass.Icons.Single(icon => icon.Template == 277).MediaIds);
-        // Two templates drawing one record share its image.
-        Assert.Single(pass.Artifacts, artifact => artifact.MediaId == "item.209.2");
+        foreach (int number in PaperDollItemPublication.IconArchives)
+        {
+            int records = TextureArchive.Parse(archives[number].Span, $"arena2/TEXTURE.{number}").RecordCount;
+            Assert.Equal(Enumerable.Range(0, records).Select(record => $"item.{number}.{record}"), pass.Icons.Where(id => id.StartsWith($"item.{number}.", StringComparison.Ordinal)));
+            Assert.Contains($"arena2/TEXTURE.{number:000}", pass.Sources);
+        }
+        Assert.Equal(pass.Icons.Count, pass.Icons.Distinct().Count());
         IndexedTextureFrame arrow = TextureArchive.Parse(archives[207].Span, "arena2/TEXTURE.207").DecodeFrame(16, 0);
         PaperDollArtifact published = pass.Artifacts.Single(artifact => artifact.MediaId == "item.207.16");
         Assert.Equal((arrow.Width, arrow.Height), (published.Width, published.Height));
-        Assert.Contains("arena2/TEXTURE.209", pass.Sources);
-        // A record past the end of its archive has no image, as the donor finds none: reported, not published.
-        Assert.DoesNotContain(pass.Icons, icon => icon.Template == 251);
-        Assert.Contains(pass.Unpublished, gap => gap.StartsWith("template 251 ", StringComparison.Ordinal));
-        JsonArray icons = PaperDollItemPublication.Section(pass)["icons"]!.AsArray();
-        Assert.Equal("item.207.16", icons.Single(icon => icon!["template"]!.GetValue<int>() == 131)!["mediaIds"]![0]!.GetValue<string>());
-    }
-
-    private sealed class IconComparer : IEqualityComparer<ItemIconTemplate>
-    {
-        public bool Equals(ItemIconTemplate? x, ItemIconTemplate? y) => x is not null && y is not null && (x.Index, x.Archive) == (y.Index, y.Archive) && x.Records.SequenceEqual(y.Records);
-        public int GetHashCode(ItemIconTemplate icon) => HashCode.Combine(icon.Index, icon.Archive);
+        Assert.Equal(pass.Icons, PaperDollItemPublication.Section(pass)["icons"]!.AsArray().Select(id => id!.GetValue<string>()));
     }
 
     private static ReadOnlyMemory<byte> Read(string file) => File.ReadAllBytes(TestData.Corpus(file));

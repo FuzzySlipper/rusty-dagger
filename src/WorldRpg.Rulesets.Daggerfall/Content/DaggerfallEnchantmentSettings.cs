@@ -2,10 +2,10 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>A loaded item-maker setting with its donor meaning, display and source.</summary>
+/// <summary>A loaded item-maker setting with its classic meaning and display.</summary>
 internal readonly record struct DaggerfallEnchantmentSetting(
     string Key, int Type, int Param, int Cost, string Meaning, string DisplayName, string TextKey,
-    string? ParameterTextKey, string SourceClass, IReadOnlyList<int> ParameterVariants, string? SpellKey = null, bool SpellIdentityShared = false, IReadOnlyList<string>? ForcedSettings = null);
+    string? ParameterTextKey, IReadOnlyList<int> ParameterVariants, string? SpellKey = null, bool SpellIdentityShared = false, IReadOnlyList<string>? ForcedSettings = null);
 
 /// <summary>Retained payload vocabulary and content admission; settings themselves come from the pack.</summary>
 internal static class DaggerfallEnchantmentSettings
@@ -42,7 +42,7 @@ internal static class DaggerfallEnchantmentSettings
                 string meaning = setting.Type == 0 ? "cast-when-used" : setting.Type == 1 ? "cast-when-held" : "cast-when-strikes";
                 if (!variants.Contains(setting.Param) || !setting.ParameterVariants.SequenceEqual(variants)
                     || setting.Meaning != meaning || setting.Cost <= 0 || setting.Key != $"enchantment.{setting.Type}.{setting.Param}"
-                    || string.IsNullOrWhiteSpace(setting.DisplayName) || string.IsNullOrWhiteSpace(setting.SourceClass)
+                    || string.IsNullOrWhiteSpace(setting.DisplayName)
                     || string.IsNullOrWhiteSpace(setting.TextKey) || string.IsNullOrWhiteSpace(setting.ParameterTextKey)
                     || string.IsNullOrWhiteSpace(setting.SpellKey))
                     problems.Add($"Enchantment setting '{setting.Key}' has invalid classic spell trigger metadata.");
@@ -71,9 +71,8 @@ internal static class DaggerfallEnchantmentSettings
             if (!setting.ParameterVariants.SequenceEqual(Enumerable.Range(firstParam, meanings.Length)))
                 problems.Add($"Enchantment setting '{setting.Key}' has an unresolved parameter variant list.");
             if (string.IsNullOrWhiteSpace(setting.DisplayName) || string.IsNullOrWhiteSpace(setting.TextKey)
-                || (firstParam == 0 && string.IsNullOrWhiteSpace(setting.ParameterTextKey))
-                || string.IsNullOrWhiteSpace(setting.SourceClass))
-                problems.Add($"Enchantment setting '{setting.Key}' has no display text, text key or donor source class.");
+                || (firstParam == 0 && string.IsNullOrWhiteSpace(setting.ParameterTextKey)))
+                problems.Add($"Enchantment setting '{setting.Key}' has no display text or text key.");
         }
         return problems;
     }

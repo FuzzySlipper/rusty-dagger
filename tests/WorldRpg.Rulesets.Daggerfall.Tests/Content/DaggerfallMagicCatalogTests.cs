@@ -16,7 +16,6 @@ public sealed class DaggerfallMagicCatalogTests
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(Payload());
 
-        Assert.Contains("arena2/SPELLS.STD", definitions.Magic.SourcePaths);
         DaggerfallSpellDefinition spell = Assert.Contains("spell.001", definitions.Magic.Spells);
         Assert.Equal("Fenrik's Door Jam", spell.Name);
         Assert.Equal(1, spell.Identity);
@@ -112,7 +111,6 @@ public sealed class DaggerfallMagicCatalogTests
                 Assert.Equal(Enumerable.Range(0, count), row.ParameterVariants);
                 Assert.False(string.IsNullOrWhiteSpace(row.DisplayName));
                 Assert.False(string.IsNullOrWhiteSpace(row.ParameterTextKey));
-                Assert.Contains($"/{row.TextKey}.cs#GetEnchantmentSettings", row.SourceClass, StringComparison.Ordinal);
             });
         }
         DaggerfallEnchantmentSetting winter = magic.EnchantmentSettings["enchantment.3.0"];

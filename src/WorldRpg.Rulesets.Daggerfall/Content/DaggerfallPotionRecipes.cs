@@ -9,7 +9,7 @@ internal sealed record DaggerfallPotionRecipeMatch(DaggerfallPotionIngredient[] 
 
 /// <summary>One normalized recipe. Ingredient equivalence is an exact multiset, never a hash-only match.</summary>
 internal sealed record DaggerfallPotionRecipeDefinition(int Key, int ClassicIndex, string Name, string TextKey,
-    int Price, int TextureRecord, string SourceClass, DaggerfallPotionIngredient[] Ingredients,
+    int Price, int TextureRecord, DaggerfallPotionIngredient[] Ingredients,
     DaggerfallSpellEffectDefinition[] Effects, DaggerfallPotionSpellPointRestore? SpellPointRestore)
 {
     internal DaggerfallPotionRecipeMatch Match(IEnumerable<int> selected)
@@ -25,7 +25,7 @@ internal sealed record DaggerfallPotionRecipeDefinition(int Key, int ClassicInde
     internal void Validate(DaggerfallItemTemplateSet templates)
     {
         if (Key <= 0 || ClassicIndex < 0 || string.IsNullOrWhiteSpace(Name) || string.IsNullOrWhiteSpace(TextKey)
-            || Price < 0 || TextureRecord is < 0 or > 35 || string.IsNullOrWhiteSpace(SourceClass)
+            || Price < 0 || TextureRecord is < 0 or > 35
             || Ingredients.Length == 0 || Ingredients.Select(value => value.Template).Distinct().Count() != Ingredients.Length)
             throw new ArgumentException($"Potion recipe {Key} has invalid identity, presentation or ingredient rows.");
         foreach (var ingredient in Ingredients)

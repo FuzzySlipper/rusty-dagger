@@ -346,8 +346,11 @@ public static class SourceManifestBuilder
                 ContentDigest.Compute(parsed.GetPayload(record).Span),
                 key,
                 record.Ordinal,
-                SourceRecordDisposition.RequiredPending,
-                $"Decoded from '{archive.SourcePath}'; no normalizer cites this record individually yet."));
+                // An archive the import does not read (its facts are authored data now) has records it does not read.
+                archive.Disposition == SourceRecordDisposition.Unused ? SourceRecordDisposition.Unused : SourceRecordDisposition.RequiredPending,
+                archive.Disposition == SourceRecordDisposition.Unused
+                    ? $"Decoded from '{archive.SourcePath}', which the import does not read."
+                    : $"Decoded from '{archive.SourcePath}'; no normalizer cites this record individually yet."));
         }
 
         return new SourceArchiveDecode(records, Failure: null);

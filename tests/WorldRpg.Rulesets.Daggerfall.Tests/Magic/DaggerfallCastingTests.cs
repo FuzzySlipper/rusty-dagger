@@ -496,7 +496,7 @@ public sealed class DaggerfallCastingTests
             DaggerfallSpellDefinition spell = new("spell", 1, false, "Compiled spell", 4, range, 0, 0, Enumerable.Repeat(setting, count).ToArray());
             var row = new DaggerfallMagicEffectCostDefinition(99,-1,1,"destruction",10,1,0,0,
                 new(new(0,10,1),null,null));
-            Catalog = new(new Dictionary<string,DaggerfallSpellDefinition> { ["spell"] = spell, ["spell.001"] = spell }, new Dictionary<string,DaggerfallMagicItemDefinition>(), [], [],
+            Catalog = new(new Dictionary<string,DaggerfallSpellDefinition> { ["spell"] = spell, ["spell.001"] = spell }, new Dictionary<string,DaggerfallMagicItemDefinition>(),
                 new Dictionary<(int,int),DaggerfallMagicEffectCostDefinition> { [(99,-1)] = row }, new Dictionary<string,DaggerfallEnchantmentSetting>());
             IEnumerable<IActiveEffectContribution> Apply(DaggerfallActiveEffect effect)
             {

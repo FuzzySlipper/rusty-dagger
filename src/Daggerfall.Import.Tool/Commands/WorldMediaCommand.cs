@@ -22,9 +22,10 @@ internal static class WorldMediaCommand
 
     private static int Run(CommandArguments args)
     {
+        Arena2SiteSources sources = Arena2SiteSources.ForWorldMedia(Path.GetFullPath(args[Options.Arena2.Name]));
         Arena2WorldMediaPublication publication = Arena2SitePublication.WorldMedia(
-            Arena2SiteSources.ForWorldMedia(Path.GetFullPath(args[Options.Arena2.Name])),
-            PublicationInputs.Media(args, AuthoredUi.Profile(args, required: true)),
+            sources,
+            PublicationInputs.Media(sources, AuthoredUi.Profile(args, required: true)),
             ClassicMediaGroup.ReadInventory(args[PublicationInputs.ClassicGroup.Name]),
             PayloadFiles.ReadSection<DaggerfallLocations>(args[Options.Pack.Name], "locations"));
         ImportPublicationPlan plan = publication.Plan.WithInvocation(PublicationInputs.Invocation(args));

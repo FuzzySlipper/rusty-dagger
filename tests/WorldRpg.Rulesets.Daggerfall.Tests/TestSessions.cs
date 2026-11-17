@@ -226,7 +226,10 @@ internal static class TestSessions
     /// <summary>The full content with one root left out of the data container, as an import that lacks it would pack it.</summary>
     internal static ProductContent FullContentWithout(string root, string missingRoot) => ContentWithContainers(root, out _, excludedRoot: missingRoot);
 
-    /// <summary>The full content with one data container entry's bytes rewritten, as an import that published them so would pack them.</summary>
+    /// <summary>
+    /// The full content with one file's bytes rewritten: a data container entry, as an import that published them so would
+    /// pack them, or a tracked content file, as an edit to it would leave it.
+    /// </summary>
     internal static ProductContent FullContentWithEntry(string root, string path, Func<byte[], byte[]> rewrite) =>
         ContentWithContainers(root, out _, rewritten: (path, rewrite));
 
@@ -272,7 +275,7 @@ internal static class TestSessions
         foreach (string file in Directory.GetFiles(Path.Combine(contentRoot, "worldrpg"), "*", SearchOption.AllDirectories))
         {
             string relative = Path.GetRelativePath(contentRoot, file).Replace(Path.DirectorySeparatorChar, '/');
-            byte[] bytes = TestContentFiles.Read(file);
+            byte[] bytes = rewritten is { } tracked && tracked.Path == relative ? tracked.Rewrite(TestContentFiles.ReadCopy(file)) : TestContentFiles.Read(file);
             eager.Add(new ProductContentFile(Encoding.UTF8.GetBytes(relative), bytes));
             bundles.AddEager(relative, bytes);
         }

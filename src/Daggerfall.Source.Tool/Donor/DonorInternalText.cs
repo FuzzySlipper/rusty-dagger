@@ -22,22 +22,3 @@ internal static class DonorInternalText
         return published;
     }
 }
-
-/// <summary>Daggerfall Unity's <c>Internal_Flats.csv</c> as our flat-caption table.</summary>
-internal static class DonorNpcCaptions
-{
-    public static IReadOnlyList<DaggerfallNpcCaption> Read(byte[] bytes, string label)
-    {
-        InternalStringsCatalog catalog = InternalStringsReader.Read(bytes, label);
-        DaggerfallNpcCaption[] captions = [.. catalog.Records.Select(row =>
-        {
-            if (!int.TryParse(row.Key, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int id))
-                throw new InvalidOperationException($"NPC caption source '{label}' has nonnumeric flat identity '{row.Key}'.");
-            return new DaggerfallNpcCaption(id >> 7, id & 127, row.Value);
-        })];
-        if (captions.Any(caption => string.IsNullOrWhiteSpace(caption.Caption))
-            || captions.Select(caption => (caption.Archive, caption.Record)).Distinct().Count() != captions.Length)
-            throw new InvalidOperationException($"NPC caption source '{label}' carries an empty caption or one flat address twice.");
-        return captions;
-    }
-}

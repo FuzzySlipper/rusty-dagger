@@ -29,44 +29,25 @@ public sealed record Arena2SiteMedia(
 public static class Arena2SitePublication
 {
     /// <summary>
-    /// The actor media the world media publishes: one sprite per mobile the imported mobile catalog gives a texture,
-    /// so whichever of them the authored actors place, the runtime can draw. The donor's table leaves a mobile it
-    /// never uses (the horse) with no texture, and that one has nothing to draw. Which mobiles an authored actor
-    /// carries is the ruleset's join, so the import publishes media without reading the authored payload.
+    /// The actor media the world media publishes: one sprite per mobile whose sprite archive the mobile source metadata
+    /// names, so whichever of them the authored actors and mobiles place, the runtime can draw. Which mobile an actor
+    /// is, and which are spawned, is authored data the ruleset joins; the import publishes media without reading it.
     /// </summary>
-    public static IReadOnlyList<string> RuntimeActorResources(string importedPayloadJson)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(importedPayloadJson);
-        using JsonDocument document = JsonDocument.Parse(importedPayloadJson);
-        if (!document.RootElement.TryGetProperty("mobiles", out JsonElement section)
-            || !section.TryGetProperty("mobiles", out JsonElement mobiles))
-        {
-            throw new InvalidOperationException("The imported payload carries no mobile catalog, which is what names the actors the world media publishes media for: run the mobile-catalog command first.");
-        }
+    public static IReadOnlyList<string> RuntimeActorResources() =>
+        [.. MobileSourceMetadata.All.Select(mobile => (int)mobile.Id.Value).Order().Select(id => $"actor/mobile-{id}")];
 
-        return [.. mobiles.EnumerateArray()
-            .Where(mobile => mobile.GetProperty("maleTexture").GetInt32() > 0)
-            .Select(mobile => mobile.GetProperty("donorId").GetInt32())
-            .Order()
-            .Select(id => $"actor/mobile-{id}")];
-    }
+    /// <summary>The flat archives the classic people are drawn from: the faction NPCs and the captioned townsfolk.</summary>
+    public static readonly int[] PeopleArchives = [171, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 199, 334, 346, 357];
 
-    /// <summary>Uses already decoded faction/NPC addresses; no source flat decoder runs at world media publication.</summary>
-    public static IReadOnlyList<string> RuntimeNpcResources(string importedPayloadJson)
+    /// <summary>
+    /// Every record of the people flat archives, which the runtime may draw at any site for a faction member, a quest
+    /// person or a captioned flat. Which record a faction or caption names is authored data the import does not read,
+    /// so every record is published.
+    /// </summary>
+    public static IReadOnlyList<string> RuntimeNpcResources(Arena2SiteSources sources)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(importedPayloadJson);
-        using JsonDocument document = JsonDocument.Parse(importedPayloadJson);
-        if (!document.RootElement.TryGetProperty("factions", out JsonElement section)
-            || !section.TryGetProperty("factions", out JsonElement factions)
-            || !section.TryGetProperty("npcCaptions", out JsonElement captions))
-            throw new InvalidOperationException("The imported payload carries no normalized faction/NPC flat catalog: run the factions command first.");
-        return [.. factions.EnumerateArray().SelectMany(faction => faction.GetProperty("flatVisuals").EnumerateArray())
-            .Concat(captions.EnumerateArray())
-            .Select(flat => (Archive: flat.GetProperty("archive").GetInt32(), Record: flat.GetProperty("record").GetInt32()))
-            .Distinct().OrderBy(flat => flat.Archive).ThenBy(flat => flat.Record)
-            .Select(flat => flat.Archive is < 0 or > 999 || flat.Record is < 0 or > 127
-                ? throw new InvalidOperationException($"Normalized NPC flat {flat.Archive}/{flat.Record} has an invalid address.")
-                : $"sprite/texture-{flat.Archive}-{flat.Record}")];
+        ArgumentNullException.ThrowIfNull(sources);
+        return [.. PeopleArchives.SelectMany(archive => Enumerable.Range(0, sources.ParseTextureLeaf((ushort)archive).RecordCount).Select(record => $"sprite/texture-{archive}-{record}"))];
     }
 
     /// <summary>

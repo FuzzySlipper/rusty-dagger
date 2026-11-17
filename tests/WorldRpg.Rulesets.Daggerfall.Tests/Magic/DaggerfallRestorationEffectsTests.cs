@@ -252,12 +252,8 @@ public sealed class DaggerfallRestorationEffectsTests
         List<DaggerfallCastResult>? completed = null)
     {
         var costs = TestPayload.Definitions.Magic.EffectCosts.ToDictionary();
-        if (spell.Effects.Any(effect => effect.Type == 26))
-        {
-            var row = Arena2MagicEffectCostTable.From(global::Daggerfall.Import.Publication.TakenTable.Read<SpellCostTable>(
-                TestContentFiles.ReadCopy(TestData.Input("spell-costs.json")), "spell-costs.json")).Resolve(26,-1);
-            costs[(26,-1)] = new(row.Type,row.SubType,row.SettingsType,row.School,row.Coefficients[0],row.Coefficients[1],row.Coefficients[2],row.Coefficients[3]);
-        }
+        // No classic spell regenerates, so the catalog carries no cost row for it; the classic one is restoration, settings 3.
+        if (spell.Effects.Any(effect => effect.Type == 26)) costs[(26,-1)] = new(26,-1,3,"restoration",5,2,10,7);
         var catalog = TestPayload.Definitions.Magic with { Spells = new Dictionary<string,DaggerfallSpellDefinition> { [spell.Key] = spell }, EffectCosts = costs };
         var profile = new DaggerfallMagicTargetProfile(50,new(DaggerfallMagicTolerance.Normal,DaggerfallMagicTolerance.CriticalWeakness,
             DaggerfallMagicTolerance.Normal,DaggerfallMagicTolerance.Normal,DaggerfallMagicTolerance.Normal,DaggerfallMagicTolerance.Normal,

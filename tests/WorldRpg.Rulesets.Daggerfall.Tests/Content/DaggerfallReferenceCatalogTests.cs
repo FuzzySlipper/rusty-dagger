@@ -11,7 +11,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
 /// The published reference catalogs as a consumer sees them: representative keys resolve,
-/// and a pack whose keys, cross-references or citations do not hold together is refused
+/// and a pack whose keys or cross-references do not hold together is refused
 /// rather than handed to a consumer that would resolve nothing.
 /// </summary>
 public sealed class DaggerfallReferenceCatalogTests
@@ -37,23 +37,8 @@ public sealed class DaggerfallReferenceCatalogTests
         Assert.Equal(Enumerable.Range(0, 35), definitions.Catalogs.Skills.Select(key => key.Index));
         Assert.Equal(Enumerable.Range(0, 5), definitions.Catalogs.Resistances.Select(key => key.Index));
         // A name two careers share cannot be a key, and resolving by it says so.
-        Assert.Equal(["Knight"], definitions.Catalogs.CareerNameCollisions);
         Assert.Throws<InvalidOperationException>(() => definitions.Catalogs.RequireCareerByName("Knight"));
         Assert.Equal("Healer", definitions.Catalogs.RequireCareerByName("Healer").Name);
-    }
-
-    [Fact]
-    public void Every_published_citation_names_a_catalog_record_and_its_path()
-    {
-        DaggerfallDefinitions definitions = ReadPack();
-
-        Assert.All(definitions.Catalogs.Careers, career =>
-        {
-            Assert.StartsWith("arena2/CLASS", career.Source.Path, StringComparison.Ordinal);
-            Assert.EndsWith(".CFG", career.Source.Path, StringComparison.Ordinal);
-        });
-        Assert.All(definitions.Catalogs.Races, race => Assert.Equal("daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs", race.Source.Path));
-        Assert.All(definitions.Catalogs.Skills, key => Assert.Equal("arena2/CLASS*.CFG;CLASSES.DAT", key.Source.Path));
     }
 
     [Fact]
@@ -74,22 +59,22 @@ public sealed class DaggerfallReferenceCatalogTests
         ResolvedGameComposition broken = TestSessions
             .Resolve(Content(root => root["catalogs"]!["careers"]!.AsArray()[0]!["primarySkills"]!.AsArray()[0] = 35), new GameBundleId("daggerfall.classic"))
             .RequireComposition();
-        ReadOnlyMemory<byte> authoredPayload = broken.RequireContentPack(new ContentPackId("daggerfall.base")).Payload;
-        ReadOnlyMemory<byte> brokenPayload = broken.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload;
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => { DaggerfallBaseContent.Read(authoredPayload, brokenPayload, DaggerfallData.For(broken)); });
+        ReadOnlyMemory<byte> brokenPayload = broken.RequireContentPack(new ContentPackId("daggerfall.base")).Payload;
+        ReadOnlyMemory<byte> importedPayload = broken.RequireContentPack(new ContentPackId("daggerfall.imported")).Payload;
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => { DaggerfallBaseContent.Read(brokenPayload, importedPayload, DaggerfallData.For(broken)); });
         Assert.Contains("skill 35", error.Message, StringComparison.Ordinal);
     }
 
     private static ProductContent Content(Action<JsonObject>? change) => change is null
         ? TestSessions.FullContent(TestData.RepositoryRoot)
-        : TestSessions.FullContentWithEntry(TestData.RepositoryRoot, "worldrpg/payloads/daggerfall.imported.json", bytes =>
+        : TestSessions.FullContentWithEntry(TestData.RepositoryRoot, "worldrpg/packs/daggerfall.base/payload.json", bytes =>
         {
             // This fixture only changes catalogs, so only that section is parsed and only its bytes are
-            // replaced; the rest of the imported payload keeps its published form.
+            // replaced; the rest of the base payload keeps its authored form.
             JsonObject pack = new()
             {
                 ["catalogs"] = JsonNode.Parse((TestSessions.TopLevelSection(bytes, "catalogs")
-                    ?? throw new InvalidOperationException("The imported payload publishes no catalogs section.")).Span),
+                    ?? throw new InvalidOperationException("The base payload carries no catalogs section.")).Span),
             };
             change(pack);
             return TestSessions.ReplaceTopLevelSection(bytes, "catalogs", pack["catalogs"]!.ToJsonString(PublishedJson.SectionCompact));
@@ -104,7 +89,6 @@ public sealed class DaggerfallReferenceCatalogTests
     [InlineData("career naming nine attributes")]
     [InlineData("career naming one skill twice")]
     [InlineData("career with unknown equipment restriction")]
-    [InlineData("citation outside the published sources")]
     public void Rejects_a_pack_whose_catalogs_do_not_hold_together(string mutation)
     {
         // Each of these is a pack a hand edit can produce and the builder never would.
@@ -141,28 +125,10 @@ public sealed class DaggerfallReferenceCatalogTests
                 case "career with unknown equipment restriction":
                     careers[0]!["forbiddenEquipment"]!.AsArray()[0] = "forbidden-material:moonstone";
                     break;
-                case "citation outside the published sources":
-                    careers[0]!["source"]!["path"] = "arena2/INVENTED.CFG";
-                    break;
             }
         });
 
         Assert.NotNull(error.Message);
-    }
-
-    [Fact]
-    public void The_published_pack_states_the_source_records_it_drew_from()
-    {
-        DaggerfallDefinitions definitions = ReadPack();
-
-        // A consumer can check a citation without owning the inventory, and the runtime
-        // refuses a citation outside this set.
-        Assert.Equal(23, definitions.Catalogs.SourcePaths.Count);
-        Assert.Contains("arena2/CLASSES.DAT", definitions.Catalogs.SourcePaths);
-        Assert.Contains("arena2/TEXT.RSC", definitions.Catalogs.SourcePaths);
-        Assert.Contains("daggerfall-unity/Assets/Scripts/Game/Entities/RaceTemplate.cs", definitions.Catalogs.SourcePaths);
-        Assert.Contains("arena2/CLASS00.CFG", definitions.Catalogs.SourcePaths);
-        Assert.All(definitions.Catalogs.Careers, career => Assert.Contains(career.Source.Path, definitions.Catalogs.SourcePaths));
     }
 
     [Fact]
@@ -175,10 +141,10 @@ public sealed class DaggerfallReferenceCatalogTests
     }
 
     [Fact]
-    public void An_authored_vocabulary_edit_names_the_imported_skills_without_a_new_import()
+    public void A_vocabulary_edit_names_every_careers_skills()
     {
-        // The import publishes classic skill indices and the authored vocabulary names them when the ruleset
-        // loads, so an edit to the vocabulary reaches every career with the imported data left as it is.
+        // A career names its skills by classic index and the vocabulary names the indices when the ruleset loads, so an
+        // edit to the vocabulary reaches every career with the careers left as they are.
         JsonObject payload = TestPayload.Sections("vocabulary");
         JsonArray skills = payload["vocabulary"]!["skills"]!.AsArray();
         List<string> names = [.. skills.Select(skill => skill!.GetValue<string>())];
@@ -193,32 +159,13 @@ public sealed class DaggerfallReferenceCatalogTests
     }
 
     [Fact]
-    public void Rejects_an_imported_skill_space_the_vocabulary_does_not_name_whole()
-    {
-        // The vocabulary names the classic skill space index by index, so an imported space of another size is
-        // refused rather than leaving a skill unnamed.
-        DaggerfallContentException error = Mutate(pack => pack["catalogs"]!["skills"]!.AsArray().RemoveAt(34));
-
-        Assert.Contains("The vocabulary names 35 skills where the catalog's classic skill space has 34.", error.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void Rejects_catalog_keys_that_are_not_indexed_uniquely()
     {
         DaggerfallContentException error = Mutate(pack =>
-            pack["catalogs"]!["attributes"]!.AsArray()[1]!["index"] = 0);
+            pack["catalogs"]!["resistances"]!.AsArray()[1]!["index"] = 0);
 
-        Assert.Contains("attributes", error.Message, StringComparison.Ordinal);
+        Assert.Contains("resistances", error.Message, StringComparison.Ordinal);
         Assert.Contains("indices", error.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Rejects_a_citation_that_is_not_a_documented_record()
-    {
-        DaggerfallContentException error = Mutate(pack =>
-            pack["catalogs"]!["races"]!.AsArray()[0]!["source"]!["path"] = "invented-source");
-
-        Assert.Contains("invented-source", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -237,15 +184,6 @@ public sealed class DaggerfallReferenceCatalogTests
 
         Assert.Contains("class12", error.Message, StringComparison.Ordinal);
         Assert.Contains("shock", error.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Rejects_career_name_collisions_that_do_not_match_the_careers()
-    {
-        DaggerfallContentException error = Mutate(pack =>
-            pack["catalogs"]!["careerNameCollisions"] = new JsonArray("Mage"));
-
-        Assert.Contains("collisions", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

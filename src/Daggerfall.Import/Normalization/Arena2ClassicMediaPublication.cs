@@ -1265,9 +1265,8 @@ public sealed record Arena2ClassicMediaPublication(
 
     private static readonly InventoryIconSource[] InventoryIconSources =
     [
-        // A potion of a recipe draws its recipe's bottle, and gold its coins; every item with a template draws the
-        // image its template draws (the paper-doll publication's), so the authored weapons, armour and arrows do too.
-        .. Arena2PotionRecipes.Build().Select(row => new InventoryIconSource($"potion.{row!["key"]!.GetValue<int>()}", 205, row["textureRecord"]!.GetValue<int>())),
+        // Gold draws its coins; every item with a template draws the image its template draws (the paper-doll
+        // publication's), a potion its recipe's bottle among them, so the authored weapons, armour and arrows do too.
         new("gold-piece", 216, 1),
     ];
 

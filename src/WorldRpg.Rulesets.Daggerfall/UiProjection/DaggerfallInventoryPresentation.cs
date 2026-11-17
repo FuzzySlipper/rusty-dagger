@@ -556,7 +556,7 @@ internal sealed class DaggerfallInventoryPresentation
 
     /// <summary>
     /// The icon an item draws, and the tint a refreshed dyed or metal one is drawn in. A potion of a recipe draws its
-    /// recipe's bottle from the published icons; every other item the image its template draws in the inventory, for
+    /// recipe's bottle, a record of the potion template's own archive; every other item the image its template draws in the inventory, for
     /// the wearer's body (<see cref="DaggerfallPaperDollPolicy.InventoryImage"/>); an item without a template its own
     /// published icon, if any.
     /// </summary>
@@ -566,7 +566,9 @@ internal sealed class DaggerfallInventoryPresentation
         bool recipe = definition.Template?.Index == PotionTemplate && metadata?.PotionRecipeKey is not null;
         if (!recipe && wearer?.Invoke() is { } who && DaggerfallPaperDollPolicy.InventoryImage(definitions, definition, metadata, who, set) is { } image)
             return image;
-        string? classic = icons.GetValueOrDefault(recipe ? $"potion.{metadata!.PotionRecipeKey}" : definition.Id.Value);
+        string? classic = !recipe ? icons.GetValueOrDefault(definition.Id.Value)
+            : definitions.Magic.PotionRecipes.TryGetValue(metadata!.PotionRecipeKey!.Value, out DaggerfallPotionRecipeDefinition? bottle)
+                ? $"item.{definition.Template!.WorldTextureArchive}.{bottle.TextureRecord}" : null;
         return (classic is null ? null : set?.Drawn(classic) ?? classic, null);
     }
 

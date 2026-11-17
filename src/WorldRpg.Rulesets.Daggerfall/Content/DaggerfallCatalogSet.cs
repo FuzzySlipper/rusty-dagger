@@ -1,17 +1,10 @@
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
-/// <summary>
-/// Where a published catalog record came from: a record id the documented inventory
-/// carries, and the path that inventory documents. The import tool refuses a citation
-/// the inventory does not contain, so a published catalog cannot invent provenance.
-/// </summary>
-internal sealed record DaggerfallCatalogCitation(string Path);
-
 /// <summary>One indexed key of a classic index space: an attribute, skill or resistance.</summary>
-internal sealed record DaggerfallCatalogKey(string Id, int Index, DaggerfallCatalogCitation Source);
+internal sealed record DaggerfallCatalogKey(string Id, int Index);
 
-/// <summary>A playable race identity with the donor's own race value.</summary>
-internal sealed record DaggerfallRaceDefinition(string Id, int DonorRaceId, DaggerfallCatalogCitation Source)
+/// <summary>A playable race identity with the classic race value its media and the classic tables are keyed by.</summary>
+internal sealed record DaggerfallRaceDefinition(string Id, int DonorRaceId)
 {
     internal int ResistanceFlags { get; init; }
     internal int ImmunityFlags { get; init; }
@@ -45,8 +38,7 @@ internal sealed record DaggerfallCareerDefinition(
     int AttackModifierFlags,
     DaggerfallCareerSpecials Specials,
     IReadOnlyList<string> ExpertProficiencies,
-    IReadOnlyList<string> ForbiddenEquipment,
-    DaggerfallCatalogCitation Source)
+    IReadOnlyList<string> ForbiddenEquipment)
 {
     internal IEnumerable<string> SkillReferences => PrimarySkills.Concat(MajorSkills).Concat(MinorSkills);
 
@@ -142,8 +134,7 @@ internal sealed class DaggerfallCatalogSet(
     IReadOnlyList<DaggerfallCatalogKey> resistances,
     IReadOnlyList<DaggerfallRaceDefinition> races,
     IReadOnlyList<DaggerfallCareerDefinition> careers,
-    IReadOnlyList<string> careerNameCollisions,
-    IReadOnlyList<string> sourcePaths, DaggerfallClassQuestionnaire? classQuestionnaire = null)
+    DaggerfallClassQuestionnaire? classQuestionnaire = null)
 {
     /// <summary>The classic element keys, in the index order the catalog publishes.</summary>
     internal static readonly string[] ElementKeys = ["fire", "frost", "disease-or-poison", "shock", "magic"];
@@ -159,15 +150,6 @@ internal sealed class DaggerfallCatalogSet(
     internal IReadOnlyList<DaggerfallRaceDefinition> Races { get; } = Array.AsReadOnly(races.ToArray());
 
     internal IReadOnlyList<DaggerfallCareerDefinition> Careers { get; } = Array.AsReadOnly(careers.ToArray());
-
-    /// <summary>Career names more than one supplied record carries, so a name is not a key.</summary>
-    internal IReadOnlyList<string> CareerNameCollisions { get; } = Array.AsReadOnly(careerNameCollisions.ToArray());
-
-    /// <summary>
-    /// The documented source paths the pack says it drew from. A citation outside this set is
-    /// refused, so a consumer can check provenance without the inventory.
-    /// </summary>
-    internal IReadOnlyList<string> SourcePaths { get; } = Array.AsReadOnly(sourcePaths.ToArray());
 
     private Dictionary<string, DaggerfallCareerDefinition> CareersById { get; } =
         careers.ToDictionary(career => career.Id, StringComparer.Ordinal);

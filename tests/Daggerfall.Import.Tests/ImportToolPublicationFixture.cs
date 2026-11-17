@@ -44,17 +44,14 @@ internal sealed partial class ImportToolFixture
                 var characters = CharacterPresentationGroup.Create(Directory.EnumerateFiles(Arena2).Select(Path.GetFileName).OfType<string>()
                     .Where(CharacterMediaInventory.IsDocumentedFamily).Order(StringComparer.Ordinal).Select(file => (file, (ReadOnlyMemory<byte>)Source(file))).ToArray(),
                     Directory.EnumerateFiles(Arena2, "*.COL").Order(StringComparer.Ordinal).ToDictionary(file => Path.GetFileName(file), file => PaletteDecoder.Decode(File.ReadAllBytes(file), Label(Path.GetFileName(file))), StringComparer.Ordinal),
-                    File.ReadAllBytes(Inventory), File.ReadAllText(Pack), Path.GetFileName(Path.TrimEndingDirectorySeparator(Arena2)));
+                    File.ReadAllBytes(Inventory), Path.GetFileName(Path.TrimEndingDirectorySeparator(Arena2)));
                 foreach (var artifact in characters.Pass.Artifacts) result.Add(At("output/worldrpg/" + artifact.RelativePath), artifact.Bytes);
                 result.Add(At("output/worldrpg/" + CharacterMediaPublisher.IndexRelativePath), CharacterMediaPublisher.WriteIndex(characters.Pass, characters.References, "worldrpg"));
                 Section("characterPresentation", characters.Presentation); break;
             case "paper-doll-media":
-                var itemTemplates = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Pack))!["itemTemplates"]!;
-                var iconTemplates = PaperDollItemPublication.ReadIconTemplates(itemTemplates);
-                var dollArchives = PaperDollItemPublication.ArchivesFor(iconTemplates).Where(number => File.Exists(Path.Combine(Arena2, $"TEXTURE.{number:000}")))
+                var dollArchives = PaperDollItemPublication.Archives.Concat(PaperDollItemPublication.IconArchives).Where(number => File.Exists(Path.Combine(Arena2, $"TEXTURE.{number:000}")))
                     .ToDictionary(number => number, number => (ReadOnlyMemory<byte>)Source($"TEXTURE.{number:000}"));
-                var doll = PaperDollItemPublication.Publish(dollArchives, PaletteDecoder.Decode(Source(CharacterMediaReferences.ArtPalette), $"arena2/{CharacterMediaReferences.ArtPalette}"),
-                    PaperDollItemPublication.ReadTemplates(itemTemplates), iconTemplates);
+                var doll = PaperDollItemPublication.Publish(dollArchives, PaletteDecoder.Decode(Source(CharacterMediaReferences.ArtPalette), $"arena2/{CharacterMediaReferences.ArtPalette}"));
                 foreach (var artifact in doll.Artifacts) result.Add(At("output/worldrpg/" + artifact.RelativePath), artifact.Bytes);
                 result.Add(At("output/worldrpg/" + PaperDollItemPublication.IndexRelativePath), PaperDollItemPublication.WriteIndex(doll, "worldrpg"));
                 sections.Add("paperDoll", PaperDollItemPublication.Section(doll).ToJsonString(PublishedJson.Section)); break;

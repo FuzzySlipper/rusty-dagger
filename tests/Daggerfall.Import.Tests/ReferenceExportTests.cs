@@ -26,24 +26,47 @@ public sealed class ReferenceExportTests : IDisposable
     }
 
     [Fact]
-    public void Organization_includes_templates_missing_from_donor_group_enumerations()
+    public void Organization_reads_every_template_its_groups_and_its_weapon_family_from_the_base_pack()
     {
-        Assert.All(Enumerable.Range(0, 288), index => Assert.NotEmpty(DaggerfallItemTemplatesBuilder.GroupsForTemplate(index)));
-        Assert.Equal(["Furniture"], DaggerfallItemTemplatesBuilder.GroupsForTemplate(251));
-        Assert.Equal(["QuestItems", "MiscItems"], DaggerfallItemTemplatesBuilder.GroupsForTemplate(281));
-        Assert.Equal("WEAPON04.CIF", ItemReferenceExport.WeaponFile(121)); // Katana shares longblade animation.
-        Assert.Null(ItemReferenceExport.WeaponFile(131)); // An arrow is drawn by the bow, with no wield animation of its own.
+        Dictionary<int, ItemReferenceExport.Template> templates = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllBytes(TestData.PackPayload("daggerfall.base")))!
+            ["itemTemplates"]!["templates"]!.AsArray().Select(row => ItemReferenceExport.Template.Read(row!)).ToDictionary(template => template.Index);
+        Assert.All(templates.Values, template => Assert.NotEmpty(template.Groups));
+        Assert.Equal(["Furniture"], templates[251].Groups);
+        Assert.Equal(["QuestItems", "MiscItems"], templates[281].Groups);
+        Assert.Equal("WEAPON04.CIF", ItemReferenceExport.WeaponFile(templates[121].WeaponMediaId)); // Katana shares longblade animation.
+        Assert.Null(ItemReferenceExport.WeaponFile(templates[131].WeaponMediaId)); // An arrow is drawn by the bow, with no wield animation of its own.
+    }
+
+    [Fact]
+    public void A_template_reaches_its_variants_its_cloak_interior_and_its_right_hand_record_across_bodies()
+    {
+        static ItemReferenceExport.Template Worn(int index, int archive, int record, int variants, bool oneHanded) =>
+            new(index, $"template {index}", [], 0, 0, archive, record, variants, oneHanded, false, "", new System.Text.Json.Nodes.JsonObject());
+        IReadOnlyDictionary<int, IReadOnlySet<int>> helm = ItemReferenceExport.PlayerRecords(Worn(107, 245, 27, 6, false), "Armor", cloak: false);
+        IReadOnlyDictionary<int, IReadOnlySet<int>> longsword = ItemReferenceExport.PlayerRecords(Worn(120, 234, 12, 0, true), "Weapons", cloak: false);
+        IReadOnlyDictionary<int, IReadOnlySet<int>> claymore = ItemReferenceExport.PlayerRecords(Worn(122, 234, 4, 0, false), "Weapons", cloak: false);
+        IReadOnlyDictionary<int, IReadOnlySet<int>> cloak = ItemReferenceExport.PlayerRecords(Worn(154, 239, 21, 6, false), "MensClothing", cloak: true);
+
+        // Armour is drawn from a female (245-248) or male (249-252) archive per body morphology.
+        Assert.Equal([245, 246, 247, 248, 249, 250, 251, 252], helm.Keys.Order());
+        Assert.Equal([27, 28, 29, 30, 31, 32], helm[251].Order());
+        // A one-handed weapon in the right hand is the next record; a two-handed one has only its own.
+        Assert.Equal([12, 13], longsword[234].Order());
+        Assert.Equal([4], claymore[234].Order());
+        // A cloak's first record is its interior and its variants follow it, for every body morphology.
+        Assert.Equal([21, 22, 23, 24, 25, 26, 27], cloak[241].Order());
+        Assert.Equal([239, 240, 241, 242], cloak.Keys.Order());
     }
 
     [CorpusFact("ART_PAL.COL", "TEXTURE.234", "TEXTURE.245", "TEXTURE.252", "TEXTURE.432", "TEXTURE.433", "WEAPON02.CIF", "WEAPO102.CIF")]
     public void Item_export_covers_templates_bodies_and_artifacts_and_every_PNG_matches_its_source_pixels()
     {
-        ItemReferenceExport.Run(TestData.CorpusRoot, TestData.Input(""), root);
+        ItemReferenceExport.Run(TestData.CorpusRoot, TestData.PackPayload("daggerfall.base"), root);
         using JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "manifest.json")));
         JsonElement document = manifest.RootElement;
         JsonElement[] entries = document.GetProperty("entries").EnumerateArray().ToArray();
         JsonElement[] items = entries.Where(entry => entry.GetProperty("kind").GetString() == "item").ToArray();
-        Assert.Equal(Enumerable.Range(0, 288), items.Select(entry => entry.GetProperty("index").GetInt32()));
+        Assert.Equal(Enumerable.Range(0, 289), items.Select(entry => entry.GetProperty("index").GetInt32()));
         Assert.Equal(23, entries.Count(entry => entry.GetProperty("kind").GetString() == "artifact"));
         JsonElement cuirass = items.Single(item => item.GetProperty("index").GetInt32() == 102);
         Assert.Equal(8, cuirass.GetProperty("images").EnumerateArray().Select(image => image.GetProperty("role").GetString()!)

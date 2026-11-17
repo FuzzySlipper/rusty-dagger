@@ -147,9 +147,7 @@ public sealed class ImportToolCommandTests
         Report_writes_nothing_and_update_writes_exact_builder_output("text");
 
     [ImportToolDataTheory]
-    [InlineData("mobile-ledger")]
     [InlineData("monster-archive")]
-    [InlineData("quest-sources")]
     [InlineData("texture-leaves")]
     [InlineData("residual-paths")]
     [InlineData("map-art")]
@@ -166,7 +164,6 @@ public sealed class ImportToolCommandTests
 
     [ImportToolDataTheory]
     [InlineData("map-art")]
-    [InlineData("quest-sources")]
     [InlineData("texture-leaves")]
     public void Report_inventory_reconciliation_is_executed_without_writing(string name)
     {
