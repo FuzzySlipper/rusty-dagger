@@ -82,25 +82,13 @@ public sealed class DaggerfallTextSetTests
     }
 
     [Fact]
-    public void The_macro_index_separates_what_the_donor_handles_from_what_it_leaves()
+    public void The_macro_index_is_derived_from_the_values_that_carry_each_symbol()
     {
         DaggerfallTextSet text = Definitions().Text;
 
         Assert.Equal(177, text.Macros.Count);
-        Assert.Equal(142, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.Handled));
-        Assert.Equal(19, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.DonorUnresolved));
-        Assert.Equal(16, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.Unrecognised));
-
-        // The index says which values carry a symbol. How often the corpus spells one is a fact about a
-        // value's text that only the reader's own macro grammar produces, so the pack does not state it
-        // and nothing here reads it: the reader checks the index against the values instead.
-        Assert.Equal(177, text.Macros.Select(macro => macro.Symbol).Distinct(StringComparer.Ordinal).Count());
-
-        // The distinction is the donor's own table, so a symbol it names without a handler is not
-        // reported as absent from it, and a symbol it never names is not reported as one it decided on.
-        Assert.Equal(DaggerfallTextMacroDisposition.Handled, text.Macros.Single(macro => macro.Symbol == "%str").Disposition);
-        Assert.Equal(DaggerfallTextMacroDisposition.DonorUnresolved, text.Macros.Single(macro => macro.Symbol == "%hol").Disposition);
-        Assert.Equal(DaggerfallTextMacroDisposition.Unrecognised, text.Macros.Single(macro => macro.Symbol == "%pc").Disposition);
+        Assert.Equal(text.Macros.Count, text.Macros.Select(macro => macro.Symbol).Distinct(StringComparer.Ordinal).Count());
+        Assert.All(text.Macros, macro => Assert.Equal(text.Values.Values.Count(value => value.Macros.Contains(macro.Symbol, StringComparer.Ordinal)), macro.Records));
 
         // A value's own symbols are the ones a resolver expands in it, in the order it carries them.
         DaggerfallTextValue spell = text.Require(new DaggerfallTextKey(DaggerfallTextKind.Resource, "1202"));
@@ -159,17 +147,6 @@ public sealed class DaggerfallTextSetTests
     }
 
     [Fact]
-    public void Rejects_a_macro_disposition_the_contract_does_not_declare()
-    {
-        // A consumer decides what to do with a symbol by its disposition, so a spelling the contract does
-        // not declare is refused rather than read as a disposition nobody published.
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => Macros(payload)[0]!.AsObject()["disposition"] = "probably")));
-
-        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("states the disposition 'probably', which the contract does not declare", StringComparison.Ordinal));
-    }
-
-    [Fact]
     public void Rejects_a_malformed_value_whose_reason_is_only_whitespace()
     {
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
@@ -214,27 +191,6 @@ public sealed class DaggerfallTextSetTests
 
         Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("states the state '1', which the contract does not declare", StringComparison.Ordinal));
         Assert.Equal(DaggerfallTextState.Read, Definitions(payload => Records(payload)[0]!.AsObject()["state"] = "Read").Text.Require(new DaggerfallTextKey(DaggerfallTextKind.Resource, "0")).State);
-    }
-
-    [Fact]
-    public void Rejects_a_macro_index_entry_that_no_value_carries_or_that_appears_twice()
-    {
-        // An index entry nothing carries would report a symbol the corpus lacks, and one indexed twice
-        // would leave a consumer reading one of the two rows and never the other.
-        DaggerfallContentException phantom = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => Macros(payload).Add(JsonNode.Parse("""{"symbol":"%zzz","records":1,"disposition":"unrecognised"}""")))));
-
-        Assert.Contains(phantom.Diagnostics, diagnostic => diagnostic.Contains("is indexed against 1 values where 0 carry it", StringComparison.Ordinal));
-
-        DaggerfallContentException zero = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => Macros(payload).Add(JsonNode.Parse("""{"symbol":"%zzz","records":0,"disposition":"unrecognised"}""")))));
-
-        Assert.Contains(zero.Diagnostics, diagnostic => diagnostic.Contains("is indexed against 0 values", StringComparison.Ordinal));
-
-        DaggerfallContentException twice = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => Macros(payload).Add(Macros(payload)[0]!.DeepClone()))));
-
-        Assert.Contains(twice.Diagnostics, diagnostic => diagnostic.Contains("is indexed twice", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -368,37 +324,6 @@ public sealed class DaggerfallTextSetTests
             })));
 
         Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("is interleaved with another source rather than grouped", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void Rejects_a_source_whose_declared_record_count_is_not_what_it_publishes()
-    {
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => Text(payload)["sources"]!.AsArray()[0]!.AsObject()["records"] = 1407)));
-
-        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("declares 1407 records and publishes 1408", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void Rejects_a_macro_a_value_carries_that_the_index_does_not_account_for()
-    {
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload => Records(payload)[0]!.AsObject()["macros"] = new JsonArray("%str", "%nothing-accounts-for-this"))));
-
-        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("which the published macro index does not account for", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void Rejects_a_macro_the_index_claims_against_the_wrong_number_of_values()
-    {
-        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
-            Payload(payload =>
-            {
-                JsonObject indexed = Macros(payload).Single(macro => macro!.AsObject()["symbol"]!.GetValue<string>() == "%str")!.AsObject();
-                indexed["records"] = 3;
-            })));
-
-        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("is indexed against 3 values", StringComparison.Ordinal));
     }
 
     [Fact]

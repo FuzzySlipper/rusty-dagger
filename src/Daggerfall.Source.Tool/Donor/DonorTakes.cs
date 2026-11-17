@@ -22,8 +22,6 @@ internal static class DonorTakes
     [
         Section("buildingNames", donor => DonorBuildingNames.Build(File.ReadAllBytes(Path.Combine(donor, "Assets/Scripts/API/MapsFile.cs")),
             PublishedSourcePath.Donor("Assets/Scripts/API/MapsFile.cs"))),
-        Section("internalText", donor => DonorInternalText.Build(File.ReadAllBytes(Path.Combine(donor, $"{TextDirectory}/Internal_Strings.csv")),
-            PublishedSourcePath.Donor($"{TextDirectory}/Internal_Strings.csv"), "en")),
     ];
 
     /// <summary>The base pack's payload, where the tables the import never needs are sections the ruleset reads.</summary>

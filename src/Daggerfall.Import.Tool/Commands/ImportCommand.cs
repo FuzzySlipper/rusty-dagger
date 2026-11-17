@@ -31,7 +31,7 @@ internal static class ImportCommand
     private const string UiOriginal = AuthoredUi.ProductDirectory;
 
     private static readonly string[] Arena2Files =
-        ["MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "DAGGER.SND", "TEXT.RSC", "CLIMATE.PAK", "POLITIC.PAK",
+        ["MAPS.BSA", "BLOCKS.BSA", "ARCH3D.BSA", "DAGGER.SND", "CLIMATE.PAK", "POLITIC.PAK",
          "WOODS.WLD", "FACTION.TXT", "FLATS.CFG", "ANIM0000.VID", "AZURA.FLC"];
 
     public static ToolCommand Command { get; } = new("import",
@@ -144,11 +144,10 @@ internal static class ImportCommand
 
         // 2. The imported payload's sections, in dependency order, with the block document and the import
         //    records. None reads the authored payload: the ruleset joins it to these sections when it loads, and the
-        //    classic tables (items, magic, mobiles, careers, factions) are authored data there (DEC-13).
+        //    classic tables and the game's text are authored data there (DEC-13).
         Add("character-presentation", "character-presentation", "--arena2", arena2, "--inventory", Inventory, "--pack", imported,
             "--out", staging, "--group", "worldrpg", "--update");
         Add("locations", "locations", "--arena2", arena2, "--pack", imported, "--out", staging, "--update");
-        Add("text", "text", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--language", "en", "--update");
         Add("blocks", "blocks", "--arena2", arena2, "--document", blocks, "--buildings", buildings, "--inventory", Inventory, "--update");
         Add("geometry", "geometry", "--arena2", arena2, "--blocks", blocks, "--records", importRecords, "--inventory", Inventory, "--update");
         Add("climate", "climate", "--arena2", arena2, "--pack", imported, "--inventory", Inventory, "--update");
@@ -205,7 +204,6 @@ internal static class ImportCommand
             string[] sky = ["PAL.PAL", "NIGHTSKY.COL", "ART_PAL.COL", "MOON00I0.CFA", "MOON01I0.CFA", .. Enumerable.Range(0, 32).Select(index => $"SKY{index:D2}.DAT"), .. Enumerable.Range(0, 4).Select(index => $"NITE{index:D2}I0.IMG")];
             foreach (string file in sky.Where(file => !IsFile(Path.Combine(inputs.Arena2, file))))
                 yield return $"Arena2 sky file '{inputs.Arena2}/{file}'";
-            if (!IsDirectory(Path.Combine(inputs.Arena2, "books"))) yield return $"Arena2 books directory '{inputs.Arena2}/books'";
         }
 
         if (inputs.Cinematics)

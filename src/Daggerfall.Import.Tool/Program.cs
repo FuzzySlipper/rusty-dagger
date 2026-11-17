@@ -28,7 +28,6 @@ internal static class Program
         CinematicMediaCommand.Command,
         // The imported payload's sections, the block document and the import records.
         LocationsCommand.Command,
-        TextCommand.Command,
         BlocksCommand.Command,
         GeometryCommand.Command,
         ClimateCommand.Command,

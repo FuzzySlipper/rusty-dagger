@@ -80,28 +80,10 @@ internal sealed record DaggerfallTextValue(
     internal IEnumerable<string> TextRuns => Tokens.Where(token => token.Code == DaggerfallTextCode.Text).Select(token => token.Text!);
 }
 
-/// <summary>How the donor's own macro table accounts for a symbol.</summary>
-internal enum DaggerfallTextMacroDisposition
-{
-    /// <summary>The donor's table maps the symbol to a handler.</summary>
-    Handled,
-
-    /// <summary>The donor's table names the symbol and maps it to no handler, so it leaves it unresolved too.</summary>
-    DonorUnresolved,
-
-    /// <summary>The donor's table does not name the symbol at all.</summary>
-    Unrecognised,
-}
-
-/// <summary>
-/// One distinct macro symbol the published text carries, and how the donor accounts for it. The index
-/// says which values carry a symbol; a spelling count would be a claim about a value's text that only
-/// the reader's source-format macro grammar can produce, so the pack does not make it.
-/// </summary>
-/// <param name="Symbol">The symbol as the source spells it, marker included.</param>
-/// <param name="Records">How many published values carry it.</param>
-/// <param name="Disposition">Whether the donor's macro table handles it, names it without a handler, or does not name it.</param>
-internal sealed record DaggerfallTextMacro(string Symbol, int Records, DaggerfallTextMacroDisposition Disposition);
+/// <summary>One distinct macro symbol the text carries, and how many values carry it, derived when the text loads.</summary>
+/// <param name="Symbol">The symbol as the text spells it, marker included.</param>
+/// <param name="Records">How many values carry it.</param>
+internal sealed record DaggerfallTextMacro(string Symbol, int Records);
 
 /// <summary>What a lookup answered.</summary>
 internal enum DaggerfallTextResolution

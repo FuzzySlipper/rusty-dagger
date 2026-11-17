@@ -58,9 +58,6 @@ public sealed class DaggerfallNamesRumorsBiographiesTests
     {
         DaggerfallDefinitions definitions = Definitions();
 
-        Assert.Equal(
-            "daggerfall-unity/Assets/Scripts/Game/Entities/PlayerEntity.cs",
-            definitions.DialogueWorldRules.Source);
         DaggerfallDialogueWorldNewsRule crimeWave = Assert.Single(definitions.DialogueWorldRules.News);
         Assert.Equal(11, crimeWave.Type);
         Assert.Equal(1410, crimeWave.TextId);

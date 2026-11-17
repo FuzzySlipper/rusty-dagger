@@ -1137,31 +1137,25 @@ internal static partial class DaggerfallBaseContent
             return new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), []);
         }
 
-        // Daggerfall Unity's internal strings are a text family of their own, taken into the base pack's internalText
-        // section rather than imported; the two sections read as one set, each with its own sources and macro index.
+        // Daggerfall Unity's internal strings are a text family of their own in the internalText section; the two
+        // sections read as one set, each with its own sources.
         JsonElement[] parts = root.TryGetProperty("internalText", out JsonElement internalText) && internalText.ValueKind == JsonValueKind.Object
             ? [section, internalText]
             : [section];
 
         // A source is the language and family its values inherit, so two sources claiming one path would
         // leave a value naming it with no one language and no one family.
-        Dictionary<string, (DaggerfallTextKind Kind, string Language, int Records)> sources = new(StringComparer.Ordinal);
+        Dictionary<string, (DaggerfallTextKind Kind, string Language)> sources = new(StringComparer.Ordinal);
         foreach (JsonElement source in parts.SelectMany(part => Array(part, "sources", diagnostics)))
         {
             DaggerfallTextKind kind = TextKind(source, diagnostics);
             string path = Text(source, "path", diagnostics);
             string language = Text(source, "language", diagnostics);
-            long byteLength = Long(source, "byteLength", diagnostics);
-            _ = Integer(source, "declaredLength", diagnostics);
-            int records = Integer(source, "records", diagnostics);
-            if (byteLength <= 0) diagnostics.Add($"Published text source '{path}' retains {byteLength} bytes, so nothing says what was read.");
-            if (records < 0) diagnostics.Add($"Published text source '{path}' declares {records} records.");
-            if (!sources.TryAdd(path, (kind, language, records))) diagnostics.Add($"Published text source '{path}' is claimed twice, so a value naming it has no one language and family.");
+            if (!sources.TryAdd(path, (kind, language))) diagnostics.Add($"Published text source '{path}' is claimed twice, so a value naming it has no one language and family.");
         }
         if (sources.Count == 0) diagnostics.Add("Published text must name the sources its values were read from.");
 
         Dictionary<DaggerfallTextKey, DaggerfallTextValue> values = [];
-        Dictionary<string, int> publishedPerSource = new(StringComparer.Ordinal);
         HashSet<string> grouped = new(StringComparer.Ordinal);
         string previousSource = string.Empty;
         int previousIndex = -1;
@@ -1182,7 +1176,7 @@ internal static partial class DaggerfallBaseContent
 
             // A value whose source the section does not declare has no language and no family: the key
             // would resolve and nothing would say what it was read from.
-            if (!sources.TryGetValue(source, out (DaggerfallTextKind Kind, string Language, int Records) owner))
+            if (!sources.TryGetValue(source, out (DaggerfallTextKind Kind, string Language) owner))
             {
                 diagnostics.Add($"Published text key '{key}' names source '{source}', which the section does not carry.");
                 continue;
@@ -1261,70 +1255,12 @@ internal static partial class DaggerfallBaseContent
 
             if (index <= previousIndex) diagnostics.Add($"Published text source '{source}' carries '{key}' at ordinal {index} after ordinal {previousIndex}, so its values are not in source order.");
             previousIndex = index;
-            publishedPerSource[source] = publishedPerSource.GetValueOrDefault(source) + 1;
             values[key] = new DaggerfallTextValue(key, source, owner.Language, index, offset, byteLength, subrecords, state, reason, symbols, tokens);
         }
 
-        foreach ((string path, (DaggerfallTextKind Kind, string Language, int Records) source) in sources)
-        {
-            int published = publishedPerSource.GetValueOrDefault(path);
-            if (published != source.Records) diagnostics.Add($"Text source '{path}' declares {source.Records} records and publishes {published}.");
-        }
-
-        // The macro index is derived from the values, so it is checked against them in both directions:
-        // an index that dropped a symbol would leave a consumer expanding text with a macro nothing
-        // accounts for, and one that invented an entry would report a symbol the corpus lacks. What is
-        // *not* checked here is how often a symbol is spelled, because that is a fact about a value's
-        // text that only the reader's own macro grammar produces, and that grammar is source-format
-        // knowledge which stays in the importer rather than being re-implemented here.
-        // Each section indexes its own values; a symbol both index counts the values of both, under the one disposition.
-        Dictionary<string, DaggerfallTextMacro> merged = new(StringComparer.Ordinal);
-        foreach (JsonElement part in parts)
-        {
-            HashSet<string> indexedHere = new(StringComparer.Ordinal);
-            foreach (JsonElement macro in Array(part, "macros", diagnostics))
-            {
-                string symbol = Text(macro, "symbol", diagnostics);
-                int records = Integer(macro, "records", diagnostics);
-                string dispositionName = Text(macro, "disposition", diagnostics);
-                if (records <= 0) diagnostics.Add($"Published macro '{symbol}' is indexed against {records} values.");
-                if (!indexedHere.Add(symbol)) diagnostics.Add($"Published macro '{symbol}' is indexed twice.");
-
-                // A consumer decides what to do with a symbol by its disposition, so a spelling the contract
-                // does not declare is refused here rather than read as a disposition nobody published. Whether
-                // the donor's table really accounts for the symbol that way is the importer's check: the table
-                // is imported donor knowledge, not something this assembly re-derives.
-                if (!TryReadName(dispositionName, out DaggerfallTextMacroDisposition disposition))
-                {
-                    diagnostics.Add($"Published macro '{symbol}' states the disposition '{dispositionName}', which the contract does not declare.");
-                }
-
-                if (merged.TryGetValue(symbol, out DaggerfallTextMacro? earlier))
-                {
-                    if (earlier.Disposition != disposition) diagnostics.Add($"Published macro '{symbol}' is indexed as '{earlier.Disposition}' and as '{disposition}'.");
-                    merged[symbol] = earlier with { Records = earlier.Records + records };
-                }
-                else merged[symbol] = new DaggerfallTextMacro(symbol, records, disposition);
-            }
-        }
-
-        List<DaggerfallTextMacro> macros = [.. merged.Values.OrderBy(macro => macro.Symbol, StringComparer.Ordinal)];
-        HashSet<string> indexed = [.. merged.Keys];
-
-        foreach (DaggerfallTextValue value in values.Values)
-        {
-            foreach (string symbol in value.Macros)
-            {
-                if (!indexed.Contains(symbol)) diagnostics.Add($"Published text key '{value.Key}' carries macro '{symbol}', which the published macro index does not account for.");
-            }
-        }
-
-        foreach (DaggerfallTextMacro macro in macros)
-        {
-            int carried = values.Values.Count(value => value.Macros.Contains(macro.Symbol, StringComparer.Ordinal));
-            if (carried != macro.Records) diagnostics.Add($"Published macro '{macro.Symbol}' is indexed against {macro.Records} values where {carried} carry it.");
-        }
-
+        // The macro index is derived from the values: each symbol any value carries, with how many carry it.
+        List<DaggerfallTextMacro> macros = [.. values.Values.SelectMany(value => value.Macros).GroupBy(symbol => symbol, StringComparer.Ordinal)
+            .Select(group => new DaggerfallTextMacro(group.Key, group.Count())).OrderBy(macro => macro.Symbol, StringComparer.Ordinal)];
         return new DaggerfallTextSet(values, macros);
     }
 
@@ -1737,9 +1673,6 @@ internal static partial class DaggerfallBaseContent
             return DaggerfallDialogueWorldRules.Empty;
 
         section = Object(section, "dialogueWorldRules", diagnostics);
-        string source = Text(section, "source", diagnostics);
-        if (!string.Equals(source, DaggerfallDialogueWorldRules.DonorSource, StringComparison.Ordinal))
-            diagnostics.Add($"Dialogue world rules must retain the PlayerEntity donor citation '{DaggerfallDialogueWorldRules.DonorSource}'.");
 
         Dictionary<(int Type, int TextId), int[]> expectedRegionKeys = new()
         {
@@ -1779,7 +1712,7 @@ internal static partial class DaggerfallBaseContent
             rules.Add(new(type, textId, scope, variableKeys, requiredValue));
         }
 
-        return new DaggerfallDialogueWorldRules(source, System.Array.AsReadOnly(rules.ToArray()));
+        return new DaggerfallDialogueWorldRules(System.Array.AsReadOnly(rules.ToArray()));
     }
 
     private static int InvalidWorldVariableKey(DaggerfallContentDiagnostics diagnostics)

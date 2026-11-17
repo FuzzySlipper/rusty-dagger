@@ -142,10 +142,6 @@ public sealed class ImportToolCommandTests
         fixture.AssertPublication(before, expected);
     }
 
-    [ImportToolDataFact]
-    public void Text_report_guard_and_publication_write_are_observable() =>
-        Report_writes_nothing_and_update_writes_exact_builder_output("text");
-
     [ImportToolDataTheory]
     [InlineData("monster-archive")]
     [InlineData("texture-leaves")]

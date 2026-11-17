@@ -19,11 +19,7 @@ internal sealed record DaggerfallDialogueWorldNewsRule(
 /// session's variable store owns the live values, so a conversation reads the same state that
 /// quests and world systems write and save.
 /// </summary>
-internal sealed record DaggerfallDialogueWorldRules(
-    string Source,
-    IReadOnlyList<DaggerfallDialogueWorldNewsRule> News)
+internal sealed record DaggerfallDialogueWorldRules(IReadOnlyList<DaggerfallDialogueWorldNewsRule> News)
 {
-    internal const string DonorSource = "daggerfall-unity/Assets/Scripts/Game/Entities/PlayerEntity.cs";
-
-    internal static DaggerfallDialogueWorldRules Empty { get; } = new(DonorSource, []);
+    internal static DaggerfallDialogueWorldRules Empty { get; } = new([]);
 }

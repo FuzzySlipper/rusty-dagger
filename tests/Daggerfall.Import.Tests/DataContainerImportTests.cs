@@ -82,7 +82,6 @@ public sealed class DataContainerImportTests : IDisposable
         string[] missing = [.. ImportCommand.MissingInputs(inputs, root)];
 
         Assert.Contains(missing, entry => entry.StartsWith("Arena2 directory 'local/inputs/arena2'", StringComparison.Ordinal));
-        Assert.Contains($"tracked file '{ImportLayout.Inputs}/mobiles.json'", missing);
         Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/inputs/Sound'", StringComparison.Ordinal));
         Assert.Contains($"tracked file '{ImportLayout.Inventory}'", missing);
         // The import does not read the authored base payload, so its absence is no missing input.
@@ -99,7 +98,6 @@ public sealed class DataContainerImportTests : IDisposable
         missing = [.. ImportCommand.MissingInputs(inputs, root)];
         Assert.Contains("Arena2 file 'local/inputs/arena2/MAPS.BSA'", missing);
         Assert.Contains("Arena2 sky file 'local/inputs/arena2/SKY31.DAT'", missing);
-        Assert.Contains("Arena2 books directory 'local/inputs/arena2/books'", missing);
         Assert.DoesNotContain(missing, entry => entry.StartsWith("Arena2 directory", StringComparison.Ordinal));
     }
 
@@ -265,7 +263,7 @@ public sealed class DataContainerImportTests : IDisposable
             }
         }
 
-        Assert.True(staged > 50, $"only {staged} staged options were checked");
+        Assert.True(staged > 40, $"only {staged} staged options were checked");
         Assert.Equal(ImportLayout.ImportedPayload, Program.Commands["locations"].Options.Single(option => option.Name == "--pack").Default);
     }
 

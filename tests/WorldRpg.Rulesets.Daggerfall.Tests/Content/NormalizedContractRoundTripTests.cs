@@ -26,11 +26,6 @@ public sealed class NormalizedContractRoundTripTests
     [
         ("characterPresentation", typeof(DaggerfallCharacterPresentation)),
         ("locations", typeof(DaggerfallLocations)),
-        ("text", typeof(DaggerfallText)),
-        ("names", typeof(DaggerfallNameTables)),
-        ("rumors", typeof(DaggerfallRumorCatalog)),
-        ("biographies", typeof(DaggerfallBiographies)),
-        ("books", typeof(DaggerfallBooks)),
         ("climate", typeof(DaggerfallClimateGrid)),
         ("politic", typeof(DaggerfallPoliticGrid)),
         ("terrain", typeof(DaggerfallTerrain)),

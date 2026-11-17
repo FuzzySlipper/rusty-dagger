@@ -78,13 +78,6 @@ internal sealed partial class ImportToolFixture : IDisposable
 
     internal string[] Arguments(string name)
     {
-        if (name == "internal-strings")
-        {
-            // Regeneration invokes this after classic text, before the donor supplement exists.
-            // The copied fully generated pack must represent that actual input boundary.
-            File.WriteAllBytes(Pack, Expected("text")[Pack]);
-            File.SetLastWriteTimeUtc(Pack, OldTime);
-        }
         Dictionary<string, string> values = new(StringComparer.Ordinal)
         {
             ["--arena2"] = Arena2, ["--pack"] = Pack, ["--authored"] = Authored, ["--records"] = Records,

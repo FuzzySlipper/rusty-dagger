@@ -6,6 +6,16 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class DaggerfallTextResolverTests
 {
+    /// <summary>
+    /// The symbols the text carries that the classic macro table leaves without a handler, or does not name: every other
+    /// symbol is one a resolver must expand.
+    /// </summary>
+    private static readonly HashSet<string> Unhandled = new(StringComparer.Ordinal)
+    {
+        "%1hn", "%2com", "%2hn", "%3hn", "%cs", "%d", "%d1", "%d2", "%dbp", "%dfs", "%dn", "%dts", "%e", "%ef", "%hol", "%hrg", "%htwn", "%key2",
+        "%mit", "%on", "%pc", "%pcnf", "%pdg", "%pfn", "%plq", "%pnq", "%prn", "%ptm", "%qot", "%region", "%s", "%tcn", "%town", "%vn", "%wpn",
+    };
+
     [Fact]
     public void Resolves_the_same_normalized_value_against_distinct_explicit_global_contexts()
     {
@@ -31,7 +41,7 @@ public sealed class DaggerfallTextResolverTests
             .Where(value => value.Key.Kind == DaggerfallTextKind.Internal)
             .SelectMany(value => value.Macros)
             .ToHashSet(StringComparer.Ordinal);
-        string[] symbols = definitions.Text.Macros.Where(macro => macro.Disposition == DaggerfallTextMacroDisposition.Handled && !internalSymbols.Contains(macro.Symbol)).Select(macro => macro.Symbol).ToArray();
+        string[] symbols = definitions.Text.Macros.Where(macro => !Unhandled.Contains(macro.Symbol) && !internalSymbols.Contains(macro.Symbol)).Select(macro => macro.Symbol).ToArray();
         DaggerfallTextResolver resolver = Resolver(string.Join(' ', symbols));
 
         DaggerfallTextRenderResult rendered = resolver.Resolve(Key, CompleteContext());

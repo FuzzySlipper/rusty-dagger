@@ -17,14 +17,6 @@ internal sealed partial class ImportToolFixture
         { foreach (var artifact in artifacts) result.Add(Path.Combine(root, artifact.RelativePath), artifact.Bytes.ToArray()); }
         switch (name)
         {
-            case "text":
-                var questionnaires = Enumerable.Range(0, 18).Select(index =>
-                    (File.ReadAllText(Path.Combine(Arena2, $"BIOG{index:D2}T0.TXT")), Label($"BIOG{index:D2}T0.TXT"), index, 0)).ToArray();
-                var books = Directory.EnumerateFiles(Path.Combine(Arena2, "books"), "BOK*.TXT").Order(StringComparer.Ordinal)
-                    .Select(file => (int.Parse(Path.GetFileNameWithoutExtension(file)[3..], System.Globalization.CultureInfo.InvariantCulture), Label("books/" + Path.GetFileName(file)), File.ReadAllBytes(file))).ToArray();
-                var text = DaggerfallTextBuilder.BuildAll(Source("TEXT.RSC"), Label("TEXT.RSC"), Source("NAMEGEN.DAT"), Label("NAMEGEN.DAT"), Source("RUMOR.DAT"), Label("RUMOR.DAT"),
-                    Source(BioDatReader.FileName), Label(BioDatReader.FileName), questionnaires, Source("BIOG00I0.IMG"), books, Rows, "en");
-                Section("text", text.Item1); Section("names", text.Item2); Section("rumors", text.Item3); Section("biographies", text.Item4); Section("books", text.Item5); break;
             case "classic-media":
                 var classic = ClassicMediaGroup.Create(Arena2SiteSources.ForClassicMedia(Arena2).ClassicMediaInputs, ClassicProfile());
                 // The inventory lists the authored UI art, which the command does not write: it is tracked product content.
