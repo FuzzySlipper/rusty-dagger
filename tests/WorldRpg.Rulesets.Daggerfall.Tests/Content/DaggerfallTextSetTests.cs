@@ -412,7 +412,7 @@ public sealed class DaggerfallTextSetTests
                 key["id"] = key["id"]!.GetValue<string>() + "-uncited";
         }));
 
-        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("cites missing text key", StringComparison.Ordinal));
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("cites missing book page", StringComparison.Ordinal));
         Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("Dialogue world news 11/1410 names text key", StringComparison.Ordinal));
     }
 

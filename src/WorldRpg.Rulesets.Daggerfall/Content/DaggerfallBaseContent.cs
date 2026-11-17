@@ -2101,8 +2101,8 @@ internal static partial class DaggerfallBaseContent
 
     /// <summary>
     /// Reads the published book catalog from the pack alone. Every book the catalog claims readable
-    /// resolves its page keys through the text section: a page key with no page would leave a reader
-    /// holding a reference the resolver answers as missing.
+    /// names each page by its id among the text section's book records: a page with no record would
+    /// leave a reader holding a reference the resolver answers as missing.
     /// </summary>
     private static DaggerfallBooksSet ReadBooks(JsonElement root, DaggerfallTextSet text, DaggerfallContentDiagnostics diagnostics)
     {
@@ -2113,7 +2113,6 @@ internal static partial class DaggerfallBaseContent
         }
 
         Dictionary<int, DaggerfallBookDefinition> books = [];
-        HashSet<string> keys = text.Values.Keys.Select(key => key.ToString()).ToHashSet(StringComparer.Ordinal);
         foreach (JsonElement book in Array(section, "books", diagnostics))
         {
             int bookId = Integer(book, "bookId", diagnostics);
@@ -2141,9 +2140,9 @@ internal static partial class DaggerfallBaseContent
 
                 foreach (string key in pageKeys)
                 {
-                    if (!keys.Contains(key))
+                    if (!text.Values.ContainsKey(new DaggerfallTextKey(DaggerfallTextKind.Book, key)))
                     {
-                        diagnostics.Add($"Book {bookId} cites missing text key '{key}'.");
+                        diagnostics.Add($"Book {bookId} cites missing book page '{key}'.");
                     }
                 }
             }

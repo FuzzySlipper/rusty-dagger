@@ -36,7 +36,7 @@ public sealed class DaggerfallBooksContentTests
         {
             foreach (string key in book.PageKeys)
             {
-                DaggerfallTextValue page = definitions.Text.Require(Parse(key));
+                DaggerfallTextValue page = definitions.Text.Require(new DaggerfallTextKey(DaggerfallTextKind.Book, key));
                 if (!page.TextRuns.Any())
                 {
                     wordless.Add(key);
@@ -44,18 +44,12 @@ public sealed class DaggerfallBooksContentTests
             }
         }
 
-        Assert.Equal(["Book:00061-p06", "Book:00088-p34", "Book:00088-p35", "Book:00088-p36", "Book:00110-p17", "Book:00110-p18"], wordless.OrderBy(key => key, StringComparer.Ordinal));
+        Assert.Equal(["00061-p06", "00088-p34", "00088-p35", "00088-p36", "00110-p17", "00110-p18"], wordless.OrderBy(key => key, StringComparer.Ordinal));
 
         // A message with no supplied file is itself the miss a consumer reports.
         DaggerfallBookDefinition missing = definitions.Books.ResolveMessage(90);
         Assert.Equal(DaggerfallBookDisposition.NotSupplied, missing.Disposition);
         Assert.Empty(missing.PageKeys);
-    }
-
-    private static DaggerfallTextKey Parse(string key)
-    {
-        string[] parts = key.Split(':');
-        return new DaggerfallTextKey(Enum.Parse<DaggerfallTextKind>(parts[0], ignoreCase: true), parts[1]);
     }
 
     private static DaggerfallDefinitions Definitions()
