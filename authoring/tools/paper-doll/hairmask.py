@@ -15,9 +15,10 @@ So hair standing out round a helmet goes, and long hair falls on below the rim. 
 authoring/specs/worn/hair-masks.json: each body's face ellipse (centre and radii in doll units) and each masking record's
 cut row, or null for a record that hides nothing on the refreshed doll (a hoodless cloak).
 
-Writes local/art/generated/worn/mask/KEY.png and a KEY.json sidecar with its `rect` in doll units (null: no mask), which
-promote.py publishes as the worn entry's `mask` and `placement.mask`. Reads the art pack and the import's catalogue, so
-run the import first.
+Writes local/art/generated/worn/mask/KEY.png and a KEY.json sidecar with its `rect` in doll units (null: no mask) and the
+item's pixels it was drawn for, which promote.py publishes as the worn entry's `mask` and `placement.mask` only with that
+item. Draws over the item's worn final and the art pack's heads and bodies, and reads the import's catalogue, so run the
+import first.
 
     hairmask.py [KEY ...]           no key draws every masking record's
     hairmask.py --sheet OUT.png [KEY ...]
@@ -25,7 +26,7 @@ run the import first.
                                     with each race and face's difference; today is the classic mask, read from an import
                                     with --classic-art, for comparison only
 """
-import argparse, json
+import argparse, json, sys
 from functools import lru_cache
 from pathlib import Path
 
@@ -33,20 +34,20 @@ import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage
 
-AUTHORING = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "shared"))
+from doll_preview import AUTHORING, DOLL, MORPH, RACES
+from promote import CLASSIC, CONTENT, IMPORTED, PAYLOAD, generated, paper_doll_items, pixels, rect_of, staged
+from promote import masking as masking_records
+
 REPOSITORY = AUTHORING.parent
-CONTENT = REPOSITORY / "content"
 SPEC = AUTHORING / "specs/worn/hair-masks.json"
 OUT = REPOSITORY / "local/art/generated/worn/mask"
-IMPORTED = REPOSITORY / "local/build/import/staging/worldrpg/payloads/daggerfall.imported.json"
-CLASSIC_MASKS = [REPOSITORY / "local/build/import" / tree / "worldrpg/media/character/paper-doll" for tree in ("staging", "classic-art")]
 
-DOLL = (110, 184)   # the doll in doll units
 SCALE = 4           # mask pixels a doll unit
 FEATHER = 4         # doll units over which a mask fades out above its cut row
-# The donor's bodies: which races share a paper-doll body, and the worn archives each body and gender draw from.
-BODIES = {"argonian": ["argonian"], "elf": ["dark-elf", "high-elf", "wood-elf"], "human": ["breton", "nord", "redguard"],
-          "khajiit": ["khajiit"]}
+# The races of each paper-doll body, in the order the worn archives draw the bodies, and the archives each body and
+# gender draw from.
+BODIES = {body: [race for n, race in enumerate(RACES) if MORPH[n] == body] for body in ("argonian", "elf", "human", "khajiit")}
 ARCHIVES = {**{235 + n: (body, "male") for n, body in enumerate(BODIES)}, **{239 + n: (body, "female") for n, body in enumerate(BODIES)},
             **{245 + n: (body, "female") for n, body in enumerate(BODIES)}, **{249 + n: (body, "male") for n, body in enumerate(BODIES)}}
 
@@ -57,8 +58,7 @@ def key_of(archive, record):
 
 @lru_cache(None)
 def pack():
-    return {entry["replaces"]: entry for entry in json.loads((CONTENT / "worldrpg/packs/daggerfall.art-replacements/payload.json")
-                                                              .read_text())["artReplacements"]["images"]}
+    return {entry["replaces"]: entry for entry in json.loads(PAYLOAD.read_text())["artReplacements"]["images"]}
 
 
 @lru_cache(None)
@@ -67,8 +67,9 @@ def catalogue():
 
 
 def masking():
-    """The worn records the classic draws with a mask, by key."""
-    return {key_of(item["archive"], item["record"]): item for item in catalogue()["paperDoll"]["items"] if item.get("maskMediaId")}
+    """The worn records the classic draws with a mask (promote.py's masking), by key."""
+    return {key_of(archive, record): item for (archive, record), item in paper_doll_items().items()
+            if f"paper-doll.{archive}.{record}" in masking_records()}
 
 
 @lru_cache(None)
@@ -103,6 +104,15 @@ def place(picture, rect, k):
 
 
 @lru_cache(None)
+def final(key):
+    """A masking record's worn final, the art the mask is drawn for (one not yet promoted too), and its doll rect."""
+    path = generated("worn", key).path
+    if not path.exists():
+        raise SystemExit(f"No worn final {path}: a mask is drawn for the item's own art.")
+    return Image.open(path).convert("RGBA"), rect_of("worn", key, path)
+
+
+@lru_cache(None)
 def alpha(replaces, k=SCALE):
     return place(*image(replaces), k)[..., 3]
 
@@ -132,7 +142,7 @@ def draw(key, spec):
     shape = spec["items"][key]
     if shape is None:
         return None
-    worn = alpha(f"paper-doll.{item['archive']}.{item['record']}") > .5
+    worn = place(*final(key), SCALE)[..., 3] > .5
     spared = face(spec["faces"][body][gender]) | (covered(body, gender, "body") > .5)
     # Enclosed: the item above and on both sides, unless reached from the top past the item, the face and the body above
     # the item's lowest row (the gap under a horn, not a visor's opening).
@@ -162,7 +172,8 @@ def write(key, mask):
     (OUT / f"{key}.png").unlink(missing_ok=True)
     if mask is not None:
         mask[0].save(OUT / f"{key}.png")
-    (OUT / f"{key}.json").write_text(json.dumps({"rect": None if mask is None else [round(v, 4) for v in mask[1]]}) + "\n")
+    (OUT / f"{key}.json").write_text(json.dumps({"rect": None if mask is None else [round(v, 4) for v in mask[1]],
+                                                  "item": pixels(final(key)[0])}) + "\n")
 
 
 def doll(key, race, face_index, mask, k=6):
@@ -176,7 +187,7 @@ def doll(key, race, face_index, mask, k=6):
         drawn = place(*image(names[name]), k) + drawn * (1 - place(*image(names[name]), k)[..., 3:])
     if mask is not None:
         drawn *= 1 - place(*mask, k)[..., 3:]
-    worn = place(*image(f"paper-doll.{item['archive']}.{item['record']}"), k)
+    worn = place(*final(key), k)
     drawn = worn + drawn * (1 - worn[..., 3:])
     background = place(*image(names["background"]), k)
     return np.clip(drawn + background * (1 - drawn[..., 3:]), 0, 1)[..., :3]
@@ -184,10 +195,9 @@ def doll(key, race, face_index, mask, k=6):
 
 def classic(key):
     item = masking()[key]
-    name = f"paper-doll-{item['archive']}-{item['record']}-mask.png"
-    path = next((root / name for root in CLASSIC_MASKS if (root / name).exists()), None)
-    if path is None:
-        raise SystemExit(f"No classic {name} to compare with: import with --classic-art.")
+    path = staged(f"{CLASSIC}/paper-doll-{item['archive']}-{item['record']}-mask.png")
+    if not path.exists():
+        raise SystemExit(f"No classic {path.name} to compare with: import with --classic-art.")
     return Image.open(path).convert("RGBA"), (item["x"], item["y"], item["width"], item["height"])
 
 

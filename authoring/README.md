@@ -62,8 +62,9 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - A worn record the classic draws with a mask (a hood, cloak or helmet over hair: the import's paper-doll catalogue
   names its `maskMediaId`) is promoted with its own: give its key a `cut` row in `specs/worn/hair-masks.json` (null if
   the refreshed item hides nothing), run `tools/paper-doll/hairmask.py KEY`, and judge `hairmask.py --sheet OUT.png KEY`
-  against today's doll before promoting. Promotion refuses it without a mask, keeps the one it has on a re-promote,
-  and takes a redrawn one; the game refuses a masking record whose entry states none.
+  against today's doll before promoting. The mask is drawn over the item's worn final, so draw it again after redrawing
+  the item: promotion refuses a mask drawn for other art, refuses a masking record without one, and keeps the one it has
+  on a re-promote; the game refuses a masking record whose entry states none.
 - `matte.py` only once an area's finals are accepted. Never despeckle effects that carry embers.
 - `promote.py` takes only finals the ledger marks `accepted`. From a task worktree, promote your own finals with
   `--key` (an art key, a record, an item, an effect or a sprite mesh's `ARCHIVE-RECORD`): it replaces those entries
@@ -79,8 +80,10 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - A window surface (a record the import cuts classic glass for: `texture-A-R-glass.png` in its materials) is promoted with
   its own glass: name the refreshed panes' colours, and a box if the wall shares one, in `tools/surfaces/glass.json`
   (`glass.py --suggest KEY` proposes them), run `tools/surfaces/glass.py KEY`, and judge `glass.py --sheet OUT.png KEY`
-  by day, night and winter before promoting. A winter record names its own. Promotion refuses a window without glass and
-  keeps the glass it has on a re-promote; the game refuses a refreshed window whose entry states none.
+  by day, night and winter before promoting. A winter record names its own. The glass is cut from the surface's final
+  (a new window's too), so cut it again after redrawing the surface: promotion refuses glass cut from other art or a
+  window without glass, and keeps the glass it has with an unchanged surface; the game refuses a refreshed window whose
+  entry states none.
 - Promotion writes into the art pack's folder and rewrites
   `src/Daggerfall.Import.Tool/inputs/replaced-classic.json`, the classic identities the pack replaces, which a
   player's import leaves out: commit both with

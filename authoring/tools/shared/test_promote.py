@@ -11,6 +11,7 @@ from io import StringIO
 from pathlib import Path
 
 import numpy as np
+from PIL import Image
 
 import promote
 
@@ -36,7 +37,7 @@ class Promotion(unittest.TestCase):
         self.root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.root)
         for name, value in (("CONTENT", self.root / "content"), ("PAYLOAD", self.root / "content/payload.json"),
-                            ("ART", self.root / "art"), ("AUTHORING", self.root / "authoring")):
+                            ("REPLACED", self.root / "replaced-classic.json"), ("ART", self.root / "art"), ("AUTHORING", self.root / "authoring")):
             self.addCleanup(setattr, promote, name, getattr(promote, name))
             setattr(promote, name, value)
         self.addCleanup(promote.AREAS.pop, AREA, None)
@@ -210,6 +211,88 @@ class Placements(unittest.TestCase):
         again = promote.own("flat.210.4", names, lambda: promote.flat_placement(210, 4, self.CLASSIC, 1))
         self.assertEqual(8, again["size"]["height"])   # the classic 2 m over the .25 of the frame it takes
         self.assertEqual({"size": "original", "pivot": "original", "foot": "original"}, again["from"])
+
+
+class OwnArt(unittest.TestCase):
+    """A worn entry keeps its dye mask with its classic images moved out of staging, and a worn mask or a window's glass
+    is the entry's own: written from a final drawn for this art, kept without one, refused when missing or for other art."""
+    HELM, CLOAK = "texture-247-record-032-frame-000", "texture-235-record-022-frame-000"
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root)
+        catalogue = {"paperDoll": {"items": [
+            {"archive": 247, "record": 32, "dyes": {"steel": "paper-doll.247.32", "daedric": "paper-doll.247.32.daedric"}, "maskMediaId": "paper-doll.247.32.mask"},
+            {"archive": 235, "record": 22, "dyes": {"blue": "paper-doll.235.22"}}]}}
+        (self.root / "imported.json").write_text(json.dumps(catalogue))
+        for name, value in (("IMPORTED", self.root / "imported.json"), ("STAGED", self.root / "staging"), ("CLASSIC_ART", self.root / "classic-art"),
+                            ("MASKS", self.root / "mask"), ("GLASS", self.root / "glass"), ("STAGE", self.root / "stage")):
+            self.addCleanup(setattr, promote, name, getattr(promote, name))
+            setattr(promote, name, value)
+        for cache in (promote.paper_doll_items,):
+            cache.cache_clear()
+            self.addCleanup(cache.cache_clear)
+        for kept in (promote.KEPT, promote.KEPT_MASK, promote.KEPT_GLASS):
+            self.addCleanup(kept.clear)
+        promote.MASKS.mkdir(), promote.GLASS.mkdir()
+        pixels = np.zeros((40, 30, 4), np.uint8)
+        pixels[5:35, 5:25] = (120, 120, 120, 255)
+        self.item = self.root / f"{self.HELM}.png"
+        Image.fromarray(pixels, "RGBA").save(self.item)
+
+    def promote_helm(self):
+        return promote.promote("worn", self.HELM, self.item, rect=(40, 10, 30, 40))
+
+    def draw_mask(self, art):
+        Image.fromarray(np.full((8, 12, 4), 255, np.uint8), "RGBA").save(promote.MASKS / f"{self.HELM}.png")
+        (promote.MASKS / f"{self.HELM}.json").write_text(json.dumps({"rect": [38, 6, 3, 2], "item": promote.pixels(art)}))
+
+    def test_a_worn_entry_keeps_its_dye_mask_with_the_classic_images_moved_out_of_staging(self):
+        self.draw_mask(Image.open(self.item))
+        self.assertIn("dyeMask", self.promote_helm())   # the catalogue names a daedric image apart from the steel one
+
+    def test_a_masking_record_takes_the_mask_drawn_for_its_art_and_keeps_it_on_a_re_promote(self):
+        self.draw_mask(Image.open(self.item))
+        entry = self.promote_helm()
+        self.assertEqual("refreshed.paper-doll.247.32.mask", entry["mask"]["mediaId"])
+        self.assertEqual({"mask": {"x": 38, "y": 6, "width": 3, "height": 2}, "from": {"mask": "hand"}}, entry["placement"])
+        # Without its final, a re-promote keeps the mask the payload holds.
+        for path in promote.MASKS.iterdir():
+            path.unlink()
+        promote.KEPT["paper-doll.247.32"], promote.KEPT_MASK["paper-doll.247.32"] = entry["placement"], entry["mask"]
+        kept = self.promote_helm()
+        self.assertEqual((entry["placement"], entry["mask"]), (kept["placement"], kept["mask"]))
+
+    def test_a_masking_record_without_its_own_mask_or_with_one_drawn_for_other_art_is_refused_by_name(self):
+        with self.assertRaisesRegex(SystemExit, f"{self.HELM} replaces paper-doll.247.32"):
+            self.promote_helm()
+        self.draw_mask(Image.new("RGBA", (30, 40)))
+        with self.assertRaisesRegex(SystemExit, "drawn for other art"):
+            self.promote_helm()
+
+    def test_a_window_takes_the_glass_cut_from_its_surface_and_keeps_it_only_with_that_surface(self):
+        window = promote.WINDOW_GLASS.format(archive=9, record=3)
+        (promote.CLASSIC_ART / window).parent.mkdir(parents=True)
+        (promote.CLASSIC_ART / window).write_bytes(b"classic glass")   # moved out of staging by the import
+        surface = Image.new("RGBA", (8, 16), (90, 60, 30, 255))
+        entry = {"sha256": "this surface"}
+        with self.assertRaisesRegex(SystemExit, "texture-009-3 is a window"):
+            promote.window_glass("surfaces", "texture-009-3", 9, 3, surface, entry)
+        Image.new("RGBA", (8, 16), (255, 255, 255, 255)).save(promote.GLASS / "texture-009-3.png")
+        (promote.GLASS / "texture-009-3.json").write_text(json.dumps({"surface": promote.pixels(surface)}))
+        glass = promote.window_glass("surfaces", "texture-009-3", 9, 3, surface, entry)["glass"]
+        self.assertEqual((8, 16), (glass["width"], glass["height"]))
+        with self.assertRaisesRegex(SystemExit, "cut from other art"):
+            promote.window_glass("surfaces", "texture-009-3", 9, 3, Image.new("RGBA", (8, 16)), entry)
+        # Without its final, the glass the payload holds is kept with the surface it was cut for, never with a redrawn one.
+        for path in promote.GLASS.iterdir():
+            path.unlink()
+        promote.KEPT_GLASS[(9, 3)] = (glass, "this surface")
+        self.assertEqual({"glass": glass}, promote.window_glass("surfaces", "texture-009-3", 9, 3, surface, entry))
+        with self.assertRaisesRegex(SystemExit, "its earlier art"):
+            promote.window_glass("surfaces", "texture-009-3", 9, 3, surface, {"sha256": "a redrawn surface"})
+        # A record that is no window has no glass.
+        self.assertEqual({}, promote.window_glass("surfaces", "texture-009-4", 9, 4, surface, entry))
 
 
 if __name__ == "__main__":

@@ -317,7 +317,7 @@ def world_image(image, height, doll=False):
 
 
 # The placement each entry had in the payload before this run, by what it replaces, its image's hash and its own mask; a
-# window surface's own glass, by its record; and what --recompute names (an id, or "all"), which takes those values from the original again.
+# window surface's own glass and the hash of the surface it was cut for, by its record; and what --recompute names (an id, or "all"), which takes those values from the original again.
 KEPT, KEPT_ART, KEPT_MASK, KEPT_GLASS, RECOMPUTE = {}, {}, {}, {}, set()
 
 
@@ -512,12 +512,16 @@ def masking():
     return {f"paper-doll.{archive}.{record}" for (archive, record), item in paper_doll_items().items() if item.get("maskMediaId")}
 
 
-def hair_mask(key, classic, media, name):
-    """A masking record's own mask, from its hairmask.py final: the image as `mask` and its rect in doll units as
-    `placement.mask`, set by hand, a null rect where it hides nothing. Without a final the entry keeps the mask it has."""
+def hair_mask(key, classic, media, name, image):
+    """A masking record's own mask, from its hairmask.py final, drawn for this item's art (`image`): the image as `mask`
+    and its rect in doll units as `placement.mask`, set by hand, a null rect where it hides nothing. Without a final the
+    entry keeps the mask it has, and promotion says so when the art is new."""
     sidecar = MASKS / f"{key}.json"
     if sidecar.exists():
-        rect = json.loads(sidecar.read_text())["rect"]
+        drawn = json.loads(sidecar.read_text())
+        if drawn["item"] != pixels(image):
+            raise SystemExit(f"{key}'s mask was drawn for other art: draw it again with authoring/tools/paper-doll/hairmask.py {key}.")
+        rect = drawn["rect"]
         own = {"placement": {"mask": None if rect is None else dict(zip(("x", "y", "width", "height"), rect)), "from": {"mask": HAND}}}
         if rect is not None:
             own["mask"] = {"mediaId": f"{media}.mask",
@@ -548,7 +552,7 @@ def promote(area, key, path, rect=None, mediaId=None, name=None):
     if classic.startswith("character.body-clothed."):
         entry["placement"] = own(classic, ["waist"], lambda: {"waist": waist(classic, entry["doll"])})
     if area == "worn" and mediaId is None and classic in masking():
-        entry.update(hair_mask(key, classic, media, name))
+        entry.update(hair_mask(key, classic, media, name, Image.open(path)))
     if area == "worn":
         ground = world_image(image, image.height / k, doll=True)
         entry["world"] = world_png(ground, f"{MEDIA}/{area}/{name}.png")
@@ -828,29 +832,50 @@ def classic_size(media):
 
 
 GLASS = ART / "generated/surfaces/glass"   # glass.py's finals, each the surface's own glass mask
+# The glass the import cuts from a classic window record, which makes the record a window.
+WINDOW_GLASS = "worldrpg/imports/shared/media/dungeon/materials/texture-{archive}-{record}-glass.png"
 
 
-def window_glass(area, key, archive, record):
+def pixels(image):
+    """A digest of an image's pixels, whatever file holds them: what a mask or glass final names as the art it was cut for."""
+    image = image.convert("RGBA")
+    return hashlib.sha256(f"{image.width}x{image.height}".encode() + image.tobytes()).hexdigest()
+
+
+def window_glass(area, key, archive, record, surface, entry):
     """A window surface's own glass mask, from its glass.py final, as `glass`; without a final the entry keeps the glass it
-    has. A window record, one the import cuts classic glass for, is refused without either."""
+    has. A window record, one the import cuts classic glass for, is refused without either, and so is glass cut from
+    other pixels than the surface promoted now (a redrawn window needs its glass cut again)."""
+    again = f"{key} is a window: cut its glass from this surface with authoring/tools/surfaces/glass.py {key}"
     if (GLASS / f"{key}.png").exists():
+        if json.loads((GLASS / f"{key}.json").read_text())["surface"] != pixels(surface):
+            raise SystemExit(f"{again}; its glass final was cut from other art.")
         return {"glass": world_png(Image.open(GLASS / f"{key}.png"), f"{MEDIA}/{area}/{key}-glass.png")}
     if (archive, record) in KEPT_GLASS:
-        return {"glass": KEPT_GLASS[(archive, record)]}
-    if staged(f"worldrpg/imports/shared/media/dungeon/materials/texture-{archive}-{record}-glass.png").exists():
-        raise SystemExit(f"{key} is a window: cut its glass with authoring/tools/surfaces/glass.py first.")
+        glass, cut_for = KEPT_GLASS[(archive, record)]
+        if cut_for != entry["sha256"]:
+            raise SystemExit(f"{again}; the glass the pack holds was cut from its earlier art.")
+        return {"glass": glass}
+    if staged(WINDOW_GLASS.format(archive=archive, record=record)).exists():
+        raise SystemExit(f"{again} first.")
     return {}
+
+
+def surface_finals(area):
+    """The `surfaces` or `terrain` area's finals, `texture-AAA-R` in their family's folder, by key."""
+    return {path.stem: path for path in (ART / "generated" / area).glob("*/texture-*.png") if path.parent.name not in ("raw", "glass")}
 
 
 def surface_units(area):
     """The `surfaces` or `terrain` area's units: each final `texture-AAA-R`, from its family's folder, by the classic
     texture record it replaces, with a window's own glass."""
-    held = {path.stem: path for path in (ART / "generated" / area).glob("*/texture-*.png") if path.parent.name not in ("raw", "glass")}
+    held = surface_finals(area)
 
     def build(final):
         archive, record = map(int, SURFACE.fullmatch(final.key).groups())
-        return [("surfaces", {"replaces": {"archive": archive, "record": record}, **world_png(Image.open(final.path), f"{MEDIA}/{area}/{final.key}.png"),
-                              **window_glass(area, final.key, archive, record)})]
+        surface = Image.open(final.path)
+        entry = {"replaces": {"archive": archive, "record": record}, **world_png(surface, f"{MEDIA}/{area}/{final.key}.png")}
+        return [("surfaces", {**entry, **window_glass(area, final.key, archive, record, surface, entry)})]
     return {key: Unit([final], lambda final=final: build(final))
             for key in sorted(ledger(area)) for final in [Final(area, key, held.get(key, ART / "generated" / area / f"{key}.png"))]}
 
@@ -1175,7 +1200,7 @@ def main(argv=None):
     placed = lambda: [(identity, entry) for identity, entry in placed_entries(payload) if "placement" in entry]
     for identity, entry in placed():
         KEPT[identity], KEPT_ART[identity], KEPT_MASK[identity] = entry["placement"], entry.get("sha256"), entry.get("mask")
-    KEPT_GLASS.update({(entry["replaces"]["archive"], entry["replaces"]["record"]): entry["glass"]
+    KEPT_GLASS.update({(entry["replaces"]["archive"], entry["replaces"]["record"]): (entry["glass"], entry["sha256"])
                        for entry in payload["artReplacements"].get("surfaces", []) if "glass" in entry})
     with tempfile.TemporaryDirectory() as stage:
         STAGE = Path(stage)
