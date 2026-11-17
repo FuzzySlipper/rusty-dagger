@@ -163,6 +163,8 @@ internal sealed record DaggerfallQuestInstanceSave(string InstanceId, string Sou
     public bool? Succeeded { get; init; }
     /// <summary>Absolute game seconds when a terminal instance entered its one-week tombstone retention period.</summary>
     public long? TombstoneAtSeconds { get; init; }
+    /// <summary>Absolute game seconds when the quest started, which dates a message read outside the journal (Quest.questStartTime).</summary>
+    public long StartedAtSeconds { get; init; }
     internal void ValidateShape()
     {
         if (string.IsNullOrWhiteSpace(InstanceId) || string.IsNullOrWhiteSpace(SourceFile) || string.IsNullOrWhiteSpace(DefinitionName))
@@ -567,6 +569,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         ParentInstanceId = saved.ParentInstanceId;
         Succeeded = saved.Succeeded;
         TombstoneAtSeconds = saved.TombstoneAtSeconds;
+        StartedAtSeconds = saved.StartedAtSeconds;
         Tasks = saved.Tasks.Select(task => new DaggerfallQuestTaskRuntimeState(task)).ToArray();
         Clocks = [.. saved.Clocks];
         Placements = [.. saved.Placements];
@@ -588,6 +591,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
     internal string? ParentInstanceId { get; }
     internal bool? Succeeded { get; set; }
     internal long? TombstoneAtSeconds { get; set; }
+    internal long StartedAtSeconds { get; }
     internal DaggerfallQuestTaskRuntimeState[] Tasks { get; }
     internal DaggerfallQuestClockState[] Clocks { get; set; }
 
@@ -631,6 +635,7 @@ internal sealed class DaggerfallQuestRuntimeInstance
         ParentInstanceId = ParentInstanceId,
         Succeeded = Succeeded,
         TombstoneAtSeconds = TombstoneAtSeconds,
+        StartedAtSeconds = StartedAtSeconds,
     };
 
     private static DaggerfallQuestResourceState[] CopyResources(IEnumerable<DaggerfallQuestResourceState> resources) =>
@@ -794,6 +799,9 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
     bool IDaggerfallQuestTaskLifecycle.CureLycanthropy() => (_cureLycanthropy ?? throw new NotSupportedException("No permanent curse owner is composed."))();
 
     internal void BindRuntime(DaggerfallQuestRuntime runtime) => _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+    /// <summary>The session's calendar, which dates each quest as it starts.</summary>
+    private Func<World.DaggerfallCalendar>? _calendar;
+    internal void BindCalendar(Func<World.DaggerfallCalendar> calendar) => _calendar = calendar ?? throw new ArgumentNullException(nameof(calendar));
     internal void BindTextContext(Func<DaggerfallQuestRuntimeInstance, DaggerfallQuestMessageContext> context) =>
         _textContext = context ?? throw new ArgumentNullException(nameof(context));
 
@@ -962,7 +970,8 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         if (instance.Tasks.Length != 0) throw new ArgumentException("A newly started quest instance cannot supply prior task state.", nameof(instance));
         DaggerfallQuestTaskProgram program = Program(instance.SourceFile);
         DaggerfallQuestClockDefinition[] clocks = DaggerfallQuestClockCompiler.Compile(_definitions.QuestSources.Resolve(instance.SourceFile));
-        DaggerfallQuestRuntimeInstance started = new(instance with { Tasks = DaggerfallQuestTaskCompiler.InitialState(program), Clocks = [.. clocks.Select(clock =>
+        DaggerfallQuestRuntimeInstance started = new(instance with { Tasks = DaggerfallQuestTaskCompiler.InitialState(program),
+            StartedAtSeconds = _calendar?.Invoke().ToAbsoluteSeconds() ?? instance.StartedAtSeconds, Clocks = [.. clocks.Select(clock =>
         {
             long duration = DaggerfallQuestClockCompiler.UsesTravelDuration(clock) ? ResolveTravelClockSeconds(instance.Resources, null)
                 : clock.MaximumSeconds == clock.MinimumSeconds ? clock.MinimumSeconds

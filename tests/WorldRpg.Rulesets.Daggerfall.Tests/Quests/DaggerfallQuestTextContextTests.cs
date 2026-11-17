@@ -86,12 +86,8 @@ public sealed class DaggerfallQuestTextContextTests
         DaggerfallQuestTaskProgram program = DaggerfallQuestTaskCompiler.Compile(source);
         DaggerfallQuestRuntimeInstance instance = new(new DaggerfallQuestInstanceSave("quest:1", source.SourceFile, source.Name,
             DaggerfallQuestLifecycle.Active, null, [], []) { Tasks = DaggerfallQuestTaskCompiler.InitialState(program) }, program);
-        DaggerfallTextStoryContext Words(bool female) => DaggerfallTextContext.Empty.Story with
-        {
-            Pronoun = female ? "she" : "he", ObjectPronoun = female ? "her" : "him",
-            ReflexivePronoun = female ? "herself" : "himself", PossessiveAdjective = female ? "her" : "his",
-        };
-        DaggerfallQuestMessageContext context = new(DaggerfallTextContext.Empty with { Story = Words(false) },
+        DaggerfallQuestPronouns Words(bool female) => female ? new("she", "her", "herself", "her") : new("he", "him", "himself", "his");
+        DaggerfallQuestMessageContext context = new(DaggerfallTextContext.Empty with { Story = Words(false).Story(DaggerfallTextContext.Empty.Story) },
             new Dictionary<string, DaggerfallQuestResourceTextContext>(StringComparer.Ordinal)
             {
                 ["woman"] = new(Name: "Agnes", NameTwo: "The Rusty Guard") { Pronouns = Words(true), Direction = "north" },
@@ -142,5 +138,58 @@ public sealed class DaggerfallQuestTextContextTests
         Assert.Equal("Nameless", new DaggerfallQuestTextContext(definitions, sites, new DaggerfallNpcRegistry(), new DaggerfallItemInstances(),
             _ => throw new InvalidOperationException("No live item is bound."), () => current, () => null, SummonRandom.Create(),
             _ => null, (_, _) => null).For(instance).Text.Player.GuildTitle);
+    }
+
+    [Fact]
+    public void A_finished_journal_keeps_its_pronouns_and_directions_through_a_save()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        DaggerfallQuestSourceDefinition source = new("kept", "", "kept.txt", DaggerfallQuestDisposition.Compiled,
+            [new(1000, ["_woman_ kept to %g2self at __woman_, %di of here."])], [], []);
+        Dictionary<string, DaggerfallQuestSourceDefinition> sources = new() { ["kept.txt"] = source };
+        DaggerfallQuestTaskProgram program = DaggerfallQuestTaskCompiler.Compile(source);
+        DaggerfallQuestRuntimeInstance instance = new(new DaggerfallQuestInstanceSave("quest:1", source.SourceFile, source.Name,
+            DaggerfallQuestLifecycle.Active, null, [], []) { Tasks = DaggerfallQuestTaskCompiler.InitialState(program) }, program);
+        DaggerfallQuestMessageContext context = new(DaggerfallTextContext.Empty with { Story = new DaggerfallQuestPronouns("he", "him", "himself", "his").Story(DaggerfallTextContext.Empty.Story) },
+            new Dictionary<string, DaggerfallQuestResourceTextContext>(StringComparer.Ordinal)
+            {
+                ["woman"] = new(Name: "Agnes", NameTwo: "The Rusty Guard") { Pronouns = new("she", "her", "herself", "her"), Direction = "north" },
+            });
+        DaggerfallQuestMessages messages = new(new DaggerfallTextResolver(definitions.Text), sources);
+        messages.Log(instance, 1000, 0, 0);
+        Assert.True(messages.RetainJournal(instance, _ => context));
+
+        string json = System.Text.Json.JsonSerializer.Serialize(messages.Capture(), typeof(DaggerfallQuestMessagesSave), DaggerfallSaveJsonContext.Default);
+        DaggerfallQuestMessages restored = new(new DaggerfallTextResolver(definitions.Text), sources);
+        restored.Restore((DaggerfallQuestMessagesSave)System.Text.Json.JsonSerializer.Deserialize(json, typeof(DaggerfallQuestMessagesSave), DaggerfallSaveJsonContext.Default)!,
+            new Dictionary<string, DaggerfallQuestRuntimeInstance>());
+
+        DaggerfallQuestRenderedMessage entry = Assert.Single(restored.RenderJournal([]));
+        Assert.Empty(entry.Diagnostics);
+        Assert.Equal("Agnes kept to herself at The Rusty Guard, north of here.", entry.Text);
+    }
+
+    [Fact]
+    public void A_letter_is_dated_by_its_quests_start_after_time_passes_and_after_a_save()
+    {
+        using var fixture = SourceBackedGuildBankSessionFixture.Create();
+        fixture.Random = SummonRandom.Create();
+        using var game = fixture.Start(fixture.KnightlyProfile);
+        game.State.RacialOverrides.Select(DaggerfallRacialKind.Vampire, "letter-clan", 0, vampireClan: 153);
+        long questor = game.State.Npcs.All.First(value => value.Appearance.FactionId == 368).DurableId;
+        game.AdvanceElapsedTime(3 * 86400);
+        string started = game.CurrentTextContext().Calendar.Date!;
+        var source = TestPayload.Definitions.QuestSources.Resolve("$CUREVAM.txt");
+        DaggerfallQuestInstanceSave quest = game.State.Quests.Start(new("letter:1", source.SourceFile, source.Name, DaggerfallQuestLifecycle.Active, null, [], [])
+            { QuestorId = questor, FactionId = 368 });
+        string Letter(DaggerfallQuestInstanceSave save) => game.State.Quests.RenderMessage(save, 1020, DaggerfallQuestMessageDelivery.Letter, 0).Text;
+        string written = Letter(quest);
+        Assert.StartsWith(started, written.TrimStart());
+
+        game.AdvanceElapsedTime(5 * 86400);
+        Assert.NotEqual(started, game.CurrentTextContext().Calendar.Date);
+        Assert.Equal(written, Letter(quest));
+        string json = System.Text.Json.JsonSerializer.Serialize(quest, typeof(DaggerfallQuestInstanceSave), DaggerfallSaveJsonContext.Default);
+        Assert.Equal(written, Letter((DaggerfallQuestInstanceSave)System.Text.Json.JsonSerializer.Deserialize(json, typeof(DaggerfallQuestInstanceSave), DaggerfallSaveJsonContext.Default)!));
     }
 }

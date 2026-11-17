@@ -96,9 +96,8 @@ internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitio
                 MaleName = Name(instance, "male", false),
                 Pronoun = Internal("pronounHe"), ObjectPronoun = Internal("pronounHim"),
                 ReflexivePronoun = Internal("pronounHimself"), PossessiveAdjective = Internal("pronounHis"),
-                // The journal dates %qdt by its entry; a letter is dated the day it is read, since an instance keeps no
-                // start date for the donor's QuestDate to fall back to.
-                QuestDate = text.Story.QuestDate ?? text.Calendar.Date,
+                // The journal dates %qdt by its entry; any other message by the quest's start (Quest.GetCurrentLogMessageTime).
+                QuestDate = text.Story.QuestDate ?? World.DaggerfallCalendar.FromAbsoluteSeconds(instance.StartedAtSeconds).DescribeDate(),
             },
         }, resources);
     }
@@ -131,11 +130,8 @@ internal sealed class DaggerfallQuestTextContext(DaggerfallDefinitions definitio
             way = town.Name + Internal("comma") + way;
         return text with
         {
-            Pronouns = DaggerfallTextContext.Empty.Story with
-            {
-                Pronoun = Internal(female ? "pronounShe" : "pronounHe"), ObjectPronoun = Internal(female ? "pronounHer" : "pronounHim"),
-                ReflexivePronoun = Internal(female ? "pronounHerself" : "pronounHimself"), PossessiveAdjective = Internal(female ? "pronounHer2" : "pronounHis"),
-            },
+            Pronouns = new(Internal(female ? "pronounShe" : "pronounHe"), Internal(female ? "pronounHer" : "pronounHim"),
+                Internal(female ? "pronounHerself" : "pronounHimself"), Internal(female ? "pronounHer2" : "pronounHis")),
             Direction = way,
         };
     }

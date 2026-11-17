@@ -660,6 +660,7 @@ internal sealed partial class DaggerfallSession
                     ? DaggerfallGuildRankTitles.Title(faction, membership.Rank, State.Character.Identity.Gender == DaggerfallCharacterGender.Female) : null,
                 (place, building) => DialogueDirections.QuestPlace(place, building));
             State.Quests.BindTextContext(_questTexts.For);
+            State.Quests.BindCalendar(() => _time.Calendar);
             DaggerfallNames questNames = new(definitions, engine.Random);
             npcs.BindNames(npc => questNames.NpcName(npc.Appearance, npc.Site.Region));
             var questPlaces = new DaggerfallQuestPlaceAllocator(definitions, _site, engine.Random,

@@ -62,12 +62,20 @@ internal sealed record DaggerfallQuestResourceTextContext(
 {
     /// <summary>
     /// The words %g, %g2, %g2self and %g3 read once a message has named this resource: its person's gender, the male
-    /// words for anything else (QuestMCP's pronouns of the last resource referenced). Read again with each render.
+    /// words for anything else (QuestMCP's pronouns of the last resource referenced). A live quest reads them again with
+    /// each render; a finished quest's journal keeps the ones it ended with.
     /// </summary>
-    [JsonIgnore] public DaggerfallTextStoryContext? Pronouns { get; init; }
+    public DaggerfallQuestPronouns? Pronouns { get; init; }
 
     /// <summary>The way to this place from the player, which %di reads once a message has named it (QuestMCP.Direction).</summary>
-    [JsonIgnore] public string? Direction { get; init; }
+    public string? Direction { get; init; }
+}
+
+/// <summary>A resource's pronouns: he/she, him/her, himself/herself, his/her.</summary>
+internal sealed record DaggerfallQuestPronouns(string Subject, string Object, string Reflexive, string Possessive)
+{
+    internal DaggerfallTextStoryContext Story(DaggerfallTextStoryContext story) =>
+        story with { Pronoun = Subject, ObjectPronoun = Object, ReflexivePronoun = Reflexive, PossessiveAdjective = Possessive };
 }
 
 /// <summary>The only text values a quest delivery may read: global session context and explicit bound resources.</summary>
@@ -531,7 +539,7 @@ internal sealed class DaggerfallQuestMessages
                 string spelled = match.Value.ToLowerInvariant();
                 DaggerfallTextContext referenced = context.Text with
                 {
-                    Story = lastResource?.Pronouns ?? context.Text.Story,
+                    Story = lastResource?.Pronouns?.Story(context.Text.Story) ?? context.Text.Story,
                     Location = context.Text.Location with { Direction = lastPlace?.Direction },
                 };
                 var lastText = _text.ResolveRaw(spelled, key, referenced);
