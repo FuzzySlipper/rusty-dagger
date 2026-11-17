@@ -13,11 +13,16 @@ internal sealed class DaggerfallQuestTable(IReadOnlyList<DaggerfallQuestTableRow
         .ToFrozenDictionary(group => group.Key, group => group.First().Id, StringComparer.OrdinalIgnoreCase);
 }
 
+/// <param name="RegionTemples">
+/// The temple faction each region's quests swear by in %god, by region index; 0 where the region has none
+/// (Daggerfall Unity's MapsFile.RegionTemples).
+/// </param>
 internal sealed record DaggerfallQuestTables(DaggerfallQuestTable Globals, DaggerfallQuestTable StaticMessages,
     DaggerfallQuestPlaces Places, DaggerfallQuestTable Sounds,
-    DaggerfallQuestTable Diseases, DaggerfallQuestTable Spells, DaggerfallQuestActorItemTables ActorItemTables)
+    DaggerfallQuestTable Diseases, DaggerfallQuestTable Spells, DaggerfallQuestActorItemTables ActorItemTables,
+    IReadOnlyList<int> RegionTemples)
 {
-    internal static DaggerfallQuestTables None { get; } = new(new([]), new([]), new([]), new([]), new([]), new([]), new(new([]), new([]), new([])));
+    internal static DaggerfallQuestTables None { get; } = new(new([]), new([]), new([]), new([]), new([]), new([]), new(new([]), new([]), new([])), []);
 }
 
 internal sealed record DaggerfallQuestPlace(string Name, string CanonicalName, int P1, int P2, int P3,

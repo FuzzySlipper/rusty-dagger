@@ -105,7 +105,8 @@ internal sealed record DaggerfallTextRenderResult(string Text, IReadOnlyList<Dag
 /// <summary>Resolves normalized base-language values for thin UI presentation with one explicit context.</summary>
 internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
 {
-    private static readonly SearchValues<char> MacroTerminators = SearchValues.Create(" %.,'?!/(){}[]\";:|".AsSpan());
+    // The donor's terminators (MacroHelper.MACRO_TERMINATORS) and a line break, since the donor expands each line on its own.
+    private static readonly SearchValues<char> MacroTerminators = SearchValues.Create(" %.,'?!/(){}[]\";:|\n".AsSpan());
 
     internal DaggerfallTextRenderResult Resolve(DaggerfallTextKey key, DaggerfallTextContext context) => Resolve(key, context, subrecord: null);
 

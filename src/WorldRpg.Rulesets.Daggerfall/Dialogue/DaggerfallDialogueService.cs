@@ -665,7 +665,7 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
             .Where(value => value.Type == 7 && value.Region == site.Id.Region)
             .OrderBy(value => value.Id)
             .FirstOrDefault();
-        string? oath = ResolveOath(faction?.Race ?? province?.Race);
+        string? oath = DaggerfallOaths.Of(_definitions, npc.Appearance.FactionId, site?.Id.Region).FirstOrDefault();
         return new(
             _currentText?.Invoke().Player ?? DaggerfallPlayerTextContext.For(_definitions, player, _playerStats),
             CalendarContext(),
@@ -685,14 +685,6 @@ internal sealed class DaggerfallDialogueService : IDaggerfallNpcActivationOwner
     }
 
     private DaggerfallTextCalendarContext CalendarContext() => DaggerfallCalendarTextContext.For(_definitions, _calendar());
-
-    private string? ResolveOath(int? race)
-    {
-        if (race is not int donorRace || donorRace < 0) return null;
-        DaggerfallTextKey key = Resource(201 + donorRace);
-        if (_definitions.Text.Resolve(key, out DaggerfallTextValue? value) != DaggerfallTextResolution.Resolved) return null;
-        return value!.TextRuns.FirstOrDefault();
-    }
 
     private bool TryReadOpeningLine(TalkSession session, DaggerfallNpc npc, DaggerfallSiteRecord? site,
         out string? opening, out IReadOnlyList<string> diagnostics)

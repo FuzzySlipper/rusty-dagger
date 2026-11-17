@@ -171,7 +171,14 @@ internal static class DaggerfallQuestContent
             if (!places.Contains(place.CanonicalName)) diagnostics.Add($"Quest place '{place.Name}' has missing canonical identity '{place.CanonicalName}'.");
         return new(Table("globals", tables.Globals, true), Table("staticMessages", tables.StaticMessages, false), new(tables.Places),
             Table("sounds", tables.Sounds, false), Table("diseases", tables.Diseases, false), Table("spells", tables.Spells, false),
-            new(new(tables.ActorItemTables.Items), new(tables.ActorItemTables.Factions), new(tables.ActorItemTables.Foes)));
+            new(new(tables.ActorItemTables.Items), new(tables.ActorItemTables.Factions), new(tables.ActorItemTables.Foes)), RegionTemples());
+
+        IReadOnlyList<int> RegionTemples()
+        {
+            foreach (int temple in tables.RegionTemples)
+                if (temple < 0) diagnostics.Add($"Quest table 'regionTemples' names the invalid temple faction {temple}.");
+            return [.. tables.RegionTemples];
+        }
 
         DaggerfallQuestTable Table(string key, IReadOnlyList<DaggerfallQuestTableRow> rows, bool globals)
         {
@@ -279,7 +286,7 @@ internal sealed record DaggerfallQuestCatalogDocument(IReadOnlyList<DaggerfallQu
 
 internal sealed record DaggerfallQuestTablesDocument(IReadOnlyList<DaggerfallQuestTableRow> Globals, IReadOnlyList<DaggerfallQuestTableRow> StaticMessages,
     IReadOnlyList<DaggerfallQuestPlace> Places, IReadOnlyList<DaggerfallQuestTableRow> Sounds, IReadOnlyList<DaggerfallQuestTableRow> Diseases,
-    IReadOnlyList<DaggerfallQuestTableRow> Spells, DaggerfallQuestActorItemTablesDocument ActorItemTables);
+    IReadOnlyList<DaggerfallQuestTableRow> Spells, DaggerfallQuestActorItemTablesDocument ActorItemTables, IReadOnlyList<int> RegionTemples);
 
 internal sealed record DaggerfallQuestActorItemTablesDocument(IReadOnlyList<DaggerfallQuestItemTableRow> Items,
     IReadOnlyList<DaggerfallQuestFactionTableRow> Factions, IReadOnlyList<DaggerfallQuestFoeTableRow> Foes);

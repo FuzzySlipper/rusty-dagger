@@ -906,10 +906,15 @@ internal sealed partial class DaggerfallQuestInstances : IDaggerfallQuestTaskLif
         return RegisterPrepared(instance);
     }
 
-    internal (string Text, IReadOnlyList<string> Diagnostics) RenderPreparedOffer(DaggerfallQuestInstanceSave prepared, int message)
+    internal (string Text, IReadOnlyList<string> Diagnostics) RenderPreparedOffer(DaggerfallQuestInstanceSave prepared, int message) =>
+        RenderMessage(prepared, message, DaggerfallQuestMessageDelivery.Popup, 0);
+
+    /// <summary>One of a quest's messages as the delivery would show it now, with the quest's text context.</summary>
+    internal (string Text, IReadOnlyList<string> Diagnostics) RenderMessage(DaggerfallQuestInstanceSave quest, int message,
+        DaggerfallQuestMessageDelivery delivery, int variant)
     {
-        var instance = new DaggerfallQuestRuntimeInstance(prepared, Program(prepared.SourceFile));
-        return Messages.RenderDelivery(instance, new(instance.InstanceId, message, DaggerfallQuestMessageDelivery.Popup, 0), _textContext(instance));
+        var instance = new DaggerfallQuestRuntimeInstance(quest, Program(quest.SourceFile));
+        return Messages.RenderDelivery(instance, new(instance.InstanceId, message, delivery, variant), _textContext(instance));
     }
 
     private DaggerfallQuestInstanceSave StartCore(DaggerfallQuestInstanceSave instance) => RegisterPrepared(PrepareCore(instance));

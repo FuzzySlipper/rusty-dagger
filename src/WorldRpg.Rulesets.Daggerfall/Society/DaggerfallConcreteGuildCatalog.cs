@@ -1,3 +1,4 @@
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Guilds;
@@ -228,6 +229,21 @@ internal static class DaggerfallConcreteGuildCatalog
     internal const int DibellaFactionId = 29;
     internal const int StendarrFactionId = 33;
     internal const int KynarethFactionId = 35;
+
+    /// <summary>
+    /// The eight Divines by their god faction, named as Daggerfall Unity's Temple.Divines names them (the faction
+    /// catalog spells Zenithar "Zen").
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<int, string> Divines = new Dictionary<int, string>
+    {
+        [ArkayFactionId] = "Arkay", [ZenitharFactionId] = "Zenithar", [MaraFactionId] = "Mara", [AkatoshFactionId] = "Akatosh",
+        [JulianosFactionId] = "Julianos", [DibellaFactionId] = "Dibella", [StendarrFactionId] = "Stendarr", [KynarethFactionId] = "Kynareth",
+    };
+
+    /// <summary>The Divine a god, temple or templar order faction serves: itself or its parent (Temple.GetDivine).</summary>
+    internal static string? DivineOf(DaggerfallFactionsSet factions, int faction) =>
+        Divines.TryGetValue(faction, out string? name) ? name
+            : factions.Factions.GetValueOrDefault(faction) is { } value ? Divines.GetValueOrDefault(value.Parent) : null;
 
     // Group-17 temple membership variants. The deity roots above remain their authored social
     // parents and are also the identities used by the current trainer policy map.

@@ -74,6 +74,6 @@ internal sealed class DaggerfallGuildAdmission(
         return new(accepted, accepted ? DaggerfallGuildProviderDenial.None : DaggerfallGuildProviderDenial.NotEligible,
             accepted ? "Welcome to the guild." : "You do not meet this guild's admission requirements.",
             TextResource: resource == 0 ? null : resource, GuildName: guild.DisplayName,
-            GodName: guild.ParentFactionId switch { 21 => "Arkay", 22 => "Zenithar", 24 => "Mara", 26 => "Akatosh", 27 => "Julianos", 29 => "Dibella", 33 => "Stendarr", 35 => "Kynareth", _ => null });
+            GodName: DaggerfallConcreteGuildCatalog.Divines.GetValueOrDefault(guild.ParentFactionId));
     }
 }
