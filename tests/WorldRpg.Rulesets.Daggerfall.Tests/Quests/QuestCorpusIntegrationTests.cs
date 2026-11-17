@@ -67,6 +67,20 @@ public sealed class QuestCorpusIntegrationTests
         Assert.True(failures.Count == 0, string.Join('\n', failures));
     }
 
+    /// <summary>The Impostor's meeting place allocated in the first town whose apothecary has quest markers.</summary>
+    private static DaggerfallQuestResourceState LocalApothecary(Rusty.Engine.IRandomService random)
+    {
+        var definitions = TestPayload.Definitions;
+        var blocks = DaggerfallBlocksContent.Read(TestContentFiles.ReadCopy(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/payloads/daggerfall.blocks.json")));
+        var town = definitions.Locations.Records.First(site => site.Exterior?.Buildings.Values.Any(building => building.Source.BuildingType == 0
+            && blocks.QuestMarkers.TryGetValue(new(building.Source.Id.SourceKey, building.Source.Id.Index), out var markers) && markers.Count > 0) == true);
+        var sites = new World.DaggerfallSiteContext(definitions.Locations, town.Id, null, []);
+        sites.AdmitBuildingNames(random, definitions, blocks);
+        var places = new DaggerfallQuestPlaceAllocator(definitions, sites, random, (_, _) => false, _ => "region", (_, _) => "residence");
+        var declared = definitions.QuestSources.Resources.Single(resource => resource.SourceFile == "A0C0XY04.txt" && resource.CanonicalId == "meetingplace");
+        return places.Allocate("local-apothecary", declared, [], []);
+    }
+
     /// <summary>
     /// The macros the corpus still leaves empty, which #10901 receives: each fixed one leaves this list, and any
     /// other that resolves empty fails the test. %qdt is here for the letters; a logged message is dated by its entry.
@@ -88,13 +102,11 @@ public sealed class QuestCorpusIntegrationTests
         {
             game.State.Quests.Restore(empty);
             var source = TestPayload.Definitions.QuestSources.Resolve(file);
-            DaggerfallQuestInstanceSave quest;
-            try
-            {
-                quest = game.State.Quests.Start(new("corpus:" + source.Name, file, source.Name, DaggerfallQuestLifecycle.Active, null, [], [])
-                    { QuestorId = questor, FactionId = 368 });
-            }
-            catch (NotSupportedException) when (file == "A0C0XY04.txt") { continue; } // No local apothecary here, as above.
+            // The Impostor needs a local apothecary this provider's town lacks; it starts with its meeting place already
+            // bound to one, as the allocation test above finds it.
+            DaggerfallQuestResourceState[] bound = file == "A0C0XY04.txt" ? [LocalApothecary(fixture.Random)] : [];
+            DaggerfallQuestInstanceSave quest = game.State.Quests.Start(new("corpus:" + source.Name, file, source.Name,
+                DaggerfallQuestLifecycle.Active, null, bound, []) { QuestorId = questor, FactionId = 368 });
             HashSet<int> logged = [.. source.Blocks.SelectMany(block => block.Lines)
                 .Select(line => System.Text.RegularExpressions.Regex.Match(line, @"\blog\s+(\d+)")).Where(match => match.Success)
                 .Select(match => int.Parse(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))];
