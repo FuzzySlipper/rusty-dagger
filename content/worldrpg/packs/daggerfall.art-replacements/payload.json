@@ -9637,6 +9637,12 @@
      "width": 74.4,
      "height": 130.0
     },
+    "placement": {
+     "mask": null,
+     "from": {
+      "mask": "hand"
+     }
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-235-record-022-frame-000.png",
      "byteLength": 2408,
@@ -9672,6 +9678,23 @@
      "width": 76.0,
      "height": 150.0
     },
+    "placement": {
+     "mask": {
+      "x": 37.0,
+      "y": 8.5,
+      "width": 36.5,
+      "height": 13.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.235.23.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-235-record-023-frame-000-mask.webp",
+     "byteLength": 326,
+     "sha256": "3bfe9df0411efc0426672c28a995387e2967f5e43e8808cfc0e45861183acda5"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-235-record-023-frame-000.png",
      "byteLength": 2717,
@@ -9706,6 +9729,23 @@
      "y": 12.8,
      "width": 69.4,
      "height": 149.2
+    },
+    "placement": {
+     "mask": {
+      "x": 37.0,
+      "y": 8.5,
+      "width": 36.5,
+      "height": 13.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.235.24.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-235-record-024-frame-000-mask.webp",
+     "byteLength": 322,
+     "sha256": "60e88b3dd2d622bac60a0b85313ecafdde4c3037e4cf10d25cc0015ce27afcf6"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-235-record-024-frame-000.png",
@@ -9811,6 +9851,23 @@
      "y": 12.6,
      "width": 68.2,
      "height": 148.8
+    },
+    "placement": {
+     "mask": {
+      "x": 37.0,
+      "y": 8.5,
+      "width": 36.5,
+      "height": 13.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.235.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-235-record-027-frame-000-mask.webp",
+     "byteLength": 330,
+     "sha256": "7384e32a115db78b31e765a54bbe6b6e7313c3f648b9c915bc7530784789e396"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-235-record-027-frame-000.png",
@@ -9951,6 +10008,23 @@
      "y": 13.2,
      "width": 73.0,
      "height": 157.6
+    },
+    "placement": {
+     "mask": {
+      "x": 37.0,
+      "y": 8.5,
+      "width": 36.5,
+      "height": 14.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.235.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-235-record-032-frame-000-mask.webp",
+     "byteLength": 334,
+     "sha256": "7582fb292e54f9b71d01b63c82c1c0ca72350a658d85cf7854a8b9135ac0a3d7"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-235-record-032-frame-000.png",
@@ -10546,6 +10620,23 @@
      "y": 11.2,
      "width": 71.2,
      "height": 143.8
+    },
+    "placement": {
+     "mask": {
+      "x": 37.0,
+      "y": 8.5,
+      "width": 36.5,
+      "height": 14.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.235.48.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-235-record-048-frame-000-mask.webp",
+     "byteLength": 354,
+     "sha256": "e8d2364539577c4b8ce0995b19bba947205c7f28a3488fd88e7435715e96b239"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-235-record-048-frame-000.png",
@@ -13172,6 +13263,12 @@
      "width": 75.8,
      "height": 128.8
     },
+    "placement": {
+     "mask": null,
+     "from": {
+      "mask": "hand"
+     }
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-236-record-022-frame-000.png",
      "byteLength": 1980,
@@ -13207,6 +13304,23 @@
      "width": 76.0,
      "height": 150.2
     },
+    "placement": {
+     "mask": {
+      "x": 35.75,
+      "y": 4.0,
+      "width": 38.25,
+      "height": 37.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.236.23.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-236-record-023-frame-000-mask.webp",
+     "byteLength": 438,
+     "sha256": "ee20ecfdaacbf2b2f720171874ede8de7067baf4ce44539ad599637eaf26a4a1"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-236-record-023-frame-000.png",
      "byteLength": 2512,
@@ -13241,6 +13355,23 @@
      "y": 12.8,
      "width": 68.4,
      "height": 150.4
+    },
+    "placement": {
+     "mask": {
+      "x": 35.75,
+      "y": 4.0,
+      "width": 38.25,
+      "height": 35.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.236.24.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-236-record-024-frame-000-mask.webp",
+     "byteLength": 434,
+     "sha256": "4b851deb0e043fe5438a669e3243670d059bb9e8a6afc9988a08cdc29d450e63"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-236-record-024-frame-000.png",
@@ -13346,6 +13477,23 @@
      "y": 12.8,
      "width": 67.0,
      "height": 152.0
+    },
+    "placement": {
+     "mask": {
+      "x": 35.75,
+      "y": 4.0,
+      "width": 38.25,
+      "height": 37.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.236.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-236-record-027-frame-000-mask.webp",
+     "byteLength": 436,
+     "sha256": "bbb6eca399ef1865df3ba031131f345f49069fa6bd55b55ddc012d346ce47b70"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-236-record-027-frame-000.png",
@@ -13486,6 +13634,23 @@
      "y": 13.2,
      "width": 71.8,
      "height": 156.6
+    },
+    "placement": {
+     "mask": {
+      "x": 35.75,
+      "y": 4.0,
+      "width": 35.75,
+      "height": 32.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.236.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-236-record-032-frame-000-mask.webp",
+     "byteLength": 434,
+     "sha256": "e37cdaf825f008a79ab924ce54d5f5d023c9afad2c7f68edcb9740285e63233b"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-236-record-032-frame-000.png",
@@ -14081,6 +14246,23 @@
      "y": 11.2,
      "width": 67.8,
      "height": 144.0
+    },
+    "placement": {
+     "mask": {
+      "x": 35.75,
+      "y": 4.0,
+      "width": 38.25,
+      "height": 38.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.236.48.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-236-record-048-frame-000-mask.webp",
+     "byteLength": 536,
+     "sha256": "899ce159224ae397ba074fbb8e8ca7eb3c7a2fcaa423081a707ade7c46b19967"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-236-record-048-frame-000.png",
@@ -16707,6 +16889,12 @@
      "width": 74.6,
      "height": 128.8
     },
+    "placement": {
+     "mask": null,
+     "from": {
+      "mask": "hand"
+     }
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-237-record-022-frame-000.png",
      "byteLength": 2002,
@@ -16742,6 +16930,23 @@
      "width": 73.6,
      "height": 151.2
     },
+    "placement": {
+     "mask": {
+      "x": 38.25,
+      "y": 6.5,
+      "width": 34.0,
+      "height": 30.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.237.23.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-237-record-023-frame-000-mask.webp",
+     "byteLength": 316,
+     "sha256": "3e884ca37f3dd0a79edc4798b0ebffc1f93a21003040facbb1dcd289660682c9"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-237-record-023-frame-000.png",
      "byteLength": 2531,
@@ -16776,6 +16981,23 @@
      "y": 12.8,
      "width": 68.4,
      "height": 151.2
+    },
+    "placement": {
+     "mask": {
+      "x": 38.25,
+      "y": 6.5,
+      "width": 33.0,
+      "height": 19.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.237.24.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-237-record-024-frame-000-mask.webp",
+     "byteLength": 306,
+     "sha256": "b6db78ab3d5acc767fee1f769890f8a14c4cb8f9939f703df66ed2c6deed3740"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-237-record-024-frame-000.png",
@@ -16881,6 +17103,23 @@
      "y": 12.8,
      "width": 67.0,
      "height": 152.0
+    },
+    "placement": {
+     "mask": {
+      "x": 38.25,
+      "y": 6.5,
+      "width": 33.0,
+      "height": 19.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.237.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-237-record-027-frame-000-mask.webp",
+     "byteLength": 304,
+     "sha256": "d07fdcf2e26a3f8982a243b44d9d5e2860873b105270965fa1de048e2abd5ef7"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-237-record-027-frame-000.png",
@@ -17021,6 +17260,23 @@
      "y": 13.2,
      "width": 71.0,
      "height": 157.4
+    },
+    "placement": {
+     "mask": {
+      "x": 38.25,
+      "y": 6.5,
+      "width": 32.75,
+      "height": 26.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.237.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-237-record-032-frame-000-mask.webp",
+     "byteLength": 346,
+     "sha256": "7e54d0dfb459f36b80bf36b458f231f202e8745204b523a4f0502cc4f407403f"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-237-record-032-frame-000.png",
@@ -17616,6 +17872,23 @@
      "y": 11.4,
      "width": 67.8,
      "height": 144.0
+    },
+    "placement": {
+     "mask": {
+      "x": 38.25,
+      "y": 6.5,
+      "width": 34.25,
+      "height": 32.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.237.48.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-237-record-048-frame-000-mask.webp",
+     "byteLength": 438,
+     "sha256": "849c6fe801504ed5f6e7ffcd885829dec930b70e5dc1f3aa582e9639c819a701"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-237-record-048-frame-000.png",
@@ -20242,6 +20515,12 @@
      "width": 76.6,
      "height": 129.4
     },
+    "placement": {
+     "mask": null,
+     "from": {
+      "mask": "hand"
+     }
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-238-record-022-frame-000.png",
      "byteLength": 2173,
@@ -20277,6 +20556,23 @@
      "width": 76.4,
      "height": 151.0
     },
+    "placement": {
+     "mask": {
+      "x": 38.75,
+      "y": 8.5,
+      "width": 30.0,
+      "height": 16.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.238.23.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-238-record-023-frame-000-mask.webp",
+     "byteLength": 270,
+     "sha256": "d00658af419f7b13d9abca3394f70cfec8199fbcf41f1295cdd298840635ac56"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-238-record-023-frame-000.png",
      "byteLength": 2373,
@@ -20311,6 +20607,23 @@
      "y": 12.6,
      "width": 68.6,
      "height": 150.8
+    },
+    "placement": {
+     "mask": {
+      "x": 38.75,
+      "y": 8.5,
+      "width": 30.0,
+      "height": 16.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.238.24.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-238-record-024-frame-000-mask.webp",
+     "byteLength": 264,
+     "sha256": "94d54ef7d91da8457c5f9b1e10f558899038aa6525e105953ffdb0a5336581ed"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-238-record-024-frame-000.png",
@@ -20416,6 +20729,23 @@
      "y": 12.4,
      "width": 67.8,
      "height": 149.4
+    },
+    "placement": {
+     "mask": {
+      "x": 38.75,
+      "y": 8.5,
+      "width": 30.0,
+      "height": 17.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.238.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-238-record-027-frame-000-mask.webp",
+     "byteLength": 272,
+     "sha256": "427546532506193a19b4fa56dccc5ab1eb4fb26bc048eb270ac3ffcdc506f8e7"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-238-record-027-frame-000.png",
@@ -20556,6 +20886,23 @@
      "y": 13.4,
      "width": 73.2,
      "height": 157.2
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 8.5,
+      "width": 29.5,
+      "height": 24.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.238.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-238-record-032-frame-000-mask.webp",
+     "byteLength": 314,
+     "sha256": "14b8a5c92c1871aea0b40bef9b94b9c60c40c30f9022b88ed1b0f51efb97b8f7"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-238-record-032-frame-000.png",
@@ -21151,6 +21498,23 @@
      "y": 11.2,
      "width": 71.2,
      "height": 144.0
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 8.5,
+      "width": 30.75,
+      "height": 31.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.238.48.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-238-record-048-frame-000-mask.webp",
+     "byteLength": 376,
+     "sha256": "73af5d5420a4c5226449b111c60af29cd0400015b8068832ed6b0a6bced33599"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-238-record-048-frame-000.png",
@@ -23812,6 +24176,23 @@
      "width": 70.0,
      "height": 150.0
     },
+    "placement": {
+     "mask": {
+      "x": 36.25,
+      "y": 5.75,
+      "width": 39.75,
+      "height": 31.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.239.23.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-239-record-023-frame-000-mask.webp",
+     "byteLength": 434,
+     "sha256": "fdfe1a0d7f3f70905d509b50eb78ba6cdba73c1a9469b9abb591f4ee17a350c5"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-239-record-023-frame-000.png",
      "byteLength": 2736,
@@ -23846,6 +24227,23 @@
      "y": 10.8,
      "width": 69.0,
      "height": 150.2
+    },
+    "placement": {
+     "mask": {
+      "x": 36.25,
+      "y": 5.75,
+      "width": 39.75,
+      "height": 31.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.239.24.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-239-record-024-frame-000-mask.webp",
+     "byteLength": 436,
+     "sha256": "b607977ff530f1b0e6d8a5a4df4525916ff3500671910c8ffc28f7d0b01763d1"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-239-record-024-frame-000.png",
@@ -23951,6 +24349,23 @@
      "y": 10.8,
      "width": 71.4,
      "height": 149.8
+    },
+    "placement": {
+     "mask": {
+      "x": 36.25,
+      "y": 5.75,
+      "width": 39.75,
+      "height": 34.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.239.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-239-record-027-frame-000-mask.webp",
+     "byteLength": 448,
+     "sha256": "665dd50d6c4b75c6799e759122fdd5d1d4d16de0d3b09513da700c64bbce406f"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-239-record-027-frame-000.png",
@@ -24091,6 +24506,23 @@
      "y": 10.6,
      "width": 72.6,
      "height": 158.4
+    },
+    "placement": {
+     "mask": {
+      "x": 36.25,
+      "y": 5.75,
+      "width": 39.75,
+      "height": 25.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.239.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-239-record-032-frame-000-mask.webp",
+     "byteLength": 418,
+     "sha256": "ba1c68711addaad5acb9334ac99421af55e80b9157237cddbbe4df38471da7d9"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-239-record-032-frame-000.png",
@@ -24581,6 +25013,23 @@
      "y": 9.4,
      "width": 71.0,
      "height": 139.4
+    },
+    "placement": {
+     "mask": {
+      "x": 36.25,
+      "y": 5.75,
+      "width": 39.75,
+      "height": 31.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.239.47.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-239-record-047-frame-000-mask.webp",
+     "byteLength": 510,
+     "sha256": "db69e31dcf4832d78f3cb37ee9afa67c6d8e2d6e918e38394bb3e80c174d704e"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-239-record-047-frame-000.png",
@@ -27277,6 +27726,23 @@
      "width": 78.4,
      "height": 150.0
     },
+    "placement": {
+     "mask": {
+      "x": 38.0,
+      "y": 5.75,
+      "width": 36.0,
+      "height": 32.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.240.23.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-240-record-023-frame-000-mask.webp",
+     "byteLength": 408,
+     "sha256": "a91596926818871f45585c1b2703ce03a089764855f41afed6b13a372f272642"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-240-record-023-frame-000.png",
      "byteLength": 2258,
@@ -27311,6 +27777,23 @@
      "y": 11.0,
      "width": 68.6,
      "height": 149.8
+    },
+    "placement": {
+     "mask": {
+      "x": 38.0,
+      "y": 5.75,
+      "width": 36.0,
+      "height": 33.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.240.24.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-240-record-024-frame-000-mask.webp",
+     "byteLength": 408,
+     "sha256": "f6f62e900937001ccf318cb8d4c771a7f2e0e311270e9b2869b0af59c57b4a07"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-240-record-024-frame-000.png",
@@ -27416,6 +27899,23 @@
      "y": 10.8,
      "width": 69.2,
      "height": 149.8
+    },
+    "placement": {
+     "mask": {
+      "x": 38.0,
+      "y": 5.75,
+      "width": 36.0,
+      "height": 34.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.240.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-240-record-027-frame-000-mask.webp",
+     "byteLength": 422,
+     "sha256": "bc94eb0cf37dcf04a76e16bccff93f06bf4fcb7f720cec78b70fd40c079e624a"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-240-record-027-frame-000.png",
@@ -27556,6 +28056,23 @@
      "y": 10.4,
      "width": 68.2,
      "height": 158.4
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 5.75,
+      "width": 34.75,
+      "height": 24.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.240.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-240-record-032-frame-000-mask.webp",
+     "byteLength": 358,
+     "sha256": "2530496a486105268b7ae11d9b9ca6f6a3e5eb1e2bedb1f9fd50ce16182f3460"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-240-record-032-frame-000.png",
@@ -28046,6 +28563,23 @@
      "y": 9.2,
      "width": 70.4,
      "height": 139.8
+    },
+    "placement": {
+     "mask": {
+      "x": 37.75,
+      "y": 5.75,
+      "width": 36.25,
+      "height": 34.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.240.47.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-240-record-047-frame-000-mask.webp",
+     "byteLength": 466,
+     "sha256": "1e0ab5330807d643c410be16a86332ddd77564a87f29244bff11fbc64f4d7532"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-240-record-047-frame-000.png",
@@ -30742,6 +31276,23 @@
      "width": 69.2,
      "height": 150.2
     },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 6.5,
+      "width": 37.75,
+      "height": 31.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.241.23.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-241-record-023-frame-000-mask.webp",
+     "byteLength": 378,
+     "sha256": "898e5700bac51a1f410543482fa8b4e8b7c387e2976535add95c6f4961f3984d"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-241-record-023-frame-000.png",
      "byteLength": 2089,
@@ -30776,6 +31327,23 @@
      "y": 10.6,
      "width": 68.2,
      "height": 150.0
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 6.5,
+      "width": 37.75,
+      "height": 31.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.241.24.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-241-record-024-frame-000-mask.webp",
+     "byteLength": 382,
+     "sha256": "21c293a6342ce7ef48a9727cd8b53de59a41f13442a0301fa8d27f87e779f4d9"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-241-record-024-frame-000.png",
@@ -30881,6 +31449,23 @@
      "y": 10.6,
      "width": 69.2,
      "height": 149.8
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 6.5,
+      "width": 37.75,
+      "height": 35.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.241.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-241-record-027-frame-000-mask.webp",
+     "byteLength": 366,
+     "sha256": "ea7db75471f9730b3be4d07b9aee9264d4decac5dacd2a2fc5c549e7e17c9e95"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-241-record-027-frame-000.png",
@@ -31021,6 +31606,23 @@
      "y": 10.6,
      "width": 69.0,
      "height": 158.4
+    },
+    "placement": {
+     "mask": {
+      "x": 40.25,
+      "y": 6.5,
+      "width": 35.75,
+      "height": 23.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.241.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-241-record-032-frame-000-mask.webp",
+     "byteLength": 314,
+     "sha256": "2d84cbeb8e3d33931d421bffeb84463efe527ac888b30415ecdbaaa28cbb5f68"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-241-record-032-frame-000.png",
@@ -31511,6 +32113,23 @@
      "y": 9.4,
      "width": 70.4,
      "height": 139.6
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 6.5,
+      "width": 37.75,
+      "height": 33.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.241.47.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-241-record-047-frame-000-mask.webp",
+     "byteLength": 432,
+     "sha256": "3221fbcb6cf3751506bac268ab4bc6999093eee9cc49d813686c96a1abaa534c"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-241-record-047-frame-000.png",
@@ -34207,6 +34826,23 @@
      "width": 78.4,
      "height": 150.0
     },
+    "placement": {
+     "mask": {
+      "x": 39.25,
+      "y": 9.0,
+      "width": 34.75,
+      "height": 28.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.242.23.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-242-record-023-frame-000-mask.webp",
+     "byteLength": 258,
+     "sha256": "e3db2dec588fe64caea9a38a6a7c4234d7ebcbce161f93f1ee6268a2469fd5ed"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-242-record-023-frame-000.png",
      "byteLength": 2624,
@@ -34241,6 +34877,23 @@
      "y": 11.0,
      "width": 68.8,
      "height": 149.8
+    },
+    "placement": {
+     "mask": {
+      "x": 38.0,
+      "y": 9.0,
+      "width": 36.0,
+      "height": 35.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.242.24.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-242-record-024-frame-000-mask.webp",
+     "byteLength": 340,
+     "sha256": "7f4a30b1624be29587f8cecab9c83c73e1186e4dfd7675ed84fbe0864d573e0b"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-242-record-024-frame-000.png",
@@ -34346,6 +34999,23 @@
      "y": 10.8,
      "width": 71.0,
      "height": 149.8
+    },
+    "placement": {
+     "mask": {
+      "x": 38.0,
+      "y": 9.0,
+      "width": 36.0,
+      "height": 35.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.242.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-242-record-027-frame-000-mask.webp",
+     "byteLength": 284,
+     "sha256": "c60daa25ee4f24614f33bf47aa9976d0d8b62693e929b2ae5358f1c433ee0b7e"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-242-record-027-frame-000.png",
@@ -34486,6 +35156,23 @@
      "y": 10.4,
      "width": 68.8,
      "height": 158.8
+    },
+    "placement": {
+     "mask": {
+      "x": 44.5,
+      "y": 9.0,
+      "width": 29.0,
+      "height": 16.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.242.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-242-record-032-frame-000-mask.webp",
+     "byteLength": 234,
+     "sha256": "65e4278a2112a19289970f39fabdc946fd532ad11a2074faa6b124d2b3d0299c"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-242-record-032-frame-000.png",
@@ -34976,6 +35663,23 @@
      "y": 9.2,
      "width": 70.6,
      "height": 140.4
+    },
+    "placement": {
+     "mask": {
+      "x": 37.25,
+      "y": 9.0,
+      "width": 36.75,
+      "height": 33.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.242.47.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-242-record-047-frame-000-mask.webp",
+     "byteLength": 400,
+     "sha256": "680b5f7dd82849311f02e4dc56ea17f124255a76a5e56d1fac2eb680038e29e9"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-242-record-047-frame-000.png",
@@ -37388,6 +38092,23 @@
      "width": 28.6,
      "height": 25.6
     },
+    "placement": {
+     "mask": {
+      "x": 36.25,
+      "y": 5.75,
+      "width": 39.75,
+      "height": 31.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.245.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-027-frame-000-mask.webp",
+     "byteLength": 610,
+     "sha256": "29059f6d561a9d3091b58ee10056db7c750aad291dc54c2068cdf070ec8c58ed"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-027-frame-000.png",
      "byteLength": 946,
@@ -37409,6 +38130,23 @@
      "y": 8.4,
      "width": 20.6,
      "height": 25.8
+    },
+    "placement": {
+     "mask": {
+      "x": 36.25,
+      "y": 5.75,
+      "width": 39.75,
+      "height": 28.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.245.28.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-028-frame-000-mask.webp",
+     "byteLength": 532,
+     "sha256": "958bb5ecf877dbd057a79a010a894a20ab5a6d3f6ef59b6f0eaf43ea76bc449c"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-028-frame-000.png",
@@ -37444,6 +38182,23 @@
      "y": 10.0,
      "width": 22.2,
      "height": 28.8
+    },
+    "placement": {
+     "mask": {
+      "x": 36.25,
+      "y": 5.75,
+      "width": 39.75,
+      "height": 32.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.245.29.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-029-frame-000-mask.webp",
+     "byteLength": 580,
+     "sha256": "ab9339af03cc33e961ce9ae866e4be66dcf66bfedda1f0fe802acf59934ecd59"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-029-frame-000.png",
@@ -37502,6 +38257,23 @@
      "width": 26.0,
      "height": 35.0
     },
+    "placement": {
+     "mask": {
+      "x": 36.25,
+      "y": 10.0,
+      "width": 39.75,
+      "height": 28.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.245.30.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-030-frame-000-mask.webp",
+     "byteLength": 576,
+     "sha256": "873524f9dbd4fdce617ede1e29a1e287a4b37adc5723dfa374cef835c80a0fb7"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-030-frame-000.png",
      "byteLength": 1042,
@@ -37523,6 +38295,23 @@
      "y": 3.2,
      "width": 24.6,
      "height": 38.4
+    },
+    "placement": {
+     "mask": {
+      "x": 36.25,
+      "y": 8.75,
+      "width": 39.75,
+      "height": 32.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.245.31.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-031-frame-000-mask.webp",
+     "byteLength": 586,
+     "sha256": "ed1ad29a9214c3ec7bbe0a2b7a87283025a915538572c1860023d28467b34ab9"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-031-frame-000.png",
@@ -37558,6 +38347,23 @@
      "y": 9.6,
      "width": 41.8,
      "height": 31.6
+    },
+    "placement": {
+     "mask": {
+      "x": 36.25,
+      "y": 5.75,
+      "width": 39.75,
+      "height": 34.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.245.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-032-frame-000-mask.webp",
+     "byteLength": 596,
+     "sha256": "dfeaf87091e0c99164b658ab91d11c5c6d82d1d9e48a7e34d0328c4083a1761c"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-245-record-032-frame-000.png",
@@ -38592,6 +39398,23 @@
      "width": 30.4,
      "height": 30.4
     },
+    "placement": {
+     "mask": {
+      "x": 37.75,
+      "y": 5.75,
+      "width": 36.25,
+      "height": 33.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.246.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-027-frame-000-mask.webp",
+     "byteLength": 538,
+     "sha256": "394f698365dadb8ce333100f7e76e97b8088d92a6ac438a267c78562cf9e9215"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-027-frame-000.png",
      "byteLength": 996,
@@ -38613,6 +39436,23 @@
      "y": 8.2,
      "width": 29.0,
      "height": 28.8
+    },
+    "placement": {
+     "mask": {
+      "x": 37.75,
+      "y": 5.75,
+      "width": 36.25,
+      "height": 30.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.246.28.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-028-frame-000-mask.webp",
+     "byteLength": 464,
+     "sha256": "f0a212fdae742d051383f6705692023bcdcdc6eb11343837e039c24cf1caba4a"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-028-frame-000.png",
@@ -38648,6 +39488,23 @@
      "y": 8.2,
      "width": 23.6,
      "height": 31.0
+    },
+    "placement": {
+     "mask": {
+      "x": 37.75,
+      "y": 5.75,
+      "width": 36.25,
+      "height": 32.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.246.29.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-029-frame-000-mask.webp",
+     "byteLength": 468,
+     "sha256": "61e9719b6b81d89e96a0d0ffecc6f21e6f5f7e83fcdaf2602bcb7ca653fe0c1e"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-029-frame-000.png",
@@ -38706,6 +39563,23 @@
      "width": 29.6,
      "height": 37.2
     },
+    "placement": {
+     "mask": {
+      "x": 37.75,
+      "y": 7.5,
+      "width": 36.25,
+      "height": 31.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.246.30.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-030-frame-000-mask.webp",
+     "byteLength": 516,
+     "sha256": "a0cb92ed2f19809a82ac4461e205bf6bf0983a00902280c7e3dc8e3bda3b27f6"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-030-frame-000.png",
      "byteLength": 1212,
@@ -38727,6 +39601,23 @@
      "y": 2.2,
      "width": 30.0,
      "height": 39.4
+    },
+    "placement": {
+     "mask": {
+      "x": 37.75,
+      "y": 6.0,
+      "width": 36.25,
+      "height": 35.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.246.31.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-031-frame-000-mask.webp",
+     "byteLength": 512,
+     "sha256": "509399b21dbff05761198c1de2a7071df410e3033c80b122ce6b21d0ec1a106e"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-031-frame-000.png",
@@ -38762,6 +39653,23 @@
      "y": 9.2,
      "width": 42.2,
      "height": 33.0
+    },
+    "placement": {
+     "mask": {
+      "x": 37.75,
+      "y": 5.75,
+      "width": 36.25,
+      "height": 35.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.246.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-032-frame-000-mask.webp",
+     "byteLength": 492,
+     "sha256": "77e2efa0c2fd786da2485e4828719f744b60ebc6e00233064592668dfcb97fc1"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-246-record-032-frame-000.png",
@@ -39796,6 +40704,23 @@
      "width": 22.6,
      "height": 27.2
     },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 6.5,
+      "width": 37.75,
+      "height": 31.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.247.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-027-frame-000-mask.webp",
+     "byteLength": 438,
+     "sha256": "2871f00c470732b5850978c404964c091d2e2ce2a68e14a5562ff9b132bdb61a"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-027-frame-000.png",
      "byteLength": 920,
@@ -39817,6 +40742,23 @@
      "y": 8.0,
      "width": 20.4,
      "height": 28.4
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 6.5,
+      "width": 37.75,
+      "height": 29.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.247.28.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-028-frame-000-mask.webp",
+     "byteLength": 426,
+     "sha256": "7a35d28e73cf9423f239728a2c2b8049c17782174ad09bb893a0f409b38c9955"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-028-frame-000.png",
@@ -39852,6 +40794,23 @@
      "y": 10.0,
      "width": 20.6,
      "height": 28.6
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 6.5,
+      "width": 37.75,
+      "height": 31.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.247.29.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-029-frame-000-mask.webp",
+     "byteLength": 446,
+     "sha256": "d8db1cffbf129300549415b0ac7387f0dda25b7ac234b9cc20edda4e6e24f61a"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-029-frame-000.png",
@@ -39910,6 +40869,23 @@
      "width": 30.0,
      "height": 36.8
     },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 7.25,
+      "width": 37.75,
+      "height": 31.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.247.30.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-030-frame-000-mask.webp",
+     "byteLength": 492,
+     "sha256": "46a956b487c6380a0156b9bc0b106df086e601d76ca2ed5d3205a43e6592c057"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-030-frame-000.png",
      "byteLength": 1160,
@@ -39931,6 +40907,23 @@
      "y": 2.2,
      "width": 25.2,
      "height": 39.4
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 6.5,
+      "width": 37.75,
+      "height": 34.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.247.31.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-031-frame-000-mask.webp",
+     "byteLength": 464,
+     "sha256": "fdda1a0ca6a955e4fbab6fc47fbaa98302801b9a9c37227e4fee69db549d270b"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-031-frame-000.png",
@@ -39966,6 +40959,23 @@
      "y": 9.6,
      "width": 41.8,
      "height": 31.8
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 6.5,
+      "width": 37.75,
+      "height": 34.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.247.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-032-frame-000-mask.webp",
+     "byteLength": 490,
+     "sha256": "4a780de7e0d4370e91d9e47004970c32eb04e145e61bf50ebd3d2b12593b789a"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-247-record-032-frame-000.png",
@@ -41000,6 +42010,23 @@
      "width": 21.0,
      "height": 25.6
     },
+    "placement": {
+     "mask": {
+      "x": 39.25,
+      "y": 9.0,
+      "width": 34.75,
+      "height": 27.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.248.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-027-frame-000-mask.webp",
+     "byteLength": 408,
+     "sha256": "4a03c64b0662220a69fdf71f87c1dd5dc3b754377c1f7694000c7ca3a34fd12f"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-027-frame-000.png",
      "byteLength": 696,
@@ -41021,6 +42048,23 @@
      "y": 8.6,
      "width": 20.4,
      "height": 28.0
+    },
+    "placement": {
+     "mask": {
+      "x": 39.5,
+      "y": 9.0,
+      "width": 34.5,
+      "height": 26.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.248.28.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-028-frame-000-mask.webp",
+     "byteLength": 400,
+     "sha256": "b256cc34af8be602668a3a11c7b66cf587af2262209d1c3fc436c206f51f1b33"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-028-frame-000.png",
@@ -41056,6 +42100,23 @@
      "y": 10.2,
      "width": 21.2,
      "height": 29.0
+    },
+    "placement": {
+     "mask": {
+      "x": 39.0,
+      "y": 9.0,
+      "width": 35.0,
+      "height": 30.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.248.29.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-029-frame-000-mask.webp",
+     "byteLength": 402,
+     "sha256": "e18c156b4b8c5ead8207862b9ab0d7894fa6c7d346de007d8e7d1cde132c25ad"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-029-frame-000.png",
@@ -41114,6 +42175,23 @@
      "width": 20.4,
      "height": 34.6
     },
+    "placement": {
+     "mask": {
+      "x": 39.0,
+      "y": 9.25,
+      "width": 35.0,
+      "height": 28.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.248.30.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-030-frame-000-mask.webp",
+     "byteLength": 412,
+     "sha256": "65b970fbd7787b2822d16e17a8e5443cd87505ba91dff539273e61e323f5ba4d"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-030-frame-000.png",
      "byteLength": 894,
@@ -41135,6 +42213,23 @@
      "y": 3.2,
      "width": 27.6,
      "height": 39.4
+    },
+    "placement": {
+     "mask": {
+      "x": 37.25,
+      "y": 9.0,
+      "width": 36.75,
+      "height": 33.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.248.31.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-031-frame-000-mask.webp",
+     "byteLength": 474,
+     "sha256": "c42353a4be2c6a455e6d0a8c2baf425dc40f0f0e4361e2a5a5ed7f2691a46a4a"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-031-frame-000.png",
@@ -41170,6 +42265,23 @@
      "y": 9.8,
      "width": 41.0,
      "height": 33.8
+    },
+    "placement": {
+     "mask": {
+      "x": 37.25,
+      "y": 9.0,
+      "width": 36.75,
+      "height": 34.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.248.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-032-frame-000-mask.webp",
+     "byteLength": 440,
+     "sha256": "b0899f455cd0d5f6a23dfb2a661b247cf25529a3247a108753e513a75101b1d8"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-248-record-032-frame-000.png",
@@ -42204,6 +43316,23 @@
      "width": 23.2,
      "height": 25.0
     },
+    "placement": {
+     "mask": {
+      "x": 37.0,
+      "y": 8.5,
+      "width": 36.5,
+      "height": 25.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.249.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-027-frame-000-mask.webp",
+     "byteLength": 420,
+     "sha256": "9d95f1699402da0010ebede04c6711bff653a614cee7e70a8b345af6067b3c16"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-027-frame-000.png",
      "byteLength": 755,
@@ -42225,6 +43354,23 @@
      "y": 8.6,
      "width": 22.8,
      "height": 22.4
+    },
+    "placement": {
+     "mask": {
+      "x": 37.0,
+      "y": 8.5,
+      "width": 36.5,
+      "height": 22.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.249.28.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-028-frame-000-mask.webp",
+     "byteLength": 460,
+     "sha256": "724d038c33ef8093948917f2a58656c0b0f846faed9464e31f23495652714ecd"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-028-frame-000.png",
@@ -42260,6 +43406,23 @@
      "y": 10.0,
      "width": 21.8,
      "height": 25.6
+    },
+    "placement": {
+     "mask": {
+      "x": 37.0,
+      "y": 8.5,
+      "width": 36.5,
+      "height": 26.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.249.29.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-029-frame-000-mask.webp",
+     "byteLength": 518,
+     "sha256": "4c92e8541a9c6e92676781534ca98e93aa3218f7104f73ae0bf4f2c9b364603e"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-029-frame-000.png",
@@ -42318,6 +43481,23 @@
      "width": 21.6,
      "height": 33.6
     },
+    "placement": {
+     "mask": {
+      "x": 37.0,
+      "y": 8.5,
+      "width": 36.5,
+      "height": 28.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.249.30.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-030-frame-000-mask.webp",
+     "byteLength": 532,
+     "sha256": "c59a5b13c13050a9e0c7a8fa3cc790961a817e5c129373661eb1444abc4cfce3"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-030-frame-000.png",
      "byteLength": 940,
@@ -42339,6 +43519,23 @@
      "y": 3.6,
      "width": 24.8,
      "height": 36.4
+    },
+    "placement": {
+     "mask": {
+      "x": 37.0,
+      "y": 8.5,
+      "width": 36.5,
+      "height": 29.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.249.31.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-031-frame-000-mask.webp",
+     "byteLength": 528,
+     "sha256": "215c24e17025579d31b01cf52b154cdc0ee2bf11379e79cb6e1d1bfebd7cced5"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-031-frame-000.png",
@@ -42374,6 +43571,23 @@
      "y": 8.6,
      "width": 41.6,
      "height": 29.6
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 8.5,
+      "width": 34.0,
+      "height": 29.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.249.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-032-frame-000-mask.webp",
+     "byteLength": 436,
+     "sha256": "232ed1d86845fd1a0ca13337a0402d066e3cb7a629a17bd65c67c5758fff6400"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-249-record-032-frame-000.png",
@@ -43408,6 +44622,23 @@
      "width": 24.2,
      "height": 24.6
     },
+    "placement": {
+     "mask": {
+      "x": 35.75,
+      "y": 4.0,
+      "width": 38.25,
+      "height": 38.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.250.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-027-frame-000-mask.webp",
+     "byteLength": 544,
+     "sha256": "c520933f454de069de3aafceb31bd8b86a6efcdb521a27d7f01736628fe403f2"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-027-frame-000.png",
      "byteLength": 723,
@@ -43429,6 +44660,23 @@
      "y": 9.8,
      "width": 24.2,
      "height": 21.8
+    },
+    "placement": {
+     "mask": {
+      "x": 35.75,
+      "y": 4.0,
+      "width": 38.25,
+      "height": 38.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.250.28.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-028-frame-000-mask.webp",
+     "byteLength": 552,
+     "sha256": "a8e5728dd3f3ce8fbb704335bb3c6b0377e9ccf211bc5fb4a8c10b507a6ef543"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-028-frame-000.png",
@@ -43464,6 +44712,23 @@
      "y": 10.0,
      "width": 30.0,
      "height": 30.0
+    },
+    "placement": {
+     "mask": {
+      "x": 35.75,
+      "y": 4.0,
+      "width": 38.25,
+      "height": 38.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.250.29.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-029-frame-000-mask.webp",
+     "byteLength": 544,
+     "sha256": "fa5f9da3a3ee7e47b392b3faa4d445a335d557a962b932724b9988ffccef710a"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-029-frame-000.png",
@@ -43522,6 +44787,23 @@
      "width": 29.6,
      "height": 34.8
     },
+    "placement": {
+     "mask": {
+      "x": 35.75,
+      "y": 6.5,
+      "width": 38.25,
+      "height": 36.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.250.30.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-030-frame-000-mask.webp",
+     "byteLength": 512,
+     "sha256": "69d1126bbd2c8bf6fca9e7cfd4ae5bd89a75282f43785a999ce8e2306a105775"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-030-frame-000.png",
      "byteLength": 1232,
@@ -43543,6 +44825,23 @@
      "y": 3.6,
      "width": 29.6,
      "height": 37.6
+    },
+    "placement": {
+     "mask": {
+      "x": 35.75,
+      "y": 4.5,
+      "width": 38.25,
+      "height": 38.25
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.250.31.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-031-frame-000-mask.webp",
+     "byteLength": 482,
+     "sha256": "3def872e1b8d89b8ba07d80b190d88b7c6e681bf858f9c8d1f73ac9c24c39141"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-031-frame-000.png",
@@ -43578,6 +44877,23 @@
      "y": 9.8,
      "width": 41.0,
      "height": 29.6
+    },
+    "placement": {
+     "mask": {
+      "x": 35.75,
+      "y": 4.0,
+      "width": 38.25,
+      "height": 38.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.250.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-032-frame-000-mask.webp",
+     "byteLength": 554,
+     "sha256": "c2a868a62a556adedaee517a1c1e8501f29b0fb64804025507b2811efe993b45"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-032-frame-000.png",
@@ -43788,6 +45104,12 @@
      "y": 35.0,
      "width": 39.8,
      "height": 50.0
+    },
+    "placement": {
+     "mask": null,
+     "from": {
+      "mask": "hand"
+     }
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-250-record-005-frame-000.png",
@@ -44612,6 +45934,23 @@
      "width": 20.8,
      "height": 25.0
     },
+    "placement": {
+     "mask": {
+      "x": 38.25,
+      "y": 6.5,
+      "width": 34.25,
+      "height": 32.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.251.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-027-frame-000-mask.webp",
+     "byteLength": 412,
+     "sha256": "6c74305a049e34adb1faa0d4a7a1deafa38a58752228188e4553e38d30dee9f8"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-027-frame-000.png",
      "byteLength": 783,
@@ -44633,6 +45972,23 @@
      "y": 8.4,
      "width": 20.4,
      "height": 24.0
+    },
+    "placement": {
+     "mask": {
+      "x": 38.25,
+      "y": 6.5,
+      "width": 34.25,
+      "height": 32.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.251.28.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-028-frame-000-mask.webp",
+     "byteLength": 408,
+     "sha256": "f62ac724077860e5c381a9d2cc3d38e2e117cf01cf78c300b8ee35d42beda37d"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-028-frame-000.png",
@@ -44668,6 +46024,23 @@
      "y": 8.6,
      "width": 20.4,
      "height": 27.2
+    },
+    "placement": {
+     "mask": {
+      "x": 38.25,
+      "y": 6.5,
+      "width": 34.25,
+      "height": 32.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.251.29.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-029-frame-000-mask.webp",
+     "byteLength": 400,
+     "sha256": "7d9668e0d4660e5d0b9b888225141fc2e29f13b03ad142752e0f89780b5ed6f5"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-029-frame-000.png",
@@ -44726,6 +46099,23 @@
      "width": 20.4,
      "height": 32.8
     },
+    "placement": {
+     "mask": {
+      "x": 38.25,
+      "y": 6.75,
+      "width": 34.25,
+      "height": 32.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.251.30.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-030-frame-000-mask.webp",
+     "byteLength": 396,
+     "sha256": "c772c679c0f944ec8fc76dea4a7a53d39e47f8717df220c7dc36fa26871d8c62"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-030-frame-000.png",
      "byteLength": 868,
@@ -44747,6 +46137,23 @@
      "y": 3.2,
      "width": 24.4,
      "height": 36.6
+    },
+    "placement": {
+     "mask": {
+      "x": 38.25,
+      "y": 6.75,
+      "width": 34.25,
+      "height": 32.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.251.31.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-031-frame-000-mask.webp",
+     "byteLength": 412,
+     "sha256": "6394cbf1c0e928455d112a9a278501f59bf2cbaa4d22a5e8b02d58492e6c538c"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-031-frame-000.png",
@@ -44782,6 +46189,23 @@
      "y": 8.8,
      "width": 41.2,
      "height": 30.8
+    },
+    "placement": {
+     "mask": {
+      "x": 38.25,
+      "y": 6.5,
+      "width": 34.25,
+      "height": 32.75
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.251.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-032-frame-000-mask.webp",
+     "byteLength": 376,
+     "sha256": "cadfc7e8f155981d604735c4c52670ae78b099ebb34113f539a6380af94de683"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-251-record-032-frame-000.png",
@@ -45816,6 +47240,23 @@
      "width": 24.0,
      "height": 24.2
     },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 8.5,
+      "width": 32.0,
+      "height": 32.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.252.27.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-027-frame-000-mask.webp",
+     "byteLength": 396,
+     "sha256": "fdca3b9c45b95b921bbacd764abf49789883e4bc347217ead178794233f3d9dd"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-027-frame-000.png",
      "byteLength": 654,
@@ -45837,6 +47278,23 @@
      "y": 9.8,
      "width": 22.2,
      "height": 24.4
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 8.5,
+      "width": 32.0,
+      "height": 32.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.252.28.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-028-frame-000-mask.webp",
+     "byteLength": 390,
+     "sha256": "f529d728d50f5167796bb64dae84c2f32d4b46d492771bb3efca4102fb6d1beb"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-028-frame-000.png",
@@ -45872,6 +47330,23 @@
      "y": 10.2,
      "width": 22.4,
      "height": 28.4
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 8.5,
+      "width": 32.0,
+      "height": 32.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.252.29.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-029-frame-000-mask.webp",
+     "byteLength": 380,
+     "sha256": "ad6cd1bb8175346d8d39792f30068ad48758bef1b9b2e2333e8236f9efe1e378"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-029-frame-000.png",
@@ -45930,6 +47405,23 @@
      "width": 21.4,
      "height": 34.0
     },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 9.0,
+      "width": 32.0,
+      "height": 32.0
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.252.30.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-030-frame-000-mask.webp",
+     "byteLength": 378,
+     "sha256": "580bc57fa427a626ace5a9cabbcd2bda8a2b0365d7c22589d3ab98b61a907e93"
+    },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-030-frame-000.png",
      "byteLength": 875,
@@ -45951,6 +47443,23 @@
      "y": 3.6,
      "width": 25.6,
      "height": 37.6
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 8.5,
+      "width": 32.0,
+      "height": 32.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.252.31.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-031-frame-000-mask.webp",
+     "byteLength": 368,
+     "sha256": "52887f85219dc6f0196fcc50e546c3b990fd0f94a11d68c9ee95e6b888aba3ea"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-031-frame-000.png",
@@ -45986,6 +47495,23 @@
      "y": 9.8,
      "width": 41.4,
      "height": 29.8
+    },
+    "placement": {
+     "mask": {
+      "x": 38.5,
+      "y": 8.5,
+      "width": 32.0,
+      "height": 32.5
+     },
+     "from": {
+      "mask": "hand"
+     }
+    },
+    "mask": {
+     "mediaId": "refreshed.paper-doll.252.32.mask",
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-032-frame-000-mask.webp",
+     "byteLength": 370,
+     "sha256": "ecb96561eea3c65055b8f2ddba5fe3f5b0a92fa55c897b8b03b2d29a6ce19cc2"
     },
     "world": {
      "path": "worldrpg/packs/daggerfall.art-replacements/media/worn/texture-252-record-032-frame-000.png",

@@ -139,7 +139,7 @@ paper-doll or worn final without its rect sidecar is refused.
     promote.py --area worn --key texture-235-record-000-frame-000
     promote.py --area paper-doll --area worn --area items --area spells --area effects --area surfaces --area terrain
 """
-import argparse, csv, hashlib, io, json, os, re, shutil, subprocess, sys, tempfile
+import argparse, csv, functools, hashlib, io, json, os, re, shutil, subprocess, sys, tempfile
 from collections import namedtuple
 from pathlib import Path
 
@@ -178,6 +178,8 @@ CLASSIC_MANIFEST = REPOSITORY / "local/build/import/staging/worldrpg/imports/sha
 IMPORTED = REPOSITORY / "local/build/import/staging/worldrpg/payloads/daggerfall.imported.json"
 ITEM_IMAGE = re.compile(r"item\.(\d+)\.(\d+)")
 STAGED = REPOSITORY / "local/build/import/staging"
+# Where a developer's --classic-art import moves the classic media a player's import leaves out (#10763), at the same paths.
+CLASSIC_ART = REPOSITORY / "local/build/import/classic-art"
 SPELL_ICON = re.compile(r"icons--icon-(\d+)--icon")
 # The classic `spell.selectors` atlas (MASK04I0.IMG, donor SpellIconCollection) lays a targeting tile and an element tile in a row
 # each; their sizes are the ruleset's (DaggerfallSpellConstruction), the one home of that layout, so a refreshed tile's aspect,
@@ -232,7 +234,7 @@ DARK = (40, 70)      # brightness (max channel) under which a pixel is an outlin
                      # tinting it rims a piece of its own colour (tan trousers) in the dye
 DYES = ["blue", "grey", "red", "dark-brown", "purple", "light-brown", "white", "aquamarine", "yellow", "green"]
 METALS = ["iron", "silver", "elven", "dwarven", "mithril", "adamantium", "ebony", "orcish", "daedric"]
-CLASSIC = REPOSITORY / "local/build/import/staging/worldrpg/media/character/paper-doll"
+CLASSIC = "worldrpg/media/character/paper-doll"   # the classic paper-doll images, under the staging or classic-art tree
 
 WORN = re.compile(r"texture-(\d+)-record-(\d+)-frame-000")
 # A design of its own over classic records another item keeps (the flanged mace over the club's), named by the
@@ -314,9 +316,9 @@ def world_image(image, height, doll=False):
     return reduce.crunch_sprites([image], (max(1, round(image.width * k)), max(1, round(image.height * k))))[0]
 
 
-# The placement each entry had in the payload before this run, by what it replaces, and its image's hash; and what
-# --recompute names (an id, or "all"), which takes those values from the original again.
-KEPT, KEPT_ART, RECOMPUTE = {}, {}, set()
+# The placement each entry had in the payload before this run, by what it replaces, its image's hash and its own mask;
+# and what --recompute names (an id, or "all"), which takes those values from the original again.
+KEPT, KEPT_ART, KEPT_MASK, RECOMPUTE = {}, {}, {}, set()
 
 
 def own(replaces, names, original):
@@ -452,9 +454,23 @@ def dye_mask(image):
     return Image.fromarray(np.dstack([np.full(cloth.shape + (3,), 255, np.uint8), (cloth * 255 + .5).astype(np.uint8)]), "RGBA")
 
 
+def staged(relative):
+    """A file the import staged: in the staging tree, or in the classic-art tree for classic media the art pack replaces."""
+    path = STAGED / relative
+    return path if path.exists() else CLASSIC_ART / relative
+
+
+@functools.lru_cache(None)
+def paper_doll_items():
+    """The import's paper-doll catalogue, by classic archive and record."""
+    return {(item["archive"], item["record"]): item for item in json.load(open(IMPORTED))["paperDoll"]["items"]}
+
+
 def dyed(archive, record):
-    """Whether the classic draws the record in other dyes or metals: clothing, and armour or weapons with bare steel."""
-    return archive in CLOTHING or (CLASSIC / f"paper-doll-{archive}-{record}-daedric.png").exists()
+    """Whether the classic draws the record in other dyes or metals: clothing, and armour or weapons with bare steel, whose
+    daedric image the paper-doll catalogue names apart from the undyed one."""
+    item = paper_doll_items()[(archive, record)]
+    return archive in CLOTHING or item["dyes"].get("daedric", item["dyes"].get("unchanged")) != f"paper-doll.{archive}.{record}"
 
 
 def dye_tints(promoted, dyes, probe):
@@ -466,19 +482,19 @@ def dye_tints(promoted, dyes, probe):
     for key, path in promoted:
         m = WORN.fullmatch(key)
         archive, record = int(m[1]), int(m[2])
-        base, changed = CLASSIC / f"paper-doll-{archive}-{record}.png", CLASSIC / f"paper-doll-{archive}-{record}-{probe}.png"
+        base, changed = staged(f"{CLASSIC}/paper-doll-{archive}-{record}.png"), staged(f"{CLASSIC}/paper-doll-{archive}-{record}-{probe}.png")
         if not changed.exists():
             continue
         classic = read(base)
         recoloured = (np.abs(classic[..., :3] - read(changed)[..., :3]).sum(-1) > 0) & (classic[..., 3] > 200)
         for dye in dyes:
-            variant = CLASSIC / f"paper-doll-{archive}-{record}-{dye}.png"
+            variant = staged(f"{CLASSIC}/paper-doll-{archive}-{record}-{dye}.png")
             recolours[dye].append((read(variant) if variant.exists() else classic)[..., :3][recoloured])
         final = read(path)
         neutral = (final[..., 3] > 200) & (final[..., :3].max(-1) - final[..., :3].min(-1) < NEUTRAL[0])
         cloth.append(final[..., :3][neutral])
     if not cloth:
-        raise SystemExit(f"No classic {probe} paper-doll images under {CLASSIC}: run the import first.")
+        raise SystemExit(f"No classic {probe} paper-doll images under {STAGED} or {CLASSIC_ART}: run the import with --classic-art first.")
     neutral = np.concatenate(cloth).mean(0)
     tints = {}
     for dye in dyes:
@@ -486,6 +502,31 @@ def dye_tints(promoted, dyes, probe):
         brightness = max(1.0, float(ratio.max()))
         tints[dye] = {"multiply": "#%02x%02x%02x" % tuple(round(v * 255) for v in ratio / brightness), "brightness": round(brightness, 3)}
     return tints
+
+
+MASKS = ART / "generated/worn/mask"   # hairmask.py's finals: KEY.png and KEY.json with its rect
+
+
+def masking():
+    """The paper-doll records the classic draws with a mask that clears what lies beneath (a helmet over hair)."""
+    return {f"paper-doll.{archive}.{record}" for (archive, record), item in paper_doll_items().items() if item.get("maskMediaId")}
+
+
+def hair_mask(key, classic, media, name):
+    """A masking record's own mask, from its hairmask.py final: the image as `mask` and its rect in doll units as
+    `placement.mask`, set by hand, a null rect where it hides nothing. Without a final the entry keeps the mask it has."""
+    sidecar = MASKS / f"{key}.json"
+    if sidecar.exists():
+        rect = json.loads(sidecar.read_text())["rect"]
+        own = {"placement": {"mask": None if rect is None else dict(zip(("x", "y", "width", "height"), rect)), "from": {"mask": HAND}}}
+        if rect is not None:
+            own["mask"] = {"mediaId": f"{media}.mask",
+                           **webp(Image.open(MASKS / f"{key}.png").convert("RGBA"), f"{MEDIA}/worn/{name}-mask.webp", lossless=True)}
+        return own
+    if "mask" in KEPT.get(classic, {}):
+        return {"placement": KEPT[classic], **({"mask": KEPT_MASK[classic]} if KEPT_MASK.get(classic) else {})}
+    raise SystemExit(f"{key} replaces {classic}, which clears what lies beneath it: draw its mask with "
+                     "authoring/tools/paper-doll/hairmask.py first.")
 
 
 def promote(area, key, path, rect=None, mediaId=None, name=None):
@@ -506,6 +547,8 @@ def promote(area, key, path, rect=None, mediaId=None, name=None):
                       "width": round(image.width / k, 4), "height": round(image.height / k, 4)}}
     if classic.startswith("character.body-clothed."):
         entry["placement"] = own(classic, ["waist"], lambda: {"waist": waist(classic, entry["doll"])})
+    if area == "worn" and mediaId is None and classic in masking():
+        entry.update(hair_mask(key, classic, media, name))
     if area == "worn":
         ground = world_image(image, image.height / k, doll=True)
         entry["world"] = world_png(ground, f"{MEDIA}/{area}/{name}.png")
@@ -776,10 +819,10 @@ def classic_size(media):
     published media: a template's image under the paper doll's, an icon of the classic media by its inventory. On the
     ground it stands at the treasure piles' metres per classic pixel."""
     if m := ITEM_IMAGE.fullmatch(media):
-        path = CLASSIC / f"item-{m[1]}-{m[2]}.png"
+        path = staged(f"{CLASSIC}/item-{m[1]}-{m[2]}.png")
     else:
         published = {artifact["mediaId"]: artifact["path"] for artifact in json.load(open(STAGED / "worldrpg/media/classic-media-inventory.json"))["artifacts"]}
-        path = STAGED / published[media]
+        path = staged(published[media])
     left, top, right, bottom = Image.open(path).convert("RGBA").getchannel("A").getbbox()
     return {"width": right - left, "height": bottom - top}
 
@@ -1110,12 +1153,12 @@ def main(argv=None):
         ap.error("give an --area to promote or a --set")
     if a.key and not a.area:
         ap.error("--key promotes within the --area named")
-    KEPT.clear(), KEPT_ART.clear(), RECOMPUTE.clear()
+    KEPT.clear(), KEPT_ART.clear(), KEPT_MASK.clear(), RECOMPUTE.clear()
     RECOMPUTE.update(a.recompute)
     payload = json.loads(PAYLOAD.read_text()) if PAYLOAD.exists() else {"artReplacements": {"images": []}}
     placed = lambda: [(identity, entry) for identity, entry in placed_entries(payload) if "placement" in entry]
     for identity, entry in placed():
-        KEPT[identity], KEPT_ART[identity] = entry["placement"], entry.get("sha256")
+        KEPT[identity], KEPT_ART[identity], KEPT_MASK[identity] = entry["placement"], entry.get("sha256"), entry.get("mask")
     with tempfile.TemporaryDirectory() as stage:
         STAGE = Path(stage)
         stale, matched = set(), set()

@@ -242,7 +242,7 @@ public sealed class DaggerfallCharacterPresentationTests
     }
 
     [Fact]
-    public void Paper_doll_draws_refreshed_art_at_its_own_doll_rect_and_waist_with_the_classic_mask_and_clothing_and_armour_in_their_dye_or_metal()
+    public void Paper_doll_draws_refreshed_art_at_its_own_doll_rect_waist_and_mask_and_clothing_and_armour_in_their_dye_or_metal()
     {
         using Fixture f = new();
         DaggerfallCharacterIdentity identity = new DaggerfallCharacterState(f.Definitions, f.Player.Stats, f.PlayerDefinition).Identity with { Gender = DaggerfallCharacterGender.Male };
@@ -281,12 +281,20 @@ public sealed class DaggerfallCharacterPresentationTests
         // The steel plate cuirass's refreshed record likewise stands in for every metal, its bare steel masked for the tint.
         System.Text.Json.Nodes.JsonObject cuirassEntry = Entry(classicCuirass.MediaId, 30, 35, 50, 60);
         cuirassEntry["dyeMask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"refreshed.{classicCuirass.MediaId}.dye", ["path"] = "worldrpg/packs/daggerfall.art-replacements/media/cuirass-dye.webp", ["byteLength"] = 1 };
+        // The helm, whose classic record clears the hair beneath it, states its own mask and where it goes in doll units.
+        System.Text.Json.Nodes.JsonObject helmEntry = Entry(classicHelm.MediaId, 40, 0, 30, 32);
+        helmEntry["mask"] = new System.Text.Json.Nodes.JsonObject { ["mediaId"] = $"refreshed.{classicHelm.MediaId}.mask", ["path"] = "worldrpg/packs/daggerfall.art-replacements/media/helm-mask.webp", ["byteLength"] = 1 };
+        helmEntry["placement"] = new System.Text.Json.Nodes.JsonObject
+        {
+            ["mask"] = new System.Text.Json.Nodes.JsonObject { ["x"] = 38.5, ["y"] = 2, ["width"] = 34, ["height"] = 28.25 },
+            ["from"] = new System.Text.Json.Nodes.JsonObject { ["mask"] = "hand" },
+        };
         System.Text.Json.Nodes.JsonObject payload = new()
         {
             ["artReplacements"] = new System.Text.Json.Nodes.JsonObject
             {
                 ["images"] = new System.Text.Json.Nodes.JsonArray(Entry(nude.MediaId, 20.5, 30.25, 70, 150), clothedEntry,
-                    Entry(classicHelm.MediaId, 40, 0, 30, 32), shirtEntry, cuirassEntry),
+                    helmEntry, shirtEntry, cuirassEntry),
                 ["dyeTints"] = new System.Text.Json.Nodes.JsonObject
                 {
                     ["red"] = new System.Text.Json.Nodes.JsonObject { ["multiply"] = "#fe4f1a", ["brightness"] = 1.0 },
@@ -307,10 +315,26 @@ public sealed class DaggerfallCharacterPresentationTests
         PaperDollLayerPresentation upper = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, [], art).Layers
             .First(layer => layer.MediaId == $"refreshed.{clothed.MediaId}");
         Assert.Equal((0d, 12.5), (upper.ClipTop!.Value, upper.ClipBottom!.Value));
-        // The helm keeps its classic mask, drawn where the classic helm was.
+        // The helm draws its own mask at its own rect, and the classic mask is not drawn or published.
         PaperDollLayerPresentation helm = refreshed.Layers.Single(layer => layer.Slot == "head");
-        Assert.Equal((helm.MediaId, helm.X, helm.Y, helm.Mask), ($"refreshed.{classicHelm.MediaId}", 40d, 0d, classicHelm.Mask));
-        Assert.Equal(new DaggerfallDollRect(classicHelm.X, classicHelm.Y, classicHelm.Width, classicHelm.Height), helm.MaskRect);
+        Assert.Equal((helm.MediaId, helm.X, helm.Y, helm.Mask), ($"refreshed.{classicHelm.MediaId}", 40d, 0d, $"refreshed.{classicHelm.MediaId}.mask"));
+        Assert.Equal(new DaggerfallDollRect(38.5, 2, 34, 28.25), helm.MaskRect);
+        Assert.DoesNotContain(classicHelm.Mask!, refreshed.MediaIds);
+        Assert.Contains(art.Images, image => image.MediaId == $"refreshed.{classicHelm.MediaId}.mask");
+        art.RequireOwnMasks(f.Definitions.CharacterPresentation);
+        // A mask whose rect is null says the refreshed helm hides nothing: it draws no mask at all.
+        helmEntry.Remove("mask");
+        helmEntry["placement"]!["mask"] = null;
+        DaggerfallArtReplacements bare = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), "test.art");
+        PaperDollLayerPresentation unmasked = DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, worn, bare).Layers.Single(layer => layer.Slot == "head");
+        Assert.Equal(($"refreshed.{classicHelm.MediaId}", (string?)null, (DaggerfallDollRect?)null), (unmasked.MediaId, unmasked.Mask, unmasked.MaskRect));
+        bare.RequireOwnMasks(f.Definitions.CharacterPresentation);
+        // A replaced masking record that states no mask of its own is refused by name at composition, never drawn with the classic.
+        helmEntry.Remove("placement");
+        DaggerfallArtReplacements unstated = DaggerfallArtReplacements.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()), "test.art");
+        Assert.Contains(classicHelm.MediaId,
+            Assert.Throws<InvalidOperationException>(() => unstated.RequireOwnMasks(f.Definitions.CharacterPresentation)).Message, StringComparison.Ordinal);
+        Assert.Throws<InvalidOperationException>(() => DaggerfallPaperDollPolicy.Compose(f.Definitions, identity, null, worn, unstated));
         // Refreshed clothing draws its neutral image tinted in the worn dye through its dye mask.
         PaperDollLayerPresentation shirtLayer = refreshed.Layers.Single(layer => layer.Slot == "chest-clothes");
         Assert.Equal(($"refreshed.{neutralShirt}", 25d, true, new PaperDollTint("#fe4f1a", 1, $"refreshed.{neutralShirt}.dye")),

@@ -141,7 +141,7 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
         Assert.All(glass, path => Assert.Contains(path, content.Opened));
         Assert.Contains(graphics.MaterialRequests.Values, request => !request.EmissionMap.Equals(default(RenderResourceReference)));
 
-        // A helmet's refreshed layer hides the hair beneath it through the classic mask (until #10773), read from the default import.
+        // A helmet's refreshed layer hides the hair beneath it through its own mask, which the art pack carries.
         Assert.True(session.Commands<IDeveloperPlayerCommands>().Equip("Helm").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.DirectDigital)]));
         Dictionary<string, object?> hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
@@ -150,7 +150,7 @@ public sealed class ClassicArtOnDemandSessionTests(ITestOutputHelper output)
             layer => layer["mask"] is string);
         Assert.StartsWith("refreshed.", Assert.IsType<string>(helm["mediaId"]), StringComparison.Ordinal);
         string mask = Assert.IsType<string>(helm["mask"]);
-        Assert.EndsWith(".mask", mask, StringComparison.Ordinal);
+        Assert.Equal($"{helm["mediaId"]}.mask", mask);
         Assert.Contains(Assert.IsType<object?[]>(Assert.IsType<Dictionary<string, object?>>(hud["uiArtDemanded"])["images"]).Cast<Dictionary<string, object?>>(),
             image => Equals(image["id"], mask) && image["image"] is string);
 

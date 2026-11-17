@@ -38,9 +38,22 @@ internal sealed record DaggerfallArtReplacement(string Replaces, string MediaId,
     /// <summary>For the clothed body, the row it is split at for clothing worn above and below, in doll units from its top.</summary>
     internal double? Waist { get; init; }
 
+    /// <summary>
+    /// For a worn item whose classic record clears what lies beneath it (a helmet over hair), its own mask: drawn for the
+    /// refreshed item and heads, never read from the classic.
+    /// </summary>
+    internal DaggerfallDollMask? Mask { get; init; }
+
     /// <summary>The height an item's world image stands on the ground at, in metres: an icon's own, a worn image's doll height.</summary>
     internal double GroundHeight => Ground ?? Doll!.Height * DaggerfallDollRect.Metres;
 }
+
+/// <summary>
+/// A worn item's own mask: where it is opaque, the paper doll clears what it drew beneath the item. A null
+/// <paramref name="Image"/> and <paramref name="Rect"/> state that the refreshed item hides nothing beneath it.
+/// </summary>
+/// <param name="Rect">Where the mask is drawn, in doll units.</param>
+internal sealed record DaggerfallDollMask(DaggerfallArtImage? Image, DaggerfallDollRect? Rect);
 
 /// <summary>One published image of the refreshed art set beside its replacement: its identity, path and length.</summary>
 /// <param name="World">For a worn item's dye mask, its PNG the same size as the item's <see cref="DaggerfallArtReplacement.World"/>.</param>
@@ -308,10 +321,28 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>Every replacement.</summary>
     internal IEnumerable<DaggerfallArtReplacement> All => _byClassic.Values;
 
-    /// <summary>Every image the set publishes: each replacement, its icon, and their dye masks.</summary>
+    /// <summary>Every image the set publishes: each replacement, its icon, their dye masks, and a worn item's own mask.</summary>
     internal IEnumerable<DaggerfallArtImage> Images => Every(_byClassic.Values).SelectMany(replacement =>
-        replacement.DyeMask is { } mask ? [new(replacement.MediaId, replacement.Path, replacement.ByteLength), mask]
-            : new[] { new DaggerfallArtImage(replacement.MediaId, replacement.Path, replacement.ByteLength) });
+        new[] { new DaggerfallArtImage(replacement.MediaId, replacement.Path, replacement.ByteLength), replacement.DyeMask, replacement.Mask?.Image }
+            .OfType<DaggerfallArtImage>());
+
+    /// <summary>
+    /// Refuses a set that replaces a worn record whose classic image clears what lies beneath it (a helmet over hair)
+    /// without stating its own mask, naming each: the refreshed doll never draws a classic mask.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">A replaced masking record states no mask of its own.</exception>
+    internal void RequireOwnMasks(DaggerfallCharacterPresentationSet presentation)
+    {
+        ArgumentNullException.ThrowIfNull(presentation);
+        string[] missing = [.. presentation.PaperDollItems.Values
+            .Where(image => image.MaskMediaId is not null)
+            .Select(image => $"paper-doll.{image.Archive}.{image.Record}")
+            .Where(key => For(key) is { Mask: null })
+            .Order(StringComparer.Ordinal)];
+        if (missing.Length > 0)
+            throw new InvalidOperationException($"The refreshed art set replaces worn records that clear what lies beneath them without a mask of "
+                + $"their own: {string.Join(", ", missing)}. Draw them with authoring/tools/paper-doll/hairmask.py and promote them.");
+    }
 
     /// <summary>Each classic clothing dye's and metal's tint, by dye or metal name.</summary>
     internal IReadOnlyDictionary<string, DaggerfallDyeTint> Tints { get; }
@@ -380,13 +411,31 @@ internal sealed class DaggerfallArtReplacements
                     throw new InvalidOperationException($"Content pack '{packId}' splits the clothed body '{mediaId}' at row {row}, outside its doll rect.");
                 if (dyeMask?.World is { } maskWorld && (world is null || maskWorld.Width != world.Width || maskWorld.Height != world.Height))
                     throw new InvalidOperationException($"Content pack '{packId}' states a world dye mask for '{mediaId}' that is not the size of its world image.");
-                if (!ids.Add(mediaId) || dyeMask is not null && !ids.Add(dyeMask.MediaId))
+                DaggerfallDollMask? ownMask = DollMask(image, placement, mediaId);
+                if (!ids.Add(mediaId) || dyeMask is not null && !ids.Add(dyeMask.MediaId) || ownMask?.Image is { } maskImage && !ids.Add(maskImage.MediaId))
                     throw new InvalidOperationException($"Content pack '{packId}' names replacement '{mediaId}' for '{replaces}' twice.");
                 DaggerfallArtReplacement? icon = image.TryGetProperty("icon", out JsonElement whole) ? Image(whole, replaces) : null;
                 // The icon is drawn in the layer's tint, so it needs a dye mask exactly when the layer has one.
                 if (icon is not null && (icon.DyeMask is null) != (dyeMask is null))
                     throw new InvalidOperationException($"Content pack '{packId}' states an icon for '{mediaId}' that is not dyed as its layer is.");
-                return new(replaces, mediaId, path, byteLength, doll, dyeMask, world, icon) { Ground = ground, Waist = waist, Aspect = aspect };
+                return new(replaces, mediaId, path, byteLength, doll, dyeMask, world, icon) { Ground = ground, Waist = waist, Aspect = aspect, Mask = ownMask };
+            }
+
+            // A worn item's own mask: its rect in the placement, null where it hides nothing, and its image beside it.
+            DaggerfallDollMask? DollMask(JsonElement image, JsonElement? placement, string mediaId)
+            {
+                bool hasImage = image.TryGetProperty("mask", out JsonElement file);
+                if (placement is not { ValueKind: JsonValueKind.Object } values || !values.TryGetProperty("mask", out JsonElement rect))
+                    return hasImage ? throw new InvalidOperationException($"Content pack '{packId}' states a mask for '{mediaId}' without its rect.") : null;
+                if (rect.ValueKind == JsonValueKind.Null)
+                    return hasImage ? throw new InvalidOperationException($"Content pack '{packId}' states a mask for '{mediaId}' whose rect says it hides nothing.")
+                        : new(null, null);
+                if (!hasImage)
+                    throw new InvalidOperationException($"Content pack '{packId}' places a mask for '{mediaId}' without its image.");
+                DaggerfallDollRect at = new(rect.GetProperty("x").GetDouble(), rect.GetProperty("y").GetDouble(), rect.GetProperty("width").GetDouble(), rect.GetProperty("height").GetDouble());
+                if (at is { Width: <= 0 } or { Height: <= 0 })
+                    throw new InvalidOperationException($"Content pack '{packId}' places the mask of '{mediaId}' in an empty doll rect.");
+                return new(new(file.GetProperty("mediaId").GetString()!, file.GetProperty("path").GetString()!, file.GetProperty("byteLength").GetInt64()), at);
             }
 
             foreach (JsonElement image in document.RootElement.GetProperty("artReplacements").GetProperty("images").EnumerateArray())

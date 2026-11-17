@@ -1013,7 +1013,7 @@ public sealed class PublishedContentDeliveryTests
 
         // The payload states the bytes of every refreshed file, and names every file the refreshed media carries.
         JsonElement[] owners = [.. images.SelectMany(image => image.TryGetProperty("icon", out JsonElement icon) ? [image, icon] : new[] { image })
-            .SelectMany(image => image.TryGetProperty("dyeMask", out JsonElement mask) ? [image, mask] : new[] { image })];
+            .SelectMany(image => new[] { "dyeMask", "mask" }.Where(part => image.TryGetProperty(part, out _)).Select(part => image.GetProperty(part)).Prepend(image))];
         JsonElement[] files = [.. owners, .. owners.Where(owner => owner.TryGetProperty("world", out _)).Select(owner => owner.GetProperty("world")),
             .. section.GetProperty("effects").EnumerateArray(), section.GetProperty("effectGlow"),
             .. section.GetProperty("meshes").EnumerateArray().DistinctBy(mesh => mesh.GetProperty("path").GetString()), .. surfaces,

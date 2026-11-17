@@ -59,6 +59,11 @@ dotnet run --project src/Daggerfall.Source.Tool -- export-items
 - An edited source goes under `local/art/generated/source-edits/NAME/` in the same layout; run the batch with `SOURCE=` at it.
 - Paper doll: `landmarks.py check` on bodies and heads before dressing or promoting. `heads.py`, then `skin.py`,
   then `doll_preview.py`.
+- A worn record the classic draws with a mask (a hood, cloak or helmet over hair: the import's paper-doll catalogue
+  names its `maskMediaId`) is promoted with its own: give its key a `cut` row in `specs/worn/hair-masks.json` (null if
+  the refreshed item hides nothing), run `tools/paper-doll/hairmask.py KEY`, and judge `hairmask.py --sheet OUT.png KEY`
+  against today's doll before promoting. Promotion refuses it without a mask, keeps the one it has on a re-promote,
+  and takes a redrawn one; the game refuses a masking record whose entry states none.
 - `matte.py` only once an area's finals are accepted. Never despeckle effects that carry embers.
 - `promote.py` takes only finals the ledger marks `accepted`. From a task worktree, promote your own finals with
   `--key` (an art key, a record, an item, an effect or a sprite mesh's `ARCHIVE-RECORD`): it replaces those entries

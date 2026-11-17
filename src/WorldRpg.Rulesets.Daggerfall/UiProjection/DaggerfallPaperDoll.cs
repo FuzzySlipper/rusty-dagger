@@ -17,7 +17,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <param name="ClipBottom">The doll row after the last one drawn, from the image's top edge, when only part of the image is.</param>
 /// <param name="Mask">A mask image placed at <paramref name="MaskRect"/>: where it is opaque, what the doll drew beneath this layer is cleared.</param>
 /// <param name="Slot">The equipment slot of an item layer.</param>
-/// <param name="MaskRect">Where the mask is drawn: the classic image's rect, which a refreshed image's own rect need not be.</param>
+/// <param name="MaskRect">Where the mask is drawn, when not at the layer's own rect: a refreshed item's mask's own rect.</param>
 /// <param name="Smooth">Whether the image is refreshed art, drawn smoothed; classic art is drawn with its pixels square.</param>
 /// <param name="Tint">How refreshed clothing, painted neutral, is drawn in its dye.</param>
 internal sealed record PaperDollLayerPresentation(string Kind, string MediaId, double X, double Y, double Width, double Height,
@@ -195,12 +195,17 @@ internal static class DaggerfallPaperDollPolicy
 
     /// <summary>
     /// A worn item's classic layer as the refreshed art draws it, when its image has a replacement: at the replacement's
-    /// own rect, the classic mask kept at the classic image's rect.
+    /// own rect, and where the classic record clears what lies beneath it, with the replacement's own mask at its own rect
+    /// (composition refuses a set without one: <see cref="DaggerfallArtReplacements.RequireOwnMasks"/>).
     /// </summary>
-    private static PaperDollLayerPresentation Refreshed(PaperDollLayerPresentation layer, DaggerfallArtReplacements? art, string key) =>
-        Own(layer.Kind, key, art) is { } own
-            ? own with { Mask = layer.Mask, MaskRect = layer.Mask is null ? null : new(layer.X, layer.Y, layer.Width, layer.Height) }
-            : layer;
+    private static PaperDollLayerPresentation Refreshed(PaperDollLayerPresentation layer, DaggerfallArtReplacements? art, string key)
+    {
+        if (Own(layer.Kind, key, art) is not { } own) return layer;
+        if (layer.Mask is null) return own;
+        DaggerfallDollMask mask = art!.For(key)!.Mask
+            ?? throw new InvalidOperationException($"The refreshed paper-doll image '{key}' states no mask of its own, and the record it replaces clears what lies beneath it.");
+        return own with { Mask = mask.Image?.MediaId, MaskRect = mask.Rect };
+    }
 
     private static InvalidOperationException Missing(string mediaId) =>
         new($"Paper-doll layer '{mediaId}' has no published placement.");

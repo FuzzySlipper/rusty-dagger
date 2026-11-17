@@ -170,6 +170,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             DaggerfallArtReplacements? art = artPacks.Length == 1 ? DaggerfallArtReplacements.Read(artPacks[0].Payload, artPacks[0].Id.Value) : null;
             // A classic image the player's data left out because the pack drew it anew must still be drawn anew.
             DaggerfallLeftOutMedia.Check(data, art);
+            // The refreshed doll draws a masking item with its own mask, never the classic one.
+            art?.RequireOwnMasks(definitions.CharacterPresentation);
             DaggerfallLocationAssembly assembly = new(definitions, new DaggerfallWorldBlocks(data), () => productMedia.Value, () => meshes.Value, art?.Models);
             // Every resolved profile names its classic images against the published manifests, and an interior
             // names its building against the block catalog: each is joined when the profile is resolved, before
