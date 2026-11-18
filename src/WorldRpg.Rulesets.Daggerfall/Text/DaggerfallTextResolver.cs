@@ -101,6 +101,8 @@ internal enum DaggerfallTextDiagnosticKind { MissingText, MalformedText, Missing
 /// <summary>A deliberate diagnostic; rendering retains its marker so story text is never silently erased.</summary>
 internal sealed record DaggerfallTextDiagnostic(DaggerfallTextDiagnosticKind Kind, DaggerfallTextKey Key, string Detail);
 internal sealed record DaggerfallTextRenderResult(string Text, IReadOnlyList<DaggerfallTextDiagnostic> Diagnostics) { internal bool IsComplete => Diagnostics.Count == 0; }
+/// <summary>A rendered book page: the heading it opens with in the title face, apart from its text.</summary>
+internal sealed record DaggerfallBookPageRenderResult(string Heading, DaggerfallTextRenderResult Body);
 
 /// <summary>Resolves normalized base-language values for thin UI presentation with one explicit context.</summary>
 internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
@@ -109,7 +111,22 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
     // hyphen, which no macro name holds and which the scripts write after one ("The %god-forsaken").
     private static readonly SearchValues<char> MacroTerminators = SearchValues.Create(" %.,'?!/(){}[]\";:|\n-".AsSpan());
 
-    internal DaggerfallTextRenderResult Resolve(DaggerfallTextKey key, DaggerfallTextContext context) => Resolve(key, context, subrecord: null);
+    // The classic book's title face. A page that opens in it opens with a heading, which the reader sets apart.
+    private const int BookTitleFont = 2;
+
+    internal DaggerfallTextRenderResult Resolve(DaggerfallTextKey key, DaggerfallTextContext context) => Resolve(key, context, subrecord: null, heading: null);
+
+    /// <summary>
+    /// Renders a book page with the run it opens with in the title face as its heading, trimmed, and the rest as its
+    /// text, from its first line on. Title-face text after the page's first words stays in the text.
+    /// </summary>
+    internal DaggerfallBookPageRenderResult ResolveBookPage(DaggerfallTextKey key, DaggerfallTextContext context)
+    {
+        StringBuilder heading = new();
+        DaggerfallTextRenderResult body = Resolve(key, context, subrecord: null, heading);
+        string title = heading.ToString().Trim();
+        return title.Length == 0 ? new(string.Empty, body) : new(title, body with { Text = body.Text.TrimStart('\n') });
+    }
 
     /// <summary>
     /// Renders only one subrecord of a record whose subrecords are alternative wordings. The caller
@@ -118,10 +135,10 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
     internal DaggerfallTextRenderResult ResolveSubrecord(DaggerfallTextKey key, int subrecord, DaggerfallTextContext context)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(subrecord);
-        return Resolve(key, context, subrecord);
+        return Resolve(key, context, subrecord, heading: null);
     }
 
-    private DaggerfallTextRenderResult Resolve(DaggerfallTextKey key, DaggerfallTextContext context, int? subrecord)
+    private DaggerfallTextRenderResult Resolve(DaggerfallTextKey key, DaggerfallTextContext context, int? subrecord, StringBuilder? heading)
     {
         ArgumentNullException.ThrowIfNull(context);
         List<DaggerfallTextDiagnostic> diagnostics = [];
@@ -141,8 +158,13 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
         // TalkManager.TokensToString(tokens, false), whose runs carry their own joining spaces.
         bool endsLines = key.Kind == DaggerfallTextKind.Resource;
         bool pendingLineEnd = false;
+        // A book page's opening title-face run goes to its heading until the first words in another face.
+        StringBuilder target = output;
+        bool opening = heading is not null;
         foreach (DaggerfallTextElement token in value.Tokens)
         {
+            if (opening && token.Code == DaggerfallTextCode.FontPrefix) target = token.X == BookTitleFont ? heading! : output;
+            if (opening && target == output && token.Code == DaggerfallTextCode.Text && !string.IsNullOrWhiteSpace(token.Text)) opening = false;
             if (subrecord is int selected)
             {
                 if (token.Code == DaggerfallTextCode.SubrecordSeparator) { current++; continue; }
@@ -158,8 +180,8 @@ internal sealed class DaggerfallTextResolver(DaggerfallTextSet text)
                 output.Append('\n');
                 pendingLineEnd = false;
             }
-            if (token.Code == DaggerfallTextCode.Text) Expand(output, token.Text!, key, context, diagnostics, ref attributeRating);
-            else if (token.Code is DaggerfallTextCode.NewLineOffset or DaggerfallTextCode.EndOfPage or DaggerfallTextCode.SubrecordSeparator) output.Append('\n');
+            if (token.Code == DaggerfallTextCode.Text) Expand(target, token.Text!, key, context, diagnostics, ref attributeRating);
+            else if (token.Code is DaggerfallTextCode.NewLineOffset or DaggerfallTextCode.EndOfPage or DaggerfallTextCode.SubrecordSeparator) target.Append('\n');
             else if (token.Code is not (DaggerfallTextCode.SameLineOffset or DaggerfallTextCode.PullPreceeding or DaggerfallTextCode.InputCursorPositioner or DaggerfallTextCode.FontPrefix or DaggerfallTextCode.PositionPrefix))
                 diagnostics.Add(new(DaggerfallTextDiagnosticKind.UnknownLayoutToken, key, $"The normalized text value carries unsupported layout token '{token.Code}'."));
         }

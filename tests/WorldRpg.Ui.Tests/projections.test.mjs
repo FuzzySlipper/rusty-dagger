@@ -1657,7 +1657,7 @@ test('transport controls keep focus through an unchanged snapshot, and a focus f
 test('book page controls send the notebook revision current when they are pressed', () => {
   const f = fixture();
   try {
-    const book = { id: 59, title: 'A book', author: 'An author', page: 0, pageCount: 2, text: 'First page.' };
+    const book = { id: 59, title: 'A book', author: 'An author', page: 0, pageCount: 2, heading: '', text: 'First page.', initial: false };
     f.publish({ notebook: { revision: '9', book, notes: [] } });
     f.root.querySelector('[data-action="journal"]').click();
     const next = f.root.querySelector('[data-testid="book-reader-next"]');
@@ -1730,10 +1730,29 @@ test('an inventory action bar closes with its panel, so navigation belongs to wh
   } finally { f.dispose(); }
 });
 
+test('a book page sets its heading apart and the page the words begin on opens with a drop cap', () => {
+  const f = fixture();
+  try {
+    const book = { id: 0, title: 'The First Scroll of Baan Dar', author: 'Arkan', page: 0, pageCount: 9,
+      heading: 'The First Scroll of Baan Dar', text: ' "What follows is a translation.', initial: true };
+    f.publish({ notebook: { revision: '1', book, notes: [] } });
+    const heading = f.root.querySelector('[data-testid="book-reader-heading"]');
+    assert.equal(heading.hidden, false);
+    assert.equal(heading.textContent, 'The First Scroll of Baan Dar');
+    const page = f.root.querySelector('[data-testid="book-reader-page"]');
+    assert.equal(page.querySelector('.dagger-book-initial').textContent, '"W', 'The initial is the first letter with the quotation mark before it.');
+    assert.equal(page.textContent, '"What follows is a translation.', 'The page keeps every word; only its leading space goes.');
+    f.publish({ notebook: { revision: '2', book: { ...book, page: 1, heading: '', text: 'Then the second page.', initial: false }, notes: [] } });
+    assert.equal(f.root.querySelector('[data-testid="book-reader-heading"]').hidden, true);
+    assert.equal(f.root.querySelector('.dagger-book-initial'), null);
+    assert.equal(f.root.querySelector('[data-testid="book-reader-page"]').textContent, 'Then the second page.');
+  } finally { f.dispose(); }
+});
+
 test('book reader and notebook render product state and send revision-guarded semantic actions', () => {
   const f = fixture();
   try {
-    const notebook = { revision: '9', book: { id: 59, title: 'A retained book', author: 'An author', page: 0, pageCount: 2, text: 'First page.' },
+    const notebook = { revision: '9', book: { id: 59, title: 'A retained book', author: 'An author', page: 0, pageCount: 2, heading: '', text: 'First page.', initial: false },
       notes: [{ id: 'note:1', text: 'Existing note.' }, { id: 'note:2', text: 'Another note.' }] };
     f.publish({ notebook });
     f.root.querySelector('[data-action="journal"]').click();

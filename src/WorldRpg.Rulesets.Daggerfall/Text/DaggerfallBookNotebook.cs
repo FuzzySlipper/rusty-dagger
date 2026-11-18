@@ -3,9 +3,16 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>A normalized book retained by its classic book identity, independent of its source item.</summary>
-internal sealed record DaggerfallReadableBook(int BookId, string Title, string Author, string[] Pages);
+internal sealed record DaggerfallReadableBook(int BookId, string Title, string Author, DaggerfallBookPage[] Pages)
+{
+    /// <summary>The page the book's words begin on, set with an initial; null when no page has words.</summary>
+    internal int? FirstWordsPage => Array.FindIndex(Pages, page => page.Text.Any(char.IsLetterOrDigit)) is var index and >= 0 ? index : null;
+}
+/// <summary>A book page: the heading it opens with in the classic title face (empty when none) and its text.</summary>
+internal sealed record DaggerfallBookPage(string Heading, string Text);
 internal sealed record DaggerfallUserNote(string Id, string Text);
-internal sealed record DaggerfallBookReaderPresentation(int BookId, string Title, string Author, int Page, int PageCount, string Text);
+/// <summary>An open book page. Initial says it is the page the book's words begin on, which the reader sets with a drop cap.</summary>
+internal sealed record DaggerfallBookReaderPresentation(int BookId, string Title, string Author, int Page, int PageCount, string Heading, string Text, bool Initial);
 internal sealed record DaggerfallNotebookPresentation(string Revision, DaggerfallBookReaderPresentation? Book, DaggerfallUserNote[] Notes);
 internal sealed record DaggerfallNotebookSave(DaggerfallReadableBook[] Books, DaggerfallUserNote[] Notes, int? ActiveBookId, int Page, ulong NextNoteId)
 {
@@ -21,7 +28,7 @@ internal sealed record DaggerfallNotebookSave(DaggerfallReadableBook[] Books, Da
             // Empty pages are valid normalized BOK content: a few source pages carry layout tokens
             // without words, and that is still a readable page rather than a missing book.
             if (book.BookId < 0 || !bookIds.Add(book.BookId) || string.IsNullOrWhiteSpace(book.Title)
-                || book.Pages is not { Length: > 0 } || book.Pages.Any(page => page is null))
+                || book.Pages is not { Length: > 0 } || book.Pages.Any(page => page?.Heading is null || page.Text is null))
                 throw new ArgumentException("A retained book is malformed.");
         }
         HashSet<string> noteIds = new(StringComparer.Ordinal);
@@ -55,10 +62,7 @@ internal sealed record DaggerfallNotebookSave(DaggerfallReadableBook[] Books, Da
             if (!string.Equals(saved.Title, definition.Title, StringComparison.Ordinal)
                 || !string.Equals(saved.Author, definition.Author, StringComparison.Ordinal))
                 throw new ArgumentException($"Retained book {saved.BookId} metadata does not match the selected catalog.");
-            string[] pages = definition.PageKeys
-                .Select(key => text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Book, key), DaggerfallTextContexts.Book(definition)).Text)
-                .ToArray();
-            if (!saved.Pages.SequenceEqual(pages, StringComparer.Ordinal))
+            if (!saved.Pages.SequenceEqual(DaggerfallBookNotebook.Pages(definition, text)))
                 throw new ArgumentException($"Retained book {saved.BookId} text does not match the selected catalog.");
         }
     }
@@ -78,6 +82,13 @@ internal sealed class DaggerfallBookNotebook(DaggerfallDefinitions definitions, 
 
     internal IReadOnlyList<DaggerfallUserNote> Notes => _notes;
 
+    /// <summary>A readable book's pages as the catalog's text renders them.</summary>
+    internal static DaggerfallBookPage[] Pages(DaggerfallBookDefinition book, DaggerfallTextResolver text) => book.PageKeys.Select(key =>
+    {
+        DaggerfallBookPageRenderResult page = text.ResolveBookPage(new DaggerfallTextKey(DaggerfallTextKind.Book, key), DaggerfallTextContexts.Book(book));
+        return new DaggerfallBookPage(page.Heading, page.Body.Text);
+    }).ToArray();
+
     internal DaggerfallReadableBook Open(int bookId)
     {
         DaggerfallBookDefinition definition = definitions.Books.ResolveMessage(bookId);
@@ -88,8 +99,7 @@ internal sealed class DaggerfallBookNotebook(DaggerfallDefinitions definitions, 
         }
         DaggerfallBookDefinition book = definition;
         if (book.Disposition != DaggerfallBookDisposition.Read) throw new InvalidOperationException("This book's text is not supplied.");
-        string[] pages = book.PageKeys.Select(key => text.Resolve(new DaggerfallTextKey(DaggerfallTextKind.Book, key), DaggerfallTextContexts.Book(definition)).Text).ToArray();
-        retained = new(book.BookId, book.Title, book.Author, pages);
+        retained = new(book.BookId, book.Title, book.Author, Pages(book, text));
         _books.Add(book.BookId, retained);
         Select(retained.BookId);
         return retained;
@@ -98,7 +108,8 @@ internal sealed class DaggerfallBookNotebook(DaggerfallDefinitions definitions, 
     internal DaggerfallNotebookPresentation Read()
     {
         DaggerfallBookReaderPresentation? book = _activeBookId is int id && _books.TryGetValue(id, out DaggerfallReadableBook? retained)
-            ? new(retained.BookId, retained.Title, retained.Author, _page, retained.Pages.Length, retained.Pages[_page])
+            ? new(retained.BookId, retained.Title, retained.Author, _page, retained.Pages.Length, retained.Pages[_page].Heading,
+                retained.Pages[_page].Text, retained.FirstWordsPage == _page)
             : null;
         return new(_revision.ToString(System.Globalization.CultureInfo.InvariantCulture), book, [.. _notes]);
     }

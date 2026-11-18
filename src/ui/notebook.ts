@@ -6,7 +6,11 @@ export interface BookReaderProjection {
   readonly author: string;
   readonly page: number;
   readonly pageCount: number;
+  /** The heading the page opens with in the book's title face; empty when it has none. */
+  readonly heading: string;
   readonly text: string;
+  /** The page the book's words begin on: its first letter is set as a drop cap. */
+  readonly initial: boolean;
 }
 
 export interface NotebookNoteProjection {
@@ -95,10 +99,22 @@ function renderReader(reader: HTMLElement, value: NotebookProjection, claim: (ac
   const author = document.createElement('p');
   author.className = 'dagger-book-author';
   author.textContent = book.author ? `By ${book.author}` : 'Author unknown';
+  const opening = document.createElement('p');
+  opening.className = 'dagger-book-heading';
+  opening.dataset.testid = 'book-reader-heading';
+  opening.textContent = book.heading;
+  opening.hidden = book.heading === '';
   const page = document.createElement('p');
   page.className = 'dagger-book-page';
   page.dataset.testid = 'book-reader-page';
-  page.textContent = book.text;
+  // The drop cap is the first letter of the words, with any quotation mark before it; the page's leading space goes.
+  const first = book.initial ? /^\s*([^\p{L}\p{N}]*[\p{L}\p{N}])/u.exec(book.text) : null;
+  if (first) {
+    const initial = document.createElement('span');
+    initial.className = 'dagger-book-initial';
+    initial.textContent = first[1]!;
+    page.append(initial, book.text.slice(first[0].length));
+  } else page.textContent = book.text;
   const controls = document.createElement('div');
   controls.className = 'dagger-book-controls';
   const previous = document.createElement('button');
@@ -112,7 +128,7 @@ function renderReader(reader: HTMLElement, value: NotebookProjection, claim: (ac
   next.dataset.testid = 'book-reader-next';
   next.addEventListener('click', () => claim({ action: 'notebook-page', revision: revision(), page: book.page + 1 }));
   controls.append(previous, location, next);
-  reader.append(title, author, page, controls);
+  reader.append(title, author, opening, page, controls);
 }
 
 function renderNotes(notes: HTMLElement, value: NotebookProjection, claim: (action: NotebookAction) => void,

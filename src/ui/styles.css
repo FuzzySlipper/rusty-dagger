@@ -1,15 +1,15 @@
 :root { color-scheme: dark; font-family: var(--font-body); color: #f2e3ba; }
 /* The game's own typefaces, shipped with it (src/ui/fonts, SIL Open Font License) so the window draws the same
-   letters on any machine: Alegreya to read, its small capitals for labels and keys, and Cinzel's Roman capitals
-   for title plates. Figures that line up in columns ask for tabular numerals where they are drawn. */
+   letters on any machine: Alegreya to read, its small capitals for labels and keys, and Almendra, a book hand, for
+   titles, title plates and a book's initial, as the manual sets its headings over an old-style text face. Figures that line up in columns ask for tabular numerals where they are drawn. */
 /* Each weight is its own static file: the window's Servo draws a variable font only at its default weight. */
 @font-face { font-family: 'Alegreya'; src: url('fonts/alegreya-regular.woff2') format('woff2'); font-weight: 400; font-style: normal; }
 @font-face { font-family: 'Alegreya'; src: url('fonts/alegreya-bold.woff2') format('woff2'); font-weight: 700; font-style: normal; }
 @font-face { font-family: 'Alegreya'; src: url('fonts/alegreya-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; }
 @font-face { font-family: 'Alegreya SC'; src: url('fonts/alegreya-sc-medium.woff2') format('woff2'); font-weight: 500; font-style: normal; }
 @font-face { font-family: 'Alegreya SC'; src: url('fonts/alegreya-sc-bold.woff2') format('woff2'); font-weight: 700; font-style: normal; }
-@font-face { font-family: 'Cinzel'; src: url('fonts/cinzel-bold.woff2') format('woff2'); font-weight: 700; font-style: normal; }
-:root { --font-body: 'Alegreya', serif; --font-label: 'Alegreya SC', 'Alegreya', serif; --font-title: 'Cinzel', 'Alegreya SC', serif; }
+@font-face { font-family: 'Almendra'; src: url('fonts/almendra-bold.woff2') format('woff2'); font-weight: 700; font-style: normal; }
+:root { --font-body: 'Alegreya', serif; --font-label: 'Alegreya SC', 'Alegreya', serif; --font-title: 'Almendra', 'Alegreya SC', serif; }
 /* The page the Engine serves sets its own body font; the game's text is the game's. */
 body, dialog { font-family: var(--font-body); }
 /* A free cursor over the game and its menus is the kit's cursor (skin.ts sets these from the published
@@ -248,6 +248,11 @@ body, dialog { font-family: var(--font-body); }
 .dagger-book-reader, .dagger-user-notes { display: grid; align-content: start; gap: .625rem; }
 .dagger-book-reader { max-width: 46rem; }
 .dagger-book-reader h2, .dagger-user-notes h2, .dagger-book-reader h3 { margin: 0; }
+.dagger-book-reader h3 { font: 700 1.5rem/1.2 var(--font-title); }
+/* The heading a page opens with in the book's title face, centred as the book sets it. */
+.dagger-book-heading { margin: .25rem 0 0; font: 700 1.5rem/1.25 var(--font-title); text-align: center; white-space: pre-line; }
+/* The first letter of the book's words, dropped two lines and inked red as a rubricated initial. */
+.dagger-book-initial { float: left; margin: .06em .1em 0 0; color: #7a1f12; font: 700 4.1em/.82 var(--font-title); }
 .dagger-book-author { color: #b9ae8c; font-style: italic; margin: 0; }
 .dagger-book-page { white-space: pre-wrap; min-height: 10rem; margin: 0; line-height: 1.55; }
 .dagger-book-controls, .dagger-note-list li { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
@@ -319,6 +324,7 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-quest-message { display: grid; gap: .5rem; padding: 1rem 1.25rem; line-height: 1.5; }
 /* pre-line keeps the record's line breaks but drops the leading spaces the classic text used to
    centre a line, which would otherwise indent it in a proportional font. */
+.dagger-quest-message > strong { font: 700 1.35rem/1.2 var(--font-title); }
 .dagger-quest-message p { margin: 0; white-space: pre-line; }
 .dagger-quest-message button { justify-self: start; margin-right: .5rem; padding: .5rem 1rem; font: 700 .8rem var(--font-label); pointer-events: auto; }
 .dagger-escort-faces { display: flex; gap: .5rem; }

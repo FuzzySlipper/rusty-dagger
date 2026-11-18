@@ -786,7 +786,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ("book", notebook.Book is null ? builder.Null() : builder.Object(
             ("id", builder.Number(notebook.Book.BookId)), ("title", builder.String(notebook.Book.Title)),
             ("author", builder.String(notebook.Book.Author)), ("page", builder.Number(notebook.Book.Page)),
-            ("pageCount", builder.Number(notebook.Book.PageCount)), ("text", builder.String(notebook.Book.Text)))),
+            ("pageCount", builder.Number(notebook.Book.PageCount)), ("heading", builder.String(notebook.Book.Heading)),
+            ("text", builder.String(notebook.Book.Text)), ("initial", builder.Boolean(notebook.Book.Initial)))),
         ("notes", builder.Array(notebook.Notes.Select(note => builder.Object(
             ("id", builder.String(note.Id)), ("text", builder.String(note.Text)))).ToArray())));
 

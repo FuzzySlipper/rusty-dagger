@@ -32,13 +32,14 @@ identifiers (`<track>.<ext>`, such as the donor installation's song folder `loca
 
 ## Typefaces
 
-The game UI draws its text in typefaces it ships, cut to the weights and Latin characters it uses and converted to WOFF2,
-in `src/ui/fonts/`. Both are licensed under the [SIL Open Font License 1.1](https://openfontlicense.org), whose
+The game UI draws its text in typefaces it ships as WOFF2 in `src/ui/fonts/`, each weight it uses its own file. All are licensed under the [SIL Open Font License 1.1](https://openfontlicense.org), whose
 text sits beside them:
 
 - **Alegreya** and **Alegreya SC**, Copyright 2011 The Alegreya Project Authors
   (https://github.com/huertatipografica/Alegreya): `Alegreya-OFL.txt`.
-- **Cinzel**, Copyright 2020 The Cinzel Project Authors (https://github.com/NDISCOVER/Cinzel): `Cinzel-OFL.txt`.
+- **Almendra**, Copyright (c) 2011-2012 Ana Sanfelippo, with Reserved Font Name "Almendra"
+  (https://github.com/google/fonts/tree/main/ofl/almendra): `Almendra-OFL.txt`. Its bold weight ships whole,
+  only compressed to WOFF2, so it keeps its name.
 
 ## Daggerfall Unity
 

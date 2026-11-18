@@ -643,7 +643,7 @@ public sealed class DungeonInteractionSessionTests
         Dictionary<string, object?> notebook = Assert.IsType<Dictionary<string, object?>>(projection["notebook"]);
         Dictionary<string, object?> book = Assert.IsType<Dictionary<string, object?>>(notebook["book"]);
         Assert.Equal(59d, Assert.IsType<double>(book["id"]));
-        Assert.Equal(saved.Notebook.Books.Single(value => value.BookId == 59).Pages[0], Assert.IsType<string>(book["text"]));
+        Assert.Equal(saved.Notebook.Books.Single(value => value.BookId == 59).Pages[0].Text, Assert.IsType<string>(book["text"]));
         object?[] notes = Assert.IsType<object?[]>(notebook["notes"]);
         Assert.Equal("Remember this passage.", Assert.IsType<Dictionary<string, object?>>(Assert.Single(notes))["text"]);
     }

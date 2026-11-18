@@ -45,9 +45,9 @@ public sealed class DaggerfallInventoryUseServiceTests
         Assert.Equal("Biography of Queen Barenziah, Vol. I", result.OpenedBook.Title);
         Assert.Equal("Stem Gamboge, scribe", result.OpenedBook.Author);
         Assert.Equal(4, result.OpenedBook.Pages.Length);
-        Assert.Contains("Late in the Second Era an heir, a girl child, Barenziah,", result.OpenedBook.Pages[1], StringComparison.Ordinal);
+        Assert.Contains("Late in the Second Era an heir, a girl child, Barenziah,", result.OpenedBook.Pages[1].Text, StringComparison.Ordinal);
         Assert.Equal(1UL, inventory.Read().Stacks.Single(item => item.Id == stack).Quantity);
-        Assert.Equal(result.OpenedBook.Pages[0], notebook.Read().Book!.Text);
+        Assert.Equal(result.OpenedBook.Pages[0].Text, notebook.Read().Book!.Text);
         Assert.False(use.Use($"stack:{stack.Value}", revision + 1).Applied);
         Assert.Equal(1UL, inventory.Read().Stacks.Single(item => item.Id == stack).Quantity);
     }

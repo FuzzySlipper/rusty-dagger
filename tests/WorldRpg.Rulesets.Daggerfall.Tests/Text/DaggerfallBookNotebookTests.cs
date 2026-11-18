@@ -20,7 +20,7 @@ public sealed class DaggerfallBookNotebookTests
         Assert.NotEmpty(book.Pages);
         DaggerfallNotebookPresentation opened = original.Read();
         Assert.Equal(book.Title, opened.Book!.Title);
-        Assert.Equal(book.Pages[0], opened.Book.Text);
+        Assert.Equal(book.Pages[0].Text, opened.Book.Text);
 
         Assert.True(original.AddNote(opened.Revision, "First account.").Applied);
         Assert.True(original.AddNote(original.Read().Revision, "Second account.").Applied);
@@ -41,8 +41,31 @@ public sealed class DaggerfallBookNotebookTests
         DaggerfallNotebookPresentation view = restored.Read();
         Assert.Equal(book.BookId, view.Book!.BookId);
         Assert.Equal(book.Title, view.Book.Title);
-        Assert.Equal(book.Pages[0], view.Book.Text);
+        Assert.Equal(book.Pages[0].Text, view.Book.Text);
         Assert.Equal(["Revised account.", "First account."], view.Notes.Select(note => note.Text));
+    }
+
+    [Fact]
+    public void A_page_opening_in_the_title_face_carries_its_heading_and_the_first_words_take_the_initial()
+    {
+        DaggerfallDefinitions definitions = ReadDefinitions();
+        DaggerfallBookNotebook notebook = new(definitions, new DaggerfallTextResolver(definitions.Text));
+
+        // The First Scroll of Baan Dar opens with its title in the classic title face, then its words on the same page.
+        DaggerfallReadableBook scroll = notebook.Open(0);
+        Assert.Equal("The First Scroll of Baan Dar", scroll.Pages[0].Heading);
+        Assert.StartsWith(" What follows is a translation of the first fragment", scroll.Pages[0].Text, StringComparison.Ordinal);
+        DaggerfallBookReaderPresentation first = notebook.Read().Book!;
+        Assert.Equal(("The First Scroll of Baan Dar", true), (first.Heading, first.Initial));
+        Assert.True(notebook.TurnPage(notebook.Read().Revision, 1).Applied);
+        DaggerfallBookReaderPresentation second = notebook.Read().Book!;
+        Assert.Equal(("", false), (second.Heading, second.Initial));
+
+        // Redguards, History and Heroes gives its first page to its title: its words, and the initial, begin on the next.
+        DaggerfallReadableBook redguards = notebook.Open(4);
+        Assert.Equal("Redguards", redguards.Pages[0].Heading.Split('\n')[0].Trim());
+        Assert.DoesNotContain(redguards.Pages[0].Text, char.IsLetterOrDigit);
+        Assert.Equal(1, redguards.FirstWordsPage);
     }
 
     [Fact]
@@ -106,7 +129,7 @@ public sealed class DaggerfallBookNotebookTests
         DaggerfallBookDefinition unavailable = definitions.Books.Books.Values
             .First(book => book.Disposition != DaggerfallBookDisposition.Read);
         Assert.Contains("not readable", Assert.Throws<ArgumentException>(() => restored.Restore(
-            new([new DaggerfallReadableBook(unavailable.BookId, "Unavailable", "Unknown", ["forged page"])], [], null, 0, 0))).Message, StringComparison.Ordinal);
+            new([new DaggerfallReadableBook(unavailable.BookId, "Unavailable", "Unknown", [new DaggerfallBookPage("", "forged page")])], [], null, 0, 0))).Message, StringComparison.Ordinal);
     }
 
     private static DaggerfallDefinitions ReadDefinitions()
