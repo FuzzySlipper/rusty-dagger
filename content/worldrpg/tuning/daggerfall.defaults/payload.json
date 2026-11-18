@@ -1023,7 +1023,7 @@
     "drift": [0.03, 0.02],
     "swellMetres": 60,
     "swell": 0.04,
-    "glint": [1, 0.05],
+    "glint": [6, 0.05],
     "glintDegrees": 3,
     "shimmer": 0.25
   },

@@ -24,7 +24,7 @@ internal sealed record DaggerfallWaterTuning(Color Shallow, Color Deep, float De
     float SwellMetres, float Swell, Vector2 Glint, float GlintDegrees, float Shimmer)
 {
     internal static DaggerfallWaterTuning Default { get; } = new(Color.FromSrgb(.85f, .95f, .95f), Color.FromSrgb(.5f, .6f, .7f), 3, .3f, .55f, 7, .2f, .85f, .48f, new(.03f, .02f),
-        60, .04f, new(1, .05f), 3, .25f);
+        60, .04f, new(6, .05f), 3, .25f);
 
     /// <summary>
     /// The Engine material for this water, over a climate's water art, at the day's light: water's colours are its own, so
