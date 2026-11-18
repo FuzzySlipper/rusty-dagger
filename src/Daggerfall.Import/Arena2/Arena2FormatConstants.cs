@@ -30,18 +30,6 @@ public static class Arena2FormatConstants
     /// <summary>Explicit headerless UI canvas byte count.</summary>
     public const int HeaderlessUiImgBytes = HeaderlessUiImgWidth * HeaderlessUiImgHeight;
 
-    /// <summary>FNT glyph count.</summary>
-    public const int FntGlyphCount = 240;
-
-    /// <summary>FNT fixed-metrics header byte count.</summary>
-    public const int FntHeaderBytes = 4;
-
-    /// <summary>FNT source bytes per glyph.</summary>
-    public const int FntGlyphBytes = 32;
-
-    /// <summary>FNT glyph table byte count.</summary>
-    public const int FntGlyphTableBytes = FntGlyphCount * 4;
-
     /// <summary>Palette RGB payload byte count.</summary>
     public const int PaletteRgbBytes = 768;
 

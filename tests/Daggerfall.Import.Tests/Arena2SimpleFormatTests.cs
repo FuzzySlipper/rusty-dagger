@@ -75,16 +75,6 @@ public sealed class Arena2SimpleFormatTests
     }
 
     [Fact]
-    public void FntUsesTheDonorGlyphBitOrientation()
-    {
-        FntFont font = FntDecoder.Decode(CreateFnt(), "font.fnt");
-        FntGlyph glyph = font.Glyphs[0];
-        Assert.True(glyph.IsSet(7, 0));
-        Assert.True(glyph.IsSet(15, 0));
-        Assert.False(glyph.IsSet(0, 0));
-    }
-
-    [Fact]
     public void PaletteMakesIndexZeroTransparencyAnExplicitCallerChoice()
     {
         byte[] bytes = new byte[Arena2FormatConstants.PaletteRgbBytes];
@@ -139,24 +129,5 @@ public sealed class Arena2SimpleFormatTests
         }
 
         return result.ToArray();
-    }
-
-    private static byte[] CreateFnt()
-    {
-        int bitmapStart = 4 + Arena2FormatConstants.FntGlyphTableBytes;
-        byte[] result = new byte[bitmapStart + (Arena2FormatConstants.FntGlyphCount * Arena2FormatConstants.FntGlyphBytes)];
-        BitConverter.GetBytes((ushort)14).CopyTo(result, 0);
-        BitConverter.GetBytes((ushort)11).CopyTo(result, 2);
-        for (int index = 0; index < Arena2FormatConstants.FntGlyphCount; index++)
-        {
-            int entryOffset = 4 + (index * 4);
-            int bitmapOffset = bitmapStart + (index * Arena2FormatConstants.FntGlyphBytes);
-            BitConverter.GetBytes((ushort)bitmapOffset).CopyTo(result, entryOffset);
-            BitConverter.GetBytes((ushort)14).CopyTo(result, entryOffset + 2);
-        }
-
-        result[bitmapStart] = 1;
-        result[bitmapStart + 1] = 1;
-        return result;
     }
 }

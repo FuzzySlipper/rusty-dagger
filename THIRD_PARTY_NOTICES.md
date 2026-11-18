@@ -5,7 +5,7 @@
 The Daggerfall ruleset's content is derived from the game data of *The Elder Scrolls II: Daggerfall*
 (Bethesda Softworks). Rusty Dagger is inspired by that game, not a port of it, and plays only from the
 player's own copy. This repository does not contain or redistribute the game's raw media: its sprites
-and textures, and its sounds, video and bitmap fonts. Facts derived from the game, such as tables,
+and textures, and its sounds and video. Facts derived from the game, such as tables,
 formulas, timings, positions, quest text, collision, navigation and model geometry, are taken once into
 authored data of ours and edited in place (decision DEC-13 on the project wiki's
 `coverage-scope-and-decisions` page). The terrain bake in `src/Daggerfall.Import.Tool/inputs/relief/`

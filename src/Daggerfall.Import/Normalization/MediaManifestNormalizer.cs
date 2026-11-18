@@ -12,7 +12,6 @@ public enum NormalizedMediaKind
     EffectSprite,
     Audio,
     UserInterface,
-    Font,
 }
 
 /// <summary>

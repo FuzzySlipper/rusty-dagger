@@ -29,7 +29,7 @@ public sealed class Arena2SiteSources
     ];
 
     /// <summary>
-    /// The fixed classic media input set: weapon grammars, sound, UI screens, fonts, map art and the
+    /// The fixed classic media input set: weapon grammars, sound, UI screens, map art and the
     /// texture leaves the classic sprites are cut from. <see cref="ClassicMediaInputs"/> binds each one.
     /// </summary>
     public static readonly IReadOnlyList<string> ClassicMediaSourceNames =
@@ -44,7 +44,6 @@ public sealed class Arena2SiteSources
         "BANK00I0.IMG", "REST01I0.IMG", "REST02I0.IMG", "INVE08I0.IMG",
         "INVE10I0.IMG", "INVE11I0.IMG", "INVE12I0.IMG", "INVE14I0.IMG",
         "GILD01I0.IMG", "ICON00I0.IMG", "MASK04I0.IMG",
-        .. Enumerable.Range(0, 5).Select(index => $"FONT{index:D4}.FNT"),
         "FMAP_PAL.COL",
         "MAP.PAL",
         .. MapMediaNames,
@@ -187,9 +186,7 @@ public sealed class Arena2SiteSources
         Require("INVE10I0.IMG"), Require("INVE11I0.IMG"), Require("INVE12I0.IMG"), Require("INVE14I0.IMG"),
         Require("GILD01I0.IMG"), Require("ICON00I0.IMG"), Require("MASK04I0.IMG"),
         Require("TEXTURE.216"),
-        Require("FONT0003.FNT"),
         Require("WEAPON00.CIF"), Require("WEAPON03.CIF"), Require("WEAPON11.CIF"),
-        Require("FONT0000.FNT"), Require("FONT0001.FNT"), Require("FONT0002.FNT"), Require("FONT0004.FNT"),
         [.. MapMediaNames.Order(StringComparer.Ordinal).Select(name => new MapMediaInput(name, Require(name)))],
         Require("FMAP_PAL.COL"),
         Require("MAP.PAL"),

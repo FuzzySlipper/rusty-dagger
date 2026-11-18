@@ -89,7 +89,7 @@ public sealed class PublishedContentDeliveryTests
         // Includes the gold piece's icon, the 60 images of the authored UI kit, the spell icon atlas and the targeting and element tiles, and each spell element's
         // missile and impact atlas, and the inventory's magic and coin glints. Every other item's icon is its template's image in the
         // paper-doll publication, a potion's its recipe's bottle among them.
-        Assert.Equal(193, listed.Count);
+        Assert.Equal(188, listed.Count);
 
         // The character canvases are admitted content in the same tree: they have their own generated
         // index beside them, and both indexes state the bytes they describe rather than trusting them.
@@ -447,9 +447,10 @@ public sealed class PublishedContentDeliveryTests
             Assert.Equal(byteLength, content.ReadBytes(path).Length);
         }
 
-        // The classic UI images, authored skins, every item icon, maps, fonts and weapon atlases have
+        // The classic UI images, authored skins, every item icon, maps and weapon atlases have
         // stable public identities. The death screen is the artifact this delivery path started from,
-        // while the map and font identities remain available to their named presentation consumers.
+        // while the map identities remain available to their named presentation consumers. The classic
+        // bitmap fonts are not published: the UI draws every string with its bundled faces.
         Assert.Equal(("worldrpg/media/ui/screen-death.png", 63124L), identified["screen.death"]);
         Assert.Equal("worldrpg/media/ui/window-character-sheet-chrome.png", identified["window.character-sheet.chrome"].Path);
         Assert.Equal("worldrpg/media/ui/window-book-reader.png", identified["window.book.reader"].Path);
@@ -466,13 +467,13 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/ui/inventory-icons/inventory-icon-gold-piece.png", identified["inventory.icon.gold-piece"].Path);
         Assert.Equal("worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-window-v2.png", identified["ui.stone.window.v2"].Path);
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", identified["map.fmap0i17"].Path);
-        Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", identified["font.classic.0000"].Path);
+        Assert.DoesNotContain(identified.Keys, id => id.StartsWith("font.", StringComparison.Ordinal));
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", identified["weapon.werecreature"].Path);
         // The group states no audio identity: the world media publication carries the clips. The separate
         // sky group is validated above and does not belong in this count. The gold piece publishes its TEXTURE.216
         // inventory icon; a potion draws its recipe's bottle from the paper-doll publication.
         Assert.DoesNotContain(identified.Keys, id => id.StartsWith("audio.", StringComparison.Ordinal));
-        Assert.Equal(193, identified.Count);
+        Assert.Equal(188, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -517,14 +518,13 @@ public sealed class PublishedContentDeliveryTests
         DaggerfallPublishedClassicMedia media = DaggerfallPublishedClassicMedia.Read(TestSessions.Data(content), inputs.ClassicPresentation);
         DaggerfallPublishedClassicMedia castleMedia = DaggerfallPublishedClassicMedia.Read(TestSessions.Data(content), castle.ClassicPresentation);
 
-        Assert.Equal(193, media.Paths.Count);
+        Assert.Equal(188, media.Paths.Count);
         JsonElement inventory = JsonDocument.Parse(content.ReadBytes(DaggerfallUiArt.InventoryPath).ToArray()).RootElement;
         Dictionary<string, string> published = inventory.GetProperty("artifacts").EnumerateArray()
             .Where(artifact => artifact.TryGetProperty("mediaId", out _))
             .ToDictionary(artifact => artifact.GetProperty("mediaId").GetString()!, artifact => artifact.GetProperty("path").GetString()!);
         Assert.Equal(published.OrderBy(pair => pair.Key), media.Paths.OrderBy(pair => pair.Key));
         Assert.Equal("worldrpg/media/maps/map-fmap0i17.png", media.Paths["map.fmap0i17"]);
-        Assert.Equal("worldrpg/media/fonts/font-classic-0000-atlas.png", media.Paths["font.classic.0000"]);
         Assert.Equal("worldrpg/media/combat/weapon-werecreature-atlas.png", media.Paths["weapon.werecreature"]);
         Assert.Equal(media.Paths.OrderBy(pair => pair.Key), castleMedia.Paths.OrderBy(pair => pair.Key));
     }

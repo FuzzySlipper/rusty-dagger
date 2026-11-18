@@ -197,8 +197,7 @@ worktree that linked a removed one runs `link` again; Windows asks for `cache`. 
 Rules for the tracked side:
 
 - Only raw media from Daggerfall stays out of Git and out of releases: sprites
-  and textures, and sounds, video and bitmap fonts while they are Daggerfall
-  originals. A fact derived from the game or from Daggerfall Unity (tables,
+  and textures, and sounds and video while they are Daggerfall originals. A fact derived from the game or from Daggerfall Unity (tables,
   formulas, timings, positions, quest text, collision, navigation, ARCH3D
   geometry) may be extracted once into authored data and edited in place, as
   the terrain bake in `src/Daggerfall.Import.Tool/inputs/relief/` was (#10758).

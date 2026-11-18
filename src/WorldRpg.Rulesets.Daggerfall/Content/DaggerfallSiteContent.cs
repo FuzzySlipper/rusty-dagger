@@ -1032,7 +1032,7 @@ internal static partial class DaggerfallSiteContent
     private static bool IsSha256Hex(string value) => value.Length == 64 && value.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
     /// <summary>The media kinds a published descriptor may state (the importer's <c>NormalizedMediaKind</c>, camelCased).</summary>
     internal static readonly IReadOnlySet<string> ClassicMediaKinds = new HashSet<string>(
-        ["texture", "billboard", "enemySprite", "weaponSprite", "effectSprite", "audio", "userInterface", "font"], StringComparer.Ordinal);
+        ["texture", "billboard", "enemySprite", "weaponSprite", "effectSprite", "audio", "userInterface"], StringComparer.Ordinal);
 
     private static bool KnownClassicMediaKind(string value) => ClassicMediaKinds.Contains(value);
 

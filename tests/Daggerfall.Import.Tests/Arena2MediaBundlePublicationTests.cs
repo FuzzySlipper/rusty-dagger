@@ -156,7 +156,6 @@ public sealed class Arena2MediaBundlePublicationTests
         string[] paths = [.. world.Artifacts.Select(artifact => artifact.RelativePath)];
         Assert.Contains("media/dungeon/materials/minimal.png", paths);
         Assert.Contains(GeometryPublication.IndexRelativePath, paths);
-        Assert.Contains("media/classic/font.bin", paths);
         // The classic media group already publishes the weapon atlas, so the world media references it.
         Assert.DoesNotContain("media/classic/weapon.png", paths);
         Assert.Equal(["media/dungeon/materials/minimal.png"],
@@ -164,7 +163,6 @@ public sealed class Arena2MediaBundlePublicationTests
         Assert.Equal(
             [
                 .. Enum.GetValues<ClassicEffect>().Select((_, index) => $"media/classic/effect.minimal.{index}.png").Order(StringComparer.Ordinal),
-                "media/classic/font.bin",
                 "media/classic/minimal.bin",
             ],
             world.Manifest.Artifacts.Single(artifact => artifact.RelativePath == Arena2MediaBundlePublication.ClassicMediaManifestRelativePath).DependsOnPaths);
@@ -248,7 +246,6 @@ public sealed class Arena2MediaBundlePublicationTests
         ImportPublicationArtifact uiArtifact = new(artifactPath ?? "media/classic/minimal.bin", "classic"u8);
         const string mediaId = "classic.minimal";
         const string weaponMediaId = "weapon.minimal";
-        const string fontMediaId = "font.minimal";
         NormalizedSpriteAtlas weaponAtlas = CreateAtlas(weaponMediaId, 7);
         ClassicWeaponActionManifest[] actions = Enum.GetValues<ClassicDaggerWeaponAction>()
             .Select((action, record) => new ClassicWeaponActionManifest(
@@ -269,13 +266,11 @@ public sealed class Arena2MediaBundlePublicationTests
         [
             new(mediaId, NormalizedMediaKind.UserInterface, uiArtifact.RelativePath, uiArtifact.Bytes.ToArray(), 0, 0, null, "application/octet-stream"),
             GeneratedMediaArtifact.FromAtlas(weaponMediaId, NormalizedMediaKind.WeaponSprite, "media/classic/weapon.png", weaponAtlas),
-            new(fontMediaId, NormalizedMediaKind.Font, "media/classic/font.bin", "font"u8.ToArray(), 0, 0, null, "application/octet-stream"),
         ];
         List<ImportPublicationArtifact> artifacts =
         [
             uiArtifact,
             new("media/classic/weapon.png", weaponAtlas.PngBytes),
-            new("media/classic/font.bin", "font"u8),
         ];
         foreach (ClassicEffectManifest effect in effects)
         {
@@ -300,18 +295,6 @@ public sealed class Arena2MediaBundlePublicationTests
             [],
             [],
             [],
-            new ClassicFontManifest(
-                fontMediaId,
-                "default",
-                1,
-                1,
-                Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, 0)).ToArray()),
-            [new ClassicFontManifest(
-                fontMediaId,
-                "default",
-                1,
-                1,
-                Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, 0)).ToArray())],
             [],
             EmptyMapRegions(),
             [],

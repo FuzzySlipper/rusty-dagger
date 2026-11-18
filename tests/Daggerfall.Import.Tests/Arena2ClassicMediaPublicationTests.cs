@@ -22,7 +22,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         // the spell icon atlas and the targeting and element tiles two more, and the five casting hands
         // five: naming an image admits it. A potion draws its recipe's bottle from the paper-doll media, so no
         // icon is published per recipe.
-        Assert.Equal(66 + first.Audio.Count, first.Artifacts.Count);
+        Assert.Equal(61 + first.Audio.Count, first.Artifacts.Count);
         Assert.Equal(first.Artifacts.Count, first.MediaManifest.Resources.Count);
         Assert.Empty(first.MapMedia);
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath).OrderBy(path => path, StringComparer.Ordinal), first.Artifacts.Select(artifact => artifact.RelativePath));
@@ -116,16 +116,6 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal(27, first.UiImages.Count);
         // Only gold: every item with a template draws its template's image, a potion its recipe's bottle among them.
         Assert.Single(first.InventoryIcons);
-        Assert.Equal(240, first.Font.Glyphs.Count);
-        // All five font tables publish with the donor's consumer for each; the default face stays
-        // the selected font the profile names.
-        Assert.Equal(5, first.Fonts.Count);
-        Assert.Equal(
-            [("font.classic.0000", "large"), ("font.classic.0001", "title"), ("font.classic.0002", "small"), ("font.classic.0003", "default"), ("font.classic.0004", "unused")],
-            first.Fonts.OrderBy(font => font.MediaId, StringComparer.Ordinal).Select(font => (font.MediaId, font.Use)));
-        Assert.All(first.Fonts, font => Assert.Equal(240, font.Glyphs.Count));
-        Assert.Equal(first.Font.MediaId, first.Fonts.Single(font => font.Use == "default").MediaId);
-        Assert.Equal("font.classic.0003", first.Font.MediaId);
         // The fixture supplies no map art: no images publish and every region maps to nothing,
         // which is the explicit no-art state rather than a missing table.
         Assert.Empty(first.MapMedia);
@@ -134,8 +124,6 @@ public sealed class Arena2ClassicMediaPublicationTests
 
         byte[] weapon = Artifact(first, "media/combat/weapon-dagger-steel-atlas.png");
         AssertPng(weapon, 3840, 600);
-        byte[] font = Artifact(first, "media/fonts/font-classic-0003-atlas.png");
-        AssertPng(font, 256, 240);
         Assert.NotNull(first.MediaManifest.Resources.Single(resource => resource.Id == "weapon.dagger.steel").Frames);
         Assert.Equal(31, first.MediaManifest.Resources.Single(resource => resource.Id == "weapon.dagger.steel").Frames.Count);
         Assert.Contains(first.Artifacts, artifact => artifact.RelativePath == "media/ui/inventory-icons/inventory-icon-gold-piece.png");
@@ -462,12 +450,12 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "BOOK00I0.IMG"), Read(arena2, "REST00I0.IMG"), Read(arena2, "SHOP00I0.IMG"), Read(arena2, "GILD00I0.IMG"), Read(arena2, "BANK00I0.IMG"),
             Read(arena2, "REST01I0.IMG"), Read(arena2, "REST02I0.IMG"), Read(arena2, "INVE08I0.IMG"), Read(arena2, "INVE10I0.IMG"), Read(arena2, "INVE11I0.IMG"),
             Read(arena2, "INVE12I0.IMG"), Read(arena2, "INVE14I0.IMG"), Read(arena2, "GILD01I0.IMG"), Read(arena2, "ICON00I0.IMG"), Read(arena2, "MASK04I0.IMG"),
-            Read(arena2, "TEXTURE.216"), Read(arena2, "FONT0003.FNT"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), Read(arena2, "FONT0000.FNT"), Read(arena2, "FONT0001.FNT"), Read(arena2, "FONT0002.FNT"), Read(arena2, "FONT0004.FNT"), ReadCorpusMapMedia(arena2), Read(arena2, "FMAP_PAL.COL"), Read(arena2, "MAP.PAL"), [], Read(arena2, "TEXTURE.205"),
+            Read(arena2, "TEXTURE.216"), Read(arena2, "WEAPON00.CIF"), Read(arena2, "WEAPON03.CIF"), Read(arena2, "WEAPON11.CIF"), ReadCorpusMapMedia(arena2), Read(arena2, "FMAP_PAL.COL"), Read(arena2, "MAP.PAL"), [], Read(arena2, "TEXTURE.205"),
             Read(arena2, "TEXTURE.375"), Read(arena2, "TEXTURE.376"), Read(arena2, "TEXTURE.377"), Read(arena2, "TEXTURE.378"), Read(arena2, "TEXTURE.379"), Read(arena2, "TEXTURE.434"),
             Read(arena2, "FIRE00C6.CIF"), Read(arena2, "FRST00C6.CIF"), Read(arena2, "POIS00C6.CIF"), Read(arena2, "SHOK00C6.CIF"), Read(arena2, "MJIC00C6.CIF")));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
-        Assert.Equal(67 + 66 + publication.Audio.Count, publication.Artifacts.Count);
+        Assert.Equal(62 + 66 + publication.Audio.Count, publication.Artifacts.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
         // All twelve archives decode: the two spares and the werecreature form carry the same
@@ -477,15 +465,6 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal(31, WeaponActions(publication, "weapon.03").Sum(action => action.FrameCount));
         Assert.Equal(31, WeaponActions(publication, "weapon.werecreature").Sum(action => action.FrameCount));
         Assert.Equal([0, 1, 2, 3, 4, 5, 6], WeaponActions(publication, "weapon.werecreature").Select(action => action.SourceRecordOrdinal));
-        // All five font tables decode with the fixed metrics the files state and the donor's
-        // consumer for each.
-        Assert.Equal(5, publication.Fonts.Count);
-        Assert.Equal(
-            [("font.classic.0000", "large", 14, 11), ("font.classic.0001", "title", 14, 14), ("font.classic.0002", "small", 5, 5), ("font.classic.0003", "default", 5, 7), ("font.classic.0004", "unused", 5, 6)],
-            publication.Fonts.OrderBy(font => font.MediaId, StringComparer.Ordinal).Select(font => (font.MediaId, font.Use, (int)font.FixedWidth, (int)font.FixedHeight)));
-        Assert.All(publication.Fonts, font => Assert.Equal(240, font.Glyphs.Count));
-        Assert.Equal("font.classic.0003", publication.Font.MediaId);
-        AssertPng(Artifact(publication, "media/fonts/font-classic-0000-atlas.png"), 256, 240);
         // All sixty-nine decoded map images publish with region bindings; the region table joins
         // them to normalized regions with the mapless regions explicitly empty.
         Assert.Equal(67, publication.MapMedia.Count);
@@ -628,17 +607,11 @@ public sealed class Arena2ClassicMediaPublicationTests
         // The targeting and element tiles: a headerless 40x80 canvas.
         new byte[40 * 80],
         CreateTextureArchive(2),
-        CreateFont(),
         // The three archives outside the original nine-input closure: two longblade-shaped
         // spares and the werecreature form, all wield image plus six five-frame records.
         CreateWeaponCif(),
         CreateWeaponCif(),
         CreateWeaponCif(),
-        // The four font tables outside the original single-font closure.
-        CreateFont(),
-        CreateFont(),
-        CreateFont(),
-        CreateFont(),
         // No map art in the fixture: the publication then carries no map images and every
         // region maps to nothing, which is the explicit no-art state.
         [],
@@ -822,26 +795,6 @@ public sealed class Arena2ClassicMediaPublicationTests
         }
 
         return result.ToArray();
-    }
-
-    private static byte[] CreateFont()
-    {
-        const int glyphCount = 240;
-        const int headerBytes = 4;
-        const int tableBytes = glyphCount * 4;
-        const int glyphBytes = 32;
-        byte[] font = new byte[headerBytes + tableBytes + (glyphCount * glyphBytes)];
-        WriteUInt16(font, 0, 8);
-        WriteUInt16(font, 2, 16);
-        for (int index = 0; index < glyphCount; index++)
-        {
-            int offset = headerBytes + tableBytes + (index * glyphBytes);
-            WriteUInt16(font, headerBytes + (index * 4), checked((ushort)offset));
-            WriteUInt16(font, headerBytes + (index * 4) + 2, checked((ushort)(index % 16)));
-            font[offset + 1] = 1;
-        }
-
-        return font;
     }
 
     private static int ReadBigEndian(byte[] bytes, int offset) => bytes[offset] << 24 | bytes[offset + 1] << 16 | bytes[offset + 2] << 8 | bytes[offset + 3];
