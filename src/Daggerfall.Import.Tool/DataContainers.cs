@@ -29,12 +29,11 @@ internal static class ImportLayout
     public const string MusicTracks = "local/build/import/music";
 
     /// <summary>
-    /// The terrain bake the repository tracks, with the record of what it was baked from (<see cref="KeptRelief"/>):
-    /// an import takes it when nothing it is baked from changed, and otherwise bakes and replaces it. It is a cache
-    /// its record checks, so it cannot change what the import writes and is not an importer revision input; a release
-    /// ships it with the other inputs.
+    /// The terrain relief and rivers, authored content of the base pack that <c>daggerfall-source-tool relief-bake</c>
+    /// writes, with its record. The game reads them from the pack; the import reads the folder only to draw the atlas, and
+    /// it is an importer revision input.
     /// </summary>
-    public const string KeptRelief = $"{Inputs}/relief";
+    public const string TerrainBake = "content/worldrpg/packs/daggerfall.base/terrain";
 
     /// <summary>The imported payload: every base section the commands derive.</summary>
     public const string ImportedPayload = $"{Staging}/worldrpg/payloads/daggerfall.imported.json";
@@ -104,7 +103,7 @@ internal static class ImportLayout
     public static void RefuseLinkedOutputs(string repository, string? install)
     {
         foreach (string output in new[] { Installed(DataContainer, install), Installed(MusicContainer, install), Installed(ClassicArt.Container, install),
-                     Staging, Records, MusicTracks, ClassicArt.Tree, KeptRelief })
+                     Staging, Records, MusicTracks, ClassicArt.Tree })
         {
             for (FileSystemInfo? current = new FileInfo(Path.GetFullPath(output, repository));
                  current is not null;

@@ -15,13 +15,13 @@ internal readonly record struct DaggerfallRiverSpan(double LeftX, double LeftZ, 
 internal readonly record struct DaggerfallRiverSection(DaggerfallRiverSpan From, DaggerfallRiverSpan To);
 
 /// <summary>
-/// The rivers the import bakes out of the relief's drainage. Each course is a line of stations in metres from the
+/// The rivers baked out of the relief's drainage, beside it in the base pack. Each course is a line of stations in metres from the
 /// heightmap's corner, its surface falling all the way from its head to the sea or the river it joins. The walked and
 /// far ground stand on what <see cref="Carve"/> cuts, and the water draws from the same stations.
 /// </summary>
 internal sealed class DaggerfallTerrainRivers
 {
-    internal const string Path = "worldrpg/terrain/rivers.bin";
+    internal const string Path = "worldrpg/packs/daggerfall.base/terrain/rivers.bin";
     private const int HeaderBytes = 8, StationFloats = 4, MapWidth = 1000, MapHeight = 500;
     private const double PixelMetres = 819.2;
     /// <summary>The ocean clamp, and a little over it.</summary>

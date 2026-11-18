@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
 
-namespace Daggerfall.Import.Relief;
+namespace Daggerfall.Source.Tool.Relief;
 
 /// <summary>One location the relief calms the ground under.</summary>
 /// <param name="MapPixelX">Its map pixel's column.</param>
@@ -32,8 +32,6 @@ public sealed record DaggerfallRelief(int Width, int Height, float[] Metres, int
     /// <summary>The rivers its drainage became.</summary>
     public DaggerfallRivers Rivers { get; init; } = new([]);
 
-    /// <summary>Where the relief is published, below the content root.</summary>
-    public const string RelativePath = "worldrpg/terrain/relief.bin";
     /// <summary>A height's published steps to the metre: an eighth of a metre, finer than any lattice's cell can show.</summary>
     public const double StepsPerMetre = 8;
     private const int HeaderBytes = 20;
@@ -64,10 +62,6 @@ public sealed record DaggerfallRelief(int Width, int Height, float[] Metres, int
 /// where the calibration closes on the classic heights, then carried onto finer ones, each cutting detail the last could
 /// not hold. All noise comes from coordinate hashes, so a bake depends on its input alone.
 /// </summary>
-/// <remarks>
-/// Everything the bake runs lives in this folder, which <c>ImporterBuild.ReliefBakeRevision</c> digests so an import can
-/// reuse a kept bake; <c>ReliefBakeRevisionTests</c> compile the folder alone, so a call into importer code outside it fails.
-/// </remarks>
 public static partial class ReliefBake
 {
     /// <summary>Lattice nodes along one map pixel of the coarsest stage.</summary>

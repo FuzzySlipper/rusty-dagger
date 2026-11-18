@@ -72,6 +72,8 @@ public sealed class DaggerfallTerrainTests
         }
 
         Assert.Equal(woods.Heightmap, heightmap);
+        // The game compares this with the WOODS.WLD the base pack's terrain relief was baked from.
+        Assert.Equal(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)), terrain.Woods);
     }
 
     private static byte[] Fixture(byte height, byte prefix, byte samples)

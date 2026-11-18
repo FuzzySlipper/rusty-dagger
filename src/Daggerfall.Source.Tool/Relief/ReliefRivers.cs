@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace Daggerfall.Import.Relief;
+namespace Daggerfall.Source.Tool.Relief;
 
 /// <summary>One point along a river, in metres from the heightmap's corner.</summary>
 /// <param name="X">Metres east.</param>
@@ -12,8 +12,6 @@ public readonly record struct DaggerfallRiverStation(float X, float Z, float Sur
 /// <summary>The rivers the bake drained the map into, each running from its head to the sea or the river it joins.</summary>
 public sealed record DaggerfallRivers(IReadOnlyList<DaggerfallRiverStation[]> Courses)
 {
-    /// <summary>Where the rivers are published, below the content root.</summary>
-    public const string RelativePath = "worldrpg/terrain/rivers.bin";
     private const int HeaderBytes = 8, StationBytes = 16;
 
     /// <summary>The published form: a magic, how many courses, each one's station count, then every station in order.</summary>

@@ -9,10 +9,8 @@
        The inputs are the import pipeline's source (src/Daggerfall.Import and src/Daggerfall.Import.Tool, which
        holds only the import, its steps and pack, and in inputs/ the tracked files its steps read: the source
        inventory and the classic identities the art pack draws anew, which promotion writes and the pack leaves out of the
-       data container) and the authored UI originals with their manifest. The
-       tracked terrain bake in inputs/relief is left out: the relief step takes it only when its record names the bake
-       this code would make from the player's files, so it cannot change what the import writes. The
-       import reads no Daggerfall Unity file and never the authored base payload; the ruleset joins the base pack's
+       data container), the authored UI originals with their manifest, and the base pack's terrain folder (relief, rivers and record),
+       which the atlas is drawn from (daggerfall-source-tool relief-bake writes them). The import reads no Daggerfall Unity file and never the authored base payload; the ruleset joins the base pack's
        sections to the imported ones when it loads. A table derived from the game is authored data (DEC-13): it lives in an
        authored pack, outside this hash, and the source inventory is being retired by #10894. A command that does not feed the containers lives in src/Daggerfall.Source.Tool, outside the hash. Build output is
        excluded; files are hashed by path and content with CRLF read as LF, so a Windows checkout of the same commit
@@ -65,8 +63,9 @@
     </PropertyGroup>
     <ItemGroup>
       <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/src/Daggerfall.Import/**;$(_ImporterRepositoryRoot)/src/Daggerfall.Import.Tool/**"
-                              Exclude="$(_ImporterRepositoryRoot)/src/*/bin/**;$(_ImporterRepositoryRoot)/src/*/obj/**;$(_ImporterRepositoryRoot)/src/Daggerfall.Import.Tool/inputs/relief/**" />
+                              Exclude="$(_ImporterRepositoryRoot)/src/*/bin/**;$(_ImporterRepositoryRoot)/src/*/obj/**" />
       <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/content/worldrpg/packs/daggerfall.art-replacements/authored-ui/**" />
+      <_ImporterRevisionInput Include="$(_ImporterRepositoryRoot)/content/worldrpg/packs/daggerfall.base/terrain/**" />
     </ItemGroup>
     <ComputeImporterRevision Root="$(_ImporterRepositoryRoot)" Files="@(_ImporterRevisionInput)">
       <Output TaskParameter="Revision" PropertyName="_ImporterRevision" />
@@ -76,31 +75,6 @@
     <ItemGroup>
       <Compile Include="$(_ImporterRevisionFile)" />
       <FileWrites Include="$(_ImporterRevisionFile)" />
-    </ItemGroup>
-  </Target>
-
-  <!-- The relief bake's revision, the same digest over the bake's own source alone (src/Daggerfall.Import/Relief), so the
-       tracked terrain bake stays valid across every other importer edit and goes stale on any edit to the bake. A project
-       sets StampReliefBakeRevision to true to have the constant `StampedReliefBakeRevision` added to its revision class.
-       Daggerfall.Import.Tests' ReliefBakeRevisionTests compile that folder alone, so the bake cannot run importer code
-       outside it. -->
-  <Target Name="StampReliefBakeRevision" BeforeTargets="CoreCompile" Condition="'$(StampReliefBakeRevision)' == 'true'">
-    <PropertyGroup>
-      <_ReliefBakeRepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</_ReliefBakeRepositoryRoot>
-      <_ReliefBakeRevisionFile>$(IntermediateOutputPath)ReliefBakeRevision.g.cs</_ReliefBakeRevisionFile>
-      <ImporterRevisionModifier Condition="'$(ImporterRevisionModifier)' == ''">public</ImporterRevisionModifier>
-    </PropertyGroup>
-    <ItemGroup>
-      <_ReliefBakeInput Include="$(_ReliefBakeRepositoryRoot)/src/Daggerfall.Import/Relief/**" />
-    </ItemGroup>
-    <ComputeImporterRevision Root="$(_ReliefBakeRepositoryRoot)" Files="@(_ReliefBakeInput)">
-      <Output TaskParameter="Revision" PropertyName="_ReliefBakeRevision" />
-    </ComputeImporterRevision>
-    <WriteLinesToFile File="$(_ReliefBakeRevisionFile)" Overwrite="true" WriteOnlyWhenDifferent="true"
-                      Lines="// &lt;auto-generated/&gt;;namespace $(ImporterRevisionNamespace)%3B;$(ImporterRevisionModifier) static partial class $(ImporterRevisionClass) { private const string StampedReliefBakeRevision = &quot;$(_ReliefBakeRevision)&quot;%3B }" />
-    <ItemGroup>
-      <Compile Include="$(_ReliefBakeRevisionFile)" />
-      <FileWrites Include="$(_ReliefBakeRevisionFile)" />
     </ItemGroup>
   </Target>
 </Project>

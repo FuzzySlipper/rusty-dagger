@@ -71,9 +71,9 @@ the one ignored folder. Its folders say what may be deleted:
   after a pull that changes the importer revision. Its
   inputs are `src/Daggerfall.Import` and `src/Daggerfall.Import.Tool`, whose
   `inputs/` holds the source inventory and the list of classic art the art pack
-  draws anew (not the terrain bake in
-  `inputs/relief/`, which cannot change what it writes), and the authored UI art
-  with its manifest (`src/ImporterRevision.targets` lists them). The import never
+  draws anew, the authored UI art with its manifest, and the base pack's
+  terrain relief and rivers, which the atlas is drawn from
+  (`src/ImporterRevision.targets` lists them). The import never
   reads the authored base payload, so editing it needs no import. The entry screen says when the data is missing, damaged or
   from another importer.
 
@@ -144,14 +144,14 @@ the one ignored folder. Its folders say what may be deleted:
 - Every run prints the container's importer revision beside the checkout's. When
   they differ the copy is stale for this tree: pull, and if the store has none,
   import it through the `data` lane.
-- The terrain bake is tracked in `src/Daggerfall.Import.Tool/inputs/relief/`
-  with the record of what it was baked from. The import's `relief` step takes it
-  when the record matches the arena2 and this build's bake; otherwise it bakes
-  (14 minutes or more), says which input differed and rewrites those files.
-  **Refresh** it with any change to `src/Daggerfall.Import/Relief/` or the bake's
-  stages: the `data` lane's import rebakes, says where it left the rewritten
-  files on the worker, and you commit them with that change. `KeptReliefTests` fails while they are stale. Git stores the
-  21 MB again only when the bytes change.
+- The terrain relief and rivers are base pack content in
+  `content/worldrpg/packs/daggerfall.base/terrain/`, with `relief.json`, the
+  digest of the WOODS.WLD they were baked from; the game warns when the
+  player's differs. After changing the bake (`src/Daggerfall.Source.Tool/Relief/`)
+  or its stages, bake again on den-k8 (about 7 minutes) with
+  `dotnet run --project src/Daggerfall.Source.Tool -- relief-bake --arena2 local/inputs/arena2 --update`,
+  commit the three files with the change, and route the `data` lane: the atlas
+  is drawn from them, so they move the importer revision.
 - The store and `data-sync` carry `classic-art.rpak` with each revision's other
   containers, and `status` prints its revision: a developer's checkout has every
   container, so it runs exactly what a player has and can still compare.
@@ -200,7 +200,7 @@ Rules for the tracked side:
   and textures, and sounds and video while they are Daggerfall originals. A fact derived from the game or from Daggerfall Unity (tables,
   formulas, timings, positions, quest text, collision, navigation, ARCH3D
   geometry) may be extracted once into authored data and edited in place, as
-  the terrain bake in `src/Daggerfall.Import.Tool/inputs/relief/` was (#10758).
+  the terrain relief in the base pack was.
   Credit to Bethesda Softworks and Daggerfall Unity stays. This is DEC-13 on
   the wiki page `wiki/rusty-dagger/coverage-scope-and-decisions`. An untracked
   file under `content/` fails the architecture tests.

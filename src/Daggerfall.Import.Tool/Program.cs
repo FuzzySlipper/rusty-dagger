@@ -31,7 +31,6 @@ internal static class Program
         BlocksCommand.Command,
         ClimateCommand.Command,
         TerrainCommand.Command,
-        ReliefCommand.Command,
         AtlasCommand.Command,
         VideosCommand.Command,
         // The product-wide world media, then the per-block world publication that places it.

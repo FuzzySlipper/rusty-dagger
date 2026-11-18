@@ -1,17 +1,20 @@
 using System.Buffers.Binary;
+using System.Text.Json;
 using WorldRpg.Kit.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
 /// <summary>
-/// The eroded landscape the import bakes from WOODS: a lattice of heights in metres, and how much
+/// The eroded landscape baked from WOODS, authored content of the base pack (<c>daggerfall-source-tool relief-bake</c>): a lattice of heights in metres, and how much
 /// of the classic height stays at each node, which returns along the coast so shores don't move. Coordinates are in
 /// map pixels of the WOODS heightmap. The bake holds valleys and ridges down to its lattice; the erosion filter cuts
 /// the finer gullies and breaks the crests.
 /// </summary>
 internal sealed class DaggerfallTerrainRelief
 {
-    internal const string Path = "worldrpg/terrain/relief.bin";
+    internal const string Path = "worldrpg/packs/daggerfall.base/terrain/relief.bin";
+    /// <summary>The bake's record beside it: the SHA-256 of the WOODS.WLD it was baked from.</summary>
+    internal const string RecordPath = "worldrpg/packs/daggerfall.base/terrain/relief.json";
     private const int HeaderBytes = 20;
     private const double MetresPerPixel = 819.2;
     private const double StepsPerMetre = 8;
@@ -43,6 +46,32 @@ internal sealed class DaggerfallTerrainRelief
         ushort[] steps = new ushort[count];
         for (int i = 0; i < count; i++) steps[i] = BinaryPrimitives.ReadUInt16LittleEndian(bytes[(HeaderBytes + (i * sizeof(ushort)))..]);
         return new(width, height, steps, shareWidth, shareHeight, bytes[(HeaderBytes + (count * sizeof(ushort)))..].ToArray());
+    }
+
+    /// <summary>
+    /// Why the relief may not fit the player's heights: the WOODS.WLD the import read (<paramref name="woods"/>, its digest
+    /// in the terrain section) is not the one the bake's record names, so the rivers would sit on other heights. Null when
+    /// they match.
+    /// </summary>
+    internal static string? WoodsMismatch(string? woods, ReadOnlyMemory<byte>? record)
+    {
+        if (record is not { } bytes) return $"The terrain relief has no record at {RecordPath}, so it cannot say whether it was baked from this WOODS.WLD.";
+        string? baked;
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(bytes);
+            baked = document.RootElement.TryGetProperty("woods", out JsonElement value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+        }
+        catch (JsonException exception)
+        {
+            return $"The terrain relief's record {RecordPath} cannot be read ({exception.Message}), so it cannot say whether the relief was baked from this WOODS.WLD.";
+        }
+
+        if (baked is null) return $"The terrain relief's record {RecordPath} names no WOODS.WLD digest.";
+        if (woods is null) return $"The imported terrain names no WOODS.WLD digest, so the relief cannot be matched to it; import again.";
+        return string.Equals(woods, baked, StringComparison.OrdinalIgnoreCase) ? null
+            : $"This WOODS.WLD ({woods[..Math.Min(12, woods.Length)]}) is not the one the terrain relief was baked from ({baked[..Math.Min(12, baked.Length)]}): "
+                + "the relief and its rivers may sit on other heights. Rebake it with daggerfall-source-tool relief-bake.";
     }
 
     /// <summary>How much of the relief stands at a point, from 0 (the classic height) to 1.</summary>

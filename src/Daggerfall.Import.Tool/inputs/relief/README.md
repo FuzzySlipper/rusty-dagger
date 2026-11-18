@@ -1,1 +1,0 @@
-Tracked by Patch's decision (Den #10758): the terrain bake transforms `WOODS.WLD`'s heights heavily, ships as binary and is used only behind the import's check for the player's own arena2; this covers no other file made from arena2. To refresh it, see the root README's Game data section.

@@ -451,6 +451,30 @@ public sealed class DaggerfallHorizonGroundTests
     }
 
     [Fact]
+    public void The_base_pack_ships_the_relief_and_rivers_with_the_digest_of_the_woods_they_were_baked_from()
+    {
+        string content = Path.Combine(TestData.RepositoryRoot, "content");
+        byte[] record = File.ReadAllBytes(Path.Combine(content, DaggerfallTerrainRelief.RecordPath));
+        string woods = System.Text.Json.JsonDocument.Parse(record).RootElement.GetProperty("woods").GetString()!;
+
+        Assert.Matches("^[0-9a-f]{64}$", woods);
+        Assert.Null(DaggerfallTerrainRelief.WoodsMismatch(woods, record));
+        DaggerfallTerrainRelief.Read(File.ReadAllBytes(Path.Combine(content, DaggerfallTerrainRelief.Path)));
+        Assert.True(DaggerfallTerrainRivers.Read(File.ReadAllBytes(Path.Combine(content, DaggerfallTerrainRivers.Path))).Courses > 0);
+    }
+
+    [Fact]
+    public void Another_woods_than_the_relief_was_baked_from_is_named_in_a_warning()
+    {
+        byte[] record = """{"woods":"aaaaaaaaaaaa1111"}"""u8.ToArray();
+
+        Assert.Contains("bbbbbbbbbbbb", DaggerfallTerrainRelief.WoodsMismatch("bbbbbbbbbbbb2222", record));
+        Assert.Contains("import again", DaggerfallTerrainRelief.WoodsMismatch(null, record));
+        Assert.Contains("no record", DaggerfallTerrainRelief.WoodsMismatch("aaaaaaaaaaaa1111", null));
+        Assert.Contains("cannot be read", DaggerfallTerrainRelief.WoodsMismatch("aaaaaaaaaaaa1111", "{"u8.ToArray()));
+    }
+
+    [Fact]
     public void A_river_cuts_its_channel_into_walked_and_far_ground_alike_and_banks_it_back_into_the_land()
     {
         const double surface = 480, halfWidth = 8, x = 3.5 * Size, z = 3 * Size;

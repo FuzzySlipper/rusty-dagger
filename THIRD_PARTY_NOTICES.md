@@ -8,9 +8,9 @@ player's own copy. This repository does not contain or redistribute the game's r
 and textures, and its sounds and video. Facts derived from the game, such as tables,
 formulas, timings, positions, quest text, collision, navigation and model geometry, are taken once into
 authored data of ours and edited in place (decision DEC-13 on the project wiki's
-`coverage-scope-and-decisions` page). The terrain bake in `src/Daggerfall.Import.Tool/inputs/relief/`
+`coverage-scope-and-decisions` page). The terrain bake in `content/worldrpg/packs/daggerfall.base/terrain/`
 is such data: eroded relief and rivers computed from the heightmap in `WOODS.WLD`, the climate and the
-locations, which the import takes in place of baking them again. The operator supplies their own copy of the game's `ARENA2` directory as
+locations, which the game reads from the base pack. The operator supplies their own copy of the game's `ARENA2` directory as
 `local/inputs/arena2`, and the import command converts it into the data container
 `local/data/daggerfall-data.rpak` on their machine (ignored by Git). The project wiki's
 `import-and-data-container` page says what is generated and what is authored.

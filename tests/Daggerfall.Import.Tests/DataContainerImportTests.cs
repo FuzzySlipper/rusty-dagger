@@ -215,16 +215,6 @@ public sealed class DataContainerImportTests : IDisposable
     }
 
     [Fact]
-    public void The_relief_is_baked_after_the_sections_it_reads()
-    {
-        string[] labels = [.. ImportCommand.Steps(new("local/inputs/arena2", null)).Select(step => step.Label)];
-
-        int relief = Array.IndexOf(labels, "relief");
-        Assert.True(relief > Array.IndexOf(labels, "locations"));
-        Assert.True(relief > Array.IndexOf(labels, "climate"));
-    }
-
-    [Fact]
     public void Every_step_is_a_tool_command_the_commands_own_grammar_accepts()
     {
         ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound");
@@ -239,9 +229,9 @@ public sealed class DataContainerImportTests : IDisposable
         }
 
         // Each step writes into the staging tree or the records, never into the repository's content: what it names
-        // there is the authored UI art and its manifest, which it reads.
+        // there is the authored UI art and its manifest, and the base pack's terrain the atlas is drawn from, which it reads.
         Assert.All(steps.SelectMany(step => step.Arguments).Where(argument => argument.StartsWith("content/", StringComparison.Ordinal)),
-            argument => Assert.Contains(argument, new[] { AuthoredUi.ProductDirectory, AuthoredUi.ManifestFile }));
+            argument => Assert.Contains(argument, new[] { AuthoredUi.ProductDirectory, AuthoredUi.ManifestFile, ImportLayout.TerrainBake }));
         Assert.Equal(["music-tracks", "classic-media"], steps.Take(2).Select(step => step.Label));
         Assert.Equal("world-blocks", steps[^1].Label);
     }

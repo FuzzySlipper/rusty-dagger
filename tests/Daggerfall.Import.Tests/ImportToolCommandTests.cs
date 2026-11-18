@@ -51,7 +51,7 @@ public sealed class ImportToolCommandTests
     // The relief takes minutes over the real map, three times here: ReliefBakeTests covers the bake on a small one.
     public static IEnumerable<object[]> UpdateCommands => ToolPrograms.Commands.Values
         // The relief bake and the atlas drawn from it run on the whole map; AtlasBakeTests and ReliefBakeTests cover them.
-        .Where(command => command.Options.Any(option => option.Name == "--update") && command.Name is not ("relief" or "atlas"))
+        .Where(command => command.Options.Any(option => option.Name == "--update") && command.Name is not ("relief-bake" or "atlas"))
         .Select(command => new object[] { command.Name });
 
     [Theory]

@@ -1,7 +1,6 @@
 using System.Buffers.Binary;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
-using Daggerfall.Import.Relief;
 using Rgb = (byte R, byte G, byte B);
 
 namespace Daggerfall.Import.Normalization;
@@ -89,6 +88,8 @@ public static class AtlasBake
     /// <summary>How many levels the atlas halves its finest level into, finest last.</summary>
     public const int LevelCount = 3;
     private const double OceanMetres = 27.2 * 1.5, PixelMetres = 819.2, Exaggeration = 2.5;
+    /// <summary>The relief file's height steps to the metre.</summary>
+    private const double ReliefStepsPerMetre = 8;
     private const double LightAzimuth = 315 * Math.PI / 180, LightAltitude = 40 * Math.PI / 180;
 
     /// <summary>The levels an atlas of the input's size takes, coarsest first.</summary>
@@ -538,7 +539,7 @@ public static class AtlasBake
         int width = BinaryPrimitives.ReadInt32LittleEndian(bytes[4..]), height = BinaryPrimitives.ReadInt32LittleEndian(bytes[8..]);
         float[] metres = new float[checked(width * height)];
         if (bytes.Length < 20 + (metres.Length * 2)) throw new InvalidDataException("The relief is shorter than its lattice.");
-        for (int i = 0; i < metres.Length; i++) metres[i] = BinaryPrimitives.ReadUInt16LittleEndian(bytes[(20 + (i * 2))..]) / (float)DaggerfallRelief.StepsPerMetre;
+        for (int i = 0; i < metres.Length; i++) metres[i] = BinaryPrimitives.ReadUInt16LittleEndian(bytes[(20 + (i * 2))..]) / (float)ReliefStepsPerMetre;
         return (width, height, metres);
     }
 

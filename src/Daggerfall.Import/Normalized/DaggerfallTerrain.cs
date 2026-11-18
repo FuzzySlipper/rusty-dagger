@@ -43,6 +43,10 @@ public sealed record DaggerfallTerrainPrefixByte(int Index, IReadOnlyList<int> V
 /// <param name="CellStride">The source stride between cell records.</param>
 /// <param name="Prefix">The value domain of every cell-prefix byte.</param>
 /// <param name="DataSection">The donor-unread data section, base-64.</param>
+/// <param name="Woods">
+/// The SHA-256 of the WOODS.WLD this was built from: the game warns when it is not the one the base pack's terrain relief
+/// was baked from, whose rivers would then sit on other heights.
+/// </param>
 public sealed record DaggerfallTerrain(
     int Width,
     int Height,
@@ -52,7 +56,8 @@ public sealed record DaggerfallTerrain(
     long CellBase,
     int CellStride,
     IReadOnlyList<DaggerfallTerrainPrefixByte> Prefix,
-    string DataSection)
+    string DataSection,
+    string Woods)
 {
     /// <summary>Where the samples are published, below the content root.</summary>
     public const string SamplesPath = "worldrpg/terrain/samples.bin";
@@ -84,9 +89,9 @@ public sealed record DaggerfallTerrain(
             throw new InvalidOperationException($"Terrain carries {CellCount} cells for a {Width * Height}-cell map.");
         }
 
-        if (string.IsNullOrWhiteSpace(Samples) || string.IsNullOrWhiteSpace(DataSection))
+        if (string.IsNullOrWhiteSpace(Samples) || string.IsNullOrWhiteSpace(DataSection) || string.IsNullOrWhiteSpace(Woods))
         {
-            throw new InvalidOperationException("Terrain carries no samples or no data section.");
+            throw new InvalidOperationException("Terrain carries no samples, no data section or no WOODS.WLD digest.");
         }
 
         // A section read back carries the samples' file, not their bytes; one built from the source carries both.
@@ -178,7 +183,8 @@ public static class DaggerfallTerrainBuilder
             offsets[0],
             WoodsReader.CellBytes,
             prefix,
-            Convert.ToBase64String(woods.DataSection))
+            Convert.ToBase64String(woods.DataSection),
+            Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)))
         {
             SampleBytes = samples,
         };

@@ -205,12 +205,6 @@ EOF
   data)
     # With the classic-art container, so every checkout runs what a player has and can still compare (#10763).
     measured import dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound --classic-art
-    # A stale terrain bake is rebaked and rewritten in the checkout; the change that made it stale commits it.
-    relief=src/Daggerfall.Import.Tool/inputs/relief
-    if [[ -n $(git status --porcelain -- "$relief") ]]; then
-      mkdir -p "$out/relief" && cp -a "$relief/." "$out/relief/"
-      echo "lane: the import rebaked the terrain; commit $(hostname):$out/relief/ as $relief/ with this change"
-    fi
     measured publish scripts/data-sync.sh publish
     ;;
 esac

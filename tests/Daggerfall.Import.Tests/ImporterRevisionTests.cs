@@ -43,6 +43,10 @@ public sealed class ImporterRevisionTests
                 "content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-authored-assets.json",
                 "src/Daggerfall.Import.Tool/inputs/item-templates.json",
                 "content/worldrpg/packs/daggerfall.art-replacements/authored-ui/ui-stone-title-v2.png",
+                // The atlas is drawn from the base pack's terrain relief and rivers.
+                "content/worldrpg/packs/daggerfall.base/terrain/relief.bin",
+                "content/worldrpg/packs/daggerfall.base/terrain/rivers.bin",
+                "content/worldrpg/packs/daggerfall.base/terrain/relief.json",
             ];
             string[] unread =
             [
@@ -57,9 +61,8 @@ public sealed class ImporterRevisionTests
                 // The ruleset joins the authored base payload to the imported sections when it loads.
                 "content/worldrpg/packs/daggerfall.base/payload.json",
                 "src/WorldRpg.Rulesets.Daggerfall/Session/DaggerfallRuleset.cs",
-                // The tracked terrain bake is taken only when its record names the bake this code makes, so it cannot change the import's output.
-                "src/Daggerfall.Import.Tool/inputs/relief/relief.bin",
-                "src/Daggerfall.Import.Tool/inputs/relief/record.json",
+                // The bake is an authoring tool's.
+                "src/Daggerfall.Source.Tool/Relief/ReliefBake.cs",
                 "src/Daggerfall.Import/obj/Debug/net10.0/ImporterRevision.g.cs",
                 "src/Daggerfall.Import.Tool/bin/Debug/net10.0/Daggerfall.Import.Tool.dll",
             ];
@@ -134,9 +137,8 @@ public sealed class ImporterRevisionTests
                 .Select(option => option.Default!);
             foreach (string value in step.Arguments.Skip(1).Concat(defaults))
             {
-                // local/ holds the operator's own files and what the import writes. The tracked terrain bake is a cache
-                // its record checks (ImportLayout.KeptRelief), and the relief step writes it.
-                if (value.StartsWith("local/", StringComparison.Ordinal) || value == ImportLayout.KeptRelief) continue;
+                // local/ holds the operator's own files and what the import writes.
+                if (value.StartsWith("local/", StringComparison.Ordinal)) continue;
                 string full = Path.GetFullPath(Path.Combine(Root, value));
                 IEnumerable<string> files = File.Exists(full) ? [full]
                     : Directory.Exists(full) ? Directory.EnumerateFiles(full, "*", SearchOption.AllDirectories)

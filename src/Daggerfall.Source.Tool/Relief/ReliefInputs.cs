@@ -1,13 +1,10 @@
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
-using Daggerfall.Import.Relief;
 
-namespace Daggerfall.Import.Normalization;
+namespace Daggerfall.Source.Tool.Relief;
 
 /// <summary>
-/// Reads what the relief is baked from out of the source wilderness and the sections the import published. It lies
-/// outside the bake's own source (<c>src/Daggerfall.Import/Relief</c>) on purpose: a kept bake is recorded against the
-/// input this returns, so how it is read can change without the bake going stale unless the input itself does.
+/// Reads what the relief is baked from out of the source wilderness and the sections the import published.
 /// </summary>
 public static class ReliefInputs
 {

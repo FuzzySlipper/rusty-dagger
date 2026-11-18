@@ -15,12 +15,10 @@
     <!-- The tests read the internal collision/navigation artifact writer's output directly. -->
     <InternalsVisibleTo Include="Daggerfall.Import.Tests" />
   </ItemGroup>
-  <!-- Stamps ImporterBuild.Revision, the importer revision the data container records, and
-       ImporterBuild.ReliefBakeRevision, the one a kept terrain bake is recorded against. -->
+  <!-- Stamps ImporterBuild.Revision, the importer revision the data container records. -->
   <PropertyGroup>
     <ImporterRevisionNamespace>Daggerfall.Import</ImporterRevisionNamespace>
     <ImporterRevisionClass>ImporterBuild</ImporterRevisionClass>
-    <StampReliefBakeRevision>true</StampReliefBakeRevision>
   </PropertyGroup>
   <Import Project="../ImporterRevision.targets" />
 </Project>

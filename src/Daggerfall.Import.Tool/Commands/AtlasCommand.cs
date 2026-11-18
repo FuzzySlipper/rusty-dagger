@@ -4,17 +4,17 @@ using System.Text.Json.Nodes;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
 using Daggerfall.Import.Publication;
-using Daggerfall.Import.Relief;
 
 namespace Daggerfall.Import.Tool.Commands;
 
 /// <summary>
-/// Draws the travel atlas from the relief, its rivers and the climate and politic grids, and publishes it as a pyramid
-/// of tiles with a manifest of its levels and an inventory of its own, beside the relief it is drawn from.
+/// Draws the travel atlas from the base pack's relief and rivers (<see cref="ImportLayout.TerrainBake"/>) and the climate
+/// and politic grids, and publishes it as a pyramid of tiles with a manifest of its levels and an inventory of its own.
 /// </summary>
 internal static class AtlasCommand
 {
-    public static ToolCommand Command { get; } = new("atlas", [Options.Pack, Options.ContentRoot, Options.Update], Run);
+    public static ToolCommand Command { get; } = new("atlas",
+        [Options.Pack, CommandOption.Staged("--terrain", "TERRAIN_DIR", ImportLayout.TerrainBake), Options.ContentRoot, Options.Update], Run);
 
     /// <summary>Where the atlas is published, below the content root; the ruleset reads the manifest and inventory here.</summary>
     internal const string Root = "worldrpg/media/atlas";
@@ -25,8 +25,9 @@ internal static class AtlasCommand
     private static int Run(CommandArguments args)
     {
         string root = Path.GetFullPath(args[Options.ContentRoot.Name]);
+        string terrain = args["--terrain"];
         AtlasInput input = AtlasBake.Input(
-            File.ReadAllBytes(Path.Combine(root, DaggerfallRelief.RelativePath)), File.ReadAllBytes(Path.Combine(root, DaggerfallRivers.RelativePath)),
+            File.ReadAllBytes(Path.Combine(terrain, "relief.bin")), File.ReadAllBytes(Path.Combine(terrain, "rivers.bin")),
             PayloadFiles.ReadSection<DaggerfallClimateGrid>(args["--pack"], "climate"), PayloadFiles.ReadSection<DaggerfallPoliticGrid>(args["--pack"], "politic"));
         Stopwatch clock = Stopwatch.StartNew();
         List<(string Path, byte[] Bytes, string MediaId)> tiles = [.. AtlasBake.Tiles(input, AtlasPalette.Painted).Select(tile =>

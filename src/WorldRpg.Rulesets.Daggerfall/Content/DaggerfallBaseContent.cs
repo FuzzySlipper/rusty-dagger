@@ -2351,6 +2351,7 @@ internal static partial class DaggerfallBaseContent
         }
 
         string path = Text(section, "samples", diagnostics);
+        string? woods = OptionalText(section, "woods", diagnostics);
         if (data is not null && path.Length != 0 && !data.Contains(path))
             diagnostics.Add($"The published terrain names its samples at '{path}', which {data.Source} does not carry.");
         return new DaggerfallTerrainSet(Width, Height, heightmap, () =>
@@ -2361,8 +2362,13 @@ internal static partial class DaggerfallBaseContent
             return samples.Length == Width * Height * CellSamples
                 ? samples
                 : throw new DaggerfallContentException([$"The published terrain samples at '{path}' carry {samples.Length} bytes for {Width * Height} cells of {CellSamples}."]);
-        }, () => data is not null && data.Contains(DaggerfallTerrainRelief.Path)
-            ? DaggerfallTerrainRelief.Read(data.ReadBytes(DaggerfallTerrainRelief.Path).Span) : null,
+        }, () =>
+        {
+            if (data is null || !data.Contains(DaggerfallTerrainRelief.Path)) return null;
+            if (DaggerfallTerrainRelief.WoodsMismatch(woods, data.TryReadFile(DaggerfallTerrainRelief.RecordPath, out ReadOnlyMemory<byte> record) ? record : null) is { } mismatch)
+                System.Diagnostics.Trace.TraceWarning(mismatch);
+            return DaggerfallTerrainRelief.Read(data.ReadBytes(DaggerfallTerrainRelief.Path).Span);
+        },
             () => data is not null && data.Contains(DaggerfallTerrainRivers.Path)
                 ? DaggerfallTerrainRivers.Read(data.ReadBytes(DaggerfallTerrainRivers.Path).Span) : null);
     }
