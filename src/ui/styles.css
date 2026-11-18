@@ -67,7 +67,9 @@ body, dialog { font-family: var(--font-body); }
    fills the frame and this stylesheet carries layout only. */
 .dagger-entry { position: absolute; inset: 0; display: grid; place-items: center; background: #05060a var(--skin-stone-texture, none) 0 0 / var(--skin-stone-texture-size, auto) repeat; pointer-events: auto; }
 .dagger-entry[hidden] { display: none; }
-.dagger-entry { overflow: hidden; }
+/* Clipped, not hidden: a hidden box still scrolls to reveal what takes focus, and the title must never move. `hidden`
+   stays as the fallback for an engine without `clip`. */
+.dagger-entry { overflow: hidden; overflow: clip; }
 /* Beside the upright refreshed title, a dimmed copy of the painting covers the window. */
 .dagger-entry[data-backdrop]::before { content: ""; position: absolute; inset: -2rem; pointer-events: none;
   background: linear-gradient(rgb(5 6 10 / .62), rgb(5 6 10 / .62)), var(--dagger-entry-backdrop) center / cover no-repeat; filter: blur(1.25rem); }

@@ -262,6 +262,13 @@ test('quest message text keeps its line breaks but not the spaces classic text u
   assert.match(rule, /white-space:\s*pre-line/);
 });
 
+test('the title screen clips rather than scrolls, so focus inside it never moves the painting', async () => {
+  const css = await readFile(new URL('../../src/ui/styles.css', import.meta.url), 'utf8');
+  const rule = /\.dagger-entry \{\s*(overflow[^}]*)\}/.exec(css)?.[1];
+  assert.ok(rule, 'the entry screen overflow rule was not found');
+  assert.match(rule, /overflow:\s*clip/);
+});
+
 test('the death screen stacks above quest messages and the legal screen', async () => {
   const css = await readFile(new URL('../../src/ui/styles.css', import.meta.url), 'utf8');
   const layer = selector => Number(new RegExp(`${selector.replace(/[.()[\]:]/g, '\\$&')} \\{[^}]*z-index:\\s*(\\d+)`).exec(css)?.[1]);
@@ -2147,8 +2154,15 @@ test('the title screen offers the games the product publishes and sends the one 
     // the player pressed takes focus again when it returns, so a second press steps again.
     cycler.querySelector('[aria-label="Next game"]').focus();
     f.publish({ mode: 'title', bundles: null });
-    f.publish({ mode: 'title', bundles: { current: 'daggerfall.town-start', options: [
-      { id: 'daggerfall.classic', title: 'Classic Daggerfall' }, { id: 'daggerfall.town-start', title: 'Developer: Charing town start' }] } });
+    // The step takes focus without scrolling the title, which would lift the painting and hide the game's name.
+    const focusing = [];
+    const focus = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function (options) { focusing.push([this.getAttribute('aria-label'), options]); return focus.call(this, options); };
+    try {
+      f.publish({ mode: 'title', bundles: { current: 'daggerfall.town-start', options: [
+        { id: 'daggerfall.classic', title: 'Classic Daggerfall' }, { id: 'daggerfall.town-start', title: 'Developer: Charing town start' }] } });
+    } finally { HTMLElement.prototype.focus = focus; }
+    assert.deepEqual(focusing, [['Next game', { preventScroll: true }]]);
     assert.equal(select().querySelector('[data-cycler="Game"] output').textContent, 'Developer: Charing town start');
     assert.equal(document.activeElement, select().querySelector('[aria-label="Next game"]'));
     // Moving away is not undone by the next snapshot.

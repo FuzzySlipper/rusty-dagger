@@ -152,7 +152,8 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     }
     if (!bundle.hidden && bundleStep !== null) {
       const step = Array.from(bundle.querySelectorAll<HTMLButtonElement>('button')).find(button => button.getAttribute('aria-label') === bundleStep);
-      step?.focus();
+      // The title never scrolls to show the step: it is already in view, and a scroll would lift the painting and its name.
+      step?.focus({ preventScroll: true });
       bundleStep = null;
     }
     if (creating) bundleStep = null;
