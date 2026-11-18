@@ -31,11 +31,12 @@ internal sealed record DaggerfallSurfaceReliefTuning(float FadeStart, float Fade
 
     /// <summary>
     /// The surface shader drawing one record's relief: <paramref name="relief"/> its image, whose alpha is each texel's
-    /// height, 1 at the face; <paramref name="depth"/> its floor's depth under the face in metres, scaled by the player's
-    /// <paramref name="strength"/>.
+    /// height, 1 at the face, or none; <paramref name="depth"/> its floor's depth under the face in metres, after the player's
+    /// strength, 0 for none; and lit glass flickering by a share at a rate (<paramref name="flicker"/>).
     /// </summary>
-    internal MaterialShader Shader(RenderResource shader, RenderResource relief, float depth, float strength) => new(new RenderResourceReference(shader),
-        new Vector4(depth * strength, Steps, FadeStart, FadeEnd), new Vector4(Cavity, Slope, 0, 0), default, default, new RenderResourceReference(relief), default);
+    internal MaterialShader Shader(RenderResource shader, RenderResource? relief, float depth, Vector2 flicker) => new(new RenderResourceReference(shader),
+        new Vector4(depth, Steps, FadeStart, FadeEnd), new Vector4(Cavity, Slope, 0, 0), new Vector4(flicker, 0, 0), default,
+        relief is null ? default : new RenderResourceReference(relief), default);
 
     internal static DaggerfallSurfaceReliefTuning Read(JsonElement e) => new DaggerfallSurfaceReliefTuning(
         e.GetProperty("fadeStart").GetSingle(), e.GetProperty("fadeEnd").GetSingle(), e.GetProperty("steps").GetInt32(),

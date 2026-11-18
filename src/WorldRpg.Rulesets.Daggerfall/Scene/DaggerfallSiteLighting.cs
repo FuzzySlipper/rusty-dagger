@@ -21,6 +21,11 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private readonly long _instance;
     private readonly string _profileId;
     private readonly List<(Light Light, LightRequest Request)> _points = [];
+    // Each lamp's own level and the phase it flickers on, from its authored id, so it flickers alike in every session.
+    private readonly Dictionary<ulong, (float Level, float Phase)> _flames = [];
+    // The lamps' flicker clock, in admitted seconds, and when it last changed their brightness.
+    private double _flickerSeconds;
+    private double _flickered = double.NegativeInfinity;
     // The shadow each lamp carried off its place held when it left, given back when it returns (PlaceLamp).
     private readonly Dictionary<ulong, LightShadowIntent> _carriedShadows = [];
     private readonly List<LightRequest> _suspendedPoints = [];
@@ -100,6 +105,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
                         0F,
                         LightShadowIntent.Disabled));
                 request = request with { Descriptor = request.Descriptor with { ShadowResolution = _tuning.LampShadowResolution } };
+                _flames.Add(lightId, (LampIntensity(light), StableHash.Fnv1a64(light.Id) % 1000 / 1000f));
                 if (light.CityLight)
                 {
                     _cityIntensities.Add(lightId, LampIntensity(light));
@@ -171,11 +177,10 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     private static (int X, int Z) ShadowSector(Vector3 at, float side) => ((int)MathF.Floor(at.X / side), (int)MathF.Floor(at.Z / side));
 
     /// <summary>
-    /// Carries authored lamp <paramref name="lamp"/> to <paramref name="position"/> at <paramref name="level"/> times its
-    /// authored intensity, as a swinging, flickering lantern does; placed at its own position at level 1 it is as authored.
-    /// It casts no shadow while away from its own position.
+    /// Carries authored lamp <paramref name="lamp"/> to <paramref name="position"/>, as a swinging lantern does, burning at
+    /// its flame's level now; placed at its own position it is as authored. It casts no shadow while away from its own position.
     /// </summary>
-    internal void PlaceLamp(DaggerfallSiteLight lamp, Vector3 position, float level)
+    internal void PlaceLamp(DaggerfallSiteLight lamp, Vector3 position)
     {
         if (_disposed || _suspended) return;
         ulong id = LogicalLightId(_profileId, _instance, $"authored:{lamp.Id}");
@@ -189,10 +194,52 @@ internal sealed class DaggerfallSiteLighting : IDisposable
             : _carriedShadows.Remove(id, out LightShadowIntent held) ? held : request.Descriptor.ShadowIntent;
         LightRequest placed = request with
         {
-            Descriptor = request.Descriptor with { Position = position, Intensity = LampIntensity(lamp) * level, ShadowIntent = shadow },
+            Descriptor = request.Descriptor with { Position = position, Intensity = Flame(id), ShadowIntent = shadow },
         };
         _graphics.UpdateLight(new(light, placed));
         _points[index] = (light, placed);
+    }
+
+    /// <summary>How often the lamps' brightness changes, in seconds: a flame's flicker reads the same at this rate, and a site of many lamps keeps its light updates few.</summary>
+    private const double FlickerStep = 1 / 20d;
+
+    /// <summary>
+    /// Flickers each lit lamp within <see cref="DaggerfallSiteLightingTuning.FlickerReach"/> of <paramref name="eye"/> about
+    /// its level, on its own phase, as <paramref name="elapsed"/> admitted seconds pass. A light's brightness redraws no
+    /// shadow, so a casting lamp flickers for the price of its update.
+    /// </summary>
+    internal void Flicker(Vector3 eye, double elapsed)
+    {
+        if (_disposed || _suspended || elapsed <= 0) return;
+        _flickerSeconds += elapsed;
+        if (_flickerSeconds - _flickered < FlickerStep) return;
+        _flickered = _flickerSeconds;
+        float reach = _tuning.FlickerReach * _tuning.FlickerReach;
+        for (int index = 0; index < _points.Count; index++)
+        {
+            (Light light, LightRequest request) = _points[index];
+            if (request.Descriptor.Intensity <= 0 || Vector3.DistanceSquared(request.Descriptor.Position, eye) > reach) continue;
+            LightRequest next = request with { Descriptor = request.Descriptor with { Intensity = Flame(request.LogicalId) } };
+            _graphics.UpdateLight(new(light, next));
+            _points[index] = (light, next);
+        }
+    }
+
+    /// <summary>A lamp's light now, about its own level as its flame flickers.</summary>
+    private float Flame(ulong id)
+    {
+        (float level, float phase) = _flames[id];
+        return level * Flickering(_tuning.LampFlicker, _tuning.LampFlickerRate, phase, _flickerSeconds);
+    }
+
+    /// <summary>
+    /// A flame's level as a share of its own: three sines at unrelated rates, so it never visibly repeats, rising and
+    /// falling by <paramref name="share"/>. Window glass flickers by the same in its shader (<c>relief.wgsl</c>).
+    /// </summary>
+    internal static float Flickering(float share, float rate, float phase, double seconds)
+    {
+        double t = (seconds * rate + phase) * 2 * Math.PI;
+        return 1 + share * (float)((Math.Sin(t) + .6 * Math.Sin(2.3 * t + 1.7) + .3 * Math.Sin(5.1 * t + .4)) / 1.9);
     }
 
     /// <summary>The share of the night's ambient the moons give tonight, from the next ambient update on. Under classic art it stays whole.</summary>
@@ -352,9 +399,9 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     // DaggerfallDateTime keeps city lamps on slightly beyond the ordinary night interval.
     internal static bool CityLightsOn(DaggerfallSkyTime sky) => sky.Hour >= 17 || sky.Hour < 8;
 
-    /// <summary>Lights a location's window glass on the city lamps' hours.</summary>
+    /// <summary>Lights a location's window glass on the city lamps' hours, flickering as the fires behind it do.</summary>
     internal void UpdateWindowGlass(DaggerfallSiteAppearance appearance, DaggerfallSkyTime sky) =>
-        appearance.UpdateWindowGlass(_tuning.WindowColor, CityLightsOn(sky) ? _tuning.WindowLevel : 0f);
+        appearance.UpdateWindowGlass(_tuning.WindowColor, CityLightsOn(sky) ? _tuning.WindowLevel : 0f, new(_tuning.WindowFlicker, _tuning.WindowFlickerRate));
 
     /// <summary>Whether a site's lamps burn: outdoors on the city lamps' hours, and always under a roof.</summary>
     internal static bool LampsLit(DaggerfallWorldProfileKind kind, DaggerfallSkyTime sky) =>
@@ -583,6 +630,7 @@ internal sealed class DaggerfallSiteLighting : IDisposable
         _mobileLights.Clear();
         _spellLights.Clear();
         _points.Clear();
+        _flames.Clear();
         _lights.Clear();
         _suspendedPoints.Clear();
         _ambient = null;

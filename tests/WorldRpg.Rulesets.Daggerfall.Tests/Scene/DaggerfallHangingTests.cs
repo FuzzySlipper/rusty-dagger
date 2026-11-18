@@ -324,10 +324,13 @@ public sealed class DaggerfallHangingTests
             // The player stands by it, so the lights' sector rule lets it cast.
             lighting.UpdateShadowSector(new Vector3(5, 0, 6), DaggerfallLampShadowChoice.Default);
             DaggerfallHangingActor near = new(1, new Vector3(5, 0, 6), .25F, 1.8F);
+            int before = site.Graphics.LightUpdates.Count;
             hanging.Step(.1F, [near], true);
-            // At rest the light its flat names, not the block's nearer one, flickers where it was authored, casting.
-            LightDescriptor rest = site.Graphics.LightUpdates[^1].Replacement.Descriptor;
-            Assert.Equal(authored, rest.Position);
+            // At rest the lantern leaves its light alone: the site's lighting flickers the light its flat names, not the
+            // block's nearer one, where it was authored, casting.
+            Assert.Equal(before, site.Graphics.LightUpdates.Count);
+            lighting.Flicker(new Vector3(5, 1.6F, 6), .1);
+            LightDescriptor rest = Assert.Single(site.Graphics.LightUpdates.Skip(before), update => update.Replacement.Descriptor.Position == authored).Replacement.Descriptor;
             Assert.Equal(LightShadowIntent.Requested, rest.ShadowIntent);
 
             hanging.Step(.1F, [near], true);

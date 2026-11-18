@@ -16,18 +16,20 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 /// location material whose record's relief has a depth draws its refreshed surface with the set's surface shader, the
 /// relief as its product map and the depth scaled by the player's strength, which a video setting changes live. Each
 /// season draws its own record's relief. Classic art, a strength of 0, a relief with no depth (a remodel's shells alone)
-/// and every interior draw the plain surface.
+/// and every interior draw the plain surface. Lit window glass outdoors flickers in the same shader, with its relief or
+/// without one, in classic art too (#10906).
 /// </summary>
 public sealed class SurfaceReliefPresentationTests
 {
     private const string HashHex = "0000000000000001000000000000000200000000000000030000000000000004";
 
-    private static DaggerfallSiteProfile Profile(DaggerfallWorldProfileKind kind)
+    private static DaggerfallSiteProfile Profile(DaggerfallWorldProfileKind kind, bool glass)
     {
         DaggerfallSiteGeometry geometry = new(1, [new DaggerfallSiteSpatialPart("block", "spatial/block.rspatial", Hash)],
             [new DaggerfallSiteMesh("mesh/house.rstatmsh", Hash, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), [new(0, 0), new(1, 1)])]);
         // House 125's plaster, snowed in winter; and the low wall's stones, whose relief only a remodel's shells draw.
         NormalizedMaterial plaster = new(0, "texture/texture-312-1.png", Hash, "material/texture-12-1") { WinterTexture = new("texture/texture-313-1.png", Hash) };
+        if (glass) plaster = plaster with { SummerGlass = new("texture/texture-312-1-glass.png", Hash), WinterGlass = new("texture/texture-313-1-glass.png", Hash) };
         NormalizedMaterial stones = new(1, "texture/texture-329-0.png", Hash, "material/texture-29-0");
         return new DaggerfallSiteProfile(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()), geometry,
             new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
@@ -42,8 +44,10 @@ public sealed class SurfaceReliefPresentationTests
     private static readonly string ArtJson = ("""
         {"artReplacements": {"images": [],
           "surfaces": [
-            {"replaces": {"archive": 312, "record": 1}, "path": "surfaces/texture-312-1.png", "sha256": "HASH", "width": 128, "height": 256},
-            {"replaces": {"archive": 313, "record": 1}, "path": "surfaces/texture-313-1.png", "sha256": "HASH", "width": 128, "height": 256},
+            {"replaces": {"archive": 312, "record": 1}, "path": "surfaces/texture-312-1.png", "sha256": "HASH", "width": 128, "height": 256,
+              "glass": {"path": "surfaces/texture-312-1-glass.png", "sha256": "HASH", "width": 128, "height": 256}},
+            {"replaces": {"archive": 313, "record": 1}, "path": "surfaces/texture-313-1.png", "sha256": "HASH", "width": 128, "height": 256,
+              "glass": {"path": "surfaces/texture-313-1-glass.png", "sha256": "HASH", "width": 128, "height": 256}},
             {"replaces": {"archive": 329, "record": 0}, "path": "surfaces/texture-329-0.png", "sha256": "HASH", "width": 128, "height": 64}],
           "groundCover": {"shell": {"path": "cover/shell.png", "sha256": "HASH", "width": 96, "height": 96, "texelsPerMetre": 24},
             "tuft": {"path": "cover/tuft.png", "sha256": "HASH"}, "shader": {"path": "cover/shells.wgsl", "sha256": "HASH"}, "grass": {},
@@ -53,16 +57,18 @@ public sealed class SurfaceReliefPresentationTests
         }}}}
         """).Replace("HASH", HashHex, StringComparison.Ordinal);
 
-    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Graphics) Compose(DaggerfallWorldProfileKind kind, Func<bool> refreshed, Func<float> strength)
+    private static (DaggerfallSiteAppearance Presentation, AppearanceFake Graphics) Compose(DaggerfallWorldProfileKind kind, Func<bool> refreshed, Func<float> strength,
+        bool glass = false)
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
         foreach (string path in new[] { "mesh/house.rstatmsh", "texture/texture-312-1.png", "texture/texture-313-1.png", "texture/texture-329-0.png",
                      "surfaces/texture-312-1.png", "surfaces/texture-313-1.png", "surfaces/texture-329-0.png", "relief/relief.wgsl",
-                     "relief/relief-312-1.png", "relief/relief-313-1.png", "relief/relief-329-0.png" })
+                     "relief/relief-312-1.png", "relief/relief-313-1.png", "relief/relief-329-0.png", "texture/texture-312-1-glass.png",
+                     "texture/texture-313-1-glass.png", "surfaces/texture-312-1-glass.png", "surfaces/texture-313-1-glass.png" })
             content.Add(path, Hash);
         AppearanceFake graphics = new(releases);
-        DaggerfallSiteAppearance presentation = new(content, graphics, Profile(kind));
+        DaggerfallSiteAppearance presentation = new(content, graphics, Profile(kind, glass));
         presentation.UseSurfaceRelief(DaggerfallSurfaceReliefTuning.Default, strength);
         presentation.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service,
             DaggerfallArtReplacements.Read(Encoding.UTF8.GetBytes(ArtJson), "test.art"), refreshed);
@@ -139,6 +145,46 @@ public sealed class SurfaceReliefPresentationTests
         Assert.All(Surfaces(indoors), surface => Assert.Equal(default, Now(indoors, surface).Shader));
         Assert.Equal("surfaces/texture-312-1.png", Opened(indoors, Now(indoors, Surfaces(indoors)[0]).Texture));
         Assert.DoesNotContain(indoors.OpenedResourcePaths, path => path is not null && path.StartsWith("relief/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Lit_window_glass_outdoors_flickers_in_the_surface_shader_with_its_relief_or_none_in_classic_art_too()
+    {
+        bool refreshed = true;
+        var (presentation, graphics) = Compose(DaggerfallWorldProfileKind.Exterior, () => refreshed, () => 1F, glass: true);
+        using DaggerfallSiteAppearance owned = presentation;
+        using var actors = EmptyActors();
+        Material[] surfaces = Surfaces(graphics);
+        Vector2 flicker = new(.1F, 1.5F);
+
+        // By day the glass is dark: the plaster draws only its relief.
+        Assert.Equal(Vector4.Zero, Now(graphics, surfaces[0]).Shader.Parameter2);
+
+        presentation.UpdateWindowGlass(Vector3.One, .8F, flicker);
+        MaterialRequest lit = Now(graphics, surfaces[0]);
+        Assert.Equal("relief/relief-312-1.png", Opened(graphics, lit.Shader.TextureA));
+        Assert.Equal(new Vector4(flicker, 0, 0), lit.Shader.Parameter2);
+        // The stones carry no glass, so nothing of theirs flickers.
+        Assert.Equal(default, Now(graphics, surfaces[1]).Shader);
+
+        // Classic art draws no relief, and its lit glass still flickers in the shader.
+        refreshed = false;
+        presentation.Publish(actors);
+        MaterialRequest classic = Now(graphics, surfaces[0]);
+        Assert.Equal("relief/relief.wgsl", Opened(graphics, classic.Shader.Shader));
+        Assert.Equal(0F, classic.Shader.Parameter0.X);
+        Assert.Equal(default, classic.Shader.TextureA);
+        Assert.Equal(new Vector4(flicker, 0, 0), classic.Shader.Parameter2);
+
+        // Dark windows draw the plain surface again.
+        presentation.UpdateWindowGlass(Vector3.One, 0F, flicker);
+        Assert.Equal(default, Now(graphics, surfaces[0]).Shader);
+
+        // Indoors nothing flickers.
+        var (inside, indoors) = Compose(DaggerfallWorldProfileKind.Interior, () => false, () => 1F, glass: true);
+        using DaggerfallSiteAppearance ownedInside = inside;
+        inside.UpdateWindowGlass(Vector3.One, .8F, flicker);
+        Assert.Equal(default, Now(indoors, Surfaces(indoors)[0]).Shader);
     }
 
     [Fact]

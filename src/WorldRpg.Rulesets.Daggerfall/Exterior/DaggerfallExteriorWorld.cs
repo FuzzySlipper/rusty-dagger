@@ -1825,6 +1825,13 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
             if (!ReferenceEquals(resident.Projection, Projection)) resident.Projection.Lighting.UpdateShadowSector(player, choice);
     }
 
+    /// <summary>Flickers the lamps near <paramref name="eye"/> of every location resident beside the active one, as the active one's flicker.</summary>
+    internal void FlickerResidentLamps(Vector3 eye, double elapsed)
+    {
+        foreach (ResidentExteriorLocation resident in _residentExteriorLocations.Values)
+            if (!ReferenceEquals(resident.Projection, Projection)) resident.Projection.Lighting.Flicker(eye, elapsed);
+    }
+
     internal void UpdateResidentCityLights()
     {
         DaggerfallSkyTime sky = _time.Calendar.Sky;

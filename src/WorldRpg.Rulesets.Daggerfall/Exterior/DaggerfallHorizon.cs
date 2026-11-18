@@ -12,7 +12,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// The exterior ground, <see cref="DaggerfallHorizonGround"/> as two heightfields. Near ground stands in the world across the
 /// walked window, and far ground in the backdrop past it, so the ranges stand where the map has them. The world draws over
 /// the backdrop, so inside the window only near ground shows. Near ground stands while the player is outdoors, and far
-/// ground too unless they have chosen classic art.
+/// ground too unless they have chosen classic art. Where the art set has the sea's shader, the water and the far sea draw
+/// with it, swelling, rippling and glinting alike, so the far sea moves out to the horizon and the moons lay paths on it.
 /// </summary>
 internal sealed class DaggerfallHorizon : IDisposable
 {
@@ -34,6 +35,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     private readonly DaggerfallHorizonTuning _tuning;
     private readonly DaggerfallHorizonGround _ground;
     private readonly Material _sea;
+    private readonly RenderResource? _seaShader;
     private readonly Material _water;
     private readonly MeshResource _sheet;
     private readonly Appearance _sheetLook;
@@ -58,14 +60,17 @@ internal sealed class DaggerfallHorizon : IDisposable
     private (int MapX, int MapY) _nearFrame;
     private (SpatialSession Session, int MapX, int MapY)? _link;
     private Vector3 _sky = Vector3.One;
+    /// <summary>Each moon slot's lit fraction, which the sea's glints take.</summary>
+    private Vector4 _moons;
     private bool _seen = true;
     private double _lift;
     private float _fogDensity;
     private bool _nearSeen;
     private bool _disposed;
 
+    /// <param name="seaShader">The art set's shader for the sea and the rivers, if it has one.</param>
     internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning, DaggerfallWaterTuning water, float repeatMetres, DaggerfallTerrainRivers? rivers,
-        DaggerfallFloraField flora, DaggerfallFarForest farForest)
+        DaggerfallFloraField flora, DaggerfallFarForest farForest, DaggerfallArtFile? seaShader)
     {
         _flora = flora ?? throw new ArgumentNullException(nameof(flora));
         _farForest = farForest ?? throw new ArgumentNullException(nameof(farForest));
@@ -75,9 +80,10 @@ internal sealed class DaggerfallHorizon : IDisposable
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
         _lift = tuning.Lift;
         _fogDensity = tuning.FogDensity;
-        _sea = engine.Graphics.CreateMaterial(Sea(Vector3.One));
         _waterTuning = water;
-        _water = engine.Graphics.CreateMaterial(water.Material(default, Vector3.One));
+        _seaShader = seaShader is null ? null : engine.Graphics.OpenShader(engine.Content, seaShader.Path, seaShader.Sha256);
+        _sea = engine.Graphics.CreateMaterial(Sea(Vector3.One));
+        _water = engine.Graphics.CreateMaterial(Water(default));
         _repeatMetres = repeatMetres;
         _sheet = engine.Graphics.CreateMeshResource(Sheet(_water, repeatMetres));
         _sheetLook = engine.Graphics.CreateMeshAppearance(_sheet);
@@ -91,17 +97,20 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// <param name="seen">Whether the weather lets the far ground show. Thick weather closes within a kilometre or so, and
     /// ground that the fog has wholly taken would still stand out as a flat shape of the fog's colour against the sky.</param>
     /// <param name="sky">The sky's light as a share of clear noon's, which the sea takes in its own colours, near and far alike.</param>
+    /// <param name="moons">Each moon slot's lit fraction, from 0 new to 1 full, by which the water reflects it.</param>
     /// <param name="far">Whether far ground and refreshed flora stand at all: classic art shows the painted sky's horizon, and its nature in the donor's places.</param>
     /// <param name="layers">Opens a ground archive's layers.</param>
     /// <param name="flora">What a nature archive's record draws as flora.</param>
-    internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, bool winter, Vector3 sky, bool seen, bool far,
+    internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, bool winter, Vector3 sky, Vector4 moons, bool seen, bool far,
         Func<int, DaggerfallGroundLayers> layers, Func<int, int, DaggerfallFloraLook?> flora)
     {
         sky = Vector3.Clamp(sky, Vector3.Zero, Vector3.One);
-        if (Vector3.Abs(sky - _sky) is { } moved && Math.Max(moved.X, Math.Max(moved.Y, moved.Z)) >= TintStep)
+        bool skyMoved = Vector3.Abs(sky - _sky) is { } moved && Math.Max(moved.X, Math.Max(moved.Y, moved.Z)) >= TintStep;
+        if (skyMoved || (_seaShader is not null && moons != _moons))
         {
-            _sky = sky;
-            _engine.Graphics.UpdateMaterial(new(_sea, Sea(sky)));
+            if (skyMoved) _sky = sky;
+            _moons = moons;
+            _engine.Graphics.UpdateMaterial(new(_sea, Sea(_sky)));
             _waterArchive = -1;
         }
 
@@ -250,9 +259,19 @@ internal sealed class DaggerfallHorizon : IDisposable
         _ground.Current = _ground.Current with { CentreX = double.NaN, CentreZ = double.NaN };
     }
 
-    /// <summary>The sea past the sheets: it glows its colour, so the world's lights can't take it away from the water it meets.</summary>
-    private MaterialRequest Sea(Vector3 sky) => new(new Color(0, 0, 0, 1), default(RenderResourceReference), 1, new Color(1, 1, 1, 1),
-        new Vector3(_tuning.Sea.R, _tuning.Sea.G, _tuning.Sea.B) * sky, 1, false);
+    /// <summary>
+    /// The sea past the sheets: it glows its colour, so the world's lights can't take it away from the water it meets, and
+    /// the sea's shader ripples it and lays the glints on it as on the sheets.
+    /// </summary>
+    private MaterialRequest Sea(Vector3 sky) => new MaterialRequest(new Color(0, 0, 0, 1), default(RenderResourceReference), 1, new Color(1, 1, 1, 1),
+        SeaColor(sky), 1, false) { Shader = SeaShader(far: true) };
+
+    /// <summary>The sheets' and the rivers' water over a climate's water art.</summary>
+    private MaterialRequest Water(RenderResourceReference art) => _waterTuning.Material(art, _sky, SeaShader(far: false));
+
+    private MaterialShader SeaShader(bool far) => _seaShader is { } shader ? _waterTuning.SeaShader(shader, far, _moons, SeaColor(_sky)) : default;
+
+    private Vector3 SeaColor(Vector3 sky) => new Vector3(_tuning.Sea.R, _tuning.Sea.G, _tuning.Sea.B) * sky;
 
     /// <summary>Stands a sheet of sea on every map pixel with water in it about the player, so inland nothing draws water at all.</summary>
     private void ShowSea(DaggerfallExteriorWorldOrigin origin, double x, double z, bool winter)
@@ -261,7 +280,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         if (archive != _waterArchive)
         {
             _waterArchive = archive;
-            _engine.Graphics.UpdateMaterial(new(_water, _waterTuning.Material(_waterArt[archive], _sky)));
+            _engine.Graphics.UpdateMaterial(new(_water, Water(_waterArt[archive])));
         }
 
         _sheets.Clear();
@@ -482,6 +501,7 @@ internal sealed class DaggerfallHorizon : IDisposable
         _sheetLook.Dispose();
         _sheet.Dispose();
         _water.Dispose();
+        _seaShader?.Dispose();
     }
 
     /// <summary>

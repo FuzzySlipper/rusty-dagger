@@ -84,6 +84,8 @@ public sealed class ActorSpritePresentationTests
         Assert.Contains("sprite/enemy-glow.png", graphics.OpenedResourcePaths);
     }
 
+    private static readonly Vector2 Flicker = new(.1f, 1.5f);
+
     [Fact]
     public void Window_glass_lights_only_at_its_level_and_follows_the_season_without_changing_the_texture()
     {
@@ -99,15 +101,15 @@ public sealed class ActorSpritePresentationTests
         using var presentation = new DaggerfallSiteAppearance(content, graphics, profile);
         Vector3 warm = new(1f, .5f, 0f);
 
-        presentation.UpdateWindowGlass(warm, .8f);
+        presentation.UpdateWindowGlass(warm, .8f, Flicker);
         MaterialRequest lit = Assert.Single(graphics.MaterialUpdates).Replacement;
         Assert.Equal(warm, lit.EmissionColor);
         Assert.Equal(.8f, lit.EmissionIntensity);
 
-        presentation.UpdateWindowGlass(warm, .8f);
+        presentation.UpdateWindowGlass(warm, .8f, Flicker);
         Assert.Single(graphics.MaterialUpdates);
 
-        presentation.UpdateWindowGlass(warm, 0f);
+        presentation.UpdateWindowGlass(warm, 0f, Flicker);
         MaterialRequest dark = graphics.MaterialUpdates[1].Replacement;
         Assert.Equal(0f, dark.EmissionIntensity);
         Assert.Equal(lit.EmissionMap, dark.EmissionMap);
@@ -141,7 +143,7 @@ public sealed class ActorSpritePresentationTests
             configure: site => site.UseEffectArt(PresentationRecorder.Create().Service, AnimationRecorder.Create().Service, art, () => refreshed));
         Assert.Contains("refreshed/surfaces/texture-312-3-glass.png", graphics.OpenedResourcePaths);
         Assert.DoesNotContain("materials/texture-312-3-glass.png", graphics.OpenedResourcePaths);
-        presentation.UpdateWindowGlass(Vector3.One, .8f);
+        presentation.UpdateWindowGlass(Vector3.One, .8f, Flicker);
         MaterialRequest own = Assert.Single(graphics.MaterialUpdates).Replacement;
         Assert.Equal(.8f, own.EmissionIntensity);
 
@@ -166,7 +168,7 @@ public sealed class ActorSpritePresentationTests
         content.Add("summer.png", Hash);
         using var presentation = new DaggerfallSiteAppearance(content, graphics, profile);
 
-        presentation.UpdateWindowGlass(Vector3.One, 1f);
+        presentation.UpdateWindowGlass(Vector3.One, 1f, Flicker);
 
         Assert.Empty(graphics.MaterialUpdates);
     }

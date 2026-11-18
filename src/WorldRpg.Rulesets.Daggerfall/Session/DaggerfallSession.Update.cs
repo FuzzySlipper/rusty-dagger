@@ -211,7 +211,9 @@ internal sealed partial class DaggerfallSession
             && facts.LifecycleState == ProductLifecycleState.Running
             && !PlayerTimeHeld
             && double.IsFinite(facts.FixedDeltaSeconds) && facts.FixedDeltaSeconds > 0;
-        SyncWeatherContext(ambientPlaying ? facts.FixedDeltaSeconds * facts.AdmittedStepCount : 0, ambientPlaying);   // Exterior
+        double ambientSeconds = ambientPlaying ? facts.FixedDeltaSeconds * facts.AdmittedStepCount : 0;
+        SyncWeatherContext(ambientSeconds, ambientPlaying);                                      // Exterior
+        FlickerLamps(ambientSeconds);                                                             // Scene
         // A paused or held update reached no impact boundary, so acts it deferred are not performed.
         _actTiming.Drop();                                                                        // Character
         foreach (var appearance in _sites.Appearances) appearance.CompleteAdmittedUpdate();      // Scene
@@ -767,6 +769,15 @@ internal sealed partial class DaggerfallSession
     /// far the camera draws, the horizon shown or hidden, then the weather's presentation. The update, a site's
     /// activation, a client's first publication and an arrival's ground wait reach it.
     /// </summary>
+    /// <summary>The lamps near the player flicker as <paramref name="elapsed"/> seconds of play pass: the active site's, and a neighbouring town's.</summary>
+    private void FlickerLamps(double elapsed)
+    {
+        if (State.PlayerControl.Position is not { } feet) return;
+        Vector3 eye = feet.ToVector() + (Vector3.UnitY * _tuning.Camera.EyeHeight);
+        _sites.Projection.Lighting.Flicker(eye, elapsed);                                         // Scene
+        _exterior.FlickerResidentLamps(eye, elapsed);                                             // Exterior
+    }
+
     private void SyncWeatherContext(double seconds = 0, bool playing = false)
     {
         if (State.PlayerControl.Position is not { } position) return;
@@ -784,7 +795,7 @@ internal sealed partial class DaggerfallSession
         {
             if (_exterior.PlacedNatureIfChanged(origin) is { } placed) _horizon.PlaceNature(placed);   // Exterior
             _horizon.Show(_spatial.Session, origin, player, _time.Calendar.Season == DaggerfallSeason.Winter,
-                _sites.Projection.Lighting.SkyLight / _tuning.SiteLighting.ViewFull,
+                _sites.Projection.Lighting.SkyLight / _tuning.SiteLighting.ViewFull, DaggerfallMoons.LitBySlot(_time.Calendar.Sky),
                 LocalWeather.Current is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast,
                 !_classicArt, _exterior.GroundLayers, _exterior.FloraLook);                        // Exterior
         }

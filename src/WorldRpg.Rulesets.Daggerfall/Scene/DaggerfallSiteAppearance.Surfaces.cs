@@ -19,6 +19,10 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// strength of 0 and a record without such relief draw the plain surface. Interiors and dungeons draw the same records
 /// flat: their relief waits on Patch's decision (#10859).
 /// </para>
+/// <para>
+/// Outdoors, lit window glass flickers as the fires behind it do, each window on its own phase, in the same shader with no
+/// relief where its surface draws none, in classic art too (#10906).
+/// </para>
 /// </summary>
 internal sealed partial class DaggerfallSiteAppearance
 {
@@ -27,7 +31,9 @@ internal sealed partial class DaggerfallSiteAppearance
     private bool surfacesRefreshed;
     private Vector3 windowColor;
     private float windowLevel;
-    // The set's surface shader, once an art set with building relief is admitted outdoors, the tuning it draws by, and the
+    // How far lit glass flickers about its level, as a share of it, and how fast, in cycles a second.
+    private Vector2 windowFlicker;
+    // The set's surface shader, once an art set with one is admitted outdoors, the tuning its relief draws by, and the
     // player's strength, read live, with the strength the surfaces draw now.
     private RenderResource? surfaceShader;
     private DaggerfallSurfaceReliefTuning reliefTuning = DaggerfallSurfaceReliefTuning.Default;
@@ -117,11 +123,14 @@ internal sealed partial class DaggerfallSiteAppearance
         ApplySurfaces();
     }
 
-    /// <summary>Lights the location's window glass in a colour at a level, which is zero while the windows are dark.</summary>
-    internal void UpdateWindowGlass(Vector3 color, float level)
+    /// <summary>
+    /// Lights the location's window glass in a colour at a level, which is zero while the windows are dark, flickering by a
+    /// share at a rate (<paramref name="flicker"/>).
+    /// </summary>
+    internal void UpdateWindowGlass(Vector3 color, float level, Vector2 flicker)
     {
-        if (level == windowLevel && color == windowColor) return;
-        (windowColor, windowLevel) = (color, level);
+        if (level == windowLevel && color == windowColor && flicker == windowFlicker) return;
+        (windowColor, windowLevel, windowFlicker) = (color, level, flicker);
         ApplySurfaces();
     }
 
@@ -136,8 +145,7 @@ internal sealed partial class DaggerfallSiteAppearance
     private void UseSurfaceArt(DaggerfallArtReplacements art)
     {
         surfaceArt = art;
-        if (inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior && art.GroundCover is { SurfaceShader: { } shader } cover && surfaceShader is null
-            && cover.Relief.Values.Any(relief => relief.Depth is not null))
+        if (inputs.ProfileKind == DaggerfallWorldProfileKind.Exterior && art.GroundCover is { SurfaceShader: { } shader } && surfaceShader is null)
         {
             surfaceShader = appearance.OpenShader(content, shader.Path, shader.Sha256);
             ownedResources.Add(surfaceShader);
@@ -193,8 +201,11 @@ internal sealed partial class DaggerfallSiteAppearance
         RenderResource wanted = DrawnSurface(surface, season, surfacesRefreshed);
         RenderResource? glass = DrawnGlass(surface, season, surfacesRefreshed);
         float level = glass is null ? 0F : windowLevel;
-        MaterialShader shader = surfacesRefreshed && surfacesStrength > 0 && surfaceShader is { } relief && surface.Relief[season] is { } height
-            ? reliefTuning.Shader(relief, height.Image, height.Depth, surfacesStrength) : default;
+        Vector2 flicker = level > 0 ? windowFlicker : default;
+        MaterialShader shader = surfaceShader is not { } surfaces ? default
+            : surfacesRefreshed && surfacesStrength > 0 && surface.Relief[season] is { } height
+                ? reliefTuning.Shader(surfaces, height.Image, height.Depth * surfacesStrength, flicker)
+                : flicker.X > 0 ? reliefTuning.Shader(surfaces, null, 0, flicker) : default;
         if (wanted == surface.Current && glass == surface.CurrentGlass && level == surface.Level && shader == surface.Shader) return;
         appearance.UpdateMaterial(new MaterialUpdateRequest(surface.Material, SurfaceRequest(wanted, glass, shader)));
         (surface.Current, surface.CurrentGlass, surface.Level, surface.Shader) = (wanted, glass, level, shader);

@@ -26,7 +26,7 @@ internal readonly record struct DaggerfallHangingActor(long Id, Vector3 Feet, fl
 /// <see cref="WorldRpg.Kit.Presentation.HeldChain"/> hangs the flail's chain, in one Dynamics world bound to the site's
 /// collision, and each actor near one walks in a kinematic capsule that pushes its bodies. A piece simulates only while an
 /// actor is within the tuning's radius; it then settles, eases back to rest and draws at rest until one comes again. A
-/// lantern carries the site's light beside it and flickers it. It is presentation: nothing of it is saved, and while
+/// lantern carries the site's light beside it while it swings. It is presentation: nothing of it is saved, and while
 /// classic art is drawn the sprites stand in and nothing simulates.
 /// </summary>
 internal sealed class DaggerfallHanging : IDisposable
@@ -69,12 +69,8 @@ internal sealed class DaggerfallHanging : IDisposable
     private readonly List<DaggerfallHangingActor> stirring = [];
     private bool paused;
 
-    // Lanterns farther than this from every actor keep a steady light: nobody near sees it flicker.
-    private const float FlickerReach = 20f;
     // How far a lantern's light must move before its light follows, in metres.
     private const float LampStill = .02f;
-    // How often a lantern at rest changes its light's brightness, in seconds: a flame's flicker reads the same at this rate.
-    private const double RestingFlickerStep = 1 / 20d;
     // How far above or below a piece an actor may stand and still be level with it: a jump's height, short of the floor
     // above or below, whose pieces an actor beneath or above them cannot reach.
     private const float LevelReach = 1f;
@@ -96,10 +92,8 @@ internal sealed class DaggerfallHanging : IDisposable
         /// <summary>The site's light this lantern carries, placed beside it.</summary>
         internal DaggerfallSiteLight? Lamp { get; set; }
         internal Vector3 LampRest { get; set; }
-        /// <summary>Where its light was last placed, while it is carried, and when.</summary>
+        /// <summary>Where its light was last placed, while it is carried.</summary>
         internal Vector3? LampAt { get; set; }
-        internal double LampSet { get; set; } = double.NegativeInfinity;
-        internal float Phase { get; set; }
     }
 
     /// <param name="lamps">The site's authored lights, among which each lantern finds the one its flat sheds.</param>
@@ -118,7 +112,7 @@ internal sealed class DaggerfallHanging : IDisposable
         Dictionary<string, DaggerfallSiteLight> lampsById = lamps.ToDictionary(lamp => lamp.Id, StringComparer.Ordinal);
         foreach (DaggerfallHangingPiece placed in site.HangingPieces())
         {
-            Piece piece = new(placed) { Phase = StableHash.Fnv1a64(placed.Id) % 1000 / 1000f };
+            Piece piece = new(placed);
             if (placed.Kind == DaggerfallHangingKind.Lantern && placed.Rig.Light is uint light
                 && placed.Light is { } lampId && lampsById.TryGetValue(lampId, out DaggerfallSiteLight? lamp))
             {
@@ -159,7 +153,7 @@ internal sealed class DaggerfallHanging : IDisposable
 
     /// <summary>
     /// World seconds admitted: wakes the pieces an actor has come near and releases those left alone, moves each actor's
-    /// capsule to where it walks, steps the world, and carries and flickers the lanterns' lights.
+    /// capsule to where it walks, steps the world, and carries the swinging lanterns' lights.
     /// </summary>
     /// <param name="actors">The actors that push the pieces aside, the player first.</param>
     /// <param name="refreshed">Whether refreshed art is drawn; while classic art is, the sprites stand in and nothing hangs.</param>
@@ -205,7 +199,7 @@ internal sealed class DaggerfallHanging : IDisposable
         }
         double stepped = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
         start = Stopwatch.GetTimestamp();
-        CarryLamps(actors);
+        CarryLamps();
         costs.Enqueue((stepped, Stopwatch.GetElapsedTime(start).TotalMilliseconds));
         while (costs.Count > 600) costs.Dequeue();
     }
@@ -310,7 +304,7 @@ internal sealed class DaggerfallHanging : IDisposable
         piece.Instance = null;
         Site.SwingHanging(piece.Placed.Id, false);
         // Its light goes home now, whoever is near, so it casts what it cast before it swung.
-        if (piece.Lamp is { } lamp) lighting.PlaceLamp(lamp, lamp.Position.ToVector(), 1);
+        if (piece.Lamp is { } lamp) lighting.PlaceLamp(lamp, lamp.Position.ToVector());
         piece.LampAt = null;
     }
 
@@ -325,7 +319,7 @@ internal sealed class DaggerfallHanging : IDisposable
             piece.Instance?.Dispose();
             piece.Instance = null;
             Site.SwingHanging(piece.Placed.Id, false);
-            if (piece.Lamp is { } lamp) lighting.PlaceLamp(lamp, lamp.Position.ToVector(), 1);
+            if (piece.Lamp is { } lamp) lighting.PlaceLamp(lamp, lamp.Position.ToVector());
             piece.LampAt = null;
         }
         foreach (DynamicsBody body in actorBodies.Values) body.Dispose();
@@ -357,31 +351,24 @@ internal sealed class DaggerfallHanging : IDisposable
         }
     }
 
-    /// <summary>A lantern's light sits in its glass, wherever that swings, and flickers about its level while an actor is near.</summary>
-    private void CarryLamps(ReadOnlySpan<DaggerfallHangingActor> actors)
+    /// <summary>
+    /// A swinging lantern's light sits in its glass, wherever that swings. At rest it stands where it was authored, where
+    /// the site's lighting flickers it as it does every lamp.
+    /// </summary>
+    private void CarryLamps()
     {
         foreach (Piece piece in pieces)
         {
-            if (piece.Lamp is not { } lamp || !Near(piece, actors, FlickerReach)) continue;
-            // At rest only its brightness changes, and a site of many lights makes each change dear: it flickers less often.
-            if (piece.Ragdoll is null && seconds - piece.LampSet < RestingFlickerStep) continue;
-            piece.LampSet = seconds;
-            // The light keeps where it was authored beside the lantern and moves as the lantern's light joint does, so at
-            // rest it is where it was authored.
-            Vector3 at = lamp.Position.ToVector();
-            if (piece.Instance is { } instance && piece.Ragdoll is not null && piece.Rig.Light is uint light)
-            {
-                AnimationJointPoseResult pose = animation.ReadJointPose(instance);
-                if (pose.Reported) at += pose.Joints.Span[(int)light].World.Translation - piece.LampRest;
-                // A settled lantern still stirs by millimetres: its light stays put until it moves, so a light casting
-                // shadows is not drawn again every frame for nothing.
-                if (piece.LampAt is { } placed && Vector3.Distance(placed, at) < LampStill) at = placed;
-                piece.LampAt = at;
-            }
-            else piece.LampAt = null;
-            double t = (seconds * tuning.LampFlickerRate + piece.Phase) * 2 * Math.PI;
-            float flicker = 1 + tuning.LampFlicker * (float)((Math.Sin(t) + .6 * Math.Sin(2.3 * t + 1.7) + .3 * Math.Sin(5.1 * t + .4)) / 1.9);
-            lighting.PlaceLamp(lamp, at, flicker);
+            if (piece.Lamp is not { } lamp || piece.Ragdoll is null || piece.Instance is not { } instance || piece.Rig.Light is not uint light) continue;
+            AnimationJointPoseResult pose = animation.ReadJointPose(instance);
+            if (!pose.Reported) continue;
+            // The light keeps where it was authored beside the lantern and moves as the lantern's light joint does.
+            Vector3 at = lamp.Position.ToVector() + pose.Joints.Span[(int)light].World.Translation - piece.LampRest;
+            // A settled lantern still stirs by millimetres: its light stays put until it moves, so a light casting
+            // shadows is not drawn again every frame for nothing.
+            if (piece.LampAt is { } placed && Vector3.Distance(placed, at) < LampStill) continue;
+            piece.LampAt = at;
+            lighting.PlaceLamp(lamp, at);
         }
     }
 

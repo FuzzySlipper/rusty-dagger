@@ -118,6 +118,12 @@ internal sealed class DaggerfallMoons : IDisposable
     /// <summary>Secunda is the nearer, so it crosses in front.</summary>
     private static uint Slot(DaggerfallSkyMoon moon) => moon.Masser ? 0U : 1U;
 
+    /// <summary>
+    /// Each moon's lit fraction by its sky slot, for what reflects it: the art draws the phase, so the sky holds each disc
+    /// whole, and the water takes the phase from here.
+    /// </summary>
+    internal static Vector4 LitBySlot(DaggerfallSkyTime sky) => new(Phase(sky.LunarCycleDay(true)), Phase(sky.LunarCycleDay(false)), 0, 0);
+
     private RenderResource Texture(DaggerfallSkyMoon moon)
     {
         if (!_textures.TryGetValue(moon.Masser, out RenderResource? texture))

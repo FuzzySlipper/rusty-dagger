@@ -659,6 +659,11 @@
     "windowColor": [1, 0.47, 0.04],
     "windowLevel": 0.8,
     "lampLevel": 1,
+    "lampFlicker": 0.12,
+    "lampFlickerRate": 7,
+    "windowFlicker": 0.1,
+    "windowFlickerRate": 1.5,
+    "flickerReach": 60,
     "creatureGlow": 0.6,
     "spellGlow": 1.5
   },
@@ -947,8 +952,6 @@
     "releaseSeconds": 2,
     "blendOutSeconds": 0.5,
     "stepsPerSecond": 60,
-    "lampFlicker": 0.12,
-    "lampFlickerRate": 7,
     "root": { "radius": 0.035, "mass": 0.25, "endRadius": 0.035, "endMass": 0.25, "swing": 0.45, "twist": 0.2, "jointDamping": 0.08, "linearDamping": 0.5, "angularDamping": 2 },
     "chain": { "radius": 0.045, "mass": 0.6, "endRadius": 0.07, "endMass": 1.2, "swing": 1.1, "twist": 0.4, "jointDamping": 0.02, "linearDamping": 0.15, "angularDamping": 0.4 },
     "cage": { "radius": 0.03, "mass": 0.4, "endRadius": 0.45, "endMass": 18, "swing": 0.8, "twist": 0.3, "jointDamping": 0.05, "linearDamping": 0.15, "angularDamping": 0.6 },
@@ -1017,7 +1020,12 @@
     "ripple": 0.2,
     "roughness": 0.85,
     "opacity": 0.48,
-    "drift": [0.03, 0.02]
+    "drift": [0.03, 0.02],
+    "swellMetres": 60,
+    "swell": 0.04,
+    "glint": [1, 0.05],
+    "glintDegrees": 3,
+    "shimmer": 0.25
   },
   "horizon": {
     "lift": 4.5,

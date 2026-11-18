@@ -113233,8 +113233,8 @@
    },
    "surfaceShader": {
     "path": "worldrpg/packs/daggerfall.art-replacements/media/relief/relief.wgsl",
-    "byteLength": 5775,
-    "sha256": "834bc06a7d0e512d00171603c78181ed8f4a57d78cfc49e2df5c35e116de968b"
+    "byteLength": 7217,
+    "sha256": "1227379e70e81403bda003c593b52bac4622164cc740d1d8590b8f057d8cd41c"
    }
   },
   "trees": {
@@ -117648,6 +117648,11 @@
      }
     }
    }
+  },
+  "sea": {
+   "path": "worldrpg/packs/daggerfall.art-replacements/media/sea/sea.wgsl",
+   "byteLength": 8292,
+   "sha256": "9803bc861f19a07d5641145194980952a82c06a2bb853826e05a2f857d7cb1ff"
   },
   "treeSnow": {
    "path": "worldrpg/packs/daggerfall.art-replacements/media/trees/snow.wgsl",

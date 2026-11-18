@@ -9,6 +9,11 @@
 // parameters[0]: x the floor's depth under the face, metres (the record's depth times the player's strength); y the most
 // texels a ray walks; z where the fade starts and w where the relief is gone, metres from the camera.
 // parameters[1]: x how dark the deepest hollow goes; y how far the height's slope turns a top's normal.
+// parameters[2]: x how far lit window glass rises and falls about its level as the fire behind it flickers, a share of it;
+// y how fast, in cycles a second (#10906).
+//
+// Each window flickers on its own phase: its texture's repeat on its face, and the face's place and facing in the world.
+// The world is the session's, so a window's phase holds wherever the player stands in one map pixel's frame.
 
 #import rusty::types::Surface
 #import rusty::material::{material, albedo, albedo_sampler, product_map_a}
@@ -20,7 +25,28 @@ fn texel_height(cell: vec2<i32>, size: vec2<i32>) -> f32 {
     return textureLoad(product_map_a, ((cell % size) + size) % size, 0).a;
 }
 
-fn shade(surface: Surface) -> vec4<f32> {
+fn window_phase(surface: Surface) -> f32 {
+    let tile = vec2<i32>(floor(surface.uv));
+    let plane = i32(round(dot(surface.normal, surface.world_position) * 8.0));
+    let facing = vec2<i32>(round(surface.normal.xz * 4.0));
+    var h = bitcast<u32>(tile.x) * 73856093u ^ bitcast<u32>(tile.y) * 19349663u ^ bitcast<u32>(plane) * 83492791u
+        ^ bitcast<u32>(facing.x * 5 + facing.y) * 2654435761u;
+    h = (h ^ (h >> 16u)) * 2246822519u;
+    h = h ^ (h >> 13u);
+    return f32(h & 0xffffu) / 65536.0;
+}
+
+// A lit window's level as the fire behind it flickers: the same waveform as a lamp's (DaggerfallSiteLighting).
+fn window_flicker(surface: Surface) -> f32 {
+    let t = (frame.time.x * material.parameters[2].y + window_phase(surface)) * 6.2831853;
+    return 1.0 + material.parameters[2].x * (sin(t) + 0.6 * sin(2.3 * t + 1.7) + 0.3 * sin(5.1 * t + 0.4)) / 1.9;
+}
+
+fn shade(given: Surface) -> vec4<f32> {
+    var surface = given;
+    if material.parameters[2].x > 0.0 && any(surface.emission > vec3<f32>(0.0)) {
+        surface.emission *= window_flicker(surface);
+    }
     // Screen derivatives first, in uniform control flow: the world and the texture's uv.
     let uv = transform_uv(material.base_uv_u, material.base_uv_v, surface.uv);
     let dp_dx = dpdx(surface.world_position);

@@ -152,6 +152,17 @@ internal sealed record DaggerfallSiteLightingTuning(
     internal float WindowLevel { get; init; } = .8f;
     /// <summary>How brightly a refreshed lamp's flame or glass shines over its painted colour, added to the light the lamp takes.</summary>
     internal float LampLevel { get; init; } = 1f;
+    /// <summary>How far a lamp's light rises and falls about its level as its flame flickers, as a share of it (0 holds it steady), and how fast, in cycles a second.</summary>
+    internal float LampFlicker { get; init; } = .12f;
+    internal float LampFlickerRate { get; init; } = 7f;
+    /// <summary>How far lit window glass rises and falls about its level as the fire behind it flickers, as a share of it, and how fast, in cycles a second.</summary>
+    internal float WindowFlicker { get; init; } = .1f;
+    internal float WindowFlickerRate { get; init; } = 1.5f;
+    /// <summary>
+    /// How near the eye, in metres, a lamp's light flickers. Farther lamps burn steady: a flicker's light on the ground that
+    /// far off doesn't show, and the light updates stay few. Window glass flickers at any distance, in its shader.
+    /// </summary>
+    internal float FlickerReach { get; init; } = 60f;
     /// <summary>How brightly a glowing creature (a fire or frost daedra, a fire atronach) shines over its painted colour, added to the light it takes.</summary>
     internal float CreatureGlow { get; init; } = .6f;
     /// <summary>How brightly a fire, shock or magic effect shines over its painted colour; above 1 it blooms.</summary>
@@ -184,6 +195,12 @@ internal sealed record DaggerfallSiteLightingTuning(
         if (!float.IsFinite(WindowColor.X + WindowColor.Y + WindowColor.Z + WindowLevel)
             || WindowColor.X < 0 || WindowColor.Y < 0 || WindowColor.Z < 0 || WindowLevel < 0)
             throw new ArgumentOutOfRangeException(nameof(WindowColor), "Window glass's colour and level are finite and not negative.");
+        foreach (float share in new[] { LampFlicker, WindowFlicker })
+            if (!float.IsFinite(share) || share is < 0 or >= 1)
+                throw new ArgumentOutOfRangeException(nameof(LampFlicker), "A lamp's or a window's light flickers by a share from 0 up to 1.");
+        if (!float.IsFinite(LampFlickerRate) || LampFlickerRate < 0 || !float.IsFinite(WindowFlickerRate) || WindowFlickerRate < 0
+            || !float.IsFinite(FlickerReach) || FlickerReach < 0)
+            throw new ArgumentOutOfRangeException(nameof(LampFlickerRate), "Lamps and windows flicker at 0 or more cycles a second, within 0 metres or more.");
         foreach (float level in new[] { LampLevel, CreatureGlow, SpellGlow })
             if (!float.IsFinite(level) || level < 0)
                 throw new ArgumentOutOfRangeException(nameof(LampLevel), "A lamp's, creature's or spell's glow is finite and not negative.");
@@ -229,6 +246,11 @@ internal sealed record DaggerfallSiteLightingTuning(
         WindowColor = ReadColor(section.GetProperty("windowColor")),
         WindowLevel = section.GetProperty("windowLevel").GetSingle(),
         LampLevel = section.GetProperty("lampLevel").GetSingle(),
+        LampFlicker = section.GetProperty("lampFlicker").GetSingle(),
+        LampFlickerRate = section.GetProperty("lampFlickerRate").GetSingle(),
+        WindowFlicker = section.GetProperty("windowFlicker").GetSingle(),
+        WindowFlickerRate = section.GetProperty("windowFlickerRate").GetSingle(),
+        FlickerReach = section.GetProperty("flickerReach").GetSingle(),
         CreatureGlow = section.GetProperty("creatureGlow").GetSingle(),
         SpellGlow = section.GetProperty("spellGlow").GetSingle(),
         Bloom = section.GetProperty("bloom").GetSingle(),

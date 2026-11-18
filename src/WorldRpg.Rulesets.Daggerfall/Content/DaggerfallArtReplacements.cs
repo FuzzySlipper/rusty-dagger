@@ -286,6 +286,9 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The shader that lays a winter tree's snow on its leaves, where the set has snowy trees.</summary>
     internal DaggerfallArtFile? TreeSnow { get; private init; }
 
+    /// <summary>The shader the sea and the rivers draw with: swells, the far sea's ripples and the moons' and the low sun's paths on the water.</summary>
+    internal DaggerfallArtFile? Sea { get; private init; }
+
     /// <summary>The tree meshes standing in for flora sprites, by nature archive and record.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallTreeArt> Trees { get; private init; } = new Dictionary<(int, int), DaggerfallTreeArt>();
 
@@ -377,6 +380,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallGroundCoverArt? groundCover = null;
         Dictionary<(int, int), DaggerfallTreeArt> trees = [];
         DaggerfallArtFile? treeSnow = null;
+        DaggerfallArtFile? sea = null;
         DaggerfallPeopleRig? peopleRig = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         Dictionary<string, DaggerfallArtModel> models = new(StringComparer.Ordinal);
@@ -602,6 +606,7 @@ internal sealed class DaggerfallArtReplacements
                 }
             if (section.TryGetProperty("peopleRig", out JsonElement rig)) peopleRig = PeopleRig(rig);
             if (section.TryGetProperty("treeSnow", out JsonElement snowShader)) treeSnow = File(snowShader, "The trees' snow shader");
+            if (section.TryGetProperty("sea", out JsonElement seaShader)) sea = File(seaShader, "The sea's shader");
             if (section.TryGetProperty("trees", out JsonElement treeArt))
                 foreach (JsonProperty tree in treeArt.EnumerateObject())
                 {
@@ -664,7 +669,7 @@ internal sealed class DaggerfallArtReplacements
         }
 
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people)
-        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, PeopleRig = peopleRig, Models = models };
+        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, PeopleRig = peopleRig, Models = models };
 
         DaggerfallPeopleRig PeopleRig(JsonElement rig)
         {

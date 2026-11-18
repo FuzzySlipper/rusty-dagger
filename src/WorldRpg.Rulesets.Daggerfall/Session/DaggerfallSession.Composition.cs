@@ -942,7 +942,8 @@ internal sealed partial class DaggerfallSession
             _exterior.UseGround(ground, GroundWalkers);
             _horizon = new DaggerfallHorizon(engine, ground, tuning.Horizon, tuning.Water, tuning.Ground.RepeatMetres, definitions.Terrain.Rivers,
                 new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
-                new DaggerfallFarForest(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)));
+                new DaggerfallFarForest(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
+                composition.ArtReplacements?.Sea);
             partiallyConstructed.Add(_horizon);
             _exterior.DrawSeaWith(_horizon.AppendFacts, _horizon.CompleteSnapshot, _horizon.ReleaseSea);
             if (composition.ArtReplacements?.GroundCover is { } cover)

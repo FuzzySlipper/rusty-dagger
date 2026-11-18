@@ -12,13 +12,11 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="ReleaseSeconds">How long a piece keeps swinging once no actor has moved within the radius and a metre more, so it settles before it rests; an actor still for this long no longer counts as moving.</param>
 /// <param name="BlendOutSeconds">How long a released piece takes to ease back into its rest pose.</param>
 /// <param name="StepsPerSecond">How often the swinging pieces step, in steps a second of world time.</param>
-/// <param name="LampFlicker">How far a lantern's light rises and falls about its level as it flickers, as a share of it (0 holds it steady).</param>
-/// <param name="LampFlickerRate">How fast a lantern's light flickers, in cycles a second.</param>
 internal sealed record DaggerfallHangingTuning(float ActivationRadius, float ReleaseSeconds, float BlendOutSeconds, int StepsPerSecond,
-    float LampFlicker, float LampFlickerRate, DaggerfallHangingBodyTuning Root, DaggerfallHangingBodyTuning Chain,
+    DaggerfallHangingBodyTuning Root, DaggerfallHangingBodyTuning Chain,
     DaggerfallHangingBodyTuning Cage, DaggerfallHangingBodyTuning Lantern)
 {
-    internal static DaggerfallHangingTuning Default { get; } = new(4f, 2f, .5f, 60, .12f, 7f,
+    internal static DaggerfallHangingTuning Default { get; } = new(4f, 2f, .5f, 60,
         Root: new(.035f, .25f, .035f, .25f, .45f, .2f, .08f, .5f, 2f),
         Chain: new(.045f, .6f, .07f, 1.2f, 1.1f, .4f, .02f, .15f, .4f),
         Cage: new(.03f, .4f, .45f, 18f, .8f, .3f, .05f, .15f, .6f),
@@ -39,15 +37,13 @@ internal sealed record DaggerfallHangingTuning(float ActivationRadius, float Rel
         if (!float.IsFinite(ReleaseSeconds) || ReleaseSeconds < 0 || !float.IsFinite(BlendOutSeconds) || BlendOutSeconds < 0)
             throw new ArgumentException("A hanging piece's release and blend-out last 0 seconds or more.");
         if (StepsPerSecond is < 10 or > 480) throw new ArgumentException("Hanging pieces step 10 to 480 times a second.");
-        if (!float.IsFinite(LampFlicker) || LampFlicker is < 0 or >= 1 || !float.IsFinite(LampFlickerRate) || LampFlickerRate < 0)
-            throw new ArgumentException("A lantern's light flickers by a share from 0 up to 1, at 0 or more cycles a second.");
         foreach (DaggerfallHangingBodyTuning bodies in (DaggerfallHangingBodyTuning[])[Root, Chain, Cage, Lantern]) bodies.Validate();
         return this;
     }
 
     internal static DaggerfallHangingTuning Read(JsonElement e) => new DaggerfallHangingTuning(
         e.GetProperty("activationRadius").GetSingle(), e.GetProperty("releaseSeconds").GetSingle(), e.GetProperty("blendOutSeconds").GetSingle(),
-        e.GetProperty("stepsPerSecond").GetInt32(), e.GetProperty("lampFlicker").GetSingle(), e.GetProperty("lampFlickerRate").GetSingle(),
+        e.GetProperty("stepsPerSecond").GetInt32(),
         DaggerfallHangingBodyTuning.Read(e.GetProperty("root")), DaggerfallHangingBodyTuning.Read(e.GetProperty("chain")),
         DaggerfallHangingBodyTuning.Read(e.GetProperty("cage")), DaggerfallHangingBodyTuning.Read(e.GetProperty("lantern"))).Validate();
 }
