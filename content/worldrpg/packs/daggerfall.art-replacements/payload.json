@@ -126817,7 +126817,17 @@
      "y": 939,
      "lamp": false
     }
-   ]
+   ],
+   "logo": {
+    "mediaId": "refreshed.title-scene.logo",
+    "path": "worldrpg/packs/daggerfall.art-replacements/media/ui/title-scene/logo.webp",
+    "byteLength": 299006,
+    "sha256": "495727f9534dd7b47e4c2a40ff628a9a99c4fb83026131da586d83b64c1718b6",
+    "x": 920,
+    "y": 199,
+    "width": 721,
+    "height": 567
+   }
   }
  }
 }

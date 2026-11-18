@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""title-scene: the animated title screen's layers, from four pictures, into the art pack.
+"""title-scene: the animated title screen's layers, from five pictures, into the art pack.
 
   town     the night painting of the town through the window (Wayrest from a tower, restyled from an Engine capture)
   clear    the same painting with its clouds removed (an image edit), whose sky is the base the clouds drift over
   window   the window arch and sill, its opening flat pure green
   capture  the Engine frame the town painting was restyled from, at the same framing: the lit windows and street lamps
            in it place the town's lights
+  logo     the game's logo, cut out on a transparent ground (an image edit repainting the classic one, never the classic
+           one itself)
 
 Writes into content/worldrpg/packs/daggerfall.art-replacements/media/ui/title-scene/:
 
@@ -14,12 +16,13 @@ Writes into content/worldrpg/packs/daggerfall.art-replacements/media/ui/title-sc
   sea.webp      the bay's water as a vertical strip of frames: a periodic sideways shimmer, larger toward the viewer, its
                 moon glints twinkling, so the strip loops exactly
   window.webp   the window with its opening (and every green pocket, such as the lantern's ring) keyed out
+  logo.webp     the logo with a soft dark halo, so it reads over the sky; the page draws it in place of the game's name
 
 and states them in payload.json: the `screen.title` image entry points at town.webp, and `titleScene` gives the layers'
-sizes and places, the window's opening and flames, and the lights, in town pixels. The page animates them; nothing here
+sizes and places, the window's opening and flames, and the lights, in town pixels, and the logo's place in window pixels. The page animates them; nothing here
 is a video.
 
-    authoring/tools/ui/title-scene.py --town T.png --clear C.png --window W.png --capture CAPTURE.png
+    authoring/tools/ui/title-scene.py --town T.png --clear C.png --window W.png --capture CAPTURE.png --logo LOGO.png
 """
 import argparse
 import hashlib
@@ -38,6 +41,8 @@ RIDGE = 300            # town rows above which the painting is sky (the far moun
 SEA_BAND = (350, 462)  # town rows the bay's water lies within
 SEA_FRAMES, SEA_FPS = 48, 12
 DRIFT, CYCLE = 240, 60  # cloud drift in town pixels over one cycle's seconds
+LOGO_TOP, LOGO_WIDTH = 213, 693  # window pixels: centred under the moon, the arch of its letters framing the moonlit bay
+LOGO_HALO = 14  # halo pixels at the logo's own size
 
 
 def rgb(path, size=None):
@@ -118,6 +123,21 @@ def window_layer(window):
     return np.dstack([out, alpha * 255]), box, flames
 
 
+def logo_layer(logo, window_width):
+    """The logo over a soft dark halo of its own shape, and its place in the window, centred."""
+    pad = LOGO_HALO * 2
+    alpha = np.pad(logo[..., 3] / 255, pad)
+    halo = np.clip(ndimage.gaussian_filter(alpha, LOGO_HALO) * 1.6, 0, 1) * .6
+    rgb = np.pad(logo[..., :3], ((pad, pad), (pad, pad), (0, 0)))
+    out_alpha = alpha + halo * (1 - alpha)
+    out = rgb * (alpha / np.maximum(out_alpha, 1e-6))[..., None]
+    h, w = out.shape[:2]
+    width = round(LOGO_WIDTH * w / logo.shape[1])
+    place = {'x': round(window_width / 2 - width / 2), 'y': LOGO_TOP - round(pad * LOGO_WIDTH / logo.shape[1]),
+             'width': width, 'height': round(width * h / w)}
+    return np.dstack([out, out_alpha * 255]), place
+
+
 def lights(capture, night):
     """Every lit window and street lamp of the capture, placed on the painting's own light within 7 px."""
     H, W = capture.shape[:2]
@@ -148,7 +168,7 @@ def lights(capture, night):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    for name in ('town', 'clear', 'window', 'capture'):
+    for name in ('town', 'clear', 'window', 'capture', 'logo'):
         ap.add_argument(f'--{name}', type=Path, required=True)
     a = ap.parse_args()
     (PACK / MEDIA).mkdir(parents=True, exist_ok=True)
@@ -157,6 +177,7 @@ def main():
     town, clouds = town_layers(night, rgb(a.clear, (W, H)))
     strip, (sx, sy, sw, sh) = sea_strip(night)
     window, opening, flames = window_layer(rgb(a.window))
+    logo, logo_place = logo_layer(np.asarray(Image.open(a.logo).convert('RGBA')).astype(np.float32), window.shape[1])
     scene = {
         'clouds': {'mediaId': 'refreshed.title-scene.clouds', **write(clouds, 'clouds.webp', 'RGBA'), 'drift': DRIFT, 'cycleSeconds': CYCLE},
         'sea': {'mediaId': 'refreshed.title-scene.sea', **write(strip, 'sea.webp', 'RGBA', 82),
@@ -164,6 +185,7 @@ def main():
         'window': {'mediaId': 'refreshed.title-scene.window', **write(window, 'window.webp', 'RGBA'),
                    'width': window.shape[1], 'height': window.shape[0], 'opening': opening, 'flames': flames},
         'lights': lights(rgb(a.capture), night),
+        'logo': {'mediaId': 'refreshed.title-scene.logo', **write(logo, 'logo.webp', 'RGBA', 90), **logo_place},
     }
     title = write(town, 'town.webp', 'RGB')
     payload_path = PACK / 'payload.json'

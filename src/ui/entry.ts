@@ -35,7 +35,8 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   const creationHome = creation.parentElement!;
   const begin = shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!;
   begin.addEventListener('click', () => send({ action: BEGIN_ACTION }));
-  // A refreshed title painting carries no lettering, so the page sets the game's name over it.
+  // A refreshed title painting carries no lettering, so the page sets the game's name over it. The title scene draws the name
+  // as its logo: the heading then stays only for assistive tech.
   const name = document.createElement('h1'); name.className = 'dagger-entry-name'; name.hidden = true; root.append(name);
   let gameName = '';
   const outcome = document.createElement('p'); outcome.className = 'dagger-entry-outcome'; outcome.setAttribute('role', 'status'); root.append(outcome);
@@ -173,6 +174,7 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     else { root.style.removeProperty('--dagger-entry-backdrop'); delete root.dataset.backdrop; }
     name.textContent = gameName;
     name.hidden = !refreshedTitle || gameName === '';
+    name.classList.toggle('dagger-entry-name-drawn', sceneShown);
     const shown = mode === 'character-pick' ? pickScreens.filter(id => id !== primary) : [];
     redraw(parts, JSON.stringify([shown, shown.map(id => image(id) !== null)]), () => parts.replaceChildren(...shown.flatMap(id => {
       const source = image(id); if (source === null) return [];

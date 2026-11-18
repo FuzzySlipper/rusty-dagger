@@ -1009,7 +1009,7 @@ public sealed class PublishedContentDeliveryTests
                 .Prepend(model.Value))
                 .DistinctBy(file => file.GetProperty("path").GetString()),
             // The title scene's layers over the title's own image, the town painting.
-            .. new[] { "clouds", "sea", "window" }.Select(layer => section.GetProperty("titleScene").GetProperty(layer)),
+            .. new[] { "clouds", "sea", "window", "logo" }.Select(layer => section.GetProperty("titleScene").GetProperty(layer)),
             .. section.GetProperty("peopleRig").GetProperty("views").EnumerateObject()
                 .SelectMany(view => view.Value.GetProperty("pages").EnumerateArray().Prepend(view.Value.GetProperty("model")))];
         foreach (JsonElement file in files)

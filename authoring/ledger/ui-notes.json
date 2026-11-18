@@ -277,6 +277,6 @@
  },
  "screens--title--title-record-000-frame-000": {
   "status": "skipped",
-  "note": "The title is drawn as the animated title scene instead: Wayrest at night through a tower window, built by authoring/tools/ui/title-scene.py into media/ui/title-scene/ (#10904). The 2026-11-10 painting (#10711) is retired."
+  "note": "The title is drawn as the animated title scene instead: Wayrest at night through a tower window, built by authoring/tools/ui/title-scene.py into media/ui/title-scene/ (#10904). The 2026-11-10 painting (#10711) is retired. The scene's logo (logo.webp, in place of the game's name) is a Qwen-Image repaint of the classic logo, B1 of six, picked by Patch 2026-11-18, its marks removed (#10909)."
  }
 }

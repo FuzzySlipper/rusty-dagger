@@ -80,6 +80,8 @@ body, dialog { font-family: var(--font-body); }
 .dagger-entry-screen[data-refreshed][data-screen="screen.title"] { width: auto; object-fit: contain; box-shadow: 0 0 3rem rgb(0 0 0 / .8); }
 .dagger-entry-name { position: absolute; top: 4%; left: 50%; transform: translateX(-50%); margin: 0; color: #f4d983; font: 700 5rem var(--font-title); letter-spacing: .08em; text-shadow: 0 .25rem 1rem #000, 0 0 .25rem #000; pointer-events: none; }
 .dagger-entry-name[hidden] { display: none; }
+/* The title scene draws the name as its logo; the heading stays for assistive tech, out of sight. */
+.dagger-entry-name-drawn { width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* The title scene (title-scene.ts) is a picture, not a layout: its stage is the window art at its own pixels, scaled by script to
    cover the title, and the town within it is placed in town pixels, so it sizes in px. It sits under every control. */
 .dagger-title-scene { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
@@ -87,6 +89,7 @@ body, dialog { font-family: var(--font-body); }
 .dagger-title-scene-stage, .dagger-title-scene-view { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .dagger-title-scene-view { overflow: hidden; }
 .dagger-title-scene-town, .dagger-title-scene-clouds, .dagger-title-scene-window, .dagger-title-scene-lights { position: absolute; left: 0; top: 0; }
+.dagger-title-scene-logo { position: absolute; }
 .dagger-title-scene-sea { position: absolute; background-repeat: no-repeat; }
 .dagger-title-scene-lights > span, .dagger-title-scene-flames > span { position: absolute; border-radius: 50%; }
 .dagger-title-scene-lit, .dagger-title-scene-lamp { background: radial-gradient(circle, rgb(255 222 150 / .9) 0, rgb(255 180 90 / .35) 30%, rgb(255 150 60 / 0) 65%); }

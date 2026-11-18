@@ -818,7 +818,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             : builder.Object(("revision", builder.String(art.Revision)), ("images", builder.Array(images)));
     }
 
-    /// <summary>The title scene the page animates over <paramref name="town"/>: its layers by media identity, their places and the town's lights.</summary>
+    /// <summary>The title scene the page animates over <paramref name="town"/>: its layers by media identity, their places, the town's lights and the logo.</summary>
     private static uint TitleScene(UiValueBuilder builder, DaggerfallTitleScene scene, string town)
     {
         uint Rect(DaggerfallTitleRect rect) => builder.Object(("x", builder.Number(rect.X)), ("y", builder.Number(rect.Y)),
@@ -833,7 +833,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("flames", builder.Array(scene.Window.Flames.Select(flame => builder.Object(("x", builder.Number(flame.X)), ("y", builder.Number(flame.Y)),
                     ("radius", builder.Number(flame.Radius)))).ToArray())))),
             ("lights", builder.Array(scene.Lights.Select(light => builder.Object(("x", builder.Number(light.X)), ("y", builder.Number(light.Y)),
-                ("lamp", builder.Boolean(light.Lamp)))).ToArray())));
+                ("lamp", builder.Boolean(light.Lamp)))).ToArray())),
+            ("logo", builder.Object(("id", builder.String(scene.Logo.Image.MediaId)), ("place", Rect(scene.Logo.Place)))));
     }
 
     /// <summary>One delivered image: its identity and data URL, whether it is refreshed art drawn smoothed, and any further fields.</summary>

@@ -462,6 +462,7 @@ public sealed class UiArtDeliverySessionTests
         Dictionary<string, object?> scene = Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(hud["uiArt"])["titleScene"]);
         Assert.Equal(Assert.IsType<Dictionary<string, object?>>(hud["screens"])["screen.title"], Assert.IsType<Dictionary<string, object?>>(scene["town"])["id"]);
         Assert.NotEmpty(Assert.IsType<object?[]>(scene["lights"]));
+        Assert.Equal(art.TitleScene!.Logo.Image.MediaId, Assert.IsType<Dictionary<string, object?>>(scene["logo"])["id"]);
         string[] demandedIds = [.. Assert.IsType<object?[]>(demanded["images"]).Cast<Dictionary<string, object?>>().Select(image => (string)image["id"]!)];
         Assert.Subset(demandedIds.ToHashSet(), art.TitleScene!.Images.Select(image => image.MediaId).ToHashSet());
         // The art is no player setting: the controls carry no choice of it.

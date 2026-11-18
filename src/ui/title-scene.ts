@@ -4,7 +4,7 @@ import { cssUrl, image, type TitleScene } from './art.js';
  * The refreshed title as a living picture behind the title's controls: the town at night seen through a window, built from
  * the layers the art set publishes (art.ts `TitleScene`). The town painting is the title's own image; over it the clouds
  * drift, the sea's strip of frames plays, the town's windows and street lamps glimmer, and the window's flames light
- * the stone. Everything is drawn here from the art; nothing in it is a game state.
+ * the stone. The game's logo hangs in the sky under the moon. Everything is drawn here from the art; nothing in it is a game state.
  *
  * The picture covers the title as the window art is shaped, cut at its edges rather than letterboxed, and the town fills the
  * window's opening with its foot on the sill.
@@ -37,9 +37,11 @@ export function mountTitleScene(host: HTMLElement): TitleSceneView {
   const sea = document.createElement('div'); sea.className = 'dagger-title-scene-sea';
   const lights = document.createElement('div'); lights.className = 'dagger-title-scene-lights';
   const arch = document.createElement('img'); arch.className = 'dagger-title-scene-window'; arch.alt = '';
+  // The logo is the visible face of the title's name heading, which stays in the page for assistive tech.
+  const logo = document.createElement('img'); logo.className = 'dagger-title-scene-logo'; logo.alt = '';
   const flames = document.createElement('div'); flames.className = 'dagger-title-scene-flames';
   view.append(town, cloudsA, cloudsB, sea, lights);
-  stage.append(view, arch, flames);
+  stage.append(view, logo, arch, flames);
   element.append(stage);
   host.prepend(element);
 
@@ -66,6 +68,8 @@ export function mountTitleScene(host: HTMLElement): TitleSceneView {
     const fill = Math.max(opening.width / scene.town.width, opening.height / scene.town.height) * 1.04;
     view.style.width = `${scene.town.width}px`; view.style.height = `${scene.town.height}px`;
     view.style.transform = `translate(${opening.x + opening.width / 2 - scene.town.width * fill / 2}px, ${opening.y + opening.height + scene.window.width / 480 - scene.town.height * fill}px) scale(${fill})`;
+    const mark = scene.logo.place;
+    Object.assign(logo.style, { left: `${mark.x}px`, top: `${mark.y}px`, width: `${mark.width}px`, height: `${mark.height}px` });
     const { place } = scene.sea;
     Object.assign(sea.style, { left: `${place.x}px`, top: `${place.y}px`, width: `${place.width}px`, height: `${place.height}px`,
       backgroundSize: `${place.width}px ${place.height * scene.sea.frames}px` });
@@ -110,12 +114,14 @@ export function mountTitleScene(host: HTMLElement): TitleSceneView {
   return {
     element,
     show(scene) {
-      const art = { town: image(scene.town.id), clouds: image(scene.clouds.id), sea: image(scene.sea.id), window: image(scene.window.id) };
+      const art = { town: image(scene.town.id), clouds: image(scene.clouds.id), sea: image(scene.sea.id), window: image(scene.window.id),
+        logo: image(scene.logo.id) };
       if (Object.values(art).some(source => source === null)) { this.hide(); return false; }
       if (shown !== scene) { shown = scene; build(scene); }
       if (town.src !== art.town) town.src = art.town!;
       for (const clouds of [cloudsA, cloudsB]) if (clouds.src !== art.clouds) clouds.src = art.clouds!;
       if (arch.src !== art.window) arch.src = art.window!;
+      if (logo.src !== art.logo) logo.src = art.logo!;
       const strip = cssUrl(art.sea!);
       if (sea.dataset.strip !== scene.sea.id) { sea.style.backgroundImage = strip; sea.dataset.strip = scene.sea.id; }
       element.hidden = false;

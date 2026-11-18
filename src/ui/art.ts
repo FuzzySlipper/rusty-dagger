@@ -29,7 +29,7 @@ export interface UiArt {
 export interface TitleRect { readonly x: number; readonly y: number; readonly width: number; readonly height: number; }
 
 /// The refreshed title as a scene the page animates (title-scene.ts): layers over the town painting `town`, the image
-/// the HUD names for the title. Places are in town pixels, the window's own in window pixels.
+/// the HUD names for the title. Places are in town pixels, the window's own and the logo's in window pixels.
 export interface TitleScene {
   readonly town: { readonly id: string; readonly width: number; readonly height: number };
   readonly clouds: { readonly id: string; readonly drift: number; readonly cycleSeconds: number };
@@ -37,6 +37,8 @@ export interface TitleScene {
   readonly window: { readonly id: string; readonly width: number; readonly height: number; readonly opening: TitleRect;
     readonly flames: readonly { readonly x: number; readonly y: number; readonly radius: number }[] };
   readonly lights: readonly { readonly x: number; readonly y: number; readonly lamp: boolean }[];
+  /// The game's logo, drawn in place of the game's name.
+  readonly logo: { readonly id: string; readonly place: TitleRect };
 }
 
 /// The demanded block: the images from `from` on, so a page that holds the earlier ones takes only what is new.

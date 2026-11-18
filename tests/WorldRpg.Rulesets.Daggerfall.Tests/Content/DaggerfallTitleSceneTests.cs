@@ -25,6 +25,10 @@ public sealed class DaggerfallTitleSceneTests
         Assert.Contains(scene.Lights, light => light.Lamp);
         Assert.Contains(scene.Lights, light => !light.Lamp);
         Assert.Equal(2, scene.Window.Flames.Count);
+        // The logo the page draws for the game's name lies over the town in the window's opening.
+        DaggerfallTitleRect opening = scene.Window.Opening, logo = scene.Logo.Place;
+        Assert.InRange(logo.X, opening.X, opening.X + opening.Width - logo.Width);
+        Assert.InRange(logo.Y, opening.Y, opening.Y + opening.Height - logo.Height);
         // Every layer is the pack's own file, of the length the payload states, and among the images the set publishes.
         foreach (DaggerfallArtImage image in scene.Images.Append(new(town.MediaId, town.Path, town.ByteLength)))
         {
@@ -50,6 +54,8 @@ public sealed class DaggerfallTitleSceneTests
         Refused(scene => scene["window"]!["opening"]!["width"] = 99999, "its window's opening lies outside the window");
         Refused(scene => scene["clouds"]!["drift"] = 0, "its drift is not above zero");
         Refused(scene => scene["window"]!["mediaId"] = "", "a layer without a usable identity");
+        Refused(scene => scene["logo"]!["x"] = 2500, "its logo lies outside the window");
+        Refused(scene => scene["logo"]!["height"] = -1, "its height is not above zero");
     }
 
     [Fact]
