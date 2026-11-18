@@ -249,8 +249,9 @@ body, dialog { font-family: var(--font-body); }
 .dagger-book-reader { max-width: 46rem; }
 .dagger-book-reader h2, .dagger-user-notes h2, .dagger-book-reader h3 { margin: 0; }
 .dagger-book-reader h3 { font: 700 1.5rem/1.2 var(--font-title); }
-/* The heading a page opens with in the book's title face, centred as the book sets it. */
-.dagger-book-heading { margin: .25rem 0 0; font: 700 1.5rem/1.25 var(--font-title); text-align: center; white-space: pre-line; }
+/* The heading a page opens with in the book's title face, centred as the book sets it (within the menu, whose
+   paragraph size it would otherwise take). */
+.dagger-book-reader .dagger-book-heading { margin: .25rem 0 0; font: 700 1.5rem/1.25 var(--font-title); text-align: center; white-space: pre-line; }
 /* The first letter of the book's words, dropped two lines and inked red as a rubricated initial; specific enough to
    outrank the parchment's inherited span ink. */
 .dagger-frame .dagger-book-page > .dagger-book-initial { float: left; margin: .06em .1em 0 0; color: #7a1f12; font: 700 4.1em/.82 var(--font-title); }
