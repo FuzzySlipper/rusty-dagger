@@ -1896,6 +1896,67 @@ test('a full screen draws the image the HUD names for it: a refreshed painting f
   } finally { f.dispose(); }
 });
 
+test('a refreshed title with a scene draws the town through the window alive, under the title\'s controls', () => {
+  const f = fixture();
+  try {
+    const png = 'data:image/png;base64,AA==', webp = id => `data:image/webp;base64,${Buffer.from(id).toString('base64')}`;
+    const titleScene = {
+      town: { id: 'refreshed.screen.title', width: 1600, height: 900 },
+      clouds: { id: 'refreshed.title-scene.clouds', drift: 240, cycleSeconds: 60 },
+      sea: { id: 'refreshed.title-scene.sea', place: { x: 500, y: 350, width: 1000, height: 100 }, frames: 48, framesPerSecond: 12 },
+      window: { id: 'refreshed.title-scene.window', width: 2560, height: 1440, opening: { x: 200, y: 0, width: 1800, height: 1200 },
+        flames: [{ x: 2268, y: 901, radius: 333 }, { x: 1787, y: 940, radius: 333 }] },
+      lights: [{ x: 100, y: 600, lamp: false }, { x: 400, y: 800, lamp: true }, { x: 900, y: 500, lamp: false }],
+    };
+    const ids = ['refreshed.screen.title', 'refreshed.title-scene.clouds', 'refreshed.title-scene.sea', 'refreshed.title-scene.window'];
+    const art = { revision: 's1', titleScene, images: [{ id: 'screen.title', image: png }, ...ids.map(id => ({ id, image: webp(id), smooth: true }))] };
+    const sceneEl = () => f.root.querySelector('.dagger-title-scene');
+    const screen = () => f.root.querySelector('.dagger-entry-screen');
+    const options = [{ id: 'daggerfall.classic', title: 'Classic Daggerfall' }, { id: 'daggerfall.town-start', title: 'Developer: Charing town start' }];
+    f.publish({ mode: 'title', uiArt: art, uiArtRevision: art.revision, gameName: 'Daggerfall', screens: { 'screen.title': 'refreshed.screen.title' },
+      bundles: { current: 'daggerfall.classic', options } });
+    // The scene stands in for the painting: the town, two cloud copies, the sea's strip, the window, a glow for every light and flame.
+    assert.equal(sceneEl().hidden, false);
+    assert.equal(screen().hidden, true, 'the painting the scene is made from is not drawn twice');
+    assert.equal(f.root.querySelector('.dagger-entry').dataset.backdrop, undefined, 'the scene fills the window, so no blurred copy lies behind it');
+    assert.equal(sceneEl().querySelector('.dagger-title-scene-town').src, webp('refreshed.screen.title'));
+    assert.equal(sceneEl().querySelectorAll('.dagger-title-scene-clouds').length, 2);
+    assert.ok(sceneEl().querySelector('.dagger-title-scene-sea').style.backgroundImage.includes(webp('refreshed.title-scene.sea')));
+    assert.equal(sceneEl().querySelector('.dagger-title-scene-window').src, webp('refreshed.title-scene.window'));
+    assert.equal(sceneEl().querySelectorAll('.dagger-title-scene-lit').length, 2);
+    assert.equal(sceneEl().querySelectorAll('.dagger-title-scene-lamp').length, 1);
+    assert.equal(sceneEl().querySelectorAll('.dagger-title-scene-flame').length, 2);
+    assert.equal(sceneEl().getAttribute('aria-hidden'), 'true', 'a picture, not a control');
+    // The game's name and every control stay over it.
+    assert.equal(f.root.querySelector('.dagger-entry-name').hidden, false);
+    assert.equal(f.root.querySelector('.dagger-entry-name').textContent, 'Daggerfall');
+    assert.equal(sceneEl().parentElement.firstElementChild, sceneEl(), 'the scene is the bottom layer of the title');
+    for (const testid of ['entry-create-character', 'entry-bundle']) assert.ok(f.root.querySelector(`[data-testid="${testid}"]`));
+    assert.equal(f.root.querySelector('.dagger-entry-begin').hidden, false);
+
+    // Classic art draws the classic title, so the scene goes.
+    f.publish({ mode: 'title', uiArt: art, uiArtRevision: art.revision, gameName: 'Daggerfall', screens: { 'screen.title': 'screen.title' } });
+    assert.equal(sceneEl().hidden, true);
+    assert.equal(screen().hidden, false);
+    assert.equal(screen().src, png);
+
+    // A scene whose layers have not all arrived is not drawn: the painting stands until they come.
+    const partial = { revision: 's2', titleScene, images: art.images.filter(image => image.id !== 'refreshed.title-scene.sea') };
+    f.publish({ mode: 'title', uiArt: partial, uiArtRevision: partial.revision, gameName: 'Daggerfall', screens: { 'screen.title': 'refreshed.screen.title' } });
+    assert.equal(sceneEl().hidden, true);
+    assert.equal(screen().hidden, false);
+    assert.equal(screen().src, webp('refreshed.screen.title'));
+
+    // Leaving the title leaves the scene behind.
+    f.publish({ mode: 'title', uiArt: art, uiArtRevision: art.revision, gameName: 'Daggerfall', screens: { 'screen.title': 'refreshed.screen.title' } });
+    assert.equal(sceneEl().hidden, false);
+    f.publish({ mode: 'playing' });
+    assert.equal(sceneEl().hidden, true);
+    // The page's art outlives a fixture: leave it naming the classic title, as later tests expect.
+    f.publish({ mode: 'title', uiArt: { revision: 's3', images: [] }, uiArtRevision: 's3', screens: { 'screen.title': 'screen.title' } });
+  } finally { f.dispose(); }
+});
+
 test('every menu panel is drawn at one of the standard sizes: wide for the item and reference screens, narrow for the rest', () => {
   const f = fixture();
   try {

@@ -22,6 +22,21 @@ export interface UiArtImage {
 export interface UiArt {
   readonly revision: string;
   readonly images: readonly UiArtImage[];
+  readonly titleScene?: TitleScene;
+}
+
+/// A rectangle in whole image pixels.
+export interface TitleRect { readonly x: number; readonly y: number; readonly width: number; readonly height: number; }
+
+/// The refreshed title as a scene the page animates (title-scene.ts): layers over the town painting `town`, the image
+/// the HUD names for the title. Places are in town pixels, the window's own in window pixels.
+export interface TitleScene {
+  readonly town: { readonly id: string; readonly width: number; readonly height: number };
+  readonly clouds: { readonly id: string; readonly drift: number; readonly cycleSeconds: number };
+  readonly sea: { readonly id: string; readonly place: TitleRect; readonly frames: number; readonly framesPerSecond: number };
+  readonly window: { readonly id: string; readonly width: number; readonly height: number; readonly opening: TitleRect;
+    readonly flames: readonly { readonly x: number; readonly y: number; readonly radius: number }[] };
+  readonly lights: readonly { readonly x: number; readonly y: number; readonly lamp: boolean }[];
 }
 
 /// The demanded block: the images from `from` on, so a page that holds the earlier ones takes only what is new.
@@ -40,6 +55,7 @@ const displays = new Map<string, UiArtDisplay>();
 const smoothed = new Set<string>();
 let revision = '';
 let demandedRevision = '';
+let scene: TitleScene | null = null;
 
 const numbers = (value: unknown, count: number): number[] | null =>
   Array.isArray(value) && value.length === count && value.every(entry => Number.isFinite(entry) && entry >= 0) ? value as number[] : null;
@@ -61,6 +77,8 @@ export function adopt(value: unknown): string {
   if (typeof value !== 'object' || value === null) return revision;
   const block = value as { revision?: unknown; images?: unknown };
   if (typeof block.revision !== 'string' || !Array.isArray(block.images)) return revision;
+  const carried = (value as Partial<UiArt>).titleScene;
+  scene = typeof carried === 'object' && carried !== null ? carried : null;
   const next = new Map<string, string>();
   const nextDisplays = new Map<string, UiArtDisplay>();
   const nextSmoothed = new Set<string>();
@@ -114,6 +132,11 @@ export function heldDemandedRevision(): string {
 /// The revision of the art currently held, which is the empty string before any block arrives.
 export function heldRevision(): string {
   return revision;
+}
+
+/// The title scene the held art carries, or null when the art set draws the title as one painting.
+export function titleScene(): TitleScene | null {
+  return scene;
 }
 
 /// The data URL for one published media identity, or null when this session has not published it.

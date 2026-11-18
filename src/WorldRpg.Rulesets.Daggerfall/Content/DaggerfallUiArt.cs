@@ -134,6 +134,18 @@ internal sealed class DaggerfallUiArt
     /// <summary>Every resolved image as a data URL, ordered by media identity, with how an authored one is drawn.</summary>
     internal IReadOnlyList<DaggerfallUiArtImage> Images { get; }
 
+    /// <summary>The title drawn as an animated scene, when the art set has one; its layers are read on demand with the title.</summary>
+    internal DaggerfallTitleScene? TitleScene { get; private init; }
+
+    /// <summary>The image the title scene lays its layers over: the title's refreshed replacement, the town painting.</summary>
+    internal string? TitleTown { get; private init; }
+
+    /// <summary>Reads the title scene's layers when the screens drawn show the town it lays them over, so classic art never reads them.</summary>
+    internal void DemandTitleScene(IEnumerable<string> drawnScreens)
+    {
+        if (TitleScene is { } scene && drawnScreens.Contains(TitleTown, StringComparer.Ordinal)) Demand(scene.Images.Select(image => image.MediaId));
+    }
+
     /// <summary>
     /// Reads the published UI art this session shows. <paramref name="itemIcons"/> are the inventory
     /// icon identities the content pack names for its items, <paramref name="characterIcons"/> the
@@ -193,7 +205,10 @@ internal sealed class DaggerfallUiArt
             images.Add(new(id, DataUrl(entry, ReadArtifact(content, id, entry)), entry.Display) { Smooth = refreshed.Contains(id) });
         }
 
-        DaggerfallUiArt art = new(images, pickScreens, content, inventory, refreshed, classic);
+        DaggerfallUiArt art = new(images, pickScreens, content, inventory, refreshed, classic)
+        {
+            TitleScene = replacements?.TitleScene, TitleTown = replacements?.TitleScene is null ? null : replacements.For("screen.title")?.MediaId,
+        };
         art._delivered.UnionWith(images.Select(image => image.Id));
         return art;
     }

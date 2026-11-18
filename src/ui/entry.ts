@@ -1,10 +1,11 @@
-import { cssUrl, fitPixelArt, image, showScreen } from './art.js';
+import { cssUrl, drawnScreen, fitPixelArt, image, showScreen, titleScene } from './art.js';
 import { button, type Send } from './host.js';
 import { isBundles, isSaveSlots, type BundleProjection, type DaggerHud, type SaveSlotEntry, type Unavailable } from './projection.js';
 import { createCycler, type Cycler } from './cycler.js';
 import { invalidate, redraw } from './redraw.js';
 import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
 import { slotRow } from './slots.js';
+import { mountTitleScene } from './title-scene.js';
 
 /**
  * The title screen and the character-creation screens the title mode owns. The mode decides which
@@ -29,6 +30,8 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
   const root = shell.querySelector<HTMLElement>('.dagger-entry')!;
   const screen = shell.querySelector<HTMLImageElement>('.dagger-entry-screen')!;
   fitPixelArt(screen, root);
+  // The refreshed title, when its art set has a scene, is the town seen through a window, alive, in place of the painting.
+  const scene = mountTitleScene(root);
   const creationHome = creation.parentElement!;
   const begin = shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!;
   begin.addEventListener('click', () => send({ action: BEGIN_ACTION }));
@@ -101,7 +104,7 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
 
   const draw = (): void => {
     root.hidden = !title;
-    if (!title) return;
+    if (!title) { scene.hide(); return; }
     root.dataset.mode = mode ?? TITLE_MODE;
     const creating = mode !== null;
     if (creating) onCreationOpens();
@@ -159,9 +162,13 @@ export function mountEntry(shell: HTMLElement, send: Send, creation: HTMLElement
     if (creating) bundleStep = null;
     const primary = screenForMode(mode ?? TITLE_MODE)!;
     showScreen(screen, primary);
+    const titleArt = titleScene();
+    const sceneShown = primary === screenForMode(TITLE_MODE) && titleArt !== null && drawnScreen(primary) === titleArt.town.id && scene.show(titleArt);
+    if (!sceneShown) scene.hide();
+    screen.hidden = sceneShown;
     const refreshedTitle = primary === screenForMode(TITLE_MODE) && screen.dataset.refreshed !== undefined;
-    // The refreshed title is an upright painting: a dimmed copy of it fills the window beside it.
-    const backdrop = refreshedTitle && screen.src ? cssUrl(screen.src) : null;
+    // A refreshed title painting is upright: a dimmed copy of it fills the window beside it. The scene fills the window itself.
+    const backdrop = refreshedTitle && !sceneShown && screen.src ? cssUrl(screen.src) : null;
     if (backdrop) { root.style.setProperty('--dagger-entry-backdrop', backdrop); root.dataset.backdrop = ''; }
     else { root.style.removeProperty('--dagger-entry-backdrop'); delete root.dataset.backdrop; }
     name.textContent = gameName;

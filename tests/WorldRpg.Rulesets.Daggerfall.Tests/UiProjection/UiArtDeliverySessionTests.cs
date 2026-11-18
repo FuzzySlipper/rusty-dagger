@@ -457,6 +457,13 @@ public sealed class UiArtDeliverySessionTests
         Dictionary<string, object?> demanded = Assert.IsType<Dictionary<string, object?>>(hud["uiArtDemanded"]);
         string delivered = Assert.IsType<string>(Assert.IsType<object?[]>(demanded["images"]).Cast<Dictionary<string, object?>>().Single(image => Equals(image["id"], bodyId))["image"]);
         Assert.StartsWith("data:image/webp;base64,", delivered, StringComparison.Ordinal);
+        // The title is a scene over the town painting the HUD names for it: the art block describes it once, and its layers are
+        // read with the title.
+        Dictionary<string, object?> scene = Assert.IsType<Dictionary<string, object?>>(Assert.IsType<Dictionary<string, object?>>(hud["uiArt"])["titleScene"]);
+        Assert.Equal(Assert.IsType<Dictionary<string, object?>>(hud["screens"])["screen.title"], Assert.IsType<Dictionary<string, object?>>(scene["town"])["id"]);
+        Assert.NotEmpty(Assert.IsType<object?[]>(scene["lights"]));
+        string[] demandedIds = [.. Assert.IsType<object?[]>(demanded["images"]).Cast<Dictionary<string, object?>>().Select(image => (string)image["id"]!)];
+        Assert.Subset(demandedIds.ToHashSet(), art.TitleScene!.Images.Select(image => image.MediaId).ToHashSet());
         // The art is no player setting: the controls carry no choice of it.
         Assert.False(Assert.IsType<Dictionary<string, object?>>(hud["controls"]).ContainsKey("classicArt"));
         // The character sheet's portrait is the face the doll wears, refreshed and delivered with the doll's layers.

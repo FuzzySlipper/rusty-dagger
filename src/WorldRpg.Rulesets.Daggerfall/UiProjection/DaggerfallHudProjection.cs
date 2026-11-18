@@ -360,6 +360,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             // DOM asked for it by the revision it lacks.
             if (character?.PaperDoll is { } doll) uiArt.Demand(doll.MediaIds);
             uiArt.Demand(frame.Screens.Values);
+            uiArt.DemandTitleScene(frame.Screens.Values);
             // The portraits a screen names: the sheet's, creation's faces and escorts', each refreshed where it has art.
             uiArt.Demand([.. character?.Identity?.SelectedMedia?.Select(media => media.MediaId) ?? [],
                 .. character?.Creation?.Faces.Select(face => face.MediaId) ?? [], .. quests?.EscortFaces.Select(face => face.MediaId) ?? []]);
@@ -812,7 +813,27 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("scale", builder.Number(display.Scale)),
                     ("slice", display.Slice is null ? builder.Null() : builder.Array(display.Slice.Select(inset => builder.Number(inset)).ToArray())),
                     ("hotspot", display.Hotspot is null ? builder.Null() : builder.Array(display.Hotspot.Select(value => builder.Number(value)).ToArray())))))).ToArray();
-        return builder.Object(("revision", builder.String(art.Revision)), ("images", builder.Array(images)));
+        return art.TitleScene is { } scene && art.TitleTown is { } town
+            ? builder.Object(("revision", builder.String(art.Revision)), ("images", builder.Array(images)), ("titleScene", TitleScene(builder, scene, town)))
+            : builder.Object(("revision", builder.String(art.Revision)), ("images", builder.Array(images)));
+    }
+
+    /// <summary>The title scene the page animates over <paramref name="town"/>: its layers by media identity, their places and the town's lights.</summary>
+    private static uint TitleScene(UiValueBuilder builder, DaggerfallTitleScene scene, string town)
+    {
+        uint Rect(DaggerfallTitleRect rect) => builder.Object(("x", builder.Number(rect.X)), ("y", builder.Number(rect.Y)),
+            ("width", builder.Number(rect.Width)), ("height", builder.Number(rect.Height)));
+        return builder.Object(("town", builder.Object(("id", builder.String(town)), ("width", builder.Number(scene.TownWidth)), ("height", builder.Number(scene.TownHeight)))),
+            ("clouds", builder.Object(("id", builder.String(scene.Clouds.Image.MediaId)), ("drift", builder.Number(scene.Clouds.Drift)),
+                ("cycleSeconds", builder.Number(scene.Clouds.CycleSeconds)))),
+            ("sea", builder.Object(("id", builder.String(scene.Sea.Image.MediaId)), ("place", Rect(scene.Sea.Place)),
+                ("frames", builder.Number(scene.Sea.Frames)), ("framesPerSecond", builder.Number(scene.Sea.FramesPerSecond)))),
+            ("window", builder.Object(("id", builder.String(scene.Window.Image.MediaId)), ("width", builder.Number(scene.Window.Width)),
+                ("height", builder.Number(scene.Window.Height)), ("opening", Rect(scene.Window.Opening)),
+                ("flames", builder.Array(scene.Window.Flames.Select(flame => builder.Object(("x", builder.Number(flame.X)), ("y", builder.Number(flame.Y)),
+                    ("radius", builder.Number(flame.Radius)))).ToArray())))),
+            ("lights", builder.Array(scene.Lights.Select(light => builder.Object(("x", builder.Number(light.X)), ("y", builder.Number(light.Y)),
+                ("lamp", builder.Boolean(light.Lamp)))).ToArray())));
     }
 
     /// <summary>One delivered image: its identity and data URL, whether it is refreshed art drawn smoothed, and any further fields.</summary>

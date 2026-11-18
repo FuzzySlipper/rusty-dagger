@@ -304,6 +304,9 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The walking test figure, when the set has one.</summary>
     internal DaggerfallPeopleRig? PeopleRig { get; private init; }
 
+    /// <summary>The title drawn as an animated scene over the title's replacement, when the set has one.</summary>
+    internal DaggerfallTitleScene? TitleScene { get; private init; }
+
     /// <summary>
     /// The refreshed surface for a classic texture record the importer published at <paramref name="texturePath"/>
     /// (<c>…/texture-ARCHIVE-RECORD.png</c>), if the set has one.
@@ -325,10 +328,10 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>Every replacement.</summary>
     internal IEnumerable<DaggerfallArtReplacement> All => _byClassic.Values;
 
-    /// <summary>Every image the set publishes: each replacement, its icon, their dye masks, and a worn item's own mask.</summary>
+    /// <summary>Every image the set publishes: each replacement, its icon, their dye masks, a worn item's own mask, and the title scene's layers.</summary>
     internal IEnumerable<DaggerfallArtImage> Images => Every(_byClassic.Values).SelectMany(replacement =>
         new[] { new DaggerfallArtImage(replacement.MediaId, replacement.Path, replacement.ByteLength), replacement.DyeMask, replacement.Mask?.Image }
-            .OfType<DaggerfallArtImage>());
+            .OfType<DaggerfallArtImage>()).Concat(TitleScene?.Images ?? []);
 
     /// <summary>
     /// Refuses a set that replaces a worn record whose classic image clears what lies beneath it (a helmet over hair)
@@ -382,6 +385,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallArtFile? treeSnow = null;
         DaggerfallArtFile? sea = null;
         DaggerfallPeopleRig? peopleRig = null;
+        DaggerfallTitleScene? titleScene = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         Dictionary<string, DaggerfallArtModel> models = new(StringComparer.Ordinal);
         Dictionary<(int Archive, int Record), DaggerfallArtSurface> surfaces = [];
@@ -462,6 +466,17 @@ internal sealed class DaggerfallArtReplacements
                 }
 
             JsonElement section = document.RootElement.GetProperty("artReplacements");
+            // The title scene lays its layers over the title's replacement, the town painting, so it needs that image and its size.
+            if (section.TryGetProperty("titleScene", out JsonElement sceneSection))
+            {
+                JsonElement town = section.GetProperty("images").EnumerateArray().FirstOrDefault(image => image.GetProperty("replaces").GetString() == "screen.title");
+                if (town.ValueKind != JsonValueKind.Object || !town.TryGetProperty("width", out JsonElement townWidth) || !town.TryGetProperty("height", out JsonElement townHeight))
+                    throw new InvalidOperationException($"Content pack '{packId}' states a title scene without the sized title image it lays over.");
+                titleScene = DaggerfallTitleScene.Read(sceneSection, packId, townWidth.GetInt32(), townHeight.GetInt32());
+                foreach (DaggerfallArtImage image in titleScene.Images)
+                    if (!ids.Add(image.MediaId))
+                        throw new InvalidOperationException($"Content pack '{packId}' names title scene layer '{image.MediaId}' twice.");
+            }
             if (section.TryGetProperty("effects", out JsonElement effectArt))
                 foreach (JsonElement effect in effectArt.EnumerateArray())
                 {
@@ -669,7 +684,7 @@ internal sealed class DaggerfallArtReplacements
         }
 
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people)
-        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, PeopleRig = peopleRig, Models = models };
+        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, PeopleRig = peopleRig, Models = models, TitleScene = titleScene };
 
         DaggerfallPeopleRig PeopleRig(JsonElement rig)
         {
