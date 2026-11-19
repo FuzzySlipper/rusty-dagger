@@ -141,7 +141,22 @@ public sealed class DaggerfallWeatherSessionTests
         Assert.Equal(tuning.Horizon.MarchedCloudThicknessMetres, marched.Thickness);
         Assert.Equal(tuning.Horizon.MarchedCloudKind, marched.Kind);
         Assert.Equal(new Vector3(tuning.Horizon.MarchedCloudBrightness), marched.Color);
+        Assert.Equal(tuning.Horizon.MarchedCloudEdgeSharpness, marched.EdgeSharpness);
+        Assert.Equal(tuning.Horizon.MarchedCloudErosion, marched.DetailErosion);
         Assert.Equal(0, marched.PixelMetres);
+
+        // A developer can draw their rims harder and eroded for the run, and take the tuning's back.
+        IDeveloperSceneCommands developer = session.Commands<IDeveloperSceneCommands>();
+        Assert.True(developer.CloudEdges("40", "15").Succeeded);
+        session.Update(Update(2));
+        Assert.Equal((40f, 15f), (fixture.Engine.Clouds.Last().EdgeSharpness, fixture.Engine.Clouds.Last().DetailErosion));
+        Assert.True(developer.CloudEdges("tuning", "2.5").Succeeded);
+        session.Update(Update(2));
+        Assert.Equal((tuning.Horizon.MarchedCloudEdgeSharpness, 2.5f), (fixture.Engine.Clouds.Last().EdgeSharpness, fixture.Engine.Clouds.Last().DetailErosion));
+        Assert.True(developer.CloudEdges("tuning", "tuning").Succeeded);
+        session.Update(Update(2));
+        Assert.Equal((tuning.Horizon.MarchedCloudEdgeSharpness, tuning.Horizon.MarchedCloudErosion),
+            (fixture.Engine.Clouds.Last().EdgeSharpness, fixture.Engine.Clouds.Last().DetailErosion));
         fixture.Engine.VolumetricClouds = VolumetricCloudsQuality.Off;
 
         Assert.True(session.TryTransitionTo(interior.ProfileKey));

@@ -1112,7 +1112,7 @@ internal sealed partial class DaggerfallSession
                 definitions, FastTravel, Activation, Entrance, _horizon, _time, () => _mode, Presentation, (actor, pose) => SpawnActor(actor, pose),
                 local => _exterior.ProfilePosition(local), BuildingLanding);                                                    // Developer
             DaggerfallDeveloperScene scene = new(_time, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); }, _horizon, _sites,
-                LocalWeather, State.PlayerControl, definitions, UseClassicArt, () => _hanging);   // Developer
+                LocalWeather, _weatherPresentation, State.PlayerControl, definitions, UseClassicArt, () => _hanging);   // Developer
             DaggerfallDeveloperGrants grants = new(hold, definitions, _random, State.Actors, State.PlayerControl, EquipmentMoves,
                 () => State.WeaponDrawn = true, State.Currency, State.SkillUses, State.LevelUps, State.Character, State.Transport, State.Inventory,
                 State.Encumbrance, State.ItemInstances, _uniqueItems, State.RacialOverrides, _lycanthropy, _time, TransportAccess,

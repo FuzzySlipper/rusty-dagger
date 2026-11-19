@@ -1056,6 +1056,8 @@
     "marchedCloudKind": "Cumulonimbus",
     "marchedCloudBrightness": 0.85,
     "marchedCloudCover": 0.6,
+    "marchedCloudEdgeSharpness": 0,
+    "marchedCloudErosion": 0,
     "masserRadiusDegrees": 4,
     "secundaRadiusDegrees": 2.4,
     "masserTiltDegrees": 20,

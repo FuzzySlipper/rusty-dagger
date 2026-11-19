@@ -10,9 +10,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
 /// Developer settings of the world around the player for this run (world.hour, season, weather, ground-weather,
-/// ground-blend, horizon, horizon-set, flora, farforest, trees, groundcover, river, ground-survey, classic-art). Time
-/// runs on through the session's passing of time, as resting would; the rest sets the weather, horizon, ground and
-/// art owners as their own settings do, and nothing of it is saved.
+/// ground-blend, horizon, horizon-set, cloud-edges, flora, farforest, trees, groundcover, river, ground-survey,
+/// classic-art). Time runs on through the session's passing of time, as resting would; the rest sets the weather,
+/// cloud, horizon, ground and art owners as their own settings do, and nothing of it is saved.
 /// </summary>
 /// <param name="passTime">Lets this many game seconds pass (the session's AdvanceElapsedTime, without idle fatigue).</param>
 /// <param name="useClassicArt">
@@ -21,8 +21,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </param>
 /// <param name="hanging">The active site's hanging pieces, when it has an owner for them.</param>
 internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<long> passTime, DaggerfallHorizon horizon,
-    DaggerfallSiteCrossing sites, DaggerfallWeather weather, PlayerControlState player, DaggerfallDefinitions definitions, Func<bool, string?> useClassicArt,
-    Func<DaggerfallHanging?> hanging) : IDeveloperSceneCommands
+    DaggerfallSiteCrossing sites, DaggerfallWeather weather, DaggerfallWeatherPresentation weatherPresentation, PlayerControlState player,
+    DaggerfallDefinitions definitions, Func<bool, string?> useClassicArt, Func<DaggerfallHanging?> hanging) : IDeveloperSceneCommands
 {
     public DebugCommandResult Hanging() => hanging() is { } pieces
         ? DebugCommandResult.Success(pieces.Describe())
@@ -87,6 +87,25 @@ internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<
         if (!double.IsFinite(fogDensity) || fogDensity <= 0) return Refused("A haze is a positive density per metre.");
         horizon.Adjust(lift, fogDensity);
         return DebugCommandResult.Success(horizon.Readout());
+    }
+
+    public DebugCommandResult CloudEdges(string edge, string erosion)
+    {
+        if (!TryEdge(edge, out float? sharpness) || !TryEdge(erosion, out float? eroded))
+            return Refused("An edge sharpness and an erosion are each a finite number, 0 or more, or tuning.");
+        weatherPresentation.UseCloudEdges(sharpness, eroded);
+        (float drawnSharpness, float drawnErosion) = weatherPresentation.CloudEdges;
+        return DebugCommandResult.Success($"Raymarched clouds draw at edge sharpness {drawnSharpness:0.##} and erosion {drawnErosion:0.##}.");
+
+        static bool TryEdge(string text, out float? value)
+        {
+            value = null;
+            if (text == "tuning") return true;
+            if (!float.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float parsed)
+                || !float.IsFinite(parsed) || parsed < 0) return false;
+            value = parsed;
+            return true;
+        }
     }
 
     public DebugCommandResult Flora(double density)

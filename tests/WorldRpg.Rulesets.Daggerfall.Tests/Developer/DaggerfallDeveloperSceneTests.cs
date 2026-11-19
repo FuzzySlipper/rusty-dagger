@@ -63,8 +63,10 @@ public sealed class DaggerfallDeveloperSceneTests
         Assert.Equal("A haze is a positive density per metre.", scene.HorizonSet(2, 0).Message);
         Assert.Equal("A contrast is 1 or more, a repeat above 0 and a sharpness 0 or more.", scene.GroundBlend(0, 1, 1).Message);
         Assert.StartsWith("The weather is one of ", scene.Weather("Hail").Message);
+        foreach ((string edge, string erosion) in new[] {("-1", "0"), ("0", "NaN"), ("sharp", "tuning")})
+            Assert.Equal("An edge sharpness and an erosion are each a finite number, 0 or more, or tuning.", scene.CloudEdges(edge, erosion).Message);
     }
 
-    private DaggerfallDeveloperScene Scene() => new(_time, _passed.Add, null!, null!, null!, new PlayerControlState(null, 0f, 0f),
+    private DaggerfallDeveloperScene Scene() => new(_time, _passed.Add, null!, null!, null!, null!, new PlayerControlState(null, 0f, 0f),
         TestPayload.Definitions, classic => { _classic.Add(classic); return _refusal; }, () => null);
 }

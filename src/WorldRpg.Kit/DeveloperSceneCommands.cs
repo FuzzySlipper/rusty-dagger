@@ -38,6 +38,9 @@ public interface IDeveloperSceneCommands : IDebugCommandModule
     [DebugCommand("world.horizon-set", Description = "Developer: set the horizon's LIFT (1 is true height) and haze per metre FOG for this run.")]
     DebugCommandResult HorizonSet(double lift, double fogDensity);
 
+    [DebugCommand("world.cloud-edges", Description = "Developer: draw the raymarched clouds' rims for this run at EDGE sharpness (0 for the Engine's, higher is harder) and EROSION by a finer noise (0 for none, about 1 strong), each a number or tuning for the shipped value. They show while the video options draw volumetric clouds.")]
+    DebugCommandResult CloudEdges(string edge, string erosion);
+
     [DebugCommand("world.flora", Description = "Developer: grow flora at DENSITY times the ruleset's base count for this run, each climate keeping its share.")]
     DebugCommandResult Flora(double density);
 

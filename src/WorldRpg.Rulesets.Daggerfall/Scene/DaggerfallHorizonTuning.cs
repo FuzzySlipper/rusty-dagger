@@ -63,6 +63,10 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     internal float MarchedCloudBrightness { get; init; } = .85f;
     /// <summary>The share of the weather's cover the raymarched clouds take, since seen low across the sky they look fuller than the flat layer.</summary>
     internal float MarchedCloudCover { get; init; } = .6f;
+    /// <summary>How steeply a raymarched cloud's density rises from its rim: 0 is the Engine's default, higher is crisper.</summary>
+    internal float MarchedCloudEdgeSharpness { get; init; }
+    /// <summary>How far a finer noise wears a raymarched cloud's thin rims into small billows: 0 for none, about 1 strong.</summary>
+    internal float MarchedCloudErosion { get; init; }
     /// <summary>
     /// The sky's sun's colour by its height in degrees, highest first, between which it blends: white high, then gold,
     /// orange and rose as it nears the horizon, where it dims so the afterglow lights the clouds well short of the day.
@@ -114,6 +118,8 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
             throw new ArgumentException("A horizon's lift cannot fall, and its fades must rise from a start to a finish.");
         foreach (float value in new[] {CloudAltitudeMetres, CloudScaleMetres, CloudPixelMetres, MarchedCloudThicknessMetres})
             if (!float.IsFinite(value) || value <= 0) throw new ArgumentException("A horizon's clouds stand above the ground and have a size.");
+        if (MarchedCloudEdgeSharpness is not (>= 0 and < float.PositiveInfinity) || MarchedCloudErosion is not (>= 0 and < float.PositiveInfinity))
+            throw new ArgumentException("A raymarched cloud's edge sharpness and erosion are finite and 0 or more.");
         if (CloudShadeSteps == 1 || CloudBrightness is <= 0 or > 1 || MarchedCloudBrightness is <= 0 or > 1 || MarchedCloudCover is <= 0 or > 1
             || !Enum.IsDefined(MarchedCloudKind))
             throw new ArgumentException("Clouds are smooth or have at least two shades, a brightness and a raymarched share of the cover above 0 and up to 1, and a kind.");
@@ -167,6 +173,8 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         MarchedCloudKind = Enum.Parse<CloudKind>(e.GetProperty("marchedCloudKind").GetString()!),
         MarchedCloudBrightness = e.GetProperty("marchedCloudBrightness").GetSingle(),
         MarchedCloudCover = e.GetProperty("marchedCloudCover").GetSingle(),
+        MarchedCloudEdgeSharpness = e.GetProperty("marchedCloudEdgeSharpness").GetSingle(),
+        MarchedCloudErosion = e.GetProperty("marchedCloudErosion").GetSingle(),
         SkySunColors = [.. e.GetProperty("skySunColors").EnumerateArray().Select(stop => (stop[0].GetSingle(), new Vector3(stop[1].GetSingle(), stop[2].GetSingle(), stop[3].GetSingle())))],
         TwilightSun = e.GetProperty("twilightSun").GetSingle(),
         CloudColors = [.. e.GetProperty("cloudColors").EnumerateArray().Select(color => new Vector3(color[0].GetSingle(), color[1].GetSingle(), color[2].GetSingle()))],

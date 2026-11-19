@@ -66,6 +66,6 @@ On top of the root `AGENTS.md`.
 - Brightness comes from the lights, not exposure; the tone operator stays `Rolloff`.
 - Rules read weather from `DaggerfallWeather.Conditions` (the session's `LocalWeather`), not from which sky draws.
 - World sprites use `SpriteAlphaMode.Mask`; only glowing and translucent ones blend.
-- Tune by eye for one run: `world.horizon-set LIFT FOG`, `world.ground-blend CONTRAST METRES SHARPNESS`, `world.weather KIND`, `world.ground-weather WET SNOW`, `world.hour HOUR`.
+- Tune by eye for one run: `world.horizon-set LIFT FOG`, `world.ground-blend CONTRAST METRES SHARPNESS`, `world.weather KIND`, `world.ground-weather WET SNOW`, `world.hour HOUR`, `world.cloud-edges EDGE EROSION`.
 
 Fuller account: `wiki/rusty-dagger/architecture`, `actors-and-mechanics`, `combat-rules`, `exterior-terrain` and `sky-light-weather`.
