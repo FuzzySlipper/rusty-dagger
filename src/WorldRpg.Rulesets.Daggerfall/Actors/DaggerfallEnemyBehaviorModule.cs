@@ -38,7 +38,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     private readonly Func<long, bool> _isPlayerAllied;
     private readonly Func<long, PursuitTarget?>? _selectAllyTarget;
     private readonly Func<long, ActorControlRestrictions> _controlRestrictions;
-    private Func<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float, bool>? _enemyMagic;
+    private Func<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float, List<DaggerfallDecisionGate>?, bool>? _enemyMagic;
     private Func<ActorState, PursuitTarget, double, bool>? _rangedSpellReady;
     private readonly Dictionary<long, double> _lastTargetDistances = [];
     // One Engine outer update can contain several admitted fixed steps.  Keep the action door
@@ -109,8 +109,17 @@ internal sealed class DaggerfallEnemyBehaviorModule
     internal double DetectionDistance => _pursuitTuning.DetectionDistance;
     private readonly Dictionary<long, DaggerfallEnemyPerceptionSource> _lastSources = [];
 
+    /// <summary>The developer's run-only overrides, read at this module's own inputs.</summary>
+    internal DaggerfallEnemyOverrides Overrides { get; } = new();
+    /// <summary>The opt-in decision trace of one enemy.</summary>
+    internal DaggerfallEnemyDecisionTrace Trace { get; } = new();
+    /// <summary>The traced actor's gates while its decision is being made; null for every other actor.</summary>
+    private List<DaggerfallDecisionGate>? _gates;
+    /// <summary>What the traced actor's motor last weighed, for the attack gate's reason.</summary>
+    private (PursuitObservation Observation, PursuitPolicy Policy)? _tracedMotor;
+
     /// <summary>Attaches the compiled spell decision to this module's existing actor update.</summary>
-    internal void BindEnemyMagic(Func<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float, bool> decide,
+    internal void BindEnemyMagic(Func<ActorState, PursuitTarget, PerceptionReadoutResult?, DaggerfallEnemyPerceptionDecision?, double, ulong, ulong, float, List<DaggerfallDecisionGate>?, bool> decide,
         Func<ActorState, PursuitTarget, double, bool> rangedSpellReady)
     {
         _enemyMagic = decide ?? throw new ArgumentNullException(nameof(decide));
@@ -181,8 +190,8 @@ internal sealed class DaggerfallEnemyBehaviorModule
     /// <summary>How an actor moves, which is how a blow throws it.</summary>
     internal ActorNavigationMode NavigationMode(long actorId) => _movementPolicy(actorId).NavigationMode;
 
-    internal bool IsPacified(long actorId) =>
-        _actors.TryGet(actorId, out ActorState actor) && (Senses(actor).Pacified || _questRestrained(actorId));
+    internal bool IsPacified(long actorId) => _actors.TryGet(actorId, out ActorState actor) && !Overrides.IsHostile(actorId)
+        && (Senses(actor).Pacified || _questRestrained(actorId));
 
     /// <summary>
     /// A blow tells an actor who struck it: it turns on its attacker, even from behind. It knows at once, since an
@@ -265,114 +274,182 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 _lastSources.Remove(actor.DurableId);
                 continue;
             }
-            if (!actor.IsDefeated && (_controlRestrictions(actor.DurableId).Movement || _reactions?.Holds(actor.DurableId) == true))
-            {
-                var restrictedPrevious = actor.Pursuit.TransitionTo(PursuitState.Idle);
-                _combat.InterruptPendingAttack(actor.DurableId, generation);
-                _lastDecisions.Remove(actor.DurableId);
-                _lastSources.Remove(actor.DurableId);
-                _lastTargetDistances.Remove(actor.DurableId);
-                if (restrictedPrevious != PursuitState.Idle)
-                    facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, ToDaggerState(restrictedPrevious), EnemyBehaviorState.Idle, generation, simulationStep));
-                evidence.Add(actor.DurableId, new(actor.DurableId, EnemyBehaviorState.Idle, null, null));
-                continue;
-            }
-            PursuitTarget? target = _selectTarget is not null ? _selectTarget(actor.DurableId) : _isPlayerAllied(actor.DurableId)
-                ? _selectAllyTarget?.Invoke(actor.DurableId)
-                : new PursuitTarget(DaggerfallActorIdentity.PlayerEntityId, playerPosition);
-            if (target is null)
-            {
-                PursuitState desired = actor.IsDefeated ? PursuitState.Dead : PursuitState.Idle;
-                PursuitState previousState = actor.Pursuit.TransitionTo(desired);
-                _combat.InterruptPendingAttack(actor.DurableId, generation);
-                _lastDecisions.Remove(actor.DurableId);
-                _lastSources.Remove(actor.DurableId);
-                _lastTargetDistances.Remove(actor.DurableId);
-                if (previousState != desired)
-                    facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, ToDaggerState(previousState), ToDaggerState(desired), generation, simulationStep));
-                evidence.Add(actor.DurableId, new(actor.DurableId, ToDaggerState(desired), null, null));
-                continue;
-            }
-            PursuitEvidence pursuit = _pursuit.Update(
-                actor,
-                actor.Pursuit,
-                target.Value,
-                _pursuitTuning,
-                _perceptionOptions,
-                generation,
-                simulationStep,
-                deltaSeconds,
-                facts,
-                _movementPolicy(actor.DurableId), admitAttack: false,
-                selectPolicy: observation => SelectMotorPolicy(actor, target.Value, observation, generation, simulationStep, deltaSeconds));
-            if (pursuit.Current == PursuitState.Blocked
-                && pursuit.Navigation is { Outcome: not NavigationPathOutcome.Reached }
-                && _canOpenDoors(actor.DurableId)
-                && _openBlockedDoor?.Invoke(actor) == true)
-            {
-                // The canonical door owner has changed state. Leave the Engine navigation receipt
-                // and pursuit state intact; the next admitted step retries the same target through
-                // the now-opened collision rather than introducing a local detour.
-            }
-            EnemyBehaviorState previous = ToDaggerState(pursuit.Previous);
-            EnemyBehaviorState current = ToDaggerState(pursuit.Current);
-            if (previous != current)
-            {
-                facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, previous, current, generation, simulationStep));
-            }
-            evidence.Add(actor.DurableId, new EnemyBehaviorEvidence(actor.DurableId, current, pursuit.Visibility, pursuit.Navigation) { Target = target });
-            double targetRateOfApproach = 0d;
-            PerceptionPair? observed = pursuit.Visibility?.Pairs.ToArray()
-                .Where(pair => pair.Observer == checked((ulong)actor.DurableId)
-                    && pair.Target == checked((ulong)target.Value.DurableId))
-                .OrderBy(pair => pair.Distance)
-                .Select(pair => (PerceptionPair?)pair)
-                .FirstOrDefault();
-            if (observed is { } pair && double.IsFinite(pair.Distance) && pair.Distance >= 0d)
-            {
-                if (_lastTargetDistances.TryGetValue(actor.DurableId, out double previousDistance))
-                    targetRateOfApproach = Math.Max(0d, previousDistance - pair.Distance);
-                _lastTargetDistances[actor.DurableId] = pair.Distance;
-            }
-            else
-            {
-                _lastTargetDistances.Remove(actor.DurableId);
-            }
-            bool actionAlreadyAdmitted = _admittedActions.Contains(actor.DurableId);
-            bool magicAdmitted = !actionAlreadyAdmitted && _enemyMagic?.Invoke(actor, target.Value, pursuit.Visibility,
-                _lastDecisions.GetValueOrDefault(actor.DurableId), targetRateOfApproach,
-                generation, simulationStep, deltaSeconds) == true;
-            // The donor chooses a single action: a successful spell selection owns this action
-            // window and vetoes the delayed physical swing that pursuit would otherwise admit.
-            // If magic declined or could not be admitted, the same attack owner receives the one
-            // physical admission after the spell decision has had its chance.
-            if (!actionAlreadyAdmitted && pursuit.AttackEligible)
-            {
-                if (magicAdmitted)
-                {
-                    _admittedActions.Add(actor.DurableId);
-                    _combat.InterruptPendingAttack(actor.DurableId, generation);
-                }
-                // An enemy that is still swinging or recovering simply waits: its pacing is not a refused
-                // request, and reporting it as one would put the enemy's cooldown on the player's line.
-                else if (_combat.IsReady(actor.DurableId, generation, simulationStep)
-                    && _combat.TryBeginEnemyAttack(actor.DurableId, target.Value.DurableId, generation,
-                        simulationStep, deltaSeconds, facts))
-                {
-                    _admittedActions.Add(actor.DurableId);
-                }
-            }
-            if (actor.IsDefeated)
-            {
-                _lastDecisions.Remove(actor.DurableId);
-                _lastSources.Remove(actor.DurableId);
-            }
-            else if (_lastDecisions.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionDecision? decision))
-                perceptions[actor.DurableId] = decision;
+            _gates = Trace.Open(actor.DurableId);
+            _tracedMotor = null;
+            EnemyBehaviorState decided = UpdateEnemy(actor, playerPosition, generation, simulationStep, deltaSeconds, facts, evidence, perceptions);
+            Trace.Close(_gates, decided, generation, simulationStep);
+            _gates = null;
         }
         LastEvidence = evidence;
         LastPerception = perceptions;
     }
+
+    /// <summary>One enemy's decision this step: control, target, pursuit with its motor, then the single action.</summary>
+    private EnemyBehaviorState UpdateEnemy(ActorState actor, WorldPoint playerPosition, ulong generation, ulong simulationStep,
+        float deltaSeconds, FactBuffer<IProductFact> facts, Dictionary<long, EnemyBehaviorEvidence> evidence,
+        Dictionary<long, DaggerfallEnemyPerceptionDecision> perceptions)
+    {
+        bool reacting = _reactions?.Holds(actor.DurableId) == true;
+        if (!actor.IsDefeated && (Overrides.Frozen || _controlRestrictions(actor.DurableId).Movement || reacting))
+        {
+            _gates?.Add(new("control", "movement", DaggerfallGateOutcome.Refused,
+                Overrides.Frozen ? "ai.freeze" : reacting ? "reacting" : "restricted"));
+            var restrictedPrevious = actor.Pursuit.TransitionTo(PursuitState.Idle);
+            _combat.InterruptPendingAttack(actor.DurableId, generation);
+            _lastDecisions.Remove(actor.DurableId);
+            _lastSources.Remove(actor.DurableId);
+            _lastTargetDistances.Remove(actor.DurableId);
+            if (restrictedPrevious != PursuitState.Idle)
+                facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, ToDaggerState(restrictedPrevious), EnemyBehaviorState.Idle, generation, simulationStep));
+            evidence.Add(actor.DurableId, new(actor.DurableId, EnemyBehaviorState.Idle, null, null));
+            return EnemyBehaviorState.Idle;
+        }
+        PursuitTarget? target = SelectTarget(actor.DurableId, playerPosition);
+        if (target is null)
+        {
+            PursuitState desired = actor.IsDefeated ? PursuitState.Dead : PursuitState.Idle;
+            PursuitState previousState = actor.Pursuit.TransitionTo(desired);
+            _combat.InterruptPendingAttack(actor.DurableId, generation);
+            _lastDecisions.Remove(actor.DurableId);
+            _lastSources.Remove(actor.DurableId);
+            _lastTargetDistances.Remove(actor.DurableId);
+            if (previousState != desired)
+                facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, ToDaggerState(previousState), ToDaggerState(desired), generation, simulationStep));
+            evidence.Add(actor.DurableId, new(actor.DurableId, ToDaggerState(desired), null, null));
+            return ToDaggerState(desired);
+        }
+        PursuitEvidence pursuit = _pursuit.Update(
+            actor,
+            actor.Pursuit,
+            target.Value,
+            _pursuitTuning,
+            _perceptionOptions,
+            generation,
+            simulationStep,
+            deltaSeconds,
+            facts,
+            _movementPolicy(actor.DurableId), admitAttack: false,
+            selectPolicy: observation => SelectMotorPolicy(actor, target.Value, observation, generation, simulationStep, deltaSeconds));
+        if (pursuit.Current == PursuitState.Blocked
+            && pursuit.Navigation is { Outcome: not NavigationPathOutcome.Reached }
+            && _canOpenDoors(actor.DurableId)
+            && _openBlockedDoor?.Invoke(actor) == true)
+        {
+            // The canonical door owner has changed state. Leave the Engine navigation receipt
+            // and pursuit state intact; the next admitted step retries the same target through
+            // the now-opened collision rather than introducing a local detour.
+        }
+        EnemyBehaviorState previous = ToDaggerState(pursuit.Previous);
+        EnemyBehaviorState current = ToDaggerState(pursuit.Current);
+        if (previous != current)
+        {
+            facts.Append(new EnemyBehaviorTransitionFact(actor.DurableId, previous, current, generation, simulationStep));
+        }
+        evidence.Add(actor.DurableId, new EnemyBehaviorEvidence(actor.DurableId, current, pursuit.Visibility, pursuit.Navigation) { Target = target });
+        double targetRateOfApproach = 0d;
+        PerceptionPair? observed = pursuit.Visibility?.Pairs.ToArray()
+            .Where(pair => pair.Observer == checked((ulong)actor.DurableId)
+                && pair.Target == checked((ulong)target.Value.DurableId))
+            .OrderBy(pair => pair.Distance)
+            .Select(pair => (PerceptionPair?)pair)
+            .FirstOrDefault();
+        if (observed is { } pair && double.IsFinite(pair.Distance) && pair.Distance >= 0d)
+        {
+            if (_lastTargetDistances.TryGetValue(actor.DurableId, out double previousDistance))
+                targetRateOfApproach = Math.Max(0d, previousDistance - pair.Distance);
+            _lastTargetDistances[actor.DurableId] = pair.Distance;
+        }
+        else
+        {
+            _lastTargetDistances.Remove(actor.DurableId);
+        }
+        bool actionAlreadyAdmitted = _admittedActions.Contains(actor.DurableId);
+        if (actionAlreadyAdmitted) _gates?.Add(new("spell", "action", DaggerfallGateOutcome.Refused, "action-taken-this-update"));
+        bool magicAdmitted = !actionAlreadyAdmitted && _enemyMagic?.Invoke(actor, target.Value, pursuit.Visibility,
+            _lastDecisions.GetValueOrDefault(actor.DurableId), targetRateOfApproach,
+            generation, simulationStep, deltaSeconds, _gates) == true;
+        // The donor chooses a single action: a successful spell selection owns this action
+        // window and vetoes the delayed physical swing that pursuit would otherwise admit.
+        // If magic declined or could not be admitted, the same attack owner receives the one
+        // physical admission after the spell decision has had its chance.
+        if (!pursuit.AttackEligible)
+            _gates?.Add(new("attack", "physical", DaggerfallGateOutcome.Refused, IneligibleReason(), MotorValues()));
+        else if (actionAlreadyAdmitted)
+            _gates?.Add(new("attack", "physical", DaggerfallGateOutcome.Refused, "action-taken-this-update"));
+        else if (magicAdmitted)
+        {
+            _gates?.Add(new("attack", "physical", DaggerfallGateOutcome.Refused, "spell-took-action"));
+            _admittedActions.Add(actor.DurableId);
+            _combat.InterruptPendingAttack(actor.DurableId, generation);
+        }
+        // An enemy that is still swinging or recovering simply waits: its pacing is not a refused
+        // request, and reporting it as one would put the enemy's cooldown on the player's line.
+        else if (!_combat.IsReady(actor.DurableId, generation, simulationStep))
+            _gates?.Add(new("attack", "physical", DaggerfallGateOutcome.Refused, actor.Attack.Pending is null ? "recovering" : "swinging",
+                new DaggerfallGateValue("readyAtStep", actor.Attack.ReadyAtStep), new DaggerfallGateValue("step", simulationStep)));
+        else if (_combat.TryBeginEnemyAttack(actor.DurableId, target.Value.DurableId, generation, simulationStep, deltaSeconds, facts))
+        {
+            _gates?.Add(new("attack", "physical", DaggerfallGateOutcome.Passed, "began", MotorValues()));
+            _admittedActions.Add(actor.DurableId);
+        }
+        else
+            _gates?.Add(new("attack", "physical", DaggerfallGateOutcome.Refused, "refused-by-combat"));
+        if (actor.IsDefeated)
+        {
+            _lastDecisions.Remove(actor.DurableId);
+            _lastSources.Remove(actor.DurableId);
+        }
+        else if (_lastDecisions.TryGetValue(actor.DurableId, out DaggerfallEnemyPerceptionDecision? decision))
+            perceptions[actor.DurableId] = decision;
+        return current;
+    }
+
+    /// <summary>
+    /// Who an enemy pursues: none while passive; the developer's chosen target; the player when forced hostile; else
+    /// the quest's or ally selection, or the player.
+    /// </summary>
+    private PursuitTarget? SelectTarget(long actorId, WorldPoint playerPosition)
+    {
+        PursuitTarget player = new(DaggerfallActorIdentity.PlayerEntityId, playerPosition);
+        if (Overrides.IsPassive(actorId))
+        {
+            _gates?.Add(new("target", "select", DaggerfallGateOutcome.Refused, "passive"));
+            return null;
+        }
+        if (Overrides.Target(actorId) is { } chosen)
+        {
+            PursuitTarget? overridden = chosen == DaggerfallActorIdentity.PlayerEntityId ? player
+                : _actors.TryGet(chosen, out ActorState other) && !other.IsDefeated ? new PursuitTarget(chosen, other.Position) : null;
+            if (overridden is not null)
+            {
+                _gates?.Add(new("target", "select", DaggerfallGateOutcome.Chose, "actor.target", new DaggerfallGateValue("target", chosen)));
+                return overridden;
+            }
+        }
+        if (Overrides.IsHostile(actorId))
+        {
+            _gates?.Add(new("target", "select", DaggerfallGateOutcome.Chose, "actor.hostile", new DaggerfallGateValue("target", player.DurableId)));
+            return player;
+        }
+        PursuitTarget? target = _selectTarget is not null ? _selectTarget(actorId) : _isPlayerAllied(actorId)
+            ? _selectAllyTarget?.Invoke(actorId)
+            : player;
+        if (_gates is not null)
+            _gates.Add(target is { } selected
+                ? new("target", "select", DaggerfallGateOutcome.Chose, selected.DurableId == player.DurableId ? "player" : "foe", new DaggerfallGateValue("target", selected.DurableId))
+                : new("target", "select", DaggerfallGateOutcome.Refused, "none"));
+        return target;
+    }
+
+    /// <summary>Why pursuit left the traced enemy's attack ineligible, from what its motor last weighed.</summary>
+    private string IneligibleReason() => _tracedMotor is not { } motor ? "no-observation"
+        : !motor.Policy.AllowAttack ? "held"
+        : !motor.Observation.Visible ? "not-visible"
+        : motor.Policy.AttackReach is not double reach ? "no-attack"
+        : motor.Observation.Distance > reach ? "out-of-reach" : "not-observed";
+
+    private DaggerfallGateValue[] MotorValues() => _tracedMotor is { } motor
+        ? [new("distance", motor.Observation.Distance), new("reach", motor.Policy.AttackReach ?? 0)] : [];
 
     private PursuitPolicy SelectMotorPolicy(ActorState actor, PursuitTarget target, PursuitObservation observation,
         ulong generation, ulong step, float deltaSeconds)
@@ -386,12 +463,38 @@ internal sealed class DaggerfallEnemyBehaviorModule
         // Engagement spaces the attack and the maneuvers around it against the delivery that resolves it.
         observation = observation with { Reach = (attack?.Reach ?? observation.Reach) is double reach ? _engagement.EngageReach(reach, attack?.Ranged == true) : null };
         var memory = Senses(actor).Motor;
-        return DaggerfallEnemyMotorPolicy.Select(memory, _movementPolicy(actor.DurableId), _maneuvers,
+        PursuitPolicy chosen = DaggerfallEnemyMotorPolicy.Select(memory, _movementPolicy(actor.DurableId), _maneuvers,
             _motorContext(actor.DurableId, target.DurableId), observation, rangedAttack, inSight, known,
             maySearch: !IsPacified(actor.DurableId), deltaSeconds,
             (key, min, max) => checked((int)_random.DrawKeyed(new KeyedRngRequest(0, "daggerfall.enemy-motor",
-                $"actor:{actor.DurableId}:target:{target.DurableId}:generation:{generation}:step:{step}:decision:{memory.Decision}:{key}", min, max)).Value)) with { AttackReach = observation.Reach };
+                $"actor:{actor.DurableId}:target:{target.DurableId}:generation:{generation}:step:{step}:decision:{memory.Decision}:{key}", min, max)).Value),
+            _gates) with { AttackReach = observation.Reach };
+        if (Overrides.ForcedState(actor.DurableId) is { } forced)
+        {
+            chosen = Force(chosen, forced, memory.StrafeDirection);
+            _gates?.Add(new("override", "force-state", DaggerfallGateOutcome.Chose, forced.ToString()));
+        }
+        if (_gates is not null) _tracedMotor = (observation, chosen);
+        return chosen;
     }
+
+    /// <summary>
+    /// Holds a maneuver whatever the motor rolled: Chase closes without swinging, Attack closes and swings in reach,
+    /// Retreat and Strafe move as the motor would, Search goes to where the target was last known, Idle stands still.
+    /// The moving states act as if the enemy knew where its target is, so they hold even where it has only noticed
+    /// the target (a dark dungeon) and would otherwise idle; the Engine's visibility still gates a swing.
+    /// </summary>
+    private PursuitPolicy Force(PursuitPolicy chosen, PursuitState state, int strafeDirection) => state switch
+    {
+        PursuitState.Chase => chosen with { Maneuver = PursuitState.Chase, AllowAttack = false, SpeedMultiplier = 1f, TargetObserved = true },
+        PursuitState.Attack => chosen with { Maneuver = PursuitState.Chase, AllowAttack = true, SpeedMultiplier = 1f, TargetObserved = true },
+        PursuitState.Retreat => chosen with { Maneuver = PursuitState.Retreat, SpeedMultiplier = .5f, TargetObserved = true },
+        PursuitState.Strafe => chosen with { Maneuver = PursuitState.Strafe, SpeedMultiplier = .25f, StrafeDirection = strafeDirection, TargetObserved = true },
+        PursuitState.Search => chosen with { TargetObserved = false, SearchLastKnownPosition = true,
+            SearchDistance = _maneuvers.SearchDistance, SearchStep = _maneuvers.SearchStep },
+        PursuitState.Idle => chosen with { Maneuver = PursuitState.Idle, AllowAttack = false },
+        _ => throw new ArgumentOutOfRangeException(nameof(state)),
+    };
 
     /// <summary>Runs one source-backed civilian activity step through Engine navigation.</summary>
     internal WanderEvidence UpdateCivilian(ActorState actor, WanderPolicy policy,
@@ -419,8 +522,18 @@ internal sealed class DaggerfallEnemyBehaviorModule
             _lastSources.Remove(actorId);
             return receipt;
         }
+        bool forcedHostile = Overrides.IsHostile(actorId);
         // The player's stealth/language policy does not reinterpret an ally's enemy visibility.
-        if (_isPlayerAllied(actorId) || receipt.Pairs.Length > 0 && receipt.Pairs.ToArray().All(pair => pair.Target != DaggerfallActorIdentity.PlayerEntityId)) return receipt;
+        if (!forcedHostile && _isPlayerAllied(actorId) || receipt.Pairs.Length > 0 && receipt.Pairs.ToArray().All(pair => pair.Target != DaggerfallActorIdentity.PlayerEntityId))
+        {
+            if (_gates is not null)
+            {
+                PerceptionPair[] seen = receipt.Pairs.ToArray().Where(value => value.Observer == checked((ulong)actorId)).ToArray();
+                _gates.Add(new("perception", "engine", seen.Any(value => value.Kind == PerceptionPairKind.Visible) ? DaggerfallGateOutcome.Passed : DaggerfallGateOutcome.Refused,
+                    seen.Length == 0 ? "no-pair" : seen[0].Kind.ToString().ToLowerInvariant(), [.. seen.Take(1).Select(value => new DaggerfallGateValue("distance", value.Distance))]));
+            }
+            return receipt;
+        }
         PerceptionPair? pair = receipt.Pairs.ToArray()
             .Where(value => value.Observer == checked((ulong)actorId) && value.Target == checked((ulong)DaggerfallActorIdentity.PlayerEntityId))
             .OrderBy(value => value.Distance)
@@ -429,13 +542,16 @@ internal sealed class DaggerfallEnemyBehaviorModule
         DaggerfallEnemyPerceptionMemory memory = Senses(actor);
 
         DaggerfallEnemyPerceptionContext context = _contextProvider(actorId);
-        if (memory.ForcedHostile)
+        if (memory.ForcedHostile || forcedHostile)
             context = context with { EnemyHostile = true, TargetPacified = false };
         DaggerfallEnemyPerceptionSource source = new(
             SeesThroughInvisibility: context.EnemySeesThroughInvisibility);
         DaggerfallEnemyPerceptionDecision decision = DaggerfallPerceptionPolicy.Evaluate(memory, pair,
             source, context, context.RollPercent);
+        // Forced hostility overrides a pacification for the run without changing the saved disposition.
+        if (forcedHostile && decision.Pacified) decision = decision with { Pacified = false };
         _lastDecisions[actorId] = decision;
+        _gates?.Add(PerceptionGate(decision, pair));
         _lastSources[actorId] = source;
         foreach (DaggerfallSkillUse use in decision.SkillUses)
             _recordSkillUse(use);
@@ -453,6 +569,21 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 : value with { Kind = PerceptionPairKind.Occluded, Evidence = 0d };
         }
         return receipt with { Pairs = projected };
+    }
+
+    private static DaggerfallDecisionGate PerceptionGate(DaggerfallEnemyPerceptionDecision decision, PerceptionPair? pair)
+    {
+        List<DaggerfallGateValue> values = [new("inSight", decision.InSight ? 1 : 0), new("inEarshot", decision.InEarshot ? 1 : 0),
+            new("stealthCheck", decision.StealthCheckAttempted ? 1 : 0)];
+        if (pair is { } seen) values.Insert(0, new("distance", seen.Distance));
+        if (decision.Pacification is { } attempt)
+        {
+            values.Add(new("pacifyChance", attempt.Chance));
+            values.Add(new("pacifyRoll", attempt.Roll));
+        }
+        string reason = pair is null ? "no-pair" : decision.BlockedByIllusion ? "illusion" : decision.Pacified ? "pacified"
+            : decision.Detected ? decision.InSight ? "seen" : decision.InEarshot ? "heard" : "stealth-roll" : "unnoticed";
+        return new("perception", "senses", decision.PursuitVisible ? DaggerfallGateOutcome.Passed : DaggerfallGateOutcome.Refused, reason, [.. values]);
     }
 
     private static EnemyBehaviorState ToDaggerState(PursuitState value) => value switch

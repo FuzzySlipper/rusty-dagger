@@ -1124,6 +1124,9 @@ internal sealed partial class DaggerfallSession
             _people = new DaggerfallPeopleSwitch(composition.ArtReplacements?.PeopleRig, composition.ArtReplacements?.SplatPeople, () => _engine.PartsRigs,
                 () => _engine.Animation, () => _engine.Content, _tuning.CivilianWander.MovementSpeedUnitsPerSecond, _tuning.SplatPeople, State.Actors,
                 peopleStage);   // Developer
+            DaggerfallActorInspection actorInspection = new(State.Actors, State.PlayerControl, _roster, _senses, _enemyBehavior, _enemyMagic,
+                Casting, _combat, State.Effects, id => State.Actors.TryGet(id, out _) ? actorInventories.EquipmentFor(id).Read() : null, id => QuestFoes.Team(id),
+                () => _latestSimulationStep);                                                          // Developer
             // One object per module type: the Engine's catalogue binds an instance to the first type it matches.
             DebugCommands =
             [
@@ -1141,6 +1144,7 @@ internal sealed partial class DaggerfallSession
                 grants,
                 _people,
                 peopleStage,
+                actorInspection,
                 heldWorkbench,
                 new TunablesDebugModule(engine.ContentSource, heldWorkbench.Page, heldWorkbench.Choose),
             ];                                                                                     // Developer

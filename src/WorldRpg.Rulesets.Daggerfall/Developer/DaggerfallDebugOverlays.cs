@@ -221,7 +221,18 @@ internal sealed class DaggerfallDebugOverlays(IEngineContext engine, PlayerContr
             if (behavior.Navigation is { NextWaypoint: Vector3 next })
                 items.Add(OverlayItem.Segment(OverlayPlace.World, actor.Position.ToVector(), next, color));
             items.Add(OverlayItem.Label(OverlayPlace.World, centre + Vector3.UnitY, $"{label} · {behavior.State}{noticed}", color, onTop: true));
+            if (TraceLine(actor.DurableId) is { } trace)
+                items.Add(OverlayItem.Label(OverlayPlace.World, centre + Vector3.UnitY * 1.3F, trace, Ink.Senses with { A = 1F }, onTop: true));
         }
+    }
+
+    /// <summary>The traced actor's latest decision in one line (actor.trace): each gate as policy.gate reason, ✓ passed, ✗ refused, → chosen.</summary>
+    private string? TraceLine(long actorId)
+    {
+        if (enemyBehavior.Trace.ActorId != actorId || enemyBehavior.Trace.Latest is not { } latest) return null;
+        IEnumerable<string> overrides = enemyBehavior.Overrides.On(actorId);
+        return string.Join(" · ", overrides.Select(value => $"[{value}]").Concat(latest.Gates.Select(gate =>
+            $"{(gate.Outcome switch { DaggerfallGateOutcome.Refused => "✗", DaggerfallGateOutcome.Passed => "✓", _ => "→" })}{gate.Policy}.{gate.Gate} {gate.Reason}")));
     }
 
     /// <summary>The active profile's markers: dungeon enemies and treasure, quest markers, arrival anchors and street population.</summary>

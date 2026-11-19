@@ -40,6 +40,8 @@ internal sealed class DaggerfallEnemyMagicModule
     internal const double MeleeDistance = 2.25d;
     internal const double RangedFacingCosine = .9238795325112867d; // cos(22.5 degrees)
     private const string SelectionScope = "daggerfall.enemy-spell-selection.v1";
+    /// <summary>The policy name a traced enemy's spell gates carry.</summary>
+    internal const string Policy = "spell";
 
     private readonly DaggerfallEnemySpells _spells;
     private readonly DaggerfallMagicCatalogSet _catalog;
@@ -84,13 +86,15 @@ internal sealed class DaggerfallEnemyMagicModule
     /// </summary>
     internal bool Decide(ActorState actor, PursuitTarget target, PerceptionReadoutResult? visibility,
         DaggerfallEnemyPerceptionDecision? perception, double targetRateOfApproach,
-        ulong generation, ulong simulationStep, float deltaSeconds)
+        ulong generation, ulong simulationStep, float deltaSeconds, List<DaggerfallDecisionGate>? gates = null)
     {
         if (actor.IsDefeated || target.DurableId != DaggerfallActorIdentity.PlayerEntityId
-            || visibility is not { } receipt || perception is not { InSight: true, PursuitVisible: true }) return false;
-        if (_casting.HasPending(actor.DurableId)) return false;
+            || visibility is not { } receipt || perception is not { InSight: true, PursuitVisible: true })
+            return Refuse("eligible", actor.IsDefeated ? "defeated" : target.DurableId != DaggerfallActorIdentity.PlayerEntityId ? "target-not-player"
+                : visibility is null ? "no-visibility" : "player-not-in-sight");
+        if (_casting.HasPending(actor.DurableId)) return Refuse("eligible", "casting");
         DaggerfallActorDefinition? definition = _definition(actor.DurableId);
-        if (definition is null || !_spells.IsCaster(definition.MobileId)) return false;
+        if (definition is null || !_spells.IsCaster(definition.MobileId)) return Refuse("eligible", "not-a-caster");
 
         PerceptionPair? observed = receipt.Pairs.ToArray()
             .Where(pair => pair.Observer == checked((ulong)actor.DurableId)
@@ -99,35 +103,59 @@ internal sealed class DaggerfallEnemyMagicModule
             .Select(pair => (PerceptionPair?)pair)
             .FirstOrDefault();
         if (observed is not { } pair || pair.Kind != PerceptionPairKind.Visible
-            || !double.IsFinite(pair.Distance) || pair.Distance < 0d) return false;
+            || !double.IsFinite(pair.Distance) || pair.Distance < 0d) return Refuse("eligible", "not-visible");
 
         List<string> ranged = RangedSpellKeys(definition);
-        if (pair.Distance > MinimumRangedDistance && pair.Distance < MaximumRangedDistance
-            && pair.FacingCosine >= RangedFacingCosine && ranged.Count > 0 && !HasBow(definition))
+        bool inRangedBand = pair.Distance > MinimumRangedDistance && pair.Distance < MaximumRangedDistance
+            && pair.FacingCosine >= RangedFacingCosine && ranged.Count > 0 && !HasBow(definition);
+        gates?.Add(new(Policy, "ranged-band", inRangedBand ? DaggerfallGateOutcome.Passed : DaggerfallGateOutcome.Refused,
+            ranged.Count == 0 ? "no-ranged-spell" : HasBow(definition) ? "has-bow" : pair.FacingCosine < RangedFacingCosine ? "not-facing"
+                : pair.Distance <= MinimumRangedDistance ? "too-close" : pair.Distance >= MaximumRangedDistance ? "too-far" : "in-band",
+            new DaggerfallGateValue("distance", pair.Distance), new DaggerfallGateValue("minimum", MinimumRangedDistance),
+            new DaggerfallGateValue("maximum", MaximumRangedDistance), new DaggerfallGateValue("facingCosine", pair.FacingCosine)));
+        if (inRangedBand)
         {
             string selected = Select(ranged, actor.DurableId, generation, simulationStep, "ranged");
-            if (!_casting.EffectsAlreadyOnTarget(selected, target.DurableId)
-                && Draw(actor.DurableId, generation, simulationStep, "ranged-gate", 1, 40) == 1)
+            gates?.Add(new(Policy, "ranged-pick", DaggerfallGateOutcome.Chose, selected, new DaggerfallGateValue("choices", ranged.Count)));
+            if (_casting.EffectsAlreadyOnTarget(selected, target.DurableId))
+                gates?.Add(new(Policy, "ranged-roll", DaggerfallGateOutcome.Refused, "already-on-target"));
+            else
             {
-                if (TryBuildAttempt(actor, selected, target, out DaggerfallEnemySpellAttempt attempt)
-                    && _rangedPathClear(attempt))
-                    return TryExecute(attempt, generation, simulationStep);
+                int roll = Draw(actor.DurableId, generation, simulationStep, "ranged-gate", 1, 40);
+                gates?.Add(new(Policy, "ranged-roll", roll == 1 ? DaggerfallGateOutcome.Passed : DaggerfallGateOutcome.Refused,
+                    roll == 1 ? "cast" : "wait", new DaggerfallGateValue("roll", roll), new DaggerfallGateValue("passOn", 1), new DaggerfallGateValue("maximum", 40)));
+                if (roll == 1)
+                {
+                    if (!TryBuildAttempt(actor, selected, target, out DaggerfallEnemySpellAttempt attempt))
+                        gates?.Add(new(Policy, "path", DaggerfallGateOutcome.Refused, "no-aim"));
+                    else if (!_rangedPathClear(attempt))
+                        gates?.Add(new(Policy, "path", DaggerfallGateOutcome.Refused, "path-blocked"));
+                    else return TryExecute(attempt, generation, simulationStep, gates);
+                }
             }
         }
 
         // TargetRateOfApproach is a donor EnhancedCombatAI input. The compiled ruleset has no
         // corresponding enhanced mode, so classic touch eligibility remains the authored melee
         // distance even when the target is closing during this update.
-        if (pair.Distance > MeleeDistance) return false;
+        if (pair.Distance > MeleeDistance) return Refuse("touch-band", "out-of-touch",
+            new DaggerfallGateValue("distance", pair.Distance), new DaggerfallGateValue("maximum", MeleeDistance));
         List<string> touch = SpellKeys(definition)
             .Where(key => TargetOf(key) is DaggerfallSpellTarget.ByTouch or DaggerfallSpellTarget.CasterOnly)
             .ToList();
-        if (touch.Count == 0) return false;
+        if (touch.Count == 0) return Refuse("touch-band", "no-touch-spell");
         string touchSpell = Select(touch, actor.DurableId, generation, simulationStep, "touch");
+        gates?.Add(new(Policy, "touch-pick", DaggerfallGateOutcome.Chose, touchSpell, new DaggerfallGateValue("choices", touch.Count)));
         if (_casting.EffectsAlreadyOnTarget(touchSpell,
-                TargetOf(touchSpell) == DaggerfallSpellTarget.CasterOnly ? actor.DurableId : target.DurableId)) return false;
-        return TryBuildAttempt(actor, touchSpell, target, out DaggerfallEnemySpellAttempt touchAttempt)
-            && TryExecute(touchAttempt, generation, simulationStep);
+                TargetOf(touchSpell) == DaggerfallSpellTarget.CasterOnly ? actor.DurableId : target.DurableId)) return Refuse("touch-pick", "already-on-target");
+        if (!TryBuildAttempt(actor, touchSpell, target, out DaggerfallEnemySpellAttempt touchAttempt)) return Refuse("path", "no-aim");
+        return TryExecute(touchAttempt, generation, simulationStep, gates);
+
+        bool Refuse(string gate, string reason, params DaggerfallGateValue[] values)
+        {
+            gates?.Add(new(Policy, gate, DaggerfallGateOutcome.Refused, reason, values));
+            return false;
+        }
     }
 
     /// <summary>
@@ -186,13 +214,15 @@ internal sealed class DaggerfallEnemyMagicModule
         return true;
     }
 
-    private bool TryExecute(DaggerfallEnemySpellAttempt attempt, ulong generation, ulong simulationStep)
+    private bool TryExecute(DaggerfallEnemySpellAttempt attempt, ulong generation, ulong simulationStep, List<DaggerfallDecisionGate>? gates)
     {
         DaggerfallCastResult result = _execute(attempt);
         _last[attempt.ActorId] = new(attempt.ActorId, attempt.SpellKey, attempt.Target, result.Outcome,
             generation, simulationStep);
         // A cast that reached no one is still a released, paid action (a contact touch that met no body).
-        return result.Outcome is DaggerfallCastOutcome.Released or DaggerfallCastOutcome.DeliveryCompleted or DaggerfallCastOutcome.Missed;
+        bool admitted = result.Outcome is DaggerfallCastOutcome.Released or DaggerfallCastOutcome.DeliveryCompleted or DaggerfallCastOutcome.Missed;
+        gates?.Add(new(Policy, "cast", admitted ? DaggerfallGateOutcome.Passed : DaggerfallGateOutcome.Refused, result.Outcome.ToString()));
+        return admitted;
     }
 
     private string Select(IReadOnlyList<string> keys, long actorId, ulong generation, ulong simulationStep, string lane)
