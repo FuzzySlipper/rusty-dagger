@@ -1,3 +1,5 @@
+using WorldRpg.Rulesets.Daggerfall.Facts;
+
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 
 /// <summary>How one gate of an enemy's decision came out: it let the decision through, stopped it, or picked among choices.</summary>
@@ -45,12 +47,18 @@ internal sealed class DaggerfallDecisionRecord(ulong generation, ulong step, Ene
 /// <summary>
 /// The opt-in decision trace of one enemy (<c>actor.trace</c>): a short ring of its recent decisions, a decision that
 /// repeats folded into the one before it. Only the followed actor opens a gate list; every other actor gets none, so
-/// nothing is recorded or allocated while the trace is off. Run-only: never saved.
+/// nothing is recorded or allocated while the trace is off. Beside its decisions the ring holds what became of each
+/// of its strikes and casts, the target it meant beside the one it reached (<see cref="Observe"/>), so a blow that
+/// fell on a bystander shows as one. Run-only: never saved.
 /// </summary>
 internal sealed class DaggerfallEnemyDecisionTrace
 {
     internal const int Capacity = 16;
     private readonly LinkedList<DaggerfallDecisionRecord> _ring = new();
+    /// <summary>The target each of the traced actor's strikes was started at, by the step it started on.</summary>
+    private readonly Dictionary<ulong, long> _aimedAt = [];
+    /// <summary>Who the traced actor pursued in its latest decision, the target its casts were meant for.</summary>
+    private long? _pursued;
 
     /// <summary>The actor being traced, or null when the trace is off.</summary>
     internal long? ActorId { get; private set; }
@@ -66,6 +74,8 @@ internal sealed class DaggerfallEnemyDecisionTrace
         if (ActorId == actorId) return;
         ActorId = actorId;
         _ring.Clear();
+        _aimedAt.Clear();
+        _pursued = null;
     }
 
     /// <summary>A gate list for this actor's decision when it is the one traced; null otherwise.</summary>
@@ -75,12 +85,68 @@ internal sealed class DaggerfallEnemyDecisionTrace
     internal void Close(List<DaggerfallDecisionGate>? gates, EnemyBehaviorState state, ulong generation, ulong step)
     {
         if (gates is null) return;
+        if (gates.FirstOrDefault(gate => gate.Policy == "target") is { } chose)
+            _pursued = chose.Values.Select(value => (long?)value.Value).FirstOrDefault();
         if (Latest is { } latest && latest.SameAs(state, gates))
         {
             latest.Repeat(generation, step, gates);
             return;
         }
-        _ring.AddLast(new DaggerfallDecisionRecord(generation, step, state, gates));
+        Add(new DaggerfallDecisionRecord(generation, step, state, gates));
+    }
+
+    /// <summary>
+    /// Hears a delivered fact: what became of the traced actor's strikes (hit, turned aside, whiffed, stopped by cover)
+    /// and casts, each as one delivery gate with the target meant and the one reached. Contact delivery's own facts
+    /// carry both, so nothing here asks combat or magic.
+    /// </summary>
+    internal void Observe(IProductFact fact)
+    {
+        if (ActorId is not long traced) return;
+        switch (fact)
+        {
+            case EnemyAttackStartedFact started when started.AttackerId == traced:
+                _aimedAt[started.OriginatingSimulationStep] = started.TargetId;
+                break;
+            case AttackHitFact hit when hit.AttackerId == traced:
+                Strike(hit.OriginatingGeneration, hit.OriginatingSimulationStep, hit.TargetId, "hit", new DaggerfallGateValue("healthLost", hit.ActualHealthLost));
+                break;
+            case AttackNegatedFact negated when negated.AttackerId == traced:
+                Strike(negated.OriginatingGeneration, negated.OriginatingSimulationStep, negated.TargetId, $"negated-{negated.Negation.ToString().ToLowerInvariant()}");
+                break;
+            case AttackWhiffedFact whiffed when whiffed.AttackerId == traced:
+                Strike(whiffed.OriginatingGeneration, whiffed.OriginatingSimulationStep, null, "whiffed");
+                break;
+            case RangedShotBlockedFact blocked when blocked.AttackerId == traced:
+                Strike(blocked.OriginatingGeneration, blocked.OriginatingSimulationStep, null, "blocked-by-cover");
+                break;
+            case SpellCastFact { CasterId: long caster } cast when caster == traced:
+                long[] reached = [.. cast.Effects.Select(effect => effect.TargetId).OfType<long>().Distinct()];
+                Delivery("cast", Latest?.Generation ?? 0, Latest?.LastStep ?? 0, _pursued, reached.Length == 0 ? null : reached.Contains(_pursued ?? 0) ? _pursued : reached[0],
+                    reached.Length == 0 ? $"reached-no-one:{cast.Outcome}" : cast.Outcome.ToString(), new DaggerfallGateValue("reached", reached.Length));
+                break;
+        }
+    }
+
+    private void Strike(ulong generation, ulong step, long? struck, string outcome, params DaggerfallGateValue[] values)
+    {
+        long? intended = _aimedAt.Remove(step, out long aimed) ? aimed : null;
+        Delivery("strike", generation, step, intended, struck, outcome, values);
+    }
+
+    /// <summary>One delivery: Passed when it reached the target meant, Refused when it reached no one or someone else.</summary>
+    private void Delivery(string gate, ulong generation, ulong step, long? intended, long? reached, string outcome, params DaggerfallGateValue[] values)
+    {
+        bool bystander = reached is not null && intended is not null && reached != intended;
+        DaggerfallDecisionGate delivered = new("delivery", gate, reached is not null && !bystander ? DaggerfallGateOutcome.Passed : DaggerfallGateOutcome.Refused,
+            bystander ? $"{outcome}:bystander" : outcome,
+            [new("intended", intended ?? 0), new("reached", reached ?? 0), .. values]);
+        Add(new DaggerfallDecisionRecord(generation, step, Latest?.State ?? EnemyBehaviorState.Idle, [delivered]));
+    }
+
+    private void Add(DaggerfallDecisionRecord record)
+    {
+        _ring.AddLast(record);
         if (_ring.Count > Capacity) _ring.RemoveFirst();
     }
 }

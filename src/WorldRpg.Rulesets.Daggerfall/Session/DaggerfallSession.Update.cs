@@ -1366,6 +1366,7 @@ internal sealed partial class DaggerfallSession
     {
         State.Quests.ObserveFoeFact(fact);                                                        // Quests
         _playtest.ObserveFact(fact);                                                              // Developer
+        EnemyBehavior.Trace.Observe(fact);                                                        // Developer
         if (fact is ActorDamagedFact { ActorId: DaggerfallActorIdentity.PlayerEntityId, ActualHealthLost: > 0 } hurt)
             _appearance.ReactPlayerHurt(hurt, State.Character.Race.Id, State.Character.Identity.Gender == DaggerfallCharacterGender.Female,
                 State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Maximum.Value);   // Scene

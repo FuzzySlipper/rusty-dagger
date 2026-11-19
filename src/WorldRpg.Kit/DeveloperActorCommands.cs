@@ -15,7 +15,7 @@ public interface IDeveloperActorCommands : IDebugCommandModule
     [DebugCommand("actor.inspect", Description = "Developer: one actor's identities, definition, stats and tracks, effects, equipment, target, hostility and team, pursuit state and maneuver, attack and spell readiness, wander state and overrides, as JSON. ACTOR is an actor id, target (the live one the player faces, within 15 degrees) or nearest.")]
     DebugCommandResult Inspect(string actor);
 
-    [DebugCommand("actor.trace", Description = "Developer: trace ACTOR's decisions (an actor id, target or nearest): perception, target choice, motor rolls and maneuver, attack and spell gates, each passed, refused or chosen with its reason and values. Shown on the actors overlay; run it again to read back the recent decisions; off stops it.")]
+    [DebugCommand("actor.trace", Description = "Developer: trace ACTOR's decisions (an actor id, target or nearest): perception, target choice, motor rolls and maneuver, attack and spell gates, each passed, refused or chosen with its reason and values, and what each strike and cast reached beside the target it meant. Shown on the actors overlay; run it again to read back the recent decisions; off stops it.")]
     DebugCommandResult Trace(string actor);
 
     [DebugCommand("ai.freeze", Description = "Developer: on holds every enemy still, starting no attack or spell, as a paralysis does; off lets them act. For this run only.")]
