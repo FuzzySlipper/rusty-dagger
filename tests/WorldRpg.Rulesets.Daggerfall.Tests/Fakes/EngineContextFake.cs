@@ -51,6 +51,12 @@ internal class EngineContextFake : DispatchProxy
 
     /// <summary>Read one named field of one element of a published array.</summary>
     internal string? PublishedArrayItem(string array, int index, string key) => ((UiServiceFake)(object)ui).ArrayItemField(array, index, key);
+    /// <summary>The volumetric clouds the renderer draws, as its settings report them in effect.</summary>
+    internal VolumetricCloudsQuality VolumetricClouds
+    {
+        get => ((RendererSettingsFake)(object)rendererSettings).VolumetricClouds;
+        set => ((RendererSettingsFake)(object)rendererSettings).VolumetricClouds = value;
+    }
     internal readonly InputServiceFake PhysicalInput = new();
     internal readonly GameplayTimeFake GameplayTime = new();
     private IContentService content = null!;
@@ -58,6 +64,7 @@ internal class EngineContextFake : DispatchProxy
     private IGraphicsService appearance = null!;
     private IPerceptionService perception = null!;
     private ICameraViewService camera = null!;
+    private readonly IRendererSettingsService rendererSettings = ServiceProxy<IRendererSettingsService, RendererSettingsFake>.Create();
     private IAudioService audio = null!;
     private IDiagnosticsService diagnostics = null!;
     private IVideoService video = null!;
@@ -143,6 +150,7 @@ internal class EngineContextFake : DispatchProxy
         "get_Graphics" => appearance,
         "get_Perception" => perception,
         "get_CameraView" => camera,
+        "get_RendererSettings" => rendererSettings,
         "get_Audio" => audio,
         "get_Presentation" => Particles.Service,
         "get_Animation" => Animation.Service,
@@ -476,6 +484,21 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>
     /// Records the diagnostics the product publishes, so a fact can read the change timeline it keeps.
     /// </summary>
+    /// <summary>Renderer settings whose readout holds only the volumetric clouds in effect.</summary>
+    private class RendererSettingsFake : DispatchProxy
+    {
+        internal VolumetricCloudsQuality VolumetricClouds { get; set; }
+
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
+        {
+            nameof(IRendererSettingsService.Read) => Readout(default(RendererSettingsRequest) with { VolumetricClouds = VolumetricClouds }),
+            _ => throw new NotSupportedException(method?.Name),
+        };
+
+        private static RendererSettingsReadout Readout(RendererSettingsRequest settings) =>
+            new(settings, settings, default, default, default, default, default, default, default, default, default, default, default, default);
+    }
+
     private class DiagnosticsServiceFake : DispatchProxy
     {
         internal List<(string Source, string Code, string Message)> Published { get; } = [];

@@ -49,10 +49,20 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     internal float StarsFromDaylight { get; init; } = .35f;
     /// <summary>How far the world draws outdoors: past near ground's corners, for the far plane clips everything.</summary>
     internal double DrawnMetres { get; init; } = 6_000;
-    /// <summary>The side of a cloud's cells in metres, so the sky sits with the pixel art under it.</summary>
-    internal float CloudPixelMetres { get; init; } = 180;
-    /// <summary>How many shades a cloud is drawn in.</summary>
-    internal uint CloudShadeSteps { get; init; } = 5;
+    /// <summary>The side of a flat cloud's cells in metres, so the sky sits with the pixel art under it.</summary>
+    internal float CloudPixelMetres { get; init; } = 45;
+    /// <summary>How many shades a flat cloud is drawn in.</summary>
+    internal uint CloudShadeSteps { get; init; } = 9;
+    /// <summary>The brightest a flat cloud's colour is, so a fair sky's clouds keep their shading short of white.</summary>
+    internal float CloudBrightness { get; init; } = .75f;
+    /// <summary>How thick the raymarched clouds are, in metres up from the layer's altitude.</summary>
+    internal float MarchedCloudThicknessMetres { get; init; } = 2_000;
+    /// <summary>The raymarched clouds' shape by height: towering cumulonimbus give bright tops over dark bases.</summary>
+    internal CloudKind MarchedCloudKind { get; init; } = CloudKind.Cumulonimbus;
+    /// <summary>The brightest a raymarched cloud's colour is.</summary>
+    internal float MarchedCloudBrightness { get; init; } = .85f;
+    /// <summary>The share of the weather's cover the raymarched clouds take, since seen low across the sky they look fuller than the flat layer.</summary>
+    internal float MarchedCloudCover { get; init; } = .6f;
     /// <summary>The colour the clouds take the light in, by <see cref="World.DaggerfallWeatherKind"/>, so foul skies close over dark.</summary>
     internal Vector3[] CloudColors { get; init; } = [Vector3.One, Vector3.One, new(.6f, .6f, .63f), Vector3.One, new(.28f, .31f, .37f), new(.17f, .19f, .24f), new(.52f, .54f, .58f)];
 
@@ -89,8 +99,11 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         if (Lift < 1 || LiftFromMetres < 0 || LiftFromMetres >= LiftFullMetres
             || RockFromSlope < 0 || RockFromSlope >= RockFullSlope)
             throw new ArgumentException("A horizon's lift cannot fall, and its fades must rise from a start to a finish.");
-        foreach (float value in new[] {CloudAltitudeMetres, CloudScaleMetres, CloudPixelMetres})
+        foreach (float value in new[] {CloudAltitudeMetres, CloudScaleMetres, CloudPixelMetres, MarchedCloudThicknessMetres})
             if (!float.IsFinite(value) || value <= 0) throw new ArgumentException("A horizon's clouds stand above the ground and have a size.");
+        if (CloudShadeSteps == 1 || CloudBrightness is <= 0 or > 1 || MarchedCloudBrightness is <= 0 or > 1 || MarchedCloudCover is <= 0 or > 1
+            || !Enum.IsDefined(MarchedCloudKind))
+            throw new ArgumentException("Clouds are smooth or have at least two shades, a brightness and a raymarched share of the cover above 0 and up to 1, and a kind.");
         if (CloudCoverage is < 0 or > 1 || StormCloudCoverage is < 0 or > 1 || CloudTwilightDegrees < 0
             || !float.IsFinite(CloudDrift.X) || !float.IsFinite(CloudDrift.Y))
             throw new ArgumentException("A horizon's cloud cover is from 0 to 1, with a finite drift and twilight.");
@@ -131,6 +144,11 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         StarsFromDaylight = e.GetProperty("starsFromDaylight").GetSingle(),
         CloudPixelMetres = e.GetProperty("cloudPixelMetres").GetSingle(),
         CloudShadeSteps = e.GetProperty("cloudShadeSteps").GetUInt32(),
+        CloudBrightness = e.GetProperty("cloudBrightness").GetSingle(),
+        MarchedCloudThicknessMetres = e.GetProperty("marchedCloudThicknessMetres").GetSingle(),
+        MarchedCloudKind = Enum.Parse<CloudKind>(e.GetProperty("marchedCloudKind").GetString()!),
+        MarchedCloudBrightness = e.GetProperty("marchedCloudBrightness").GetSingle(),
+        MarchedCloudCover = e.GetProperty("marchedCloudCover").GetSingle(),
         CloudColors = [.. e.GetProperty("cloudColors").EnumerateArray().Select(color => new Vector3(color[0].GetSingle(), color[1].GetSingle(), color[2].GetSingle()))],
         AirColors = [.. e.GetProperty("airColors").EnumerateArray().Select(color => new Vector3(color[0].GetSingle(), color[1].GetSingle(), color[2].GetSingle()))],
         NightAir = e.GetProperty("nightAir").GetSingle(),

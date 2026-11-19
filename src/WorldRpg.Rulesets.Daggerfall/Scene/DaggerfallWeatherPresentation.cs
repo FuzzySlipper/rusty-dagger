@@ -15,7 +15,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
     private readonly DaggerfallAmbientPresentation _ambient;
     private readonly Dictionary<string, RenderResource> _sky = new(StringComparer.Ordinal);
     private Color _skyColor = new(.5f,.5f,.5f,1);
-    private (float Cover, Vector2 Drift, Vector3 Color) _clouds;
+    private (float Cover, Vector2 Drift, Vector3 Color, bool Marched) _clouds;
     private float _falling;
     private bool _fallingSnow, _outside, _closed;
     private (WetnessRequest Wet, SnowRequest Snow, WindRequest Wind)? _ground;
@@ -81,12 +81,22 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         else _moons?.Hide();
     }
 
+    /// <summary>
+    /// The cloud layer, as the renderer draws it: raymarched while the player's video options draw volumetric clouds,
+    /// else flat in fine cells. Each caps the fair weathers' white at its own brightness; the raymarched clouds take a
+    /// share of the cover, which they fill more fully.
+    /// </summary>
     private void SetClouds(float cover, Vector2 drift, Vector3 color)
     {
-        if (_clouds == (cover, drift, color)) return;
-        _clouds = (cover, drift, color);
-        _engine.CameraView.SetClouds(new(cover, drift, _horizon.CloudAltitudeMetres, _horizon.CloudScaleMetres,
-            color, 0, CloudKind.Cumulus, _horizon.CloudTwilightDegrees) { PixelMetres = _horizon.CloudPixelMetres, ShadeSteps = _horizon.CloudShadeSteps });
+        bool marched = _engine.RendererSettings.Read().Effective.VolumetricClouds != VolumetricCloudsQuality.Off;
+        if (_clouds == (cover, drift, color, marched)) return;
+        _clouds = (cover, drift, color, marched);
+        _engine.CameraView.SetClouds(marched
+            ? new(cover * _horizon.MarchedCloudCover, drift, _horizon.CloudAltitudeMetres, _horizon.CloudScaleMetres,
+                Vector3.Min(color, new(_horizon.MarchedCloudBrightness)), _horizon.MarchedCloudThicknessMetres, _horizon.MarchedCloudKind,
+                _horizon.CloudTwilightDegrees)
+            : new(cover, drift, _horizon.CloudAltitudeMetres, _horizon.CloudScaleMetres, Vector3.Min(color, new(_horizon.CloudBrightness)), 0,
+                CloudKind.Cumulus, _horizon.CloudTwilightDegrees) { PixelMetres = _horizon.CloudPixelMetres, ShadeSteps = _horizon.CloudShadeSteps });
     }
 
     /// <summary>The way the wind blows over the ground: x east and y south, from its compass degree.</summary>

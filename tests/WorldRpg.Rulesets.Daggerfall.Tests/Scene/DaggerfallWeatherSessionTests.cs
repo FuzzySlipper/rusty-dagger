@@ -127,23 +127,37 @@ public sealed class DaggerfallWeatherSessionTests
         Assert.Equal(tuning.Horizon.FogDensity, fixture.Engine.Fogs.Last().Density);
         Assert.Equal(tuning.Horizon.CloudCoverage, fixture.Engine.Clouds.Last().Coverage);
         Assert.Equal(tuning.Horizon.CloudPixelMetres, fixture.Engine.Clouds.Last().PixelMetres);
+        Assert.Equal(tuning.Horizon.CloudShadeSteps, fixture.Engine.Clouds.Last().ShadeSteps);
+        Assert.Equal(0, fixture.Engine.Clouds.Last().Thickness);
+        Assert.Equal(new Vector3(tuning.Horizon.CloudBrightness), fixture.Engine.Clouds.Last().Color);
         Assert.All(fixture.Engine.Moons.TakeLast(2), moon => Assert.True(moon.Radiance > 0));
         Assert.All(fixture.Engine.Moons.TakeLast(2), moon => Assert.True(moon.LightIntensity <= tuning.Horizon.MoonCloudLight));
 
-        Assert.True(session.TryTransitionTo(interior.ProfileKey));
+        // Where the player's video options draw volumetric clouds, the layer is raymarched, in its own shape and share.
+        fixture.Engine.VolumetricClouds = VolumetricCloudsQuality.Low;
         session.Update(Update(2));
+        CloudsRequest marched = fixture.Engine.Clouds.Last();
+        Assert.Equal(tuning.Horizon.CloudCoverage * tuning.Horizon.MarchedCloudCover, marched.Coverage, 5);
+        Assert.Equal(tuning.Horizon.MarchedCloudThicknessMetres, marched.Thickness);
+        Assert.Equal(tuning.Horizon.MarchedCloudKind, marched.Kind);
+        Assert.Equal(new Vector3(tuning.Horizon.MarchedCloudBrightness), marched.Color);
+        Assert.Equal(0, marched.PixelMetres);
+        fixture.Engine.VolumetricClouds = VolumetricCloudsQuality.Off;
+
+        Assert.True(session.TryTransitionTo(interior.ProfileKey));
+        session.Update(Update(3));
         Assert.False(fixture.Engine.BackdropLinked);
         Assert.All(fixture.Engine.Moons.TakeLast(2), moon => Assert.Equal(0, moon.Radiance));
         Assert.Equal(tuning.Ambient.InteriorFogDensity, fixture.Engine.Fogs.Last().Density);
         Assert.Equal(0, fixture.Engine.Clouds.Last().Coverage);
 
         Assert.True(session.TryTransitionTo(exterior.ProfileKey));
-        session.Update(Update(3));
+        session.Update(Update(4));
         Assert.True(fixture.Engine.BackdropLinked);
 
         session.Commands<IDeveloperSceneCommands>().ClassicArt("on");
-        session.Update(Update(4));
         session.Update(Update(5));
+        session.Update(Update(6));
         Assert.False(fixture.Engine.BackdropLinked);
         Assert.Equal(FogMode.Linear, fixture.Engine.Fogs.Last().Mode);
         Assert.Equal(tuning.Ambient.ClearFogEnd, fixture.Engine.Fogs.Last().End);

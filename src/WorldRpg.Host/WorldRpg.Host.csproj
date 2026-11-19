@@ -20,6 +20,7 @@
          Shadow budget video option overrides it. -->
     <RustyEngineProductSceneShadows>enabled</RustyEngineProductSceneShadows>
     <RustyEngineProductShadowBudget>32</RustyEngineProductShadowBudget>
+    <RustyEngineProductVolumetricClouds>low</RustyEngineProductVolumetricClouds>
     <RustyEngineProductUiRoot>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)', 'product-ui'))</RustyEngineProductUiRoot>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
     <!-- The containers converted from the player's Daggerfall files (daggerfall-data.rpak, music.rpak) are
