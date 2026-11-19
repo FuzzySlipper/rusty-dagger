@@ -51,11 +51,14 @@ internal sealed class DaggerfallEnemySenses(ActorsState actors, PlayerControlSta
     }
 
     /// <summary>
-    /// One enemy's perception context from the current state. The behaviour module calls it as its admitted context
-    /// provider, so it is read inside the same Engine update as the perception query.
+    /// One enemy's perception context for its target from the current state, or null where the senses have no rule for
+    /// that target and the Engine's sight stands: stealth, language and the illusions are the player's, so only the
+    /// player is judged. The behaviour module calls it as its admitted context provider, so it is read inside the same
+    /// Engine update as the perception query.
     /// </summary>
-    internal DaggerfallEnemyPerceptionContext PerceptionContext(long actorId)
+    internal DaggerfallEnemyPerceptionContext? PerceptionContext(long actorId, long targetId)
     {
+        if (targetId != DaggerfallActorIdentity.PlayerEntityId) return null;
         if (!definitions.TryGetValue(actorId, out DaggerfallActorDefinition? definition))
             throw new InvalidOperationException($"Enemy perception actor '{actorId}' has no admitted Daggerfall definition.");
 

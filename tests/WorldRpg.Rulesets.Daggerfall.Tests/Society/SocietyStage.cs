@@ -42,7 +42,7 @@ internal sealed class SocietyStage : IDisposable
             () => Calendar, Granted.Add, Provoked.Add);
         _ = CombatCollaborators.Targeting(Actors, ActorDefinitions, out _spatial, out _);
         Placement = new DaggerfallActorPlacement(Actors, Player, Npcs.IsGameplayActive, ActorDefinitions, _ => null, _ => false, _ => true,
-            _spatial, Perception.Service, Random.Service, () => default, allyDetectionDistance: 10d, fieldOfViewYDegrees: 60f);
+            _ => false, _ => false, () => false, _spatial, Perception.Service, Random.Service, () => default, detectionDistance: 10d, fieldOfViewYDegrees: 60f);
         Active = DaggerfallWorldProfileIds.Exterior(Site.Id);
         Law = new DaggerfallLaw(Crime, Social, Definitions, DaggerfallTuning.Defaults.Law, Crimes, Actors, Npcs, Player, Sites, Placement,
             SkillUses, Overrides,

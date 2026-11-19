@@ -80,7 +80,7 @@ public sealed class DaggerfallEnemySensesTests
     {
         using Stage stage = new();
         stage.WeaponDrawn = false;
-        DaggerfallEnemyPerceptionContext context = stage.Senses.PerceptionContext(Foe);
+        DaggerfallEnemyPerceptionContext context = stage.Senses.PerceptionContext(Foe, DaggerfallActorIdentity.PlayerEntityId)!.Value;
         Assert.Equal(600, context.GameMinute);
         Assert.False(context.TargetInsideDungeonCastle);
         Assert.True(context.TargetWeaponSheathed);
@@ -93,8 +93,10 @@ public sealed class DaggerfallEnemySensesTests
             stage.Random.Requests.Where(draw => draw.Scope == "daggerfall.enemy-perception.v1").Select(draw => draw.Key));
 
         stage.Profile = new(new DaggerfallSiteId(0, 0), DaggerfallWorldProfileKind.Dungeon, "test");
-        Assert.True(stage.Senses.PerceptionContext(Foe).TargetInsideDungeonCastle);
-        Assert.Throws<InvalidOperationException>(() => stage.Senses.PerceptionContext(404));
+        Assert.True(stage.Senses.PerceptionContext(Foe, DaggerfallActorIdentity.PlayerEntityId)!.Value.TargetInsideDungeonCastle);
+        Assert.Throws<InvalidOperationException>(() => stage.Senses.PerceptionContext(404, DaggerfallActorIdentity.PlayerEntityId));
+        // Stealth, language and the illusions are the player's: for any other target the Engine's sight stands.
+        Assert.Null(stage.Senses.PerceptionContext(Foe, 404));
     }
 
     [Fact]

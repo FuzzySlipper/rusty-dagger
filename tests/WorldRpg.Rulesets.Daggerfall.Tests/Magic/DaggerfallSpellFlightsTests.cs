@@ -1,6 +1,7 @@
 using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using Xunit;
@@ -43,7 +44,7 @@ public sealed class DaggerfallSpellFlightsTests
         WorldPoint at = new(3f, 0f, 0f);
         Assert.Empty(flights.Views());
 
-        DaggerfallCastResult cast = enemy.Execute(new(MagicCastFixture.Monster, RangedSpell(f), DaggerfallSpellTarget.SingleTargetAtRange, at, new WorldPoint(3f, 0f, 20f), Vector3.UnitZ));
+        DaggerfallCastResult cast = enemy.Execute(new(MagicCastFixture.Monster, RangedSpell(f), DaggerfallSpellTarget.SingleTargetAtRange, at, new WorldPoint(3f, 0f, 20f), Vector3.UnitZ, DaggerfallActorIdentity.PlayerEntityId));
         DaggerfallLiveSpell bundle = cast.Bundle!;
 
         DaggerfallDungeonSpellFlightView view = Assert.Single(flights.Views());
@@ -59,7 +60,7 @@ public sealed class DaggerfallSpellFlightsTests
         using MagicCastFixture f = new();
         (DaggerfallSpellFlights flights, DaggerfallEnemySpellRelease enemy) = Owners(f);
         WorldPoint at = new(3f, 0f, 0f);
-        DaggerfallLiveSpell bundle = enemy.Execute(new(MagicCastFixture.Monster, RangedSpell(f), DaggerfallSpellTarget.SingleTargetAtRange, at, new WorldPoint(3f, 0f, 20f), Vector3.UnitZ)).Bundle!;
+        DaggerfallLiveSpell bundle = enemy.Execute(new(MagicCastFixture.Monster, RangedSpell(f), DaggerfallSpellTarget.SingleTargetAtRange, at, new WorldPoint(3f, 0f, 20f), Vector3.UnitZ, DaggerfallActorIdentity.PlayerEntityId)).Bundle!;
         Assert.Single(flights.Views());
         bundle.ReleaseDirection = Vector3.Zero;
 

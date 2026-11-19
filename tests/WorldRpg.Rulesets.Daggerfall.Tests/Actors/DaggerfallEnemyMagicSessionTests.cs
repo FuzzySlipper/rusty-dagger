@@ -91,6 +91,48 @@ public sealed class DaggerfallEnemyMagicSessionTests
     }
 
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_caster_pursuing_another_actor_casts_at_it_through_a_lane_only_that_actor_may_stand_in(bool playerInLane)
+    {
+        using Fixture fixture = new();
+        DaggerfallSession session = fixture.Session;
+        WorldPoint playerPosition = session.State.PlayerControl.Position
+            ?? throw new InvalidOperationException("The fixture player has no position.");
+        long imp = session.SpawnActor("imp", new ActorPose(playerPosition with { Z = playerPosition.Z - 10f }, 0f), level: 1);
+        long victim = session.SpawnActor("imp", new ActorPose(playerPosition with { X = playerPosition.X + 10f, Z = playerPosition.Z - 10f }, 0f), level: 1);
+        session.State.Actors.Get(imp).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value)).SetCurrent(1, clamp: true);
+        session.EnemyBehavior.Overrides.SetTarget(imp, victim);
+        session.EnemyBehavior.Trace.Follow(imp);
+        // Everyone sees whomever they look for, ten metres off and straight ahead.
+        fixture.Perception.Responder = request => Receipt([.. request.Observers.ToArray().SelectMany(observer => request.Targets.ToArray()
+            .Select(target => new PerceptionPair(observer.Entity, target.Entity, 10d, 1d, PerceptionPairKind.Visible, 1d)))]);
+        // The lane meets the victim itself, or the player standing in it.
+        ulong inLane = playerInLane ? session.State.Actors.Player.Actor.Entity.Value : session.State.Actors.Get(victim).Actor.Entity.Value;
+        fixture.Spatial.OverlapHit = _ => default;
+        fixture.Spatial.CapsuleCastHit = _ => new SpatialHit { Present = true, Kind = SpatialHitKind.Entity, Entity = inLane };
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        Assert.Equal(victim, session.EnemyBehavior.LastEvidence[imp].Target?.DurableId);
+        // Only the player's pair has a senses rule (stealth, language, illusions); the victim is the Engine's sight alone.
+        Assert.False(session.EnemyBehavior.LastPerception.ContainsKey(imp));
+        // The step's decision, before the delivery the release reported beside it.
+        IReadOnlyList<DaggerfallDecisionGate> gates = session.EnemyBehavior.Trace.Recent.Last(record => record.Gates[0].Policy != "delivery").Gates;
+        if (playerInLane)
+        {
+            Assert.Contains(gates, gate => gate is { Policy: "spell", Gate: "path", Reason: "path-blocked" });
+            Assert.DoesNotContain(imp, session.LastEnemySpell);
+            return;
+        }
+        DaggerfallDecisionGate cast = Assert.Single(gates, gate => gate is { Policy: "spell", Gate: "cast" });
+        Assert.Equal(DaggerfallGateOutcome.Passed, cast.Outcome);
+        Assert.Equal(victim, (long)cast.Values.Single(value => value.Name == "intended").Value);
+        Assert.Equal(DaggerfallCastOutcome.Released, session.LastEnemySpell[imp].Outcome);
+        Assert.Single(session.Casting.PendingRangedFlights, flight => flight.CasterId == imp);
+    }
+
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public void Caster_with_a_ready_ranged_spell_holds_the_ranged_band(bool pathClear)

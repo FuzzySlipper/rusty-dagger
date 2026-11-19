@@ -9,7 +9,7 @@ using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-/// <summary>Spawn poses, the enemy query, an ally's target and where everyone stands, built without the session.</summary>
+/// <summary>Spawn poses, the enemy query, the team rule's targets and where everyone stands, built without the session.</summary>
 public sealed class DaggerfallActorPlacementTests
 {
     private const long Foe = 10, Ally = 11, Hidden = 12, Pacified = 13, Protected = 14, Fallen = 15;
@@ -29,8 +29,8 @@ public sealed class DaggerfallActorPlacementTests
             _ = CombatCollaborators.Targeting(Actors, Definitions, out _spatial, out SpatialFake fake);
             Spatial = fake;
             Placement = new DaggerfallActorPlacement(Actors, Player, id => id != Hidden, Definitions,
-                id => id == Ally ? "player-ally" : null, id => id == Pacified, id => id != Protected, _spatial, Perception.Service,
-                Random.Service, () => default, allyDetectionDistance: 10d, fieldOfViewYDegrees: 60f);
+                id => Teams.GetValueOrDefault(id), id => id == Pacified, id => id != Protected, Restrained.Contains, Joins.Contains, () => Infighting,
+                _spatial, Perception.Service, Random.Service, () => default, detectionDistance: 10d, fieldOfViewYDegrees: 60f);
         }
 
         private readonly SpatialMovementSystem _spatial;
@@ -41,6 +41,19 @@ public sealed class DaggerfallActorPlacementTests
         internal KeyedRandomFake Random { get; } = KeyedRandomFake.Create(3);
         internal SpatialFake Spatial { get; }
         internal DaggerfallActorPlacement Placement { get; }
+        /// <summary>The team each actor fights for now; the ally's is the player's.</summary>
+        internal Dictionary<long, string> Teams { get; } = new() { [Ally] = "player-ally" };
+        /// <summary>The actors a quest holds back.</summary>
+        internal HashSet<long> Restrained { get; } = [];
+        /// <summary>The actors a quest opted into infighting.</summary>
+        internal HashSet<long> Joins { get; } = [];
+        /// <summary>Whether any quest has infighting foes.</summary>
+        internal bool Infighting { get; set; }
+
+        /// <summary>Every observer sees every target it asks about, at the distance between them.</summary>
+        internal void SeeEveryone() => Perception.Responder = request => TestSessions.Receipt([.. request.Observers.ToArray().SelectMany(observer =>
+            request.Targets.ToArray().Select(target => new PerceptionPair(observer.Entity, target.Entity, Vector3.Distance(observer.Origin, target.Center), 1d,
+                PerceptionPairKind.Visible, 1d)))]);
 
         public void Dispose() { _spatial.Dispose(); Actors.Dispose(); }
     }
@@ -77,6 +90,48 @@ public sealed class DaggerfallActorPlacementTests
         Assert.Equal(Foe, target.DurableId);
         Assert.Equal(stage.Actors.Get(Foe).Position, target.Position);
         Assert.Null(stage.Placement.SelectAllyTarget(Fallen));
+    }
+
+    [Fact]
+    public void An_enemy_pursues_the_player_unless_a_quest_holds_it_back_and_an_ally_its_nearest_foe_where_it_may_fight()
+    {
+        using Stage stage = new();
+        stage.SeeEveryone();
+
+        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, stage.Placement.SelectTarget(Foe)?.DurableId);
+        Assert.Equal(stage.Player.Position, stage.Placement.SelectTarget(Foe)?.Position);
+        // The ally takes its nearest foe it may attack, passing the pacified and the protected.
+        Assert.Equal(Foe, stage.Placement.SelectTarget(Ally)?.DurableId);
+        stage.Restrained.Add(Foe);
+        Assert.Null(stage.Placement.SelectTarget(Foe));
+        Assert.Null(stage.Placement.SelectTarget(Fallen));
+        // An ally a quest keeps out of fights fights no one.
+        stage.Teams[Protected] = "player-ally";
+        Assert.Null(stage.Placement.SelectTarget(Protected));
+    }
+
+    [Fact]
+    public void Only_a_quests_infighting_turns_an_enemy_on_a_nearer_visible_foe_of_another_team()
+    {
+        using Stage stage = new();
+        stage.SeeEveryone();
+        stage.Teams[Foe] = stage.Teams[Pacified] = "orcs";
+
+        stage.Infighting = true;
+        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, stage.Placement.SelectTarget(Foe)?.DurableId);
+
+        // Opted in, it turns on the nearest visible foe of another team: the ally a metre off, not its fellow orc.
+        stage.Joins.Add(Foe);
+        Assert.Equal(Ally, stage.Placement.SelectTarget(Foe)?.DurableId);
+        stage.Teams[Ally] = "orcs";
+        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, stage.Placement.SelectTarget(Foe)?.DurableId);
+        stage.Teams[Ally] = "player-ally";
+        // A player nearer than any foe stays the target, and without an active infighting quest nothing changes.
+        stage.Player.MoveTo(new Vector3(Foe, 0f, 4.5f));
+        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, stage.Placement.SelectTarget(Foe)?.DurableId);
+        stage.Player.MoveTo(Vector3.Zero);
+        stage.Infighting = false;
+        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, stage.Placement.SelectTarget(Foe)?.DurableId);
     }
 
     [Fact]

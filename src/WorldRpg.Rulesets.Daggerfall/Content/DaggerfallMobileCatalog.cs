@@ -47,6 +47,11 @@ internal sealed record DaggerfallMobileDefinition(
     internal int ImmunityFlags { get; init; }
     internal int LowToleranceFlags { get; init; }
     internal int CriticalWeaknessFlags { get; init; }
+    /// <summary>The compiled tactic that decides for this mobile in a fight; <see cref="LegacyTactic"/> unless its record names another.</summary>
+    internal string Tactic { get; init; } = LegacyTactic;
+
+    /// <summary>The tactic every mobile fights with unless its record names another: the decision enemies made before tactics existed.</summary>
+    internal const string LegacyTactic = "legacy";
 
     /// <summary>Whether this mobile is one the product places as an actor.</summary>
     internal bool IsPublished => Disposition is "published" or "published-variant";

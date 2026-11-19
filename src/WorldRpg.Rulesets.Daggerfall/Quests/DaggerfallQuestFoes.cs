@@ -14,17 +14,18 @@ using WorldRpg.Rulesets.Daggerfall.World;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>
-/// A quest's foes as actors: the team each fights for and whom it pursues, the quest's command over all enemies, spawning a
-/// foe near the player, and a foe's kill or removal, live or kept in an unloaded site.
+/// A quest's foes as actors: the team each fights for and whether it is held back (inputs to the team rule in
+/// <see cref="DaggerfallActorPlacement.SelectTarget"/>), the quest's command over all enemies, spawning a foe near the
+/// player, and a foe's kill or removal, live or kept in an unloaded site.
 /// </summary>
 /// <remarks>A quest's kill is harm like any other: the session turns it into facts (killedByQuest). The roster's spawning and
 /// removal, enemy behaviour's hostility, retiring a detached actor and killing a foe an unloaded site keeps (the list
 /// KillRetainedQuestFoe) are handed in; where the player is changes with the site, so it is read as it is asked.</remarks>
 internal sealed class DaggerfallQuestFoes(DaggerfallQuestInstances quests, ActorsState actors, PlayerControlState playerControl,
     DaggerfallTravelState travel, IReadOnlyDictionary<long, DaggerfallActorDefinition> actorDefinitions, DaggerfallActorPlacement placement,
-    DaggerfallVitalityConsequences vitality, DaggerfallQuestSpawningTuning spawning, DaggerfallEnemyBehaviorTuning enemyBehaviorTuning,
+    DaggerfallVitalityConsequences vitality, DaggerfallQuestSpawningTuning spawning,
     Func<DaggerfallQuestLocationRead> questLocation, Func<string, ActorPose, long> spawn, Action<long> removeQuestActor,
-    Action<long, bool> makeHostile, Func<long, bool> isPacified, Action<DamageResult> killedByQuest, Func<long, bool> retireDetached,
+    Action<long, bool> makeHostile, Action<DamageResult> killedByQuest, Func<long, bool> retireDetached,
     Func<long, bool> killRetained)
 {
     /// <summary>Whether a quest holds this foe back from acting.</summary>
@@ -42,34 +43,6 @@ internal sealed class DaggerfallQuestFoes(DaggerfallQuestInstances quests, Actor
             if (clear) removeQuestActor(id);
             else makeHostile(id, true);
         }
-    }
-
-    /// <summary>The target an enemy pursues: the player, or a foe across a quest's infighting.</summary>
-    internal PursuitTarget? SelectTarget(long observerId)
-    {
-        if (!actors.TryGet(observerId, out var observer) || observer.IsDefeated || quests.IsFoeRestrained(observerId)) return null;
-        if (Team(observerId) == "player-ally")
-            return quests.AllowsFoeInfighting(observerId) ? placement.SelectAllyTarget(observerId) : null;
-        var player = playerControl.Position;
-        PursuitTarget? selected = player is { } position ? new(DaggerfallActorIdentity.PlayerEntityId, position) : null;
-        if (!quests.AllowsFoeInfighting(observerId) || !quests.HasInfightingFoes) return selected;
-        double best = player is { } target ? Vector3.Distance(observer.Position.ToVector(), target.ToVector()) : double.PositiveInfinity;
-        Vector3 forward = ActorHeading.Forward(observer.HeadingYawRadians);
-        string? team = Team(observerId);
-        foreach (var pair in placement.QueryEnemies(observerId, observer.Position, forward,
-            Math.Max(enemyBehaviorTuning.DetectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),
-            DaggerfallPerceptionQueryDefaults.MinimumFacingCosine, _ => true)
-            .Where(pair => pair.Kind == PerceptionPairKind.Visible).OrderBy(pair => pair.Distance).ThenBy(pair => pair.Target))
-        {
-            long id = checked((long)pair.Target);
-            // Classic quest foes are excluded from AI fights unless the source explicitly opts in.
-            // Other actors keep their established player pursuit unless participating in that opt-in.
-            if (quests.FoeRelationsFor(observerId)?.Infighting != true && quests.FoeRelationsFor(id)?.Infighting != true) continue;
-            if (!quests.AllowsFoeInfighting(id) || Team(id) == team
-                || Team(id) == "player-ally" && isPacified(observerId) || pair.Distance >= best) continue;
-            selected = new(id, actors.Get(id).Position); best = pair.Distance;
-        }
-        return selected;
     }
 
     /// <summary>Spawns a quest foe near the player and makes it hostile; null while travelling, defeated or with no clear pose.</summary>

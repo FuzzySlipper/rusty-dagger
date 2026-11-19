@@ -139,6 +139,8 @@ public sealed class SanguineRoseSessionTests
         senses.Pacified = false; senses.ForcedHostile = true;
         f.Perception.Responder = request => f.Respond(request, combat: true);
         f.Session.State.Kit.Rules.RegisterAction(f.Session.DefinitionsByActor[ally].ActionId!, new ForceHit());
+        // The Daedroth casts at whatever it pursues, as any caster does; with no magicka its spell is refused and it strikes.
+        f.Session.State.Actors.Get(ally).Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value)).SetCurrent(0, clamp: true);
         f.Session.Touches(f.Enemy);
         double playerHealth = Health(f.Session.State.Actors.Player.Actor);
         double enemyHealth = Health(f.Session.State.Actors.Get(f.Enemy).Actor);

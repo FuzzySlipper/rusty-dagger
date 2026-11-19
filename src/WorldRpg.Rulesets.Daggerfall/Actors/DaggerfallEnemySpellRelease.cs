@@ -1,5 +1,6 @@
 using System.Numerics;
 using Rusty.Engine;
+using WorldRpg.Kit.Ai;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -30,9 +31,9 @@ internal sealed class DaggerfallEnemySpellRelease(DaggerfallCasting casting, Dag
         Vector3 origin = attempt.Origin.ToVector();
         if (attempt.Target is DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange)
             origin += attempt.Direction * DaggerfallDungeonSpellPolicy.MissileArmLengthMetres;
-        // The behavior admitted the player in touch reach; touch delivery decides whom the touch reaches.
+        // The behavior admitted its target in touch reach; touch delivery decides whom the touch reaches.
         DaggerfallTouchReach reach = attempt.Target == DaggerfallSpellTarget.ByTouch
-            ? touch(new(attempt.ActorId, origin + Vector3.UnitY * (DaggerfallContactBody.Envelope.Height * DaggerfallContactBody.EyeFraction), attempt.Direction, DaggerfallActorIdentity.PlayerEntityId))
+            ? touch(new(attempt.ActorId, origin + Vector3.UnitY * (DaggerfallContactBody.Envelope.Height * DaggerfallContactBody.EyeFraction), attempt.Direction, attempt.TargetId))
             : default;
         DaggerfallCastResult release = casting.Release(attempt.ActorId, attempt.Target != DaggerfallSpellTarget.ByTouch || reach.Releases, origin, attempt.Direction);
         if (release.Bundle is not { } bundle) return release;
@@ -48,33 +49,32 @@ internal sealed class DaggerfallEnemySpellRelease(DaggerfallCasting casting, Dag
     }
 
     /// <summary>
-    /// Applies the donor's ranged admission boundary through the one Engine spatial owner. The
-    /// projectile starts at the authored arm distance, checks its radius at that origin, then
-    /// sweeps to the admitted aim. Only the intended player entity is an allowed hit; static cover
-    /// and another actor reject the action before readiness or magicka deduction.
+    /// Applies the donor's ranged admission boundary through the one Engine spatial owner: whether a missile from
+    /// <paramref name="casterId"/> standing at <paramref name="origin"/> would reach <paramref name="target"/>. The
+    /// projectile starts at the authored arm distance, checks its radius at that origin, then sweeps to the target.
+    /// Only the target aimed at is an allowed hit; static cover and any other actor, the player included, reject the
+    /// action before readiness or magicka deduction.
     /// </summary>
-    internal bool RangedPathClear(DaggerfallEnemySpellAttempt attempt)
+    internal bool LaneClear(long casterId, WorldPoint origin, PursuitTarget target)
     {
-        if (attempt.Target is not (DaggerfallSpellTarget.SingleTargetAtRange or DaggerfallSpellTarget.AreaAtRange))
-            return true;
-        Vector3 origin = attempt.Origin.ToVector();
-        Vector3 aim = attempt.Aim.ToVector();
-        Vector3 delta = aim - origin;
+        Vector3 from = origin.ToVector();
+        Vector3 aim = target.Position.ToVector();
+        Vector3 delta = aim - from;
         if (!DaggerfallSpellTargets.ValidDirection(delta)) return false;
         float distance = delta.Length();
         float armDistance = DaggerfallDungeonSpellPolicy.MissileArmLengthMetres;
         if (!float.IsFinite(distance) || distance <= armDistance) return false;
         Vector3 direction = Vector3.Normalize(delta);
-        Vector3 launch = origin + direction * armDistance;
-        ReadOnlyMemory<SpatialEntityCollider> colliders = contact.Colliders(attempt.ActorId);
+        Vector3 launch = from + direction * armDistance;
+        ReadOnlyMemory<SpatialEntityCollider> colliders = contact.Colliders(casterId);
         CharacterStepEnvironment world = environment();
         SpatialHit atLaunch = spatial.OverlapCapsule(launch, 0d, .45d, colliders, world);
-        if (Blocks(atLaunch)) return false;
+        if (Blocks(atLaunch, target.DurableId)) return false;
         SpatialHit alongPath = spatial.CastCapsule(launch, 0d, .45d,
             direction * (distance - armDistance), colliders, world);
-        return !Blocks(alongPath);
+        return !Blocks(alongPath, target.DurableId);
     }
 
-    private bool Blocks(SpatialHit hit) => hit.Present
-        && !(hit.Kind == SpatialHitKind.Entity && contact.ActorFor(hit) == DaggerfallActorIdentity.PlayerEntityId);
+    private bool Blocks(SpatialHit hit, long target) => hit.Present
+        && !(hit.Kind == SpatialHitKind.Entity && contact.ActorFor(hit) == target);
 }

@@ -84,6 +84,22 @@ public sealed class DaggerfallMobileCatalogTests
     }
 
     [Fact]
+    public void ReadsAMobilesTacticDefaultingToLegacyAndRefusesABlankOne()
+    {
+        // No record names a tactic yet, so every mobile fights with the legacy one.
+        Assert.All(DaggerfallBaseContent.Read(Payload()).Mobiles.Mobiles.Values, mobile => Assert.Equal(DaggerfallMobileDefinition.LegacyTactic, mobile.Tactic));
+
+        JsonObject payload = TestPayload.Sections("mobiles", "actors");
+        payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["tactic"] = "beast";
+        Assert.Equal("beast", DaggerfallBaseContent.Read(TestPayload.Splice(payload)).Mobiles.Mobiles[0].Tactic);
+
+        payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["tactic"] = " ";
+        DaggerfallContentException blank = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
+        Assert.True(blank.Diagnostics.Any(message => message.Contains("mobile 0 names a blank or non-text tactic", StringComparison.Ordinal)),
+            $"the blank tactic was not named: {string.Join(" | ", blank.Diagnostics)}");
+    }
+
+    [Fact]
     public void RefusesTwoMobilesThatJoinOneActor()
     {
         // Two donor records whose identities both name one authored actor would leave a consumer resolving two

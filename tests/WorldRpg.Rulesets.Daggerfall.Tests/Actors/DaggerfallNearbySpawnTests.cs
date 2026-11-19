@@ -24,7 +24,7 @@ public sealed class DaggerfallNearbySpawnTests
             _ = CombatCollaborators.Targeting(Actors, new Dictionary<long, DaggerfallActorDefinition>(), out _spatial, out SpatialFake fake);
             Spatial = fake;
             DaggerfallActorPlacement placement = new(Actors, Player, _ => true, new Dictionary<long, DaggerfallActorDefinition>(), _ => null, _ => false,
-                _ => true, _spatial, PerceptionFake.Create().Service, Random.Service, () => default, allyDetectionDistance: 10d, fieldOfViewYDegrees: 60f);
+                _ => true, _ => false, _ => false, () => false, _spatial, PerceptionFake.Create().Service, Random.Service, () => default, detectionDistance: 10d, fieldOfViewYDegrees: 60f);
             Spawn = new DaggerfallNearbySpawn(TestPayload.Definitions.Actors, mobile => Presented(mobile), placement, Player,
                 (actor, pose) =>
                 {

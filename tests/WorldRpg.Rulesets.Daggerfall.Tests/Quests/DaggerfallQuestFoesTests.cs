@@ -9,8 +9,8 @@ using Xunit;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// A quest's foes built without the session over <see cref="SocietyStage"/>'s actors, their definitions and placement
-/// (whose perception sees no one), quests of their own and a vitality owner; the roster's spawning and removal, enemy
+/// A quest's foes built without the session over <see cref="SocietyStage"/>'s actors, their definitions and placement,
+/// quests of their own and a vitality owner (whom an enemy pursues is placement's team rule, DaggerfallActorPlacementTests); the roster's spawning and removal, enemy
 /// behaviour, the kill's facts, detached retirement and the retained kill are delegates the test watches.
 /// </summary>
 public sealed class DaggerfallQuestFoesTests
@@ -27,10 +27,10 @@ public sealed class DaggerfallQuestFoesTests
     private static DaggerfallQuestFoes Foes(SocietyStage stage, Watched watched) =>
         new(new DaggerfallQuestInstances(stage.Definitions, RandomMinimum.Create()), stage.Actors, stage.Player, new DaggerfallTravelState(),
             stage.ActorDefinitions, stage.Placement, new DaggerfallVitalityConsequences(new CombatResolution()),
-            DaggerfallTuning.Defaults.QuestSpawning, DaggerfallTuning.Defaults.EnemyBehavior,
+            DaggerfallTuning.Defaults.QuestSpawning,
             () => throw new InvalidOperationException("No quest foe spawns in this stage."),
             (_, _) => throw new InvalidOperationException("No quest foe spawns in this stage."),
-            watched.Removed.Add, (id, allies) => watched.Hostile.Add((id, allies)), _ => false, watched.Kills.Add,
+            watched.Removed.Add, (id, allies) => watched.Hostile.Add((id, allies)), watched.Kills.Add,
             id => { watched.Retired.Add(id); return false; }, id => { watched.RetainedKills.Add(id); return false; });
 
     private static long Monster(SocietyStage stage) =>
@@ -77,14 +77,11 @@ public sealed class DaggerfallQuestFoesTests
     }
 
     [Fact]
-    public void An_enemy_pursues_the_player_and_no_foe_spawns_for_a_defeated_player()
+    public void No_foe_spawns_for_a_defeated_player()
     {
         using SocietyStage stage = new();
-        long foe = Monster(stage);
         stage.Player.MoveTo(new Vector3(4, 0, 4));
         Watched watched = new();
-
-        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, Foes(stage, watched).SelectTarget(foe)?.DurableId);
 
         stage.Defeat(DaggerfallActorIdentity.PlayerEntityId);
         Assert.Null(Foes(stage, watched).Spawn("spawn/defeated", new("nymph", 1, false), send: false));

@@ -358,7 +358,8 @@ internal sealed partial class DaggerfallSession
             _itemEnchanting = new DaggerfallItemEnchanting(definitions, itemInstances, _equipmentMoves, _itemCondition, inventory, () => ItemSouls.Gems);
             _itemCondition.Broken += item => ItemSouls.ReleaseBoundSoul(item);
             _placement = new DaggerfallActorPlacement(actors, assembled.PlayerControl, npcs.IsGameplayActive, authored, id => QuestFoes.Team(id),
-                id => _enemyBehavior!.IsPacified(id), id => quests.AllowsFoeInfighting(id), _spatial, engine.Perception, _random,
+                id => _enemyBehavior!.IsPacified(id), id => quests.AllowsFoeInfighting(id), id => quests.IsFoeRestrained(id),
+                id => quests.FoeRelationsFor(id)?.Infighting == true, () => quests.HasInfightingFoes, _spatial, engine.Perception, _random,
                 () => _exterior.CharacterEnvironment(assembled.PlayerControl.Motion), _tuning.EnemyBehavior.DetectionDistance,
                 (float)_tuning.Camera.FieldOfViewYDegrees);
             _senses = new DaggerfallEnemySenses(actors, assembled.PlayerControl, definitions, authored, id => QuestFoes.Team(id),
@@ -461,9 +462,9 @@ internal sealed partial class DaggerfallSession
                 tuning.EnemyBehavior,
                 contextProvider: _senses.PerceptionContext,
                 recordSkillUse: use => skillUses.Record(use),
-                random: _random, motorContext: _senses.MotorContext,
+                motorContext: _senses.MotorContext, selectTarget: _placement.SelectTarget,
                 isPlayerAllied: id => QuestFoes.Team(id) == "player-ally",
-                selectAllyTarget: _placement.SelectAllyTarget, controlRestrictions: effects.ControlsFor, reactions: _reactions,
+                controlRestrictions: effects.ControlsFor, reactions: _reactions,
                 movementPolicy: id => DaggerfallEnemyBehaviorModule.PolicyFor(
                     id,
                     authored,
@@ -472,8 +473,7 @@ internal sealed partial class DaggerfallSession
                     effects.GrantsWaterWalking(id),
                     effects.GrantsLevitation(id)),
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),
-                openBlockedDoor: actor => _doors.TryOpenForEnemy(actor.Position), selectTarget: observer => QuestFoes.SelectTarget(observer), questRestrained: id => QuestFoes.Restrained(id), attackAtDistance: _combat.EnemyAttackAtDistance,
-                engagement: new DaggerfallContactEngagement(_tuning.Contact));
+                openBlockedDoor: actor => _doors.TryOpenForEnemy(actor.Position), questRestrained: id => QuestFoes.Restrained(id), attackAtDistance: _combat.EnemyAttackAtDistance);
             HashSet<ulong> authoredEntityIds = DaggerfallActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {
@@ -814,8 +814,14 @@ internal sealed partial class DaggerfallSession
                 () => _exterior.CharacterEnvironment(State.PlayerControl.Motion));
             _enemyMagic = new(definitions.EnemySpells, definitions.Magic, Casting, _random,
                 id => authored.GetValueOrDefault(id),
-                id => definitions.Mobiles.Mobiles.GetValueOrDefault(id), enemySpells.RangedPathClear, enemySpells.Execute);
-            _enemyBehavior.BindEnemyMagic(_enemyMagic.Decide, _enemyMagic.HasRangedSpellReady);
+                id => definitions.Mobiles.Mobiles.GetValueOrDefault(id), enemySpells.LaneClear, enemySpells.Execute);
+            // Every mobile fights with the tactic its record names; the legacy tactic is the only one compiled yet.
+            DaggerfallEnemyTactics tactics = new(new Dictionary<string, IDaggerfallEnemyTactic>(StringComparer.Ordinal)
+            {
+                [DaggerfallMobileDefinition.LegacyTactic] = new DaggerfallLegacyEnemyTactic(_enemyMagic, new DaggerfallContactEngagement(_tuning.Contact),
+                    _tuning.EnemyBehavior.Maneuvers, _random),
+            }, definitions.Mobiles, id => authored.GetValueOrDefault(id));
+            _enemyBehavior.BindDecisions(tactics, _enemyMagic.Cast, _enemyMagic.LaneClear);
             _itemCastTriggers = new(definitions.Magic, itemInstances, Casting, effects, actors.Entities,
                 id => id == actors.Player.DurableId ? equipmentCoordinator : actors.TryGet(id, out var actor) && !actor.IsDefeated ? actorInventories.EquipmentFor(id) : null,
                 _itemCondition, () => _time.Calendar.MinuteNumber, (owner, result) =>
@@ -919,8 +925,8 @@ internal sealed partial class DaggerfallSession
                 (item, position) => _groundContainers.CreateQuestItem(item, position, _uniqueItems), _questItemPlacement.PlaceBound,
                 NpcProjection.Project, BringOutRetainedQuestActor);
             QuestFoes = new DaggerfallQuestFoes(State.Quests, State.Actors, State.PlayerControl, State.Travel, _roster.Definitions, _placement, _vitality,
-                tuning.QuestSpawning, tuning.EnemyBehavior, () => _sites.ReadQuestLocation(), (definition, pose) => _roster.Spawn(definition, pose),
-                _roster.RemoveQuestActor, (id, allies) => _enemyBehavior.MakeHostile(id, includePlayerAllies: allies), _enemyBehavior.IsPacified,
+                tuning.QuestSpawning, () => _sites.ReadQuestLocation(), (definition, pose) => _roster.Spawn(definition, pose),
+                _roster.RemoveQuestActor, (id, allies) => _enemyBehavior.MakeHostile(id, includePlayerAllies: allies),
                 result => AppendDamage(result, DaggerfallDamageCause.Quest, 0), id => RetireDetachedActor(id), KillRetainedQuestFoe);
             TeleportChoice = new DaggerfallTeleport(this, State.PlayerControl, State.Transport, () => State.Property.OwnedShip,
                 Presentation, saved?.PendingTeleport, saved?.TeleportAnchor);

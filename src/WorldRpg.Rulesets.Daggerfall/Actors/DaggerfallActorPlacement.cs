@@ -27,21 +27,25 @@ internal enum SpawnDirection
 
 /// <summary>
 /// Where actors can be placed and whom they see as foes: clear spawn poses around the player, the enemies a
-/// perception query finds, an ally's target and where everyone stands, used by summons, law, quests, encounters,
-/// spells and allies.
+/// perception query finds, the team rule that picks whom an enemy or ally pursues, and where everyone stands, used by
+/// summons, law, quests, encounters, spells, allies and enemy behaviour.
 /// </summary>
 /// <param name="isGameplayActive">Whether an actor answers the world now (the NPC registry's presence).</param>
 /// <param name="definitions">Every live actor's definition by durable identity (the roster's).</param>
 /// <param name="foeTeam">The team an actor fights for now, quest overrides included.</param>
 /// <param name="isPacified">Whether an enemy is pacified.</param>
-/// <param name="allowsFoeInfighting">Whether an actor may be attacked by the player's allies (quests protect some).</param>
+/// <param name="allowsFoeInfighting">Whether an actor may fight other actors and be attacked by the player's allies (quests protect some).</param>
+/// <param name="restrained">Whether a quest holds an actor back from acting.</param>
+/// <param name="joinsInfighting">Whether a quest opted an actor into fights between actors (the classic foe-infighting operation).</param>
+/// <param name="infightingActive">Whether any active quest has opted foes into infighting.</param>
 /// <param name="environment">The world environment the player's placement queries run against now.</param>
-/// <param name="allyDetectionDistance">How far an ally looks for a foe, at least the donor's sight radius.</param>
+/// <param name="detectionDistance">How far an enemy or ally looks for a foe, at least the donor's sight radius.</param>
 /// <param name="fieldOfViewYDegrees">The camera's vertical field of view, the edge a beside-view spawn starts past.</param>
 internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControlState player, Func<long, bool> isGameplayActive,
     IReadOnlyDictionary<long, DaggerfallActorDefinition> definitions, Func<long, string?> foeTeam, Func<long, bool> isPacified,
-    Func<long, bool> allowsFoeInfighting, SpatialMovementSystem spatial, IPerceptionService perception, IRandomService random,
-    Func<CharacterStepEnvironment> environment, double allyDetectionDistance, float fieldOfViewYDegrees)
+    Func<long, bool> allowsFoeInfighting, Func<long, bool> restrained, Func<long, bool> joinsInfighting, Func<bool> infightingActive,
+    SpatialMovementSystem spatial, IPerceptionService perception, IRandomService random,
+    Func<CharacterStepEnvironment> environment, double detectionDistance, float fieldOfViewYDegrees)
 {
     // FoeSpawner's placement envelope, in normalized world metres.
     private const float SummonFloorDistance = 4f;
@@ -51,13 +55,45 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
     /// <summary>How far either side of the facing an <see cref="SpawnDirection.Ahead"/> pose may be.</summary>
     internal const int AheadDegrees = 30;
 
+    /// <summary>
+    /// Whom an enemy or ally pursues, the team rule: none while a quest holds it back or it is defeated; for an ally of
+    /// the player, the nearest visible foe it may attack, where it may fight at all; for anyone else the player, unless
+    /// a quest's infighting lets it take a nearer visible foe of another team. Quests supply the teams, the restraint
+    /// and the infighting opt-in as inputs.
+    /// </summary>
+    internal PursuitTarget? SelectTarget(long observerId)
+    {
+        if (!actors.TryGet(observerId, out var observer) || observer.IsDefeated || restrained(observerId)) return null;
+        if (foeTeam(observerId) == "player-ally")
+            return allowsFoeInfighting(observerId) ? SelectAllyTarget(observerId) : null;
+        PursuitTarget? selected = player.Position is { } position ? new(DaggerfallActorIdentity.PlayerEntityId, position) : null;
+        if (!allowsFoeInfighting(observerId) || !infightingActive()) return selected;
+        double best = player.Position is { } standing ? Vector3.Distance(observer.Position.ToVector(), standing.ToVector()) : double.PositiveInfinity;
+        Vector3 forward = ActorHeading.Forward(observer.HeadingYawRadians);
+        string? team = foeTeam(observerId);
+        foreach (PerceptionPair pair in QueryEnemies(observerId, observer.Position, forward,
+                     Math.Max(detectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),
+                     DaggerfallPerceptionQueryDefaults.MinimumFacingCosine, _ => true)
+                     .Where(pair => pair.Kind == PerceptionPairKind.Visible).OrderBy(pair => pair.Distance).ThenBy(pair => pair.Target))
+        {
+            long id = checked((long)pair.Target);
+            // Classic quest foes are excluded from AI fights unless the source explicitly opts in.
+            // Other actors keep their established player pursuit unless participating in that opt-in.
+            if (!joinsInfighting(observerId) && !joinsInfighting(id)) continue;
+            if (!allowsFoeInfighting(id) || foeTeam(id) == team
+                || foeTeam(id) == "player-ally" && isPacified(observerId) || pair.Distance >= best) continue;
+            selected = new(id, actors.Get(id).Position); best = pair.Distance;
+        }
+        return selected;
+    }
+
     /// <summary>The nearest visible foe of the player's side an ally can attack, if any.</summary>
     internal PursuitTarget? SelectAllyTarget(long observerId)
     {
         if (!actors.TryGet(observerId, out var observer) || observer.IsDefeated) return null;
         Vector3 forward = ActorHeading.Forward(observer.HeadingYawRadians);
         foreach (PerceptionPair pair in QueryEnemies(observerId, observer.Position, forward,
-                     Math.Max(allyDetectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),
+                     Math.Max(detectionDistance, DaggerfallPerceptionQueryDefaults.SightRadius),
                      DaggerfallPerceptionQueryDefaults.MinimumFacingCosine,
                      definition => definition.Team != "player-ally")
                      .Where(pair => pair.Kind == PerceptionPairKind.Visible)

@@ -141,6 +141,8 @@ internal sealed record DaggerfallEnemyPerceptionDecision(
     IReadOnlyList<DaggerfallSkillUse> SkillUses)
 {
     internal bool PursuitVisible => Detected && !Pacified;
+    /// <summary>The target these senses judged; the behaviour module sets it.</summary>
+    internal long TargetId { get; init; }
 }
 
 /// <summary>

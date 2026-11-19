@@ -10,14 +10,17 @@ using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 
-/// <summary>One selected enemy spell and the pose supplied to the common casting owner.</summary>
+/// <summary>One selected enemy spell, the pose supplied to the common casting owner and the target it is aimed at.</summary>
+/// <param name="Target">How the spell reaches: on the caster, by touch, at range or around the caster.</param>
+/// <param name="TargetId">The target the caster pursues and aims at, the player or another actor.</param>
 internal readonly record struct DaggerfallEnemySpellAttempt(
     long ActorId,
     string SpellKey,
     DaggerfallSpellTarget Target,
     WorldPoint Origin,
     WorldPoint Aim,
-    Vector3 Direction);
+    Vector3 Direction,
+    long TargetId);
 
 /// <summary>Evidence for the last admitted enemy spell decision for one live actor.</summary>
 internal sealed record DaggerfallEnemySpellEvidence(
@@ -29,9 +32,9 @@ internal sealed record DaggerfallEnemySpellEvidence(
     ulong SimulationStep);
 
 /// <summary>
-/// Donor-shaped spell selection at the existing enemy behavior owner.  This module chooses from
-/// authored mobile/class lists and delegates readiness, cost, release, collision, and effect
-/// lifecycle to <see cref="DaggerfallCasting"/> through its executor callback.
+/// The classic enemy spell choice, which the legacy tactic makes from authored mobile and class lists, and the release
+/// of a chosen spell, which the behaviour module admits: readiness, cost, release, collision and effect lifecycle are
+/// <see cref="DaggerfallCasting"/>'s through the executor callback. Its target is whichever the enemy pursues.
 /// </summary>
 internal sealed class DaggerfallEnemyMagicModule
 {
@@ -48,7 +51,7 @@ internal sealed class DaggerfallEnemyMagicModule
     private readonly DaggerfallCasting _casting;
     private readonly IRandomService _random;
     private readonly Func<long, DaggerfallActorDefinition?> _definition;
-    private readonly Func<DaggerfallEnemySpellAttempt, bool> _rangedPathClear;
+    private readonly Func<long, WorldPoint, PursuitTarget, bool> _laneClear;
     private readonly Func<DaggerfallEnemySpellAttempt, DaggerfallCastResult> _execute;
     private readonly Dictionary<long, DaggerfallEnemySpellEvidence> _last = [];
 
@@ -59,7 +62,7 @@ internal sealed class DaggerfallEnemyMagicModule
         IRandomService random,
         Func<long, DaggerfallActorDefinition?> definition,
         Func<int, DaggerfallMobileDefinition?> mobileCatalog,
-        Func<DaggerfallEnemySpellAttempt, bool> rangedPathClear,
+        Func<long, WorldPoint, PursuitTarget, bool> laneClear,
         Func<DaggerfallEnemySpellAttempt, DaggerfallCastResult> execute)
     {
         _spells = spells ?? throw new ArgumentNullException(nameof(spells));
@@ -68,7 +71,7 @@ internal sealed class DaggerfallEnemyMagicModule
         _random = random ?? throw new ArgumentNullException(nameof(random));
         _definition = definition ?? throw new ArgumentNullException(nameof(definition));
         _mobileCatalog = mobileCatalog ?? throw new ArgumentNullException(nameof(mobileCatalog));
-        _rangedPathClear = rangedPathClear ?? throw new ArgumentNullException(nameof(rangedPathClear));
+        _laneClear = laneClear ?? throw new ArgumentNullException(nameof(laneClear));
         _execute = execute ?? throw new ArgumentNullException(nameof(execute));
     }
 
@@ -79,19 +82,23 @@ internal sealed class DaggerfallEnemyMagicModule
         _last.Clear();
     }
 
+    /// <summary>Whether a missile from the actor where it stands now would reach its target, the lane the classic choice keeps clear.</summary>
+    internal bool LaneClear(ActorState actor, PursuitTarget target) => _laneClear(actor.DurableId, actor.Position, target);
+
     /// <summary>
-    /// Decides one spell from the perception receipt already admitted by the behavior owner.  It
-    /// deliberately does not issue another visibility query or retain a timer: the common pending
-    /// cast set and active effects are the only duplicate/cancellation authorities.
+    /// The classic choice of one spell at the pursued target from the perception receipt already admitted by the
+    /// behaviour owner: a keyed pick from the ranged list inside the ranged band and a one-in-forty roll, its lane
+    /// clear, else a touch or self spell at melee distance; null when none. It issues no visibility query and keeps no
+    /// timer: the common pending cast set and active effects are the only duplicate and cancellation authorities.
+    /// <paramref name="senses"/> is the senses' judgement of this target where they judge it (the player's stealth
+    /// and illusions); elsewhere the Engine's sight alone decides.
     /// </summary>
-    internal bool Decide(ActorState actor, PursuitTarget target, PerceptionReadoutResult? visibility,
-        DaggerfallEnemyPerceptionDecision? perception, double targetRateOfApproach,
-        ulong generation, ulong simulationStep, float deltaSeconds, List<DaggerfallDecisionGate>? gates = null)
+    internal DaggerfallEnemySpellAttempt? Choose(ActorState actor, PursuitTarget target, PerceptionReadoutResult? visibility,
+        DaggerfallEnemyPerceptionDecision? senses, Lazy<bool> laneClear, ulong generation, ulong simulationStep, List<DaggerfallDecisionGate>? gates = null)
     {
-        if (actor.IsDefeated || target.DurableId != DaggerfallActorIdentity.PlayerEntityId
-            || visibility is not { } receipt || perception is not { InSight: true, PursuitVisible: true })
-            return Refuse("eligible", actor.IsDefeated ? "defeated" : target.DurableId != DaggerfallActorIdentity.PlayerEntityId ? "target-not-player"
-                : visibility is null ? "no-visibility" : "player-not-in-sight");
+        if (actor.IsDefeated || visibility is not { } receipt || senses is not (null or { InSight: true, PursuitVisible: true }))
+            return Refuse("eligible", actor.IsDefeated ? "defeated" : visibility is null ? "no-visibility"
+                : target.DurableId == DaggerfallActorIdentity.PlayerEntityId ? "player-not-in-sight" : "target-not-in-sight");
         if (_casting.HasPending(actor.DurableId)) return Refuse("eligible", "casting");
         DaggerfallActorDefinition? definition = _definition(actor.DurableId);
         if (definition is null || !_spells.IsCaster(definition.MobileId)) return Refuse("eligible", "not-a-caster");
@@ -128,16 +135,16 @@ internal sealed class DaggerfallEnemyMagicModule
                 {
                     if (!TryBuildAttempt(actor, selected, target, out DaggerfallEnemySpellAttempt attempt))
                         gates?.Add(new(Policy, "path", DaggerfallGateOutcome.Refused, "no-aim"));
-                    else if (!_rangedPathClear(attempt))
+                    else if (!laneClear.Value)
                         gates?.Add(new(Policy, "path", DaggerfallGateOutcome.Refused, "path-blocked"));
-                    else return TryExecute(attempt, IntendedTarget(selected, actor, target), generation, simulationStep, gates);
+                    else return attempt;
                 }
             }
         }
 
-        // TargetRateOfApproach is a donor EnhancedCombatAI input. The compiled ruleset has no
-        // corresponding enhanced mode, so classic touch eligibility remains the authored melee
-        // distance even when the target is closing during this update.
+        // TargetRateOfApproach is a donor EnhancedCombatAI input. The classic spell choice has no
+        // corresponding enhanced mode, so touch eligibility remains the authored melee distance even
+        // when the target is closing during this update.
         if (pair.Distance > MeleeDistance) return Refuse("touch-band", "out-of-touch",
             new DaggerfallGateValue("distance", pair.Distance), new DaggerfallGateValue("maximum", MeleeDistance));
         List<string> touch = SpellKeys(definition)
@@ -149,28 +156,51 @@ internal sealed class DaggerfallEnemyMagicModule
         if (_casting.EffectsAlreadyOnTarget(touchSpell,
                 TargetOf(touchSpell) == DaggerfallSpellTarget.CasterOnly ? actor.DurableId : target.DurableId)) return Refuse("touch-pick", "already-on-target");
         if (!TryBuildAttempt(actor, touchSpell, target, out DaggerfallEnemySpellAttempt touchAttempt)) return Refuse("path", "no-aim");
-        return TryExecute(touchAttempt, IntendedTarget(touchSpell, actor, target), generation, simulationStep, gates);
+        return touchAttempt;
 
-        bool Refuse(string gate, string reason, params DaggerfallGateValue[] values)
+        DaggerfallEnemySpellAttempt? Refuse(string gate, string reason, params DaggerfallGateValue[] values)
         {
             gates?.Add(new(Policy, gate, DaggerfallGateOutcome.Refused, reason, values));
-            return false;
+            return null;
         }
+    }
+
+    /// <summary>
+    /// Releases a chosen spell; whether it took the step's action. A traced caster's cast gate carries the target it
+    /// was meant for (the caster for a caster-only spell, otherwise its target) and the cast's sequence, which its
+    /// delivery facts carry too, so the trace can set what each cast reached beside what it meant.
+    /// </summary>
+    internal bool Cast(DaggerfallEnemySpellAttempt attempt, ulong generation, ulong simulationStep, List<DaggerfallDecisionGate>? gates = null)
+    {
+        long intended = attempt.Target == DaggerfallSpellTarget.CasterOnly ? attempt.ActorId : attempt.TargetId;
+        DaggerfallCastResult result = _execute(attempt);
+        _last[attempt.ActorId] = new(attempt.ActorId, attempt.SpellKey, attempt.Target, result.Outcome,
+            generation, simulationStep);
+        // A cast that reached no one is still a released, paid action (a contact touch that met no body).
+        bool admitted = result.Outcome is DaggerfallCastOutcome.Released or DaggerfallCastOutcome.DeliveryCompleted or DaggerfallCastOutcome.Missed;
+        gates?.Add(new(Policy, "cast", admitted ? DaggerfallGateOutcome.Passed : DaggerfallGateOutcome.Refused, result.Outcome.ToString(),
+            [new("intended", intended), .. result.Bundle is { } bundle ? [new DaggerfallGateValue("sequence", bundle.Sequence)] : Array.Empty<DaggerfallGateValue>()]));
+        return admitted;
     }
 
     /// <summary>
     /// EnemyMotor.CanCastRangedSpell: inside the ranged band a caster without a bow attack has a
     /// ranged spell ready while it has magicka, a ranged spell whose effects are not already on the
-    /// target, and a clear missile path. The motor holds or strafes while this is true.
+    /// target, and a clear missile lane. The motor holds or strafes while this is true.
     /// </summary>
-    internal bool HasRangedSpellReady(ActorState actor, PursuitTarget target, double distance)
+    internal bool HasRangedSpellReady(ActorState actor, PursuitTarget target, double distance) =>
+        HasRangedSpellReady(actor, target, distance, new Lazy<bool>(() => LaneClear(actor, target)));
+
+    /// <inheritdoc cref="HasRangedSpellReady(ActorState, PursuitTarget, double)"/>
+    /// <param name="laneClear">The lane to the target, read only when everything else holds.</param>
+    internal bool HasRangedSpellReady(ActorState actor, PursuitTarget target, double distance, Lazy<bool> laneClear)
     {
         if (actor.IsDefeated || distance <= MinimumRangedDistance || distance >= MaximumRangedDistance) return false;
         DaggerfallActorDefinition? definition = _definition(actor.DurableId);
         if (definition is null || !_spells.IsCaster(definition.MobileId) || HasBow(definition)) return false;
         if (!actor.Stats.TryGetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), out Track? magicka) || magicka.Current <= 0) return false;
         string? ready = RangedSpellKeys(definition).FirstOrDefault(key => !_casting.EffectsAlreadyOnTarget(key, target.DurableId));
-        return ready is not null && TryBuildAttempt(actor, ready, target, out DaggerfallEnemySpellAttempt attempt) && _rangedPathClear(attempt);
+        return ready is not null && TryBuildAttempt(actor, ready, target, out _) && laneClear.Value;
     }
 
     private List<string> RangedSpellKeys(DaggerfallActorDefinition definition) => SpellKeys(definition)
@@ -199,7 +229,7 @@ internal sealed class DaggerfallEnemyMagicModule
         Vector3 aim = target.Position.ToVector();
         Vector3 delta = aim - origin;
         if (!TryNormalize(delta, out Vector3 direction)) return false;
-        attempt = new(actor.DurableId, key, targetMode, actor.Position, target.Position, direction);
+        attempt = new(actor.DurableId, key, targetMode, actor.Position, target.Position, direction, target.DurableId);
         return true;
     }
 
@@ -212,26 +242,6 @@ internal sealed class DaggerfallEnemyMagicModule
         }
         target = DaggerfallMagicCostPolicy.TargetForRangeType(spell.RangeType);
         return true;
-    }
-
-    /// <summary>Who a spell is meant for: the caster for a caster-only spell, otherwise the pursued target.</summary>
-    private long IntendedTarget(string key, ActorState actor, PursuitTarget target) =>
-        TargetOf(key) == DaggerfallSpellTarget.CasterOnly ? actor.DurableId : target.DurableId;
-
-    /// <summary>
-    /// Releases a spell. A traced caster's cast gate carries the target it was meant for and the cast's sequence, which
-    /// its delivery facts carry too, so the trace can set what each cast reached beside what it meant.
-    /// </summary>
-    private bool TryExecute(DaggerfallEnemySpellAttempt attempt, long intended, ulong generation, ulong simulationStep, List<DaggerfallDecisionGate>? gates)
-    {
-        DaggerfallCastResult result = _execute(attempt);
-        _last[attempt.ActorId] = new(attempt.ActorId, attempt.SpellKey, attempt.Target, result.Outcome,
-            generation, simulationStep);
-        // A cast that reached no one is still a released, paid action (a contact touch that met no body).
-        bool admitted = result.Outcome is DaggerfallCastOutcome.Released or DaggerfallCastOutcome.DeliveryCompleted or DaggerfallCastOutcome.Missed;
-        gates?.Add(new(Policy, "cast", admitted ? DaggerfallGateOutcome.Passed : DaggerfallGateOutcome.Refused, result.Outcome.ToString(),
-            [new("intended", intended), .. result.Bundle is { } bundle ? [new DaggerfallGateValue("sequence", bundle.Sequence)] : Array.Empty<DaggerfallGateValue>()]));
-        return admitted;
     }
 
     private string Select(IReadOnlyList<string> keys, long actorId, ulong generation, ulong simulationStep, string lane)

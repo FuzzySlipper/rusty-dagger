@@ -1456,8 +1456,11 @@ internal static partial class DaggerfallBaseContent
                 ImmunityFlags = FlagByte(mobile, "immunityFlags", diagnostics),
                 LowToleranceFlags = FlagByte(mobile, "lowToleranceFlags", diagnostics),
                 CriticalWeaknessFlags = FlagByte(mobile, "criticalWeaknessFlags", diagnostics),
+                Tactic = mobile.TryGetProperty("tactic", out JsonElement tactic) ? tactic.ValueKind == JsonValueKind.String ? tactic.GetString()! : "" : DaggerfallMobileDefinition.LegacyTactic,
             };
 
+            if (string.IsNullOrWhiteSpace(definition.Tactic))
+                diagnostics.Add($"Published mobile {donorId} names a blank or non-text tactic; leave the field out to fight with '{DaggerfallMobileDefinition.LegacyTactic}'.");
             if (definition.SoulPoints < 0 || definition.GlowColor is { } tint && (tint.X < 0 || tint.Y < 0 || tint.Z < 0))
                 diagnostics.Add($"Published mobile {donorId} requires nonnegative soul points and glow channels.");
             // A donor id identifies one mobile; two records claiming it would make a lookup ambiguous.
