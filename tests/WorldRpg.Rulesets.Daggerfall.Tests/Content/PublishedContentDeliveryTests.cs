@@ -1011,7 +1011,10 @@ public sealed class PublishedContentDeliveryTests
             // The title scene's layers over the title's own image, the town painting.
             .. new[] { "clouds", "sea", "window", "logo" }.Select(layer => section.GetProperty("titleScene").GetProperty(layer)),
             .. section.GetProperty("peopleRig").GetProperty("views").EnumerateObject()
-                .SelectMany(view => view.Value.GetProperty("pages").EnumerateArray().Prepend(view.Value.GetProperty("model")))];
+                .SelectMany(view => view.Value.GetProperty("pages").EnumerateArray().Prepend(view.Value.GetProperty("model"))),
+            // The gsplat townspeople's walk and idle packs, and each character's body.
+            .. section.GetProperty("splatPeople").GetProperty("clips").EnumerateObject().Select(clip => clip.Value),
+            .. section.GetProperty("splatPeople").GetProperty("characters").EnumerateObject().Select(character => character.Value.GetProperty("body"))];
         foreach (JsonElement file in files)
         {
             byte[] bytes = content.ReadBytes(file.GetProperty("path").GetString()!).ToArray();

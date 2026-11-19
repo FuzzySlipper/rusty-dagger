@@ -96,6 +96,28 @@ internal sealed record DaggerfallPeopleRigView(DaggerfallArtFile Model, IReadOnl
 /// <summary>A direction of a view set: the view a camera <paramref name="Angle"/> degrees around the figure sees (0 in front, 90 at its left), mirrored or not.</summary>
 internal sealed record DaggerfallPeopleRigDirection(string Label, float Angle, string View, bool Mirror);
 
+/// <summary>
+/// The gsplat townspeople the developer command draws every walking person as: PINOC's Mixamo Walking and Standing Idle as
+/// clip packs (<paramref name="Walk"/>, <paramref name="Idle"/>, whose clips are named <c>walk</c> and <c>idle</c>), the
+/// top joint their pelvis fits move, the producer and licence the packs are associated under, and the characters by
+/// asset-pipeline id.
+/// </summary>
+internal sealed record DaggerfallSplatPeople(DaggerfallArtFile Walk, DaggerfallArtFile Idle, string Joint, string Producer, string License,
+    IReadOnlyDictionary<string, DaggerfallSplatPerson> Characters)
+{
+    /// <summary>The clip each pack carries.</summary>
+    internal const string WalkClip = "walk", IdleClip = "idle";
+}
+
+/// <summary>
+/// One gsplat character: what asset-pipeline calls it, its skinned-splat GLB (metres, standing on y = 0, facing +z), the
+/// pelvis fit of each clip to its legs, and the speed its fitted walk travels, in metres a second.
+/// </summary>
+internal sealed record DaggerfallSplatPerson(string Name, DaggerfallArtFile Body, DaggerfallSplatClipFit Walk, DaggerfallSplatClipFit Idle, float WalkSpeed);
+
+/// <summary>A clip's pelvis fit: the top joint's translation t becomes (<paramref name="Scale"/> t.x, <paramref name="Lift"/> + <paramref name="Scale"/> t.y, <paramref name="Scale"/> t.z).</summary>
+internal sealed record DaggerfallSplatClipFit(float Scale, float Lift);
+
 /// <summary>A published file of the refreshed set: its path and digest.</summary>
 internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 
@@ -310,6 +332,9 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The walking test figure, when the set has one.</summary>
     internal DaggerfallPeopleRig? PeopleRig { get; private init; }
 
+    /// <summary>The gsplat townspeople, when the set has them.</summary>
+    internal DaggerfallSplatPeople? SplatPeople { get; private init; }
+
     /// <summary>The title drawn as an animated scene over the title's replacement, when the set has one.</summary>
     internal DaggerfallTitleScene? TitleScene { get; private init; }
 
@@ -391,6 +416,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallArtFile? treeSnow = null;
         DaggerfallSeaArt? sea = null;
         DaggerfallPeopleRig? peopleRig = null;
+        DaggerfallSplatPeople? splatPeople = null;
         DaggerfallTitleScene? titleScene = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
         Dictionary<string, DaggerfallArtModel> models = new(StringComparer.Ordinal);
@@ -626,6 +652,7 @@ internal sealed class DaggerfallArtReplacements
                         throw new InvalidOperationException($"Content pack '{packId}' names two flats for {replaces.Item1}/{replaces.Item2}.");
                 }
             if (section.TryGetProperty("peopleRig", out JsonElement rig)) peopleRig = PeopleRig(rig);
+            if (section.TryGetProperty("splatPeople", out JsonElement splats)) splatPeople = SplatPeople(splats);
             if (section.TryGetProperty("treeSnow", out JsonElement snowShader)) treeSnow = File(snowShader, "The trees' snow shader");
             if (section.TryGetProperty("sea", out JsonElement seaArt))
                 sea = new(File(seaArt.GetProperty("shader"), "The sea's shader"), File(seaArt.GetProperty("ripples"), "The sea's ripple map"),
@@ -692,7 +719,7 @@ internal sealed class DaggerfallArtReplacements
         }
 
         return new DaggerfallArtReplacements(byClassic, tints, effects, glow, meshes, surfaces, flats, people)
-        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, PeopleRig = peopleRig, Models = models, TitleScene = titleScene };
+        { GroundCover = groundCover, Trees = trees, TreeSnow = treeSnow, Sea = sea, PeopleRig = peopleRig, SplatPeople = splatPeople, Models = models, TitleScene = titleScene };
 
         DaggerfallPeopleRig PeopleRig(JsonElement rig)
         {
@@ -712,6 +739,27 @@ internal sealed class DaggerfallArtReplacements
             if (directions.Count == 0 || directions.Values.Any(set => set.Count == 0 || set.Any(direction => !views.ContainsKey(direction.View) || !float.IsFinite(direction.Angle))))
                 throw new InvalidOperationException($"Content pack '{packId}' states a view set of people rig '{name}' that is empty or names a view it lacks.");
             return new(name, height, walk, idle, crossfade, clips, PartsRigLayerStack.Read(rig.GetProperty("layers")), views, directions);
+        }
+
+        DaggerfallSplatPeople SplatPeople(JsonElement splats)
+        {
+            JsonElement clips = splats.GetProperty("clips");
+            Dictionary<string, DaggerfallSplatPerson> characters = splats.GetProperty("characters").EnumerateObject().ToDictionary(character => character.Name, character =>
+            {
+                JsonElement walk = character.Value.GetProperty("walk");
+                DaggerfallSplatPerson person = new(character.Value.GetProperty("name").GetString()!, File(character.Value.GetProperty("body"), $"Splat person {character.Name}'s body"),
+                    Fit(walk), Fit(character.Value.GetProperty("idle")), walk.GetProperty("speed").GetSingle());
+                if (!float.IsFinite(person.WalkSpeed) || person.WalkSpeed <= 0
+                    || new[] { person.Walk, person.Idle }.Any(fit => !float.IsFinite(fit.Scale) || fit.Scale <= 0 || !float.IsFinite(fit.Lift)))
+                    throw new InvalidOperationException($"Content pack '{packId}' fits splat person {character.Name}'s clips by a scale that is not positive or walks them at {person.WalkSpeed} m/s.");
+                return person;
+            }, StringComparer.Ordinal);
+            if (characters.Count == 0)
+                throw new InvalidOperationException($"Content pack '{packId}' states splat people without a character.");
+            return new(File(clips.GetProperty("walk"), "The splat people's walk"), File(clips.GetProperty("idle"), "The splat people's idle"),
+                splats.GetProperty("joint").GetString()!, splats.GetProperty("producer").GetString()!, splats.GetProperty("license").GetString()!, characters);
+
+            static DaggerfallSplatClipFit Fit(JsonElement fit) => new(fit.GetProperty("k").GetSingle(), fit.GetProperty("A").GetSingle());
         }
 
         DaggerfallArtWorldImage? World(JsonElement owner, string mediaId)

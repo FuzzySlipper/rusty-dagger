@@ -396,7 +396,7 @@ public sealed class DaggerfallPopulationSessionTests
             Assert.True(Vector3.Distance(Vector3.Transform(Vector3.UnitZ, fact.Transform.Rotation), ActorHeading.Forward(civilian.HeadingYawRadians)) < 1e-4F);
             // She walks while she moves to a waypoint and idles otherwise, with the attention layer over both.
             PartsRigPlayRequest body = Assert.Single(rigs.Plays, play => play.ObjectId == fact.ObjectId && play.Track == 0);
-            Assert.Equal(PartsRigCrowd.Walks(civilian.Wander.State) ? "walk" : "idle", body.Clip);
+            Assert.Equal(IWalkerCrowd.Walks(civilian.Wander.State) ? "walk" : "idle", body.Clip);
             Assert.Contains(rigs.Plays, play => play.ObjectId == fact.ObjectId && play.Track == 2 && play.Clip == "attention" && play.Looping);
         }
 
@@ -415,6 +415,45 @@ public sealed class DaggerfallPopulationSessionTests
         Assert.DoesNotContain(rigs.Appearances, pair => pair.Appearance == own.Appearance);
         Assert.Equal(rigs.Appearances.Count, rigs.ReleasedAppearances.Count);
         Assert.Equal(5, rigs.ReleasedRigs);
+    }
+
+    [Fact]
+    public void People_splat_draws_every_walking_civilian_as_one_lit_gsplat_character_walking_or_idling_and_off_releases_them()
+    {
+        using ResidentPopulationFixture fixture = ResidentPopulationFixture.Create(DaggerfallPeopleSwitchTests.Art());
+        DaggerfallSession session = fixture.Session;
+        AnimationRecorder animation = fixture.Engine.Animation;
+        animation.Clips = [new("walk", "walk", 1.03F, true, 1), new("idle", "idle", 5.03F, true, 2)];
+        session.AdvanceElapsedTime(8 * 60 * 60);
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        ActorState[] civilians = [.. session.State.Actors.All.Where(actor => actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian)];
+        Assert.NotEmpty(civilians);
+
+        Assert.True(session.Commands<IDeveloperPeopleCommands>().Splat("385").Succeeded);
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        Appearance character = Assert.Single(animation.Splats).Appearance;
+        AppearanceFact[] snapshot = fixture.Appearance.Snapshots[^1];
+        foreach (ActorState civilian in civilians)
+        {
+            // Every walker is the one character, at his own size, facing where it heads, on an instance of its own.
+            AppearanceFact fact = Assert.Single(snapshot, fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilian.DurableId, "Actor"));
+            Assert.Same(character, fact.Appearance);
+            Assert.Equal(Vector3.One, fact.Transform.Scale);
+            Assert.True(Vector3.Distance(Vector3.Transform(Vector3.UnitZ, fact.Transform.Rotation), ActorHeading.Forward(civilian.HeadingYawRadians)) < 1e-4F);
+            int instance = animation.InstanceRequests.FindIndex(request => request.ObjectId == fact.ObjectId && request.Appearance == character);
+            Assert.True(instance >= 0, $"Walker {fact.ObjectId} has no instance.");
+            // It walks while it moves to a waypoint and idles otherwise.
+            AnimationPlaybackRequest play = Assert.Single(animation.Playbacks, play => play.Instance.Handle.Value == 7001UL + (ulong)instance);
+            Assert.Equal(IWalkerCrowd.Walks(civilian.Wander.State) ? "walk" : "idle", play.Clip);
+        }
+
+        // Off draws their own sprites again, and their instances go with the settle after it.
+        int released = animation.ReleasedInstances;
+        Assert.True(session.Commands<IDeveloperPeopleCommands>().Splat("off").Succeeded);
+        session.Update(new ProductUpdate(OuterUpdate(4), []));
+        AppearanceFact own = fixture.Appearance.Snapshots[^1].First(fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilians[0].DurableId, "Actor"));
+        Assert.NotSame(character, own.Appearance);
+        Assert.Equal(civilians.Length, animation.ReleasedInstances - released);
     }
 
     private static int PopulationTextureOpens(AppearanceFake appearance) =>

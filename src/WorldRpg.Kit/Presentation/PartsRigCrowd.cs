@@ -1,6 +1,5 @@
 using System.Numerics;
 using Rusty.Engine;
-using WorldRpg.Kit.Ai;
 
 namespace WorldRpg.Kit.Presentation;
 
@@ -41,7 +40,7 @@ public sealed record PartsRigFigure(string Name, IReadOnlyList<PartsRigFigureVie
 /// them and are released when nothing shows them; an appearance a snapshot stopped drawing is released at the next
 /// settle after that, when no reader of the scene still holds it.
 /// </summary>
-public sealed class PartsRigCrowd(Func<IPartsRigsService> engine) : IDisposable
+public sealed class PartsRigCrowd(Func<IPartsRigsService> engine) : IWalkerCrowd, IDisposable
 {
     private readonly Dictionary<(string Model, TextureFilter Filter), PartsRig> rigs = [];
     private readonly Dictionary<ulong, Walker> shown = [];
@@ -54,9 +53,6 @@ public sealed class PartsRigCrowd(Func<IPartsRigsService> engine) : IDisposable
 
     /// <summary>How many walkers the last settled snapshot drew as the figure.</summary>
     public int Count => shown.Count;
-
-    /// <summary>Whether a walker in <paramref name="state"/> walks: while it seeks or moves to a waypoint.</summary>
-    public static bool Walks(WanderState state) => state is WanderState.Moving or WanderState.Seeking;
 
     /// <summary>
     /// Draws walkers as <paramref name="figure"/> from the next snapshot, or (null) as their own art again. The figure's

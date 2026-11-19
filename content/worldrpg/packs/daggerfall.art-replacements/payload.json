@@ -126840,6 +126840,229 @@
     "width": 721,
     "height": 567
    }
+  },
+  "splatPeople": {
+   "clips": {
+    "walk": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/walk.glb",
+     "byteLength": 181004,
+     "sha256": "2b941cd133edf6704b95e4d06bc6b191d2294036a30a296a3b128c133af2fe2a"
+    },
+    "idle": {
+     "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/clips/idle.glb",
+     "byteLength": 185784,
+     "sha256": "50bafb1517b9c23b23aa3b5d2a02aa022d8805e006b9ba17d2d6652f7a7d2ad8"
+    }
+   },
+   "joint": "mixamorig:Hips",
+   "producer": "PINOC library (Viggle), Mixamo rig",
+   "license": "PINOC library clip",
+   "characters": {
+    "381": {
+     "name": "white linen tunic, red-orange zigzag hem",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/381.glb",
+      "byteLength": 835304,
+      "sha256": "208ecf1c13d16fc973dd784aeeaf55a5fec571751ccdfb30d59f94c6bc453a94"
+     },
+     "walk": {
+      "k": 0.7708,
+      "A": 0.1646,
+      "speed": 1.3938
+     },
+     "idle": {
+      "k": 0.8507,
+      "A": 0.091
+     }
+    },
+    "382": {
+     "name": "bare-chested, white wrap kilt, steel bracers",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/382.glb",
+      "byteLength": 837136,
+      "sha256": "2641b7464a84fe327f9416ee8c8dd6eec7f3e313e316f48bcb8ee5bebfe96b80"
+     },
+     "walk": {
+      "k": 0.7869,
+      "A": 0.1655,
+      "speed": 1.4229
+     },
+     "idle": {
+      "k": 0.8633,
+      "A": 0.0965
+     }
+    },
+    "383-A": {
+     "name": "teal tunic, yellow zigzag bands",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/383-A.glb",
+      "byteLength": 836100,
+      "sha256": "cc227ecaeb853c4059b033d0dbbffaa00c14244274ecf99d0d67df876305b785"
+     },
+     "walk": {
+      "k": 0.8058,
+      "A": 0.1735,
+      "speed": 1.457
+     },
+     "idle": {
+      "k": 0.9024,
+      "A": 0.0862
+     }
+    },
+    "385": {
+     "name": "townsman: teal tunic, orange hood, striped hose",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/385.glb",
+      "byteLength": 840076,
+      "sha256": "6dd49be5f42cf4de4f5f8460962a96eb9ac5f47376ad701b2471c5377bfcad4d"
+     },
+     "walk": {
+      "k": 0.7851,
+      "A": 0.1657,
+      "speed": 1.4197
+     },
+     "idle": {
+      "k": 0.865,
+      "A": 0.0929
+     }
+    },
+    "386-C": {
+     "name": "sleeveless teal tunic, pale blue mantle",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/386-C.glb",
+      "byteLength": 838552,
+      "sha256": "968f3f5d945e8594011712706ad74522818d5544130d6713c6b9532c9596478c"
+     },
+     "walk": {
+      "k": 0.8214,
+      "A": 0.1617,
+      "speed": 1.4853
+     },
+     "idle": {
+      "k": 0.9083,
+      "A": 0.0857
+     }
+    },
+    "387-A": {
+     "name": "green tunic, yellow-purple plaid kilt, fur-cuffed boots",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/387-A.glb",
+      "byteLength": 836364,
+      "sha256": "3a5ef6c960447af030bb2258c061185bbba2a1d3912c4219c46b8d7d1e1127c6"
+     },
+     "walk": {
+      "k": 0.7882,
+      "A": 0.1735,
+      "speed": 1.4252
+     },
+     "idle": {
+      "k": 0.8582,
+      "A": 0.1109
+     }
+    },
+    "388": {
+     "name": "green hood, orange tunic, striped hose",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/388.glb",
+      "byteLength": 791880,
+      "sha256": "dd63f8083cc4a7462eb0b0e2bdf1d2c00e0169372cdfd98dd900f015bfbcb196"
+     },
+     "walk": {
+      "k": 0.8551,
+      "A": 0.1297,
+      "speed": 1.5463
+     },
+     "idle": {
+      "k": 0.8742,
+      "A": 0.1048
+     }
+    },
+    "389": {
+     "name": "green hood, teal and pale blue tunic, striped hose",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/389.glb",
+      "byteLength": 786980,
+      "sha256": "09655131654769606fdc12ddb56e2be255e7402db18448436db422c481a6c30f"
+     },
+     "walk": {
+      "k": 0.8478,
+      "A": 0.1281,
+      "speed": 1.533
+     },
+     "idle": {
+      "k": 0.8468,
+      "A": 0.0929
+     }
+    },
+    "391": {
+     "name": "green tunic, blue-green hood collar, blue hose",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/391.glb",
+      "byteLength": 837692,
+      "sha256": "bcccd78acb82f2063d6a9772e2a8f260daa098c5b5ca731f48030fecc9d34c3a"
+     },
+     "walk": {
+      "k": 0.8642,
+      "A": 0.1306,
+      "speed": 1.5627
+     },
+     "idle": {
+      "k": 0.8856,
+      "A": 0.0858
+     }
+    },
+    "393": {
+     "name": "blue hood, laced bodice, striped skirt",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/393.glb",
+      "byteLength": 837384,
+      "sha256": "999b9ab6c945015476ec254210e5990331f0bac28697e0db6701fec74ed4bcdb"
+     },
+     "walk": {
+      "k": 0.8282,
+      "A": 0.1258,
+      "speed": 1.4976
+     },
+     "idle": {
+      "k": 0.8949,
+      "A": 0.0914
+     }
+    },
+    "394": {
+     "name": "rust-orange robe, green hood collar",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/394.glb",
+      "byteLength": 832756,
+      "sha256": "eee66e5eb5134762c5ca81eedf09ec344df130a6a4e875e7f582e132fff7e322"
+     },
+     "walk": {
+      "k": 0.8587,
+      "A": 0.1252,
+      "speed": 1.5526
+     },
+     "idle": {
+      "k": 0.9174,
+      "A": 0.0803
+     }
+    },
+    "454": {
+     "name": "rust jacket, blue skirt",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/454.glb",
+      "byteLength": 836492,
+      "sha256": "c55e6901e49f3c00ca7b6ac936f9fbcbe1403d62104534519c027f67fe22c1c7"
+     },
+     "walk": {
+      "k": 0.8262,
+      "A": 0.1791,
+      "speed": 1.494
+     },
+     "idle": {
+      "k": 0.9651,
+      "A": 0.0794
+     }
+    }
+   }
   }
  }
 }

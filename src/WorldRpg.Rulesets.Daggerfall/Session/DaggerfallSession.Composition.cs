@@ -1117,7 +1117,8 @@ internal sealed partial class DaggerfallSession
                 () => State.WeaponDrawn = true, State.Currency, State.SkillUses, State.LevelUps, State.Character, State.Transport, State.Inventory,
                 State.Encumbrance, State.ItemInstances, _uniqueItems, State.RacialOverrides, _lycanthropy, _time, TransportAccess,
                 ApplyTransportChange);                                                                // Developer
-            _peopleRigs = new DaggerfallPeopleRigSwitch(composition.ArtReplacements?.PeopleRig, () => _engine.PartsRigs, State.Actors);   // Developer
+            _people = new DaggerfallPeopleSwitch(composition.ArtReplacements?.PeopleRig, composition.ArtReplacements?.SplatPeople, () => _engine.PartsRigs,
+                () => _engine.Animation, () => _engine.Content, _tuning.CivilianWander.MovementSpeedUnitsPerSecond, State.Actors);   // Developer
             // One object per module type: the Engine's catalogue binds an instance to the first type it matches.
             DebugCommands =
             [
@@ -1133,7 +1134,7 @@ internal sealed partial class DaggerfallSession
                 placement,
                 scene,
                 grants,
-                _peopleRigs,
+                _people,
                 heldWorkbench,
                 new TunablesDebugModule(engine.ContentSource, heldWorkbench.Page, heldWorkbench.Choose),
             ];                                                                                     // Developer
@@ -1264,7 +1265,7 @@ internal sealed partial class DaggerfallSession
         appearance.UsePlayerRide(() => (State.Transport.Mode, new Vector2(State.PlayerControl.Motion.ControlledVelocity.X, State.PlayerControl.Motion.ControlledVelocity.Z).Length(), State.PlayerControl.PitchRadians, State.Transport.Ride.TurnFrom(State.PlayerControl.YawRadians)));
         appearance.UseViewLight(_engine.Tween, _viewLight);
         appearance.UsePlayerBeastForm(() => State.RacialOverrides.Current is { State.BeastForm: true } form ? form.State.Kind : null);
-        appearance.UsePeopleRigs(() => _peopleRigs?.Crowd);
+        appearance.UsePeopleRigs(() => _people);
         appearance.UseNatureField(record => _horizon.GrowsPlaced(record));
         if (_tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && _composition.HeldArt is { } art)
             appearance.UseHeldArt(_engine, art, _tuning.Viewmodel.Style, _composition.ArtReplacements?.Tints ?? new Dictionary<string, DaggerfallDyeTint>(), HeldItem, HeldShield, equipment => HeldArms(art, equipment));

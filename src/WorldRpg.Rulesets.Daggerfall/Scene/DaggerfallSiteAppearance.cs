@@ -38,9 +38,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
     internal void UsePlayerVampireGender(Func<bool?> female) => playerVampireFemale = female;
     private Func<DaggerfallRacialKind?> playerBeastForm = () => null;
     internal void UsePlayerBeastForm(Func<DaggerfallRacialKind?> form) => playerBeastForm = form;
-    /// <summary>The session's parts-rig figure for walking people, or null while it has none; it draws them while it uses one.</summary>
-    private Func<PartsRigCrowd?> peopleRigs = () => null;
-    internal void UsePeopleRigs(Func<PartsRigCrowd?> crowd) => peopleRigs = crowd;
+    /// <summary>The session's figure for walking people (a parts rig or a gsplat character), or null while it has none; it draws them while it uses one.</summary>
+    private Func<IWalkerCrowd?> peopleRigs = () => null;
+    internal void UsePeopleRigs(Func<IWalkerCrowd?> crowd) => peopleRigs = crowd;
     private double? playerBeastVoiceSeconds;
     /// <summary>The archive of the light flats, which holds the magic candle.</summary>
     private const int LightFlatArchive = 210;
@@ -513,9 +513,9 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 ? DaggerfallPresentationObjectIds.Gameplay(actor.DurableId, "Actor")
                 : DaggerfallPresentationObjectIds.LocationVisual(slot, visual.LocationOrdinal);
             Appearance? chosen = actor.IsDefeated ? DrawnCorpse(visual) : DrawnLive(visual);
-            // A walking person drawn as the rig figure faces where it walks, and the figure shows the view its camera sees.
+            // A walking person drawn as the crowd's figure faces where it walks (a rig figure shows the view its camera sees).
             Appearance? rigged = !actor.IsDefeated && actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian
-                ? peopleRigs()?.Show(id, visual.Sprite.Size.Y, PartsRigCrowd.Walks(actor.Wander.State)) : null;
+                ? peopleRigs()?.Show(id, visual.Sprite.Size.Y, IWalkerCrowd.Walks(actor.Wander.State)) : null;
             chosen = rigged ?? chosen;
             if (chosen is null) continue;
             // A corpse mesh lies along its creature's heading; a billboard turns to the camera on its own.

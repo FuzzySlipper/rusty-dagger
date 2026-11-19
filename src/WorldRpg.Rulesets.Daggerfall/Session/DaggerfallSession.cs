@@ -229,7 +229,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallDebugOverlays _overlays = null!;
 
     /// <summary>The switch that draws walking people as the parts-rig test figure.</summary>
-    private readonly DaggerfallPeopleRigSwitch _peopleRigs = null!;
+    private readonly DaggerfallPeopleSwitch _people = null!;
     private bool _newGameInitialized;
     public bool RequiresCharacterInitialization => !_newGameInitialized;
 
@@ -592,8 +592,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { _exterior.RetireExteriorAppearance(); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
-        // The test figure's appearances and rigs are released once no site appearance draws them.
-        try { _peopleRigs?.Dispose(); }                                                          // Developer
+        // The walkers' figures (rigs, gsplat characters and their clips) are released once no site appearance draws them.
+        try { _people?.Dispose(); }                                                          // Developer
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         // The score's loop and the clips it opened belong to this session, so they are retired before
         // the Engine context that produced them is asked for anything else.

@@ -49,7 +49,7 @@ public sealed class PartsRigCrowdTests
     [InlineData(WanderState.Unloaded, false)]
     [InlineData(WanderState.Dead, false)]
     public void A_walker_walks_while_it_seeks_or_moves_to_a_waypoint(WanderState state, bool walks) =>
-        Assert.Equal(walks, PartsRigCrowd.Walks(state));
+        Assert.Equal(walks, IWalkerCrowd.Walks(state));
 
     [Theory]
     [InlineData("""{"spec": "parts-rig-layers/2", "layers": [{"name": "body", "track": 0, "body": true}]}""")]
