@@ -12,15 +12,17 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallMusicDirectorTests
 {
     [Fact]
-    public void Alternate_playlist_lists_preserve_the_donors_order_and_duplicates()
+    public void The_playlists_add_the_donors_unused_dungeon_songs_and_its_two_fm_only_songs()
     {
-        Assert.Equal(new[] { "song_fday___d", "song_fm_swim2", "song_fm_sunny", "song_02fm", "song_03fm", "song_22fm" },
-            DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Sunny, true));
-        Assert.Equal(new[] { "song_11fm", "song_fcurse", "song_feerie", "song_fruins", "song_18fm", "song_21fm" },
-            DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Night, true));
-        Assert.Equal(new[] { "song_fm_dngn1", "song_fm_dngn1", "song_fm_dngn2", "song_fm_dngn3", "song_fm_dngn4", "song_fm_dngn5", "song_fdngn10", "song_fdngn11", "song_fdungn4", "song_fdungn9", "song_04fm", "song_05fm", "song_07fm", "song_15fm", "song_15fm" },
-            DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Dungeon, true));
-        Assert.Equal(DaggerfallMusicDirector.SunnySongs, DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Sunny));
+        IReadOnlyList<string> dungeon = DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Dungeon);
+        Assert.Equal(25, dungeon.Count);
+        Assert.Equal("song_dungeon", dungeon[0]);
+        Assert.Equal(Enumerable.Range(1, 10).Select(number => $"song_d{number}"), dungeon.Skip(15));
+        Assert.Contains("song_fm_swim2", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Sunny));
+        Assert.Contains("song_fm_swim2", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Cloudy));
+        Assert.Contains("song_fm_nite3", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.MagesGuild));
+        // The FM renders are gone: no playlist names one.
+        Assert.DoesNotContain(DaggerfallMusicDirector.PlaylistTracks, track => track.EndsWith("fm", StringComparison.Ordinal));
     }
 
     [Fact]

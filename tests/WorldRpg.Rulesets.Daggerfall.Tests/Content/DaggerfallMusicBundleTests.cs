@@ -32,9 +32,9 @@ public sealed class DaggerfallMusicBundleTests
         Assert.DoesNotContain("song_dungeon", missing);
         Assert.Contains("song_tavern", missing);
         Assert.Equal(missing.Order(StringComparer.Ordinal), missing);
-        // Every playlist the director plays, in either set, names its tracks here.
+        // Every playlist the director plays names its tracks here.
         foreach (DaggerfallMusicContext context in Enum.GetValues<DaggerfallMusicContext>())
-            Assert.All(DaggerfallMusicDirector.PlaylistFor(context, alternatePlaylists: true), track => Assert.Contains(track, DaggerfallMusicDirector.PlaylistTracks));
+            Assert.All(DaggerfallMusicDirector.PlaylistFor(context), track => Assert.Contains(track, DaggerfallMusicDirector.PlaylistTracks));
     }
 
     [Fact]

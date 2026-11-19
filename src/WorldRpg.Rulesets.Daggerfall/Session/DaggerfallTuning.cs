@@ -35,7 +35,6 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallLycanthropyTuning Lycanthropy { get; init; } = DaggerfallLycanthropyTuning.Classic;
     internal DaggerfallStrikeEnchantmentTuning StrikeEnchantments { get; init; } = new(5, 2.25d);
     internal DaggerfallDetectionTuning Detection { get; init; } = new(14d);
-    internal DaggerfallMusicTuning Music { get; init; } = new(AlternatePlaylists: false);
     internal DaggerfallViewmodelTuning Viewmodel { get; init; } = DaggerfallViewmodelTuning.Classic;
     internal DaggerfallWorldOriginTuning WorldOrigin { get; init; } = new(500f);
     internal DaggerfallCivilianWanderTuning CivilianWander { get; init; } = DaggerfallCivilianWanderTuning.Classic;
@@ -146,7 +145,6 @@ internal sealed record DaggerfallTuning(
             Vampirism = DaggerfallVampirismTuning.Read(root.GetProperty("vampirism")),
             Lycanthropy = DaggerfallLycanthropyTuning.Read(root.GetProperty("lycanthropy")),
             Detection = DaggerfallDetectionTuning.Read(root.GetProperty("detection")),
-            Music = DaggerfallMusicTuning.Read(root.GetProperty("music")),
             Viewmodel = DaggerfallViewmodelTuning.Read(root.GetProperty("viewmodel")),
             WorldOrigin = DaggerfallWorldOriginTuning.Read(root.GetProperty("worldOrigin")),
             CivilianWander = DaggerfallCivilianWanderTuning.Read(root.GetProperty("civilianWander")),
@@ -292,12 +290,6 @@ internal sealed record DaggerfallTimeTuning(double GameSecondsPerRealSecond)
     }
 
     internal static DaggerfallTimeTuning Read(JsonElement section) => new DaggerfallTimeTuning(section.GetProperty("gameSecondsPerRealSecond").GetDouble()).Validate();
-}
-
-/// <summary>Chooses the donor's standard or alternate playlists; JSON admission requires a Boolean.</summary>
-internal sealed record DaggerfallMusicTuning(bool AlternatePlaylists)
-{
-    internal static DaggerfallMusicTuning Read(JsonElement section) => new(section.GetProperty("alternatePlaylists").GetBoolean());
 }
 
 /// <summary>

@@ -199,7 +199,7 @@ internal sealed partial class DaggerfallSession
             PublishPresentation();                                                                // UiProjection
             // The score follows the world this admitted update settled: a site change or a change of day
             // is real once the step applied it, and the director is told once per admitted update.
-            if (Music.Scored) Music.Advance(MusicContext(), _time.Calendar.DayNumber);            // Scene
+            if (Music.Scored) Music.Advance(MusicContext(), _time.Calendar.DayNumber, _activeProfileKey.Site); // Scene
         }
         UpdatePlayerTime(facts);                                                                  // Session: player time's hand-off, below
         // Play time counts the time the world runs in play; menus, the title and held moments do not.
@@ -532,7 +532,7 @@ internal sealed partial class DaggerfallSession
         ApplyDeferredPlayerActs();                                                                // Session: the deferred acts' list, below
         ResolveExhaustion();                                                                      // Condition
         PublishPresentation();                                                                    // UiProjection
-        if (Music.Scored) Music.Advance(MusicContext(), _time.Calendar.DayNumber);                // Scene
+        if (Music.Scored) Music.Advance(MusicContext(), _time.Calendar.DayNumber, _activeProfileKey.Site);  // Scene
     }
 
     /// <summary>

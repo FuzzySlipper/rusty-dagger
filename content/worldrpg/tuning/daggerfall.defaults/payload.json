@@ -539,9 +539,6 @@
     "damageAdjustment": 5,
     "vampiricRange": 2.25
   },
-  "music": {
-    "alternatePlaylists": false
-  },
   "viewmodel": {
     "style": "held"
   },

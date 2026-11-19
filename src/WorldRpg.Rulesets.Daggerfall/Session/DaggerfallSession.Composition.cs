@@ -110,7 +110,7 @@ internal sealed partial class DaggerfallSession
             _newGameInitialized = saved is not null;
             _tuning = tuning;
             _viewLight = new(tuning.SiteLighting);
-            Music = new DaggerfallMusic(engine, music, tuning.Music.AlternatePlaylists,
+            Music = new DaggerfallMusic(engine, music,
                 DaggerfallConcreteGuildCatalog.MagesFactionId, DaggerfallConcreteGuildCatalog.FightersTrainerFactionId);
             // A 3D viewmodel without its art draws the classic sprites; say why once rather than silently.
             if (tuning.Viewmodel.Style != DaggerfallViewmodelStyle.Classic && composition.HeldArt is null)

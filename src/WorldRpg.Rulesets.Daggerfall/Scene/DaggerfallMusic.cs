@@ -11,7 +11,6 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallMusic
 {
     private readonly IEngineContext _engine;
-    private readonly bool _alternatePlaylists;
     private readonly int _magesFactionId;
     private readonly int _fightersTrainerFactionId;
     private readonly Dictionary<string, AudioClip> _clips = new(StringComparer.Ordinal);
@@ -21,10 +20,9 @@ internal sealed class DaggerfallMusic
     /// <param name="bundle">The music container's tracks; without one there is no score and nothing plays.</param>
     /// <param name="magesFactionId">The Mages Guild's faction, whose hall plays the guild's songs.</param>
     /// <param name="fightersTrainerFactionId">The fighters' trainer's faction, whose temple building plays the knight's songs.</param>
-    internal DaggerfallMusic(IEngineContext engine, DaggerfallMusicBundle? bundle, bool alternatePlaylists, int magesFactionId, int fightersTrainerFactionId)
+    internal DaggerfallMusic(IEngineContext engine, DaggerfallMusicBundle? bundle, int magesFactionId, int fightersTrainerFactionId)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        _alternatePlaylists = alternatePlaylists;
         _magesFactionId = magesFactionId;
         _fightersTrainerFactionId = fightersTrainerFactionId;
         Bundle = bundle;
@@ -32,7 +30,7 @@ internal sealed class DaggerfallMusic
         // owner's own: it keeps the Engine resource alive for as long as that track plays and releases it on disposal.
         if (bundle is not null)
         {
-            Director = new DaggerfallMusicDirector(engine.Audio, ResolveClip, ReportRetired, alternatePlaylists);
+            Director = new DaggerfallMusicDirector(engine.Audio, ResolveClip, ReportRetired);
             ReportMissingTracks(bundle);
         }
     }
@@ -103,17 +101,23 @@ internal sealed class DaggerfallMusic
     /// ordinary update allocates nothing and emits nothing.
     /// </summary>
     /// <param name="dayNumber">The calendar's day, by which a tavern picks its song.</param>
-    internal void Advance(DaggerfallMusicContext context, long dayNumber)
+    /// <param name="site">The site the player is in, by which a dungeon keeps its own song on every visit.</param>
+    internal void Advance(DaggerfallMusicContext context, long dayNumber, DaggerfallSiteId site)
     {
         if (Director is null || Bundle is null) return;
         string? playing = Director.Playing;
-        IReadOnlyList<string> playlist = DaggerfallMusicDirector.PlaylistFor(context, _alternatePlaylists);
-        for (int offset = 0; offset < playlist.Count; offset++)
+        IReadOnlyList<string> playlist = DaggerfallMusicDirector.PlaylistFor(context);
+        int first = context switch
         {
+            DaggerfallMusicContext.Tavern => (int)(dayNumber % playlist.Count),
+            DaggerfallMusicContext.Dungeon or DaggerfallMusicContext.Castle => SiteSong(site, playlist.Count),
             // The rotation is per site change, so a place with more than one published song starts a
             // different one than the place before it, exactly as the donor's own lists rotate.
-            int rotation = context == DaggerfallMusicContext.Tavern ? (int)(dayNumber % playlist.Count) : _rotation;
-            int pick = (rotation + offset) % playlist.Count;
+            _ => _rotation,
+        };
+        for (int offset = 0; offset < playlist.Count; offset++)
+        {
+            int pick = (first + offset) % playlist.Count;
             if (!Bundle.CanPlay(playlist[pick])) continue;
             // A cue that cannot open throws out of the update and stays terminal for it. The loop it
             // replaced was already reported by the director, so nothing ends here unreported.
@@ -133,7 +137,7 @@ internal sealed class DaggerfallMusic
         if (_silentContext != context)
         {
             _silentContext = context;
-            Report("cue.unavailable", $"No published music cue for context '{context}' in the {(_alternatePlaylists ? "alternate" : "standard")} playlist.");
+            Report("cue.unavailable", $"No published music cue for context '{context}'.");
         }
     }
 
@@ -144,6 +148,19 @@ internal sealed class DaggerfallMusic
         _rotation++;
         // The director reports the retirement, so this only has to move the rotation on.
         Director.Stop();
+    }
+
+    /// <summary>
+    /// The song a site starts on among <paramref name="count"/>: a fixed hash of its region and index, so a dungeon plays
+    /// the same song on every visit in every save, whatever was visited before it.
+    /// </summary>
+    internal static int SiteSong(DaggerfallSiteId site, int count)
+    {
+        // FNV-1a over the two numbers: stable across runs and machines, unlike string.GetHashCode.
+        uint hash = 2166136261;
+        foreach (int value in (ReadOnlySpan<int>)[site.Region, site.Index])
+            for (int shift = 0; shift < 32; shift += 8) hash = unchecked((hash ^ (byte)(value >> shift)) * 16777619);
+        return (int)(hash % (uint)count);
     }
 
     /// <summary>Ends the loop and releases every clip it opened, adding what failed to <paramref name="failure"/>.</summary>

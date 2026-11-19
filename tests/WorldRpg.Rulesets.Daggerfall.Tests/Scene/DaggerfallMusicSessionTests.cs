@@ -34,19 +34,19 @@ public sealed class DaggerfallMusicSessionTests
         using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults, identity) { Music = bundle });
 
         session.Update(Update());
-        // The first listed dungeon song is the published one, and it plays through the real resolver.
-        Assert.Equal("song_dungeon", session.Music.Track);
+        // The fixture dungeon's own song (a fixed hash of its site) is published, and it plays through the real resolver.
+        Assert.Equal("song_04", session.Music.Track);
         Assert.Single(engine.StartedAudioVoices);
         // The voice is a clip the resolver opened from content, which is the path a substituted or
         // pre-baked clip could not take.
         Assert.Equal(1, engine.OpenedMusicClips);
         // A cue change is the one completed change a score has to report: nothing on screen names the track.
-        Assert.Equal(["daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'."], Cues(engine));
+        Assert.Equal(["daggerfall.music/cue.started: Music cue 'song_04' started for context 'Dungeon'."], Cues(engine));
         // The tracks the container carries no recording of are named once, at the start, and never again.
         Assert.Equal(DaggerfallMusicDirector.MissingTracks(bundle).Count == 0 ? 0 : 1, engine.PublishedDiagnostics.Count(value => value.StartsWith("daggerfall.music/tracks.missing:", StringComparison.Ordinal)));
         // The same world in the next admitted update keeps that one loop: no second voice, no release.
         session.Update(Update());
-        Assert.Equal("song_dungeon", session.Music.Track);
+        Assert.Equal("song_04", session.Music.Track);
         Assert.Single(engine.StartedAudioVoices);
         Assert.Equal(0, engine.ReleasedAudioVoices);
         Assert.Single(Cues(engine));
@@ -55,8 +55,8 @@ public sealed class DaggerfallMusicSessionTests
         // Disposal retires the loop exactly once, and the session holds no cue afterwards.
         Assert.Equal(1, engine.ReleasedAudioVoices);
         Assert.Equal(
-            ["daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'.",
-             "daggerfall.music/cue.retired: Music cue 'song_dungeon' retired."],
+            ["daggerfall.music/cue.started: Music cue 'song_04' started for context 'Dungeon'.",
+             "daggerfall.music/cue.retired: Music cue 'song_04' retired."],
             Cues(engine));
     }
 
@@ -79,7 +79,7 @@ public sealed class DaggerfallMusicSessionTests
         session.State.PlayerControl.MoveTo(start + System.Numerics.Vector3.UnitX * 30);
         session.Update(Update());
         Assert.Equal(DaggerfallMusicContext.Dungeon, session.MusicContext());
-        Assert.Equal("song_dungeon", session.Music.Track);
+        Assert.Equal("song_04", session.Music.Track);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public sealed class DaggerfallMusicSessionTests
         session.AdmitSiteProfiles(new DaggerfallSiteProfiles([inputs, castle]));
 
         session.Update(Update());
-        Assert.Equal("song_dungeon", session.Music.Track);
+        Assert.Equal("song_04", session.Music.Track);
         Assert.Single(engine.StartedAudioVoices);
 
         Assert.True(session.TryTransitionTo(castle.ProfileKey));
@@ -110,18 +110,18 @@ public sealed class DaggerfallMusicSessionTests
         Assert.Null(session.Music.Track);
         Assert.Equal(1, engine.ReleasedAudioVoices);
         Assert.Equal(
-            ["daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'.",
-             "daggerfall.music/cue.retired: Music cue 'song_dungeon' retired."],
+            ["daggerfall.music/cue.started: Music cue 'song_04' started for context 'Dungeon'.",
+             "daggerfall.music/cue.retired: Music cue 'song_04' retired."],
             Cues(engine));
 
         // The destination's own cue starts on the update that settles the new world, as one voice.
         session.Update(Update());
-        Assert.Equal("song_dungeon6", session.Music.Track);
+        Assert.Equal("song_dungeon", session.Music.Track);
         Assert.Equal(2, engine.StartedAudioVoices.Count);
         Assert.Equal(
-            ["daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'.",
-             "daggerfall.music/cue.retired: Music cue 'song_dungeon' retired.",
-             "daggerfall.music/cue.started: Music cue 'song_dungeon6' started for context 'Dungeon'."],
+            ["daggerfall.music/cue.started: Music cue 'song_04' started for context 'Dungeon'.",
+             "daggerfall.music/cue.retired: Music cue 'song_04' retired.",
+             "daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'."],
             Cues(engine));
         session.Dispose();
         Assert.Equal(2, engine.ReleasedAudioVoices);
@@ -183,16 +183,15 @@ public sealed class DaggerfallMusicSessionTests
         Assert.Equal(fixture.OpenedMusicClips, fixture.ReleasedMusicClips);
     }
 
-    [Theory]
-    [InlineData(false, "song_overlong", "song_10")]
-    [InlineData(true, "song_fmover_c", "song_11fm")]
-    public void Outdoor_rain_answers_daylight_and_night_overrides_weather(bool alternate, string rain, string night)
+    [Fact]
+    public void Outdoor_rain_answers_daylight_and_night_overrides_weather()
     {
+        const string rain = "song_overlong", night = "song_10";
         string root = TestData.RepositoryRoot;
         var content = FullContent(root);
         var inputs = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
         var fixture = MusicEngine(inputs);
-        var tuning = MusicTuning(root, alternate) with { Weather = DaggerfallWeatherTuning.Classic with {
+        var tuning = DaggerfallTuning.Defaults with { Weather = DaggerfallWeatherTuning.Classic with {
             Odds = Enumerable.Range(0,24).Select(_ => new[]{0,0,0,0,100,0,0}).ToArray() } };
         using var session = DaggerfallSession.StartNew(fixture.Context,
             new(TestPayload.Definitions, inputs, tuning) { Music = Score(content),
@@ -211,13 +210,12 @@ public sealed class DaggerfallMusicSessionTests
     }
 
     [Fact]
-    public void Every_environment_playlist_has_published_music_in_both_variants()
+    public void Every_environment_playlist_has_published_music()
     {
         var content = FullContent(TestData.RepositoryRoot);
         var bundle = Score(content);
         foreach (var context in Enum.GetValues<DaggerfallMusicContext>().Except([DaggerfallMusicContext.Combat, DaggerfallMusicContext.Menu]))
-            foreach (bool alternate in new[]{false,true})
-                Assert.Contains(DaggerfallMusicDirector.PlaylistFor(context, alternate), bundle.CanPlay);
+            Assert.Contains(DaggerfallMusicDirector.PlaylistFor(context), bundle.CanPlay);
     }
 
     [Fact]
@@ -241,7 +239,7 @@ public sealed class DaggerfallMusicSessionTests
         ulong step = 2;
         RunSeconds(session, ref step, DaggerfallTuning.Defaults.Attacks.For("long-blade").Fast.Windup + 2d / 60d);
         Assert.Equal(1, session.State.Progression.SkillUses["long-blade"]);
-        Assert.Equal("song_dungeon", session.Music.Track);
+        Assert.Equal("song_04", session.Music.Track);
         Assert.Equal(1, engine.OpenedMusicClips);
         Assert.Single(engine.PublishedDiagnostics, value => value.Contains("cue.started"));
         Assert.Equal(0, engine.ReleasedMusicClips);
@@ -271,14 +269,6 @@ public sealed class DaggerfallMusicSessionTests
         ContentFake content = new(releases);
         foreach (var profile in profiles) { PopulateContent(content, profile); PopulateTerrainContent(content, profile); }
         return EngineContextFake.Create(content, SpatialFake.Create(profiles[0].Geometry.Spatial[0].Sha256, releases).Service, new AppearanceFake(releases));
-    }
-
-    private static DaggerfallTuning MusicTuning(string root, bool alternate)
-    {
-        System.Text.Json.Nodes.JsonNode payload = System.Text.Json.Nodes.JsonNode.Parse(TestContentFiles.ReadText(
-            Path.Combine(root, "content/worldrpg/tuning/daggerfall.defaults/payload.json")))!;
-        payload["music"]!["alternatePlaylists"] = alternate;
-        return DaggerfallTuning.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString()));
     }
 
     private static void PopulateTerrainContent(ContentFake content, DaggerfallSiteProfile profile)

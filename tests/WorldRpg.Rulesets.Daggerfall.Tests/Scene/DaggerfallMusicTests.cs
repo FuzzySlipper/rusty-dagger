@@ -8,7 +8,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
 /// The music owner alone, with no session: the donor context a place answers, the song it plays for a context, the
-/// rotation a site change moves on, the tavern's song by the day, a silent context reported once, and the clips it
+/// rotation a site change moves on, a dungeon's own song, the tavern's song by the day, a silent context reported once, and the clips it
 /// releases.
 /// </summary>
 public sealed class DaggerfallMusicTests
@@ -19,7 +19,7 @@ public sealed class DaggerfallMusicTests
     [Fact]
     public void The_donor_context_follows_the_place_the_building_and_the_weather()
     {
-        DaggerfallMusic music = new(Engine().Context, null, false, Mages, FightersTrainer);
+        DaggerfallMusic music = new(Engine().Context, null, Mages, FightersTrainer);
 
         Assert.Equal(DaggerfallMusicContext.Castle, DaggerfallMusic.Underground(insideCastle: true));
         Assert.Equal(DaggerfallMusicContext.Dungeon, DaggerfallMusic.Underground(insideCastle: false));
@@ -43,7 +43,7 @@ public sealed class DaggerfallMusicTests
     [Fact]
     public void The_context_asks_each_reading_only_where_it_decides()
     {
-        DaggerfallMusic music = new(Engine().Context, null, false, Mages, FightersTrainer);
+        DaggerfallMusic music = new(Engine().Context, null, Mages, FightersTrainer);
         Place dungeon = new(DaggerfallWorldProfileKind.Dungeon) { InsideCastle = true };
         Assert.Equal(DaggerfallMusicContext.Castle, music.Context(dungeon));
         Assert.Equal(["kind", "castle"], dungeon.Asked);
@@ -85,10 +85,10 @@ public sealed class DaggerfallMusicTests
     public void Without_a_score_nothing_plays_and_nothing_is_said()
     {
         EngineContextFake engine = Engine();
-        DaggerfallMusic music = new(engine.Context, null, false, Mages, FightersTrainer);
+        DaggerfallMusic music = new(engine.Context, null, Mages, FightersTrainer);
 
         Assert.False(music.Scored);
-        music.Advance(DaggerfallMusicContext.Dungeon, 0);
+        music.Advance(DaggerfallMusicContext.Dungeon, 0, Site);
         music.ChangeSite();
         Exception? failure = null;
         music.Dispose(ref failure);
@@ -103,13 +103,13 @@ public sealed class DaggerfallMusicTests
     public void A_context_keeps_one_loop_and_a_site_change_moves_on_to_its_next_song()
     {
         EngineContextFake engine = Engine();
-        DaggerfallMusic music = new(engine.Context, Score("song_dungeon", "song_dungeon5"), false, Mages, FightersTrainer);
+        DaggerfallMusic music = new(engine.Context, Score("song_gday___d", "song_swimming"), Mages, FightersTrainer);
 
-        music.Advance(DaggerfallMusicContext.Dungeon, 0);
-        music.Advance(DaggerfallMusicContext.Dungeon, 0);
+        music.Advance(DaggerfallMusicContext.Sunny, 0, Site);
+        music.Advance(DaggerfallMusicContext.Sunny, 0, Site);
 
         Assert.True(music.Scored);
-        Assert.Equal("song_dungeon", music.Track);
+        Assert.Equal("song_gday___d", music.Track);
         Assert.Single(engine.StartedAudioVoices);
         Assert.Equal(1, engine.OpenedMusicClips);
 
@@ -117,28 +117,53 @@ public sealed class DaggerfallMusicTests
         // The retirement releases the voice and the clip it played.
         Assert.Null(music.Track);
         Assert.Equal(1, engine.ReleasedAudioVoices);
-        music.Advance(DaggerfallMusicContext.Dungeon, 0);
-        Assert.Equal("song_dungeon5", music.Track);
+        music.Advance(DaggerfallMusicContext.Sunny, 0, Site);
+        Assert.Equal("song_swimming", music.Track);
 
         Exception? failure = null;
         music.Dispose(ref failure);
         Assert.Null(failure);
         Assert.Equal(2, engine.ReleasedAudioVoices);
         Assert.Equal(
-            ["daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'.",
-             "daggerfall.music/cue.retired: Music cue 'song_dungeon' retired.",
-             "daggerfall.music/cue.started: Music cue 'song_dungeon5' started for context 'Dungeon'.",
-             "daggerfall.music/cue.retired: Music cue 'song_dungeon5' retired."],
+            ["daggerfall.music/cue.started: Music cue 'song_gday___d' started for context 'Sunny'.",
+             "daggerfall.music/cue.retired: Music cue 'song_gday___d' retired.",
+             "daggerfall.music/cue.started: Music cue 'song_swimming' started for context 'Sunny'.",
+             "daggerfall.music/cue.retired: Music cue 'song_swimming' retired."],
             Cues(engine));
+    }
+
+    [Fact]
+    public void A_dungeon_plays_its_own_song_on_every_visit_whatever_was_visited_before()
+    {
+        DaggerfallSiteId first = new(17, 214), second = new(17, 215);
+        IReadOnlyList<string> dungeon = DaggerfallMusicDirector.DungeonSongs;
+        string own = dungeon[DaggerfallMusic.SiteSong(first, dungeon.Count)];
+        Assert.NotEqual(own, dungeon[DaggerfallMusic.SiteSong(second, dungeon.Count)]);
+        DaggerfallMusic music = new(Engine().Context, Score([.. dungeon]), Mages, FightersTrainer);
+
+        music.Advance(DaggerfallMusicContext.Dungeon, 0, first);
+        Assert.Equal(own, music.Track);
+        music.ChangeSite();
+        music.Advance(DaggerfallMusicContext.Dungeon, 0, second);
+        music.ChangeSite();
+        music.ChangeSite();
+        music.Advance(DaggerfallMusicContext.Dungeon, 0, first);
+        Assert.Equal(own, music.Track);
+        // A fresh owner, as a later session or another save, picks the same song for the same dungeon.
+        DaggerfallMusic later = new(Engine().Context, Score([.. dungeon]), Mages, FightersTrainer);
+        later.Advance(DaggerfallMusicContext.Dungeon, 0, first);
+        Assert.Equal(own, later.Track);
+        // The pick is a fixed hash, pinned so a change to it is a deliberate one.
+        Assert.Equal(10, DaggerfallMusic.SiteSong(first, dungeon.Count));
     }
 
     [Fact]
     public void A_tavern_plays_its_song_by_the_day_whatever_the_rotation()
     {
-        DaggerfallMusic music = new(Engine().Context, Score([.. DaggerfallMusicDirector.TavernSongs]), false, Mages, FightersTrainer);
+        DaggerfallMusic music = new(Engine().Context, Score([.. DaggerfallMusicDirector.TavernSongs]), Mages, FightersTrainer);
         music.ChangeSite();
 
-        music.Advance(DaggerfallMusicContext.Tavern, 7);
+        music.Advance(DaggerfallMusicContext.Tavern, 7, Site);
 
         Assert.Equal(DaggerfallMusicDirector.TavernSongs[7 % DaggerfallMusicDirector.TavernSongs.Count], music.Track);
     }
@@ -147,11 +172,11 @@ public sealed class DaggerfallMusicTests
     public void A_context_with_no_published_song_is_silent_and_said_once()
     {
         EngineContextFake engine = Engine();
-        DaggerfallMusic music = new(engine.Context, Score("song_dungeon"), false, Mages, FightersTrainer);
-        music.Advance(DaggerfallMusicContext.Dungeon, 0);
+        DaggerfallMusic music = new(engine.Context, Score("song_dungeon"), Mages, FightersTrainer);
+        music.Advance(DaggerfallMusicContext.Dungeon, 0, Site);
 
-        music.Advance(DaggerfallMusicContext.Sunny, 0);
-        music.Advance(DaggerfallMusicContext.Sunny, 0);
+        music.Advance(DaggerfallMusicContext.Sunny, 0, Site);
+        music.Advance(DaggerfallMusicContext.Sunny, 0, Site);
 
         Assert.Null(music.Track);
         Assert.Equal(1, engine.ReleasedAudioVoices);
@@ -159,6 +184,8 @@ public sealed class DaggerfallMusicTests
         // The tracks the container has no recording of are named once, as the owner is built.
         Assert.Single(engine.PublishedDiagnostics, value => value.StartsWith("daggerfall.music/tracks.missing:", StringComparison.Ordinal));
     }
+
+    private static readonly DaggerfallSiteId Site = new(0, 0);
 
     private static EngineContextFake Engine()
     {

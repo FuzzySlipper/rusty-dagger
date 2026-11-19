@@ -45,143 +45,75 @@ public enum DaggerfallMusicContext
 /// </remarks>
 public sealed class DaggerfallMusicDirector : IDisposable
 {
-    /// <summary>Donor Dungeon playlist in source order.</summary>
+    /// <summary>Donor Dungeon playlist in source order, then the ten dungeon songs the donor left unused.</summary>
     public static readonly IReadOnlyList<string> DungeonSongs =
-        ["song_dungeon", "song_dungeon5", "song_dungeon6", "song_dungeon7", "song_dungeon8", "song_dungeon9", "song_gdngn10", "song_gdngn11", "song_gdungn4", "song_gdungn9", "song_04", "song_05", "song_07", "song_15", "song_28"];
+        ["song_dungeon", "song_dungeon5", "song_dungeon6", "song_dungeon7", "song_dungeon8", "song_dungeon9", "song_gdngn10", "song_gdngn11", "song_gdungn4", "song_gdungn9", "song_04", "song_05", "song_07", "song_15", "song_28",
+         "song_d1", "song_d2", "song_d3", "song_d4", "song_d5", "song_d6", "song_d7", "song_d8", "song_d9", "song_d10"];
 
-    /// <summary>Donor DungeonFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> DungeonSongsFM =
-        ["song_fm_dngn1", "song_fm_dngn1", "song_fm_dngn2", "song_fm_dngn3", "song_fm_dngn4", "song_fm_dngn5", "song_fdngn10", "song_fdngn11", "song_fdungn4", "song_fdungn9", "song_04fm", "song_05fm", "song_07fm", "song_15fm", "song_15fm"];
-
-    /// <summary>Donor Sunny playlist in source order.</summary>
+    /// <summary>Donor Sunny playlist in source order, with the FM set's own swimming song.</summary>
     public static readonly IReadOnlyList<string> SunnySongs =
-        ["song_gday___d", "song_swimming", "song_gsunny2", "song_sunnyday", "song_02", "song_03", "song_22"];
-
-    /// <summary>Donor SunnyFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> SunnySongsFM =
-        ["song_fday___d", "song_fm_swim2", "song_fm_sunny", "song_02fm", "song_03fm", "song_22fm"];
+        ["song_gday___d", "song_swimming", "song_gsunny2", "song_sunnyday", "song_02", "song_03", "song_22", "song_fm_swim2"];
 
     /// <summary>Donor Night playlist in source order.</summary>
     public static readonly IReadOnlyList<string> NightSongs =
         ["song_10", "song_11", "song_gcurse", "song_geerie", "song_gruins", "song_18", "song_21"];
 
-    /// <summary>Donor NightFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> NightSongsFM =
-        ["song_11fm", "song_fcurse", "song_feerie", "song_fruins", "song_18fm", "song_21fm"];
-
     /// <summary>Donor Tavern playlist in source order.</summary>
     public static readonly IReadOnlyList<string> TavernSongs =
         ["song_square_2", "song_tavern", "song_folk1", "song_folk2", "song_folk3"];
-
-    /// <summary>Donor TavernFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> TavernSongsFM =
-        ["song_fm_sqr_2"];
 
     /// <summary>Donor Shop playlist in source order.</summary>
     public static readonly IReadOnlyList<string> ShopSongs =
         ["song_gshop"];
 
-    /// <summary>Donor ShopFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> ShopSongsFM =
-        ["song_fm_sqr_2"];
-
-    /// <summary>Donor MagesGuild playlist in source order.</summary>
+    /// <summary>Donor MagesGuild playlist in source order, with the FM set's own guild song.</summary>
     public static readonly IReadOnlyList<string> MagesGuildSongs =
-        ["song_gmage_3", "song_magic_2"];
-
-    /// <summary>Donor MagesGuildFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> MagesGuildSongsFM =
-        ["song_fm_nite3"];
+        ["song_gmage_3", "song_magic_2", "song_fm_nite3"];
 
     /// <summary>Donor Temple playlist in source order.</summary>
     public static readonly IReadOnlyList<string> TempleSongs =
         ["song_ggood"];
 
-    /// <summary>Donor TempleFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> TempleSongsFM =
-        ["song_fgood"];
-
     /// <summary>Donor TempleNeutral playlist in source order.</summary>
     public static readonly IReadOnlyList<string> TempleNeutralSongs =
         ["song_gneut"];
-
-    /// <summary>Donor TempleNeutralFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> TempleNeutralSongsFM =
-        ["song_fneut"];
 
     /// <summary>Donor TempleBad playlist in source order.</summary>
     public static readonly IReadOnlyList<string> TempleBadSongs =
         ["song_gbad"];
 
-    /// <summary>Donor TempleBadFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> TempleBadSongsFM =
-        ["song_fbad"];
-
     /// <summary>Donor Knight playlist in source order.</summary>
     public static readonly IReadOnlyList<string> KnightSongs =
         ["song_17"];
 
-    /// <summary>Donor KnightFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> KnightSongsFM =
-        ["song_17fm"];
-
-    /// <summary>Donor Cloudy playlist in source order.</summary>
+    /// <summary>Donor Cloudy playlist in source order, with the FM set's own swimming song.</summary>
     public static readonly IReadOnlyList<string> CloudySongs =
-        ["song_gday___d", "song_swimming", "song_gsunny2", "song_sunnyday", "song_02", "song_03", "song_22", "song_29", "song_12"];
-
-    /// <summary>Donor CloudyFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> CloudySongsFM =
-        ["song_fday___d", "song_fm_swim2", "song_fm_sunny", "song_02fm", "song_03fm", "song_22fm", "song_29fm", "song_12fm"];
+        ["song_gday___d", "song_swimming", "song_gsunny2", "song_sunnyday", "song_02", "song_03", "song_22", "song_fm_swim2", "song_29", "song_12"];
 
     /// <summary>Donor Overcast playlist in source order.</summary>
     public static readonly IReadOnlyList<string> OvercastSongs =
         ["song_29", "song_12", "song_13", "song_gpalac", "song_overcast"];
 
-    /// <summary>Donor OvercastFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> OvercastSongsFM =
-        ["song_29fm", "song_12fm", "song_13fm", "song_fpalac", "song_fmover_c"];
-
     /// <summary>Donor Rain playlist in source order.</summary>
     public static readonly IReadOnlyList<string> RainSongs =
         ["song_overlong", "song_raining", "song_08"];
-
-    /// <summary>Donor RainFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> RainSongsFM =
-        ["song_fmover_c", "song_fm_rain", "song_08fm"];
 
     /// <summary>Donor Snow playlist in source order.</summary>
     public static readonly IReadOnlyList<string> SnowSongs =
         ["song_20", "song_gsnow__b", "song_oversnow", "song_snowing"];
 
-    /// <summary>Donor SnowFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> SnowSongsFM =
-        ["song_20fm", "song_fsnow__b", "song_fmover_s"];
-
     /// <summary>Donor Interior playlist in source order.</summary>
     public static readonly IReadOnlyList<string> InteriorSongs =
         ["song_23"];
-
-    /// <summary>Donor InteriorFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> InteriorSongsFM =
-        ["song_23fm"];
 
     /// <summary>Donor Palace playlist in source order.</summary>
     public static readonly IReadOnlyList<string> PalaceSongs =
         ["song_06"];
 
-    /// <summary>Donor PalaceFM playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> PalaceSongsFM =
-        ["song_06fm"];
-
     /// <summary>Donor Castle playlist: a dungeon's castle block.</summary>
     public static readonly IReadOnlyList<string> CastleSongs =
         ["song_gpalac"];
 
-    /// <summary>Donor CastleFM playlist.</summary>
-    public static readonly IReadOnlyList<string> CastleSongsFM =
-        ["song_fpalac"];
-
-    private readonly bool _alternatePlaylists;
     private readonly IAudioService? _audio;
     private readonly Func<string, AudioClip?> _resolve;
     private readonly Action<string>? _retire;
@@ -193,9 +125,8 @@ public sealed class DaggerfallMusicDirector : IDisposable
     private AudioVoice? _voice;
 
     /// <summary>Creates a director over Engine audio with a track resolver.</summary>
-    public DaggerfallMusicDirector(IAudioService? audio, Func<string, AudioClip?> resolve, Action<string>? retire = null, bool alternatePlaylists = false)
+    public DaggerfallMusicDirector(IAudioService? audio, Func<string, AudioClip?> resolve, Action<string>? retire = null)
     {
-        _alternatePlaylists = alternatePlaylists;
         _audio = audio;
         _resolve = resolve ?? throw new ArgumentNullException(nameof(resolve));
         _retire = retire;
@@ -331,10 +262,10 @@ public sealed class DaggerfallMusicDirector : IDisposable
         _retire?.Invoke(retired);
     }
 
-    /// <summary>Every track any playlist names, in either playlist set, ordered.</summary>
+    /// <summary>Every track any playlist names, ordered.</summary>
     internal static IReadOnlyList<string> PlaylistTracks { get; } =
         [.. Enum.GetValues<DaggerfallMusicContext>()
-            .SelectMany(context => PlaylistFor(context, alternatePlaylists: false).Concat(PlaylistFor(context, alternatePlaylists: true)))
+            .SelectMany(PlaylistFor)
             .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
 
     /// <summary>The tracks the playlists name that the music container carries no recording of, ordered.</summary>
@@ -348,7 +279,7 @@ public sealed class DaggerfallMusicDirector : IDisposable
     /// the session asks here, then names one of these tracks through <see cref="Update"/>. A context the
     /// donor leaves to whatever plays — combat and the menu — answers the empty list.
     /// </remarks>
-    public static IReadOnlyList<string> PlaylistFor(DaggerfallMusicContext context, bool alternatePlaylists = false)
+    public static IReadOnlyList<string> PlaylistFor(DaggerfallMusicContext context)
     {
         if (!Enum.IsDefined(context))
         {
@@ -357,23 +288,23 @@ public sealed class DaggerfallMusicDirector : IDisposable
 
         return context switch
         {
-            DaggerfallMusicContext.Dungeon => alternatePlaylists ? DungeonSongsFM : DungeonSongs,
-            DaggerfallMusicContext.Sunny => alternatePlaylists ? SunnySongsFM : SunnySongs,
-            DaggerfallMusicContext.Night => alternatePlaylists ? NightSongsFM : NightSongs,
-            DaggerfallMusicContext.Tavern => alternatePlaylists ? TavernSongsFM : TavernSongs,
-            DaggerfallMusicContext.Shop => alternatePlaylists ? ShopSongsFM : ShopSongs,
-            DaggerfallMusicContext.MagesGuild => alternatePlaylists ? MagesGuildSongsFM : MagesGuildSongs,
-            DaggerfallMusicContext.Temple => alternatePlaylists ? TempleSongsFM : TempleSongs,
-            DaggerfallMusicContext.Knight => alternatePlaylists ? KnightSongsFM : KnightSongs,
-            DaggerfallMusicContext.Cloudy => alternatePlaylists ? CloudySongsFM : CloudySongs,
-            DaggerfallMusicContext.Rain => alternatePlaylists ? RainSongsFM : RainSongs,
-            DaggerfallMusicContext.Snow => alternatePlaylists ? SnowSongsFM : SnowSongs,
-            DaggerfallMusicContext.Interior => alternatePlaylists ? InteriorSongsFM : InteriorSongs,
-            DaggerfallMusicContext.Palace => alternatePlaylists ? PalaceSongsFM : PalaceSongs,
-            DaggerfallMusicContext.Castle => alternatePlaylists ? CastleSongsFM : CastleSongs,
-            DaggerfallMusicContext.Overcast => alternatePlaylists ? OvercastSongsFM : OvercastSongs,
-            DaggerfallMusicContext.TempleNeutral => alternatePlaylists ? TempleNeutralSongsFM : TempleNeutralSongs,
-            DaggerfallMusicContext.TempleBad => alternatePlaylists ? TempleBadSongsFM : TempleBadSongs,
+            DaggerfallMusicContext.Dungeon => DungeonSongs,
+            DaggerfallMusicContext.Sunny => SunnySongs,
+            DaggerfallMusicContext.Night => NightSongs,
+            DaggerfallMusicContext.Tavern => TavernSongs,
+            DaggerfallMusicContext.Shop => ShopSongs,
+            DaggerfallMusicContext.MagesGuild => MagesGuildSongs,
+            DaggerfallMusicContext.Temple => TempleSongs,
+            DaggerfallMusicContext.Knight => KnightSongs,
+            DaggerfallMusicContext.Cloudy => CloudySongs,
+            DaggerfallMusicContext.Rain => RainSongs,
+            DaggerfallMusicContext.Snow => SnowSongs,
+            DaggerfallMusicContext.Interior => InteriorSongs,
+            DaggerfallMusicContext.Palace => PalaceSongs,
+            DaggerfallMusicContext.Castle => CastleSongs,
+            DaggerfallMusicContext.Overcast => OvercastSongs,
+            DaggerfallMusicContext.TempleNeutral => TempleNeutralSongs,
+            DaggerfallMusicContext.TempleBad => TempleBadSongs,
             DaggerfallMusicContext.Combat or DaggerfallMusicContext.Menu => [],
             _ => throw new ArgumentOutOfRangeException(nameof(context), context, "Music answers to no context the contract declares."),
         };
@@ -385,7 +316,7 @@ public sealed class DaggerfallMusicDirector : IDisposable
     private string? TrackFor(DaggerfallMusicContext context, int pick)
     {
         if (context is DaggerfallMusicContext.Combat or DaggerfallMusicContext.Menu) return _playing;
-        IReadOnlyList<string> playlist = PlaylistFor(context, _alternatePlaylists);
+        IReadOnlyList<string> playlist = PlaylistFor(context);
         return playlist[pick % playlist.Count];
     }
 }
