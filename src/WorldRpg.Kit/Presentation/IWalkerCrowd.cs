@@ -19,6 +19,12 @@ public interface IWalkerCrowd
     /// </summary>
     Appearance? Show(ulong id, float heightMetres, bool walking);
 
+    /// <summary>
+    /// Before the snapshot <see cref="Show"/> built is published: lets go of what binds a walker it left out to its
+    /// object, since that object may now show something else (its own art, a corpse) or nothing.
+    /// </summary>
+    void Publishing();
+
     /// <summary>Once the snapshot <see cref="Show"/> built has been accepted: plays what each walker now does and lets go of walkers it left out.</summary>
     void Settle();
 }

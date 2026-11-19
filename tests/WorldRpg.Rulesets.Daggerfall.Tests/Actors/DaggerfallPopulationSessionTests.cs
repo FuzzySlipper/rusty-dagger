@@ -447,13 +447,16 @@ public sealed class DaggerfallPopulationSessionTests
             Assert.Equal(IWalkerCrowd.Walks(civilian.Wander.State) ? "walk" : "idle", play.Clip);
         }
 
-        // Off draws their own sprites again, and their instances go with the settle after it.
+        // Off draws their own sprites again, and their instances are gone by the time that snapshot is published: the
+        // Engine refuses a pose for an object that shows a sprite.
         int released = animation.ReleasedInstances;
+        int? releasedAtPublish = null;
+        fixture.Appearance.OnPublish = _ => releasedAtPublish ??= animation.ReleasedInstances - released;
         Assert.True(session.Commands<IDeveloperPeopleCommands>().Splat("off").Succeeded);
         session.Update(new ProductUpdate(OuterUpdate(4), []));
         AppearanceFact own = fixture.Appearance.Snapshots[^1].First(fact => fact.ObjectId == DaggerfallPresentationObjectIds.Gameplay(civilians[0].DurableId, "Actor"));
         Assert.NotSame(character, own.Appearance);
-        Assert.Equal(civilians.Length, animation.ReleasedInstances - released);
+        Assert.Equal(civilians.Length, releasedAtPublish);
     }
 
     private static int PopulationTextureOpens(AppearanceFake appearance) =>

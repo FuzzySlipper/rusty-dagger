@@ -53,6 +53,12 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
 
     public Appearance? Show(ulong id, float heightMetres, bool walking) => Crowd?.Show(id, heightMetres, walking);
 
+    public void Publishing()
+    {
+        rigCrowd?.Publishing();
+        splatCrowd?.Publishing();
+    }
+
     public void Settle()
     {
         rigCrowd?.Settle();

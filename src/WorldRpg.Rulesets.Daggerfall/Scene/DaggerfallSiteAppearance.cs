@@ -495,6 +495,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         }
         AppendViewmodelFacts(facts, viewmodel);
         appendSnapshotFacts?.Invoke(facts);
+        peopleRigs()?.Publishing();
         appearance.PublishSnapshot([.. facts]);
         ReachHeld();
         completeSnapshot?.Invoke();
@@ -901,6 +902,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
         {
             try
             {
+                peopleRigs()?.Publishing();
                 appearance.PublishSnapshot(ReadOnlySpan<AppearanceFact>.Empty);
                 completeSnapshot?.Invoke();
                 peopleRigs()?.Settle();

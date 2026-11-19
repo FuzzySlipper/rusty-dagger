@@ -13,7 +13,8 @@ public sealed record SplatFigure(string Name, Appearance Appearance, string Walk
 /// Draws walkers as one <see cref="SplatFigure"/>, at its own size: each walker shown in a snapshot is an animation
 /// instance of the figure's appearance, playing its walk while it walks and its idle otherwise. The figure's
 /// appearance and clips belong to whoever made it. An object holds one instance, so a walker that changes figure has
-/// its instance replaced, and one a snapshot left out has its instance released at the settle after that snapshot.
+/// its instance replaced, and one a snapshot leaves out has its instance released before that snapshot is published:
+/// the Engine refuses a pose for an object that now shows a sprite.
 /// </summary>
 public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, IDisposable
 {
@@ -50,7 +51,7 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
         return figure.Appearance;
     }
 
-    public void Settle()
+    public void Publishing()
     {
         if (disposed) return;
         List<Exception>? failures = null;
@@ -60,6 +61,12 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
             shown.Remove(id);
         }
         seen.Clear();
+        if (failures is { Count: > 0 }) throw new AggregateException(failures);
+    }
+
+    public void Settle()
+    {
+        if (disposed) return;
         foreach (Walker walker in shown.Values)
         {
             if (walker.Played == walker.Wanted) continue;
@@ -70,7 +77,6 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
                 !fades, fades ? walker.Figure.CrossfadeSeconds : 0F, fades, 0F));
             walker.Played = walker.Wanted;
         }
-        if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
     public void Dispose()

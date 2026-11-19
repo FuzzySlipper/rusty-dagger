@@ -87,6 +87,9 @@ public sealed class PartsRigCrowd(Func<IPartsRigsService> engine) : IWalkerCrowd
         return walker.Appearance;
     }
 
+    /// <summary>A walker's rig appearance binds nothing to its object, so it is let go once no snapshot draws it (<see cref="Settle"/>).</summary>
+    public void Publishing() { }
+
     /// <summary>
     /// Once the snapshot <see cref="Show"/> built has been accepted: plays each shown walker's clip where it changed (a
     /// new appearance starts its standing layers too), stops drawing walkers that snapshot left out, and releases the

@@ -29,6 +29,8 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     internal List<LightRequest> LightRequests { get; } = [];
     internal List<LightUpdateRequest> LightUpdates { get; } = [];
     internal List<AppearanceFact[]> Snapshots { get; } = [];
+    /// <summary>Runs as each snapshot is published, so a test can see what other fakes hold at that moment.</summary>
+    internal Action<AppearanceFact[]>? OnPublish { get; set; }
     internal List<SpriteFrameUpdateRequest> SetFrameRequests { get; } = [];
     internal List<SpritePlayback> CreatedPlaybacks { get; } = [];
     internal Queue<SpritePlaybackAdvanceResult> AdvanceReceipts { get; } = [];
@@ -218,6 +220,7 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
             failDuringProjectionDispose = true;
         }
         Snapshots.Add(values.ToArray());
+        OnPublish?.Invoke(Snapshots[^1]);
         retainedAppearances.Clear();
         foreach (AppearanceFact value in values) retainedAppearances.Add(value.Appearance);
         if (FailPublishAt == PublishCalls) throw new InvalidOperationException("Injected presentation publish failure.");

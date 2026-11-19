@@ -22,7 +22,7 @@ public sealed class SplatCrowdTests
         Assert.Same(figure.Appearance, crowd.Show(8, 1.9F, walking: false));
         Assert.Equal(["instance 1 of 1 on 7", "instance 2 of 1 on 8"], engine.Calls);
         engine.Calls.Clear();
-        crowd.Settle();
+        Publish(crowd);
         // A new instance starts its clip at once; the walk at the rate that keeps its stride at the walker's pace.
         Assert.Equal(["play 1 walk speed 0.9 restart fade 0", "play 2 idle speed 1 restart fade 0"], engine.Calls);
         engine.Calls.Clear();
@@ -30,11 +30,11 @@ public sealed class SplatCrowdTests
         // The same clip again plays nothing; stopping crossfades to the idle, and setting off again to the walk.
         crowd.Show(7, 1.7F, walking: true);
         crowd.Show(8, 1.9F, walking: false);
-        crowd.Settle();
+        Publish(crowd);
         Assert.Empty(engine.Calls);
         crowd.Show(7, 1.7F, walking: false);
         crowd.Show(8, 1.9F, walking: true);
-        crowd.Settle();
+        Publish(crowd);
         Assert.Equal(["play 1 idle speed 1 fade 0.25", "play 2 walk speed 0.9 fade 0.25"], engine.Calls);
         Assert.Equal(2, crowd.Count);
     }
@@ -46,44 +46,54 @@ public sealed class SplatCrowdTests
         using SplatCrowd crowd = new(() => engine.Service);
         crowd.Use(Figure("385", 1));
         crowd.Show(3, 1.7F, walking: true);
-        crowd.Settle();
+        Publish(crowd);
         engine.Calls.Clear();
 
         SplatFigure other = Figure("454", 2);
         crowd.Use(other);
         Assert.Same(other.Appearance, crowd.Show(3, 1.7F, walking: true));
-        crowd.Settle();
+        Publish(crowd);
         // An object holds one instance: the old one is given up for the new.
         Assert.Equal(["replace 1 with instance 2 of 2 on 3", "play 2 walk speed 0.9 restart fade 0"], engine.Calls);
     }
 
     [Fact]
-    public void A_walker_a_snapshot_leaves_out_is_released_at_its_settle_and_off_releases_them_all()
+    public void A_walker_a_snapshot_leaves_out_is_released_before_it_is_published_and_off_releases_them_all()
     {
         AnimationRecorder engine = AnimationRecorder.Create();
         using SplatCrowd crowd = new(() => engine.Service);
         crowd.Use(Figure("385", 1));
         crowd.Show(1, 1.7F, walking: false);
         crowd.Show(2, 1.8F, walking: true);
-        crowd.Settle();
+        Publish(crowd);
         engine.Calls.Clear();
 
-        // Walker 2 walked out of the snapshot: its object is gone, so its instance goes with the settle.
+        // Walker 2 walked out of the snapshot (or died, and shows its corpse): its instance goes before that snapshot is
+        // published, since the Engine refuses a pose for an object that shows a sprite.
         crowd.Show(1, 1.7F, walking: false);
-        crowd.Settle();
+        crowd.Publishing();
         Assert.Equal(["release 2"], engine.Calls);
+        crowd.Settle();
         // Back again, it is a new instance on its object.
         crowd.Show(1, 1.7F, walking: false);
         crowd.Show(2, 1.8F, walking: true);
-        crowd.Settle();
+        Publish(crowd);
         Assert.Equal(["release 2", "instance 3 of 1 on 2", "play 3 walk speed 0.9 restart fade 0"], engine.Calls);
         engine.Calls.Clear();
 
         crowd.Use(null);
         Assert.Null(crowd.Show(1, 1.7F, walking: false));
-        crowd.Settle();
+        crowd.Publishing();
         Assert.Equal(["release 1", "release 3"], engine.Calls);
+        crowd.Settle();
         Assert.Equal(0, crowd.Count);
+    }
+
+    /// <summary>What the site appearance does with the snapshot the crowd showed walkers in.</summary>
+    private static void Publish(SplatCrowd crowd)
+    {
+        crowd.Publishing();
+        crowd.Settle();
     }
 
     private static SplatFigure Figure(string name, ulong appearance) =>
