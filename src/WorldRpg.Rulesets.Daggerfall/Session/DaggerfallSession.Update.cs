@@ -796,7 +796,7 @@ internal sealed partial class DaggerfallSession
             if (_exterior.PlacedNatureIfChanged(origin) is { } placed) _horizon.PlaceNature(placed);   // Exterior
             _horizon.Show(_spatial.Session, origin, player, _time.Calendar.Season == DaggerfallSeason.Winter,
                 _sites.Projection.Lighting.SkyLight / _tuning.SiteLighting.ViewFull, DaggerfallMoons.LitBySlot(_time.Calendar.Sky),
-                LocalWeather.Current is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast,
+                LocalWeather.Conditions, _time.AbsoluteGameSeconds / (DaggerfallCalendar.SecondsPerMinute * DaggerfallCalendar.MinutesPerHour), LocalWeather.Current is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy or DaggerfallWeatherKind.Overcast,
                 !_classicArt, _exterior.GroundLayers, _exterior.FloraLook);                        // Exterior
         }
         else _horizon.Hide();                                                                     // Exterior

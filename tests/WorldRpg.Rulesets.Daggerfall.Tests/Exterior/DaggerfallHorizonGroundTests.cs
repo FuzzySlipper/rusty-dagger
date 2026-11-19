@@ -311,6 +311,49 @@ public sealed class DaggerfallHorizonGroundTests
         Assert.All(sheets, id => Assert.InRange(id, 0UL, DaggerfallPresentationObjectIds.Maximum));
     }
 
+    /// <summary>
+    /// The sea's fine tiles over shallows get meshes of their own, whose normals lean along +x by how shallow the water is,
+    /// so its waves die toward the shore; tiles deep all over keep the shared mesh. A few are read an update, and the ones a
+    /// layout leaves out go once a snapshot without them is accepted (#10910).
+    /// </summary>
+    [Fact]
+    public void The_seas_fine_tiles_over_shallows_carry_how_shallow_their_water_is_and_deep_ones_share_a_mesh()
+    {
+        List<string> releases = [];
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(new ContentFake(releases), SpatialFake.Create(TestSessions.Hash, releases).Service, appearance);
+        Material water = engine.Context.Graphics.CreateMaterial(default);
+        DaggerfallSeaShore shore = new(engine.Context, Ground(Coast()), water, 6.4F);
+        const double tile = Size / 8;
+
+        shore.Begin();
+        Assert.Null(shore.Look(1, Size / 2, 4 * Size, tile, 10));
+        Assert.Empty(appearance.MeshRequests);
+        // Along the coast from the open sea to the land, a tile at a time, until one holds shallows.
+        Appearance? shallows = null;
+        for (int step = 0; step < 24 && shallows is null; step++)
+        {
+            if (step % 3 == 0) { shore.End(); shore.Begin(); }
+            shallows = shore.Look((ulong)(100 + step), (2 * Size) + (step * tile), 4 * Size, tile, 10);
+        }
+        Assert.NotNull(shallows);
+        Vector3[] normals = Assert.Single(appearance.MeshRequests).Normals.ToArray();
+        Assert.Equal(121, normals.Length);
+        Assert.All(normals, normal => Assert.InRange(normal.X, 0, 1));
+        // The first tile to hold shallows meets them at its landward edge: deep water offshore, shallower toward the land.
+        Assert.True(normals.Max(normal => normal.X) > normals.Min(normal => normal.X));
+        Assert.True(normals[^1].X > normals[110].X, "The water shallows eastward, toward the land.");
+        Assert.All(normals, normal => Assert.Equal(new Vector2(1, 0), new Vector2(normal.Y, normal.Z)));
+
+        // A layout that leaves it out lets it go once a snapshot without it has been accepted.
+        shore.End();
+        shore.Begin();
+        shore.End();
+        Assert.DoesNotContain("mesh", releases);
+        shore.CompleteSnapshot();
+        Assert.Contains("mesh", releases);
+    }
+
     /// <summary>Samples for a tile: the Engine makes them, and a fixture has no Engine to ask.</summary>
     /// <summary>
     /// Flora grows on the surface near ground draws, on its climate's nature archive (the winter set in winter), and the

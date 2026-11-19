@@ -75,7 +75,21 @@ internal static class DaggerfallPresentationObjectIds
         return GameplayEnd | ((ulong)(uint)cellX << CellBits) | (uint)cellY;
     }
 
-    /// <summary>The ground cover's shells about the player, past every identity the sea and rivers take.</summary>
+    /// <summary>
+    /// One of the tiles a sea pixel near the player is cut into (<paramref name="tile"/> 0 to 63), coarse or fine, above the
+    /// ground cover's identities, which count up from theirs.
+    /// </summary>
+    internal static ulong SeaTile(int x, int y, int tile, bool fine)
+    {
+        if ((uint)tile >= 1U << SeaTileBits) throw new ArgumentOutOfRangeException(nameof(tile), "A sea pixel has 64 tiles.");
+        return Sea(x, y) | SeaTileBit | (fine ? SeaFineBit : 0) | ((ulong)(uint)tile << (2 * CellBits));
+    }
+
+    private const int SeaTileBits = 6;
+    private const ulong SeaTileBit = 1UL << 42;
+    private const ulong SeaFineBit = 1UL << ((2 * CellBits) + SeaTileBits);
+
+    /// <summary>The ground cover's shells about the player, past every identity the sea's sheets and rivers take.</summary>
     internal const ulong GroundCover = GameplayEnd | (1UL << 41);
 
     /// <summary>A map pixel's river water, in the half of the sea's band no map pixel reaches.</summary>

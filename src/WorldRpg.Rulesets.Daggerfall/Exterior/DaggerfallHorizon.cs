@@ -12,8 +12,10 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// The exterior ground, <see cref="DaggerfallHorizonGround"/> as two heightfields. Near ground stands in the world across the
 /// walked window, and far ground in the backdrop past it, so the ranges stand where the map has them. The world draws over
 /// the backdrop, so inside the window only near ground shows. Near ground stands while the player is outdoors, and far
-/// ground too unless they have chosen classic art. Where the art set has the sea's shader, the water and the far sea draw
-/// with it, swelling, rippling and glinting alike, so the far sea moves out to the horizon and the moons lay paths on it.
+/// ground too unless they have chosen classic art. Where the art set has the sea's art, the water, the rivers and the far
+/// sea draw with its shader: waves the weather's wind raises, its ripples and whitecaps, and the moons' paths, alike, so the
+/// far sea moves out to the horizon. Near the player the sea's sheets are cut into tiles, and those within the waves' reach
+/// are fine enough for the waves to move.
 /// </summary>
 internal sealed class DaggerfallHorizon : IDisposable
 {
@@ -30,16 +32,31 @@ internal sealed class DaggerfallHorizon : IDisposable
     private const int SheetReach = (int)(DaggerfallHorizonGround.NearReachMetres / CellSize) - 1;
     /// <summary>Past anything near ground's frame can reach.</summary>
     private const double NearEverywhere = 1e7;
+    /// <summary>A sea pixel near the player is cut into this many tiles a side, so the art's repeats run on across them as across pixels.</summary>
+    private const int TilesPerSide = 8;
+    private const double TileMetres = CellSize / TilesPerSide;
+    /// <summary>A fine tile's cells a side: about a metre, four vertices to the shortest wave.</summary>
+    private const int FineCells = 100;
+    /// <summary>How far from the eye the waves move the sea's fine tiles, metres; past it they only tilt the light.</summary>
+    private const float WavesReach = 200;
+    /// <summary>Tiles within this of the player are fine: the reach, and room for the eye to stand off the player.</summary>
+    private const double FineReach = WavesReach + 25;
+    /// <summary>The sea's waves follow the wind in steps this small, m/s.</summary>
+    private const float WindStep = .1f;
 
     private readonly IEngineContext _engine;
     private readonly DaggerfallHorizonTuning _tuning;
     private readonly DaggerfallHorizonGround _ground;
     private readonly Material _sea;
-    private readonly RenderResource? _seaShader;
+    /// <summary>The sea's shader for the sheets, the far sea and the rivers, and its maps, where the art set has them.</summary>
+    private readonly (RenderResource Near, RenderResource Far, RenderResource River, DaggerfallSeaMaps Maps)? _seaArt;
     private readonly Material _water;
-    private readonly MeshResource _sheet;
-    private readonly Appearance _sheetLook;
-    private readonly List<(ulong Id, Vector3 At)> _sheets = [];
+    private readonly Material _river;
+    private readonly (MeshResource Mesh, Appearance Look) _sheet, _tile, _fineTile;
+    private readonly List<(ulong Id, Vector3 At, Appearance Look)> _sheets = [];
+    private readonly DaggerfallSeaShore _shore;
+    private readonly DaggerfallSeaWind _wind;
+    private DaggerfallSeaWind.Blowing _blowing;
     private readonly DaggerfallRiverWater? _rivers;
     private readonly DaggerfallFloraField _flora;
     /// <summary>Forest on the far hills, standing on far ground in the backdrop.</summary>
@@ -68,9 +85,9 @@ internal sealed class DaggerfallHorizon : IDisposable
     private bool _nearSeen;
     private bool _disposed;
 
-    /// <param name="seaShader">The art set's shader for the sea and the rivers, if it has one.</param>
+    /// <param name="seaArt">The art set's shader and maps for the sea and the rivers, if it has them.</param>
     internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning, DaggerfallWaterTuning water, float repeatMetres, DaggerfallTerrainRivers? rivers,
-        DaggerfallFloraField flora, DaggerfallFarForest farForest, DaggerfallArtFile? seaShader)
+        DaggerfallFloraField flora, DaggerfallFarForest farForest, DaggerfallSeaArt? seaArt)
     {
         _flora = flora ?? throw new ArgumentNullException(nameof(flora));
         _farForest = farForest ?? throw new ArgumentNullException(nameof(farForest));
@@ -81,13 +98,24 @@ internal sealed class DaggerfallHorizon : IDisposable
         _lift = tuning.Lift;
         _fogDensity = tuning.FogDensity;
         _waterTuning = water;
-        _seaShader = seaShader is null ? null : engine.Graphics.OpenShader(engine.Content, seaShader.Path, seaShader.Sha256);
+        _wind = new(water);
+        _blowing = _wind.Now;
+        if (seaArt is not null)
+        {
+            RenderResource Shader(string keywords) => engine.Graphics.OpenShader(engine.Content, seaArt.Shader.Path, seaArt.Shader.Sha256, keywords);
+            RenderResource Map(DaggerfallArtFile map) => engine.Graphics.OpenTexture(engine.Content, map.Path, map.Sha256, TextureFilter.Linear, TextureWrap.Repeat,
+                space: TextureColorSpace.Linear).Handle;
+            _seaArt = (Shader(""), Shader("FAR"), Shader("RIVER"), new(Map(seaArt.Ripples), Map(seaArt.Foam)));
+        }
         _sea = engine.Graphics.CreateMaterial(Sea(Vector3.One));
-        _water = engine.Graphics.CreateMaterial(Water(default));
+        _water = engine.Graphics.CreateMaterial(Water(default, river: false));
+        _river = engine.Graphics.CreateMaterial(Water(default, river: true));
         _repeatMetres = repeatMetres;
-        _sheet = engine.Graphics.CreateMeshResource(Sheet(_water, repeatMetres));
-        _sheetLook = engine.Graphics.CreateMeshAppearance(_sheet);
-        _rivers = rivers is null ? null : new(engine, rivers, _water, repeatMetres);
+        _sheet = DaggerfallSeaShore.Sheet(engine, _water, CellSize, 1, repeatMetres);
+        _tile = DaggerfallSeaShore.Sheet(engine, _water, TileMetres, 1, repeatMetres);
+        _fineTile = DaggerfallSeaShore.Sheet(engine, _water, TileMetres, FineCells, repeatMetres);
+        _shore = new(engine, ground, _water, repeatMetres);
+        _rivers = rivers is null ? null : new(engine, rivers, _river, repeatMetres);
     }
 
     /// <summary>The clear-weather haze while the horizon stands, or none when the classic fog applies.</summary>
@@ -98,17 +126,22 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// ground that the fog has wholly taken would still stand out as a flat shape of the fog's colour against the sky.</param>
     /// <param name="sky">The sky's light as a share of clear noon's, which the sea takes in its own colours, near and far alike.</param>
     /// <param name="moons">Each moon slot's lit fraction, from 0 new to 1 full, by which the water reflects it.</param>
+    /// <param name="weather">The weather where the player stands, whose wind raises the sea's waves.</param>
+    /// <param name="gameHours">The game's clock in hours, over which waves build and fall.</param>
     /// <param name="far">Whether far ground and refreshed flora stand at all: classic art shows the painted sky's horizon, and its nature in the donor's places.</param>
     /// <param name="layers">Opens a ground archive's layers.</param>
     /// <param name="flora">What a nature archive's record draws as flora.</param>
-    internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, bool winter, Vector3 sky, Vector4 moons, bool seen, bool far,
-        Func<int, DaggerfallGroundLayers> layers, Func<int, int, DaggerfallFloraLook?> flora)
+    internal void Show(SpatialSession session, DaggerfallExteriorWorldOrigin origin, Vector3 local, bool winter, Vector3 sky, Vector4 moons,
+        DaggerfallWeatherConditions weather, double gameHours, bool seen, bool far, Func<int, DaggerfallGroundLayers> layers, Func<int, int, DaggerfallFloraLook?> flora)
     {
         sky = Vector3.Clamp(sky, Vector3.Zero, Vector3.One);
         bool skyMoved = Vector3.Abs(sky - _sky) is { } moved && Math.Max(moved.X, Math.Max(moved.Y, moved.Z)) >= TintStep;
-        if (skyMoved || (_seaShader is not null && moons != _moons))
+        _wind.Follow(gameHours, weather.Wind, weather.WindDegrees);
+        bool windMoved = _wind.Now.Bearing != _blowing.Bearing || Math.Abs(_wind.Now.Speed - _blowing.Speed) >= WindStep;
+        if (skyMoved || (_seaArt is not null && (moons != _moons || windMoved)))
         {
             if (skyMoved) _sky = sky;
+            if (windMoved) _blowing = _wind.Now;
             _moons = moons;
             _engine.Graphics.UpdateMaterial(new(_sea, Sea(_sky)));
             _waterArchive = -1;
@@ -264,12 +297,14 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// the sea's shader ripples it and lays the glints on it as on the sheets.
     /// </summary>
     private MaterialRequest Sea(Vector3 sky) => new MaterialRequest(new Color(0, 0, 0, 1), default(RenderResourceReference), 1, new Color(1, 1, 1, 1),
-        SeaColor(sky), 1, false) { Shader = SeaShader(far: true) };
+        SeaColor(sky), 1, false) { Shader = _seaArt is { } art ? SeaShader(art.Far, art.Maps, _waterTuning.Fetch.X, 0) : default };
 
-    /// <summary>The sheets' and the rivers' water over a climate's water art.</summary>
-    private MaterialRequest Water(RenderResourceReference art) => _waterTuning.Material(art, _sky, SeaShader(far: false));
+    /// <summary>The sheets' or the rivers' water over a climate's water art. The rivers' wind blows over a short reach, and never moves their mesh.</summary>
+    private MaterialRequest Water(RenderResourceReference art, bool river) => _waterTuning.Material(art, _sky, _seaArt is not { } sea ? null
+        : river ? SeaShader(sea.River, sea.Maps, _waterTuning.Fetch.Y, 0) : SeaShader(sea.Near, sea.Maps, _waterTuning.Fetch.X, WavesReach));
 
-    private MaterialShader SeaShader(bool far) => _seaShader is { } shader ? _waterTuning.SeaShader(shader, far, _moons, SeaColor(_sky)) : default;
+    private MaterialShader SeaShader(RenderResource shader, DaggerfallSeaMaps maps, float fetch, float reach) =>
+        _waterTuning.SeaShader(shader, maps, _blowing, fetch, reach, _moons, SeaColor(_sky));
 
     private Vector3 SeaColor(Vector3 sky) => new Vector3(_tuning.Sea.R, _tuning.Sea.G, _tuning.Sea.B) * sky;
 
@@ -280,26 +315,65 @@ internal sealed class DaggerfallHorizon : IDisposable
         if (archive != _waterArchive)
         {
             _waterArchive = archive;
-            _engine.Graphics.UpdateMaterial(new(_water, Water(_waterArt[archive])));
+            _engine.Graphics.UpdateMaterial(new(_water, Water(_waterArt[archive], river: false)));
+            _engine.Graphics.UpdateMaterial(new(_river, Water(_waterArt[archive], river: true)));
         }
 
         _sheets.Clear();
+        _shore.Begin();
         (int mapX, int mapY) = DaggerfallHorizonGround.MapPixel(x, z);
         for (int y = mapY - SheetReach; y <= mapY + SheetReach; y++)
         for (int column = mapX - SheetReach; column <= mapX + SheetReach; column++)
         {
             if (!_ground.HoldsSea(column, y)) continue;
             // A pixel spans x on from its X and z back from its Y; the sheet's corner is its least x and z.
+            double cornerX = column * CellSize, cornerZ = (y - 1) * CellSize;
             Vector3 corner = new((float)((column - origin.MapPixelX) * CellSize), (float)DaggerfallHorizonGround.OceanMetres, (float)((y - 1 - origin.MapPixelY) * CellSize));
-            _sheets.Add((DaggerfallPresentationObjectIds.Sea(column, y), corner + origin.Compensation));
+            foreach (SeaPiece piece in SeaPieces(x - cornerX, z - cornerZ))
+            {
+                (ulong id, Appearance look) = piece.Tile is not { } tile ? (DaggerfallPresentationObjectIds.Sea(column, y), _sheet.Look)
+                    : (DaggerfallPresentationObjectIds.SeaTile(column, y, tile, piece.Fine), piece.Fine ? _fineTile.Look : _tile.Look);
+                // A fine tile over shallows has its own mesh, so the waves die toward the shore.
+                if (piece.Fine) look = _shore.Look(id, cornerX + piece.Offset.X, cornerZ + piece.Offset.Z, TileMetres, FineCells) ?? look;
+                _sheets.Add((id, corner + piece.Offset + origin.Compensation, look));
+            }
         }
+        _shore.End();
+    }
+
+    /// <summary>One piece of a sea pixel: the whole sheet, or one of its tiles (fine where the waves move it), and where it stands in the pixel.</summary>
+    internal readonly record struct SeaPiece(int? Tile, bool Fine, Vector3 Offset);
+
+    /// <summary>
+    /// What draws a sea pixel's water for a player at (<paramref name="x"/>, <paramref name="z"/>) metres from its least
+    /// corner: the whole sheet, or, while the player is near enough for the waves to move some of it, its tiles, fine
+    /// within their reach. Past the reach the waves have stopped moving the water, so a coarse tile meets a fine one flat.
+    /// </summary>
+    internal static IEnumerable<SeaPiece> SeaPieces(double x, double z)
+    {
+        if (Distance(x, z, 0, 0, CellSize) >= FineReach)
+        {
+            yield return new(null, false, Vector3.Zero);
+            yield break;
+        }
+
+        for (int row = 0; row < TilesPerSide; row++)
+        for (int column = 0; column < TilesPerSide; column++)
+        {
+            double left = column * TileMetres, top = row * TileMetres;
+            yield return new((row * TilesPerSide) + column, Distance(x, z, left, top, TileMetres) < FineReach, new((float)left, 0, (float)top));
+        }
+
+        // How far a point is from a square, 0 inside it.
+        static double Distance(double x, double z, double left, double top, double side) =>
+            Math.Sqrt(Math.Pow(Math.Max(0, Math.Max(left - x, x - (left + side))), 2) + Math.Pow(Math.Max(0, Math.Max(top - z, z - (top + side))), 2));
     }
 
     /// <summary>Adds the sea to the world's snapshot while the ground stands.</summary>
     internal void AppendFacts(List<AppearanceFact> facts)
     {
-        foreach ((ulong id, Vector3 at) in _sheets)
-            facts.Add(new AppearanceFact(id, false, 0, new Transform(at, Quaternion.Identity, Vector3.One), _sheetLook, true, RenderLayer.Scene));
+        foreach ((ulong id, Vector3 at, Appearance look) in _sheets)
+            facts.Add(new AppearanceFact(id, false, 0, new Transform(at, Quaternion.Identity, Vector3.One), look, true, RenderLayer.Scene));
         _cover?.AppendFacts(facts);
         _rivers?.AppendFacts(facts);
     }
@@ -311,6 +385,7 @@ internal sealed class DaggerfallHorizon : IDisposable
     internal void CompleteSnapshot()
     {
         _rivers?.CompleteSnapshot();
+        _shore.CompleteSnapshot();
         _cover?.CompleteSnapshot();
     }
 
@@ -337,24 +412,11 @@ internal sealed class DaggerfallHorizon : IDisposable
         return cover;
     }
 
-    /// <summary>
-    /// One map pixel of flat water at the sea's surface. Land stands through it, so the shore is wherever ground meets the
-    /// water. It is a mesh, not a heightfield: a heightfield's tiles hang skirts, which show through water. The art's repeats
-    /// fill a pixel exactly, so it runs on from sheet to sheet.
-    /// </summary>
-    private static MeshResourceCreateRequest Sheet(Material water, float repeatMetres)
-    {
-        float side = (float)CellSize, repeats = side / repeatMetres;
-        Vector3[] positions = [new(0, 0, 0), new(side, 0, 0), new(side, 0, side), new(0, 0, side)];
-        Vector3[] normals = [Vector3.UnitY, Vector3.UnitY, Vector3.UnitY, Vector3.UnitY];
-        Vector2[] uvs = [new(0, 0), new(repeats, 0), new(repeats, repeats), new(0, repeats)];
-        return new MeshResourceCreateRequest(positions, normals, uvs, new uint[] { 0, 2, 1, 0, 3, 2 }, new MeshGroup[] { new(0, 0, 6) }, new MeshMaterialBinding[] { new(0, water) });
-    }
-
     /// <summary>Takes the ground down, keeping its tiles for the next time outdoors.</summary>
     internal void Hide()
     {
         _sheets.Clear();
+        _wind.Release();
         _flora.Hide();
         _cover?.Hide();
         _rivers?.Hide();
@@ -498,10 +560,16 @@ internal sealed class DaggerfallHorizon : IDisposable
         _cover?.Dispose();
         _cover = null;
         _rivers?.Release();
-        _sheetLook.Dispose();
-        _sheet.Dispose();
+        _shore.Release();
+        foreach ((MeshResource mesh, Appearance look) in new[] { _sheet, _tile, _fineTile })
+        {
+            look.Dispose();
+            mesh.Dispose();
+        }
         _water.Dispose();
-        _seaShader?.Dispose();
+        _river.Dispose();
+        if (_seaArt is { } art)
+            foreach (RenderResource resource in new[] { art.Near, art.Far, art.River, art.Maps.Ripples, art.Maps.Foam }) resource.Dispose();
     }
 
     /// <summary>

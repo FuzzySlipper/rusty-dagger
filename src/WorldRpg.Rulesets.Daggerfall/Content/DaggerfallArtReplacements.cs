@@ -100,6 +100,12 @@ internal sealed record DaggerfallPeopleRigDirection(string Label, float Angle, s
 internal sealed record DaggerfallArtFile(string Path, ContentSha256 Sha256);
 
 /// <summary>
+/// The sea's art (#10906, #10910): the shader the sea and the rivers draw with, its ripple map (tilt in xy, squared tilt in
+/// alpha) and its foam map (a mottle evenly spread from 0 to 1), the maps read as data.
+/// </summary>
+internal sealed record DaggerfallSeaArt(DaggerfallArtFile Shader, DaggerfallArtFile Ripples, DaggerfallArtFile Foam);
+
+/// <summary>
 /// A refreshed mesh standing in for the classic sprite cut from one texture record: a GLB resting on the floor, drawn at
 /// its own placed width in the world from its own width across (x), as the Engine admits it, or, hung from its sprite's top,
 /// at its placed height.
@@ -286,8 +292,8 @@ internal sealed class DaggerfallArtReplacements
     /// <summary>The shader that lays a winter tree's snow on its leaves, where the set has snowy trees.</summary>
     internal DaggerfallArtFile? TreeSnow { get; private init; }
 
-    /// <summary>The shader the sea and the rivers draw with: swells, the far sea's ripples and the moons' and the low sun's paths on the water.</summary>
-    internal DaggerfallArtFile? Sea { get; private init; }
+    /// <summary>What the sea and the rivers draw with: their waves, ripples and whitecaps, and the moons' and the low sun's paths on the water.</summary>
+    internal DaggerfallSeaArt? Sea { get; private init; }
 
     /// <summary>The tree meshes standing in for flora sprites, by nature archive and record.</summary>
     internal IReadOnlyDictionary<(int Archive, int Record), DaggerfallTreeArt> Trees { get; private init; } = new Dictionary<(int, int), DaggerfallTreeArt>();
@@ -383,7 +389,7 @@ internal sealed class DaggerfallArtReplacements
         DaggerfallGroundCoverArt? groundCover = null;
         Dictionary<(int, int), DaggerfallTreeArt> trees = [];
         DaggerfallArtFile? treeSnow = null;
-        DaggerfallArtFile? sea = null;
+        DaggerfallSeaArt? sea = null;
         DaggerfallPeopleRig? peopleRig = null;
         DaggerfallTitleScene? titleScene = null;
         Dictionary<(int Archive, int Record), DaggerfallArtMesh> meshes = [];
@@ -621,7 +627,9 @@ internal sealed class DaggerfallArtReplacements
                 }
             if (section.TryGetProperty("peopleRig", out JsonElement rig)) peopleRig = PeopleRig(rig);
             if (section.TryGetProperty("treeSnow", out JsonElement snowShader)) treeSnow = File(snowShader, "The trees' snow shader");
-            if (section.TryGetProperty("sea", out JsonElement seaShader)) sea = File(seaShader, "The sea's shader");
+            if (section.TryGetProperty("sea", out JsonElement seaArt))
+                sea = new(File(seaArt.GetProperty("shader"), "The sea's shader"), File(seaArt.GetProperty("ripples"), "The sea's ripple map"),
+                    File(seaArt.GetProperty("foam"), "The sea's foam map"));
             if (section.TryGetProperty("trees", out JsonElement treeArt))
                 foreach (JsonProperty tree in treeArt.EnumerateObject())
                 {

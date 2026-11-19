@@ -109,9 +109,12 @@ internal sealed class AppearanceFake(List<string> releases) : IGraphicsService
     public Appearance CreatePrimitive(PrimitiveAppearanceRequest request) => CreateAppearance();
     public Appearance ReplacePrimitive(PrimitiveAppearanceReplaceRequest request) => CreateAppearance();
     public Appearance CreateStaticMesh(StaticMeshAppearanceRequest request) => CreateAppearance();
-    public MeshResource CreateMeshResource(MeshResourceCreateRequest request) => new(
-        new MeshResourceHandle(nextHandle++),
-        () => releases.Add("mesh"));
+    internal List<MeshResourceCreateRequest> MeshRequests { get; } = [];
+    public MeshResource CreateMeshResource(MeshResourceCreateRequest request)
+    {
+        MeshRequests.Add(request);
+        return new(new MeshResourceHandle(nextHandle++), () => releases.Add("mesh"));
+    }
     public Appearance CreateMeshAppearance(MeshResource resource) => CreateAppearance();
     public MeshPartition PartitionMesh(MeshPartitionRequest request) => throw new NotSupportedException();
     public MeshPartitionReadout ReadMeshPartition(MeshPartition partition) => throw new NotSupportedException();

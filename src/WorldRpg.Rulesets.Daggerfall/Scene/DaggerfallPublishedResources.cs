@@ -13,21 +13,22 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal static class DaggerfallPublishedResources
 {
     /// <summary>
-    /// Opens a published texture with the given sampling, as sRGB colour; <paramref name="deferred"/> decodes and uploads it
-    /// on the renderer's workers, and what samples it draws once it is taken in.
+    /// Opens a published texture with the given sampling, as sRGB colour unless it is data (<paramref name="space"/>);
+    /// <paramref name="deferred"/> decodes and uploads it on the renderer's workers, and what samples it draws once it is
+    /// taken in.
     /// </summary>
     internal static RenderResourceInfo OpenTexture(this IGraphicsService graphics, IContentService content, string path, ContentSha256 sha256,
-        TextureFilter filter = TextureFilter.Nearest, TextureWrap wrap = TextureWrap.Clamp, bool deferred = false)
+        TextureFilter filter = TextureFilter.Nearest, TextureWrap wrap = TextureWrap.Clamp, bool deferred = false, TextureColorSpace space = TextureColorSpace.Srgb)
     {
         using ContentReference reference = Resolve(content, path, sha256);
-        return graphics.OpenResourceFromContent(new RenderResourceContentRequest(reference, filter, wrap, TextureColorSpace.Srgb, "", deferred));
+        return graphics.OpenResourceFromContent(new RenderResourceContentRequest(reference, filter, wrap, space, "", deferred));
     }
 
-    /// <summary>Opens a published product shader.</summary>
-    internal static RenderResource OpenShader(this IGraphicsService graphics, IContentService content, string path, ContentSha256 sha256)
+    /// <summary>Opens a published product shader, the variant its <paramref name="keywords"/> choose (space-separated).</summary>
+    internal static RenderResource OpenShader(this IGraphicsService graphics, IContentService content, string path, ContentSha256 sha256, string keywords = "")
     {
         using ContentReference reference = Resolve(content, path, sha256);
-        return graphics.OpenResourceFromContent(new RenderResourceContentRequest(reference, TextureFilter.Linear, TextureWrap.Clamp, TextureColorSpace.Srgb, "")).Handle;
+        return graphics.OpenResourceFromContent(new RenderResourceContentRequest(reference, TextureFilter.Linear, TextureWrap.Clamp, TextureColorSpace.Srgb, keywords)).Handle;
     }
 
     /// <summary>

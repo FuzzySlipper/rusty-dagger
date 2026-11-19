@@ -1001,8 +1001,8 @@ public sealed class PublishedContentDeliveryTests
                 // Trees trimmed alike share a mesh.
                 .DistinctBy(file => file.GetProperty("path").GetString()),
             section.GetProperty("treeSnow"),
-            // The sea's shader, which the water sheets and the far sea both draw with.
-            section.GetProperty("sea"),
+            // The sea's shader, which the water sheets, the rivers and the far sea draw with, and its ripple and foam maps.
+            .. new[] { "shader", "ripples", "foam" }.Select(file => section.GetProperty("sea").GetProperty(file)),
             .. section.GetProperty("models").EnumerateObject().SelectMany(model => model.Value.GetProperty("slots").EnumerateArray()
                 .Where(slot => slot.TryGetProperty("texture", out _)).SelectMany(slot => slot.TryGetProperty("drawn", out JsonElement drawn)
                     ? drawn.EnumerateObject().Select(other => other.Value).Prepend(slot.GetProperty("texture")) : [slot.GetProperty("texture")])
