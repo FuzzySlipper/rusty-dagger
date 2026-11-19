@@ -19,6 +19,7 @@ public sealed class DaggerfallActorInspectionTests : IDisposable
 {
     private readonly DaggerfallSession _session;
     private readonly PerceptionFake _perception = PerceptionFake.Create();
+    private readonly SpatialFake _spatial;
     private readonly IDeveloperActorCommands _commands;
     private readonly long _enemy = HoldActor(40);
     private ulong _step;
@@ -28,7 +29,7 @@ public sealed class DaggerfallActorInspectionTests : IDisposable
         var profile = ReadInputs(TestData.RepositoryRoot);
         List<string> releases = [];
         var content = new ContentFake(releases); PopulateContent(content, profile);
-        var spatial = SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases); spatial.KeepPosition = true;
+        var spatial = _spatial = SpatialFake.Create(profile.Geometry.Spatial[0].Sha256, releases); spatial.KeepPosition = true;
         // Every step's route is found, so a maneuver never turns into Blocked.
         PlanarNavCell[] path = [new(0, 0, 0), new(1, 0, 0)];
         spatial.NavigationResult = request => new(path, path.Select(_ => new NavigationPathEdge(NavigationEdgeKind.Walk)).ToArray(),
@@ -197,6 +198,29 @@ public sealed class DaggerfallActorInspectionTests : IDisposable
         Assert.Equal(EnemyBehaviorState.Chase, Step().State);
         Run(_commands.ForceState(_enemy.ToString(), "Retreat"));
         Assert.Equal(EnemyBehaviorState.Retreat, Step().State);
+    }
+
+    [Fact]
+    public void A_forced_idle_does_not_search_for_a_target_that_left_its_sight_and_clears()
+    {
+        // Seen far beyond reach, so the enemy remembers where the player was.
+        _perception.Receipt = Receipt(new PerceptionPair((ulong)_enemy, 1, 12, 1, PerceptionPairKind.Visible, 1));
+        _session.State.Actors.Get(_enemy).ApplyPose(new(new(0, 0, -12), 0));
+        Step();
+        Assert.NotNull(_session.State.Actors.Get(_enemy).Pursuit.LastKnownPosition);
+
+        Run(_commands.ForceState(_enemy.ToString(), "Idle"));
+        _perception.Receipt = Receipt(new PerceptionPair((ulong)_enemy, 1, 12, 1, PerceptionPairKind.Occluded, 1));
+        _spatial.NavigationRequests.Clear();
+        // Pursuit says once that the target is lost, then idles; it never searches or moves.
+        Assert.Equal(EnemyBehaviorState.TargetLost, Step().State);
+        Assert.Equal(EnemyBehaviorState.Idle, Step().State);
+        Assert.Empty(_spatial.NavigationRequests);
+
+        Run(_commands.ForceState(_enemy.ToString(), "off"));
+        _perception.Receipt = Receipt(new PerceptionPair((ulong)_enemy, 1, 12, 1, PerceptionPairKind.Visible, 1));
+        Assert.Equal(EnemyBehaviorState.Chase, Step().State);
+        Assert.NotEmpty(_spatial.NavigationRequests);
     }
 
     [Fact]

@@ -482,7 +482,9 @@ internal sealed class DaggerfallEnemyBehaviorModule
     /// Holds a maneuver whatever the motor rolled: Chase closes without swinging, Attack closes and swings in reach,
     /// Retreat and Strafe move as the motor would, Search goes to where the target was last known, Idle stands still.
     /// The moving states act as if the enemy knew where its target is, so they hold even where it has only noticed
-    /// the target (a dark dungeon) and would otherwise idle; the Engine's visibility still gates a swing.
+    /// the target (a dark dungeon) and would otherwise idle; the Engine's visibility still gates a swing. Idle also
+    /// gives up searching where the target was last seen, which pursuit would otherwise do before any maneuver: a held
+    /// enemy loses track of a target that leaves its sight.
     /// </summary>
     private PursuitPolicy Force(PursuitPolicy chosen, PursuitState state, int strafeDirection) => state switch
     {
@@ -492,7 +494,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         PursuitState.Strafe => chosen with { Maneuver = PursuitState.Strafe, SpeedMultiplier = .25f, StrafeDirection = strafeDirection, TargetObserved = true },
         PursuitState.Search => chosen with { TargetObserved = false, SearchLastKnownPosition = true,
             SearchDistance = _maneuvers.SearchDistance, SearchStep = _maneuvers.SearchStep },
-        PursuitState.Idle => chosen with { Maneuver = PursuitState.Idle, AllowAttack = false },
+        PursuitState.Idle => chosen with { Maneuver = PursuitState.Idle, AllowAttack = false, SearchLastKnownPosition = false },
         _ => throw new ArgumentOutOfRangeException(nameof(state)),
     };
 
