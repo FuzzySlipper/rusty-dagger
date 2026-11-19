@@ -51,12 +51,44 @@ public sealed class DaggerfallEnemyDecisionTraceTests
         Assert.StartsWith("negated-", Delivered(trace).Reason);
         trace.Observe(new RangedShotBlockedFact(Traced, Player, 1, 40));
         Assert.Equal("blocked-by-cover", Delivered(trace).Reason);
-        trace.Observe(new SpellCastFact(DaggerfallCastOutcome.Released, null, Traced, "fireball", 10,
-            [new DaggerfallCastEffectResult(0, Bystander, DaggerfallCastOutcome.Released)]));
+    }
+
+    /// <summary>A traced decision whose spell gate released a cast meant for <paramref name="intended"/>.</summary>
+    private static void Casts(DaggerfallEnemyDecisionTrace trace, long sequence, long intended, ulong step) =>
+        trace.Close([new("target", "select", DaggerfallGateOutcome.Chose, "player", new DaggerfallGateValue("target", Player)),
+            new("spell", "cast", DaggerfallGateOutcome.Passed, "Released", new DaggerfallGateValue("intended", intended), new DaggerfallGateValue("sequence", sequence))],
+            EnemyBehaviorState.Attack, 1, step);
+
+    private static SpellCastFact Cast(long sequence, DaggerfallCastOutcome outcome, params long[] targets) =>
+        new(outcome, sequence, Traced, "spell", 10, [.. targets.Select((target, index) => new DaggerfallCastEffectResult(index, target, outcome))]);
+
+    [Fact]
+    public void A_self_cast_reaches_the_target_it_meant()
+    {
+        DaggerfallEnemyDecisionTrace trace = Following();
+        Casts(trace, sequence: 7, intended: Traced, step: 10);
+        trace.Observe(Cast(7, DaggerfallCastOutcome.DeliveryCompleted, Traced));
         DaggerfallDecisionGate cast = Delivered(trace);
-        Assert.Equal(("cast", DaggerfallGateOutcome.Refused), (cast.Gate, cast.Outcome));
+        Assert.Equal(("cast", DaggerfallGateOutcome.Passed, "DeliveryCompleted"), (cast.Gate, cast.Outcome, cast.Reason));
+        Assert.Equal(Traced, Value(cast, "intended"));
+        Assert.Equal(Traced, Value(cast, "reached"));
+    }
+
+    [Fact]
+    public void A_cast_keeps_its_own_target_through_a_later_decision_and_says_when_it_hit_a_bystander()
+    {
+        DaggerfallEnemyDecisionTrace trace = Following();
+        Casts(trace, sequence: 8, intended: Player, step: 10);
+        // A later decision casts at itself; the earlier missile still lands as the earlier cast.
+        Casts(trace, sequence: 9, intended: Traced, step: 11);
+        trace.Observe(Cast(8, DaggerfallCastOutcome.DeliveryCompleted, Bystander));
+        DaggerfallDecisionGate cast = Delivered(trace);
+        Assert.Equal(DaggerfallGateOutcome.Refused, cast.Outcome);
         Assert.EndsWith(":bystander", cast.Reason);
-        Assert.Equal(Player, Value(cast, "intended"));
+        Assert.Equal((Player, Bystander, 1d), (Value(cast, "intended"), Value(cast, "reached"), Value(cast, "targetsReached")));
+        // A cast the trace never saw decided has no intended target to compare.
+        trace.Observe(Cast(99, DaggerfallCastOutcome.DeliveryCompleted, Bystander));
+        Assert.Equal(0, Value(Delivered(trace), "intended"));
     }
 
     [Fact]

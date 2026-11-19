@@ -57,8 +57,9 @@ internal sealed class DaggerfallEnemyDecisionTrace
     private readonly LinkedList<DaggerfallDecisionRecord> _ring = new();
     /// <summary>The target each of the traced actor's strikes was started at, by the step it started on.</summary>
     private readonly Dictionary<ulong, long> _aimedAt = [];
-    /// <summary>Who the traced actor pursued in its latest decision, the target its casts were meant for.</summary>
-    private long? _pursued;
+    /// <summary>The target each of the traced actor's casts was meant for, by the cast's sequence, oldest first.</summary>
+    private readonly Dictionary<long, long> _castFor = [];
+    private readonly Queue<long> _casts = new();
 
     /// <summary>The actor being traced, or null when the trace is off.</summary>
     internal long? ActorId { get; private set; }
@@ -75,7 +76,8 @@ internal sealed class DaggerfallEnemyDecisionTrace
         ActorId = actorId;
         _ring.Clear();
         _aimedAt.Clear();
-        _pursued = null;
+        _castFor.Clear();
+        _casts.Clear();
     }
 
     /// <summary>A gate list for this actor's decision when it is the one traced; null otherwise.</summary>
@@ -85,8 +87,10 @@ internal sealed class DaggerfallEnemyDecisionTrace
     internal void Close(List<DaggerfallDecisionGate>? gates, EnemyBehaviorState state, ulong generation, ulong step)
     {
         if (gates is null) return;
-        if (gates.FirstOrDefault(gate => gate.Policy == "target") is { } chose)
-            _pursued = chose.Values.Select(value => (long?)value.Value).FirstOrDefault();
+        foreach (DaggerfallDecisionGate cast in gates.Where(gate => gate.Policy == "spell" && gate.Gate == "cast"))
+            if (cast.Values.FirstOrDefault(value => value.Name == "sequence") is { Name: not null } sequence
+                && cast.Values.FirstOrDefault(value => value.Name == "intended") is { Name: not null } intended)
+                RememberCast((long)sequence.Value, (long)intended.Value);
         if (Latest is { } latest && latest.SameAs(state, gates))
         {
             latest.Repeat(generation, step, gates);
@@ -121,11 +125,20 @@ internal sealed class DaggerfallEnemyDecisionTrace
                 Strike(blocked.OriginatingGeneration, blocked.OriginatingSimulationStep, null, "blocked-by-cover");
                 break;
             case SpellCastFact { CasterId: long caster } cast when caster == traced:
+                // A cast keeps the target it was meant for through its later delivery facts; one released outside a
+                // traced decision has none.
+                long? meant = cast.Sequence is long sequence && _castFor.TryGetValue(sequence, out long aimed) ? aimed : null;
                 long[] reached = [.. cast.Effects.Select(effect => effect.TargetId).OfType<long>().Distinct()];
-                Delivery("cast", Latest?.Generation ?? 0, Latest?.LastStep ?? 0, _pursued, reached.Length == 0 ? null : reached.Contains(_pursued ?? 0) ? _pursued : reached[0],
-                    reached.Length == 0 ? $"reached-no-one:{cast.Outcome}" : cast.Outcome.ToString(), new DaggerfallGateValue("reached", reached.Length));
+                Delivery("cast", Latest?.Generation ?? 0, Latest?.LastStep ?? 0, meant, reached.Length == 0 ? null : reached.Contains(meant ?? 0) ? meant : reached[0],
+                    reached.Length == 0 ? $"reached-no-one:{cast.Outcome}" : cast.Outcome.ToString(), new DaggerfallGateValue("targetsReached", reached.Length));
                 break;
         }
+    }
+
+    private void RememberCast(long sequence, long intended)
+    {
+        if (_castFor.TryAdd(sequence, intended)) _casts.Enqueue(sequence);
+        if (_casts.Count > Capacity) _castFor.Remove(_casts.Dequeue());
     }
 
     private void Strike(ulong generation, ulong step, long? struck, string outcome, params DaggerfallGateValue[] values)

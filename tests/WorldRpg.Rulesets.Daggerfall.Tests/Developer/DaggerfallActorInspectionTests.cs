@@ -6,6 +6,7 @@ using WorldRpg.Kit;
 using WorldRpg.Kit.Ai;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Facts;
 using Xunit;
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
@@ -135,6 +136,26 @@ public sealed class DaggerfallActorInspectionTests : IDisposable
         Step();
         Assert.Null(_session.EnemyBehavior.Trace.ActorId);
         Assert.Empty(_session.EnemyBehavior.Trace.Recent);
+    }
+
+    [Fact]
+    public void The_trace_readback_keeps_what_a_cast_reached_beside_what_it_meant()
+    {
+        long bystander = _session.SpawnActor("thief", new(new(4, 0, -4), 0));
+        Run(_commands.Trace(_enemy.ToString()));
+        DaggerfallEnemyDecisionTrace trace = _session.EnemyBehavior.Trace;
+        trace.Close([new("spell", "cast", DaggerfallGateOutcome.Passed, "Released",
+            new DaggerfallGateValue("intended", DaggerfallActorIdentity.PlayerEntityId), new DaggerfallGateValue("sequence", 5))], EnemyBehaviorState.Attack, 1, 1);
+        trace.Observe(new SpellCastFact(DaggerfallCastOutcome.DeliveryCompleted, 5, _enemy, "spell", 10,
+            [new DaggerfallCastEffectResult(0, bystander, DaggerfallCastOutcome.DeliveryCompleted)]));
+        JsonElement values = Json(_commands.Trace(_enemy.ToString())).GetProperty("decisions").EnumerateArray().Last()
+            .GetProperty("gates")[0].GetProperty("values");
+        Assert.Equal(bystander, values.GetProperty("reached").GetInt64());
+        Assert.Equal(DaggerfallActorIdentity.PlayerEntityId, values.GetProperty("intended").GetInt64());
+        Assert.Equal(1, values.GetProperty("targetsReached").GetInt32());
+        // Every value name appears once, so a reader taking the last of a name reads the right one.
+        string[] names = [.. values.EnumerateObject().Select(property => property.Name)];
+        Assert.Equal(names.Length, names.Distinct().Count());
     }
 
     [Fact]

@@ -130,7 +130,7 @@ internal sealed class DaggerfallEnemyMagicModule
                         gates?.Add(new(Policy, "path", DaggerfallGateOutcome.Refused, "no-aim"));
                     else if (!_rangedPathClear(attempt))
                         gates?.Add(new(Policy, "path", DaggerfallGateOutcome.Refused, "path-blocked"));
-                    else return TryExecute(attempt, generation, simulationStep, gates);
+                    else return TryExecute(attempt, IntendedTarget(selected, actor, target), generation, simulationStep, gates);
                 }
             }
         }
@@ -149,7 +149,7 @@ internal sealed class DaggerfallEnemyMagicModule
         if (_casting.EffectsAlreadyOnTarget(touchSpell,
                 TargetOf(touchSpell) == DaggerfallSpellTarget.CasterOnly ? actor.DurableId : target.DurableId)) return Refuse("touch-pick", "already-on-target");
         if (!TryBuildAttempt(actor, touchSpell, target, out DaggerfallEnemySpellAttempt touchAttempt)) return Refuse("path", "no-aim");
-        return TryExecute(touchAttempt, generation, simulationStep, gates);
+        return TryExecute(touchAttempt, IntendedTarget(touchSpell, actor, target), generation, simulationStep, gates);
 
         bool Refuse(string gate, string reason, params DaggerfallGateValue[] values)
         {
@@ -214,14 +214,23 @@ internal sealed class DaggerfallEnemyMagicModule
         return true;
     }
 
-    private bool TryExecute(DaggerfallEnemySpellAttempt attempt, ulong generation, ulong simulationStep, List<DaggerfallDecisionGate>? gates)
+    /// <summary>Who a spell is meant for: the caster for a caster-only spell, otherwise the pursued target.</summary>
+    private long IntendedTarget(string key, ActorState actor, PursuitTarget target) =>
+        TargetOf(key) == DaggerfallSpellTarget.CasterOnly ? actor.DurableId : target.DurableId;
+
+    /// <summary>
+    /// Releases a spell. A traced caster's cast gate carries the target it was meant for and the cast's sequence, which
+    /// its delivery facts carry too, so the trace can set what each cast reached beside what it meant.
+    /// </summary>
+    private bool TryExecute(DaggerfallEnemySpellAttempt attempt, long intended, ulong generation, ulong simulationStep, List<DaggerfallDecisionGate>? gates)
     {
         DaggerfallCastResult result = _execute(attempt);
         _last[attempt.ActorId] = new(attempt.ActorId, attempt.SpellKey, attempt.Target, result.Outcome,
             generation, simulationStep);
         // A cast that reached no one is still a released, paid action (a contact touch that met no body).
         bool admitted = result.Outcome is DaggerfallCastOutcome.Released or DaggerfallCastOutcome.DeliveryCompleted or DaggerfallCastOutcome.Missed;
-        gates?.Add(new(Policy, "cast", admitted ? DaggerfallGateOutcome.Passed : DaggerfallGateOutcome.Refused, result.Outcome.ToString()));
+        gates?.Add(new(Policy, "cast", admitted ? DaggerfallGateOutcome.Passed : DaggerfallGateOutcome.Refused, result.Outcome.ToString(),
+            [new("intended", intended), .. result.Bundle is { } bundle ? [new DaggerfallGateValue("sequence", bundle.Sequence)] : Array.Empty<DaggerfallGateValue>()]));
         return admitted;
     }
 
