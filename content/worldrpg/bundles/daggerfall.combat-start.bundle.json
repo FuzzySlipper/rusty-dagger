@@ -1,0 +1,29 @@
+{
+  "kind": "worldrpg.game-bundle",
+  "id": "daggerfall.combat-start",
+  "title": "Developer: combat start",
+  "ruleset": "daggerfall",
+  "contentPacks": [
+    {
+      "id": "daggerfall.imported"
+    },
+    {
+      "id": "daggerfall.base"
+    },
+    {
+      "id": "daggerfall.art-replacements"
+    },
+    {
+      "id": "daggerfall.blocks"
+    },
+    {
+      "id": "daggerfall.quests"
+    },
+    {
+      "id": "daggerfall.combat-start"
+    }
+  ],
+  "tuning": {
+    "id": "daggerfall.defaults"
+  }
+}

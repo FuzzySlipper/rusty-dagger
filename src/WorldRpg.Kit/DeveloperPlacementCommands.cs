@@ -38,8 +38,8 @@ public interface IDeveloperPlacementCommands : IDebugCommandModule
     [DebugCommand("world.goto", Description = "Developer: stand within reach of a loaded person, door or container (its label or navigation.targets id), facing it.")]
     DebugCommandResult GoTo(string target);
 
-    [DebugCommand("world.spawn", Description = "Developer: bring one ACTOR (a published actor definition id, such as fire-daedra) into the scene METRES along the player's facing, facing back.")]
-    DebugCommandResult Spawn(string actor, double metres);
+    [DebugCommand("world.spawn", Description = "Developer: bring COUNT of ACTOR (a published actor definition id, such as encounter-warrior or fire-daedra) within METRES (2 to 30) of the player, each on clear floor in sight of them, ahead where there is room, facing them; an enemy comes hostile. Refused, saying why, when no clear floor is found.")]
+    DebugCommandResult Spawn(string actor, int count, double metres);
 
     [DebugCommand("world.where", Description = "Developer: the current place, profile, building and pose, and the nearest named targets.")]
     DebugCommandResult Where();

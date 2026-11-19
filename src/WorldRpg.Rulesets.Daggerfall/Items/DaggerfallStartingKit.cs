@@ -27,14 +27,28 @@ internal sealed class DaggerfallStartingKit
         _grants = grants;
     }
 
-    /// <summary>The kit's items, made now, each with the clothing slot its key names.</summary>
+    /// <summary>
+    /// The kit's items, made now, each with the clothing slot its key names; an armed start wields the career's first
+    /// unique weapon in the main hand.
+    /// </summary>
     internal static DaggerfallStartingKit Make(DaggerfallDefinitions definitions, IRandomService random,
         DaggerfallCharacterCreationChoices choices, DaggerfallCareerDefinition career)
     {
         DaggerfallItemFactory factory = new(definitions, random);
-        return new(definitions, factory, [.. Requests(definitions, choices, career).Select(request =>
-            (factory.Create(request), Slot(request.Key)))]);
+        DaggerfallItemCreateRequest[] requests = [.. Requests(definitions, choices, career)];
+        (DaggerfallCreatedItem Item, string? Slot)[] grants = [.. requests.Select(request => (factory.Create(request), Slot(request.Key)))];
+        if (definitions.NewGame.Armed)
+        {
+            int weapon = Enumerable.Range(0, requests.Length).FirstOrDefault(index =>
+                requests[index].Key.StartsWith(WeaponKey, StringComparison.Ordinal) && !grants[index].Item.Stackable, -1);
+            if (weapon < 0) throw new ArgumentException($"An armed start wields a weapon, and career '{career.Id}' starts with none that is held alone.");
+            grants[weapon] = grants[weapon] with { Slot = MainHand };
+        }
+        return new(definitions, factory, grants);
     }
+
+    private const string WeaponKey = "new-game.weapon.";
+    private const string MainHand = "right-hand";
 
     /// <summary>The worn slot of a starting item: the shirt goes on the chest and the pants on the legs.</summary>
     internal static string? Slot(string key) => key.EndsWith(".shirt", StringComparison.Ordinal)
@@ -55,7 +69,7 @@ internal sealed class DaggerfallStartingKit
             TemplateIndex: female ? config.FemalePantsTemplate : config.MalePantsTemplate, Race: choices.RaceId, Gender: gender);
         var items = choices.CustomCareer is not null ? config.CustomItems : config.Careers.Single(value => value.Career == career.Id).Items;
         foreach (var (item, index) in items.Select((item, index) => (item, index)))
-            yield return new("Weapons", $"new-game.weapon.{index}", DaggerfallItemOwner.Player,
+            yield return new("Weapons", $"{WeaponKey}{index}", DaggerfallItemOwner.Player,
                 Quantity: item.Quantity, TemplateIndex: item.Template, Material: item.Material);
         if (config.Gold > 0) yield return new("Currency", "new-game.gold", DaggerfallItemOwner.Player, Quantity: (ulong)config.Gold, TemplateIndex: 276);
         foreach (var (grant, index) in choices.Background!.StartingGrants.Select((grant, index) => (grant, index)))
@@ -71,7 +85,7 @@ internal sealed class DaggerfallStartingKit
 
     /// <summary>
     /// Grants the kit in its order: gold to the purse (<paramref name="receiveGold"/>, Economy's), every other item into the
-    /// player's pack, a unique one under a newly allocated identity, and the clothes put on.
+    /// player's pack, a unique one under a newly allocated identity, and the clothes put on and an armed start's weapon wielded.
     /// </summary>
     internal void Grant(MechanicsInventoryCoordinator inventory, DaggerfallItemInstances instances, DaggerfallUniqueItemAllocator uniqueItems,
         EntityDirectory entities, DaggerfallEquipmentMoves equipment, Func<ulong, bool> receiveGold)
@@ -92,7 +106,7 @@ internal sealed class DaggerfallStartingKit
             {
                 var equipped = equipment.MoveToSlot(new UniqueInventoryItem(entities.Resolve(identity!.Value).Value, grant.Item.Item), new EquipmentSlotId(slot));
                 if (equipped.Outcome != EquipmentMoveOutcome.Applied)
-                    throw new ArgumentException($"Starting clothing could not be equipped: {equipped.Detail}");
+                    throw new ArgumentException($"Starting item '{grant.Item.Item.Value}' could not be put in '{slot}': {equipped.Detail}");
             }
         }
     }

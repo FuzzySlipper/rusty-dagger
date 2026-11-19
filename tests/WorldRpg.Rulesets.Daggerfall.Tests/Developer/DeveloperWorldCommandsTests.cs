@@ -7,6 +7,7 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
 using WorldRpg.Rulesets.Daggerfall.World;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using Xunit;
 
 using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
@@ -61,15 +62,22 @@ public sealed class DeveloperWorldCommandsTests
         Assert.Equal(new Vector2(before.X + 5, before.Z), Planar(Position(session)), new PlanarComparer());
         run.Spatial.OverlapHit = _ => default;
 
-        // An actor brought in stands along the facing; a name no definition has is refused.
+        // world.spawn brings enemies onto the floor near the player, in front of them and facing them, hostile; a name
+        // no definition has is refused, and so is a place with no clear floor.
         session.State.PlayerControl.YawRadians = 0;
         Vector3 eye = Position(session);
-        DebugCommandResult spawned = session.Commands<IDeveloperPlacementCommands>().Spawn("fire-daedra", 3);
+        DebugCommandResult spawned = session.Commands<IDeveloperPlacementCommands>().Spawn("encounter-warrior", 2, 5);
         Assert.True(spawned.Succeeded, spawned.Message);
-        long daedra = Assert.Single(session.DynamicActors, actor => actor.Value.Value == "fire-daedra").Key;
-        Assert.Equal(new Vector2(eye.X, eye.Z - 3), Planar(session.State.Actors.Get(daedra).Position.ToVector()), new PlanarComparer());
-        Assert.False(session.Commands<IDeveloperPlacementCommands>().Spawn("no-such-actor", 3).Succeeded);
-        session.RetireActor(daedra);
+        long[] warriors = [.. session.DynamicActors.Where(actor => actor.Value.Value == "encounter-warrior").Select(actor => actor.Key)];
+        Assert.Equal(2, warriors.Length);
+        AssertBroughtNear(session, warriors, eye, 5);
+        Assert.False(session.Commands<IDeveloperPlacementCommands>().Spawn("no-such-actor", 1, 3).Succeeded);
+        run.Spatial.OverlapHit = _ => default(SpatialHit) with { Present = true, Converged = true };
+        DebugCommandResult crowded = session.Commands<IDeveloperPlacementCommands>().Spawn("encounter-warrior", 1, 5);
+        Assert.False(crowded.Succeeded);
+        Assert.StartsWith("No clear floor within 5 m", crowded.Message, StringComparison.Ordinal);
+        run.Spatial.OverlapHit = _ => default;
+        foreach (long warrior in warriors) session.RetireActor(warrior);
 
         // Relative moves: an offset, and a distance along the facing.
         Vector3 here = Position(session);
@@ -108,6 +116,14 @@ public sealed class DeveloperWorldCommandsTests
         Assert.True(arrived.Succeeded, arrived.Message);
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(Charing), session.Sites.ActiveProfile);
         Assert.Equal("Charing", Json(arrived).GetProperty("place").GetString());
+
+        // Outdoors too, world.spawn brings an enemy onto the ground near the player.
+        Vector3 street = Position(session);
+        DebugCommandResult spawned = session.Commands<IDeveloperPlacementCommands>().Spawn("encounter-barbarian", 1, 4);
+        Assert.True(spawned.Succeeded, spawned.Message);
+        long barbarian = Assert.Single(session.DynamicActors, actor => actor.Value.Value == "encounter-barbarian").Key;
+        AssertBroughtNear(session, [barbarian], street, 4);
+        session.RetireActor(barbarian);
 
         // A closed door is collision movement meets, though the admitted scene does not hold it: a spot it
         // fills is refused unless forced.
@@ -233,5 +249,24 @@ public sealed class DeveloperWorldCommandsTests
     {
         public bool Equals(Vector2 x, Vector2 y) => Vector2.Distance(x, y) < .02f;
         public int GetHashCode(Vector2 value) => 0;
+    }
+
+    /// <summary>Each brought actor stands within METRES of the player but never on top of them, ahead of them and facing them, hostile and provoked.</summary>
+    private static void AssertBroughtNear(DaggerfallSession session, long[] brought, Vector3 player, float metres)
+    {
+        Vector3 forward = WorldRpg.Kit.Actors.ActorHeading.Forward(session.State.PlayerControl.YawRadians);
+        foreach (long id in brought)
+        {
+            WorldRpg.Kit.Actors.ActorState actor = session.State.Actors.Get(id);
+            Vector2 offset = Planar(actor.Position.ToVector()) - Planar(player);
+            Assert.InRange(offset.Length(), DaggerfallNearbySpawn.MinimumMetres - .01f, metres + .01f);
+            Assert.True(Vector2.Dot(Vector2.Normalize(offset), new Vector2(forward.X, forward.Z)) > .8f, $"{offset} is not ahead");
+            Assert.Equal(MathF.Atan2(-offset.X, offset.Y), actor.HeadingYawRadians, 3);
+            // Hostile, and provoked: it knows where the player is.
+            DaggerfallEnemyPerceptionMemory senses = actor.Actor.Get<DaggerfallEnemyPerceptionMemory>();
+            Assert.True(senses.ForcedHostile);
+            Assert.True(senses.HasEncounteredPlayer);
+            Assert.NotNull(senses.ProvokedUntilMinute);
+        }
     }
 }

@@ -13,6 +13,11 @@ internal sealed record DaggerfallInitialItem(int Template, string? Material, ulo
 /// the location receives one (a dungeon's Enter marker, where the site crossing stands it).
 /// </summary>
 internal sealed record DaggerfallNewGameStart(string Profile, DaggerfallSiteAnchor? Pose);
+/// <summary>
+/// Foes a new game begins with, brought in close around the player as soon as the floor the game begins on is there:
+/// each a published actor definition id, within <paramref name="Metres"/> of the player.
+/// </summary>
+internal sealed record DaggerfallStartFoes(string[] Actors, float Metres);
 internal sealed record DaggerfallInitialCareer(string Career, DaggerfallInitialItem[] Items, string[] Spells);
 internal sealed record DaggerfallNewGameDefinition(int Gold, int SpellbookTemplate, int MaleShirtTemplate,
     int MalePantsTemplate, int FemaleShirtTemplate, int FemalePantsTemplate,
@@ -28,6 +33,12 @@ internal sealed record DaggerfallNewGameDefinition(int Gold, int SpellbookTempla
     internal int StartHour { get; init; }
     /// <summary>Begin starts play at once: a character is quick-started and the opening cinematics are skipped.</summary>
     internal bool QuickEntry { get; init; }
+    /// <summary>The career a quick-started character takes, or null for the one the draft stands at.</summary>
+    internal string? QuickCareer { get; init; }
+    /// <summary>The new character begins with its career's first weapon in hand, drawn.</summary>
+    internal bool Armed { get; init; }
+    /// <summary>The foes the new game begins with near the player, if any.</summary>
+    internal DaggerfallStartFoes? Foes { get; init; }
 }
 
 internal static partial class DaggerfallBaseContent
@@ -121,13 +132,38 @@ internal static partial class DaggerfallBaseContent
             int startHour = OptionalInteger(root, "startHour", diagnostics) ?? baseline.StartHour;
             if (startHour is < 0 or >= DaggerfallSkyTime.HoursPerDay) diagnostics.Add($"New-game start pack '{packId}' names start hour {startHour}, outside the day.");
             bool quickEntry = root.TryGetProperty("quickEntry", out JsonElement quick) && quick.GetBoolean();
+            string? quickCareer = root.TryGetProperty("quickCareer", out _) ? Text(root, "quickCareer", diagnostics) : null;
+            if (quickCareer is not null && !quickEntry) diagnostics.Add($"New-game start pack '{packId}' names a quick career without a quick entry.");
+            if (quickCareer is not null && baseline.Careers.All(career => career.Career != quickCareer))
+                diagnostics.Add($"New-game start pack '{packId}' names quick career '{quickCareer}', which has no starting loadout.");
+            bool armed = root.TryGetProperty("armed", out JsonElement arming) && arming.GetBoolean();
+            DaggerfallStartFoes? foes = root.TryGetProperty("foes", out JsonElement foesValue) ? ReadStartFoes(foesValue, packId, diagnostics) : null;
             diagnostics.ThrowIfAny();
-            return baseline with { Gold = gold, Start = start, Quests = quests, StartHour = startHour, QuickEntry = quickEntry };
+            return baseline with
+            {
+                Gold = gold, Start = start, Quests = quests, StartHour = startHour, QuickEntry = quickEntry,
+                QuickCareer = quickCareer, Armed = armed, Foes = foes,
+            };
         }
         catch (JsonException error)
         {
             throw new InvalidOperationException($"New-game start pack '{packId}' is not valid JSON: {error.Message}", error);
         }
+    }
+
+    /// <summary>
+    /// A start's <c>foes</c>: the <c>actors</c> brought and the <c>metres</c> they are brought within, checked against
+    /// the actors and the placement when the game is admitted.
+    /// </summary>
+    private static DaggerfallStartFoes ReadStartFoes(JsonElement value, string packId, DaggerfallContentDiagnostics diagnostics)
+    {
+        JsonElement foes = Object(value, $"new-game start pack '{packId}' foes", diagnostics);
+        if (foes.ValueKind != JsonValueKind.Object) return new([], 0F);
+        RejectDuplicateProperties(foes, $"new-game start pack '{packId}' foes", diagnostics);
+        string[] actors = [.. Array(foes, "actors", diagnostics).Select(actor => actor.GetString() ?? string.Empty)];
+        if (actors.Length == 0 || actors.Any(string.IsNullOrWhiteSpace)) diagnostics.Add($"New-game start pack '{packId}' foes name at least one actor.");
+        float metres = Number(foes, "metres", diagnostics);
+        return new(actors, metres);
     }
 
     /// <summary>

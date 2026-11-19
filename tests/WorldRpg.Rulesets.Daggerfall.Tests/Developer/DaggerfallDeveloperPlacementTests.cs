@@ -14,31 +14,35 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
 /// <see cref="DaggerfallDeveloperPlacement"/> built without the session: the actor definitions, the player's pose and a
-/// recording spawn as plain inputs. Landing in places and buildings runs over the site crossing and collision and is
+/// recording nearby spawn as plain inputs. Landing in places and buildings runs over the site crossing and collision and is
 /// <c>DeveloperWorldCommandsTests</c>' end-to-end case.
 /// </summary>
 public sealed class DaggerfallDeveloperPlacementTests
 {
-    private readonly List<(string Actor, ActorPose Pose)> _spawned = [];
+    private readonly List<(string Actor, int Count, float Metres)> _asked = [];
+    private DaggerfallNearbySpawnResult _bring = new([], null);
 
     [Fact]
-    public void A_spawn_stands_the_actor_ahead_of_the_player_facing_back()
+    public void A_spawn_brings_what_the_nearby_spawn_brings_and_says_why_it_brought_no_more()
     {
         PlayerControlState player = new(new WorldPoint(1f, 0f, 2f), .5f, 0f);
         DaggerfallDeveloperPlacement placement = Placement(player, ProductMode.Playing);
 
-        DebugCommandResult spawned = placement.Spawn("fire-daedra", 3);
+        _bring = new([7, 8], null);
+        DebugCommandResult spawned = placement.Spawn("encounter-warrior", 2, 5);
         Assert.True(spawned.Succeeded);
-        Assert.Equal("fire-daedra (7) stands 3 m ahead.", spawned.Message);
-        (string actor, ActorPose pose) = Assert.Single(_spawned);
-        Assert.Equal("fire-daedra", actor);
-        Assert.True(Vector3.Distance(new Vector3(1f, 0f, 2f) + ActorHeading.Forward(.5f) * 3, pose.Position.ToVector()) < 1e-5f);
-        Assert.Equal(.5f + MathF.PI, pose.HeadingYawRadians, 5);
+        Assert.Equal("Brought 2 encounter-warrior (7, 8) within 5 m.", spawned.Message);
+        Assert.Equal(("encounter-warrior", 2, 5f), Assert.Single(_asked));
 
-        Assert.Equal("A distance is finite and above 0.", placement.Spawn("fire-daedra", 0).Message);
-        Assert.Equal("'no-such-actor' is no actor definition that can be spawned.", placement.Spawn("no-such-actor", 3).Message);
-        Assert.Equal("'player' is no actor definition that can be spawned.", placement.Spawn("player", 3).Message);
-        Assert.Single(_spawned);
+        _bring = new([7], "No clear floor within 5 m of the player, in sight of them, for one more.");
+        DebugCommandResult partly = placement.Spawn("encounter-warrior", 2, 5);
+        Assert.True(partly.Succeeded);
+        Assert.Equal("Brought only 1 encounter-warrior (7) within 5 m. No clear floor within 5 m of the player, in sight of them, for one more.", partly.Message);
+
+        _bring = new([], "No clear floor within 5 m of the player, in sight of them, for 2 more.");
+        DebugCommandResult refused = placement.Spawn("encounter-warrior", 2, 5);
+        Assert.Equal(DebugCommandStatus.Failed, refused.Status);
+        Assert.Equal("No clear floor within 5 m of the player, in sight of them, for 2 more.", refused.Message);
     }
 
     [Fact]
@@ -52,11 +56,11 @@ public sealed class DaggerfallDeveloperPlacementTests
             Assert.Equal("No game is running.", refused.Message);
         }
         Assert.Equal("The player has no position.", title.Where().Message);
-        Assert.Equal("The player has no position.", title.Spawn("fire-daedra", 3).Message);
+
     }
 
     private DaggerfallDeveloperPlacement Placement(PlayerControlState player, ProductMode mode) => new(
         DeveloperOwnerStage.Hold(() => mode, DeveloperOwnerStage.Actors(health: 100), player, () => []), null!, null!, null!, null!, player, null!,
         null!, TestPayload.Definitions, null!, null!, null!, null!, null!, () => mode, null!,
-        (actor, pose) => { _spawned.Add((actor, pose)); return 7; }, null!, null!);
+        (actor, count, metres) => { _asked.Add((actor, count, metres)); return _bring; }, null!, null!);
 }

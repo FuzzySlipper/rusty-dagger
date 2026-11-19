@@ -1,0 +1,10 @@
+{
+  "ruleset": "daggerfall",
+  "start": { "profile": "17/179/dungeon" },
+  "gold": 100,
+  "quests": [],
+  "quickEntry": true,
+  "quickCareer": "class16",
+  "armed": true,
+  "foes": { "actors": ["encounter-warrior", "encounter-barbarian"], "metres": 5 }
+}

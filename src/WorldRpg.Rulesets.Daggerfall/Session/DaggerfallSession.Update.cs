@@ -480,6 +480,7 @@ internal sealed partial class DaggerfallSession
         // own loaded-location guards.
         if (!player.Alive || State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value)).Current <= 0d) return;
         _ = _encounters.MaterializePending(_activeProfileKey.LogicalId, pending => WorldEncounters.Place(pending, simulationStep));   // Actors
+        _nearbySpawn.BringExpected();                                                             // Actors: a start's opening foes
         if (Law.Update(update.DeltaSeconds) is { } arrest) Arrest(arrest);                       // Society
         if (Law.ModalOpen) return;
         _reactions.Step(State.Actors, update.DeltaSeconds, ThrownLanding);                       // Actors
@@ -1588,9 +1589,9 @@ internal sealed partial class DaggerfallSession
     /// The new game's list: the committed character's kit and spells are made before the title session is replaced, so
     /// a refusal leaves the title as it was; the new session (built at the bundle's start site) then stands the
     /// character where it begins, commits its choices, swaps the player definition's loadout for the kit, applies the
-    /// background's standing, teaches the spells, fills the tracks and starts the new-game quests. When an opening quest
-    /// selects a variant of the start place as it starts, the game is begun again with that selection, so the place is
-    /// built with it. A load restores its own inventory instead.
+    /// background's standing, teaches the spells, fills the tracks, draws an armed start's weapon, expects the start's foes
+    /// and starts the new-game quests. When an opening quest selects a variant of the start place as it starts, the game
+    /// is begun again with that selection, so the place is built with it. A load restores its own inventory instead.
     /// </summary>
     public IGameSession CreateNewGame()
     {
@@ -1630,6 +1631,8 @@ internal sealed partial class DaggerfallSession
                 replacement.State.Social.ApplyBackground(replacement._definitions, replacement.State.Character.Career,
                     choices.Background!);                                                                      // Society
                 replacement._creation.CompleteNewCharacter(spells, replacement.State.Actors.Player.Stats);     // Character
+                if (_definitions.NewGame.Armed) replacement.State.WeaponDrawn = true;                          // Character: the wielded kit weapon drawn
+                replacement._nearbySpawn.Expect(_definitions.NewGame.Foes);                                    // Actors
                 replacement._newGameInitialized = true;                                                        // Session
                 replacement.State.Quests.StartNewGame(_composition.NewGameQuests);                             // Quests
                 replacement.Presentation.SetOutcome($"New game initialized for {choices.Name}.");              // UiProjection

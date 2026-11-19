@@ -123,12 +123,16 @@ internal sealed class DaggerfallCharacterCreation(DaggerfallCharacterState chara
         character.CommitChoices(replaceCommitted: true);
     }
 
-    /// <summary>Quick-starts the character the draft stands at, for a start that begins play with one press.</summary>
+    /// <summary>
+    /// Quick-starts the character the draft stands at, for a start that begins play with one press, in the start's
+    /// quick career when it names one; its background is rolled and completed for that career.
+    /// </summary>
     internal void QuickStart()
     {
         if (character.Pending is null) character.BeginFreshChoices(random);
         if (character.CreationMode == "character-generation") character.BackToClassPick();
         DaggerfallCharacterCreationChoices draft = character.Pending!;
+        if (definitions.NewGame.QuickCareer is { } career) draft = draft with { CareerId = career, CustomCareer = null };
         character.ReplacePending(character.WithCompletedBackground(
             string.IsNullOrWhiteSpace(draft.Name) ? draft with { Name = QuickStartName } : draft, random));
         character.CommitChoices(replaceCommitted: true);

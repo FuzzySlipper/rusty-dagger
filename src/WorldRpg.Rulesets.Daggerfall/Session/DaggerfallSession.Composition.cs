@@ -370,6 +370,9 @@ internal sealed partial class DaggerfallSession
                 () => _site.TryFind(_activeProfileKey.Site, out DaggerfallSiteRecord site) ? site : null,
                 () => { DaggerfallExteriorCellId cell = _exterior.CurrentExteriorCell(); return (cell.X, cell.Y); },
                 () => _exterior.LocationAtPlayer() is not null, () => _latestUpdateGeneration, (definition, pose, level) => SpawnActor(definition, pose, level));
+            _nearbySpawn = new DaggerfallNearbySpawn(definitions.Actors, mobile => _sites.Projection.Inputs.MobileSprites.ContainsKey(mobile), _placement,
+                assembled.PlayerControl, (actor, pose) => SpawnActor(actor, pose),
+                id => { _enemyBehavior!.MakeHostile(id); _enemyBehavior.Provoke(id, _time.Calendar.MinuteNumber); }, line => Presentation.SetOutcome(line));
             SpellTargets = new DaggerfallSpellTargets(definitions, actors, character, effects, _spatial, npcs.IsGameplayActive,
                 id => DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null, _placement.CurrentPositions,
                 request => _engine.Perception.QueryVisibility(request));
@@ -1109,7 +1112,7 @@ internal sealed partial class DaggerfallSession
                     .Select(screen => screen.ToString()),
                 Summoning, State.Quests, Law, DispelChoice, IdentifyChoice, CreateItemChoice, _openingCinematics, Cinematics);   // Developer
             DaggerfallDeveloperPlacement placement = new(hold, engine, _spatial, _sites, _site, State.PlayerControl, State.Actors, State.Npcs,
-                definitions, FastTravel, Activation, Entrance, _horizon, _time, () => _mode, Presentation, (actor, pose) => SpawnActor(actor, pose),
+                definitions, FastTravel, Activation, Entrance, _horizon, _time, () => _mode, Presentation, _nearbySpawn.Bring,
                 local => _exterior.ProfilePosition(local), BuildingLanding);                                                    // Developer
             DaggerfallDeveloperScene scene = new(_time, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); }, _horizon, _sites,
                 LocalWeather, _weatherPresentation, State.PlayerControl, definitions, UseClassicArt, () => _hanging);   // Developer

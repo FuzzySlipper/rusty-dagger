@@ -21,6 +21,8 @@ internal enum SpawnDirection
     BesideView,
     /// <summary>Any direction, as the donor places a foe that need not stay out of sight.</summary>
     Any,
+    /// <summary>In front of the player, up to <see cref="DaggerfallActorPlacement.AheadDegrees"/> either side of the facing.</summary>
+    Ahead,
 }
 
 /// <summary>
@@ -46,6 +48,8 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
     internal const float SummonSeparation = 1.25f;
     private const float SummonClearanceRadius = .65f;
     private const int SummonPlacementAttempts = 8;
+    /// <summary>How far either side of the facing an <see cref="SpawnDirection.Ahead"/> pose may be.</summary>
+    internal const int AheadDegrees = 30;
 
     /// <summary>The nearest visible foe of the player's side an ally can attack, if any.</summary>
     internal PursuitTarget? SelectAllyTarget(long observerId)
@@ -115,6 +119,7 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
                     + (float)random.DrawKeyed(new(0, randomScope, key + ":angle", 0, 4)).Value)
                     * (random.DrawKeyed(new(0, randomScope, key + ":side", 0, 1)).Value == 0 ? -1f : 1f),
                 SpawnDirection.Any => random.DrawKeyed(new(0, randomScope, key + ":angle", 0, 359)).Value,
+                SpawnDirection.Ahead => random.DrawKeyed(new(0, randomScope, key + ":angle", 0, 2 * AheadDegrees)).Value - AheadDegrees,
                 _ => random.DrawKeyed(new(0, randomScope, key + ":angle", 90, 270)).Value,
             };
             Vector3 rayDirection = ActorHeading.Forward(player.YawRadians + offsetDegrees * MathF.PI / 180f);
@@ -156,7 +161,9 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
 
     private WorldPoint? ClearFloor(Vector3 above, SpatialEntityCollider[] colliders, CharacterStepEnvironment stepEnvironment)
     {
-        SpatialHit floor = spatial.CastRay(above, -Vector3.UnitY, SummonFloorDistance, colliders, stepEnvironment);
+        // The floor is the world's: a look down that started inside another actor's clearance box would otherwise
+        // take that box's underside for floor and stand the new actor inside it.
+        SpatialHit floor = spatial.CastRay(above, -Vector3.UnitY, SummonFloorDistance, ReadOnlyMemory<SpatialEntityCollider>.Empty, stepEnvironment);
         if (!floor.Present || floor.StartSolid || floor.Normal.Y <= 0f) return null;
         SpatialHit clearance = spatial.OverlapCapsule(floor.Point + Vector3.UnitY * SummonSeparation,
             0d, SummonClearanceRadius, colliders, stepEnvironment);

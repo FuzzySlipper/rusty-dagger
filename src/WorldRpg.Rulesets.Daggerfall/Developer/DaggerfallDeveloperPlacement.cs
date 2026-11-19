@@ -28,14 +28,14 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="engine">The Engine, whose spatial service a refused spot's clearance is read from.</param>
 /// <param name="time">The world's time; a scout looks for winter's ground in winter.</param>
 /// <param name="mode">The product mode the session runs under.</param>
-/// <param name="spawn">Registers one actor of a published definition at a pose (the session's roster spawn).</param>
+/// <param name="bring">Brings COUNT of an actor definition within METRES of the player (<see cref="DaggerfallNearbySpawn.Bring"/>).</param>
 /// <param name="profilePosition">A scene-local point in the active profile's own frame, as a relocation takes it.</param>
 /// <param name="buildingLanding">Where entering through an exterior door lands inside its building.</param>
 internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold, IEngineContext engine, SpatialMovementSystem spatial,
     DaggerfallSiteCrossing sites, DaggerfallSiteContext site, PlayerControlState player, ActorsState actors, DaggerfallNpcRegistry npcs,
     DaggerfallDefinitions definitions, DaggerfallFastTravel fastTravel, DaggerfallActivation activation, DaggerfallBuildingEntrance entrance,
     DaggerfallHorizon horizon, DaggerfallWorldTime time, Func<ProductMode> mode, PresentationState presentation,
-    Func<string, ActorPose, long> spawn, Func<WorldPoint, Vector3> profilePosition,
+    Func<string, int, float, DaggerfallNearbySpawnResult> bring, Func<WorldPoint, Vector3> profilePosition,
     Func<DaggerfallSiteProfile, DaggerfallRdbDoorId, DaggerfallSiteAnchor> buildingLanding) : IDeveloperPlacementCommands
 {
     /// <summary>How far from a target <see cref="GoTo"/> stands: inside every interaction reach, clear of a counter's far side.</summary>
@@ -76,16 +76,12 @@ internal sealed class DaggerfallDeveloperPlacement(DaggerfallDeveloperHold hold,
         return Move(offset.X, 0, offset.Z);
     }
 
-    public DebugCommandResult Spawn(string actor, double metres)
+    public DebugCommandResult Spawn(string actor, int count, double metres)
     {
-        if (!double.IsFinite(metres) || metres <= 0) return Refused("A distance is finite and above 0.");
-        if (!definitions.Actors.TryGetValue(new DaggerfallActorId(actor), out DaggerfallActorDefinition? definition) || definition.Kind == DaggerfallActorKinds.Player)
-            return Refused($"'{actor}' is no actor definition that can be spawned.");
-        if (player.Position is not WorldPoint position) return Refused("The player has no position.");
-        float yaw = player.YawRadians;
-        Vector3 at = position.ToVector() + (ActorHeading.Forward(yaw) * (float)metres);
-        long spawned = spawn(actor, new ActorPose(WorldPoint.From(at), yaw + MathF.PI));
-        return DebugCommandResult.Success($"{actor} ({spawned}) stands {metres:0.#} m ahead.");
+        DaggerfallNearbySpawnResult result = bring(actor, count, (float)metres);
+        if (result.Brought.Length == 0) return Refused(result.Refusal!);
+        string brought = $"{result.Brought.Length} {actor} ({string.Join(", ", result.Brought)}) within {metres:0.#} m";
+        return DebugCommandResult.Success(result.Refusal is null ? $"Brought {brought}." : $"Brought only {brought}. {result.Refusal}");
     }
 
     public DebugCommandResult Travel(string place)

@@ -157,6 +157,17 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
                 throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' selects {startPacks.Length} '{NewGameStartRole.Value}' content packs; a new game starts in one place.");
             if (startPacks.Length == 1)
                 definitions = definitions.WithNewGame(DaggerfallBaseContent.ReadNewGameStart(startPacks[0].Payload, definitions.NewGame, startPacks[0].Id.Value));
+            if (definitions.NewGame.Foes is { } foes)
+            {
+                // A start's foes are brought one at a time, so each is checked as world.spawn checks one.
+                if (foes.Actors.Length > DaggerfallNearbySpawn.MaximumCount || !(foes.Metres is >= DaggerfallNearbySpawn.MinimumMetres and <= DaggerfallNearbySpawn.MaximumMetres))
+                    throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' starts with {foes.Actors.Length} foes within {foes.Metres} m; "
+                        + $"a start brings up to {DaggerfallNearbySpawn.MaximumCount} within {DaggerfallNearbySpawn.MinimumMetres:0} to {DaggerfallNearbySpawn.MaximumMetres:0} m.");
+                foreach (string foe in foes.Actors)
+                    if (!definitions.Actors.TryGetValue(new DaggerfallActorId(foe), out DaggerfallActorDefinition? actor)
+                        || actor.Kind is not (DaggerfallActorKinds.Monster or DaggerfallActorKinds.EnemyClass))
+                        throw new InvalidOperationException($"Game bundle '{selected.Bundle.Id.Value}' starts with foe '{foe}', which is no published monster or enemy class.");
+            }
             DaggerfallBlocksSnapshot blocks = DaggerfallBlocksContent.Read(RequireSingle(selected, roles, BlocksRole).Payload);
             blocks.AdmitLocations(definitions.Locations);
             // Every location profile is assembled from the per-block publication when first needed, over the one

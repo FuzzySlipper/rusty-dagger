@@ -39,6 +39,8 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
     private IReadOnlyList<InstalledContent> _installed = [];
     // The bundle the product was created to start, which an entry-screen import composes again.
     private readonly GameBundleId _startBundle;
+    // Whether the launch named the start bundle, which then starts in place of the remembered choice.
+    private readonly bool _launchNamed;
     // The game composed now; null while the product runs the unavailable screen and no game can be played.
     private ResolvedGameComposition? _composition;
     private IGameRuleset? _ruleset;
@@ -76,23 +78,28 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         BundleChoiceScope,
         new JsonProductStateCodec<string>(WorldRpgSaveJsonContext.Default.String));
 
+    /// <summary>
+    /// Creates the product under the bundle the launch names (<see cref="HostDefaults.LaunchBundleVariable"/>), or else
+    /// the one the player last chose, or else the default.
+    /// </summary>
     public WorldRpgProduct(ProductCreateContext context)
-        : this(context, HostDefaults.DefaultBundle, ruleset: null)
+        : this(context, HostDefaults.LaunchBundle ?? HostDefaults.DefaultBundle, ruleset: null, launchNamed: HostDefaults.LaunchBundle is not null)
     {
     }
 
     /// <summary>Creates a product through the same selected-bundle seam with an explicit compiled ruleset.</summary>
     public WorldRpgProduct(ProductCreateContext context, IGameRuleset ruleset, GameBundleId bundle)
-        : this(context, bundle, ruleset)
+        : this(context, bundle, ruleset, launchNamed: false)
     {
     }
 
-    private WorldRpgProduct(ProductCreateContext context, GameBundleId bundle, IGameRuleset? ruleset)
+    private WorldRpgProduct(ProductCreateContext context, GameBundleId bundle, IGameRuleset? ruleset, bool launchNamed)
     {
         ArgumentNullException.ThrowIfNull(context);
         _context = context;
         _explicitRuleset = ruleset;
         _startBundle = bundle;
+        _launchNamed = launchNamed;
         // Each change of the loading screen is published by whichever session is current then: a new game or a
         // load replaces the session part-way through its work.
         _loading = new LoadingScreen(() => (_session as ILoadingScreenSession)?.PublishLoading());
@@ -114,9 +121,9 @@ public sealed class WorldRpgProduct : IEngineProduct, IDebugCommandModuleSource
         (ResolvedGameComposition, IGameRuleset)? selection = null;
         try
         {
-            // The bundle the player last chose starts the product when it still composes; otherwise the
-            // default does, and the entry screen says why the remembered one was set aside.
-            selection = RememberedSelection() ?? ResolveSelection(context, ruleset, bundle, _installed);
+            // A bundle the launch names starts the product; otherwise the one the player last chose does when it still
+            // composes, and otherwise the default, the entry screen saying why the remembered one was set aside.
+            selection = (_launchNamed ? null : RememberedSelection()) ?? ResolveSelection(context, ruleset, bundle, _installed);
         }
         catch (InvalidOperationException error) when (installedRuleset is not null)
         {

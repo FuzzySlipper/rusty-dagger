@@ -87,6 +87,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallBookNotebook _notebook;
     private readonly DaggerfallEncounterRuntime _encounters;
     private readonly DaggerfallActorPlacement _placement;
+    private readonly DaggerfallNearbySpawn _nearbySpawn;
     private readonly DaggerfallEnemySenses _senses;
     private readonly DaggerfallDungeonPopulation _dungeonPopulation;
     internal DaggerfallCivilians Civilians { get; }

@@ -238,6 +238,11 @@ rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj
   creation begins at once.
 - **Developer: Charing town start** begins in Charing's streets at nine in the
   morning with 5000 gold and no opening quests, for town services.
+- **Developer: combat start** begins in Privateer's Hold as a warrior with the
+  broadsword drawn and an enemy warrior and barbarian close by, for combat.
+- `WORLDRPG_BUNDLE=<bundle id>` on the launch (for example
+  `WORLDRPG_BUNDLE=daggerfall.combat-start rusty dev ...`) starts under that
+  bundle in place of the remembered choice; Begin then starts play.
 - The menu's **Engine debug console** needs the host started with `--live-debug`.
 - Engine contributors may pass `--engine-source /absolute/rusty-engine`; nothing
   else discovers an adjacent Engine checkout.

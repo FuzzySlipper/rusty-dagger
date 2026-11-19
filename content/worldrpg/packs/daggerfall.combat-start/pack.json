@@ -1,0 +1,11 @@
+{
+  "kind": "worldrpg.content-pack",
+  "id": "daggerfall.combat-start",
+  "ruleset": "daggerfall",
+  "role": "daggerfall.new-game-start",
+  "dependencies": [
+    { "id": "daggerfall.base" }
+  ],
+  "description": "Developer start for combat checks: a new game begins in Privateer's Hold as a quick-started warrior with the career's broadsword drawn, and an enemy warrior and barbarian brought in close in front, with no opening quests. Begin starts play at once, with no opening cinematics.",
+  "payload": "worldrpg/packs/daggerfall.combat-start/payload.json"
+}
