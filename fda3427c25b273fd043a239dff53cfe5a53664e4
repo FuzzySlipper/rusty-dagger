@@ -1,0 +1,24 @@
+scripts/route.py main: FAILED (product): scripts/verify.sh failed
+rusty-dagger verify at fda3427c25b273fd043a239dff53cfe5a53664e4 FAILED in 33.8 min
+verify on den-k8, 33.8 min, FAIL: /home/agent/dev/rusty-dagger/local/build/route/main-fda3427c25b2-20261119T043033/verify.log
+    lane: run 11dcb774a830372fd19a8ad4aa222534 of verify on den-k8 at fda3427c25b273fd043a239dff53cfe5a53664e4 (0 s)
+    lane: tooling took 10 s, peak memory 38 MiB
+    skipped authoring/tools/paper-doll tests: local/art/reference/items is absent; run `dotnet run --project src/Daggerfall.Source.Tool -- export-items`
+    Passed!  - Failed:     0, Passed:    12, Skipped:     0, Total:    12, Duration: 278 ms - WorldRpg.Architecture.Tests.dll (net10.0)
+    Passed!  - Failed:     0, Passed:   499, Skipped:     0, Total:   499, Duration: 14 m 8 s - Daggerfall.Import.Tests.dll (net10.0)
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallAudioBundleTests.Opens_the_exact_named_audio_resource_without_admitting_its_body_to_the_snapshot [8 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallAudioBundleTests.Composed_appearance_defers_audio_until_its_first_cue_then_reuses_and_releases_the_clip [< 1 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.QuestPersonSelectionTests.Every_retained_Person_selects_published_faction_race_gender_and_independent_display(maximum: False) [2 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.QuestPersonSelectionTests.Every_retained_Person_selects_published_faction_race_gender_and_independent_display(maximum: True) [< 1 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.BundleChoiceSessionTests.The_title_screen_switches_to_another_game_and_a_quick_started_game_runs_under_it [8 s]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.QuestResourceSelectionTests.Every_retained_item_and_foe_selects_actual_published_meaning_before_spawn(maximum: True) [1 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.QuestResourceSelectionTests.Every_retained_item_and_foe_selects_actual_published_meaning_before_spawn(maximum: False) [< 1 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallCinematicPresentationTests.An_unconverted_cinematic_counts_as_skipped_and_native_failure_still_releases_the_content_lease [56 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallCinematicPresentationTests.Replacement_ignores_old_completion_and_skip_and_disposal_clean_up_current_playback [46 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallCinematicPresentationTests.Normal_reference_is_released_after_play_and_completion_releases_playback [28 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.DaggerfallCinematicPresentationTests.Opening_plays_the_donor_order_and_each_terminal_result_advances_once [66 ms]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.StaticNpcAdmissionTests.Failed_later_static_admission_rolls_back_the_whole_batch_and_can_retry [1 s]
+    Failed WorldRpg.Rulesets.Daggerfall.Tests.StaticNpcAdmissionTests.Failed_static_appearance_admission_releases_the_candidate_and_can_retry [2 s]
+    Failed!  - Failed:    13, Passed:  4433, Skipped:     8, Total:  4454, Duration: 17 m 53 s - WorldRpg.Rulesets.Daggerfall.Tests.dll (net10.0)
+    lane: verify took 2003 s, peak memory 12373 MiB
+    lane: verify failed (exit 1)
