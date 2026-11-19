@@ -67,8 +67,10 @@ const SEEN_TO: f32 = 0.6;
 // The sheets move fully to this share of their reach.
 const MOVED_FULLY: f32 = 0.6;
 
-// The wind's drift at the surface, as a share of its speed: the ripples and foam ride it downwind.
-const SURFACE_DRIFT: f32 = 0.03;
+// How fast the ripples, gusts and foam ride downwind, metres a second: about a short ripple's own speed, whatever the
+// wind. It stays put as the wind's speed steps, since a speed times the renderer's whole elapsed time would move every
+// pattern at each step; only their bearing turns, which happens while the sea is out of view.
+const RIPPLE_DRIFT: f32 = 0.25;
 // A calm's ripples, as a share of a fresh wind's (RIPPLE_WIND, m/s).
 const RIPPLE_CALM: f32 = 0.3;
 const RIPPLE_WIND: f32 = 8.0;
@@ -295,7 +297,7 @@ fn shade(given: Surface) -> vec4<f32> {
 
     // Ripples along the wind, drifting downwind with the surface, stronger in a wind and in gusts.
     let repeat = material.parameters[2].z;
-    let drift = SURFACE_DRIFT * speed * t;
+    let drift = RIPPLE_DRIFT * t;
     let along = vec2<f32>(dot(world.xz, wind), dot(world.xz, across)) - vec2<f32>(drift, 0.0);
     let gust = textureSample(product_map_b, product_sampler_b, (world.xz - wind * drift) / PATCH_METRES).r;
     let strength = material.parameters[2].w * mix(RIPPLE_CALM, 1.0, smoothstep(0.0, RIPPLE_WIND, speed))

@@ -117652,8 +117652,8 @@
   "sea": {
    "shader": {
     "path": "worldrpg/packs/daggerfall.art-replacements/media/sea/sea.wgsl",
-    "byteLength": 18714,
-    "sha256": "66481d0c4780cd37a76de8cbd26cf3c8d376f7d8bb94ccbf15b31cb95354b0fa"
+    "byteLength": 18938,
+    "sha256": "1ef077c08bc55a60803b966e72596cc24354b0fc36b974e7148accdddfc82160"
    },
    "ripples": {
     "path": "worldrpg/packs/daggerfall.art-replacements/media/sea/ripples.png",
