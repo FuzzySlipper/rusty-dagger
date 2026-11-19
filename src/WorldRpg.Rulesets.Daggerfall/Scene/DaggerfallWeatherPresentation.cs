@@ -16,6 +16,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
     private readonly Dictionary<string, RenderResource> _sky = new(StringComparer.Ordinal);
     private Color _skyColor = new(.5f,.5f,.5f,1);
     private (float Cover, Vector2 Drift, Vector3 Color, bool Marched) _clouds;
+    private AtmosphereRequest _air;
     private float _falling;
     private bool _fallingSnow, _outside, _closed;
     private (WetnessRequest Wet, SnowRequest Snow, WindRequest Wind)? _ground;
@@ -32,10 +33,11 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
 
     /// <summary>Shows the weather over the active site, whose profile, frame offset, lighting and appearance it draws on.</summary>
     /// <param name="daylight">The share of clear noon's light the weather lets through now.</param>
+    /// <param name="sunlight">The share of a clear sky's sun the weather lets through, whatever the hour.</param>
     /// <param name="cleared">Whether the sky is drawn cleared, as refreshed art draws it over the real horizon; the painted
     /// panoramas are classic art's alone, and a player's data leaves them out.</param>
     internal void Update(DaggerfallSiteProfile inputs, Vector3 worldOffset, DaggerfallSiteLighting lighting, DaggerfallSiteAppearance appearance,
-        DaggerfallSkyTime sky, float daylight, int climate, DaggerfallWeatherConditions conditions, int variant, Vector3 player, bool sheltered,
+        DaggerfallSkyTime sky, float daylight, float sunlight, int climate, DaggerfallWeatherConditions conditions, int variant, Vector3 player, bool sheltered,
         double seconds, bool playing, float? horizonFog, bool cleared)
     {
         DaggerfallWeatherKind weather = conditions.Kind;
@@ -75,6 +77,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         SetClouds(horizonFog is null || weather == DaggerfallWeatherKind.Fog ? 0
             : weather is DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy ? _horizon.CloudCoverage : _horizon.StormCloudCoverage,
             wind * _horizon.CloudDrift.Length() * (1 + (conditions.Wind * _tuning.WindDrift)), _horizon.CloudColors[(int)weather]);
+        SetSkySun(outside && horizonFog is not null ? lighting.Sun : null, sunlight);
         SetFall(conditions, outside, sheltered, wind, daylight, seconds);
         SetGround(conditions, outside, wind, sky.Season == DaggerfallSeason.Winter);
         if (moons) _moons!.Show(sky, daylight);
@@ -97,6 +100,34 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
                 _horizon.CloudTwilightDegrees)
             : new(cover, drift, _horizon.CloudAltitudeMetres, _horizon.CloudScaleMetres, Vector3.Min(color, new(_horizon.CloudBrightness)), 0,
                 CloudKind.Cumulus, _horizon.CloudTwilightDegrees) { PixelMetres = _horizon.CloudPixelMetres, ShadeSteps = _horizon.CloudShadeSteps });
+    }
+
+    /// <summary>
+    /// The sky's own sun, apart from the ground's light: the clouds, the water's sun path and the moons' lit limbs take it.
+    /// It warms through gold and orange to rose as it nears the horizon (<see cref="DaggerfallHorizonTuning.SkySunColors"/>),
+    /// and lights the clouds at least at <see cref="DaggerfallHorizonTuning.TwilightSun"/> while the ground's light fades,
+    /// then below the horizon, where the Engine reddens and fades it on each cloud through its twilight. Once it has sunk
+    /// past the highest cloud's twilight, as indoors and under classic art, the sky takes the ground's light again.
+    /// </summary>
+    private void SetSkySun((Vector3 Toward, float Intensity)? sun, float sunlight)
+    {
+        // The Engine's twilight reaches further for higher cloud, by the square root of its height over the layer's.
+        float sets = _horizon.CloudTwilightDegrees
+            * MathF.Sqrt((_horizon.CloudAltitudeMetres + _horizon.MarchedCloudThicknessMetres) / _horizon.CloudAltitudeMetres);
+        AtmosphereRequest air = default;
+        if (sun is var (toward, intensity) && MathF.Asin(Math.Clamp(toward.Y, -1, 1)) * 180 / MathF.PI is var degrees && degrees > -sets)
+        {
+            Vector3 color = _horizon.SkySunColor(degrees);
+            air = default(AtmosphereRequest) with
+            {
+                SkySunDirection = toward,
+                SkySunColor = new(color.X, color.Y, color.Z, 1),
+                SkySunIntensity = MathF.Max(intensity, _horizon.TwilightSun * sunlight),
+            };
+        }
+        if (air == _air) return;
+        _air = air;
+        _engine.CameraView.SetAtmosphere(air);
     }
 
     /// <summary>The way the wind blows over the ground: x east and y south, from its compass degree.</summary>
@@ -217,6 +248,7 @@ internal sealed class DaggerfallWeatherPresentation : IDisposable
         try {if (_sky.Count != 0) _engine.CameraView.ClearSkyBackground(default);} catch (Exception error) {failures.Add(error);}
         try {_engine.CameraView.SetFog(new(FogMode.Off, new Color(0,0,0,1),0,0,0));} catch (Exception error) {failures.Add(error);}
         try {SetClouds(0, default, Vector3.One);} catch (Exception error) {failures.Add(error);}
+        try {_engine.CameraView.SetAtmosphere(default);} catch (Exception error) {failures.Add(error);}
         try {ClearFall();} catch (Exception error) {failures.Add(error);}
         try {_moons?.Dispose();} catch (Exception error) {failures.Add(error);}
         foreach (var resource in _sky.Values)

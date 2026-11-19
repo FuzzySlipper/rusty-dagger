@@ -165,6 +165,62 @@ public sealed class DaggerfallWeatherSessionTests
     }
 
     [Fact]
+    public void The_sky_sun_warms_toward_the_horizon_lights_the_clouds_through_the_twilight_and_stays_outdoors()
+    {
+        var exterior = Assembled(DaggerfallWorldProfileIds.Exterior(Charing));
+        var interior = Assembled(DaggerfallWorldProfileIds.Interior(Charing, new(1, 1, 0)));
+        var media = DaggerfallSkyMedia.Read(TestSessions.Data(DaggerfallSkyMediaTests.Fixture().Content));
+        var fairOdds = Enumerable.Range(0,24).Select(_ => new[]{100,0,0,0,0,0,0}).ToArray();
+        var tuning = DaggerfallTuning.Defaults with {Weather = DaggerfallWeatherTuning.Classic with {Odds = fairOdds}};
+        var composition = new DaggerfallSessionComposition(TestPayload.Definitions, exterior, tuning)
+            {Profiles = new([exterior,interior]),Sky = media};
+        var fixture = Engine(exterior, interior);
+        using var session = DaggerfallSession.StartNew(fixture.Engine.Context, composition);
+        session.ApplyProductMode(ProductMode.Playing);
+        session.PublishInitial();
+
+        // By day the sky's sun is the ground's, white and as bright.
+        session.Commands<IDeveloperSceneCommands>().Hour(12);
+        session.Update(Update(1));
+        var noon = session.Sites.Projection.Lighting.Sun!.Value;
+        AtmosphereRequest air = fixture.Engine.Atmospheres.Last();
+        Assert.Equal(noon.Toward, air.SkySunDirection);
+        Assert.Equal(new Color(1, 1, 1, 1), air.SkySunColor);
+        Assert.Equal(noon.Intensity, air.SkySunIntensity);
+
+        // At sunset the ground's light has gone, but the clouds still stand in the sun, in its dimmer rose.
+        session.Commands<IDeveloperSceneCommands>().Hour(18);
+        session.Update(Update(2));
+        var sunset = session.Sites.Projection.Lighting.Sun!.Value;
+        air = fixture.Engine.Atmospheres.Last();
+        Assert.Equal(0, sunset.Intensity);
+        Assert.Equal(sunset.Toward, air.SkySunDirection);
+        Vector3 rose = tuning.Horizon.SkySunColors[^1].Color;
+        Assert.Equal(rose.Y, air.SkySunColor.G, 3);
+        Assert.Equal(rose.Z, air.SkySunColor.B, 3);
+        Assert.Equal(tuning.Horizon.TwilightSun, air.SkySunIntensity);
+        Assert.True(air.SkySunColor.R * air.SkySunIntensity < noon.Intensity / 2);
+
+        // Past the twilight, indoors and under classic art, the sky takes the ground's light again.
+        session.Commands<IDeveloperSceneCommands>().Hour(19);
+        session.Update(Update(3));
+        Assert.Equal(default, fixture.Engine.Atmospheres.Last());
+        session.Commands<IDeveloperSceneCommands>().Hour(18);
+        session.Update(Update(4));
+        Assert.NotEqual(default, fixture.Engine.Atmospheres.Last());
+        Assert.True(session.TryTransitionTo(interior.ProfileKey));
+        session.Update(Update(5));
+        Assert.Equal(default, fixture.Engine.Atmospheres.Last());
+        Assert.True(session.TryTransitionTo(exterior.ProfileKey));
+        session.Update(Update(6));
+        Assert.NotEqual(default, fixture.Engine.Atmospheres.Last());
+        session.Commands<IDeveloperSceneCommands>().ClassicArt("on");
+        session.Update(Update(7));
+        session.Update(Update(8));
+        Assert.Equal(default, fixture.Engine.Atmospheres.Last());
+    }
+
+    [Fact]
     public void Refreshed_art_draws_the_cleared_sky_across_crossings_from_data_without_the_painted_panoramas()
     {
         // A player's data leaves the painted panoramas out, so the sky refreshed art draws never opens one, whether or not the

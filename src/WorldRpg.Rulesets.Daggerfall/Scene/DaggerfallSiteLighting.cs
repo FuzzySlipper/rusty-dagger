@@ -246,6 +246,12 @@ internal sealed class DaggerfallSiteLighting : IDisposable
     internal void LightNightBy(float share) => _nightShare = share;
 
     /// <summary>
+    /// The sun as this site holds it, null where it carries none: toward it, below the horizon by night, and its light's
+    /// intensity on the ground.
+    /// </summary>
+    internal (Vector3 Toward, float Intensity)? Sun => _sunRequest is { Descriptor: var sun } ? (-sun.Direction, sun.Intensity) : null;
+
+    /// <summary>
     /// What this site's sky gives a surface open to it, before the Engine divides by pi: the ambient in its colour and the
     /// sun whatever its angle, as a hand held up takes a low sun as well as a high one.
     /// </summary>

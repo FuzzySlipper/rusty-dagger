@@ -86,19 +86,22 @@ internal sealed record DaggerfallWeatherTuning(int[][] Odds, float WinterScale, 
         throw new InvalidOperationException("Validated weather odds did not select a pattern.");
     }
 
+    /// <summary>The share of a clear sky's sun the weather lets through.</summary>
+    internal float Sunlight(DaggerfallSeason season, DaggerfallWeatherKind weather) => weather switch
+    {
+        DaggerfallWeatherKind.Rain => RainScale,
+        DaggerfallWeatherKind.Thunder => StormScale,
+        DaggerfallWeatherKind.Snow => SnowScale,
+        DaggerfallWeatherKind.Overcast or DaggerfallWeatherKind.Fog => OvercastScale,
+        _ => season == DaggerfallSeason.Winter ? WinterScale : 1f,
+    };
+
     internal float Daylight(DaggerfallCalendar calendar, DaggerfallWeatherKind weather)
     {
         float time = (calendar.SecondOfDay / 60f - DaggerfallSkyTime.DawnHour * 60f)
             / ((DaggerfallSkyTime.DuskHour - DaggerfallSkyTime.DawnHour) * 60f);
         if (time <= 0 || time >= 1) return 0;
-        float scale = weather switch
-        {
-            DaggerfallWeatherKind.Rain => RainScale,
-            DaggerfallWeatherKind.Thunder => StormScale,
-            DaggerfallWeatherKind.Snow => SnowScale,
-            DaggerfallWeatherKind.Overcast or DaggerfallWeatherKind.Fog => OvercastScale,
-            _ => calendar.Season == DaggerfallSeason.Winter ? WinterScale : 1f,
-        };
+        float scale = Sunlight(calendar.Season, weather);
         for (int index = 1; index < DaylightCurve.Length; index++)
         {
             float[] end = DaylightCurve[index];

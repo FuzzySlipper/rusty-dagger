@@ -63,6 +63,19 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
     internal float MarchedCloudBrightness { get; init; } = .85f;
     /// <summary>The share of the weather's cover the raymarched clouds take, since seen low across the sky they look fuller than the flat layer.</summary>
     internal float MarchedCloudCover { get; init; } = .6f;
+    /// <summary>
+    /// The sky's sun's colour by its height in degrees, highest first, between which it blends: white high, then gold,
+    /// orange and rose as it nears the horizon, where it dims so the afterglow lights the clouds well short of the day.
+    /// Below the last it keeps the last's colour, which the Engine reddens and fades on each cloud by how far the sun has
+    /// sunk under it.
+    /// </summary>
+    internal (float Degrees, Vector3 Color)[] SkySunColors { get; init; } =
+        [(25, Vector3.One), (15, new(1, .84f, .56f)), (8, new(1, .62f, .34f)), (5, new(.9f, .52f, .36f)), (0, new(.3f, .15f, .15f))];
+    /// <summary>
+    /// The least light the sky's sun gives the clouds while it lights them, in a clear sky: a low sun's light on the
+    /// ground fades, but the clouds stand in it until it has sunk through the twilight.
+    /// </summary>
+    internal float TwilightSun { get; init; } = 1.2f;
     /// <summary>The colour the clouds take the light in, by <see cref="World.DaggerfallWeatherKind"/>, so foul skies close over dark.</summary>
     internal Vector3[] CloudColors { get; init; } = [Vector3.One, Vector3.One, new(.6f, .6f, .63f), Vector3.One, new(.28f, .31f, .37f), new(.17f, .19f, .24f), new(.52f, .54f, .58f)];
 
@@ -107,6 +120,11 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         if (CloudCoverage is < 0 or > 1 || StormCloudCoverage is < 0 or > 1 || CloudTwilightDegrees < 0
             || !float.IsFinite(CloudDrift.X) || !float.IsFinite(CloudDrift.Y))
             throw new ArgumentException("A horizon's cloud cover is from 0 to 1, with a finite drift and twilight.");
+        if (SkySunColors.Length == 0 || TwilightSun is not (>= 0 and < float.PositiveInfinity)
+            || SkySunColors.Any(stop => !float.IsFinite(stop.Degrees) || !float.IsFinite(stop.Color.X + stop.Color.Y + stop.Color.Z)
+                || stop.Color.X < 0 || stop.Color.Y < 0 || stop.Color.Z < 0)
+            || SkySunColors.Zip(SkySunColors.Skip(1)).Any(pair => pair.First.Degrees <= pair.Second.Degrees))
+            throw new ArgumentException("The sky's sun has colours by falling height, and a finite twilight light of at least nothing.");
         if (CloudColors.Length != Enum.GetValues<World.DaggerfallWeatherKind>().Length
             || CloudColors.Any(color => !float.IsFinite(color.X + color.Y + color.Z) || color.X < 0 || color.Y < 0 || color.Z < 0))
             throw new ArgumentException("Every weather colours its clouds.");
@@ -149,6 +167,8 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         MarchedCloudKind = Enum.Parse<CloudKind>(e.GetProperty("marchedCloudKind").GetString()!),
         MarchedCloudBrightness = e.GetProperty("marchedCloudBrightness").GetSingle(),
         MarchedCloudCover = e.GetProperty("marchedCloudCover").GetSingle(),
+        SkySunColors = [.. e.GetProperty("skySunColors").EnumerateArray().Select(stop => (stop[0].GetSingle(), new Vector3(stop[1].GetSingle(), stop[2].GetSingle(), stop[3].GetSingle())))],
+        TwilightSun = e.GetProperty("twilightSun").GetSingle(),
         CloudColors = [.. e.GetProperty("cloudColors").EnumerateArray().Select(color => new Vector3(color[0].GetSingle(), color[1].GetSingle(), color[2].GetSingle()))],
         AirColors = [.. e.GetProperty("airColors").EnumerateArray().Select(color => new Vector3(color[0].GetSingle(), color[1].GetSingle(), color[2].GetSingle()))],
         NightAir = e.GetProperty("nightAir").GetSingle(),
@@ -159,6 +179,20 @@ internal sealed record DaggerfallHorizonTuning(float Lift, float LiftFromMetres,
         SecundaTiltDegrees = e.GetProperty("secundaTiltDegrees").GetSingle(),
         MoonDayBrightness = e.GetProperty("moonDayBrightness").GetSingle(),
     }.Validate();
+
+    /// <summary>The sky's sun's colour at <paramref name="degrees"/> above the horizon (<see cref="SkySunColors"/>).</summary>
+    internal Vector3 SkySunColor(float degrees)
+    {
+        if (degrees >= SkySunColors[0].Degrees) return SkySunColors[0].Color;
+        for (int index = 1; index < SkySunColors.Length; index++)
+        {
+            (float lowDegrees, Vector3 low) = SkySunColors[index];
+            if (degrees < lowDegrees) continue;
+            (float highDegrees, Vector3 high) = SkySunColors[index - 1];
+            return Vector3.Lerp(low, high, (degrees - lowDegrees) / (highDegrees - lowDegrees));
+        }
+        return SkySunColors[^1].Color;
+    }
 
     /// <summary>A colour as content writes it, sRGB from 0 to 1; a heightfield takes linear.</summary>
     private static Color ReadColor(JsonElement e)

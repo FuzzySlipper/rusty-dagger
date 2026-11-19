@@ -84,6 +84,7 @@ internal class EngineContextFake : DispatchProxy
     /// <summary>Whether a backdrop link stands, as the last call left it.</summary>
     internal bool BackdropLinked => ((CameraServiceFake)(object)camera).BackdropLinked;
     internal IReadOnlyList<CloudsRequest> Clouds => ((CameraServiceFake)(object)camera).Clouds;
+    internal IReadOnlyList<AtmosphereRequest> Atmospheres => ((CameraServiceFake)(object)camera).Atmospheres;
     internal IReadOnlyList<StarsRequest> Stars => ((CameraServiceFake)(object)camera).Stars;
     internal IReadOnlyList<MoonRequest> Moons => ((CameraServiceFake)(object)camera).Moons;
     private readonly IHeightfieldService heightfield = ServiceProxy<IHeightfieldService, HeightfieldServiceFake>.Create();
@@ -323,6 +324,7 @@ internal class EngineContextFake : DispatchProxy
         internal List<WetnessRequest> Wetness { get; } = [];
         internal List<SnowRequest> Snow { get; } = [];
         internal List<WindRequest> Wind { get; } = [];
+        internal List<AtmosphereRequest> Atmospheres { get; } = [];
         internal ulong? ActiveCamera { get; private set; }
         private ulong nextCamera = 1;
 
@@ -353,6 +355,7 @@ internal class EngineContextFake : DispatchProxy
                 nameof(ICameraViewService.SetBackdrop) => LinkBackdrop(true),
                 nameof(ICameraViewService.ClearBackdrop) => LinkBackdrop(false),
                 nameof(ICameraViewService.SetClouds) => SetClouds((CloudsRequest)arguments![0]!),
+                nameof(ICameraViewService.SetAtmosphere) => Record(Atmospheres, arguments),
                 nameof(ICameraViewService.SetStars) => SetStars((StarsRequest)arguments![0]!),
                 nameof(ICameraViewService.SetMoon) => SetMoon((MoonRequest)arguments![0]!),
                 nameof(ICameraViewService.ReplaceCamera) => ReplaceCamera(((CameraUpdateRequest)arguments![0]!).Camera.Handle.Value),

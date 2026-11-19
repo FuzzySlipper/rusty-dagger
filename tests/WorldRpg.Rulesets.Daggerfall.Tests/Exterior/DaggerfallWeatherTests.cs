@@ -150,5 +150,7 @@ public sealed class DaggerfallWeatherTests
         Assert.Equal(.9f * .4f, tuning.Daylight(noon, DaggerfallWeatherKind.Thunder), 5);
         Assert.Equal(.9f * .65f, tuning.Daylight(noon with { Month = 0 }, DaggerfallWeatherKind.Sunny), 5);
         Assert.Equal(.9f * .6f, tuning.Daylight(noon with { Month = 0 }, DaggerfallWeatherKind.Rain), 5);
+        Assert.Equal(.4f, tuning.Sunlight(DaggerfallSeason.Summer, DaggerfallWeatherKind.Thunder));
+        Assert.Equal(.65f, tuning.Sunlight(DaggerfallSeason.Winter, DaggerfallWeatherKind.Sunny));
     }
 }
