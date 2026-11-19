@@ -67,9 +67,10 @@ public sealed class PartsRigCrowd(Func<IPartsRigsService> engine) : IWalkerCrowd
 
     /// <summary>
     /// The appearance object <paramref name="id"/> shows in the snapshot being built, drawn
-    /// <paramref name="heightMetres"/> tall and walking or standing; null while no figure is used.
+    /// <paramref name="heightMetres"/> tall and walking or standing; null while no figure is used. Every walker
+    /// (<paramref name="actor"/>) draws as the one figure.
     /// </summary>
-    public Appearance? Show(ulong id, float heightMetres, bool walking)
+    public Appearance? Show(ulong id, long actor, float heightMetres, bool walking)
     {
         if (disposed || Figure is not { } figure) return null;
         if (!float.IsFinite(heightMetres) || heightMetres <= 0F) throw new ArgumentOutOfRangeException(nameof(heightMetres));

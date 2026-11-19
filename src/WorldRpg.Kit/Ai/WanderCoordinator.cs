@@ -53,6 +53,33 @@ public sealed class WanderMemoryComponent
     public float IdleRemainingSeconds { get; private set; }
     public WorldPoint? Target { get; private set; }
 
+    /// <summary>
+    /// A route set for a developer's look at the actor, followed in place of its own waypoints: one point it walks to
+    /// and stands at, keeping the heading it has there, or points it walks back and forth along. Null while it wanders
+    /// on its own.
+    /// </summary>
+    public IReadOnlyList<WorldPoint>? Route { get; private set; }
+
+    /// <summary>Follows <paramref name="route"/> from its first point, the actor's next waypoint chosen afresh.</summary>
+    public void Stage(IReadOnlyList<WorldPoint> route)
+    {
+        ArgumentNullException.ThrowIfNull(route);
+        if (route.Count == 0) throw new ArgumentException("A staged route has at least one point.", nameof(route));
+        foreach (WorldPoint point in route) point.Validate();
+        Route = [.. route];
+        WaypointIndex = 0;
+        IdleRemainingSeconds = 0f;
+        if (State != WanderState.Unloaded) TransitionTo(WanderState.Idle);
+        else Target = null;
+    }
+
+    /// <summary>Returns the actor to its own waypoints.</summary>
+    public void Unstage()
+    {
+        Route = null;
+        if (State != WanderState.Unloaded) TransitionTo(WanderState.Idle);
+    }
+
     public WanderState TransitionTo(WanderState next)
     {
         if (!Enum.IsDefined(next)) throw new ArgumentOutOfRangeException(nameof(next));
@@ -157,6 +184,10 @@ public sealed class ActorWanderCoordinator
         if (memory.State == WanderState.Unloaded || deltaSeconds == 0f)
             return new(previous, memory.State, memory.Target, null);
 
+        // A staged actor at its one point stands there, as it was placed.
+        if (memory.Route is [var stand] && memory.State == WanderState.Idle
+            && Vector3.DistanceSquared(actor.Position.ToVector(), stand.ToVector()) <= .04f)
+            return new(previous, memory.State, memory.Target, null);
         if (memory.State is WanderState.Idle or WanderState.Blocked)
         {
             if (!memory.ConsumeIdle(deltaSeconds))
@@ -195,6 +226,13 @@ public sealed class ActorWanderCoordinator
     private static WorldPoint NextWaypoint(ActorState actor, WanderMemoryComponent memory,
         ulong simulationStep, WanderPolicy policy)
     {
+        if (memory.Route is { } route)
+        {
+            // Back and forth: 0, 1, ..., n-1, n-2, ..., 1, 0, ...
+            int turn = Math.Max(1, 2 * (route.Count - 1));
+            int step = (int)(memory.WaypointIndex % (uint)turn);
+            return route[step < route.Count ? step : turn - step];
+        }
         // The direction is deterministic per actor and waypoint. The sequence is only target
         // selection; collision, projection and any usable movement remain Engine-owned.
         ulong seed = checked((ulong)actor.DurableId) + memory.WaypointIndex + simulationStep / 60UL;

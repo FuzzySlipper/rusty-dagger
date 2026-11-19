@@ -41,6 +41,7 @@ On top of the root `AGENTS.md`.
 - Place a new actor around the player with `DaggerfallActorPlacement.TrySpawnPose` and find foes with its `QueryEnemies`; don't cast placement rays or perception queries of your own.
 - Harm becomes facts through `DaggerfallDamageFacts`, whatever dealt it; a death is its `ActorDiedFact`.
 - What a death does is the list `ReactToDeath` in `Session/DaggerfallSession.Update.cs`, after the quests' foes hear it in `React`; a new consequence is a line there, marked with its domain.
+- Look at townsfolk close up with `people.spawn ID COUNT` (walkers in front of you as gsplat character ID), `people.stage COUNT METRES SPREAD`, `people.cross COUNT METRES SPREAD` and `people.unstage`, rather than hunting for them; `people.splat ID|off` draws every walker as one character, and `people.splat-look GRID COVERAGE own|none POSERATE` and `people.splat-shadow none|ellipsoids|splats` change their look for the run (the tuning's `splatPeople` holds the shipped one).
 - A facade property needs its component attached; use Engine `TryGet<T>` for an optional one.
 - An effect definition that applies contributions supplies a resume callback, so a load never applies them twice.
 - New spell families bind in `DaggerfallEffectCatalog`; an unmapped effect refuses before payment or skill use.

@@ -13,10 +13,12 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>
 /// The developer switches that draw every walking townsperson as one figure, through every site appearance, and back
 /// to their own art: people.rig as the art set's parts-rig test figure (<see cref="DaggerfallPeopleRig"/>) in one of
-/// its view sets, people.splat as one of its gsplat characters (<see cref="DaggerfallSplatPeople"/>). One figure is in
-/// use at a time. Each crowd is made on its first use, and a gsplat character is opened on its first use and kept for
-/// the session. Site appearances draw walkers through this switch: it shows them as the crowd in use, and settles every
-/// crowd it made, so one put aside lets go of its walkers.
+/// its view sets, people.splat as one of its gsplat characters (<see cref="DaggerfallSplatPeople"/>), drawn in the
+/// tuning's look until people.splat-look changes it for the run. One figure is in use at a time. people.spawn stands a
+/// few walkers in front of the player as a gsplat character of their own, whatever the rest are drawn as. Each crowd is
+/// made on its first use, and a gsplat character is opened on its first use and kept for the session. Site appearances
+/// draw walkers through this switch: it shows a spawned walker as its character and the rest as the crowd in use, and
+/// settles every crowd it made, so one put aside lets go of its walkers.
 /// </summary>
 /// <param name="rig">The art set's people rig, or null when it carries none.</param>
 /// <param name="splats">The art set's gsplat townspeople, or null when it carries none.</param>
@@ -24,9 +26,12 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="animation">The Engine's animation, which opens, poses and draws the gsplat characters.</param>
 /// <param name="content">The product content the gsplat characters and their clips are read from.</param>
 /// <param name="walkerSpeed">How fast a townsperson walks, in metres a second, which a character's stride keeps pace with.</param>
+/// <param name="tuning">How the gsplat people draw.</param>
 /// <param name="actors">The actors, counted for who walks here now.</param>
+/// <param name="stage">The staging people.spawn stands its walkers with.</param>
 internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, DaggerfallSplatPeople? splats, Func<IPartsRigsService> partsRigs,
-    Func<IAnimationService> animation, Func<IContentService> content, float walkerSpeed, ActorsState actors) : IWalkerCrowd, IDisposable, IDeveloperPeopleCommands
+    Func<IAnimationService> animation, Func<IContentService> content, float walkerSpeed, DaggerfallSplatPeopleTuning tuning, ActorsState actors,
+    DaggerfallPeopleStage stage) : IWalkerCrowd, IDisposable, IDeveloperPeopleCommands
 {
     /// <summary>The rig pages are painted far finer than a classic person's pixels, so they are sampled smooth.</summary>
     private const TextureFilter Filter = TextureFilter.Linear;
@@ -34,16 +39,14 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     /// <summary>The figure takes the light around it as a person's sprite does, and casts her shape into the sun's shadow.</summary>
     private static readonly SpriteMaterialDescriptor Material = DaggerfallSiteAppearance.CastingSprite;
 
-    /// <summary>
-    /// A gsplat character is lit per pixel by the world's lights and keeps this share of its paint however dark they
-    /// are, and casts an ellipsoid a joint into the sun's shadow: the Engine's choice for a crowd.
-    /// </summary>
-    private const float SplatLightFloor = .15F;
-
-    /// <summary>A gsplat character crossfades this long between its walk and its idle.</summary>
-    private const float SplatCrossfadeSeconds = .25F;
+    /// <summary>Spawned walkers stand this far apart, in the first of these rows ahead that has clear ground.</summary>
+    private const float SpawnSpacing = 1.5F;
+    private static readonly float[] SpawnRows = [4F, 5.5F, 7F, 8.5F];
 
     private readonly Dictionary<string, (RenderResource Body, Appearance Appearance, SplatFigure Figure)> characters = new(StringComparer.Ordinal);
+    /// <summary>How the gsplat people are finished: the tuning's look until a developer sets another for the run.</summary>
+    private (uint Grid, float Coverage, bool OwnPalette, float PoseRate, SplatShadowCaster Shadow) look =
+        (tuning.PixelGrid, tuning.PixelCoverage, tuning.OwnPalette, tuning.PoseRate, tuning.ShadowCaster);
     private (RenderResource Walk, RenderResource Idle)? clips;
     private PartsRigCrowd? rigCrowd;
     private SplatCrowd? splatCrowd;
@@ -51,7 +54,8 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
     /// <summary>The crowd walking people are drawn as, or null while they show their own art.</summary>
     internal IWalkerCrowd? Crowd { get; private set; }
 
-    public Appearance? Show(ulong id, float heightMetres, bool walking) => Crowd?.Show(id, heightMetres, walking);
+    public Appearance? Show(ulong id, long actor, float heightMetres, bool walking) =>
+        splatCrowd?.Show(id, actor, heightMetres, walking) ?? (Crowd == splatCrowd ? null : Crowd?.Show(id, actor, heightMetres, walking));
 
     public void Publishing()
     {
@@ -89,6 +93,57 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         rigCrowd?.Use(null);
         Crowd = splatCrowd;
         return DebugCommandResult.Success($"Walking people draw as gsplat {figure.Name}, lit; {Walking()} walk here now.");
+    }
+
+    public DebugCommandResult Spawn(string character, int count)
+    {
+        if (character == "off")
+        {
+            int released = splatCrowd?.Assigned.Count ?? 0;
+            foreach (long actor in splatCrowd?.Assigned.Keys.ToArray() ?? []) splatCrowd!.Assign(actor, null);
+            return DebugCommandResult.Success($"{released} spawned walkers draw as the rest do again.");
+        }
+        if (count is < 1 or > 16) return DaggerfallDeveloperReplies.Refused("people.spawn takes a COUNT of 1 to 16.");
+        if (splats is null) return DaggerfallDeveloperReplies.Refused("The art set carries no gsplat townspeople.");
+        if (!splats.Characters.TryGetValue(character, out DaggerfallSplatPerson? person))
+            return DaggerfallDeveloperReplies.Refused($"The art set has no gsplat character '{character}'; it has {string.Join(", ", splats.Characters.Keys.Order(StringComparer.Ordinal))}, or off.");
+        SplatFigure figure = Open(splats, character, person);
+        splatCrowd ??= new(animation);
+        HashSet<long> spawned = [.. splatCrowd.Assigned.Keys];
+        DebugCommandResult placed = default!;
+        ActorState[] walkers = [];
+        // A row already full of spawned walkers is not clear ground, so later spawns stand further back.
+        foreach (float metres in SpawnRows)
+            if ((placed = stage.Place(count, metres, (count - 1) * SpawnSpacing, crossing: false, spawned, out walkers)).Succeeded) break;
+        if (!placed.Succeeded) return placed;
+        foreach (ActorState walker in walkers) splatCrowd.Assign(walker.DurableId, figure);
+        return DebugCommandResult.Success($"{count} walking {(count == 1 ? "person stands" : "people stand")} in front of the player as gsplat {figure.Name}, until people.unstage.");
+    }
+
+    public DebugCommandResult SplatLook(int grid, double coverage, string palette, double poseRate)
+    {
+        if (grid is < 0 or > 16 || !(coverage is > 0 and <= 1) || palette is not ("own" or "none") || !(poseRate >= 0) || !double.IsFinite(poseRate)
+            || palette == "own" && grid == 0)
+            return DaggerfallDeveloperReplies.Refused("people.splat-look takes GRID 0 to 16, COVERAGE above 0 to 1, own (needs a grid) or none, and POSERATE 0 or more.");
+        look = look with { Grid = (uint)grid, Coverage = (float)coverage, OwnPalette = palette == "own", PoseRate = (float)poseRate };
+        foreach ((string id, var opened) in characters) Finish(opened.Appearance, splats!.Characters[id]);
+        return DebugCommandResult.Success(grid == 0
+            ? $"Gsplat people draw smooth, posed {(poseRate == 0 ? "every frame" : $"{poseRate:0.#} times a second")}."
+            : $"Gsplat people draw on a {grid}-pixel grid, blocks where they cover {coverage:0.##}, {(look.OwnPalette ? "in their own palette" : "in their own colours")}, posed {(poseRate == 0 ? "every frame" : $"{poseRate:0.#} times a second")}.");
+    }
+
+    public DebugCommandResult SplatShadow(string caster)
+    {
+        if (DaggerfallSplatPeopleTuning.Caster(caster) is not { } shadow)
+            return DaggerfallDeveloperReplies.Refused("people.splat-shadow takes none, ellipsoids or splats.");
+        look = look with { Shadow = shadow };
+        foreach ((string id, var opened) in characters) Finish(opened.Appearance, splats!.Characters[id]);
+        return DebugCommandResult.Success(shadow switch
+        {
+            SplatShadowCaster.None => "Gsplat people cast no shadow.",
+            SplatShadowCaster.Splats => "Gsplat people cast their own silhouette into the sun's shadow.",
+            _ => "Gsplat people cast an ellipsoid a joint into the sun's shadow.",
+        });
     }
 
     public void Dispose()
@@ -145,8 +200,8 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
             AnimationClipInfo[] bound = engine.ReadClips(body).ToArray();
             string walkClip = ClipId(bound, DaggerfallSplatPeople.WalkClip), idleClip = ClipId(bound, DaggerfallSplatPeople.IdleClip);
             appearance = engine.CreateAnimatedMeshAppearance(new(body));
-            engine.SetSplatAppearance(new(appearance, Vector3.One, 0, .5F, ReadOnlyMemory<Color>.Empty, 0F, SplatLighting.Lit, SplatLightFloor, SplatShadowCaster.Ellipsoids));
-            SplatFigure figure = new($"{id} ({person.Name})", appearance, walkClip, idleClip, walkerSpeed / person.WalkSpeed, SplatCrossfadeSeconds);
+            Finish(appearance, person);
+            SplatFigure figure = new($"{id} ({person.Name})", appearance, walkClip, idleClip, walkerSpeed / person.WalkSpeed, tuning.CrossfadeSeconds);
             characters.Add(id, (body, appearance, figure));
             return figure;
         }
@@ -160,6 +215,10 @@ internal sealed class DaggerfallPeopleSwitch(DaggerfallPeopleRig? rig, Daggerfal
         string ClipId(AnimationClipInfo[] bound, string name) => bound.Where(clip => clip.Name == name).Select(clip => clip.Id).FirstOrDefault()
             ?? throw new InvalidOperationException($"Gsplat character {id} carries no clip '{name}' after its clip packs were bound; it has {string.Join(", ", bound.Select(clip => clip.Name))}.");
     }
+
+    /// <summary>Draws <paramref name="person"/>'s appearance lit, in the run's look.</summary>
+    private void Finish(Appearance appearance, DaggerfallSplatPerson person) => animation().SetSplatAppearance(new(appearance, Vector3.One, look.Grid, look.Coverage,
+        look.OwnPalette ? person.Palette.ToArray() : ReadOnlyMemory<Color>.Empty, look.PoseRate, SplatLighting.Lit, tuning.LightFloor, look.Shadow));
 
     private ContentReference Reference(DaggerfallArtFile file) => content().ResolveReference(new ContentResolveRequest(file.Path, file.Sha256));
 }

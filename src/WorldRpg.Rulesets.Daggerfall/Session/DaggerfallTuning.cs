@@ -45,6 +45,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallHorizonTuning Horizon { get; init; } = DaggerfallHorizonTuning.Default;
     internal DaggerfallGroundTuning Ground { get; init; } = DaggerfallGroundTuning.Default;
     internal DaggerfallFlatsTuning Flats { get; init; } = DaggerfallFlatsTuning.Default;
+    internal DaggerfallSplatPeopleTuning SplatPeople { get; init; } = DaggerfallSplatPeopleTuning.Default;
     internal DaggerfallHangingTuning Hanging { get; init; } = DaggerfallHangingTuning.Default;
     /// <summary>What a site's projection and the exterior world read of these.</summary>
     internal DaggerfallSiteTuning Site => new(PresentationAudio, Flats, SiteLighting, WorldOrigin, Ground);
@@ -157,6 +158,7 @@ internal sealed record DaggerfallTuning(
             Horizon = DaggerfallHorizonTuning.Read(root.GetProperty("horizon")),
             Ground = DaggerfallGroundTuning.Read(root.GetProperty("ground")),
             Flats = DaggerfallFlatsTuning.Read(root.GetProperty("flats")),
+            SplatPeople = DaggerfallSplatPeopleTuning.Read(root.GetProperty("splatPeople")),
             Hanging = DaggerfallHangingTuning.Read(root.GetProperty("hanging")),
             Flora = DaggerfallFloraTuning.Read(root.GetProperty("flora")),
             GroundCover = DaggerfallGroundCoverTuning.Read(root.GetProperty("groundCover")),

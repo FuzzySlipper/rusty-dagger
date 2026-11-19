@@ -256,6 +256,47 @@ public sealed class ActorNavigationAndCameraTests
     }
 
     [Fact]
+    public void A_staged_wander_walks_its_route_back_and_forth_or_stands_at_its_one_point_until_unstaged()
+    {
+        using SpatialSession session = new(new SpatialSessionHandle(11), () => { });
+        SpatialDouble spatial = SpatialDouble.Create();
+        using ActorsState actors = CreateActors(new ActorPose(new WorldPoint(0f, 0f, 0f), 0f));
+        ActorState actor = actors.Get(42);
+        actor.Stats.AddTrack(TrackId.Parse("health"), new Track(new Stat(100), 100));
+        actor.Actor.Add(new WanderMemoryComponent());
+        ActorWanderCoordinator wander = new(new ActorNavigationCoordinator(spatial.Service, session));
+        WanderPolicy policy = new(.5f, 2.5f, 0f, 8, 2, ActorNavigationMode.Swimming);
+        WorldPoint a = new(0f, 0f, 0f), b = new(4f, 0f, 0f);
+
+        // Two points: from the first to the second and back, never its own waypoints.
+        actor.Wander.Stage([a, b]);
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, a.ToVector());
+        Assert.Equal(WanderState.Idle, wander.Update(actor, actor.Wander, policy, 1, .1f).Current);
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(1f, 0f, 0f));
+        Assert.Equal(WanderState.Moving, wander.Update(actor, actor.Wander, policy, 2, .1f).Current);
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, b.ToVector());
+        Assert.Equal(WanderState.Idle, wander.Update(actor, actor.Wander, policy, 3, .1f).Current);
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, new Vector3(3f, 0f, 0f));
+        _ = wander.Update(actor, actor.Wander, policy, 4, .1f);
+        Assert.Equal([a.ToVector(), b.ToVector(), b.ToVector(), a.ToVector()], spatial.Requests.Select(request => request.Target));
+
+        // One point: there, and then it stands.
+        WorldPoint stand = new(2f, 0f, 2f);
+        actor.Wander.Stage([stand]);
+        spatial.Receipt = Receipt(NavigationPathOutcome.Reached, stand.ToVector());
+        _ = wander.Update(actor, actor.Wander, policy, 5, .1f);
+        int requests = spatial.Requests.Count;
+        Assert.Equal(WanderState.Idle, wander.Update(actor, actor.Wander, policy, 6, 5f).Current);
+        Assert.Equal(requests, spatial.Requests.Count);
+
+        // Unstaged, it chooses its own waypoints again.
+        actor.Wander.Unstage();
+        Assert.Null(actor.Wander.Route);
+        _ = wander.Update(actor, actor.Wander, policy, 7, .1f);
+        Assert.Equal(2.5f, Vector3.Distance(stand.ToVector(), spatial.Requests[^1].Target), 3);
+    }
+
+    [Fact]
     public void Camera_viewpoint_equals_the_exact_position_in_its_engine_descriptor()
     {
         CameraDouble camera = CameraDouble.Create();

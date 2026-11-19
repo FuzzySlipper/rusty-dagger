@@ -102,13 +102,7 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
         SpawnDirection direction = SpawnDirection.Behind)
     {
         CharacterStepEnvironment stepEnvironment = environment();
-        // These are call-local spawn-clearance envelopes, not another retained collision world.
-        SpatialEntityCollider[] colliders = actors.All.Where(actor => !actor.IsDefeated && isGameplayActive(actor.DurableId)).Select(actor =>
-        {
-            Vector3 center = actor.Position.ToVector() + Vector3.UnitY * SummonSeparation;
-            return new SpatialEntityCollider(actor.Actor.Entity.Value, center - new Vector3(SummonClearanceRadius),
-                center + new Vector3(SummonClearanceRadius), 0, 0, true, false, false);
-        }).Append(spatial.ProjectCharacterCollider(player, actors.Player.Actor.Entity.Value)).ToArray();
+        SpatialEntityCollider[] colliders = Colliders();
         SpatialEntityCollider[] rayActors = colliders.Where(actor => actor.Entity != actors.Player.Actor.Entity.Value).ToArray();
         for (int attempt = 0; attempt < SummonPlacementAttempts; attempt++)
         {
@@ -135,23 +129,45 @@ internal sealed class DaggerfallActorPlacement(ActorsState actors, PlayerControl
                 if (distance < minimumDistance) continue;
             }
             Vector3 candidate = origin.ToVector() + rayDirection * distance;
-            SpatialHit floor = spatial.CastRay(candidate, -Vector3.UnitY, SummonFloorDistance, colliders, stepEnvironment);
-            if (!floor.Present || floor.StartSolid || floor.Normal.Y <= 0f) continue;
-            SpatialHit clearance = spatial.OverlapCapsule(floor.Point + Vector3.UnitY * SummonSeparation,
-                0d, SummonClearanceRadius, colliders, stepEnvironment);
-            if (clearance.Present) continue;
-            // Actor poses are feet. Admit the entire controller capsule at its projected center,
-            // not only the donor's small separation sphere, before handing this pose to the roster.
-            CharacterShapeConfig shape = spatial.CurrentController.Shape;
-            Vector3 center = floor.Point + Vector3.UnitY * (shape.StandingHeight * .5f + shape.ContactSkin + shape.ClearancePadding);
-            SpatialHit body = spatial.OverlapCapsule(center, shape.StandingHeight * .5f - shape.Radius,
-                shape.Radius + shape.ClearancePadding, colliders, stepEnvironment);
-            if (body.Present) continue;
-            pose = new(WorldPoint.From(floor.Point), MathF.Atan2(origin.X - floor.Point.X, -(origin.Z - floor.Point.Z)));
+            if (ClearFloor(candidate, colliders, stepEnvironment) is not { } feet) continue;
+            pose = new(feet, MathF.Atan2(origin.X - feet.X, -(origin.Z - feet.Z)));
             return true;
         }
         pose = default;
         return false;
+    }
+
+    /// <summary>
+    /// Where an actor can stand at <paramref name="at"/>: the floor under it (or up to a separation above it) with room
+    /// for a whole controller capsule, clear of every actor but <paramref name="moving"/> (those about to be moved);
+    /// null when there is none.
+    /// </summary>
+    internal WorldPoint? StandingAt(Vector3 at, IReadOnlySet<long> moving) =>
+        ClearFloor(at + Vector3.UnitY * SummonSeparation, Colliders(moving), environment());
+
+    // These are call-local spawn-clearance envelopes, not another retained collision world.
+    private SpatialEntityCollider[] Colliders(IReadOnlySet<long>? moving = null) => [.. actors.All
+        .Where(actor => !actor.IsDefeated && isGameplayActive(actor.DurableId) && moving?.Contains(actor.DurableId) != true).Select(actor =>
+        {
+            Vector3 center = actor.Position.ToVector() + Vector3.UnitY * SummonSeparation;
+            return new SpatialEntityCollider(actor.Actor.Entity.Value, center - new Vector3(SummonClearanceRadius),
+                center + new Vector3(SummonClearanceRadius), 0, 0, true, false, false);
+        }).Append(spatial.ProjectCharacterCollider(player, actors.Player.Actor.Entity.Value))];
+
+    private WorldPoint? ClearFloor(Vector3 above, SpatialEntityCollider[] colliders, CharacterStepEnvironment stepEnvironment)
+    {
+        SpatialHit floor = spatial.CastRay(above, -Vector3.UnitY, SummonFloorDistance, colliders, stepEnvironment);
+        if (!floor.Present || floor.StartSolid || floor.Normal.Y <= 0f) return null;
+        SpatialHit clearance = spatial.OverlapCapsule(floor.Point + Vector3.UnitY * SummonSeparation,
+            0d, SummonClearanceRadius, colliders, stepEnvironment);
+        if (clearance.Present) return null;
+        // Actor poses are feet. Admit the entire controller capsule at its projected center,
+        // not only the donor's small separation sphere, before handing this pose to the roster.
+        CharacterShapeConfig shape = spatial.CurrentController.Shape;
+        Vector3 center = floor.Point + Vector3.UnitY * (shape.StandingHeight * .5f + shape.ContactSkin + shape.ClearancePadding);
+        SpatialHit body = spatial.OverlapCapsule(center, shape.StandingHeight * .5f - shape.Radius,
+            shape.Radius + shape.ClearancePadding, colliders, stepEnvironment);
+        return body.Present ? null : WorldPoint.From(floor.Point);
     }
 
     /// <summary>Where the player and every gameplay-active actor stand now.</summary>

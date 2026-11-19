@@ -947,6 +947,15 @@
     "floraWindBend": 0.05,
     "floraWindWholeTexels": true
   },
+  "splatPeople": {
+    "pixelGrid": 3,
+    "pixelCoverage": 0.5,
+    "ownPalette": false,
+    "poseRate": 0,
+    "lightFloor": 0.15,
+    "crossfadeSeconds": 0.25,
+    "shadowCaster": "ellipsoids"
+  },
   "hanging": {
     "activationRadius": 4,
     "releaseSeconds": 2,

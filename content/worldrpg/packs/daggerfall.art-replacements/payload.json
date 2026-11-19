@@ -126862,8 +126862,8 @@
      "name": "white linen tunic, red-orange zigzag hem",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/381.glb",
-      "byteLength": 835304,
-      "sha256": "208ecf1c13d16fc973dd784aeeaf55a5fec571751ccdfb30d59f94c6bc453a94"
+      "byteLength": 1090144,
+      "sha256": "0257104fb92c002e34edafae894d92178b2b54116cd79605eecc71dfbac17cf3"
      },
      "walk": {
       "k": 0.7708,
@@ -126873,14 +126873,48 @@
      "idle": {
       "k": 0.8507,
       "A": 0.091
-     }
+     },
+     "palette": [
+      "#c18a69",
+      "#090a24",
+      "#931411",
+      "#66554c",
+      "#d97227",
+      "#d6b18e",
+      "#060559",
+      "#184751",
+      "#ae9c90",
+      "#160202",
+      "#7e6a5e",
+      "#854930",
+      "#4a210f",
+      "#e3cbae",
+      "#6c0607",
+      "#968174",
+      "#673219",
+      "#4c0303",
+      "#2a1711",
+      "#01010d",
+      "#0c0101",
+      "#d71828",
+      "#f0e2cb",
+      "#56758a",
+      "#000000",
+      "#350201",
+      "#350bb9",
+      "#230302",
+      "#a26549",
+      "#3c2a28",
+      "#524039",
+      "#faf9f1"
+     ]
     },
     "382": {
      "name": "bare-chested, white wrap kilt, steel bracers",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/382.glb",
-      "byteLength": 837136,
-      "sha256": "2641b7464a84fe327f9416ee8c8dd6eec7f3e313e316f48bcb8ee5bebfe96b80"
+      "byteLength": 1092532,
+      "sha256": "e64eb08a24da4494132caa1a43b42feab6280cdd6596fd6707ecf9ff84ef1c83"
      },
      "walk": {
       "k": 0.7869,
@@ -126890,14 +126924,48 @@
      "idle": {
       "k": 0.8633,
       "A": 0.0965
-     }
+     },
+     "palette": [
+      "#4f2916",
+      "#47382c",
+      "#c6c7ca",
+      "#7e7166",
+      "#bca692",
+      "#0e0b97",
+      "#351d0c",
+      "#1f242f",
+      "#dfc0a2",
+      "#1a0100",
+      "#670c03",
+      "#5a493b",
+      "#a28975",
+      "#ab714b",
+      "#eee0c9",
+      "#090d25",
+      "#434754",
+      "#8391b0",
+      "#36291e",
+      "#d49669",
+      "#146084",
+      "#01020d",
+      "#6c5c4f",
+      "#8b5434",
+      "#280101",
+      "#6f3b20",
+      "#faf8ee",
+      "#0e0100",
+      "#231406",
+      "#b7350d",
+      "#3f0403",
+      "#000000"
+     ]
     },
     "383-A": {
      "name": "teal tunic, yellow zigzag bands",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/383-A.glb",
-      "byteLength": 836100,
-      "sha256": "cc227ecaeb853c4059b033d0dbbffaa00c14244274ecf99d0d67df876305b785"
+      "byteLength": 1091180,
+      "sha256": "65263cf8690a8f9fc011a0a610cee9b57fd88a4c84953b196eead3fa0056ba3c"
      },
      "walk": {
       "k": 0.8058,
@@ -126907,14 +126975,48 @@
      "idle": {
       "k": 0.9024,
       "A": 0.0862
-     }
+     },
+     "palette": [
+      "#442219",
+      "#731804",
+      "#235459",
+      "#7b4122",
+      "#bd8f7b",
+      "#3812c8",
+      "#133c41",
+      "#4a0a01",
+      "#706259",
+      "#190b75",
+      "#ecbd94",
+      "#ae6f4e",
+      "#e69e3a",
+      "#5a3428",
+      "#100000",
+      "#060242",
+      "#eae9e4",
+      "#092a2d",
+      "#96bdc9",
+      "#021406",
+      "#2e160f",
+      "#050020",
+      "#03181a",
+      "#00020c",
+      "#000000",
+      "#cd4e10",
+      "#1c0201",
+      "#945533",
+      "#2b0401",
+      "#52909d",
+      "#a126b4",
+      "#33727b"
+     ]
     },
     "385": {
      "name": "townsman: teal tunic, orange hood, striped hose",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/385.glb",
-      "byteLength": 840076,
-      "sha256": "6dd49be5f42cf4de4f5f8460962a96eb9ac5f47376ad701b2471c5377bfcad4d"
+      "byteLength": 1096384,
+      "sha256": "70618d8241aaa0c46bb8353382b4ebfdbcc6948bf2cee4f82631d6599a2f2739"
      },
      "walk": {
       "k": 0.7851,
@@ -126924,14 +127026,48 @@
      "idle": {
       "k": 0.865,
       "A": 0.0929
-     }
+     },
+     "palette": [
+      "#67f1f9",
+      "#fabf13",
+      "#741908",
+      "#08515c",
+      "#646b71",
+      "#c56e3b",
+      "#f77113",
+      "#f8e091",
+      "#54aec4",
+      "#0e7080",
+      "#f5f8f0",
+      "#530702",
+      "#8c4e28",
+      "#053441",
+      "#11d2e6",
+      "#eb3a04",
+      "#b7c0c9",
+      "#031e2b",
+      "#130786",
+      "#360403",
+      "#eea061",
+      "#03091e",
+      "#484846",
+      "#01010b",
+      "#200101",
+      "#3c2d19",
+      "#ab1f04",
+      "#1c94a6",
+      "#0f0201",
+      "#1c1d0a",
+      "#959182",
+      "#000000"
+     ]
     },
     "386-C": {
      "name": "sleeveless teal tunic, pale blue mantle",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/386-C.glb",
-      "byteLength": 838552,
-      "sha256": "968f3f5d945e8594011712706ad74522818d5544130d6713c6b9532c9596478c"
+      "byteLength": 1094380,
+      "sha256": "68f5bdfb6060da657644a9ee622cc572932cdad4879f8f44886d2b9160dd6712"
      },
      "walk": {
       "k": 0.8214,
@@ -126941,14 +127077,48 @@
      "idle": {
       "k": 0.9083,
       "A": 0.0857
-     }
+     },
+     "palette": [
+      "#0d3c44",
+      "#22b5c8",
+      "#392d1b",
+      "#098001",
+      "#0e1998",
+      "#3a0602",
+      "#02024c",
+      "#7e462f",
+      "#bb7b58",
+      "#231b09",
+      "#010122",
+      "#8f6b4a",
+      "#5e7378",
+      "#0a272e",
+      "#e7f1e6",
+      "#db9c70",
+      "#012b02",
+      "#a4c6ca",
+      "#00020f",
+      "#01161d",
+      "#5a3824",
+      "#2d464b",
+      "#efc898",
+      "#216977",
+      "#879799",
+      "#57584c",
+      "#871704",
+      "#230100",
+      "#d0410c",
+      "#561205",
+      "#110300",
+      "#000000"
+     ]
     },
     "387-A": {
      "name": "green tunic, yellow-purple plaid kilt, fur-cuffed boots",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/387-A.glb",
-      "byteLength": 836364,
-      "sha256": "3a5ef6c960447af030bb2258c061185bbba2a1d3912c4219c46b8d7d1e1127c6"
+      "byteLength": 1091524,
+      "sha256": "1ebb1145371eecc5ba7d77ea705617b7905a8fcc2b53d13075980f584da2bd0c"
      },
      "walk": {
       "k": 0.7882,
@@ -126958,109 +127128,449 @@
      "idle": {
       "k": 0.8582,
       "A": 0.1109
-     }
+     },
+     "palette": [
+      "#0c21a2",
+      "#232419",
+      "#120348",
+      "#d0801e",
+      "#958c7c",
+      "#dcb198",
+      "#250503",
+      "#687553",
+      "#094c4a",
+      "#55573d",
+      "#9e6447",
+      "#402116",
+      "#c21011",
+      "#c88a64",
+      "#02011c",
+      "#5e3123",
+      "#190101",
+      "#ededd8",
+      "#7e4830",
+      "#9d570e",
+      "#683303",
+      "#f6b626",
+      "#f8e170",
+      "#4b0c02",
+      "#6ea0c3",
+      "#683884",
+      "#350402",
+      "#041a13",
+      "#0d0101",
+      "#710606",
+      "#000001",
+      "#3a3d2d"
+     ]
     },
     "388": {
      "name": "green hood, orange tunic, striped hose",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/388.glb",
-      "byteLength": 791880,
-      "sha256": "dd63f8083cc4a7462eb0b0e2bdf1d2c00e0169372cdfd98dd900f015bfbcb196"
+      "byteLength": 1033356,
+      "sha256": "2431faa31e859bf79a65dcd8c773311a07eafdad1c4dc798fdd53b33dbcd49c5"
      },
      "walk": {
-      "k": 0.8551,
-      "A": 0.1297,
-      "speed": 1.5463
+      "k": 0.8015,
+      "A": 0.1688,
+      "speed": 1.4493
      },
      "idle": {
       "k": 0.8742,
       "A": 0.1048
-     }
+     },
+     "palette": [
+      "#19018c",
+      "#94724b",
+      "#260302",
+      "#520502",
+      "#070351",
+      "#2b2c29",
+      "#28dfe4",
+      "#d28f6f",
+      "#e8c38b",
+      "#106282",
+      "#180101",
+      "#040429",
+      "#bbbcc2",
+      "#033d37",
+      "#00030f",
+      "#531ce6",
+      "#401f0f",
+      "#b54b23",
+      "#898c7f",
+      "#081e15",
+      "#622716",
+      "#0c0100",
+      "#4d4537",
+      "#380201",
+      "#616755",
+      "#f6271f",
+      "#000000",
+      "#b20c07",
+      "#833d25",
+      "#df7532",
+      "#f1efe0",
+      "#7d0805"
+     ]
     },
     "389": {
      "name": "green hood, teal and pale blue tunic, striped hose",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/389.glb",
-      "byteLength": 786980,
-      "sha256": "09655131654769606fdc12ddb56e2be255e7402db18448436db422c481a6c30f"
+      "byteLength": 1026956,
+      "sha256": "4edeee2633ac7bfbec550d9a663c71d59bf62542a2997a5ec547eda7cf412800"
      },
      "walk": {
-      "k": 0.8478,
-      "A": 0.1281,
-      "speed": 1.533
+      "k": 0.7699,
+      "A": 0.1631,
+      "speed": 1.3922
      },
      "idle": {
       "k": 0.8468,
       "A": 0.0929
-     }
+     },
+     "palette": [
+      "#76794a",
+      "#030361",
+      "#713d2a",
+      "#5e6d7e",
+      "#ad070f",
+      "#501f15",
+      "#485558",
+      "#390705",
+      "#080bb0",
+      "#dbe9ed",
+      "#0e2b39",
+      "#200203",
+      "#a4583e",
+      "#1a4d5c",
+      "#2a778b",
+      "#01021b",
+      "#323a3a",
+      "#010110",
+      "#21231e",
+      "#140001",
+      "#7890a3",
+      "#000009",
+      "#0a0000",
+      "#a6bdcd",
+      "#e8bc86",
+      "#051722",
+      "#132b04",
+      "#000005",
+      "#040e03",
+      "#000000",
+      "#c18b5e",
+      "#030234"
+     ]
     },
     "391": {
      "name": "green tunic, blue-green hood collar, blue hose",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/391.glb",
-      "byteLength": 837692,
-      "sha256": "bcccd78acb82f2063d6a9772e2a8f260daa098c5b5ca731f48030fecc9d34c3a"
+      "byteLength": 1093268,
+      "sha256": "ed75af2a5f00368ee2806b68fdf9bb4e3f51011babbaeaaee4c7a1b811041f7a"
      },
      "walk": {
-      "k": 0.8642,
-      "A": 0.1306,
-      "speed": 1.5627
+      "k": 0.8014,
+      "A": 0.1637,
+      "speed": 1.4491
      },
      "idle": {
       "k": 0.8856,
       "A": 0.0858
-     }
+     },
+     "palette": [
+      "#0a79ab",
+      "#273746",
+      "#8f9761",
+      "#060925",
+      "#587102",
+      "#393e26",
+      "#ac5305",
+      "#a56943",
+      "#410e03",
+      "#f2b938",
+      "#290301",
+      "#c6885c",
+      "#596c7f",
+      "#d6ac82",
+      "#824e36",
+      "#a0bfca",
+      "#262a18",
+      "#582209",
+      "#505638",
+      "#708ba2",
+      "#f2f7e8",
+      "#170100",
+      "#f3dc99",
+      "#0b0467",
+      "#0c5205",
+      "#000112",
+      "#67371e",
+      "#6f7549",
+      "#0b1b05",
+      "#3e5061",
+      "#112230",
+      "#000000"
+     ]
+    },
+    "392": {
+     "name": "light blue gown, red hip band",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/392.glb",
+      "byteLength": 1090772,
+      "sha256": "9278cc8fc5d38844085c96f8453ee5d0609fc8e88956cfc580003f9543b14029"
+     },
+     "walk": {
+      "k": 0.7874,
+      "A": 0.1637,
+      "speed": 1.4239
+     },
+     "idle": {
+      "k": 0.8734,
+      "A": 0.0832
+     },
+     "palette": [
+      "#530b02",
+      "#1e0ab4",
+      "#eaa46d",
+      "#8aa9c9",
+      "#392f33",
+      "#637fa8",
+      "#d97732",
+      "#12b71d",
+      "#75310f",
+      "#b1a8a8",
+      "#020e56",
+      "#20b6ed",
+      "#390201",
+      "#554b51",
+      "#240303",
+      "#a0552d",
+      "#010a28",
+      "#f5d199",
+      "#908988",
+      "#274055",
+      "#14242e",
+      "#425b73",
+      "#010313",
+      "#130101",
+      "#736d70",
+      "#780201",
+      "#000000",
+      "#adcce2",
+      "#096598",
+      "#a91a0d",
+      "#f1f3ed",
+      "#eb1206"
+     ]
     },
     "393": {
      "name": "blue hood, laced bodice, striped skirt",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/393.glb",
-      "byteLength": 837384,
-      "sha256": "999b9ab6c945015476ec254210e5990331f0bac28697e0db6701fec74ed4bcdb"
+      "byteLength": 1092864,
+      "sha256": "93f97935e0bad81de93ede3f744dad6ef053a7cbf3fd9095fcb61a057bf07baf"
      },
      "walk": {
-      "k": 0.8282,
-      "A": 0.1258,
-      "speed": 1.4976
+      "k": 0.8005,
+      "A": 0.1731,
+      "speed": 1.4475
      },
      "idle": {
       "k": 0.8949,
       "A": 0.0914
-     }
+     },
+     "palette": [
+      "#5c0802",
+      "#1c7b0a",
+      "#125fac",
+      "#e29d72",
+      "#1006b5",
+      "#370d07",
+      "#4f6081",
+      "#070f2b",
+      "#918779",
+      "#862a06",
+      "#c07935",
+      "#240201",
+      "#252e40",
+      "#a2c4f1",
+      "#032840",
+      "#0c386a",
+      "#899cbf",
+      "#945a33",
+      "#edf5f0",
+      "#010215",
+      "#f0d19d",
+      "#071d06",
+      "#110001",
+      "#5f77aa",
+      "#d21e07",
+      "#512c1a",
+      "#3b4861",
+      "#eda52d",
+      "#020357",
+      "#3fa2ef",
+      "#6f432c",
+      "#000000"
+     ]
     },
     "394": {
      "name": "rust-orange robe, green hood collar",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/394.glb",
-      "byteLength": 832756,
-      "sha256": "eee66e5eb5134762c5ca81eedf09ec344df130a6a4e875e7f582e132fff7e322"
+      "byteLength": 1086812,
+      "sha256": "5799c96bca983ea7aa9b391b9ad12ca0b7b7a9ce7714662d3619ac952683fd1b"
      },
      "walk": {
-      "k": 0.8587,
-      "A": 0.1252,
-      "speed": 1.5526
+      "k": 0.824,
+      "A": 0.1628,
+      "speed": 1.4899
      },
      "idle": {
       "k": 0.9174,
       "A": 0.0803
-     }
+     },
+     "palette": [
+      "#ed6f32",
+      "#0d0abf",
+      "#bc5429",
+      "#dd1e0b",
+      "#580502",
+      "#2a0705",
+      "#04086d",
+      "#532f25",
+      "#97b0be",
+      "#03033f",
+      "#1f0101",
+      "#01011e",
+      "#9c3b1b",
+      "#3f5452",
+      "#5d2010",
+      "#20372b",
+      "#150001",
+      "#4f5f03",
+      "#7a8468",
+      "#811705",
+      "#00020d",
+      "#c08263",
+      "#091c15",
+      "#0b0000",
+      "#000000",
+      "#3a0501",
+      "#eeedde",
+      "#75311e",
+      "#1595b3",
+      "#42170c",
+      "#82533c",
+      "#edb388"
+     ]
+    },
+    "396": {
+     "name": "orange halter dress",
+     "body": {
+      "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/396.glb",
+      "byteLength": 1092520,
+      "sha256": "f08bf3ef8efc948dd9476a552d3a1fdfeb32ee0a58d6744b7a96f627bc3d28cc"
+     },
+     "walk": {
+      "k": 0.8451,
+      "A": 0.1411,
+      "speed": 1.5281
+     },
+     "idle": {
+      "k": 0.9036,
+      "A": 0.1082
+     },
+     "palette": [
+      "#f22812",
+      "#684131",
+      "#210303",
+      "#090954",
+      "#56150b",
+      "#58a4c2",
+      "#440602",
+      "#1606af",
+      "#ee9e53",
+      "#6a6c78",
+      "#93321d",
+      "#add5ec",
+      "#00010d",
+      "#b81705",
+      "#e56734",
+      "#f4f5ec",
+      "#351d18",
+      "#8e583e",
+      "#300301",
+      "#f1c19a",
+      "#160101",
+      "#b84528",
+      "#1e5563",
+      "#152c1f",
+      "#0c0101",
+      "#ae765a",
+      "#030525",
+      "#7f0702",
+      "#4f2e26",
+      "#732615",
+      "#c09685",
+      "#000000"
+     ]
     },
     "454": {
      "name": "rust jacket, blue skirt",
      "body": {
       "path": "worldrpg/packs/daggerfall.art-replacements/media/splat-people/454.glb",
-      "byteLength": 836492,
-      "sha256": "c55e6901e49f3c00ca7b6ac936f9fbcbe1403d62104534519c027f67fe22c1c7"
+      "byteLength": 1091696,
+      "sha256": "5afe819117f7ee3371559a97e473f249857f2180196bb1c8095d619f5cdb041a"
      },
      "walk": {
-      "k": 0.8262,
-      "A": 0.1791,
-      "speed": 1.494
+      "k": 0.8451,
+      "A": 0.1864,
+      "speed": 1.5282
      },
      "idle": {
       "k": 0.9651,
       "A": 0.0794
-     }
+     },
+     "palette": [
+      "#051059",
+      "#364054",
+      "#023804",
+      "#1f0101",
+      "#4f5970",
+      "#c05124",
+      "#09c118",
+      "#b87851",
+      "#4b9ae2",
+      "#2c2c3b",
+      "#f3d7ac",
+      "#030529",
+      "#13498b",
+      "#591b0c",
+      "#8c4021",
+      "#8f5a42",
+      "#e9a62c",
+      "#fce86a",
+      "#617796",
+      "#132331",
+      "#e1a37e",
+      "#100000",
+      "#01020f",
+      "#633425",
+      "#f6f9f0",
+      "#899ab5",
+      "#872006",
+      "#421008",
+      "#0c111b",
+      "#a5cfef",
+      "#300401",
+      "#000000"
+     ]
     }
    }
   }

@@ -69,7 +69,7 @@ public sealed class PartsRigCrowdTests
         Assert.Equal(["load front", "load side", "load back"], rigs.Calls);
         rigs.Calls.Clear();
 
-        Appearance first = crowd.Show(7, 1.7F, walking: true)!;
+        Appearance first = crowd.Show(7, 7, 1.7F, walking: true)!;
         Assert.Equal(["appearance 4 views 1.7/850"], rigs.Calls);
         rigs.Calls.Clear();
         crowd.Settle();
@@ -78,10 +78,10 @@ public sealed class PartsRigCrowdTests
         rigs.Calls.Clear();
 
         // The same clip again plays nothing; stopping crossfades to the idle, and the walk's companion fades out.
-        Assert.Same(first, crowd.Show(7, 1.7F, walking: true));
+        Assert.Same(first, crowd.Show(7, 7, 1.7F, walking: true));
         crowd.Settle();
         Assert.Empty(rigs.Calls);
-        crowd.Show(7, 1.7F, walking: false);
+        crowd.Show(7, 7, 1.7F, walking: false);
         crowd.Settle();
         Assert.Equal(["play 7 track 0 idle fade 0.2 speed 1", "stop 7 track 3 fade 0.2"], rigs.Calls);
         Assert.Equal(1, crowd.Count);
@@ -93,13 +93,13 @@ public sealed class PartsRigCrowdTests
         RigsRecorder rigs = RigsRecorder.Create();
         using PartsRigCrowd crowd = new(() => rigs.Service);
         crowd.Use(Figure(["walk", "idle", "attention"]));
-        crowd.Show(1, 1.7F, walking: false);
-        crowd.Show(2, 1.8F, walking: true);
+        crowd.Show(1, 1, 1.7F, walking: false);
+        crowd.Show(2, 2, 1.8F, walking: true);
         crowd.Settle();
         rigs.Calls.Clear();
 
         crowd.Use(null);
-        Assert.Null(crowd.Show(1, 1.7F, walking: false));
+        Assert.Null(crowd.Show(1, 1, 1.7F, walking: false));
         // The snapshot that leaves them out may still be read: they are released at the settle after it.
         crowd.Settle();
         Assert.Empty(rigs.Calls);
@@ -114,14 +114,14 @@ public sealed class PartsRigCrowdTests
         RigsRecorder rigs = RigsRecorder.Create();
         using PartsRigCrowd crowd = new(() => rigs.Service);
         crowd.Use(Figure(["walk", "idle", "attention"]));
-        Appearance four = crowd.Show(3, 1.7F, walking: true)!;
+        Appearance four = crowd.Show(3, 3, 1.7F, walking: true)!;
         crowd.Settle();
         PartsRigLayerStack layers = PartsRigLayerStack.Read(JsonDocument.Parse(Stack).RootElement);
         crowd.Use(new PartsRigFigure("eight", [.. Figure([]).Views, new("front34", MathF.PI / 4, true), new("front34", -MathF.PI / 4, false)],
             850, "walk", "idle", new HashSet<string>(["walk", "idle", "attention"]), layers, .2F, TextureFilter.Linear, default));
         rigs.Calls.Clear();
 
-        Appearance eight = crowd.Show(3, 1.7F, walking: true)!;
+        Appearance eight = crowd.Show(3, 3, 1.7F, walking: true)!;
         Assert.NotSame(four, eight);
         crowd.Settle();
         // The rigs the first set loaded serve the second; only the new view's rig loaded.

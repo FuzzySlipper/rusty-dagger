@@ -14,10 +14,10 @@ public interface IWalkerCrowd
     static bool Walks(WanderState state) => state is WanderState.Moving or WanderState.Seeking;
 
     /// <summary>
-    /// The appearance object <paramref name="id"/> shows in the snapshot being built, for a walker
-    /// <paramref name="heightMetres"/> tall, walking or standing; null while no figure is used.
+    /// The appearance object <paramref name="id"/> shows in the snapshot being built, for walker
+    /// <paramref name="actor"/>, <paramref name="heightMetres"/> tall, walking or standing; null while no figure is used for it.
     /// </summary>
-    Appearance? Show(ulong id, float heightMetres, bool walking);
+    Appearance? Show(ulong id, long actor, float heightMetres, bool walking);
 
     /// <summary>
     /// Before the snapshot <see cref="Show"/> built is published: lets go of what binds a walker it left out to its

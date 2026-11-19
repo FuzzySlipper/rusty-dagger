@@ -13,13 +13,13 @@ public sealed class SplatCrowdTests
     {
         AnimationRecorder engine = AnimationRecorder.Create();
         using SplatCrowd crowd = new(() => engine.Service);
-        Assert.Null(crowd.Show(7, 1.7F, walking: true));
+        Assert.Null(crowd.Show(7, 7, 1.7F, walking: true));
         SplatFigure figure = Figure("385", 1);
         crowd.Use(figure);
 
         // Every walker draws the figure's one appearance, at its own size, through an instance on its own object.
-        Assert.Same(figure.Appearance, crowd.Show(7, 1.7F, walking: true));
-        Assert.Same(figure.Appearance, crowd.Show(8, 1.9F, walking: false));
+        Assert.Same(figure.Appearance, crowd.Show(7, 7, 1.7F, walking: true));
+        Assert.Same(figure.Appearance, crowd.Show(8, 8, 1.9F, walking: false));
         Assert.Equal(["instance 1 of 1 on 7", "instance 2 of 1 on 8"], engine.Calls);
         engine.Calls.Clear();
         Publish(crowd);
@@ -28,12 +28,12 @@ public sealed class SplatCrowdTests
         engine.Calls.Clear();
 
         // The same clip again plays nothing; stopping crossfades to the idle, and setting off again to the walk.
-        crowd.Show(7, 1.7F, walking: true);
-        crowd.Show(8, 1.9F, walking: false);
+        crowd.Show(7, 7, 1.7F, walking: true);
+        crowd.Show(8, 8, 1.9F, walking: false);
         Publish(crowd);
         Assert.Empty(engine.Calls);
-        crowd.Show(7, 1.7F, walking: false);
-        crowd.Show(8, 1.9F, walking: true);
+        crowd.Show(7, 7, 1.7F, walking: false);
+        crowd.Show(8, 8, 1.9F, walking: true);
         Publish(crowd);
         Assert.Equal(["play 1 idle speed 1 fade 0.25", "play 2 walk speed 0.9 fade 0.25"], engine.Calls);
         Assert.Equal(2, crowd.Count);
@@ -45,13 +45,13 @@ public sealed class SplatCrowdTests
         AnimationRecorder engine = AnimationRecorder.Create();
         using SplatCrowd crowd = new(() => engine.Service);
         crowd.Use(Figure("385", 1));
-        crowd.Show(3, 1.7F, walking: true);
+        crowd.Show(3, 3, 1.7F, walking: true);
         Publish(crowd);
         engine.Calls.Clear();
 
         SplatFigure other = Figure("454", 2);
         crowd.Use(other);
-        Assert.Same(other.Appearance, crowd.Show(3, 1.7F, walking: true));
+        Assert.Same(other.Appearance, crowd.Show(3, 3, 1.7F, walking: true));
         Publish(crowd);
         // An object holds one instance: the old one is given up for the new.
         Assert.Equal(["replace 1 with instance 2 of 2 on 3", "play 2 walk speed 0.9 restart fade 0"], engine.Calls);
@@ -63,30 +63,53 @@ public sealed class SplatCrowdTests
         AnimationRecorder engine = AnimationRecorder.Create();
         using SplatCrowd crowd = new(() => engine.Service);
         crowd.Use(Figure("385", 1));
-        crowd.Show(1, 1.7F, walking: false);
-        crowd.Show(2, 1.8F, walking: true);
+        crowd.Show(1, 1, 1.7F, walking: false);
+        crowd.Show(2, 2, 1.8F, walking: true);
         Publish(crowd);
         engine.Calls.Clear();
 
         // Walker 2 walked out of the snapshot (or died, and shows its corpse): its instance goes before that snapshot is
         // published, since the Engine refuses a pose for an object that shows a sprite.
-        crowd.Show(1, 1.7F, walking: false);
+        crowd.Show(1, 1, 1.7F, walking: false);
         crowd.Publishing();
         Assert.Equal(["release 2"], engine.Calls);
         crowd.Settle();
         // Back again, it is a new instance on its object.
-        crowd.Show(1, 1.7F, walking: false);
-        crowd.Show(2, 1.8F, walking: true);
+        crowd.Show(1, 1, 1.7F, walking: false);
+        crowd.Show(2, 2, 1.8F, walking: true);
         Publish(crowd);
         Assert.Equal(["release 2", "instance 3 of 1 on 2", "play 3 walk speed 0.9 restart fade 0"], engine.Calls);
         engine.Calls.Clear();
 
         crowd.Use(null);
-        Assert.Null(crowd.Show(1, 1.7F, walking: false));
+        Assert.Null(crowd.Show(1, 1, 1.7F, walking: false));
         crowd.Publishing();
         Assert.Equal(["release 1", "release 3"], engine.Calls);
         crowd.Settle();
         Assert.Equal(0, crowd.Count);
+    }
+
+    [Fact]
+    public void A_walker_assigned_a_figure_draws_as_it_whether_or_not_the_crowd_uses_one()
+    {
+        AnimationRecorder engine = AnimationRecorder.Create();
+        using SplatCrowd crowd = new(() => engine.Service);
+        SplatFigure own = Figure("454", 2);
+        crowd.Assign(5, own);
+
+        // Walker 5 is its own figure; the rest show their own art while the crowd uses none.
+        Assert.Same(own.Appearance, crowd.Show(9, 5, 1.7F, walking: false));
+        Assert.Null(crowd.Show(10, 6, 1.7F, walking: false));
+        // Once the crowd uses a figure the rest draw as it, and walker 5 still as its own.
+        SplatFigure everyone = Figure("385", 1);
+        crowd.Use(everyone);
+        Assert.Same(own.Appearance, crowd.Show(9, 5, 1.7F, walking: false));
+        Assert.Same(everyone.Appearance, crowd.Show(10, 6, 1.7F, walking: false));
+        Assert.Equal(new[] { 5L }, crowd.Assigned.Keys);
+
+        crowd.Assign(5, null);
+        Assert.Same(everyone.Appearance, crowd.Show(9, 5, 1.7F, walking: false));
+        Assert.Empty(crowd.Assigned);
     }
 
     /// <summary>What the site appearance does with the snapshot the crowd showed walkers in.</summary>

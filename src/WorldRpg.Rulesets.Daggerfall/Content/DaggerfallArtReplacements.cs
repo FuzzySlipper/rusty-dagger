@@ -111,9 +111,11 @@ internal sealed record DaggerfallSplatPeople(DaggerfallArtFile Walk, DaggerfallA
 
 /// <summary>
 /// One gsplat character: what asset-pipeline calls it, its skinned-splat GLB (metres, standing on y = 0, facing +z), the
-/// pelvis fit of each clip to its legs, and the speed its fitted walk travels, in metres a second.
+/// pelvis fit of each clip to its legs, the speed its fitted walk travels, in metres a second, and the colours of its
+/// own paint a pixel finish may snap to.
 /// </summary>
-internal sealed record DaggerfallSplatPerson(string Name, DaggerfallArtFile Body, DaggerfallSplatClipFit Walk, DaggerfallSplatClipFit Idle, float WalkSpeed);
+internal sealed record DaggerfallSplatPerson(string Name, DaggerfallArtFile Body, DaggerfallSplatClipFit Walk, DaggerfallSplatClipFit Idle, float WalkSpeed,
+    IReadOnlyList<Color> Palette);
 
 /// <summary>A clip's pelvis fit: the top joint's translation t becomes (<paramref name="Scale"/> t.x, <paramref name="Lift"/> + <paramref name="Scale"/> t.y, <paramref name="Scale"/> t.z).</summary>
 internal sealed record DaggerfallSplatClipFit(float Scale, float Lift);
@@ -748,7 +750,11 @@ internal sealed class DaggerfallArtReplacements
             {
                 JsonElement walk = character.Value.GetProperty("walk");
                 DaggerfallSplatPerson person = new(character.Value.GetProperty("name").GetString()!, File(character.Value.GetProperty("body"), $"Splat person {character.Name}'s body"),
-                    Fit(walk), Fit(character.Value.GetProperty("idle")), walk.GetProperty("speed").GetSingle());
+                    Fit(walk), Fit(character.Value.GetProperty("idle")), walk.GetProperty("speed").GetSingle(),
+                    [.. character.Value.GetProperty("palette").EnumerateArray().Select(colour => Color.FromSrgbHex(
+                        int.Parse(colour.GetString()!.TrimStart('#'), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture), 1F))]);
+                if (person.Palette.Count is 0 or > 256)
+                    throw new InvalidOperationException($"Content pack '{packId}' gives splat person {character.Name} {person.Palette.Count} palette colours, not 1 to 256.");
                 if (!float.IsFinite(person.WalkSpeed) || person.WalkSpeed <= 0
                     || new[] { person.Walk, person.Idle }.Any(fit => !float.IsFinite(fit.Scale) || fit.Scale <= 0 || !float.IsFinite(fit.Lift)))
                     throw new InvalidOperationException($"Content pack '{packId}' fits splat person {character.Name}'s clips by a scale that is not positive or walks them at {person.WalkSpeed} m/s.");

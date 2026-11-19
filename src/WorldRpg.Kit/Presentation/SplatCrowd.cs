@@ -10,7 +10,8 @@ namespace WorldRpg.Kit.Presentation;
 public sealed record SplatFigure(string Name, Appearance Appearance, string Walk, string Idle, float WalkRate, float CrossfadeSeconds);
 
 /// <summary>
-/// Draws walkers as one <see cref="SplatFigure"/>, at its own size: each walker shown in a snapshot is an animation
+/// Draws walkers as <see cref="SplatFigure"/>s, at their own size: the crowd's figure, or one assigned to a walker
+/// (<see cref="Assign"/>), which it draws as that figure whether or not the crowd uses one. Each walker shown in a snapshot is an animation
 /// instance of the figure's appearance, playing its walk while it walks and its idle otherwise. The figure's
 /// appearance and clips belong to whoever made it. An object holds one instance, so a walker that changes figure has
 /// its instance replaced, and one a snapshot leaves out has its instance released before that snapshot is published:
@@ -20,6 +21,7 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
 {
     private readonly Dictionary<ulong, Walker> shown = [];
     private readonly HashSet<ulong> seen = [];
+    private readonly Dictionary<long, SplatFigure> assigned = [];
     private bool disposed;
 
     /// <summary>The figure walkers are drawn as, or null while they show their own art.</summary>
@@ -28,6 +30,17 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
     /// <summary>How many walkers the last settled snapshot drew as the figure.</summary>
     public int Count => shown.Count;
 
+    /// <summary>The walkers drawn as a figure of their own, by actor.</summary>
+    public IReadOnlyDictionary<long, SplatFigure> Assigned => assigned;
+
+    /// <summary>Draws walker <paramref name="actor"/> as <paramref name="figure"/> from the next snapshot, or (null) as the crowd draws the rest.</summary>
+    public void Assign(long actor, SplatFigure? figure)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (figure is null) assigned.Remove(actor);
+        else assigned[actor] = figure;
+    }
+
     /// <summary>Draws walkers as <paramref name="figure"/> from the next snapshot, or (null) as their own art again.</summary>
     public void Use(SplatFigure? figure)
     {
@@ -35,9 +48,9 @@ public sealed class SplatCrowd(Func<IAnimationService> engine) : IWalkerCrowd, I
         Figure = figure;
     }
 
-    public Appearance? Show(ulong id, float heightMetres, bool walking)
+    public Appearance? Show(ulong id, long actor, float heightMetres, bool walking)
     {
-        if (disposed || Figure is not { } figure) return null;
+        if (disposed || (assigned.TryGetValue(actor, out SplatFigure? own) ? own : Figure) is not { } figure) return null;
         seen.Add(id);
         if (!shown.TryGetValue(id, out Walker? walker))
             shown[id] = walker = new(figure, Engine.CreateInstance(new(figure.Appearance, id)));

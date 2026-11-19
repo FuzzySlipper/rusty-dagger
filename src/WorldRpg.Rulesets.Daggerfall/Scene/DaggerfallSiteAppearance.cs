@@ -516,7 +516,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
             Appearance? chosen = actor.IsDefeated ? DrawnCorpse(visual) : DrawnLive(visual);
             // A walking person drawn as the crowd's figure faces where it walks (a rig figure shows the view its camera sees).
             Appearance? rigged = !actor.IsDefeated && actor.Actor.TypeId.Value == DaggerfallActorKinds.Civilian
-                ? peopleRigs()?.Show(id, visual.Sprite.Size.Y, IWalkerCrowd.Walks(actor.Wander.State)) : null;
+                ? peopleRigs()?.Show(id, actor.DurableId, visual.Sprite.Size.Y, IWalkerCrowd.Walks(actor.Wander.State)) : null;
             chosen = rigged ?? chosen;
             if (chosen is null) continue;
             // A corpse mesh lies along its creature's heading; a billboard turns to the camera on its own.

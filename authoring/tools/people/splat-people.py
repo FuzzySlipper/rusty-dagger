@@ -11,8 +11,9 @@ writes into content/worldrpg/packs/daggerfall.art-replacements/media/splat-peopl
                   clips alike (Armature.001|Scene), and one character carries both packs, so each takes its own name.
 
 and states artReplacements.splatPeople in payload.json: the clips, the joint the fits move (the top joint, Hips), and
-per character its name, body and the pelvis fit of each clip (k and A: Hips at (k x, A + k y, k z)) with the speed
-the fitted walk travels. Rerun it when asset-pipeline marks another character ready or refits one.
+per character its name, body, the pelvis fit of each clip (k and A: Hips at (k x, A + k y, k z)) with the speed
+the fitted walk travels, and its palette: PALETTE sRGB colours k-means picks from its own Gaussians, weighted by
+opacity, which a pixel finish can snap its blocks to. Rerun it when asset-pipeline marks another character ready or refits one.
 
     authoring/tools/people/splat-people.py [--characters DIR] [--clips DIR]
 """
@@ -23,6 +24,8 @@ import shutil
 import struct
 from pathlib import Path
 
+import numpy as np
+
 ROOT = Path(__file__).resolve().parents[3]
 PACK = ROOT / 'content/worldrpg/packs/daggerfall.art-replacements'
 MEDIA = PACK / 'media/splat-people'
@@ -31,6 +34,7 @@ CLIPS = Path('/data/assets/splat-characters/pinoc-clips/mixamo')
 # Each pack's clip, by the name the game plays it under, from the PINOC Mixamo export it is cut from.
 PACKS = {'walk': 'walking.glb', 'idle': 'standing-idle.glb'}
 TOP_JOINT = 'mixamorig:Hips'
+PALETTE = 32
 
 
 def read_glb(path):
@@ -84,6 +88,27 @@ def clip_pack(source, name, out):
     write_glb(out, pack, bytes(data))
 
 
+def palette(body):
+    """PALETTE sRGB colours (#rrggbb) that k-means picks from the body's Gaussians, weighted by their opacity."""
+    gltf, binary = read_glb(body)
+    accessor = gltf['accessors'][gltf['meshes'][0]['primitives'][0]['attributes']['_COLOR']]
+    if (accessor['componentType'], accessor['type'], accessor.get('normalized')) != (5121, 'VEC4', True):
+        raise SystemExit(f'{body} keeps _COLOR as {accessor["componentType"]} {accessor["type"]}, not normalized bytes')
+    view = gltf['bufferViews'][accessor['bufferView']]
+    start = view.get('byteOffset', 0) + accessor.get('byteOffset', 0)
+    rgba = np.frombuffer(binary, np.uint8, accessor['count'] * 4, start).reshape(-1, 4).astype(np.float64)
+    colours, weights = rgba[:, :3], rgba[:, 3] / 255
+    rng = np.random.default_rng(10922)
+    centres = colours[rng.choice(len(colours), PALETTE, replace=False, p=weights / weights.sum())]
+    for _ in range(40):
+        nearest = np.argmin(((colours[:, None] - centres[None]) ** 2).sum(-1), axis=1)
+        for k in range(PALETTE):
+            mine = nearest == k
+            if weights[mine].sum() > 0:
+                centres[k] = (colours[mine] * weights[mine, None]).sum(0) / weights[mine].sum()
+    return [f'#{r:02x}{g:02x}{b:02x}' for r, g, b in np.clip(np.round(centres), 0, 255).astype(int)]
+
+
 def entry(path):
     data = path.read_bytes()
     return {'path': path.relative_to(ROOT / 'content').as_posix(), 'byteLength': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
@@ -94,6 +119,7 @@ def main():
     parser.add_argument('--characters', type=Path, default=CHARACTERS, help="asset-pipeline's outputs/dagger-characters")
     parser.add_argument('--clips', type=Path, default=CLIPS, help="PINOC's Mixamo exports of Walking and Standing Idle")
     args = parser.parse_args()
+    ready_list = json.loads((args.characters / 'ready.json').read_text())['ready']
     if MEDIA.exists():
         shutil.rmtree(MEDIA)
     (MEDIA / 'clips').mkdir(parents=True)
@@ -102,7 +128,7 @@ def main():
         clip_pack(args.clips / file, name, MEDIA / 'clips' / f'{name}.glb')
         clips[name] = entry(MEDIA / 'clips' / f'{name}.glb')
     characters = {}
-    for ready in json.loads((args.characters / 'ready.json').read_text())['ready']:
+    for ready in ready_list:
         body = args.characters / ready['engine_glb']
         fit = json.loads(body.with_name(f'{ready["id"]}-clip-fit.json').read_text())['clips']
         if {fit[name]['path'] for name in PACKS} != set(PACKS.values()):
@@ -112,6 +138,7 @@ def main():
             'name': ready['name'], 'body': entry(MEDIA / f'{ready["id"]}.glb'),
             'walk': {'k': fit['walk']['k'], 'A': fit['walk']['A'], 'speed': round(fit['walk']['fitted']['speed_m_s'], 4)},
             'idle': {'k': fit['idle']['k'], 'A': fit['idle']['A']},
+            'palette': palette(MEDIA / f'{ready["id"]}.glb'),
         }
     payload_path = PACK / 'payload.json'
     payload = json.loads(payload_path.read_text())

@@ -160,6 +160,10 @@ internal sealed class DaggerfallSourcePopulation(DaggerfallNpcRegistry npcs, Act
         appearance().SyncRestoredDefeat(actors);
     }
 
+    /// <summary>Whether <paramref name="actorId"/> is one of the active site's source civilians, which this population walks.</summary>
+    internal bool Walks(long actorId) => npcs.All.Any(npc => npc.DurableId == actorId && DaggerfallCivilians.IsSourcePopulation(npc)
+        && npcs.IsGameplayActive(actorId) && npc.Profile == activeProfile());
+
     /// <summary>
     /// Advances only admitted source civilians. Enemy pursuit never owns this actor family; the
     /// wander coordinator records explicit idle, seeking, moving, blocked, unloaded, and dead

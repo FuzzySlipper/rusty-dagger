@@ -1117,8 +1117,10 @@ internal sealed partial class DaggerfallSession
                 () => State.WeaponDrawn = true, State.Currency, State.SkillUses, State.LevelUps, State.Character, State.Transport, State.Inventory,
                 State.Encumbrance, State.ItemInstances, _uniqueItems, State.RacialOverrides, _lycanthropy, _time, TransportAccess,
                 ApplyTransportChange);                                                                // Developer
+            DaggerfallPeopleStage peopleStage = new(State.Actors, id => Population.Walks(id), State.PlayerControl, (at, moving) => _placement.StandingAt(at, moving));   // Developer
             _people = new DaggerfallPeopleSwitch(composition.ArtReplacements?.PeopleRig, composition.ArtReplacements?.SplatPeople, () => _engine.PartsRigs,
-                () => _engine.Animation, () => _engine.Content, _tuning.CivilianWander.MovementSpeedUnitsPerSecond, State.Actors);   // Developer
+                () => _engine.Animation, () => _engine.Content, _tuning.CivilianWander.MovementSpeedUnitsPerSecond, _tuning.SplatPeople, State.Actors,
+                peopleStage);   // Developer
             // One object per module type: the Engine's catalogue binds an instance to the first type it matches.
             DebugCommands =
             [
@@ -1135,6 +1137,7 @@ internal sealed partial class DaggerfallSession
                 scene,
                 grants,
                 _people,
+                peopleStage,
                 heldWorkbench,
                 new TunablesDebugModule(engine.ContentSource, heldWorkbench.Page, heldWorkbench.Choose),
             ];                                                                                     // Developer
