@@ -84,7 +84,10 @@ public sealed class ActorNavigationCoordinator
     /// Evaluates one Engine-owned navigation step. Only an explicit Reached
     /// outcome changes product pose; every other Engine fact leaves it intact,
     /// but for a body the Engine cannot free, which is stood clear if it can
-    /// be (<see cref="CharacterPenetration"/>).
+    /// be (<see cref="CharacterPenetration"/>). A walker the navigation cannot
+    /// start from (off every grid, as in ground no navigation covers, above its
+    /// floor, or with no navigation published at all) walks straight for the target under the Engine character
+    /// controller instead, which owns its collision, gravity and steps.
     /// </summary>
     public NavigationStepResult Evaluate(ActorState actor, ActorNavigationRequest request)
     {
@@ -101,6 +104,9 @@ public sealed class ActorNavigationCoordinator
             request.Target.ToVector(),
             request.MaximumStepUnits,
             request.MaximumVisited));
+
+        if (receipt.Outcome is NavigationPathOutcome.StartNotWalkable or NavigationPathOutcome.ProjectionUnavailable && _useCharacterController)
+            return EvaluateCharacterStep(actor, request);
 
         if (receipt.Outcome == NavigationPathOutcome.Reached)
         {
@@ -158,7 +164,7 @@ public sealed class ActorNavigationCoordinator
         {
             ActorNavigationMode.Swimming => CharacterMovementMode.Swimming,
             ActorNavigationMode.Flying => CharacterMovementMode.Flying,
-            ActorNavigationMode.WaterWalking => CharacterMovementMode.Walking,
+            ActorNavigationMode.WaterWalking or ActorNavigationMode.Ground => CharacterMovementMode.Walking,
             _ => throw new ArgumentOutOfRangeException(nameof(request)),
         };
         CharacterMovementRequest movement = new(
