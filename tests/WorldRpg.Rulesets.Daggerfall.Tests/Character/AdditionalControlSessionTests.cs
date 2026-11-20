@@ -17,7 +17,6 @@ public sealed class AdditionalControlSessionTests
     [InlineData("transport", "transport")]
     [InlineData("logbook", "journal")]
     [InlineData("notebook", "notebook")]
-    [InlineData("travel-map", "transport")]
     [InlineData("use-magic-item", "magic-items")]
     public void Mapped_shortcuts_request_the_existing_panels(string intent, string panel)
     {
@@ -25,6 +24,15 @@ public sealed class AdditionalControlSessionTests
         Press(f.Session, intent);
         Assert.Equal(panel, f.Session.LatestPanelRequest!.Panel);
         Assert.Contains(new DaggerfallControlSettings().PhysicalMappings(), mapping => Encoding.UTF8.GetString(mapping.Intent.Span) == intent);
+    }
+
+    [Fact]
+    public void The_travel_map_shortcut_opens_the_expedition_map()
+    {
+        using var f = new SanguineRoseSessionTests.Fixture();
+        Press(f.Session, "travel-map");
+        Assert.True(f.Session.Expedition.Open);
+        Assert.Contains(new DaggerfallControlSettings().PhysicalMappings(), mapping => Encoding.UTF8.GetString(mapping.Intent.Span) == "travel-map");
     }
 
     [Theory]
