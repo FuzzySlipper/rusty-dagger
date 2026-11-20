@@ -19,10 +19,13 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
 {
     /// <summary>EnemyMotor's close-range retreat and strafe decisions, which the Kit pursuit policy applies.</summary>
     internal DaggerfallPursuitManeuverTuning Maneuvers { get; init; } = DaggerfallPursuitManeuverTuning.Default;
+    /// <summary>The scored tactics' rule numbers.</summary>
+    internal DaggerfallEnemyTacticTuning Tactics { get; init; } = DaggerfallEnemyTacticTuning.Default;
 
     internal DaggerfallEnemyBehaviorTuning Validate()
     {
         Maneuvers.Validate();
+        Tactics.Validate();
         if (!double.IsFinite(DetectionDistance) || DetectionDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(DetectionDistance));
         if (!float.IsFinite(ChaseSpeedUnitsPerSecond) || ChaseSpeedUnitsPerSecond <= 0f) throw new ArgumentOutOfRangeException(nameof(ChaseSpeedUnitsPerSecond));
         if (!float.IsFinite(SpawnGroundProbeLift) || SpawnGroundProbeLift < 0f) throw new ArgumentOutOfRangeException(nameof(SpawnGroundProbeLift));
@@ -56,6 +59,7 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
                 maneuvers.GetProperty("advanceDistanceMultiplier").GetSingle(),
                 maneuvers.GetProperty("searchDistance").GetSingle(),
                 maneuvers.GetProperty("searchStep").GetSingle()),
+            Tactics = DaggerfallEnemyTacticTuning.Read(section.GetProperty("tactics")),
         }.Validate();
     }
 }

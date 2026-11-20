@@ -85,6 +85,8 @@ internal sealed record DaggerfallEnemyPerceptionSource(
 internal sealed class DaggerfallEnemyPerceptionMemory
 {
     internal DaggerfallEnemyMotorMemory Motor { get; } = new();
+    /// <summary>What a scored tactic remembers of its own choices; not saved.</summary>
+    internal DaggerfallEnemyTacticMemory Tactic { get; } = new();
     internal bool Detected { get; set; }
     internal bool HasEncounteredPlayer { get; set; }
     internal bool LanguagePacified { get; set; }
@@ -98,6 +100,15 @@ internal sealed class DaggerfallEnemyPerceptionMemory
     internal long? LastDirectSightMinute { get; set; }
     /// <summary>Through this game minute the actor knows where its attacker is, having been struck; not saved.</summary>
     internal long? ProvokedUntilMinute { get; set; }
+    /// <summary>The target this actor fled and leaves alone through <see cref="DisengagedUntilMinute"/> unless struck; not saved.</summary>
+    internal long? DisengagedFrom { get; set; }
+    internal long DisengagedUntilMinute { get; set; }
+
+    /// <summary>Whether the actor is still leaving <paramref name="target"/> alone at <paramref name="gameMinute"/>.</summary>
+    internal bool LeavesAlone(long target, long gameMinute) => DisengagedFrom == target && gameMinute < DisengagedUntilMinute;
+
+    /// <summary>Being struck ends a disengagement: the actor knows where its attacker is and answers it.</summary>
+    internal void Reengage() => DisengagedFrom = null;
 
     internal void SetForcedHostile(bool hostile)
     {
@@ -120,6 +131,8 @@ internal sealed class DaggerfallEnemyPerceptionMemory
         SetForcedHostile(ForcedHostile);
         LastStealthCheckMinute = null;
         LastDirectSightMinute = null;
+        DisengagedFrom = null;
+        Tactic.Clear();
     }
 }
 

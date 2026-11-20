@@ -25,7 +25,7 @@ public sealed class AttackCapabilities<TFact>(long playerId, TargetingService ta
         // and reports why nothing was in reach, unless the ruleset's contact decides at the hit frame.
         execution.Start(new(playerId, target, generation, step, delta, target is not null || untargetedSwingsWaitForImpact), facts);
     }
-    public bool TryBeginEnemyAttack(long attacker, long target, ulong generation, ulong step, double delta, FactBuffer<TFact> facts) =>
-        execution.Start(new(attacker, target, generation, step, delta, true), facts);
+    public bool TryBeginEnemyAttack(long attacker, long target, ulong generation, ulong step, double delta, FactBuffer<TFact> facts, string? action = null) =>
+        execution.Start(new(attacker, target, generation, step, delta, true, action), facts);
     public void InterruptPendingAttack(long attacker, ulong generation) => execution.Interrupt(attacker, generation);
 }

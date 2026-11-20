@@ -19,6 +19,8 @@ public enum PursuitState
     TargetLost,
     Unloaded,
     Dead,
+    /// <summary>Running to a ruleset-chosen destination away from the target, whether or not it is in sight.</summary>
+    Flee,
 }
 
 /// <summary>Ruleset policy for an actor's movement medium and close-range maneuvers.</summary>
@@ -45,11 +47,15 @@ public readonly record struct PursuitPolicy(
 
     /// <summary>Consecutive failed navigation probes that make pursuit explicitly blocked; the first is a transient observation.</summary>
     public uint BlockedFailures { get; init; } = 2;
+    /// <summary>Where a <see cref="PursuitState.Flee"/> maneuver runs to, by Engine navigation; required by it and read by nothing else.</summary>
+    public WorldPoint? Destination { get; init; }
 
     public PursuitPolicy Validate()
     {
         if (AttackReach is double reach && (!double.IsFinite(reach) || reach <= 0)) throw new ArgumentOutOfRangeException(nameof(AttackReach));
-        if (Maneuver is not (PursuitState.Chase or PursuitState.Idle or PursuitState.Retreat or PursuitState.Strafe)) throw new ArgumentOutOfRangeException(nameof(Maneuver));
+        if (Maneuver is not (PursuitState.Chase or PursuitState.Idle or PursuitState.Retreat or PursuitState.Strafe or PursuitState.Flee)) throw new ArgumentOutOfRangeException(nameof(Maneuver));
+        if (Maneuver == PursuitState.Flee && Destination is null) throw new ArgumentOutOfRangeException(nameof(Destination), "A flee needs a destination.");
+        Destination?.Validate();
         if (!float.IsFinite(SpeedMultiplier) || SpeedMultiplier <= 0) throw new ArgumentOutOfRangeException(nameof(SpeedMultiplier));
         if (StrafeDirection is not (-1 or 1)) throw new ArgumentOutOfRangeException(nameof(StrafeDirection));
         if (SearchLastKnownPosition && (!float.IsFinite(SearchDistance) || SearchDistance <= 0 || !float.IsFinite(SearchStep) || SearchStep <= 0))
@@ -62,6 +68,35 @@ public readonly record struct PursuitPolicy(
     }
 }
 
+
+/// <summary>
+/// Where a <see cref="PursuitState.Flee"/> runs: a point at a distance from the actor, directly away from the threat
+/// on the ground plane, turned further aside on each later attempt (45 degrees either way, then 90, then 135) for a
+/// ruleset whose earlier destination the Engine's navigation could not walk.
+/// </summary>
+public static class PursuitFlee
+{
+    private static readonly float[] TurnDegrees = [0f, 45f, -45f, 90f, -90f, 135f, -135f];
+
+    /// <summary>How many distinct directions there are to try before none is left.</summary>
+    public static int Directions => TurnDegrees.Length;
+
+    public static WorldPoint Destination(WorldPoint from, WorldPoint threat, float distance, int attempt)
+    {
+        from.Validate();
+        threat.Validate();
+        if (!float.IsFinite(distance) || distance <= 0f) throw new ArgumentOutOfRangeException(nameof(distance));
+        if (attempt < 0 || attempt >= TurnDegrees.Length) throw new ArgumentOutOfRangeException(nameof(attempt));
+        Vector3 away = from.ToVector() - threat.ToVector();
+        away.Y = 0f;
+        // Standing on the threat gives no away; any direction serves, so take the same one every time.
+        away = away.LengthSquared() > .0001f ? Vector3.Normalize(away) : Vector3.UnitZ;
+        float turn = TurnDegrees[attempt] * MathF.PI / 180f;
+        (float sin, float cos) = MathF.SinCos(turn);
+        Vector3 turned = new(away.X * cos - away.Z * sin, 0f, away.X * sin + away.Z * cos);
+        return WorldPoint.From(from.ToVector() + turned * distance);
+    }
+}
 
 /// <summary>Entity-local memory for one actor's current pursuit decision.</summary>
 public sealed class PursuitMemoryComponent
@@ -264,16 +299,19 @@ public sealed class PursuitCoordinator<TFact> where TFact : IWorldRpgFact
             WorldPoint? search = !observed && policy.SearchLastKnownPosition && reach is not null
                 ? memory.Search(target.DurableId, actor.Position, reach.Value, policy) : null;
             if (!observed && !policy.SearchLastKnownPosition) memory.ForgetTarget();
-            attackEligible = policy.AllowAttack && observed && visible && reach is not null && pair.Distance <= reach;
-            desired = reach is null ? PursuitState.Idle
+            bool fleeing = policy.Maneuver == PursuitState.Flee;
+            attackEligible = !fleeing && policy.AllowAttack && observed && visible && reach is not null && pair.Distance <= reach;
+            // A flee runs to its destination whether or not the target is in sight or within any attack's reach.
+            desired = fleeing ? PursuitState.Flee
+                : reach is null ? PursuitState.Idle
                 : !observed ? search is not null ? PursuitState.Search
                     : policy.EmitTargetLost && memory.State is not PursuitState.Idle and not PursuitState.TargetLost ? PursuitState.TargetLost : PursuitState.Idle
                 : policy.Maneuver == PursuitState.Retreat && policy.CanRetreat ? PursuitState.Retreat
                 : policy.Maneuver == PursuitState.Strafe && policy.CanStrafe ? PursuitState.Strafe
                 : attackEligible ? PursuitState.Attack : policy.Maneuver == PursuitState.Idle ? PursuitState.Idle : PursuitState.Chase;
-            if (desired is PursuitState.Chase or PursuitState.Search or PursuitState.Retreat or PursuitState.Strafe)
+            if (desired is PursuitState.Chase or PursuitState.Search or PursuitState.Retreat or PursuitState.Strafe or PursuitState.Flee)
             {
-                WorldPoint destination = search ?? target.Position;
+                WorldPoint destination = fleeing ? policy.Destination!.Value : search ?? target.Position;
                 WorldPoint navigationTarget = policy.NavigationMode is ActorNavigationMode.Ground or ActorNavigationMode.WaterWalking
                     ? new WorldPoint(destination.X, actor.Position.Y, destination.Z) : destination;
                 if (desired == PursuitState.Retreat)

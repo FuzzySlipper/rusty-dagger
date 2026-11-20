@@ -473,7 +473,8 @@ internal sealed partial class DaggerfallSession
                     effects.GrantsWaterWalking(id),
                     effects.GrantsLevitation(id)),
                 canOpenDoors: id => DaggerfallEnemyBehaviorModule.CanOpenDoors(id, authored, definitions),
-                openBlockedDoor: actor => _doors.TryOpenForEnemy(actor.Position), questRestrained: id => QuestFoes.Restrained(id), attackAtDistance: _combat.EnemyAttackAtDistance);
+                openBlockedDoor: actor => _doors.TryOpenForEnemy(actor.Position), questRestrained: id => QuestFoes.Restrained(id), attackAtDistance: _combat.EnemyAttackAtDistance,
+                gameMinute: () => _time.Calendar.MinuteNumber);
             HashSet<ulong> authoredEntityIds = DaggerfallActorFactory.AdmittedAuthoredEntityIds(inputs, playerDefinition.Loadout);
             if (restore is null)
             {
@@ -816,10 +817,15 @@ internal sealed partial class DaggerfallSession
                 id => authored.GetValueOrDefault(id),
                 id => definitions.Mobiles.Mobiles.GetValueOrDefault(id), enemySpells.LaneClear, enemySpells.Execute);
             // Every mobile fights with the tactic its record names; the legacy tactic is the only one compiled yet.
+            DaggerfallContactEngagement engagement = new(_tuning.Contact);
+            DaggerfallScoredEnemyTactic Scored(DaggerfallScoredPreset preset) => new(preset, _combat.EnemyAttackOptions, _enemyMagic.SpellOptions, _enemyMagic.Aim,
+                id => authored.GetValueOrDefault(id)?.MobileId is int mobile && definitions.Mobiles.Mobiles.TryGetValue(mobile, out var record) ? record.Tendencies : null,
+                engagement, _tuning.EnemyBehavior.Maneuvers, _tuning.EnemyBehavior.Tactics, _random);
             DaggerfallEnemyTactics tactics = new(new Dictionary<string, IDaggerfallEnemyTactic>(StringComparer.Ordinal)
             {
-                [DaggerfallMobileDefinition.LegacyTactic] = new DaggerfallLegacyEnemyTactic(_enemyMagic, new DaggerfallContactEngagement(_tuning.Contact),
-                    _tuning.EnemyBehavior.Maneuvers, _random),
+                [DaggerfallMobileDefinition.LegacyTactic] = new DaggerfallLegacyEnemyTactic(_enemyMagic, engagement, _tuning.EnemyBehavior.Maneuvers, _random),
+                [DaggerfallScoredEnemyTactic.IntelligentName] = Scored(DaggerfallScoredPreset.Intelligent),
+                [DaggerfallScoredEnemyTactic.BeastName] = Scored(DaggerfallScoredPreset.Beast),
             }, definitions.Mobiles, id => authored.GetValueOrDefault(id));
             _enemyBehavior.BindDecisions(tactics, _enemyMagic.Cast, _enemyMagic.LaneClear);
             _itemCastTriggers = new(definitions.Magic, itemInstances, Casting, effects, actors.Entities,

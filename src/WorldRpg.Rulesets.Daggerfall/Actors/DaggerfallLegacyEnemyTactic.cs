@@ -22,6 +22,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 internal sealed class DaggerfallLegacyEnemyTactic(DaggerfallEnemyMagicModule magic, DaggerfallContactEngagement engagement,
     DaggerfallPursuitManeuverTuning maneuvers, IRandomService random) : IDaggerfallEnemyTactic
 {
+    public bool WeighsTendencies => false;
+
     public PursuitPolicy Move(DaggerfallEnemyMoveObservation seen, List<DaggerfallDecisionGate>? gates)
     {
         bool inSight = seen.Senses?.InSight ?? seen.Pursuit.Visible;

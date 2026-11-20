@@ -519,6 +519,39 @@
       "advanceDistanceMultiplier": 2.75,
       "searchDistance": 10,
       "searchStep": 1
+    },
+    "tactics": {
+      "noise": 0.05,
+      "castIntervalSeconds": 2.5,
+      "weights": {
+        "melee": 0.6,
+        "bow": 0.8,
+        "spell": 1.0,
+        "reposition": 0.7,
+        "flee": 1.0,
+        "finisher": 0.2,
+        "closing": 0.7
+      },
+      "flee": {
+        "health": 0.6,
+        "allyCourage": 0.15,
+        "allyRadius": 8.0,
+        "distance": 15.0,
+        "seconds": 6.0,
+        "speedMultiplier": 1.0,
+        "disengageMinutes": 15,
+        "arrival": 1.5
+      },
+      "intelligent": {
+        "courage": 0.5,
+        "discipline": 0.5
+      },
+      "beast": {
+        "courage": 0.25,
+        "discipline": 0.0,
+        "lungeDistance": 4.5,
+        "lungeSpeedMultiplier": 1.6
+      }
     }
   },
   "civilianWander": {

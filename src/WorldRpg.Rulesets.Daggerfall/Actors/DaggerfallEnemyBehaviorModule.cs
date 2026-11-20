@@ -8,6 +8,8 @@ using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Policies;
+using Rusty.Engine.Mechanics;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 
@@ -53,6 +55,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
     private readonly Func<long, long, DaggerfallEnemyMotorContext> _motorContext;
     private readonly Func<long, long, double, (double Reach, bool Ranged)?>? _attackAtDistance;
     private readonly DaggerfallPursuitManeuverTuning _maneuvers;
+    private readonly Func<long> _gameMinute;
 
     internal DaggerfallEnemyBehaviorModule(
         IPerceptionService perception,
@@ -69,8 +72,9 @@ internal sealed class DaggerfallEnemyBehaviorModule
         Func<long, PursuitPolicy>? movementPolicy = null,
         Func<long, bool>? canOpenDoors = null,
         Func<ActorState, bool>? openBlockedDoor = null, Func<long, bool>? questRestrained = null, Func<long, long, double, (double Reach, bool Ranged)?>? attackAtDistance = null,
-        ActorReactions? reactions = null)
+        ActorReactions? reactions = null, Func<long>? gameMinute = null)
     {
+        _gameMinute = gameMinute ?? (() => 0L);
         _reactions = reactions;
         _motorContext = motorContext;
         _attackAtDistance = attackAtDistance;
@@ -205,6 +209,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         DaggerfallEnemyPerceptionMemory memory = Senses(actor);
         memory.ProvokedUntilMinute = gameMinute + 1;
         memory.Detected = memory.HasEncounteredPlayer = true;
+        memory.Reengage();
     }
 
     /// <summary>Whether an actor hasn't noticed the player. Its pursuit state can't say: paralysis idles an actor that knows.</summary>
@@ -395,7 +400,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         else if (!_combat.IsReady(actor.DurableId, generation, simulationStep))
             _gates?.Add(new("attack", "physical", DaggerfallGateOutcome.Refused, actor.Attack.Pending is null ? "recovering" : "swinging",
                 new DaggerfallGateValue("readyAtStep", actor.Attack.ReadyAtStep), new DaggerfallGateValue("step", simulationStep)));
-        else if (_combat.TryBeginEnemyAttack(actor.DurableId, target.Value.DurableId, generation, simulationStep, deltaSeconds, facts))
+        else if (_combat.TryBeginEnemyAttack(actor.DurableId, target.Value.DurableId, generation, simulationStep, deltaSeconds, facts, choice.Attack))
         {
             _gates?.Add(new("attack", "physical", DaggerfallGateOutcome.Passed, "began", MotorValues()));
             _admittedActions.Add(actor.DurableId);
@@ -465,7 +470,16 @@ internal sealed class DaggerfallEnemyBehaviorModule
     {
         PursuitPolicy chosen = tactic.Move(new(actor, target, observation, SensesOf(actor.DurableId, target.DurableId),
             _attackAtDistance?.Invoke(actor.DurableId, target.DurableId, observation.Distance), _motorContext(actor.DurableId, target.DurableId),
-            _movementPolicy(actor.DurableId), MaySearch: !IsPacified(actor.DurableId), Lane(actor, target), generation, step, deltaSeconds), _gates);
+            _movementPolicy(actor.DurableId), MaySearch: !IsPacified(actor.DurableId), Lane(actor, target), generation, step, deltaSeconds)
+        {
+            Health = HealthOf(actor.Stats),
+            TargetHealth = target.DurableId == _actors.Player.DurableId ? HealthOf(_actors.Player.Stats)
+                : _actors.TryGet(target.DurableId, out ActorState foe) ? HealthOf(foe.Stats) : 1d,
+            Allies = [.. LastEvidence.Values.Where(other => other.ActorId != actor.DurableId && other.Target?.DurableId == target.DurableId
+                    && _actors.TryGet(other.ActorId, out ActorState ally) && !ally.IsDefeated)
+                .Select(other => _actors.Get(other.ActorId).Position)],
+            GameMinute = _gameMinute(),
+        }, _gates);
         if (Overrides.ForcedState(actor.DurableId) is { } forced)
         {
             chosen = Force(chosen, forced, Senses(actor).Motor.StrafeDirection);
@@ -474,6 +488,11 @@ internal sealed class DaggerfallEnemyBehaviorModule
         if (_gates is not null) _tracedMotor = (observation, chosen);
         return chosen;
     }
+
+    /// <summary>Health as a share of its most; full for an actor with no health track.</summary>
+    private static double HealthOf(StatsComponent stats) =>
+        stats.TryGetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value), out Track? health) && health.Maximum.Value > 0
+            ? Math.Clamp(health.Current / health.Maximum.Value, 0d, 1d) : 1d;
 
     /// <summary>The senses' last judgement of an actor's target, if they judged that target; null where only the Engine's sight applies.</summary>
     private DaggerfallEnemyPerceptionDecision? SensesOf(long actorId, long targetId) =>
@@ -609,6 +628,7 @@ internal sealed class DaggerfallEnemyBehaviorModule
         PursuitState.TargetLost => EnemyBehaviorState.TargetLost,
         PursuitState.Unloaded => EnemyBehaviorState.Unloaded,
         PursuitState.Dead => EnemyBehaviorState.Dead,
+        PursuitState.Flee => EnemyBehaviorState.Flee,
         _ => throw new InvalidOperationException($"Unknown Daggerfall enemy behavior state '{value}'."),
     };
 }

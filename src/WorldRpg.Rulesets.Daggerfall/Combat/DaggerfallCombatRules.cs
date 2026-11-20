@@ -182,7 +182,7 @@ internal sealed partial class DaggerfallCombatRules : IAttackRules<IProductFact>
         }
         else
         {
-            var selection = EnemyAction(attacker, EnemyTargetDistance(request.AttackerId, request.TargetId));
+            var selection = EnemyAction(attacker, EnemyTargetDistance(request.AttackerId, request.TargetId), request.Action);
             if (selection.Action is not { CooldownSeconds: double cooldown, Reach: > 0d } action)
             { facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy, request.AttackerId)); return false; }
             selectedAction = action.Id;

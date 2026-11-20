@@ -1457,8 +1457,12 @@ internal static partial class DaggerfallBaseContent
                 LowToleranceFlags = FlagByte(mobile, "lowToleranceFlags", diagnostics),
                 CriticalWeaknessFlags = FlagByte(mobile, "criticalWeaknessFlags", diagnostics),
                 Tactic = mobile.TryGetProperty("tactic", out JsonElement tactic) ? tactic.ValueKind == JsonValueKind.String ? tactic.GetString()! : "" : DaggerfallMobileDefinition.LegacyTactic,
+                Tendencies = mobile.TryGetProperty("tendencies", out JsonElement tendencies)
+                    ? new(OptionalNumber(tendencies, "courage", diagnostics) ?? double.NaN, OptionalNumber(tendencies, "discipline", diagnostics) ?? double.NaN) : null,
             };
 
+            if (definition.Tendencies is { IsValid: false })
+                diagnostics.Add($"Published mobile {donorId} needs its tendencies' courage and discipline between 0 and 1.");
             if (string.IsNullOrWhiteSpace(definition.Tactic))
                 diagnostics.Add($"Published mobile {donorId} names a blank or non-text tactic; leave the field out to fight with '{DaggerfallMobileDefinition.LegacyTactic}'.");
             if (definition.SoulPoints < 0 || definition.GlowColor is { } tint && (tint.X < 0 || tint.Y < 0 || tint.Z < 0))

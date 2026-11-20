@@ -1,6 +1,7 @@
 using Rusty.Engine;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Ai;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
@@ -16,6 +17,10 @@ namespace WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 /// <param name="Movement">How the actor moves at all (its medium and maneuver distances), before any maneuver is chosen.</param>
 /// <param name="MaySearch">Whether it may go looking where the target was last seen: not while pacified.</param>
 /// <param name="LaneClear">Whether a missile from where it stands would reach the target; swept only when read.</param>
+/// <param name="Health">Its own health, as a share of its most.</param>
+/// <param name="TargetHealth">The target's health, as a share of its most.</param>
+/// <param name="Allies">Where the others fighting the same target stood at their last decision.</param>
+/// <param name="GameMinute">The game minute this step falls in.</param>
 internal readonly record struct DaggerfallEnemyMoveObservation(
     ActorState Actor,
     PursuitTarget Target,
@@ -28,7 +33,13 @@ internal readonly record struct DaggerfallEnemyMoveObservation(
     Lazy<bool> LaneClear,
     ulong Generation,
     ulong Step,
-    float DeltaSeconds);
+    float DeltaSeconds)
+{
+    internal double Health { get; init; } = 1d;
+    internal double TargetHealth { get; init; } = 1d;
+    internal IReadOnlyList<WorldPoint> Allies { get; init; } = [];
+    internal long GameMinute { get; init; }
+}
 
 /// <summary>
 /// What an enemy's tactic is shown when it chooses this step's action, after pursuit has moved it.
@@ -52,11 +63,12 @@ internal readonly record struct DaggerfallEnemyActionObservation(
     float DeltaSeconds);
 
 /// <summary>
-/// The action a tactic chose for this step: a spell to release first, and whether it strikes, when no spell took the
-/// step's action, with the attack combat gives it at this distance (a bow in its band while arrows last, else the
-/// melee weapon: combat's EnemyAction).
+/// The action a tactic chose for this step: a spell to release first, and whether it strikes when no spell took the
+/// step's action. The strike is made with <paramref name="Attack"/>, one of the attacks the enemy carries
+/// (<see cref="Combat.DaggerfallEnemyAttackOption"/>), or when that is null with the attack combat gives it at this
+/// distance (a bow in its band while arrows last, else the melee weapon: combat's EnemyAction).
 /// </summary>
-internal readonly record struct DaggerfallEnemyActionChoice(DaggerfallEnemySpellAttempt? Spell, bool Strike);
+internal readonly record struct DaggerfallEnemyActionChoice(DaggerfallEnemySpellAttempt? Spell, bool Strike, string? Attack = null);
 
 /// <summary>What became of a tactic's chosen action at the step's action door.</summary>
 internal enum DaggerfallEnemyAdmission
@@ -78,6 +90,9 @@ internal enum DaggerfallEnemyAdmission
 /// </summary>
 internal interface IDaggerfallEnemyTactic
 {
+    /// <summary>Whether it weighs a mobile record's authored tendencies; a record giving them to one that doesn't is refused.</summary>
+    bool WeighsTendencies { get; }
+
     /// <summary>The movement intent: the maneuver, whether it may attack and at what reach.</summary>
     PursuitPolicy Move(DaggerfallEnemyMoveObservation observation, List<DaggerfallDecisionGate>? gates);
 
@@ -109,9 +124,15 @@ internal sealed class DaggerfallEnemyTactics
         _definition = definition ?? throw new ArgumentNullException(nameof(definition));
         if (!compiled.ContainsKey(DaggerfallMobileDefinition.LegacyTactic))
             throw new InvalidOperationException($"The ruleset compiles no '{DaggerfallMobileDefinition.LegacyTactic}' tactic, which every mobile without one fights with.");
-        foreach (DaggerfallMobileDefinition mobile in mobiles.Mobiles.Values.Where(mobile => !compiled.ContainsKey(mobile.Tactic)))
-            throw new InvalidOperationException($"Mobile {mobile.DonorId} ('{mobile.DonorName}') names tactic '{mobile.Tactic}', which this ruleset does not compile "
-                + $"({string.Join(", ", compiled.Keys.Order(StringComparer.Ordinal))}); it would fight as another without saying so.");
+        foreach (DaggerfallMobileDefinition mobile in mobiles.Mobiles.Values)
+        {
+            if (!compiled.TryGetValue(mobile.Tactic, out IDaggerfallEnemyTactic? tactic))
+                throw new InvalidOperationException($"Mobile {mobile.DonorId} ('{mobile.DonorName}') names tactic '{mobile.Tactic}', which this ruleset does not compile "
+                    + $"({string.Join(", ", compiled.Keys.Order(StringComparer.Ordinal))}); it would fight as another without saying so.");
+            if (mobile.Tendencies is not null && !tactic.WeighsTendencies)
+                throw new InvalidOperationException($"Mobile {mobile.DonorId} ('{mobile.DonorName}') authors tendencies, which its tactic '{mobile.Tactic}' does not weigh; "
+                    + "they would be ignored without saying so.");
+        }
     }
 
     /// <summary>The tactic that decides for an actor: its mobile's, or the legacy tactic for an actor no mobile describes.</summary>

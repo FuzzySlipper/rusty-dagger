@@ -778,7 +778,7 @@ internal sealed partial class DaggerfallSiteAppearance : IDisposable
                 if (actorState?.TryGet(transition.ActorId, out var acting) == true
                     && acting.Actor.TryGet<AttackState>(out var attackState) && attackState.Pending is not null) break;
                 if (transition.Current == EnemyBehaviorState.Idle && actors.TryGetValue(transition.ActorId, out ActorVisual? visual)) EnsureRestState(transition.ActorId, PreferredRestState(visual.Sprite));
-                else if (transition.Current == EnemyBehaviorState.Chase) EnsureRestState(transition.ActorId, "move");
+                else if (transition.Current is EnemyBehaviorState.Chase or EnemyBehaviorState.Flee) EnsureRestState(transition.ActorId, "move");
                 break;
         }
     }

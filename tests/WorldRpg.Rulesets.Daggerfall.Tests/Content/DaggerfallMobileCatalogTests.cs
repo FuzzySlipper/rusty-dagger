@@ -86,8 +86,14 @@ public sealed class DaggerfallMobileCatalogTests
     [Fact]
     public void ReadsAMobilesTacticDefaultingToLegacyAndRefusesABlankOne()
     {
-        // No record names a tactic yet, so every mobile fights with the legacy one.
-        Assert.All(DaggerfallBaseContent.Read(Payload()).Mobiles.Mobiles.Values, mobile => Assert.Equal(DaggerfallMobileDefinition.LegacyTactic, mobile.Tactic));
+        // The first opt-ins: two class enemies weigh their kit with authored tendencies, and the bear is a beast; every other
+        // mobile fights with the legacy tactic and authors no tendencies.
+        var read = DaggerfallBaseContent.Read(Payload()).Mobiles.Mobiles;
+        Assert.Equal(("intelligent", new DaggerfallTacticTendencies(.6d, .8d)), (read[130].Tactic, read[130].Tendencies));
+        Assert.Equal(("intelligent", new DaggerfallTacticTendencies(.4d, .3d)), (read[142].Tactic, read[142].Tendencies));
+        Assert.Equal(("beast", (DaggerfallTacticTendencies?)null), (read[4].Tactic, read[4].Tendencies));
+        Assert.All(read.Values.Where(mobile => mobile.DonorId is not (130 or 142 or 4)), mobile =>
+            Assert.Equal((DaggerfallMobileDefinition.LegacyTactic, (DaggerfallTacticTendencies?)null), (mobile.Tactic, mobile.Tendencies)));
 
         JsonObject payload = TestPayload.Sections("mobiles", "actors");
         payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["tactic"] = "beast";
@@ -97,6 +103,12 @@ public sealed class DaggerfallMobileCatalogTests
         DaggerfallContentException blank = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
         Assert.True(blank.Diagnostics.Any(message => message.Contains("mobile 0 names a blank or non-text tactic", StringComparison.Ordinal)),
             $"the blank tactic was not named: {string.Join(" | ", blank.Diagnostics)}");
+
+        payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["tactic"] = "intelligent";
+        payload["mobiles"]!["mobiles"]!.AsArray().First(mobile => mobile!["donorId"]!.GetValue<int>() == 0)!["tendencies"] =
+            new JsonObject { ["courage"] = 1.5, ["discipline"] = .2 };
+        DaggerfallContentException outOfRange = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(TestPayload.Splice(payload)));
+        Assert.Contains(outOfRange.Diagnostics, message => message.Contains("mobile 0 needs its tendencies' courage and discipline between 0 and 1", StringComparison.Ordinal));
     }
 
     [Fact]

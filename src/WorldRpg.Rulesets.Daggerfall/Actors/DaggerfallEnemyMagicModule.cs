@@ -22,6 +22,12 @@ internal readonly record struct DaggerfallEnemySpellAttempt(
     Vector3 Direction,
     long TargetId);
 
+/// <summary>
+/// One spell an enemy could cast, as a tactic weighs it: how it reaches, the magicka it costs this caster, and whether
+/// its effects already hold on whom it would reach.
+/// </summary>
+internal readonly record struct DaggerfallEnemySpellOption(string SpellKey, DaggerfallSpellTarget Target, int Cost, bool AlreadyOnTarget);
+
 /// <summary>Evidence for the last admitted enemy spell decision for one live actor.</summary>
 internal sealed record DaggerfallEnemySpellEvidence(
     long ActorId,
@@ -182,6 +188,28 @@ internal sealed class DaggerfallEnemyMagicModule
             [new("intended", intended), .. result.Bundle is { } bundle ? [new DaggerfallGateValue("sequence", bundle.Sequence)] : Array.Empty<DaggerfallGateValue>()]));
         return admitted;
     }
+
+    /// <summary>
+    /// Every spell on the enemy's authored list that casting would admit from it, with its cost to this caster; none
+    /// while a cast of its own is still pending. Whether it can pay is the tactic's to weigh against its magicka.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallEnemySpellOption> SpellOptions(ActorState actor, PursuitTarget target)
+    {
+        if (actor.IsDefeated || _casting.HasPending(actor.DurableId) || _definition(actor.DurableId) is not { } definition) return [];
+        List<DaggerfallEnemySpellOption> options = [];
+        foreach (string key in SpellKeys(definition))
+        {
+            if (_casting.AvailableSpellCost(actor.DurableId, key) is not int cost) continue;
+            DaggerfallSpellTarget reaches = TargetOf(key);
+            options.Add(new(key, reaches, cost,
+                _casting.EffectsAlreadyOnTarget(key, reaches == DaggerfallSpellTarget.CasterOnly ? actor.DurableId : target.DurableId)));
+        }
+        return options;
+    }
+
+    /// <summary>A chosen spell aimed from where the actor stands at its target, or null when it cannot be aimed.</summary>
+    internal DaggerfallEnemySpellAttempt? Aim(ActorState actor, string spellKey, PursuitTarget target) =>
+        TryBuildAttempt(actor, spellKey, target, out DaggerfallEnemySpellAttempt attempt) ? attempt : null;
 
     /// <summary>
     /// EnemyMotor.CanCastRangedSpell: inside the ranged band a caster without a bow attack has a

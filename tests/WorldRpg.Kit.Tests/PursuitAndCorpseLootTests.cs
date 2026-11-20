@@ -134,6 +134,70 @@ public sealed class PursuitAndCorpseLootTests
         Assert.Null(memory.LastKnownPosition);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_flee_navigates_to_its_destination_without_attacking_whether_or_not_the_target_is_seen(bool visible)
+    {
+        using ActorsState actors = new();
+        actors.CreatePlayer(1, new("player"), Stats(), "health");
+        var actor = actors.CreateActor(42, new("enemy"), Stats(), new(new(0, 1, 0), 0), "health");
+        var perception = PerceptionDouble.Create();
+        perception.Pairs = new PerceptionPair[] { new(42, 1, 1, 1, visible ? PerceptionPairKind.Visible : PerceptionPairKind.Occluded, visible ? 1 : 0) };
+        var spatial = SpatialDouble.Create();
+        using SpatialMovementSystem movement = new(spatial.Service, ContentDouble.Create().Service,
+            new SpatialContentArtifact("spatial/test", new ContentSha256(1, 2, 3, 4), 1), new SpatialTuning(.5, 8, 8, 1));
+        var attacks = new RecordingAttacks(1.5);
+        var pursuit = new PursuitCoordinator<TestFact>(perception.Service, movement,
+            new ActorNavigationCoordinator(spatial.Service, movement.Session), attacks);
+        WorldPoint away = PursuitFlee.Destination(actor.Position, new(0, 1, 1), 12f, 0);
+
+        // The target stands within reach; a flee still runs, and for a target out of sight it neither searches nor idles.
+        var evidence = pursuit.Update(actor, new PursuitMemoryComponent(), new(1, new(0, 1, 1)), new(64, -1, 2, 8), new(0, 8), 1, 1, .1f, new(),
+            new PursuitPolicy(EmitTargetLost: true), selectPolicy: _ => new PursuitPolicy(EmitTargetLost: true) { Maneuver = PursuitState.Flee, Destination = new(away.X, 9, away.Z) });
+
+        Assert.Equal(PursuitState.Flee, evidence.Current);
+        Assert.False(evidence.AttackEligible);
+        Assert.Empty(attacks.Attacks);
+        // Ground navigation keeps the actor's own height, as every other ground goal does.
+        Assert.Equal(new Vector3(0, 1, -12), spatial.NavigationRequests.Single().Target);
+    }
+
+    [Fact]
+    public void A_flee_without_a_destination_is_refused()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PursuitPolicy(ActorNavigationMode.Ground) { Maneuver = PursuitState.Flee }.Validate());
+        new PursuitPolicy(ActorNavigationMode.Ground) { Maneuver = PursuitState.Flee, Destination = new(1, 0, 1) }.Validate();
+    }
+
+    [Fact]
+    public void Flee_destinations_run_straight_away_then_turn_further_aside_each_attempt()
+    {
+        WorldPoint from = new(0, 2, 0), threat = new(0, 0, 4);
+        Vector3[] seen = Enumerable.Range(0, PursuitFlee.Directions)
+            .Select(attempt => PursuitFlee.Destination(from, threat, 10f, attempt).ToVector()).ToArray();
+
+        Assert.Equal(7, seen.Length);
+        AssertNear(new(0, 2, -10), seen[0]);
+        // Each pair turns the same angle either side of straight away, at the same distance, and keeps the height.
+        foreach ((int left, int right, float degrees) in new[] { (1, 2, 45f), (3, 4, 90f), (5, 6, 135f) })
+        {
+            float expected = MathF.Cos(degrees * MathF.PI / 180f);
+            foreach (Vector3 point in new[] { seen[left], seen[right] })
+            {
+                Assert.Equal(10f, Vector3.Distance(from.ToVector(), point), 3);
+                Assert.Equal(2f, point.Y);
+                Assert.Equal(expected, Vector3.Dot(Vector3.Normalize(point - from.ToVector()), -Vector3.UnitZ), 3);
+            }
+            Assert.Equal(-seen[left].X, seen[right].X, 3);
+        }
+        Assert.Throws<ArgumentOutOfRangeException>(() => PursuitFlee.Destination(from, threat, 10f, PursuitFlee.Directions));
+        // Standing on the threat still gives a direction, the same one every time.
+        Assert.Equal(PursuitFlee.Destination(from, from, 3f, 0), PursuitFlee.Destination(from, from, 3f, 0));
+
+        static void AssertNear(Vector3 expected, Vector3 actual) => Assert.True(Vector3.Distance(expected, actual) < 1e-3f, $"{actual} is not {expected}");
+    }
+
     private static StatsComponent Stats()
     {
         Stat maximum = new(100);
@@ -212,7 +276,7 @@ public sealed class PursuitAndCorpseLootTests
         public double? ReachOf(long actorId) => reach;
         public bool IsReady(long actorId, ulong generation, ulong step) => true;
         public void TryPlayerMelee(PlayerControlState player, LookReceipt look, ulong generation, ulong step, double delta, FactBuffer<TestFact> facts) { }
-        public bool TryBeginEnemyAttack(long attacker, long target, ulong generation, ulong step, double delta, FactBuffer<TestFact> facts)
+        public bool TryBeginEnemyAttack(long attacker, long target, ulong generation, ulong step, double delta, FactBuffer<TestFact> facts, string? action = null)
         {
             Attacks.Add((attacker, target));
             return true;

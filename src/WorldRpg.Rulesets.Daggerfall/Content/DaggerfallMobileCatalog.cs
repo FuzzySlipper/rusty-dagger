@@ -50,6 +50,9 @@ internal sealed record DaggerfallMobileDefinition(
     /// <summary>The compiled tactic that decides for this mobile in a fight; <see cref="LegacyTactic"/> unless its record names another.</summary>
     internal string Tactic { get; init; } = LegacyTactic;
 
+    /// <summary>How this mobile tends to choose under a tactic that weighs tendencies; null takes the tactic's tuned defaults.</summary>
+    internal DaggerfallTacticTendencies? Tendencies { get; init; }
+
     /// <summary>The tactic every mobile fights with unless its record names another: the decision enemies made before tactics existed.</summary>
     internal const string LegacyTactic = "legacy";
 
@@ -67,6 +70,16 @@ internal sealed record DaggerfallMobileDefinition(
     /// <summary>The health range the donor states, or null when the mobile carries none.</summary>
     internal (int Minimum, int Maximum)? HealthRange =>
         MinimumHealth == 0 && MaximumHealth == 0 ? null : (MinimumHealth, MaximumHealth);
+}
+
+/// <summary>
+/// How a creature tends to choose in a fight, each from 0 to 1, authored on its mobile record for a tactic that weighs
+/// them: <paramref name="Courage"/> holds it in the fight as it is hurt (none flees soonest, full never flees), and
+/// <paramref name="Discipline"/> makes it hold a blocked shot and look for a lane rather than give up the shot.
+/// </summary>
+internal sealed record DaggerfallTacticTendencies(double Courage, double Discipline)
+{
+    internal bool IsValid => double.IsFinite(Courage) && Courage is >= 0d and <= 1d && double.IsFinite(Discipline) && Discipline is >= 0d and <= 1d;
 }
 
 /// <summary>

@@ -570,6 +570,56 @@ public sealed class RangedCombatSessionTests
     }
 
     [Fact]
+    public void An_archer_lists_its_bow_and_blade_and_makes_the_one_a_tactic_chose_only_while_it_can()
+    {
+        string root = TestData.RepositoryRoot;
+        DaggerfallSiteProfile inputs = ReadInputs(root);
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.Geometry.Spatial[0].Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = DaggerfallSession.StartNew(engine.Context, new(definitions, inputs, DaggerfallTuning.Defaults));
+        PlaceArcherInRangedBand(session);
+        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, null, DaggerfallTuning.Defaults.Spatial);
+        Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
+            placement => placement.EntityId,
+            placement => definitions.RequireActor(placement.ActorId));
+        authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
+        TargetingService targeting = new(perception.Service, targetingSpatial, session.State.Actors, new DaggerfallTargetingPolicy(authored, DaggerfallTuning.Defaults.MeleeTargeting, () => inputs));
+        DaggerfallCombatRules combat = CombatCollaborators.SessionRules(session, definitions, authored, targeting, targetingSpatial,
+            physicalAttacksBlocked: _ => false, actorGameplayActive: _ => true);
+        long archer = HoldActor(5);
+        WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator quiver = Assert.IsType<WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator>(session.State.ActorInventories.InventoryFor(archer));
+        ulong Arrows() => quiver.Read().Stacks.Where(stack => stack.Definition.Value == "arrow").Aggregate(0UL, (sum, stack) => sum + stack.Quantity);
+
+        Assert.Equal([new DaggerfallEnemyAttackOption("archer-shot", definitions.Actions["archer-shot"].Reach!.Value, definitions.EnemyRanged.MinimumDistance, true, 12),
+            new DaggerfallEnemyAttackOption("enemy-class-equipped-melee", definitions.Actions["enemy-class-equipped-melee"].Reach!.Value, 0d, false, null)],
+            combat.EnemyAttackOptions(archer));
+
+        // Inside the bow's band it still swings its blade when that is the attack chosen, and spends no arrow.
+        FactBuffer<IProductFact> facts = new();
+        Assert.True(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, 77, 400, .125, facts, "enemy-class-equipped-melee"));
+        List<IProductFact> decided = [];
+        facts.Deliver(decided.Add);
+        Assert.False(Assert.Single(decided.OfType<EnemyAttackStartedFact>()).Ranged);
+        Assert.Equal(12UL, Arrows());
+
+        // Too close for the bow, a chosen shot is not made at all, rather than turned into the blade unasked.
+        combat.Attacks.InterruptPendingAttack(archer, 77);
+        session.State.Actors.Get(archer).ApplyPose(new(new(0, 0, -2), MathF.PI));
+        facts = new();
+        Assert.False(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, 77, 1_000, .125, facts, "archer-shot"));
+        decided.Clear();
+        facts.Deliver(decided.Add);
+        Assert.Contains(new AttackRejectedFact(AttackRejection.NoAttackPolicy, archer), decided);
+        Assert.False(combat.Attacks.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, 77, 1_000, .125, new(), "fireball"));
+        Assert.Equal(12UL, Arrows());
+    }
+
+    [Fact]
     public void A_restored_session_keeps_the_quiver_count_its_save_carried()
     {
         string root = TestData.RepositoryRoot;
