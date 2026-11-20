@@ -8,10 +8,10 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The music container (<see cref="ContainerName"/>) holds one recording per classic track at its root, named
-/// <c>&lt;track&gt;.&lt;ext&gt;</c>: the track identifier the playlists name (<c>song_dungeon</c>, <c>song_04</c>)
-/// and the extension of any format the Engine's audio plays. Any source of recordings named that way works,
-/// and nothing pins the bytes of one; the playlists, which say which track plays where, stay in Scene's music
+/// The music container (<see cref="ContainerName"/>) ships with the game: Patch's arrangement of the score, one
+/// recording per track at its root, named <c>&lt;track&gt;.&lt;ext&gt;</c>: the track the playlists name
+/// (<c>dungeon-01</c>, <c>outside-night-03</c>) and the extension of any format the Engine's audio plays
+/// (authoring/tools/music builds it). The playlists, which say which track plays where, stay in Scene's music
 /// director, which also names the tracks no recording answers.
 /// </para>
 /// <para>

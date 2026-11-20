@@ -21,14 +21,14 @@ A release (`rusty build --release`) carries the product, the Engine host with it
 licences in `share/third-party/`, the .NET runtime (MIT, its licence and notices in `dotnet/`), the game
 UI's typefaces with their licences (below), and the import tool with the tracked files it reads, among them
 our tables taken from Daggerfall Unity (below) and the terrain bake (above). It carries no Daggerfall
-Unity file and none of the game's raw media: the player's import writes `daggerfall-data.rpak` and
-`music.rpak` on their own machine.
+Unity file and none of the game's raw media: the player's import writes `daggerfall-data.rpak` on their
+own machine.
 
-## Music (not redistributed)
+## Music
 
-The score is packed from an operator-supplied folder of recordings named by the classic song
-identifiers (`<track>.<ext>`, such as the donor installation's song folder `local/inputs/Sound`) into
-`local/data/music.rpak`. It is not part of this repository and is not redistributed.
+The score is Patch's own orchestral arrangement of the Daggerfall soundtrack, which Eric Heberling
+composed for Bethesda Softworks. It ships with the game as `music.rpak`, built outside this repository
+(`authoring/tools/music`); no recording of the original game's music is part of it.
 
 ## Typefaces
 

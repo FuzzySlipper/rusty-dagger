@@ -103,13 +103,13 @@ public sealed class DaggerfallMusicTests
     public void A_context_keeps_one_loop_and_a_site_change_moves_on_to_its_next_song()
     {
         EngineContextFake engine = Engine();
-        DaggerfallMusic music = new(engine.Context, Score("song_gday___d", "song_swimming"), Mages, FightersTrainer);
+        DaggerfallMusic music = new(engine.Context, Score("outside-day-sunny-01", "outside-day-sunny-02"), Mages, FightersTrainer);
 
         music.Advance(DaggerfallMusicContext.Sunny, 0, Site);
         music.Advance(DaggerfallMusicContext.Sunny, 0, Site);
 
         Assert.True(music.Scored);
-        Assert.Equal("song_gday___d", music.Track);
+        Assert.Equal("outside-day-sunny-01", music.Track);
         Assert.Single(engine.StartedAudioVoices);
         Assert.Equal(1, engine.OpenedMusicClips);
 
@@ -118,24 +118,24 @@ public sealed class DaggerfallMusicTests
         Assert.Null(music.Track);
         Assert.Equal(1, engine.ReleasedAudioVoices);
         music.Advance(DaggerfallMusicContext.Sunny, 0, Site);
-        Assert.Equal("song_swimming", music.Track);
+        Assert.Equal("outside-day-sunny-02", music.Track);
 
         Exception? failure = null;
         music.Dispose(ref failure);
         Assert.Null(failure);
         Assert.Equal(2, engine.ReleasedAudioVoices);
         Assert.Equal(
-            ["daggerfall.music/cue.started: Music cue 'song_gday___d' started for context 'Sunny'.",
-             "daggerfall.music/cue.retired: Music cue 'song_gday___d' retired.",
-             "daggerfall.music/cue.started: Music cue 'song_swimming' started for context 'Sunny'.",
-             "daggerfall.music/cue.retired: Music cue 'song_swimming' retired."],
+            ["daggerfall.music/cue.started: Music cue 'outside-day-sunny-01' started for context 'Sunny'.",
+             "daggerfall.music/cue.retired: Music cue 'outside-day-sunny-01' retired.",
+             "daggerfall.music/cue.started: Music cue 'outside-day-sunny-02' started for context 'Sunny'.",
+             "daggerfall.music/cue.retired: Music cue 'outside-day-sunny-02' retired."],
             Cues(engine));
     }
 
     [Fact]
     public void A_dungeon_plays_its_own_song_on_every_visit_whatever_was_visited_before()
     {
-        DaggerfallSiteId first = new(17, 214), second = new(17, 215);
+        DaggerfallSiteId first = new(17, 216), second = new(17, 214);
         IReadOnlyList<string> dungeon = DaggerfallMusicDirector.DungeonSongs;
         string own = dungeon[DaggerfallMusic.SiteSong(first, dungeon.Count)];
         Assert.NotEqual(own, dungeon[DaggerfallMusic.SiteSong(second, dungeon.Count)]);
@@ -154,7 +154,7 @@ public sealed class DaggerfallMusicTests
         later.Advance(DaggerfallMusicContext.Dungeon, 0, first);
         Assert.Equal(own, later.Track);
         // The pick is a fixed hash, pinned so a change to it is a deliberate one.
-        Assert.Equal(10, DaggerfallMusic.SiteSong(first, dungeon.Count));
+        Assert.Equal(14, DaggerfallMusic.SiteSong(first, dungeon.Count));
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public sealed class DaggerfallMusicTests
     public void A_context_with_no_published_song_is_silent_and_said_once()
     {
         EngineContextFake engine = Engine();
-        DaggerfallMusic music = new(engine.Context, Score("song_dungeon"), Mages, FightersTrainer);
+        DaggerfallMusic music = new(engine.Context, Score("dungeon-01"), Mages, FightersTrainer);
         music.Advance(DaggerfallMusicContext.Dungeon, 0, Site);
 
         music.Advance(DaggerfallMusicContext.Sunny, 0, Site);

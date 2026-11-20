@@ -10,27 +10,27 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallMusicBundleTests
 {
     [Fact]
-    public void Tracks_are_named_by_the_classic_track_in_any_admitted_format_and_case()
+    public void Tracks_are_named_by_the_track_in_any_admitted_format_and_case()
     {
-        ProductContentBundle container = Container("song_dungeon.ogg", "SONG_04.MP3", "song_gshop.flac", "song_tavern.mid", "notes/song_23.ogg", "worldrpg/data-container.json");
+        ProductContentBundle container = Container("dungeon-01.ogg", "DUNGEON-02.MP3", "shop-01.flac", "tavern-01.mid", "notes/building-interior-01.ogg", "worldrpg/data-container.json");
 
         DaggerfallMusicBundle music = DaggerfallMusicBundle.Read(container);
 
-        Assert.Equal(["song_04", "song_dungeon", "song_gshop"], music.Tracks);
-        Assert.True(music.CanPlay("song_04"));
+        Assert.Equal(["dungeon-01", "dungeon-02", "shop-01"], music.Tracks);
+        Assert.True(music.CanPlay("dungeon-02"));
         // A format the Engine does not play, a file in a folder and the container's own description are not tracks.
-        Assert.False(music.CanPlay("song_tavern"));
-        Assert.False(music.CanPlay("song_23"));
+        Assert.False(music.CanPlay("tavern-01"));
+        Assert.False(music.CanPlay("building-interior-01"));
     }
 
     [Fact]
     public void The_tracks_no_recording_answers_are_named_once()
     {
-        IReadOnlyList<string> missing = DaggerfallMusicDirector.MissingTracks(DaggerfallMusicBundle.Read(Container("song_dungeon.ogg")));
+        IReadOnlyList<string> missing = DaggerfallMusicDirector.MissingTracks(DaggerfallMusicBundle.Read(Container("dungeon-01.ogg")));
 
         Assert.Equal(DaggerfallMusicDirector.PlaylistTracks.Count - 1, missing.Count);
-        Assert.DoesNotContain("song_dungeon", missing);
-        Assert.Contains("song_tavern", missing);
+        Assert.DoesNotContain("dungeon-01", missing);
+        Assert.Contains("tavern-01", missing);
         Assert.Equal(missing.Order(StringComparer.Ordinal), missing);
         // Every playlist the director plays names its tracks here.
         foreach (DaggerfallMusicContext context in Enum.GetValues<DaggerfallMusicContext>())
@@ -40,10 +40,10 @@ public sealed class DaggerfallMusicBundleTests
     [Fact]
     public void Two_recordings_of_one_track_are_refused_by_name()
     {
-        InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Read(Container("song_dungeon.ogg", "song_dungeon.mp3")));
+        InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(() => DaggerfallMusicBundle.Read(Container("dungeon-01.ogg", "dungeon-01.mp3")));
 
-        Assert.Contains("'song_dungeon.mp3'", refusal.Message, StringComparison.Ordinal);
-        Assert.Contains("'song_dungeon.ogg'", refusal.Message, StringComparison.Ordinal);
+        Assert.Contains("'dungeon-01.mp3'", refusal.Message, StringComparison.Ordinal);
+        Assert.Contains("'dungeon-01.ogg'", refusal.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -51,15 +51,15 @@ public sealed class DaggerfallMusicBundleTests
     {
         BundleContentFake service = new();
         service.Container(DaggerfallMusicBundle.ContainerName);
-        service.Add(DaggerfallMusicBundle.ContainerName, "song_04.mp3", [1, 2, 3]);
+        service.Add(DaggerfallMusicBundle.ContainerName, "dungeon-02.mp3", [1, 2, 3]);
         DaggerfallMusicBundle music = DaggerfallMusicBundle.Read(new ProductContent(Array.Empty<ProductContentFile>(), service).OpenContainer(DaggerfallMusicBundle.ContainerName));
         AudioFake audio = AudioFake.Create();
 
-        using AudioClip? clip = music.OpenClip(audio.Service, "song_04");
+        using AudioClip? clip = music.OpenClip(audio.Service, "dungeon-02");
 
         Assert.NotNull(clip);
-        Assert.Equal([(DaggerfallMusicBundle.ContainerName, "song_04.mp3")], service.OpenedReferences);
-        Assert.Null(music.OpenClip(audio.Service, "song_tavern"));
+        Assert.Equal([(DaggerfallMusicBundle.ContainerName, "dungeon-02.mp3")], service.OpenedReferences);
+        Assert.Null(music.OpenClip(audio.Service, "tavern-01"));
         Assert.Equal(1, audio.Opened);
     }
 

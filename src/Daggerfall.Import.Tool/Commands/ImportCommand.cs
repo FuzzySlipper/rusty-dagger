@@ -5,7 +5,7 @@ namespace Daggerfall.Import.Tool.Commands;
 /// <summary>
 /// Turns the player's Daggerfall files into the data containers in one run: every import step in the
 /// importer's dependency order, in process, into the staging tree, then <c>local/data/daggerfall-data.rpak</c>,
-/// when a music folder is supplied <c>local/data/music.rpak</c>, and with <c>--classic-art</c> the developer's
+/// and with <c>--classic-art</c> the developer's
 /// <c>local/data/classic-art.rpak</c> of the classic media the art pack draws anew, which the data container leaves out.
 /// </summary>
 /// <remarks>
@@ -34,7 +34,7 @@ internal static class ImportCommand
 
     public static ToolCommand Command { get; } = new("import",
     [
-        CommandOption.Optional("--arena2", "DIR"), CommandOption.Optional("--music", "DIR"),
+        CommandOption.Optional("--arena2", "DIR"),
         CommandOption.Optional("--repository", "DIR"), CommandOption.Optional("--install", "DIR"), CommandOption.Optional("--only", "STEP[,STEP...]"),
         CommandOption.Switch("--compress"), CommandOption.Switch("--cinematics"), CommandOption.Switch("--classic-art"),
     ], Run);
@@ -48,7 +48,7 @@ internal static class ImportCommand
     /// They are off by default because their bytes depend on the machine that encodes them (another CPU encodes the
     /// same Opus audio differently), and a container must be the same wherever it is imported.
     /// </summary>
-    internal sealed record Inputs(string Arena2, string? Music, bool Cinematics = false);
+    internal sealed record Inputs(string Arena2, bool Cinematics = false);
 
     private static int Run(CommandArguments args)
     {
@@ -63,7 +63,6 @@ internal static class ImportCommand
         bool cinematics = args.Switch("--cinematics");
         Inputs inputs = new(
             Portable(Arena2Folder(Path.GetFullPath(arena2, invoked)) ?? arena2, invoked, repository),
-            args.Optional("--music") is { } music ? Portable(music, invoked, repository) : null,
             cinematics);
         IReadOnlyList<Step> steps = Steps(inputs);
         HashSet<string>? only = args.Optional("--only") is { } names
@@ -94,7 +93,7 @@ internal static class ImportCommand
         long started = Environment.TickCount64;
         if (only is null)
         {
-            foreach (string directory in new[] { ImportLayout.Staging, ImportLayout.Records, ImportLayout.MusicTracks, ClassicArt.Tree })
+            foreach (string directory in new[] { ImportLayout.Staging, ImportLayout.Records, ClassicArt.Tree })
                 if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
         }
 
@@ -129,11 +128,8 @@ internal static class ImportCommand
         List<Step> steps = [];
         void Add(string label, params string[] arguments) => steps.Add(new(label, arguments));
 
-        // 1. Product-wide media. The music container's tracks are staged by the naming scheme; nothing in the
-        //    data container names them, so it is the same whichever recordings were supplied. The classic media
-        //    group's inventory lists the authored UI art, whose bytes are the product's own tracked content.
-        if (inputs.Music is { } music) Add("music-tracks", "music-tracks", "--music", music, "--out", ImportLayout.MusicTracks);
-
+        // 1. Product-wide media. The classic media group's inventory lists the authored UI art, whose bytes are the
+        //    product's own tracked content.
         Add("classic-media", "classic-media", "--arena2", arena2, "--out", staging, "--group", "worldrpg",
             "--ui-authored-assets", UiAssets, "--ui-original", UiOriginal, "--update");
         Add("sky-media", "sky-media", "--arena2", arena2, "--out", staging, "--group", "worldrpg", "--update");
@@ -197,7 +193,6 @@ internal static class ImportCommand
         if (inputs.Cinematics)
             foreach (string tool in new[] { "ffmpeg", "ffprobe" }.Where(tool => FindOnPath(tool) is null))
                 yield return $"{tool} on PATH (--cinematics converts the cinematics with it)";
-        if (inputs.Music is { } music && !IsDirectory(music)) yield return $"music folder '{music}' (a folder of <track>.<ext> recordings, or leave out --music)";
         foreach (string file in new[] { ClassicArt.ListFile, UiAssets }.Where(file => !IsFile(file)))
             yield return $"tracked file '{file}'";
         if (!IsDirectory(UiOriginal)) yield return $"tracked directory '{UiOriginal}'";

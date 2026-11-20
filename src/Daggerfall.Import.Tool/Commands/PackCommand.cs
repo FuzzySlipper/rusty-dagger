@@ -2,8 +2,8 @@ namespace Daggerfall.Import.Tool.Commands;
 
 /// <summary>
 /// Repacks the containers from what the import staged, after a step was rerun by hand: each container's
-/// description is rewritten, then <c>local/data/daggerfall-data.rpak</c> and, when tracks are staged,
-/// <c>local/data/music.rpak</c> (and with <c>--classic-art</c>, <c>local/data/classic-art.rpak</c>) are packed and checked
+/// description is rewritten, then <c>local/data/daggerfall-data.rpak</c> (and with <c>--classic-art</c>,
+/// <c>local/data/classic-art.rpak</c>) is packed and checked
 /// against the staged files. The staged files may come from
 /// several importer revisions, so the description records the repack as a departure and the container never reads
 /// as current; only a full <c>import</c> produces one that does.

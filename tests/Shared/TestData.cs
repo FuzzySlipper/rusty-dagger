@@ -25,7 +25,7 @@ internal static class TestData
     public static string PackPayload(string pack) => Path.Combine(RepositoryRoot, "content", "worldrpg", "packs", pack, "payload.json");
 
     /// <summary>The one command that converts the operator's Arena2 files into the data containers and records.</summary>
-    public const string RegenerationCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound";
+    public const string RegenerationCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import";
 
     /// <summary>The data container a real import packed.</summary>
     public static string DataContainer => Path.Combine(RepositoryRoot, "local", "data", "daggerfall-data.rpak");

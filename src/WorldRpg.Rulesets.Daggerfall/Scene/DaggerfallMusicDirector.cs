@@ -28,8 +28,8 @@ public enum DaggerfallMusicContext
 }
 
 /// <summary>
-/// Contextual music selection with explicit loop lifetime: the donor's song lists choose the
-/// track identity for each context, and one loop plays at a time through safe Engine audio. A
+/// Contextual music selection with explicit loop lifetime: the donor's song lists, in the names of Patch's
+/// arrangement of the score, choose the track identity for each context, and one loop plays at a time through safe Engine audio. A
 /// repeated update for the playing context allocates nothing; a context change retires the old
 /// loop before the new one starts; a quest cue overrides and then resumes what it interrupted.
 /// Track identities resolve against admitted audio: MIDI playback is excluded, so a context
@@ -45,74 +45,60 @@ public enum DaggerfallMusicContext
 /// </remarks>
 public sealed class DaggerfallMusicDirector : IDisposable
 {
-    /// <summary>Donor Dungeon playlist in source order, then the ten dungeon songs the donor left unused.</summary>
-    public static readonly IReadOnlyList<string> DungeonSongs =
-        ["song_dungeon", "song_dungeon5", "song_dungeon6", "song_dungeon7", "song_dungeon8", "song_dungeon9", "song_gdngn10", "song_gdngn11", "song_gdungn4", "song_gdungn9", "song_04", "song_05", "song_07", "song_15", "song_28",
-         "song_d1", "song_d2", "song_d3", "song_d4", "song_d5", "song_d6", "song_d7", "song_d8", "song_d9", "song_d10"];
+    /// <summary>Every dungeon's songs: the donor's Dungeon playlist, and three of the dungeon songs the donor left unused.</summary>
+    public static readonly IReadOnlyList<string> DungeonSongs = Numbered("dungeon", 17);
 
-    /// <summary>Donor Sunny playlist in source order, with the FM set's own swimming song.</summary>
-    public static readonly IReadOnlyList<string> SunnySongs =
-        ["song_gday___d", "song_swimming", "song_gsunny2", "song_sunnyday", "song_02", "song_03", "song_22", "song_fm_swim2"];
+    /// <summary>The donor's Sunny playlist, with the FM set's own swimming song (outside-day-sunny-08).</summary>
+    public static readonly IReadOnlyList<string> SunnySongs = Numbered("outside-day-sunny", 8);
 
-    /// <summary>Donor Night playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> NightSongs =
-        ["song_10", "song_11", "song_gcurse", "song_geerie", "song_gruins", "song_18", "song_21"];
+    /// <summary>The donor's Night playlist.</summary>
+    public static readonly IReadOnlyList<string> NightSongs = Numbered("outside-night", 7);
 
-    /// <summary>Donor Tavern playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> TavernSongs =
-        ["song_square_2", "song_tavern", "song_folk1", "song_folk2", "song_folk3"];
+    /// <summary>The donor's Tavern playlist.</summary>
+    public static readonly IReadOnlyList<string> TavernSongs = Numbered("tavern", 5);
 
-    /// <summary>Donor Shop playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> ShopSongs =
-        ["song_gshop"];
+    /// <summary>The donor's Shop playlist.</summary>
+    public static readonly IReadOnlyList<string> ShopSongs = ["shop-01"];
 
-    /// <summary>Donor MagesGuild playlist in source order, with the FM set's own guild song.</summary>
-    public static readonly IReadOnlyList<string> MagesGuildSongs =
-        ["song_gmage_3", "song_magic_2", "song_fm_nite3"];
+    /// <summary>The donor's MagesGuild playlist, with the FM set's own guild song (mages-guild-03).</summary>
+    public static readonly IReadOnlyList<string> MagesGuildSongs = Numbered("mages-guild", 3);
 
-    /// <summary>Donor Temple playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> TempleSongs =
-        ["song_ggood"];
+    /// <summary>The donor's Temple playlist: Arkay, Mara and Dibella.</summary>
+    public static readonly IReadOnlyList<string> TempleSongs = ["temple-arkay-mara-dibella-01"];
 
-    /// <summary>Donor TempleNeutral playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> TempleNeutralSongs =
-        ["song_gneut"];
+    /// <summary>The donor's TempleNeutral playlist: Akatosh and Kynareth.</summary>
+    public static readonly IReadOnlyList<string> TempleNeutralSongs = ["temple-akatosh-kynareth-01"];
 
-    /// <summary>Donor TempleBad playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> TempleBadSongs =
-        ["song_gbad"];
+    /// <summary>The donor's TempleBad playlist: Zen, Julianos and Stendarr.</summary>
+    public static readonly IReadOnlyList<string> TempleBadSongs = ["temple-zen-julianos-stendarr-01"];
 
-    /// <summary>Donor Knight playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> KnightSongs =
-        ["song_17"];
+    /// <summary>The donor's Knight playlist: the fighters' trainers in temple buildings.</summary>
+    public static readonly IReadOnlyList<string> KnightSongs = ["fighters-guild-temple-01"];
 
-    /// <summary>Donor Cloudy playlist in source order, with the FM set's own swimming song.</summary>
-    public static readonly IReadOnlyList<string> CloudySongs =
-        ["song_gday___d", "song_swimming", "song_gsunny2", "song_sunnyday", "song_02", "song_03", "song_22", "song_fm_swim2", "song_29", "song_12"];
+    /// <summary>The donor's Cloudy playlist: the sunny songs and two of the overcast ones.</summary>
+    public static readonly IReadOnlyList<string> CloudySongs = [.. SunnySongs, "outside-day-overcast-01", "outside-day-overcast-03"];
 
-    /// <summary>Donor Overcast playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> OvercastSongs =
-        ["song_29", "song_12", "song_13", "song_gpalac", "song_overcast"];
+    /// <summary>The donor's Overcast playlist, which the castle's song joins.</summary>
+    public static readonly IReadOnlyList<string> OvercastSongs = [.. Numbered("outside-day-overcast", 4), "castle-dungeon-01"];
 
-    /// <summary>Donor Rain playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> RainSongs =
-        ["song_overlong", "song_raining", "song_08"];
+    /// <summary>The donor's Rain playlist.</summary>
+    public static readonly IReadOnlyList<string> RainSongs = Numbered("outside-day-rain", 3);
 
-    /// <summary>Donor Snow playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> SnowSongs =
-        ["song_20", "song_gsnow__b", "song_oversnow", "song_snowing"];
+    /// <summary>The donor's Snow playlist.</summary>
+    public static readonly IReadOnlyList<string> SnowSongs = Numbered("outside-day-snow", 4);
 
-    /// <summary>Donor Interior playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> InteriorSongs =
-        ["song_23"];
+    /// <summary>The donor's Interior playlist.</summary>
+    public static readonly IReadOnlyList<string> InteriorSongs = ["building-interior-01"];
 
-    /// <summary>Donor Palace playlist in source order.</summary>
-    public static readonly IReadOnlyList<string> PalaceSongs =
-        ["song_06"];
+    /// <summary>The donor's Palace playlist.</summary>
+    public static readonly IReadOnlyList<string> PalaceSongs = ["palace-interior-01"];
 
-    /// <summary>Donor Castle playlist: a dungeon's castle block.</summary>
-    public static readonly IReadOnlyList<string> CastleSongs =
-        ["song_gpalac"];
+    /// <summary>The donor's Castle playlist: a dungeon's castle block.</summary>
+    public static readonly IReadOnlyList<string> CastleSongs = ["castle-dungeon-01"];
+
+    /// <summary>A numbered series of Patch's tracks: <c>dungeon-01</c> to <c>dungeon-17</c>.</summary>
+    private static string[] Numbered(string name, int count) =>
+        [.. Enumerable.Range(1, count).Select(number => $"{name}-{number:00}")];
 
     private readonly IAudioService? _audio;
     private readonly Func<string, AudioClip?> _resolve;

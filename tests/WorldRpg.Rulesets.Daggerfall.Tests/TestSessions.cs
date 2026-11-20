@@ -228,8 +228,8 @@ internal static class TestSessions
     }
 
     /// <summary>
-    /// The content the product runs with: the tracked <c>content/</c> tree it stages, and the data and music
-    /// containers a real import packed, installed beside it as the Host opens them.
+    /// The content the product runs with: the tracked <c>content/</c> tree it stages, the data container a real import
+    /// packed and the shipped music container, installed beside it as the Host opens them.
     /// </summary>
     internal static ProductContent StagedContent(string root, out BundleContentFake bundles) => ContentWithContainers(root, out bundles);
 

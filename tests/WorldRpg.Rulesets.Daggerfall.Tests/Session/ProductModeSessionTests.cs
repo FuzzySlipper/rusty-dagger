@@ -164,7 +164,7 @@ public sealed class ProductModeSessionTests
         // Ordinary play takes world steps and plays the site's published cue as one retained loop.
         product.Update(new ProductUpdate(OuterUpdate(++step), []));
         Assert.True(spatial.StepCalls > 0, "ordinary play admits world time");
-        Assert.Contains("daggerfall.music/cue.started: Music cue 'song_dungeon' started for context 'Dungeon'.", engine.PublishedDiagnostics);
+        Assert.Contains("daggerfall.music/cue.started: Music cue 'dungeon-09' started for context 'Dungeon'.", engine.PublishedDiagnostics);
         Assert.Single(engine.StartedAudioVoices);
         Assert.Equal(0, engine.ReleasedAudioVoices);
         // The cue's body came out of the music container installed beside the product.

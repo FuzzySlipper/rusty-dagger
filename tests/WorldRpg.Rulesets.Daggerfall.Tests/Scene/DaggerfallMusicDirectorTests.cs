@@ -6,23 +6,23 @@ using Xunit;
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 /// <summary>
-/// Music selection and loop lifetime: donor song lists, idempotent same-context updates, cue
+/// Music selection and loop lifetime: the playlists, idempotent same-context updates, cue
 /// override with resume, and silent contexts without admitted clips.
 /// </summary>
 public sealed class DaggerfallMusicDirectorTests
 {
     [Fact]
-    public void The_playlists_add_the_donors_unused_dungeon_songs_and_its_two_fm_only_songs()
+    public void The_playlists_name_patchs_arrangement_with_three_of_the_donors_unused_dungeon_songs_and_its_two_fm_only_songs()
     {
-        IReadOnlyList<string> dungeon = DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Dungeon);
-        Assert.Equal(25, dungeon.Count);
-        Assert.Equal("song_dungeon", dungeon[0]);
-        Assert.Equal(Enumerable.Range(1, 10).Select(number => $"song_d{number}"), dungeon.Skip(15));
-        Assert.Contains("song_fm_swim2", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Sunny));
-        Assert.Contains("song_fm_swim2", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Cloudy));
-        Assert.Contains("song_fm_nite3", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.MagesGuild));
-        // The FM renders are gone: no playlist names one.
-        Assert.DoesNotContain(DaggerfallMusicDirector.PlaylistTracks, track => track.EndsWith("fm", StringComparison.Ordinal));
+        Assert.Equal(Enumerable.Range(1, 17).Select(number => $"dungeon-{number:00}"), DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Dungeon));
+        Assert.Contains("outside-day-sunny-08", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Sunny));
+        Assert.Contains("outside-day-sunny-08", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Cloudy));
+        Assert.Contains("mages-guild-03", DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.MagesGuild));
+        Assert.Equal(["castle-dungeon-01"], DaggerfallMusicDirector.PlaylistFor(DaggerfallMusicContext.Castle));
+        // Every one of the 59 recordings plays somewhere; no classic name, sneaking track or title track is left.
+        Assert.Equal(59, DaggerfallMusicDirector.PlaylistTracks.Count);
+        Assert.All(DaggerfallMusicDirector.PlaylistTracks, track => Assert.Matches("^[a-z]+(-[a-z]+)*-[0-9]{2}$", track));
+        Assert.DoesNotContain(DaggerfallMusicDirector.PlaylistTracks, track => track.StartsWith("sneaking", StringComparison.Ordinal) || track.StartsWith("title", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -47,26 +47,26 @@ public sealed class DaggerfallMusicDirectorTests
         IAudioService service = AudioFake.Create(out AudioFake audio);
         Dictionary<string, AudioClip> clips = new(StringComparer.Ordinal)
         {
-            ["song_dungeon"] = new AudioClip(new AudioClipHandle(1), static () => { }),
-            ["song_square_2"] = new AudioClip(new AudioClipHandle(2), static () => { }),
+            ["dungeon-01"] = new AudioClip(new AudioClipHandle(1), static () => { }),
+            ["tavern-01"] = new AudioClip(new AudioClipHandle(2), static () => { }),
         };
         using DaggerfallMusicDirector music = new(service, track => clips.GetValueOrDefault(track), audio.Retire);
 
-        Assert.Equal("song_dungeon", music.Update(DaggerfallMusicContext.Dungeon));
+        Assert.Equal("dungeon-01", music.Update(DaggerfallMusicContext.Dungeon));
         Assert.Single(audio.Started);
         // The same context again allocates no new loop.
-        Assert.Equal("song_dungeon", music.Update(DaggerfallMusicContext.Dungeon));
+        Assert.Equal("dungeon-01", music.Update(DaggerfallMusicContext.Dungeon));
         Assert.Single(audio.Started);
         // A new context retires the old loop before starting its own.
-        Assert.Equal("song_square_2", music.Update(DaggerfallMusicContext.Tavern));
+        Assert.Equal("tavern-01", music.Update(DaggerfallMusicContext.Tavern));
         Assert.Equal(2, audio.Started.Count);
-        Assert.Equal(["song_dungeon"], audio.Retired);
+        Assert.Equal(["dungeon-01"], audio.Retired);
         // Retiring really ends the loop: the voice is released, not just forgotten.
         Assert.Equal(1, audio.ReleasedVoices);
 
         // Combat and menu name no song: whatever plays keeps playing.
-        Assert.Equal("song_square_2", music.Update(DaggerfallMusicContext.Combat));
-        Assert.Equal("song_square_2", music.Update(DaggerfallMusicContext.Menu));
+        Assert.Equal("tavern-01", music.Update(DaggerfallMusicContext.Combat));
+        Assert.Equal("tavern-01", music.Update(DaggerfallMusicContext.Menu));
         Assert.Equal(2, audio.Started.Count);
         Assert.Throws<ArgumentOutOfRangeException>(() => music.Update((DaggerfallMusicContext)99));
     }
@@ -80,7 +80,7 @@ public sealed class DaggerfallMusicDirectorTests
         Assert.Null(music.Update(DaggerfallMusicContext.Dungeon));
         Assert.Null(music.Playing);
         Assert.Empty(audio.Started);
-        Assert.Null(music.Cue("song_quest"));
+        Assert.Null(music.Cue("quest-song"));
         music.Resume();
         music.Stop();
         music.Dispose();
@@ -93,17 +93,17 @@ public sealed class DaggerfallMusicDirectorTests
         IAudioService service = AudioFake.Create(out AudioFake audio);
         Dictionary<string, AudioClip> clips = new(StringComparer.Ordinal)
         {
-            ["song_square_2"] = new AudioClip(new AudioClipHandle(2), static () => { }),
-            ["song_quest"] = new AudioClip(new AudioClipHandle(3), static () => { }),
+            ["tavern-01"] = new AudioClip(new AudioClipHandle(2), static () => { }),
+            ["quest-song"] = new AudioClip(new AudioClipHandle(3), static () => { }),
         };
         using DaggerfallMusicDirector music = new(service, track => clips.GetValueOrDefault(track), audio.Retire);
 
         music.Update(DaggerfallMusicContext.Tavern);
-        Assert.Equal("song_quest", music.Cue("song_quest"));
-        Assert.Equal("song_quest", music.Update(DaggerfallMusicContext.Tavern));
-        Assert.Equal(["song_square_2"], audio.Retired);
+        Assert.Equal("quest-song", music.Cue("quest-song"));
+        Assert.Equal("quest-song", music.Update(DaggerfallMusicContext.Tavern));
+        Assert.Equal(["tavern-01"], audio.Retired);
         music.Resume();
-        Assert.Equal("song_square_2", music.Playing);
+        Assert.Equal("tavern-01", music.Playing);
         Assert.Equal(3, audio.Started.Count);
     }
 
@@ -121,16 +121,16 @@ public sealed class DaggerfallMusicDirectorTests
         IAudioService service = AudioFake.Create(out AudioFake audio);
         Dictionary<string, AudioClip> clips = new(StringComparer.Ordinal)
         {
-            ["song_dungeon"] = new AudioClip(new AudioClipHandle(1), static () => { }),
-            ["song_quest"] = new AudioClip(new AudioClipHandle(2), static () => { }),
+            ["dungeon-01"] = new AudioClip(new AudioClipHandle(1), static () => { }),
+            ["quest-song"] = new AudioClip(new AudioClipHandle(2), static () => { }),
         };
         DaggerfallMusicDirector music = new(service, track => clips.GetValueOrDefault(track), audio.Retire);
-        Assert.Equal("song_dungeon", music.Update(DaggerfallMusicContext.Dungeon));
+        Assert.Equal("dungeon-01", music.Update(DaggerfallMusicContext.Dungeon));
         Assert.Equal(0, audio.ReleasedVoices);
 
         // The cue overrides the loop, so the dungeon's voice is released as the quest voice starts.
-        Assert.Equal("song_quest", music.Cue("song_quest"));
-        Assert.Equal("song_quest", music.Update(DaggerfallMusicContext.Dungeon));
+        Assert.Equal("quest-song", music.Cue("quest-song"));
+        Assert.Equal("quest-song", music.Update(DaggerfallMusicContext.Dungeon));
         Assert.Equal(1, audio.ReleasedVoices);
         music.Stop();
         Assert.Null(music.Playing);
@@ -141,7 +141,7 @@ public sealed class DaggerfallMusicDirectorTests
         Assert.Equal(2, audio.ReleasedVoices);
 
         // Disposing a stopped director releases nothing a second time.
-        Assert.Equal("song_dungeon", music.Update(DaggerfallMusicContext.Dungeon));
+        Assert.Equal("dungeon-01", music.Update(DaggerfallMusicContext.Dungeon));
         Assert.Equal(3, audio.Started.Count);
         music.Dispose();
         Assert.Equal(3, audio.ReleasedVoices);
@@ -159,14 +159,14 @@ public sealed class DaggerfallMusicDirectorTests
             service,
             track => broken ? throw new InvalidOperationException("the Engine will not open this clip") : dungeon,
             audio.Retire);
-        Assert.Equal("song_dungeon", music.Update(DaggerfallMusicContext.Dungeon));
+        Assert.Equal("dungeon-01", music.Update(DaggerfallMusicContext.Dungeon));
 
         // The next cue cannot open. The voice it replaced is still released and still reported, so the
         // failure leaves no cue the product believes is playing.
         broken = true;
         Assert.Throws<InvalidOperationException>(() => music.Update(DaggerfallMusicContext.Tavern));
         Assert.Null(music.Playing);
-        Assert.Equal(["song_dungeon"], audio.Retired);
+        Assert.Equal(["dungeon-01"], audio.Retired);
         Assert.Equal(1, audio.ReleasedVoices);
     }
 
@@ -177,7 +177,7 @@ public sealed class DaggerfallMusicDirectorTests
         AudioClip dungeon = new(new AudioClipHandle(1), static () => { });
         using DaggerfallMusicDirector music = new(service, _ => dungeon, audio.Retire);
 
-        Assert.Equal("song_dungeon", music.Update(DaggerfallMusicContext.Dungeon));
+        Assert.Equal("dungeon-01", music.Update(DaggerfallMusicContext.Dungeon));
 
         // The Engine validates every descriptor a voice is created with and refuses the call otherwise, so
         // the ranges are pinned here: a maximum distance of zero is a refused voice, not a silent one — it was

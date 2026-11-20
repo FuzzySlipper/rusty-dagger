@@ -20,7 +20,6 @@ internal static class Program
         ImportCommand.Command,
         PackCommand.Command,
         // Product-wide media.
-        MusicTracksCommand.Command,
         ClassicMediaCommand.Command,
         SkyMediaCommand.Command,
         CharacterPresentationCommand.Command,
@@ -64,5 +63,5 @@ internal static class Program
 
     private static int Run(string[] args) => ToolCommand.Dispatch(Commands, args, ToolCommand.ImportTool, ImportLayout.ReleaseDirectory is null
         ? $"usage: {ToolCommand.ImportTool} <{string.Join('|', Commands.Keys)}> [options]; each command prints its own options when they are wrong."
-        : "usage: Daggerfall.Import.Tool <the folder Daggerfall is installed in, or its ARENA2 folder> [--music <a folder of the game's music recordings>]");
+        : "usage: Daggerfall.Import.Tool <the folder Daggerfall is installed in, or its ARENA2 folder>");
 }

@@ -51,7 +51,7 @@ out=$DEN_BUILD_OUTPUT_DIR
 # What a test lane pulled from the store is kept together, apart from the inputs, so that one place says which
 # revision is held. The data lane writes its own, in the checkout, which the router clears before the next run.
 imported=$kept/imported
-mkdir -p "$kept"/inputs/{arena2,Sound} "$imported"/{data,import} "$out" local/build
+mkdir -p "$kept"/inputs/arena2 "$imported"/{data,import} "$out" local/build
 ln -sfn "$kept/inputs" local/inputs
 if [[ $lane == data ]]; then
   mkdir -p local/data local/build/import
@@ -83,9 +83,8 @@ status() {
 }
 read -r wanted have whole stored < <(status)
 [[ $wanted =~ ^[0-9a-f]{64}$ ]] || { echo "lane: cannot compute this commit's importer revision" >&2; exit 1; }
-# The inputs: the corpus the import and its suite read, and the score; changed files only.
+# The inputs: the corpus the import and its suite read; changed files only.
 rsync -rtL --delete "$inputs_source/arena2/" "$kept/inputs/arena2/"
-rsync -rtL --delete "$inputs_source/Sound/" "$kept/inputs/Sound/"
 if [[ $lane == data ]]; then
   if [[ $stored == held ]]; then
     step "the store already holds importer revision $wanted; nothing to import"
@@ -204,7 +203,7 @@ EOF
     ;;
   data)
     # With the classic-art container, so every checkout runs what a player has and can still compare (#10763).
-    measured import dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound --classic-art
+    measured import dotnet run --project src/Daggerfall.Import.Tool -- import --classic-art
     measured publish scripts/data-sync.sh publish
     ;;
 esac

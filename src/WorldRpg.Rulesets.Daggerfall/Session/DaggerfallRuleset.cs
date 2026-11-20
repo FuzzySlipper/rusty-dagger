@@ -43,9 +43,6 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
 
     public RulesetId Id => Identity;
 
-    /// <summary>The import tool <c>rusty build --release</c> ships, from the game's folder.</summary>
-    private const string ReleaseImportTool = "tools/Daggerfall.Import.Tool/Daggerfall.Import.Tool";
-
     /// <summary>
     /// The entry screen's import of the Daggerfall data: the declared import tool, run on the folder the player
     /// chooses and told to install the container where the host opens it.
@@ -55,12 +52,12 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
         (folder, install) => ["import", "--arena2", folder, "--install", install]);
 
     /// <summary>The import command a developer runs in the repository root to produce the containers.</summary>
-    private const string ImportCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound --classic-art";
+    private const string ImportCommand = "dotnet run --project src/Daggerfall.Import.Tool -- import --classic-art";
 
     /// <summary>
-    /// The containers the player's own Daggerfall files are converted into: the data every game reads, the optional score,
-    /// whose tracks are read by name, and the developer's optional classic art the data leaves out; and the optional 3D
-    /// first-person art, built on a development checkout.
+    /// The containers the player's own Daggerfall files are converted into: the data every game reads and the developer's
+    /// optional classic art the data leaves out; and two that ship with the game, built on a development checkout: the
+    /// score, Patch's arrangement, whose tracks are read by name, and the optional 3D first-person art.
     /// </summary>
     public IReadOnlyList<InstalledContentRequirement> InstalledContent { get; } =
     [
@@ -68,9 +65,9 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset, IInstalledContentR
             DevelopmentStep: $"Choose Import, or with the game's ARENA2 folder at local/inputs/arena2 run `{ImportCommand}` in the repository root.",
             ReleaseStep: "Choose Import and select the folder Daggerfall is installed in, or its ARENA2 folder.",
             Import: DataImport),
-        new(DaggerfallMusicBundle.ContainerName, "the Daggerfall music", Required: false,
-            DevelopmentStep: $"Run `{ImportCommand}` with a folder of <track>.<ext> recordings, such as the Daggerfall Unity song pack.",
-            ReleaseStep: $"Run {ReleaseImportTool} with the folder Daggerfall is installed in and --music with a folder of the game's music recordings (<track>.<ext>)."),
+        new(DaggerfallMusicBundle.ContainerName, "the music", Required: false,
+            DevelopmentStep: "Run `scripts/data-sync.sh pull` (or `link`), or build it with `authoring/tools/music/build.sh` (authoring/tools/music).",
+            ReleaseStep: "Build music.rpak on a development checkout with authoring/tools/music/build.sh and place it beside the product."),
         new(DaggerfallData.ClassicArtContainerName, "the classic art the refreshed art draws anew", Required: false,
             DevelopmentStep: $"Run `{ImportCommand}` in the repository root; it is the developer's comparison (world.classic-art), never a player's.",
             ReleaseStep: "A player's game draws the refreshed art and has no classic-art container."),

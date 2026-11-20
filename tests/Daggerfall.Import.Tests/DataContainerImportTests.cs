@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Daggerfall.Import.Audio;
 using Daggerfall.Import.Publication;
 using Daggerfall.Import.Tool;
 using Daggerfall.Import.Tool.Commands;
@@ -12,7 +11,7 @@ using Xunit;
 namespace Daggerfall.Import.Tests;
 
 /// <summary>
-/// The import into the data containers: the music naming scheme, the input check that runs before anything is
+/// The import into the data containers: the input check that runs before anything is
 /// written, the step list against the commands' own grammar, the container's description, and packing through
 /// the Engine.
 /// </summary>
@@ -25,64 +24,13 @@ public sealed class DataContainerImportTests : IDisposable
     public void Dispose() => Directory.Delete(root, recursive: true);
 
     [Fact]
-    public void A_music_folder_is_matched_to_tracks_by_name_in_any_case_and_admitted_format()
-    {
-        ClassicMusicFolder folder = ClassicMusicTracks.Match(["song_dungeon.ogg", "SONG_04.MP3", "song_gshop.flac", "song_dungeon5).ogg", "song_tavern.mid", "notes.txt"]);
-
-        Assert.Equal(
-            [("song_04", "SONG_04.MP3", "song_04.mp3"), ("song_dungeon", "song_dungeon.ogg", "song_dungeon.ogg"), ("song_gshop", "song_gshop.flac", "song_gshop.flac")],
-            folder.Recordings.Select(recording => (recording.Track, recording.SourceFile, recording.PackedName)));
-        Assert.Equal(["notes.txt", "song_dungeon5).ogg", "song_tavern.mid"], folder.Unknown);
-        Assert.Equal(ClassicMusicTracks.All.Count - 3, folder.Missing.Count);
-        Assert.Contains("song_tavern", folder.Missing);
-        Assert.DoesNotContain("song_dungeon", folder.Missing);
-    }
-
-    [Fact]
-    public void Two_recordings_of_one_track_are_refused_by_name()
-    {
-        InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(() => ClassicMusicTracks.Match(["song_dungeon.ogg", "song_dungeon.mp3"]));
-
-        Assert.Contains("'song_dungeon.mp3'", refusal.Message, StringComparison.Ordinal);
-        Assert.Contains("'song_dungeon.ogg'", refusal.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void The_track_list_names_each_classic_track_once_in_ordinal_order()
-    {
-        Assert.Equal(ClassicMusicTracks.All.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal), ClassicMusicTracks.All);
-        Assert.All(ClassicMusicTracks.All, track => Assert.Matches("^song_[a-z0-9_]+$", track));
-        Assert.Equal(97, ClassicMusicTracks.All.Count);
-    }
-
-    [Fact]
-    public void The_music_tracks_command_stages_scheme_names_and_refuses_a_folder_with_none()
-    {
-        string music = Directory.CreateDirectory(Path.Combine(root, "Sound")).FullName;
-        File.WriteAllBytes(Path.Combine(music, "Song_Dungeon.OGG"), [1, 2, 3]);
-        File.WriteAllBytes(Path.Combine(music, "readme.txt"), [4]);
-        string output = Path.Combine(root, "tracks");
-
-        Assert.Equal(0, Program.Commands["music-tracks"].Invoke(["music-tracks", "--music", music, "--out", output]));
-
-        Assert.Equal(["song_dungeon.ogg"], Directory.EnumerateFiles(output).Select(Path.GetFileName));
-        Assert.Equal([1, 2, 3], File.ReadAllBytes(Path.Combine(output, "song_dungeon.ogg")));
-
-        File.Delete(Path.Combine(music, "Song_Dungeon.OGG"));
-        InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(() =>
-            Program.Commands["music-tracks"].Invoke(["music-tracks", "--music", music, "--out", output]));
-        Assert.Contains("leave out --music", refusal.Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void Every_missing_input_is_named_before_anything_is_written()
     {
-        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound");
+        ImportCommand.Inputs inputs = new("local/inputs/arena2");
 
         string[] missing = [.. ImportCommand.MissingInputs(inputs, root)];
 
         Assert.Contains(missing, entry => entry.StartsWith("Arena2 directory 'local/inputs/arena2'", StringComparison.Ordinal));
-        Assert.Contains(missing, entry => entry.StartsWith("music folder 'local/inputs/Sound'", StringComparison.Ordinal));
         Assert.Contains($"tracked file '{ImportLayout.RootMarker}'", missing);
         // The import does not read the authored base payload, so its absence is no missing input.
         Assert.DoesNotContain(missing, entry => entry.Contains("daggerfall.base", StringComparison.Ordinal));
@@ -172,12 +120,12 @@ public sealed class DataContainerImportTests : IDisposable
         ImportLayout.RefuseLinkedOutputs(repository, null);
         ImportLayout.RefuseLinkedOutputs(repository, shared);
         // A container linked on its own, in a directory of the checkout's own, is refused by name.
-        File.WriteAllBytes(Path.Combine(shared, "music.rpak"), []);
-        File.CreateSymbolicLink(Path.Combine(repository, "local", "data", "music.rpak"), Path.Combine(shared, "music.rpak"));
+        File.WriteAllBytes(Path.Combine(shared, "daggerfall-data.rpak"), []);
+        File.CreateSymbolicLink(Path.Combine(repository, "local", "data", "daggerfall-data.rpak"), Path.Combine(shared, "daggerfall-data.rpak"));
         refused = Assert.Throws<InvalidOperationException>(() => ImportLayout.RefuseLinkedOutputs(repository, null));
-        Assert.Contains("'local/data/music.rpak' is a link", refused.Message, StringComparison.Ordinal);
+        Assert.Contains("'local/data/daggerfall-data.rpak' is a link", refused.Message, StringComparison.Ordinal);
         // So is a linked staging tree, which the tests in a worktree may read from the main checkout.
-        File.Delete(Path.Combine(repository, "local", "data", "music.rpak"));
+        File.Delete(Path.Combine(repository, "local", "data", "daggerfall-data.rpak"));
         Directory.CreateDirectory(Path.Combine(repository, "local", "build"));
         Directory.CreateSymbolicLink(Path.Combine(repository, "local", "build", "import"), Directory.CreateDirectory(Path.Combine(root, "shared", "import")).FullName);
         refused = Assert.Throws<InvalidOperationException>(() => ImportLayout.RefuseLinkedOutputs(repository, null));
@@ -189,7 +137,6 @@ public sealed class DataContainerImportTests : IDisposable
     {
         string install = Path.Combine(root, "installed");
         Assert.Equal(Path.Combine(install, "daggerfall-data.rpak"), ImportLayout.Installed(ImportLayout.DataContainer, install));
-        Assert.Equal(Path.Combine(install, "music.rpak"), ImportLayout.Installed(ImportLayout.MusicContainer, install));
 
         // The host runs the tool from its build output in the installed-content directory, so the repository is the
         // one that build output lies in.
@@ -205,8 +152,8 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void The_import_converts_the_cinematics_only_when_asked_and_that_changes_nothing_else()
     {
-        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", null, Cinematics: true));
-        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null));
+        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", Cinematics: true));
+        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2"));
 
         Assert.Equal(["cinematic-media-vid", "cinematic-media-flc"], with.Select(step => step.Label).Where(label => label.StartsWith("cinematic-media", StringComparison.Ordinal)));
         Assert.Equal(
@@ -217,7 +164,7 @@ public sealed class DataContainerImportTests : IDisposable
     [Fact]
     public void Every_step_is_a_tool_command_the_commands_own_grammar_accepts()
     {
-        ImportCommand.Inputs inputs = new("local/inputs/arena2", "local/inputs/Sound");
+        ImportCommand.Inputs inputs = new("local/inputs/arena2");
 
         IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(inputs);
 
@@ -232,14 +179,14 @@ public sealed class DataContainerImportTests : IDisposable
         // there is the authored UI art and its manifest, and the base pack's terrain the atlas is drawn from, which it reads.
         Assert.All(steps.SelectMany(step => step.Arguments).Where(argument => argument.StartsWith("content/", StringComparison.Ordinal)),
             argument => Assert.Contains(argument, new[] { AuthoredUi.ProductDirectory, AuthoredUi.ManifestFile, ImportLayout.TerrainBake }));
-        Assert.Equal(["music-tracks", "classic-media"], steps.Take(2).Select(step => step.Label));
+        Assert.Equal("classic-media", steps[0].Label);
         Assert.Equal("world-blocks", steps[^1].Label);
     }
 
     [Fact]
     public void A_command_rerun_without_its_staged_options_reads_and_writes_what_the_import_does()
     {
-        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound"));
+        IReadOnlyList<ImportCommand.Step> steps = ImportCommand.Steps(new("local/inputs/arena2"));
 
         int staged = 0;
         foreach (ImportCommand.Step step in steps)
@@ -270,27 +217,12 @@ public sealed class DataContainerImportTests : IDisposable
     }
 
     [Fact]
-    public void The_data_container_steps_are_the_same_whichever_music_was_supplied()
-    {
-        IReadOnlyList<ImportCommand.Step> without = ImportCommand.Steps(new("local/inputs/arena2", null));
-        IReadOnlyList<ImportCommand.Step> with = ImportCommand.Steps(new("local/inputs/arena2", "local/inputs/Sound"));
-
-        // Only the music container's own step reads the music folder; no other step names it or what it staged.
-        Assert.DoesNotContain(without, step => step.Label == "music-tracks");
-        ImportCommand.Step tracks = Assert.Single(with, step => step.Label == "music-tracks");
-        Assert.Equal(["music-tracks", "--music", "local/inputs/Sound", "--out", ImportLayout.MusicTracks], tracks.Arguments);
-        Assert.Equal(
-            without.Select(step => string.Join('\u001f', [step.Label, .. step.Arguments])),
-            with.Where(step => step != tracks).Select(step => string.Join('\u001f', [step.Label, .. step.Arguments])));
-    }
-
-    [Fact]
     public void A_caller_path_inside_the_repository_is_recorded_relative_and_one_outside_absolute()
     {
         string repository = Directory.CreateDirectory(Path.Combine(root, "repo")).FullName;
 
         Assert.Equal("local/inputs/arena2", ImportCommand.Portable("local/inputs/arena2", repository, repository));
-        Assert.Equal("local/inputs/Sound", ImportCommand.Portable("../local/inputs/Sound", Path.Combine(repository, "scripts"), repository));
+        Assert.Equal("local/inputs/fp-melee", ImportCommand.Portable("../local/inputs/fp-melee", Path.Combine(repository, "scripts"), repository));
         Assert.Equal(Path.Combine(root, "games", "ARENA2"), ImportCommand.Portable(Path.Combine(root, "games", "ARENA2"), repository, repository));
     }
 
@@ -353,15 +285,10 @@ public sealed class DataContainerImportTests : IDisposable
         Write(staging, "worldrpg/payloads/daggerfall.imported.json", "{\"locations\":{}}"u8);
         foreach (JsonObject pack in DataContainers.DerivedPacks()) Write(staging, (string)pack["payload"]!, "{}"u8);
         DataContainers.WriteDescriptor(staging);
-        string tracks = Path.Combine(root, "tracks");
-        Write(tracks, "song_dungeon.ogg", [9, 9, 9]);
-        DataContainers.WriteMusicDescriptor(tracks);
         string container = Path.Combine(root, "local", "daggerfall-data.rpak");
-        string music = Path.Combine(root, "local", "music.rpak");
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
 
         DataContainers.PackOne(host, staging, container, compress: true);
-        DataContainers.PackOne(host, tracks, music, compress: false);
 
         host.Call(engine =>
         {
@@ -372,13 +299,6 @@ public sealed class DataContainerImportTests : IDisposable
             JsonNode data = JsonNode.Parse(opened.ReadText(ImportLayout.DescriptorPath))!;
             Assert.Equal(ImporterBuild.Revision, (string)data["importerRevision"]!);
             Assert.Equal(DataContainers.DerivedPacks().Count, data["contentPacks"]!.AsArray().Count);
-
-            using ProductContentBundle score = ProductContentBundle.OpenContainer(engine.Content, music);
-            Assert.Equal(["song_dungeon.ogg", ImportLayout.DescriptorPath], score.Entries.ToArray().Select(entry => entry.Path).Order(StringComparer.Ordinal));
-            JsonNode described = JsonNode.Parse(score.ReadText(ImportLayout.DescriptorPath))!;
-            Assert.Equal(DataContainers.DescriptorKind, (string)described["kind"]!);
-            Assert.Equal(ImporterBuild.Revision, (string)described["importerRevision"]!);
-            Assert.Empty(described["contentPacks"]!.AsArray());
         });
     }
 
@@ -497,13 +417,6 @@ public sealed class DataContainerImportTests : IDisposable
             Assert.NotNull(descriptor["leftOut"]);
             if (classic is not null)
                 Assert.Equal((string)descriptor["importerRevision"]!, (string)JsonNode.Parse(classic.ReadText(ImportLayout.DescriptorPath))!["importerRevision"]!);
-
-            string music = Path.Combine(TestData.RepositoryRoot, ImportLayout.MusicContainer);
-            if (!File.Exists(music)) return;
-            using ProductContentBundle score = ProductContentBundle.OpenContainer(engine.Content, music);
-            Assert.Equal(DataContainers.DescriptorKind, (string)JsonNode.Parse(score.ReadText(ImportLayout.DescriptorPath))!["kind"]!);
-            Assert.All(score.Entries.ToArray().Where(entry => entry.Path != ImportLayout.DescriptorPath),
-                entry => Assert.Contains(Path.GetFileNameWithoutExtension(entry.Path), ClassicMusicTracks.All));
         });
     }
 
@@ -529,7 +442,7 @@ public sealed class DataContainerImportTests : IDisposable
 
         Assert.Contains(authored, entry => entry["display"] is not null);
 
-        // No classic sidecar names music: the data container is the same whichever recordings were supplied.
+        // No classic sidecar names music: the score ships in its own container.
         string[] sidecars = [.. entries.Keys.Where(path => path.StartsWith("worldrpg/imports/", StringComparison.Ordinal)
             && path.EndsWith("/" + Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, StringComparison.Ordinal))];
         Assert.Contains("worldrpg/imports/shared/" + Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, sidecars);

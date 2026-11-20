@@ -39,10 +39,10 @@ corpora="Arena2 corpus $arena2_root: $([[ -d "$arena2_root" ]] && echo present |
 echo "corpora: $corpora"
 
 # The Arena2-derived content is not tracked: the import command packs it into local/data/daggerfall-data.rpak,
-# with its import records in local/build/import/records (and the score in local/data/music.rpak). Without it the product
+# with its import records in local/build/import/records (the score, local/data/music.rpak, ships: scripts/data-sync.sh). Without it the product
 # still stages and states why it cannot be played, the suites that read it skip with the reason printed, and
 # --play, which plays it, is refused.
-import_command="dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound --classic-art"
+import_command="dotnet run --project src/Daggerfall.Import.Tool -- import --classic-art"
 generated_missing=()
 for path in local/data/daggerfall-data.rpak local/build/import/records; do
   [[ -e "$path" ]] || generated_missing+=("$path")

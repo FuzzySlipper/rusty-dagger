@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Copies the data the game and the tests read between this checkout and the den NAS store, which keeps one set per
-# importer revision: revisions/REVISION/ holds daggerfall-data.rpak, music.rpak, classic-art.rpak (the classic media the
+# importer revision: revisions/REVISION/ holds daggerfall-data.rpak, classic-art.rpak (the classic media the
 # art pack draws anew, which a player's data container leaves out: the developer's comparison), import.tar.zst (the import tree,
 # local/build/import: 82,000 files, which the NAS writes at about 20 a second when loose), SHA256SUMS (every file,
 # the tree's by its path inside it) and published (when, from which commit and worker, with which ffmpeg). The import lane
 # (scripts/route.py data) is the one publisher; every checkout pulls the revision its commit needs. The data is derived
 # from arena2 and never leaves our network. Beside lan/, the store's ship/ root holds what ships with the game but lives
-# outside GitHub, finals only, so it can be published whole: exactly first-person.rpak, the packed arms
-# authoring/tools/fp-arms/build.sh builds from purchased art, which ships packed but never as raw assets.
+# outside GitHub, finals only, so it can be published whole: exactly the shipped containers, first-person.rpak (the packed
+# arms authoring/tools/fp-arms/build.sh builds from purchased art, which ships packed but never as raw assets) and
+# music.rpak (Patch's arrangement of the score, which authoring/tools/music/build.sh packs from the store's assets/music/).
 #
-#   scripts/data-sync.sh pull                  # this checkout's revision into local/data, with ship/first-person.rpak
+#   scripts/data-sync.sh pull                  # this checkout's revision into local/data, with the shipped containers
 #   scripts/data-sync.sh pull --import-tree    # also local/build/import, for a box that runs the tests
 #   scripts/data-sync.sh link --import-tree    # instead of copying: link local/data and local/build/import to this
 #                                              # machine's one read-only copy of the revision (den-agents' checkouts)
@@ -18,7 +19,7 @@
 #   scripts/data-sync.sh status                # the container's revision beside this tree's, and whether the store has it
 #   scripts/data-sync.sh store                 # the revisions the store holds, with their size and publish time
 #   scripts/data-sync.sh publish               # the import lane only: this checkout's whole import into the store
-#   scripts/data-sync.sh ship                  # a first-person.rpak built here into ship/, replacing the one there
+#   scripts/data-sync.sh ship                  # the shipped containers built here into ship/, replacing those there
 #   ... --mirror                               # also delete from local/data what the store lacks (the import tree
 #                                              # is always made to match the revision)
 #   DAGGER_DATA_STORE=HOST:/path scripts/data-sync.sh pull   # a store over ssh (changed 8 KiB blocks only)
@@ -59,6 +60,7 @@ if [[ $store == *:* ]]; then
 fi
 # What ships outside GitHub sits in the store's ship/ root, beside lan/.
 ship=${store%/*}/ship ship_path=${store_path%/*}/ship
+shipped=(first-person.rpak music.rpak)
 at_store() { if [[ -n $store_host ]]; then ssh -o BatchMode=yes "$store_host" "$*"; else bash -c "$*"; fi; }
 
 # What the container says of itself (worldrpg/data-container.json), read through its index, so an entry stored
@@ -127,7 +129,7 @@ report() {
 # The containers one revision's import writes: the classic-art one where the revision has it (every one since #10763).
 containers() {
   local from=$1
-  echo daggerfall-data.rpak music.rpak
+  echo daggerfall-data.rpak
   if [[ $from == store ]]; then at_store "test -f '$store_path/revisions/$revision/classic-art.rpak'" 2>/dev/null && echo classic-art.rpak
   else [[ -f $data/classic-art.rpak ]] && echo classic-art.rpak; fi
   return 0
@@ -155,7 +157,9 @@ case $direction in
     from=$store/revisions/$revision
     mkdir -p "$data"
     rsync "${options[@]}" $(containers store | sed "s#^#$from/#; s# # $from/#g") "$data/"
-    if at_store "test -f '$ship_path/first-person.rpak'"; then rsync "${options[@]}" "$ship/first-person.rpak" "$data/"; fi
+    for name in "${shipped[@]}"; do
+      if at_store "test -f '$ship_path/$name'"; then rsync "${options[@]}" "$ship/$name" "$data/"; fi
+    done
     if [[ -n $import_tree ]]; then
       # The archive stays beside the tree, so a second pull of the same revision copies nothing.
       archive=$root/local/build/import.tar.zst unpacked=$root/local/build/import.unpacked
@@ -194,13 +198,15 @@ case $direction in
       rm "$incoming/import.tar.zst"
       (cd "$incoming" && sha256sum --check --quiet SHA256SUMS) ||
         { echo "data-sync: the copy of importer revision $revision does not match its sums; nothing was linked" >&2; exit 1; }
-      ln -s ../../first-person.rpak "$incoming/data/first-person.rpak"
+      for name in "${shipped[@]}"; do ln -s "../../$name" "$incoming/data/$name"; done
       chmod -R a-w "$incoming/data" "$incoming/import"
       # When another link got there first, its copy is the same revision, checked the same way.
       mv -T "$incoming" "$entry" 2>/dev/null || true
     fi
-    # first-person.rpak is not an import output: one copy here serves every revision, refreshed from the store's ship/.
-    if at_store "test -f '$ship_path/first-person.rpak'" 2>/dev/null; then rsync "${options[@]}" "$ship/first-person.rpak" "$cache/"; fi
+    # The shipped containers are not import outputs: one copy here serves every revision, refreshed from the store's ship/.
+    for name in "${shipped[@]}"; do
+      if at_store "test -f '$ship_path/$name'" 2>/dev/null; then rsync "${options[@]}" "$ship/$name" "$cache/"; fi
+    done
     if [[ $direction == cache ]]; then echo "data-sync: $entry holds importer revision $revision"; exit 0; fi
     folders=(local/data)
     [[ -n $import_tree ]] && folders+=(local/build/import)
@@ -274,14 +280,19 @@ case $direction in
     fi
     ;;
   ship)
-    # The arms as built here, a file of this checkout's own: a link is another checkout's or the cache's copy.
-    built=$data/first-person.rpak
-    [[ -f $built && ! -L $built && ! -L $data ]] ||
-      { echo "data-sync: no first-person.rpak built in this checkout's own local/data (authoring/tools/fp-arms/build.sh)" >&2; exit 1; }
+    # Each shipped container built here, a file of this checkout's own: a link is another checkout's or the cache's copy.
     at_store "test -d '$ship_path'" || { echo "data-sync: $ship is not reachable" >&2; exit 1; }
-    # rsync writes a temporary file and renames it, so a pull never reads half of it.
-    rsync -t --info=stats1 "$built" "$ship/first-person.rpak"
-    echo "data-sync: published first-person.rpak to $ship"
+    published=0
+    for name in "${shipped[@]}"; do
+      built=$data/$name
+      [[ -f $built && ! -L $built && ! -L $data ]] || continue
+      # rsync writes a temporary file and renames it, so a pull never reads half of it.
+      rsync -t --info=stats1 "$built" "$ship/$name"
+      echo "data-sync: published $name to $ship"
+      published=$((published + 1))
+    done
+    ((published > 0)) || { echo "data-sync: no shipped container built in this checkout's own local/data" \
+      "(authoring/tools/fp-arms/build.sh, authoring/tools/music/build.sh)" >&2; exit 1; }
     ;;
   *) echo "$usage" >&2; exit 2 ;;
 esac

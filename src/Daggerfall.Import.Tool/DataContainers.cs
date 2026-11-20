@@ -9,7 +9,7 @@ namespace Daggerfall.Import.Tool;
 
 /// <summary>
 /// Where the import writes, relative to the repository root: the staging tree the data container is packed
-/// from, the import records, the music container's tracks, and the two containers.
+/// from, the import records, and the containers.
 /// </summary>
 /// <remarks>
 /// The commands record the paths they were given in what they publish, so these stay relative and use
@@ -24,9 +24,6 @@ internal static class ImportLayout
 
     public const string Staging = "local/build/import/staging";
     public const string Records = "local/build/import/records";
-
-    /// <summary>The music container's files: one recording per track at the root, by the naming scheme.</summary>
-    public const string MusicTracks = "local/build/import/music";
 
     /// <summary>
     /// The terrain relief and rivers, authored content of the base pack that <c>daggerfall-source-tool relief-bake</c>
@@ -54,7 +51,6 @@ internal static class ImportLayout
     public const string WorldBlocks = $"{Staging}/worldrpg/imports/world-blocks";
 
     public const string DataContainer = "local/data/daggerfall-data.rpak";
-    public const string MusicContainer = "local/data/music.rpak";
 
     /// <summary>Each container's own description, at its container-relative path.</summary>
     public const string DescriptorPath = "worldrpg/data-container.json";
@@ -102,8 +98,8 @@ internal static class ImportLayout
     /// </summary>
     public static void RefuseLinkedOutputs(string repository, string? install)
     {
-        foreach (string output in new[] { Installed(DataContainer, install), Installed(MusicContainer, install), Installed(ClassicArt.Container, install),
-                     Staging, Records, MusicTracks, ClassicArt.Tree })
+        foreach (string output in new[] { Installed(DataContainer, install), Installed(ClassicArt.Container, install),
+                     Staging, Records, ClassicArt.Tree })
         {
             for (FileSystemInfo? current = new FileInfo(Path.GetFullPath(output, repository));
                  current is not null;
@@ -139,8 +135,8 @@ internal static class ImportLayout
 }
 
 /// <summary>
-/// Describes and packs the containers the import produces: <c>daggerfall-data.rpak</c> from the staging tree,
-/// when music was supplied <c>music.rpak</c> from its tracks, and when asked the developer's <c>classic-art.rpak</c> from
+/// Describes and packs the containers the import produces: <c>daggerfall-data.rpak</c> from the staging tree, and
+/// when asked the developer's <c>classic-art.rpak</c> from
 /// the classic media the data container leaves out.
 /// </summary>
 internal static class DataContainers
@@ -196,17 +192,6 @@ internal static class DataContainers
     }
 
     /// <summary>
-    /// Writes the music container's description beside its tracks: the importer revision that staged them, and
-    /// no content packs, since the tracks are read by name rather than through a pack. A music container packed
-    /// from recordings by other means carries only the tracks and is read the same way.
-    /// </summary>
-    internal static void WriteMusicDescriptor(string tracks, string? repack = null)
-    {
-        Describe(tracks, [], [.. Repacked(repack)]);
-        Console.WriteLine($"music container: importer revision {ImporterBuild.Revision} described");
-    }
-
-    /// <summary>
     /// A repack over files an earlier run staged: those files may come from another importer revision, so the
     /// revision this run records no longer says what the container holds.
     /// </summary>
@@ -228,9 +213,8 @@ internal static class DataContainers
     }
 
     /// <summary>
-    /// Describes and packs the data container from the staging tree, and the music container from its tracks
-    /// when they were staged, then opens each through the Engine and checks that it carries exactly the staged
-    /// files.
+    /// Describes and packs the data container from the staging tree, and when asked the classic-art container, then
+    /// opens each through the Engine and checks that it carries exactly the staged files.
     /// </summary>
     /// <param name="repack">The command that repacked files an earlier run staged, or null for a full import.</param>
     /// <param name="classicArt">Whether to pack the developer's classic-art container from the classic media the data leaves out.</param>
@@ -241,7 +225,6 @@ internal static class DataContainers
         (int moved, long bytes) = ClassicArt.Split(Directory.GetCurrentDirectory());
         Console.WriteLine($"classic art: {moved} staged files ({bytes} bytes) of entries the art pack draws anew moved to '{ClassicArt.Tree}', which the data container leaves out");
         WriteDescriptor(ImportLayout.Staging, repack, ClassicArt.LeftOut(Directory.GetCurrentDirectory()));
-        if (Directory.Exists(ImportLayout.MusicTracks)) WriteMusicDescriptor(ImportLayout.MusicTracks, repack);
         if (classicArt) Describe(ClassicArt.Tree, [], [.. Repacked(repack)]);
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
         PackOne(host, ImportLayout.Staging, ImportLayout.Installed(ImportLayout.DataContainer, install), compress);
@@ -249,10 +232,6 @@ internal static class DataContainers
             PackOne(host, ClassicArt.Tree, ImportLayout.Installed(ClassicArt.Container, install), compress);
         else
             Console.WriteLine($"classic-art container: not packed ('{ImportLayout.Installed(ClassicArt.Container, install)}' is left as it is); --classic-art packs it for world.classic-art");
-        if (Directory.Exists(ImportLayout.MusicTracks))
-            PackOne(host, ImportLayout.MusicTracks, ImportLayout.Installed(ImportLayout.MusicContainer, install), compress);
-        else
-            Console.WriteLine($"music container: no tracks were staged, so '{ImportLayout.Installed(ImportLayout.MusicContainer, install)}' is left as it is; the product plays no score without one");
     }
 
     /// <summary>Packs one directory into one container and checks the container against the directory.</summary>

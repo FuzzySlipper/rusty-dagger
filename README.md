@@ -57,16 +57,15 @@ the one ignored folder. Its folders say what may be deleted:
 
 | Folder | Holds | Lifecycle |
 | --- | --- | --- |
-| `local/inputs/` | `arena2`, `Sound`, `fp-melee` (purchased art) | supplied, never regenerated: keep a copy |
-| `local/data/` | `daggerfall-data.rpak`, `music.rpak`, `first-person.rpak` | what the game opens; rebuilt by the import and `authoring/tools/fp-arms/build.sh`, or pulled by `scripts/data-sync.sh` |
+| `local/inputs/` | `arena2`, `fp-melee` (purchased art) | supplied, never regenerated: keep a copy |
+| `local/data/` | `daggerfall-data.rpak`, `music.rpak`, `first-person.rpak` | what the game opens; rebuilt by the import, `authoring/tools/music/build.sh` and `authoring/tools/fp-arms/build.sh`, or pulled by `scripts/data-sync.sh` |
 | `local/build/` | import staging and records, the fp-arms build, verify stamps | regenerable |
 | `local/art/` | `reference/` exports, `generated/` finals and studies, `review/` pages | the art pipeline's working files ([authoring/README.md](authoring/README.md)) |
 | `local/scratch/` | experiments | deletable at any time |
 | `local/evidence` | a link to the den NAS's `evidence/rusty-dagger/`, a folder per task (`ln -s /mnt/den-nas-backup/data/evidence/rusty-dagger local/evidence`) | kept off the checkout |
 
 - Supply the game's `ARENA2` directory as `local/inputs/arena2` (or pass
-  `--arena2` the folder Daggerfall is installed in) and the song folder as
-  `local/inputs/Sound`. A link is fine.
+  `--arena2` the folder Daggerfall is installed in). A link is fine.
 - A checkout needs the data of its own importer revision: import once, and again
   after a pull that changes the importer revision. Its
   inputs are `src/Daggerfall.Import` and `src/Daggerfall.Import.Tool`, whose
@@ -78,12 +77,11 @@ the one ignored folder. Its folders say what may be deleted:
   from another importer.
 
   ```bash
-  dotnet run --project src/Daggerfall.Import.Tool -- import --music local/inputs/Sound --classic-art
+  dotnet run --project src/Daggerfall.Import.Tool -- import --classic-art
   ```
 
 - It checks every input before writing anything, then packs
-  `local/data/daggerfall-data.rpak` and `local/data/music.rpak`. `--music` is
-  optional. The data container leaves out the classic media the art pack draws
+  `local/data/daggerfall-data.rpak`. The data container leaves out the classic media the art pack draws
   anew, which refreshed art never opens: the entries in
   `src/Daggerfall.Import.Tool/inputs/replaced-classic.json` (promotion writes it,
   so promoting a new entry moves the importer revision) and the sky's original
@@ -162,6 +160,13 @@ the one ignored folder. Its folders say what may be deleted:
   store's `ship/` root (beside `lan/`), which holds what ships but lives outside
   GitHub, finals only. `pull` and `link` take it from there; after a rebuild,
   `scripts/data-sync.sh ship` replaces it there for every checkout.
+- `local/data/music.rpak` is the score, Patch's own arrangement, which ships with
+  the game and sits beside `first-person.rpak` in the store's `ship/` root, pulled,
+  linked and replaced the same way. `authoring/tools/music/build.sh` packs it from
+  the Ogg Vorbis finals in the store's `assets/music/`, one `TRACK.ogg` per line of
+  `authoring/tools/music/sources.tsv`; `encode.sh` beside it writes them from the
+  approved renders in Patch's `music-dev` repository. The tracks are named as the
+  playlists name them (`dungeon-01`, `outside-night-03`).
 - The values taken from Daggerfall Unity and the classic tables are authored
   data: the classic tables and the game's text are sections of the
   `daggerfall.base` pack's payload, and the quests are the `daggerfall.quests`
@@ -355,13 +360,14 @@ product.rpak                the product: UI, tracked content and refreshed art (
 coreclr/ | native/          the product's code
 bin/, share/, dotnet/       the Engine host, its licences and the .NET runtime
 tools/Daggerfall.Import.Tool/   the import, with the tracked files it reads (no Daggerfall Unity file)
-daggerfall-data.rpak, music.rpak   written by the import from the player's own files
+daggerfall-data.rpak            written by the import from the player's own files
+music.rpak, first-person.rpak   the score and the 3D arms, built on a development checkout and placed beside
 ```
 
 The player imports once, from the game: while the data is missing, damaged or
 from another importer, the entry screen says why and offers **Import**, runs the
 shipped tool on the folder they pick and opens the game when it finishes. The
-tool can also be run by hand, adding `--music <folder>` for the score.
+tool can also be run by hand.
 
 ## Acknowledgements
 

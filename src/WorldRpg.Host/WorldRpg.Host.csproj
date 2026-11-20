@@ -23,9 +23,10 @@
     <RustyEngineProductVolumetricClouds>low</RustyEngineProductVolumetricClouds>
     <RustyEngineProductUiRoot>$([MSBuild]::NormalizePath('$(MSBuildProjectDirectory)', '$(BaseIntermediateOutputPath)', 'product-ui'))</RustyEngineProductUiRoot>
     <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
-    <!-- The containers converted from the player's Daggerfall files (daggerfall-data.rpak, music.rpak) are
-         installed beside the product: in a release beside product.rpak, under rusty dev in the repository's
-         local/data/ directory, where the import command writes them. -->
+    <!-- The containers converted from the player's Daggerfall files (daggerfall-data.rpak) and the ones that ship
+         outside the product (music.rpak, first-person.rpak) are installed beside the product: in a release beside
+         product.rpak, under rusty dev in the repository's local/data/ directory, where the import command writes
+         them and scripts/data-sync.sh pulls them. -->
     <RustyEngineProductInstalledContent>../../local/data</RustyEngineProductInstalledContent>
     <!-- A release (rusty build with its release option) names the launcher a player starts; the import tool ships in
          tools/Daggerfall.Import.Tool/ and installs the containers beside product.rpak. -->
