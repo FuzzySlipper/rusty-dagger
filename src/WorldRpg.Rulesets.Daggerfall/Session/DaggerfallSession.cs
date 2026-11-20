@@ -392,7 +392,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     bool IDaggerfallExpeditionSurroundings.HeldElsewhere =>
         _mode is not (ProductMode.Playing or ProductMode.Modal)
         || Enum.GetValues<DaggerfallInteractionScreen>().Any(screen => screen != DaggerfallInteractionScreen.Expedition && _interactions.IsOpen(screen))
-        || Summoning.PendingOffer || State.Quests.PendingOffer is not null || State.Quests.Messages.Pending is not null || Law.ModalOpen
+        || Summoning.PendingOffer || State.Quests.PendingOffer is not null || State.Quests.Messages.Pending is not null || State.Quests.Messages.AwaitsReading || Law.ModalOpen
         || DispelChoice.Pending is not null || IdentifyChoice.Open || CreateItemChoice.Pending is not null || Cinematics?.ActiveSource is not null;
 
     long IDaggerfallExpeditionSurroundings.Pass(DaggerfallExpeditionStretch stretch)

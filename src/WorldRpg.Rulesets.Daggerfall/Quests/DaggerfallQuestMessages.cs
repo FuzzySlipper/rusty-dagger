@@ -223,6 +223,10 @@ internal sealed class DaggerfallQuestMessages
     internal string NoteText(DaggerfallQuestRuntimeInstance instance, int messageId, DaggerfallQuestMessageContext context) =>
         Render(instance, messageId, DaggerfallQuestMessageDelivery.Journal, 0, context).Text;
 
+    /// <summary>A popup or letter is up waiting to be read and dismissed; rumors and journal entries wait for no one.</summary>
+    internal bool AwaitsReading => _deliveries.Any(delivery =>
+        delivery.Delivery is DaggerfallQuestMessageDelivery.Popup or DaggerfallQuestMessageDelivery.Letter);
+
     internal bool Dismiss(string instanceId, string entryId) => _deliveries.RemoveAll(delivery =>
         delivery.InstanceId == instanceId && delivery.EntryId == entryId
         && delivery.Delivery is DaggerfallQuestMessageDelivery.Popup or DaggerfallQuestMessageDelivery.Letter) > 0;

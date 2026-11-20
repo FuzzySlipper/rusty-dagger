@@ -246,6 +246,33 @@ public sealed class DaggerfallExpeditionSessionTests
     }
 
     [Fact]
+    public void A_quest_popup_delivered_on_a_running_map_holds_it_until_it_is_dismissed()
+    {
+        using Fixture fixture = new(definitions: DeadlineDefinitions.Value);
+        fixture.Session.State.Quests.Start(new("travel-deadline", "travel-deadline.txt", "travel-deadline",
+            DaggerfallQuestLifecycle.Active, null, [], []));
+        fixture.Open();
+        fixture.Go(fixture.Step2);
+        fixture.Step();
+        DaggerfallQuestInstanceSave quest = Assert.Single(fixture.Session.State.Quests.All);
+        var source = DeadlineDefinitions.Value.QuestSources.Quests[quest.SourceFile];
+        fixture.Session.State.Quests.Messages.Popup(new DaggerfallQuestRuntimeInstance(quest, DaggerfallQuestTaskCompiler.Compile(source)), 10);
+        long held = fixture.Now;
+        (double, double) position = fixture.Session.Expedition.Position;
+        double fatigue = fixture.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current;
+        for (int update = 0; update < 30; update++) fixture.Step();
+        Assert.Equal((held, position, fatigue), (fixture.Now, fixture.Session.Expedition.Position,
+            fixture.Session.State.Actors.Player.Stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value)).Current));
+
+        var popup = fixture.Session.State.Quests.Messages.Deliveries.Single(delivery => delivery.Delivery == DaggerfallQuestMessageDelivery.Popup);
+        fixture.Submit(new { action = "quest-dismiss", questInstance = popup.InstanceId, questDelivery = popup.EntryId });
+        Assert.False(fixture.Session.State.Quests.Messages.AwaitsReading);
+        for (int update = 0; update < 5; update++) fixture.Step();
+        Assert.True(fixture.Now > held);
+        Assert.NotEqual(position, fixture.Session.Expedition.Position);
+    }
+
+    [Fact]
     public void Knightly_rank_six_grants_free_passage_on_a_hired_ship()
     {
         using Fixture fixture = new();
