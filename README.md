@@ -159,10 +159,10 @@ the one ignored folder. Its folders say what may be deleted:
   never as the raw art in `local/inputs/fp-melee`, so it is the one file in the
   store's `ship/` root (beside `lan/`), which holds what ships but lives outside
   GitHub, finals only. `pull` and `link` take it from there; after a rebuild,
-  `scripts/data-sync.sh ship` replaces it there for every checkout.
+  `scripts/data-sync.sh ship first-person.rpak` replaces it there for every checkout.
 - `local/data/music.rpak` is the score, Patch's own arrangement, which ships with
-  the game and sits beside `first-person.rpak` in the store's `ship/` root, pulled,
-  linked and replaced the same way. `authoring/tools/music/build.sh` packs it from
+  the game and sits beside `first-person.rpak` in the store's `ship/` root, pulled
+  and linked the same way and replaced with `scripts/data-sync.sh ship music.rpak`. `authoring/tools/music/build.sh` packs it from
   the Ogg Vorbis finals in the store's `assets/music/`, one `TRACK.ogg` per line of
   `authoring/tools/music/sources.tsv`; `encode.sh` beside it writes them from the
   approved renders in Patch's `music-dev` repository. The tracks are named as the

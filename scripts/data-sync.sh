@@ -19,7 +19,9 @@
 #   scripts/data-sync.sh status                # the container's revision beside this tree's, and whether the store has it
 #   scripts/data-sync.sh store                 # the revisions the store holds, with their size and publish time
 #   scripts/data-sync.sh publish               # the import lane only: this checkout's whole import into the store
-#   scripts/data-sync.sh ship                  # the shipped containers built here into ship/, replacing those there
+#   scripts/data-sync.sh ship NAME             # the shipped container NAME (first-person.rpak or music.rpak) built
+#                                              # here into ship/, replacing the one there; only that one, since a
+#                                              # pulled copy of the other would replace a newer build
 #   ... --mirror                               # also delete from local/data what the store lacks (the import tree
 #                                              # is always made to match the revision)
 #   DAGGER_DATA_STORE=HOST:/path scripts/data-sync.sh pull   # a store over ssh (changed 8 KiB blocks only)
@@ -38,14 +40,16 @@ root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 data=$root/local/data
 store=${DAGGER_DATA_STORE:-/mnt/den-nas-backup/data/rusty-dagger/lan}
 store=${store%/}
-usage="usage: scripts/data-sync.sh pull|link [--import-tree] [--mirror] | cache [REVISION] | status | store | publish | ship"
+usage="usage: scripts/data-sync.sh pull|link [--import-tree] [--mirror] | cache [REVISION] | status | store | publish | ship first-person.rpak|music.rpak"
 
 direction=${1:-}
 shift || true
-import_tree='' named=''
+import_tree='' named='' shipping=''
 options=(-rt --info=stats1)
 for argument in "$@"; do
   case $argument in
+    # Before the revision pattern: a container's name can begin with a hexadecimal digit.
+    first-person.rpak|music.rpak) [[ $direction == ship ]] || { echo "$usage" >&2; exit 2; }; shipping=$argument ;;
     [0-9a-f]*) [[ $direction == cache && $argument =~ ^[0-9a-f]{64}$ ]] || { echo "$usage" >&2; exit 2; }; named=$argument ;;
     --mirror) options+=(--delete) ;;
     --import-tree) import_tree=1 ;;
@@ -280,19 +284,20 @@ case $direction in
     fi
     ;;
   ship)
-    # Each shipped container built here, a file of this checkout's own: a link is another checkout's or the cache's copy.
+    # The one container named, as built here: a file of this checkout's own (a link is another checkout's or the cache's
+    # copy). It is named because a pull makes ordinary copies of both, and publishing a pulled one would replace a newer build.
+    [[ -n $shipping ]] || { echo "$usage" >&2; exit 2; }
+    built=$data/$shipping
+    case $shipping in
+      first-person.rpak) builder=authoring/tools/fp-arms/build.sh ;;
+      music.rpak) builder=authoring/tools/music/build.sh ;;
+    esac
+    [[ -f $built && ! -L $built && ! -L $data ]] ||
+      { echo "data-sync: no $shipping built in this checkout's own local/data ($builder)" >&2; exit 1; }
     at_store "test -d '$ship_path'" || { echo "data-sync: $ship is not reachable" >&2; exit 1; }
-    published=0
-    for name in "${shipped[@]}"; do
-      built=$data/$name
-      [[ -f $built && ! -L $built && ! -L $data ]] || continue
-      # rsync writes a temporary file and renames it, so a pull never reads half of it.
-      rsync -t --info=stats1 "$built" "$ship/$name"
-      echo "data-sync: published $name to $ship"
-      published=$((published + 1))
-    done
-    ((published > 0)) || { echo "data-sync: no shipped container built in this checkout's own local/data" \
-      "(authoring/tools/fp-arms/build.sh, authoring/tools/music/build.sh)" >&2; exit 1; }
+    # rsync writes a temporary file and renames it, so a pull never reads half of it.
+    rsync -t --info=stats1 "$built" "$ship/$shipping"
+    echo "data-sync: published $shipping to $ship"
     ;;
   *) echo "$usage" >&2; exit 2 ;;
 esac

@@ -2,7 +2,7 @@
 # Builds local/data/music.rpak: Patch's arrangement of the score, one TRACK.ogg per line of sources.tsv at the
 # container's root, packed from the store's assets/music/ (encode.sh writes them). The playlists in
 # src/WorldRpg.Rulesets.Daggerfall/Scene/DaggerfallMusicDirector.cs name the tracks; the game warns of any they name
-# that the container lacks. The container ships with the game, so after a rebuild `scripts/data-sync.sh ship` puts it
+# that the container lacks. The container ships with the game, so after a rebuild `scripts/data-sync.sh ship music.rpak` puts it
 # in the store's ship/ root for every checkout. Needs the rusty CLI.
 #
 #   authoring/tools/music/build.sh
