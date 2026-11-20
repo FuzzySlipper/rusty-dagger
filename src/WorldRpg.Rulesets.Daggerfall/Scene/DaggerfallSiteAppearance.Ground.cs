@@ -21,8 +21,17 @@ internal sealed partial class DaggerfallSiteAppearance
     private readonly Dictionary<string, SpriteAtlas> groundItemAtlases = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RenderResource> groundItemMasks = new(StringComparer.Ordinal);
 
-    /// <summary>A ground pile's billboard, what it stands as (a treasure pile's index or an item's look), and how far it is lifted to stand on the floor.</summary>
-    internal sealed record GroundVisual(BillboardVisual Billboard, object Look, float Lift);
+    /// <summary>
+    /// A ground pile's billboard, what it stands as (a treasure pile's index or an item's look), how far it is lifted to stand
+    /// on the floor, and its width and height in metres.
+    /// </summary>
+    internal sealed record GroundVisual(BillboardVisual Billboard, object Look, float Lift, Vector2 Size);
+
+    /// <summary>
+    /// The width and height a ground pile's billboard is drawn at, standing on the pile's position, or null before it is
+    /// first published.
+    /// </summary>
+    internal Vector2? GroundSize(long id) => groundVisuals.TryGetValue(id, out GroundVisual? visual) ? visual.Size : null;
 
     private void ReconcileGroundVisuals(IReadOnlyDictionary<long, DaggerfallGroundContainer> containers, Func<long, DaggerfallGroundItemLook?>? groundLook)
     {
@@ -44,8 +53,8 @@ internal sealed partial class DaggerfallSiteAppearance
                 groundVisuals.Remove(container.Id);
                 Retire(current.Billboard);
             }
-            (Appearance visual, float lift) = look is DaggerfallGroundItemLook itemLook ? CreateGroundItem(itemLook) : CreateTreasurePile(((int, bool))look);
-            groundVisuals.Add(container.Id, new(new BillboardVisual(container.Id, visual), look, lift));
+            (Appearance visual, float lift, Vector2 size) = look is DaggerfallGroundItemLook itemLook ? CreateGroundItem(itemLook) : CreateTreasurePile(((int, bool))look);
+            groundVisuals.Add(container.Id, new(new BillboardVisual(container.Id, visual), look, lift, size));
         }
     }
 
@@ -61,16 +70,16 @@ internal sealed partial class DaggerfallSiteAppearance
     /// share of its height so it stands on the floor whatever pivot the source publishes, as the donor lifts dropped
     /// containers by half their height.
     /// </summary>
-    private (Appearance, float) CreateTreasurePile((int Index, bool Refreshed) pile)
+    private (Appearance, float, Vector2) CreateTreasurePile((int Index, bool Refreshed) pile)
     {
         if (pile.Refreshed && RefreshedPile(pile.Index) is { } art)
             return (appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(RefreshedPileAtlas(art), 0, art.Foot, art.Size, flats.Items,
-                SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F), LitSprite)), 0F);
+                SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F), LitSprite)), 0F, art.Size);
         NormalizedBillboardSprite sprite = groundContainerSprites[pile.Index];
         Appearance visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(ClassicTreasureAtlas(pile.Index),
             sprite.InitialFrameId, sprite.Pivot, sprite.Size, flats.Items, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default,
             new Color(1F, 1F, 1F, 1F), LitSprite));
-        return (visual, sprite.Pivot.Y * sprite.Size.Y);
+        return (visual, sprite.Pivot.Y * sprite.Size.Y, sprite.Size);
     }
 
     /// <summary>A treasure pile's classic atlas, opened the first time classic art draws it.</summary>
@@ -103,7 +112,7 @@ internal sealed partial class DaggerfallSiteAppearance
     /// An item's billboard: its world image standing on the floor at the height its entry states, as wide as the
     /// image's proportions make it, and where it is in a metal or dye, that colour multiplied into the pixels its mask covers.
     /// </summary>
-    private (Appearance, float) CreateGroundItem(DaggerfallGroundItemLook look)
+    private (Appearance, float, Vector2) CreateGroundItem(DaggerfallGroundItemLook look)
     {
         float height = (float)look.Height;
         Vector2 size = new(height * look.Image.Width / look.Image.Height, height);
@@ -113,7 +122,7 @@ internal sealed partial class DaggerfallSiteAppearance
         SpriteFromAtlasRequest request = new(atlas, 0, new Vector2(.5F, 0F), size, flats.Items, SpriteSizeMode.World, 0,
             SpriteDepthPolicy.Default, tint, LitSprite);
         if (mask is not null) request = request with { Material = LitSprite with { TintMask = new RenderResourceReference(mask) } };
-        return (appearance.CreateSpriteFromAtlas(request), 0F);
+        return (appearance.CreateSpriteFromAtlas(request), 0F, size);
     }
 
     private SpriteAtlas GroundItemAtlas(DaggerfallArtWorldImage image)

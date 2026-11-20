@@ -13,11 +13,14 @@ using static WorldRpg.Rulesets.Daggerfall.Tests.TestSessions;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
-/// <summary>Things that come to rest in the world rest on its floor: dropped piles, treasure piles and corpses.</summary>
+/// <summary>
+/// Things that come to rest in the world rest on its floor: treasure piles and corpses, and a dropped item, let go above the
+/// floor to fall onto it as a body.
+/// </summary>
 public sealed class GroundRestingSessionTests
 {
     [Fact]
-    public void A_dropped_pile_rests_on_the_floor_under_the_player_not_at_the_body_centre_and_stays_there_after_restore()
+    public void A_dropped_pile_is_let_go_above_the_floor_under_the_player_not_at_the_body_centre_and_stays_where_it_is_after_restore()
     {
         using Fixture f = new();
         DaggerfallSession s = f.Session;
@@ -30,9 +33,10 @@ public sealed class GroundRestingSessionTests
 
         DaggerfallGroundContainerSave dropped = Assert.Single(DaggerfallSavePayload.Read(s.CaptureSave()).GroundContainers,
             pile => pile.TreasurePlacement is null && pile.PropertyPlacement is null);
-        Assert.Equal((10F, .25F, 10F), (dropped.X, dropped.Y, dropped.Z));
+        float letGo = .25F + DaggerfallTuning.Defaults.LooseItems.DropHeight;
+        Assert.Equal((10F, letGo, 10F), (dropped.X, dropped.Y, dropped.Z));
         using DaggerfallSession restored = f.Restore(s.CaptureSave());
-        Assert.Equal(.25F, Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).GroundContainers,
+        Assert.Equal(letGo, Assert.Single(DaggerfallSavePayload.Read(restored.CaptureSave()).GroundContainers,
             pile => pile.TreasurePlacement is null && pile.PropertyPlacement is null).Y);
     }
 

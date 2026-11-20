@@ -11,6 +11,7 @@ internal static class DaggerfallInput
     internal static readonly InputActionId Kick = new("daggerfall.kick");
     internal static readonly InputActionId Block = new("daggerfall.block");
     internal static readonly InputActionId Interact = new("daggerfall.interact");
+    internal static readonly InputActionId Carry = new("daggerfall.carry");
     internal static readonly InputActionId Inventory = new("daggerfall.inventory");
     internal static readonly InputActionId Character = new("daggerfall.character");
     internal static readonly InputActionId Map = new("daggerfall.map");
@@ -33,6 +34,7 @@ internal static class DaggerfallInput
         new(Block, "block"u8.ToArray()),
         new(ToggleWeapon, "toggle-weapon"u8.ToArray()),
         new(Interact, "interact"u8.ToArray()),
+        new(Carry, "carry"u8.ToArray()),
         new(Inventory, "inventory"u8.ToArray()),
         new(Character, "character"u8.ToArray()),
         new(Menu, "menu"u8.ToArray()),
@@ -92,8 +94,8 @@ internal static class DaggerfallInput
     /// <summary>
     /// The pad's action buttons in the layout the browser shell delivers: the bottom face attacks, the
     /// right face reaches for what the player is facing, the left face readies the weapon, the top
-    /// face opens the command radial, the left shoulder guards, the right shoulder kicks, select opens
-    /// the pack, and start opens the menu. They are
+    /// face opens the command radial, the left shoulder guards, the right shoulder kicks, the right
+    /// trigger carries what the player faces, select opens the pack, and start opens the menu. They are
     /// product bindings rather than engine mappings because the Engine publishes positions and this is
     /// the layer that knows what an action means.
     /// </summary>
@@ -104,6 +106,7 @@ internal static class DaggerfallInput
         new(ControllerButton.Button3, Shortcut("radial")),
         new(ControllerButton.Button4, Block),
         new(ControllerButton.Button5, Kick),
+        new(ControllerButton.Button7, Carry),
         new(ControllerButton.Button8, Inventory),
         new(ControllerButton.Button9, Menu),
     ];

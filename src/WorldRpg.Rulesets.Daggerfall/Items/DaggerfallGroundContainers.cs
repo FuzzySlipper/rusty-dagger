@@ -196,6 +196,32 @@ internal sealed class DaggerfallGroundContainers
     internal InventoryView? Read(long id) => TryGet(id, out DaggerfallGroundContainer? container)
         ? _containers.Read(container.Owner) : null;
 
+    /// <summary>
+    /// The active piles that lie loose, which a body moves: dropped or placed items, not a source treasure pile or furniture,
+    /// which stay where the source put them.
+    /// </summary>
+    internal IEnumerable<DaggerfallGroundContainer> Loose => All.Values.Where(container => container.PropertyPlacement is null && container.TreasurePlacement is null);
+
+    /// <summary>Moves a loose pile to where its body came to: it is saved there.</summary>
+    internal void Move(long id, WorldPoint position)
+    {
+        if (!TryGet(id, out DaggerfallGroundContainer? container) || container.PropertyPlacement is not null || container.TreasurePlacement is not null)
+            throw new InvalidOperationException($"Ground pile {id} is not a loose pile in the active site.");
+        if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
+            throw new ArgumentOutOfRangeException(nameof(position), "Ground placement must be finite.");
+        _ground[id] = container with { Position = position };
+    }
+
+    /// <summary>What a pile weighs in kilograms: each item's own recorded weight, else its template's, times how many.</summary>
+    internal double Kilograms(long id, Func<string, DaggerfallItemDefinition> definitions)
+    {
+        if (Read(id) is not { } contents) return 0;
+        DaggerfallItemOwner owner = DaggerfallItemOwner.Ground(id);
+        return contents.Stacks.Sum(stack => DaggerfallEncumbrancePolicy.UnitKilograms(definitions(stack.Definition.Value), _instances.RequireStack(owner, stack.Id)) * stack.Quantity)
+            + contents.UniqueItems.Sum(item => DaggerfallEncumbrancePolicy.UnitKilograms(definitions(item.Definition.Value),
+                _instances.RequireUnique(_containers.Entities.IdentityOf(item.Entity).Value)));
+    }
+
     /// <summary>Populates a source treasure pile once; an emptied pile remains as the current durable source state.</summary>
     /// <param name="position">Where the pile rests: the floor under its classic marker.</param>
     internal DaggerfallGroundContainer EnsureTreasure(DaggerfallDungeonTreasurePlacement placement, WorldPoint position, int dungeonType,

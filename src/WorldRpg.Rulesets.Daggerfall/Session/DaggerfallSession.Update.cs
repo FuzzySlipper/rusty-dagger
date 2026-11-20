@@ -11,6 +11,7 @@ using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Guilds;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Interaction;
+using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
@@ -121,6 +122,7 @@ internal sealed partial class DaggerfallSession
                 _input.Neutralize();                                                              // Character
                 _locomotion.Neutralize();                                                         // Character
                 NeutralizeGuard();                                                                // Combat
+                LooseItems.Release();                                                             // Items: a held world lets go of what is carried
                 // The expedition map runs its own time over the held world, on this update's real seconds.
                 if (!elapsedSubmitted && Expedition.Running) AdvanceExpedition(facts.HostElapsedSeconds);   // Session: the map's list
                 DeliverFacts();                                                                   // Session
@@ -191,6 +193,7 @@ internal sealed partial class DaggerfallSession
         {
             foreach (var appearance in _sites.Appearances) appearance.Advance(facts);            // Scene
             StepHanging(facts);                                                                   // Scene: the hanging pieces' list, below
+            StepLooseItems(facts);                                                                // Items: the loose items' list, below
             _appearance.AdvanceMobileFeedback(facts, State.Actors, State.PlayerControl.Position, _soundCover.Blocks);   // Scene
             // A held value is recomputed before anything this update can read it: impacts resolve, the
             // flight advances and presentation publishes against what the player is wearing now.
@@ -1202,6 +1205,62 @@ internal sealed partial class DaggerfallSession
         _locomotion.Observe(input);                                                               // Character
         _guard.Observe(input, _controls.PadBindings);                                             // Combat
         PlayerAttack.Clock.Observe(input, _controls.PadBindings);                                 // Combat
+        ObserveCarry(input);                                                                      // Session: the carry's list, below
+    }
+
+    /// <summary>
+    /// The carry's list: the carry control going down takes hold of the loose item use would act on (Interiors' focus,
+    /// Items' hold), and coming up, or input clearing, lets it go.
+    /// </summary>
+    private void ObserveCarry(ReadOnlySpan<ProductInputEvent> input)
+    {
+        foreach (ProductInputEvent each in input)
+        {
+            bool? held = each.Kind == InputEventKind.Clear ? false
+                : DaggerfallInput.HeldChange(each, "carry"u8, DaggerfallInput.Carry, _controls.PadBindings);   // Character
+            if (held == false) LooseItems.Release();                                              // Items
+            else if (held == true && LooseItems.Carried is null)
+            {
+                LookReceipt look = _input.ResolveCurrentLook(State.PlayerControl);                // Character
+                string? refusal = Activation.Module?.FocusedTarget(State.Actors.Player.Actor.Entity, State.PlayerControl, look)
+                    is { Kind: DaggerfallActivationTargetKind.Container } target && LooseItems.Holds(checked((long)target.Identity.Value))
+                    ? LooseItems.Grab(checked((long)target.Identity.Value), Hand(look))           // Interiors' focus, Items
+                    : "Nothing loose to carry there.";
+                if (refusal is null) continue;
+                InputRefusals.Refused("Carry", DaggerfallInputRefusals.Words(refusal));           // Character
+                Presentation.SetOutcome(refusal);                                                 // UiProjection
+            }
+        }
+    }
+
+    /// <summary>The player's hand as loose items meet it: the eye, the look and Strength.</summary>
+    private DaggerfallLooseItemHand Hand(LookReceipt look) => new(_camera.Viewpoint.ToVector(), look.Forward,
+        State.Actors.Player.Stats.GetStat(StatId.Parse(DaggerfallMechanicsIds.Strength.Value)).ValueInt);
+
+    /// <summary>How a dropped item leaves the hand: tossed level along the look at the tuning's speed.</summary>
+    private Vector3 Toss()
+    {
+        Vector3 forward = _input.ResolveCurrentLook(State.PlayerControl).Forward;                // Character
+        Vector3 level = new(forward.X, 0, forward.Z);
+        return level.LengthSquared() < 1e-6f ? Vector3.Zero : Vector3.Normalize(level) * _tuning.LooseItems.DropSpeed;
+    }
+
+    /// <summary>
+    /// The loose items' list: each loose pile the active site draws (Items' piles, Scene's billboard size) steps as a body
+    /// near the player, landing on what collision stands (Exterior), and moves its pile where it comes to rest.
+    /// </summary>
+    private void StepLooseItems(ProductUpdateFacts facts)
+    {
+        if (State.PlayerControl.Position is not WorldPoint feet) return;
+        List<DaggerfallLooseItem> items = [];
+        foreach (DaggerfallGroundContainer pile in _groundContainers.Loose)                      // Items
+            items.Add(new(pile.Id, pile.Position.ToVector(), _appearance.GroundSize(pile.Id)));  // Scene: the billboard it is drawn as
+        LooseItems.Step((float)(facts.FixedDeltaSeconds * facts.AdmittedStepCount), _spatial.Session, items, feet.ToVector(),
+            Hand(_input.ResolveCurrentLook(State.PlayerControl)),
+            id => (float)_groundContainers.Kilograms(id, item => _definitions.RequireItem(new DaggerfallItemId(item))),
+            point => _exterior.CollisionUnknownAt(point) is null,
+            (id, foot) => _groundContainers.Move(id, WorldPoint.From(foot)));                     // Items, with Exterior's collision
+        if (LooseItems.TakeNotice() is { } notice) Presentation.SetOutcome(notice);               // UiProjection
     }
 
     /// <summary>
@@ -1555,6 +1614,7 @@ internal sealed partial class DaggerfallSession
     /// <summary>What moves with the world's origin: the transient positions each owner keeps.</summary>
     void IDaggerfallExteriorHost.RebaseTransientWorld(Vector3 delta)
     {
+        LooseItems.LetGo();                                                                       // Items: their piles moved with the origin
         _combat.RebaseRangedFlight(delta);                                                        // Combat
         Casting.Rebase(delta);                                                                    // Magic
         _encounters.RebasePending(_activeProfileKey.LogicalId, delta);                            // Actors
@@ -1584,6 +1644,7 @@ internal sealed partial class DaggerfallSession
     void IDaggerfallSiteTransitionHost.RetireDepartingProjection(DaggerfallSiteProjection source)
     {
         if (_hanging?.Site == source.Appearance) { _hanging.Dispose(); _hanging = null; }       // Scene
+        LooseItems.LetGo();                                                                       // Items
         source.DeactivateWaterTriggers(_latestSimulationStep ?? 0UL);                             // Exterior
         if (_latestUpdateGeneration is ulong swinging) PlayerAttack.Retire(swinging, "site changed"); // Combat
         IReadOnlyList<AttackImpactNotice> departing = source.Appearance.TakeAttackImpacts();      // Scene
@@ -1712,6 +1773,7 @@ internal sealed partial class DaggerfallSession
         if (acts.ToggleWeapon) ToggleWeapon();                                                    // Character, Travel's hands
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);         // Scene
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);                 // Character
+        if (acts.Attack && LooseItems.Throw(Hand(currentLook))) acts = acts with { Attack = false };   // Items: attack throws what is carried
         if (acts.Swings(State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId), State.WeaponDrawn, InputRefusals))   // Character
         {
             if (acts.Attack) PlayerAttack.Clock.Press();                                          // Combat

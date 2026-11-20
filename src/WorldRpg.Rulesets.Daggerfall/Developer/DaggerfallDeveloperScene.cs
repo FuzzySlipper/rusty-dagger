@@ -2,6 +2,7 @@ using Rusty.Engine.Debugging;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
 using static WorldRpg.Rulesets.Daggerfall.DaggerfallDeveloperReplies;
@@ -20,10 +21,14 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// classic file absent, or null.
 /// </param>
 /// <param name="hanging">The active site's hanging pieces, when it has an owner for them.</param>
+/// <param name="looseItems">The loose items' bodies.</param>
 internal sealed class DaggerfallDeveloperScene(DaggerfallWorldTime time, Action<long> passTime, DaggerfallHorizon horizon,
     DaggerfallSiteCrossing sites, DaggerfallWeather weather, DaggerfallWeatherPresentation weatherPresentation, PlayerControlState player,
-    DaggerfallDefinitions definitions, Func<bool, string?> useClassicArt, Func<DaggerfallHanging?> hanging) : IDeveloperSceneCommands
+    DaggerfallDefinitions definitions, Func<bool, string?> useClassicArt, Func<DaggerfallHanging?> hanging,
+    DaggerfallLooseItems looseItems) : IDeveloperSceneCommands
 {
+    public DebugCommandResult LooseItems() => DebugCommandResult.Success(looseItems.Describe());
+
     public DebugCommandResult Hanging() => hanging() is { } pieces
         ? DebugCommandResult.Success(pieces.Describe())
         : DebugCommandResult.Success("Nothing hangs here: hanging pieces swing only in dungeons and interiors.");

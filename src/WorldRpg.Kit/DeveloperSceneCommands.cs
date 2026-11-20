@@ -50,6 +50,9 @@ public interface IDeveloperSceneCommands : IDebugCommandModule
     [DebugCommand("world.hanging", Description = "Developer: the hanging roots, chains, cage and lanterns here: how many hang and swing, their bodies, and what their steps cost.")]
     DebugCommandResult Hanging();
 
+    [DebugCommand("world.loose-items", Description = "Developer: the loose items' bodies near the player: how many, which are awake or asleep, what stepping them costs, and the nearest five with where they stand, their speed, weight and size.")]
+    DebugCommandResult LooseItems();
+
     [DebugCommand("world.classic-art", Description = "Developer: draw the classic art in place of the refreshed art for this run, to compare them: on or off.")]
     DebugCommandResult ClassicArt(string state);
 

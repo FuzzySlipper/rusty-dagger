@@ -681,6 +681,7 @@ internal sealed partial class DaggerfallSession
             _itemOwnership = new DaggerfallItemOwnership(State.Actors, State.InventoryStore, actor => _corpseLoot.Corpses[actor].Owner);
             _itemLifetime = new DaggerfallItemLifetime(State.Actors.Entities, State.InventoryStore, State.ItemInstances, _uniqueItems, _itemOwnership);
             _groundContainers = new DaggerfallGroundContainers(containers, State.ItemInstances, playerEntity, _actorIdentities, activeProfile, questItemExits);
+            LooseItems = new DaggerfallLooseItems(engine.Dynamics, _tuning.LooseItems);
             Detectors = new DaggerfallDetectors(State.Effects, actors, containers, _tuning.Detection.MaximumDistance,
                 () => assembled.PlayerControl.Position, npcs.IsGameplayActive, id => DefinitionsByActor.TryGetValue(id, out var definition) ? definition : null,
                 () => _groundContainers.All.Values.Select(ground => (ground.Id, ground.Owner, ground.Position))
@@ -709,8 +710,10 @@ internal sealed partial class DaggerfallSession
             _inventoryUi.UseItemValuation(new DaggerfallItemValuation(definitions), State.ItemInstances, DaggerfallItemOwner.Player,
                 entity => State.Actors.Entities.IdentityOf(new Rusty.Engine.Entities.EntityId(entity)).Value);
             _inventoryUi.UseItemCondition(_itemCondition);
-            // A dropped pile rests on the floor under the player, not at the body centre the player's position names.
-            _inventoryUi.UseGroundDrops(_groundContainers, () => State.PlayerControl.Position is WorldPoint at ? _grounding.RestingPosition(at) : null);
+            // A dropped item is let go above the floor under the player and tossed ahead, so it falls before the player and settles.
+            _inventoryUi.UseGroundDrops(_groundContainers, () => State.PlayerControl.Position is WorldPoint at
+                    ? WorldPoint.From(_grounding.RestingPosition(at).ToVector() + Vector3.UnitY * _tuning.LooseItems.DropHeight) : null,
+                id => LooseItems.Drop(id, Toss()));
             _notebook = new DaggerfallBookNotebook(definitions, new DaggerfallTextResolver(definitions.Text));
             quests.BindNotebook(_notebook.AddQuestNote);
             quests.BindItemCleanup(RemoveCarriedQuestItems);
@@ -1115,7 +1118,7 @@ internal sealed partial class DaggerfallSession
                 definitions, Expedition, MapPosition, Activation, Entrance, _horizon, _time, () => _mode, Presentation, _nearbySpawn.Bring,
                 local => _exterior.ProfilePosition(local), BuildingLanding);                                                    // Developer
             DaggerfallDeveloperScene scene = new(_time, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); }, _horizon, _sites,
-                LocalWeather, _weatherPresentation, State.PlayerControl, definitions, UseClassicArt, () => _hanging);   // Developer
+                LocalWeather, _weatherPresentation, State.PlayerControl, definitions, UseClassicArt, () => _hanging, LooseItems);   // Developer
             DaggerfallDeveloperGrants grants = new(hold, definitions, _random, State.Actors, State.PlayerControl, EquipmentMoves,
                 () => State.WeaponDrawn = true, State.Currency, State.SkillUses, State.LevelUps, State.Character, State.Transport, State.Inventory,
                 State.Encumbrance, State.ItemInstances, _uniqueItems, State.RacialOverrides, _lycanthropy, _time, TransportAccess,

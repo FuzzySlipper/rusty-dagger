@@ -104,6 +104,10 @@
         "action": "daggerfall.kick"
       },
       {
+        "button": 7,
+        "action": "daggerfall.carry"
+      },
+      {
         "button": 8,
         "action": "daggerfall.inventory"
       },
@@ -1037,6 +1041,24 @@
     "chain": { "radius": 0.045, "mass": 0.6, "endRadius": 0.07, "endMass": 1.2, "swing": 1.1, "twist": 0.4, "jointDamping": 0.02, "linearDamping": 0.15, "angularDamping": 0.4 },
     "cage": { "radius": 0.03, "mass": 0.4, "endRadius": 0.45, "endMass": 18, "swing": 0.8, "twist": 0.3, "jointDamping": 0.05, "linearDamping": 0.15, "angularDamping": 0.6 },
     "lantern": { "radius": 0.02, "mass": 0.12, "endRadius": 0.12, "endMass": 2, "swing": 0.6, "twist": 0.3, "jointDamping": 0.02, "linearDamping": 0.1, "angularDamping": 0.3 }
+  },
+  "looseItems": {
+    "activationRadius": 16,
+    "stepsPerSecond": 60,
+    "friction": 1.2,
+    "restitution": 0,
+    "linearDamping": 0.5,
+    "minimumKilograms": 0.1,
+    "dropHeight": 0.9,
+    "dropSpeed": 1.5,
+    "reach": 2.5,
+    "holdDistance": 1.2,
+    "followSeconds": 0.08,
+    "carrySpeed": 8,
+    "breakDistance": 1,
+    "carryKilogramsPerStrength": 0.5,
+    "throwImpulsePerStrength": 0.2,
+    "maxThrowSpeed": 14
   },
   "flora": {
     "density": 3,

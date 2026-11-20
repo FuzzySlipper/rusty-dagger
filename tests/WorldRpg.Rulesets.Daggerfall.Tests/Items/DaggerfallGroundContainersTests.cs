@@ -196,6 +196,33 @@ public sealed class DaggerfallGroundContainersTests
         Assert.Equal(2, restoredStore.InventoryOwners.Count());
     }
 
+    [Fact]
+    public void A_loose_pile_moves_where_its_body_rests_and_is_saved_there_while_source_piles_stay_put()
+    {
+        using EntityDirectory entities = new();
+        InventoryStore store = new();
+        EntityId player = entities.Create(new(DurableIdentityKind.Actor, 1), new("player"));
+        store.RegisterInventory(new InventoryState(player));
+        entities.Store.Add(player, new InventoryComponent(store, player));
+        ItemDefinition apples = new(ItemDefinitionId.Parse("apple"), ItemKind.Fungible, 20);
+        MechanicsInventoryContainerCoordinator containers = new(store, entities, new Dictionary<InventoryItemId, ItemDefinition> { [new("apple")] = apples });
+        var stack = InventoryStackId.Parse("player.apples");
+        new InventoryComponent(store, player).Grant(apples, stack, 5);
+        DaggerfallItemInstances instances = new();
+        instances.RegisterStack(DaggerfallItemOwner.Player, stack, Metadata(DaggerfallItemOwner.Player));
+        DaggerfallGroundContainers ground = new(containers, instances, player, new(DurableIdentityKind.Container, 100),
+            Profile(DaggerfallWorldProfileKind.Interior, "charing-interior"), QuestItemDropsFake.Exits(instances));
+        DaggerfallGroundContainer pile = ground.Drop(new(new("apple"), 3, stack), new WorldPoint(1, .9f, 2), store.Revision);
+
+        Assert.Equal([pile.Id], ground.Loose.Select(value => value.Id));
+        // Three apples of the template's two quarter-kilograms each.
+        Assert.Equal(1.5, ground.Kilograms(pile.Id, _ => new DaggerfallItemDefinition(new("apple"), DaggerfallItemKind.Fungible, 20, 2, 1)), 6);
+        ground.Move(pile.Id, new WorldPoint(1.4f, 0, 2.5f));
+        DaggerfallGroundContainerSave saved = Assert.Single(ground.Capture());
+        Assert.Equal((1.4f, 0f, 2.5f), (saved.X, saved.Y, saved.Z));
+        Assert.Throws<InvalidOperationException>(() => ground.Move(pile.Id + 1, new WorldPoint(0, 0, 0)));
+    }
+
     private static DaggerfallWorldProfileKey Profile(DaggerfallWorldProfileKind kind, string id) =>
         new DaggerfallWorldProfileKey(new DaggerfallSiteId(1, 2), kind, id).Validate();
 

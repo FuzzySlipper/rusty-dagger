@@ -68,5 +68,5 @@ public sealed class DaggerfallDeveloperSceneTests
     }
 
     private DaggerfallDeveloperScene Scene() => new(_time, _passed.Add, null!, null!, null!, null!, new PlayerControlState(null, 0f, 0f),
-        TestPayload.Definitions, classic => { _classic.Add(classic); return _refusal; }, () => null);
+        TestPayload.Definitions, classic => { _classic.Add(classic); return _refusal; }, () => null, null!);
 }

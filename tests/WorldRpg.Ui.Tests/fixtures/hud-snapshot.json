@@ -546,6 +546,20 @@
         "buttonFixedReason": null
       },
       {
+        "id": "carry",
+        "category": "combat",
+        "label": "Carry an item (hold; attack throws it)",
+        "keys": [
+          "KeyH"
+        ],
+        "fixed": false,
+        "fixedReason": null,
+        "buttons": [
+          7
+        ],
+        "buttonFixedReason": null
+      },
+      {
         "id": "toggle-weapon",
         "category": "combat",
         "label": "Ready or sheathe weapon",

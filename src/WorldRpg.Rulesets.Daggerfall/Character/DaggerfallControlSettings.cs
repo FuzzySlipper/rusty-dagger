@@ -41,6 +41,7 @@ public sealed class DaggerfallControlSettings
         new("block", ["Secondary"], "combat"),
         new("kick", ["KeyG"], "combat"),
         new("interact", ["KeyF"], "combat"),
+        new("carry", ["KeyH"], "combat"),
         new("toggle-weapon", ["KeyZ"], "combat"),
         new("inventory", ["KeyI"], "interface"),
         new("character", ["KeyC"], "interface"),
@@ -69,6 +70,7 @@ public sealed class DaggerfallControlSettings
     {
         ["move.forward"] = "Move forward", ["move.backward"] = "Move backward", ["move.left"] = "Strafe left", ["move.right"] = "Strafe right",
         ["run"] = "Run", ["crouch"] = "Crouch", ["jump"] = "Jump", ["attack"] = "Attack", ["block"] = "Guard", ["kick"] = "Kick", ["interact"] = "Activate",
+        ["carry"] = "Carry an item (hold; attack throws it)",
         ["toggle-weapon"] = "Ready or sheathe weapon", ["inventory"] = "Inventory", ["character"] = "Character sheet", ["menu"] = "Game menu", ["radial"] = "Command radial",
         ["spell"] = "Spellbook", ["rest"] = "Rest", ["map"] = "Map", ["transport"] = "Travel and transport",
         ["activation.steal"] = "Steal mode", ["activation.grab"] = "Grab mode", ["activation.info"] = "Information mode", ["activation.talk"] = "Talk mode",
@@ -129,7 +131,7 @@ public sealed class DaggerfallControlSettings
 
     // Whether an action reads how long its binding stays down. A mapping fires on its one edge, so these map the
     // release as well as the press.
-    private static bool ReadsRelease(string action) => action is "attack" or "block";
+    private static bool ReadsRelease(string action) => action is "attack" or "block" or "carry";
 
     private static bool IsDirection(string action) => action.StartsWith("move.", StringComparison.Ordinal);
 

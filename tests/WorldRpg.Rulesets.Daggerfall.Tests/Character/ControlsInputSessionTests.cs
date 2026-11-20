@@ -100,10 +100,10 @@ public sealed class ControlsInputSessionTests
         Assert.False(loaded.InvertLookX);
         Assert.Equal(2.5f, loaded.LookYawRadiansPerSecond);
         Assert.Equal(
-            [ControllerButton.Button0, ControllerButton.Button1, ControllerButton.Button2, ControllerButton.Button3, ControllerButton.Button4, ControllerButton.Button5, ControllerButton.Button8, ControllerButton.Button9],
+            [ControllerButton.Button0, ControllerButton.Button1, ControllerButton.Button2, ControllerButton.Button3, ControllerButton.Button4, ControllerButton.Button5, ControllerButton.Button7, ControllerButton.Button8, ControllerButton.Button9],
             loaded.Actions.Select(binding => binding.Button));
         Assert.Equal(
-            ["daggerfall.attack", "daggerfall.interact", "daggerfall.toggle-weapon", "daggerfall.radial", "daggerfall.block", "daggerfall.kick", "daggerfall.inventory", "daggerfall.menu"],
+            ["daggerfall.attack", "daggerfall.interact", "daggerfall.toggle-weapon", "daggerfall.radial", "daggerfall.block", "daggerfall.kick", "daggerfall.carry", "daggerfall.inventory", "daggerfall.menu"],
             loaded.Actions.Select(binding => binding.Action.Value));
     }
 
@@ -119,6 +119,7 @@ public sealed class ControlsInputSessionTests
             DaggerfallInput.Block.Value,
             DaggerfallInput.ToggleWeapon.Value,
             DaggerfallInput.Interact.Value,
+            DaggerfallInput.Carry.Value,
             DaggerfallInput.Inventory.Value,
             DaggerfallInput.Character.Value,
             DaggerfallInput.Menu.Value,
@@ -249,8 +250,8 @@ public sealed class ControlsInputSessionTests
             Assert.Equal("4", engine.PublishedNested("panelRequest", "revision"));
             Assert.Contains("\"controller\":{", session.CapturePlayerPreferences(), StringComparison.Ordinal);
             // A shortcut action answers a pad button the same way.
-            session.Update(new ProductUpdate(OuterUpdate(8), [Ui("{\"action\":\"controls-rebind-button\",\"item\":\"spell\",\"amount\":7}")]));
-            Press(ControllerButton.Button7, 9);
+            session.Update(new ProductUpdate(OuterUpdate(8), [Ui("{\"action\":\"controls-rebind-button\",\"item\":\"spell\",\"amount\":10}")]));
+            Press(ControllerButton.Button10, 9);
             Assert.Equal("spells", engine.PublishedNested("panelRequest", "panel"));
 
             // Sound levels apply to the Engine's buses at once and persist with the controls.

@@ -85,6 +85,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private readonly DaggerfallEnemyMagicModule _enemyMagic;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
     private readonly DaggerfallGroundContainers _groundContainers;
+    /// <summary>The loose piles' bodies near the player, and the one the player carries.</summary>
+    internal DaggerfallLooseItems LooseItems { get; }
     private readonly DaggerfallBookNotebook _notebook;
     private readonly DaggerfallEncounterRuntime _encounters;
     private readonly DaggerfallActorPlacement _placement;
@@ -695,6 +697,8 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         // The hanging pieces' ragdolls hold the site appearance's instances, so they go before the projection.
         try { _hanging?.Dispose(); }                                                              // Scene
+        catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
+        try { LooseItems.Dispose(); }                                                              // Items
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }
         try { DisposeAll([.. Cinematics is null ? Array.Empty<IDisposable>() : new IDisposable[] { Cinematics }, .. _atlasTiles is null ? Array.Empty<IDisposable>() : new IDisposable[] { _atlasTiles }, _hud, _overland, _camera, _spatial, State.Actors, _heldEnchantments, _sites.Projection, State.Effects, _sites.Interiors.ActionTriggers, Infections, _horizon, _weatherPresentation]); }
         catch (Exception exception) { failure = failure is null ? exception : new AggregateException(failure, exception); }

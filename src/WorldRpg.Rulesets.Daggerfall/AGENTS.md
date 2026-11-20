@@ -33,6 +33,7 @@ On top of the root `AGENTS.md`.
 - Change a rule in its owner; effects and items add to it as RuleEvent contributions.
 - Saved live items must agree with the durable allocator.
 - A new lifecycle feature decides what happens to owned items and native resources.
+- A loose pile (dropped or quest-placed, not treasure or furniture) is a body near the player in `DaggerfallLooseItems`, and its pile's position is where the body rests, so the save keeps it there. A pile its owner places anew (a quest moving it) has its body made again there. A site change or origin rebase calls its `LetGo`. Read the bodies with `world.loose-items`.
 
 ## Actors
 

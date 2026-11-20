@@ -105,6 +105,7 @@ internal sealed class DaggerfallInventoryPresentation
     private DaggerfallItemConditionService? itemCondition;
     private DaggerfallGroundContainers? ground;
     private Func<WorldRpg.Kit.Controls.WorldPoint?>? groundPosition;
+    private Action<long>? groundDropped;
     private DaggerfallInventoryUseService? itemUse;
     private DaggerfallRegionalBankState? bank;
     private Func<ulong>? depositableGold;
@@ -159,12 +160,16 @@ internal sealed class DaggerfallInventoryPresentation
         itemCondition = condition ?? throw new ArgumentNullException(nameof(condition));
     }
 
-    /// <summary>Connects player drops to the durable, positioned ground-container owner.</summary>
-    internal void UseGroundDrops(DaggerfallGroundContainers containers, Func<WorldRpg.Kit.Controls.WorldPoint?> position)
+    /// <summary>
+    /// Connects player drops to the durable, positioned ground-container owner: a drop is let go at
+    /// <paramref name="position"/>, and <paramref name="dropped"/> hears the new pile, which falls from there.
+    /// </summary>
+    internal void UseGroundDrops(DaggerfallGroundContainers containers, Func<WorldRpg.Kit.Controls.WorldPoint?> position, Action<long> dropped)
     {
         if (ground is not null) throw new InvalidOperationException("Inventory ground drops are already configured.");
         ground = containers ?? throw new ArgumentNullException(nameof(containers));
         groundPosition = position ?? throw new ArgumentNullException(nameof(position));
+        groundDropped = dropped ?? throw new ArgumentNullException(nameof(dropped));
     }
 
     internal void UseItemActions(DaggerfallInventoryUseService use)
@@ -544,7 +549,7 @@ internal sealed class DaggerfallInventoryPresentation
         if (position is null) { Message = "You cannot drop an item without a world position."; return; }
         try
         {
-            _ = ground.Drop(selection, position.Value, ulong.Parse(current.Revision.Split(':')[0], CultureInfo.InvariantCulture));
+            groundDropped!(ground.Drop(selection, position.Value, ulong.Parse(current.Revision.Split(':')[0], CultureInfo.InvariantCulture)).Id);
             Message = $"Dropped {row.Label}.";
         }
         catch (DaggerfallItemExitRefusedException refused) { Message = refused.Message; }
