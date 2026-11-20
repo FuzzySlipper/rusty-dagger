@@ -95,6 +95,10 @@ internal sealed class DaggerfallExpeditionBands(DaggerfallTravelPolicy policy, D
 
     internal void Remove(DaggerfallExpeditionBand band) => _bands.Remove(band);
 
+    /// <summary>Whether a band is still staged and near enough the party to be met.</summary>
+    internal bool Within(DaggerfallExpeditionBand band, (double X, double Y) party) =>
+        _bands.Contains(band) && band.Distance(party.X, party.Y) <= tuning.MeetDistance;
+
     /// <summary>How far the party sees, in map pixels.</summary>
     internal double PartySight(DaggerfallBandSightConditions conditions)
     {

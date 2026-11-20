@@ -557,6 +557,8 @@ internal sealed class DaggerfallExpedition
     {
         if (!Running || !double.IsFinite(realSeconds) || realSeconds <= 0) return 0;
         if (_world.HeldElsewhere) { _owed = 0; return 0; }
+        // Going on by any means (the same way again, a halt or a camp) passes by a band come upon unseen.
+        SteerAway();
         // A long frame does not leap: the map gives it at most a quarter second's time.
         _owed += Math.Min(realSeconds, LongestFrame) * _tuning.TimeScales[_speed - 1] * DaggerfallCalendar.SecondsPerMinute;
         long passed = 0;
@@ -616,7 +618,7 @@ internal sealed class DaggerfallExpedition
         if (!_open || _teleport is not null) return null;
         if (_held is not null) { _message = _held; return null; }
         if (_policy.IsOcean(_party)) { _message = "There is no land here. Make for the shore first."; return null; }
-        if (_bandAhead is { } band)
+        if (_bandAhead is { } band && _bands.Within(band, Position))
         {
             // The band the party came upon unseen is met as it stood: camped, or on its way.
             _world.MeetBand(band, _party, band.Camp ? DaggerfallEncounterStaging.Camp : DaggerfallEncounterStaging.Travelling);
@@ -736,14 +738,14 @@ internal sealed class DaggerfallExpedition
                 return true;
             case DaggerfallBandEventKind.CameUpon:
                 _bandAhead = band;
-                Pause($"You come upon {band.Name}{(band.Camp ? ", camped by the way" : "")}. Enter to fight, or choose another way.");
+                Pause($"You come upon {band.Name}{(band.Camp ? ", camped by the way" : "")}. Enter to fight, or go on to pass it by.");
                 return true;
             default:
                 return false;
         }
     }
 
-    /// <summary>Choosing another way past a band come upon unseen leaves it be until the party has drawn off.</summary>
+    /// <summary>Going on past a band come upon unseen, by another way or the same, leaves it be until the party has drawn off.</summary>
     private void SteerAway()
     {
         if (_bandAhead is not { } band) return;

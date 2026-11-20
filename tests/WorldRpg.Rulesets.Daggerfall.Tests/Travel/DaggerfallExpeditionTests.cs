@@ -349,7 +349,7 @@ public sealed class DaggerfallExpeditionTests
         expedition.SetSpeed(Fastest);
         Run(expedition, 2);
         Assert.StartsWith("You come upon ", expedition.Message);
-        Assert.EndsWith(", camped by the way. Enter to fight, or choose another way.", expedition.Message);
+        Assert.EndsWith(", camped by the way. Enter to fight, or go on to pass it by.", expedition.Message);
         Assert.NotNull(expedition.BandAhead);
         Assert.False(expedition.EncounterWaiting);
 
@@ -360,6 +360,21 @@ public sealed class DaggerfallExpeditionTests
         Run(expedition, 4);
         Assert.Equal(new DaggerfallTravelMapPixel(4, 3), expedition.Party);
         Assert.Empty(world.Met);
+
+        // Going on the same way passes it by too: entering where the party arrives meets nothing.
+        (DaggerfallExpedition onward, World passer) = Create(Unseen, bands: true);
+        onward.Begin(new(2, 2), false);
+        onward.StageBand(1.2, 90, camp: true);
+        onward.SetDestination(new(4, 2), null);
+        onward.SetSpeed(Fastest);
+        Run(onward, 2);
+        Assert.NotNull(onward.BandAhead);
+        onward.SetSpeed(Fastest);
+        Run(onward, 4);
+        Assert.Null(onward.BandAhead);
+        Assert.Equal(new DaggerfallTravelMapPixel(4, 2), onward.Party);
+        Assert.NotNull(onward.Entry());
+        Assert.Empty(passer.Met);
 
         // Entering beside one met unseen fights it as it stood: camped.
         (DaggerfallExpedition again, World other) = Create(Unseen, bands: true);
