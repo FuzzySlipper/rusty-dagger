@@ -818,7 +818,7 @@ internal sealed partial class DaggerfallSession
                 id => definitions.Mobiles.Mobiles.GetValueOrDefault(id), enemySpells.LaneClear, enemySpells.Execute);
             // Every mobile fights with the tactic its record names; the legacy tactic is the only one compiled yet.
             DaggerfallContactEngagement engagement = new(_tuning.Contact);
-            DaggerfallScoredEnemyTactic Scored(DaggerfallScoredPreset preset) => new(preset, _combat.EnemyAttackOptions, _enemyMagic.SpellOptions, _enemyMagic.Aim,
+            DaggerfallScoredEnemyTactic Scored(DaggerfallScoredPreset preset) => new(preset, _combat.EnemyAttackOptions, _combat.LineOfFireClear, _enemyMagic.SpellOptions, _enemyMagic.Aim,
                 id => authored.GetValueOrDefault(id)?.MobileId is int mobile && definitions.Mobiles.Mobiles.TryGetValue(mobile, out var record) ? record.Tendencies : null,
                 engagement, _tuning.EnemyBehavior.Maneuvers, _tuning.EnemyBehavior.Tactics, _random);
             DaggerfallEnemyTactics tactics = new(new Dictionary<string, IDaggerfallEnemyTactic>(StringComparer.Ordinal)

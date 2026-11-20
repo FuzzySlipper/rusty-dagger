@@ -96,6 +96,7 @@ internal sealed class DaggerfallScoredEnemyTactic : IDaggerfallEnemyTactic
 
     private readonly DaggerfallScoredPreset _preset;
     private readonly Func<long, IReadOnlyList<DaggerfallEnemyAttackOption>> _attacks;
+    private readonly Func<long, long, bool> _lineOfFire;
     private readonly Func<ActorState, PursuitTarget, IReadOnlyList<DaggerfallEnemySpellOption>> _spells;
     private readonly Func<ActorState, string, PursuitTarget, DaggerfallEnemySpellAttempt?> _aim;
     private readonly Func<long, DaggerfallTacticTendencies?> _tendencies;
@@ -105,11 +106,12 @@ internal sealed class DaggerfallScoredEnemyTactic : IDaggerfallEnemyTactic
     private readonly IRandomService _random;
 
     /// <param name="attacks">The attacks each enemy carries now (combat's).</param>
+    /// <param name="lineOfFire">Whether an enemy's shot at a target would meet it first: the line a bow holds fire on (combat's).</param>
     /// <param name="spells">The spells an enemy could cast at a target now, with their costs; empty while a cast is pending.</param>
     /// <param name="aim">A chosen spell aimed from where the enemy stands, or null when it cannot be aimed.</param>
     /// <param name="tendencies">The tendencies an enemy's mobile record authors, or null.</param>
     internal DaggerfallScoredEnemyTactic(DaggerfallScoredPreset preset,
-        Func<long, IReadOnlyList<DaggerfallEnemyAttackOption>> attacks,
+        Func<long, IReadOnlyList<DaggerfallEnemyAttackOption>> attacks, Func<long, long, bool> lineOfFire,
         Func<ActorState, PursuitTarget, IReadOnlyList<DaggerfallEnemySpellOption>> spells,
         Func<ActorState, string, PursuitTarget, DaggerfallEnemySpellAttempt?> aim,
         Func<long, DaggerfallTacticTendencies?> tendencies,
@@ -117,6 +119,7 @@ internal sealed class DaggerfallScoredEnemyTactic : IDaggerfallEnemyTactic
     {
         _preset = preset;
         _attacks = attacks ?? throw new ArgumentNullException(nameof(attacks));
+        _lineOfFire = lineOfFire ?? throw new ArgumentNullException(nameof(lineOfFire));
         _spells = spells ?? throw new ArgumentNullException(nameof(spells));
         _aim = aim ?? throw new ArgumentNullException(nameof(aim));
         _tendencies = tendencies ?? throw new ArgumentNullException(nameof(tendencies));
@@ -222,7 +225,7 @@ internal sealed class DaggerfallScoredEnemyTactic : IDaggerfallEnemyTactic
                 double resources = attack.Ammunition is int arrows ? arrows / (arrows + 1d) : 1d;
                 string? unavailable = attack.Ammunition == 0 ? "no-arrows" : !inSight ? "not-in-sight"
                     : distance <= attack.MinimumDistance ? "too-close" : distance >= attack.Reach ? "too-far" : null;
-                if (unavailable is null && !seen.LaneClear.Value) { unavailable = "lane-blocked"; laneWanted = true; }
+                if (unavailable is null && !_lineOfFire(seen.Actor.DurableId, seen.Target.DurableId)) { unavailable = "lane-blocked"; laneWanted = true; }
                 options.Add(Scored(new(DaggerfallTacticOptionKind.Strike, $"strike:{attack.Action}", weights.Bow * (.5d + .5d * resources) + finisher, unavailable,
                     [new("distance", distance), new("reach", attack.Reach), new("minimum", attack.MinimumDistance), new("ammunition", attack.Ammunition ?? -1),
                         new("targetHealth", seen.TargetHealth)]) { Attack = attack.Action, Reach = reach, Ranged = true }));
@@ -243,7 +246,8 @@ internal sealed class DaggerfallScoredEnemyTactic : IDaggerfallEnemyTactic
             options.Add(Scored(new(DaggerfallTacticOptionKind.Lunge, "lunge", weights.Melee + finisher, lunge,
                 [new("distance", distance), new("lungeDistance", _tuning.Beast.LungeDistance), new("gap", gap ? 1 : 0)]) { Attack = melee.Attack, Reach = melee.Reach }));
             // A beast cannot shoot; what blocks it is a body or cover between it and its prey, or a way it cannot walk.
-            bool blocked = seen.Actor.Pursuit.State == PursuitState.Blocked || inSight && distance > melee.Reach && !seen.LaneClear.Value;
+            bool blocked = seen.Actor.Pursuit.State == PursuitState.Blocked
+                || inSight && distance > melee.Reach && !_lineOfFire(seen.Actor.DurableId, seen.Target.DurableId);
             options.Add(Scored(new(DaggerfallTacticOptionKind.Reposition, "circle", weights.Reposition, blocked ? null : "not-blocked",
                 [new("blocked", blocked ? 1 : 0)])));
         }

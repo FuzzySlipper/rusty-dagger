@@ -44,9 +44,12 @@ public sealed class DaggerfallScoredEnemyTacticTests : IDisposable
 
     public void Dispose() => _actors.Dispose();
 
-    private static DaggerfallScoredEnemyTactic Tactic(DaggerfallScoredPreset preset, IReadOnlyList<DaggerfallEnemyAttackOption> attacks,
+    /// <summary>Whether this step's lane is clear, for a shot and a spell alike.</summary>
+    private bool _lane = true;
+
+    private DaggerfallScoredEnemyTactic Tactic(DaggerfallScoredPreset preset, IReadOnlyList<DaggerfallEnemyAttackOption> attacks,
         IReadOnlyList<DaggerfallEnemySpellOption>? spells = null, DaggerfallTacticTendencies? tendencies = null) =>
-        new(preset, _ => attacks, (_, _) => spells ?? [],
+        new(preset, _ => attacks, (_, _) => _lane, (_, _) => spells ?? [],
             (actor, key, target) => new DaggerfallEnemySpellAttempt(actor.DurableId, key, DaggerfallSpellTarget.SingleTargetAtRange, actor.Position,
                 target.Position, Vector3.UnitZ, target.DurableId),
             _ => tendencies, Engagement, DaggerfallPursuitManeuverTuning.Default, Tuning, RandomMinimum.Create());
@@ -57,6 +60,7 @@ public sealed class DaggerfallScoredEnemyTacticTests : IDisposable
         DaggerfallEnemyMotorContext motor = default, bool actionOpen = true)
     {
         _step++;
+        _lane = lane;
         _actor.Stats.GetTrack(TrackId.Parse("health")).SetCurrent(health * 100, clamp: true);
         PursuitTarget target = new(Player, WorldPoint.From(_actor.Position.ToVector() + new Vector3(0, 0, (float)distance)));
         List<DaggerfallDecisionGate> gates = [];

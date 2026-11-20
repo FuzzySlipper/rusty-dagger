@@ -55,6 +55,8 @@ public sealed class ScoredEnemySessionTests
 
         // Cover across the lane: every shot it carries waits, and its discipline moves it round for a clear one.
         fixture.Spatial.CapsuleCastHit = _ => new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh };
+        fixture.Spatial.FloorHit = request => MathF.Abs(request.Direction.Y) > .9f ? default
+            : new SpatialHit { Present = true, Kind = SpatialHitKind.StaticMesh, Point = request.Origin + request.Direction, Distance = 1f };
         DaggerfallDecisionRecord held = fixture.Decide(battlemage);
 
         Assert.Equal("reposition", Chosen(held));

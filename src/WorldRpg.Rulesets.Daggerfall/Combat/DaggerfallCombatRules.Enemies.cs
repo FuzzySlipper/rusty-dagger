@@ -52,6 +52,9 @@ internal sealed partial class DaggerfallCombatRules
             : [];
     }
 
+    /// <summary>Whether a shot from the enemy's eye at its target's would meet the target first: the line a carried bow holds fire on.</summary>
+    internal bool LineOfFireClear(long actorId, long targetId) => !_delivery.HoldsFire(actorId, targetId);
+
     /// <summary>
     /// The attack an enemy makes at <paramref name="distance"/>. With no <paramref name="chosen"/> attack it is the
     /// donor's EnemyAction: a class enemy's bow inside its band while it has arrows and an unbroken bow, else its melee
