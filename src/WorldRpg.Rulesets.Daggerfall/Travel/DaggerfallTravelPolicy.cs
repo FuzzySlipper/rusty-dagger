@@ -66,6 +66,9 @@ internal sealed record DaggerfallTravelQuote(
 /// </remarks>
 internal sealed class DaggerfallTravelPolicy
 {
+    // CLIMATE.PAK's value for open sea.
+    private const int OceanClimate = 223;
+
     // DFU's climateIndices starts at CLIMATE.PAK value 223 (Ocean).
     private static readonly int[] ClimateIndices = [0, 0, 0, 1, 2, 3, 4, 5, 5, 5];
 
@@ -194,8 +197,11 @@ internal sealed class DaggerfallTravelPolicy
         return true;
     }
 
-    private RouteResult CalculateRoute(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination,
-        DaggerfallTravelOptions options)
+    /// <summary>
+    /// The pixels the donor's route walk steps through from <paramref name="origin"/> to <paramref name="destination"/>,
+    /// the origin excluded: its integer line, one pixel a move, diagonally where the shorter axis has gathered a whole step.
+    /// </summary>
+    internal static IReadOnlyList<DaggerfallTravelMapPixel> Route(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination)
     {
         int distanceX = destination.X - origin.X;
         int distanceY = destination.Y - origin.Y;
@@ -207,9 +213,7 @@ internal sealed class DaggerfallTravelPolicy
         int x = origin.X;
         int y = origin.Y;
         int shorterIncrementer = 0;
-        int oceanPixels = 0;
-        int minutesTotal = 0;
-
+        DaggerfallTravelMapPixel[] route = new DaggerfallTravelMapPixel[furthest];
         for (int movement = 0; movement < furthest; movement++)
         {
             if (furthest == distanceXAbs)
@@ -233,27 +237,65 @@ internal sealed class DaggerfallTravelPolicy
                     x += xDirection;
                 }
             }
+            route[movement] = new(x, y);
+        }
+        return route;
+    }
 
-            DaggerfallClimateCell climate = ClimateAt(x, y);
-            int minutesThisMove;
-            if (climate.Value == 223)
-            {
-                oceanPixels = checked(oceanPixels + 1);
-                minutesThisMove = options.TravelShip ? _transport.ShipOceanMinutes : _transport.FootOceanMinutes;
-            }
-            else
-            {
-                int climateOffset = climate.Value - 223;
-                if ((uint)climateOffset >= (uint)ClimateIndices.Length)
-                    throw new InvalidOperationException($"Travel route climate value {climate.Value} at {x}/{y} is not a Daggerfall climate.");
-                int terrainIndex = ClimateIndices[climateOffset];
-                int transportModifier = options.HasHorse
-                    ? _transport.HorseTravelModifier
-                    : options.HasCart ? _transport.CartTravelModifier : _transport.FootTravelModifier;
-                minutesThisMove = (((102 * transportModifier) >> 8)
-                    * (256 - TerrainMovementModifiers[terrainIndex] + 256)) >> 8;
-            }
+    /// <summary>
+    /// The pixels a party walks from <paramref name="origin"/> to <paramref name="destination"/>: the donor's route walk,
+    /// whose strict comparison can leave its last pixel one short across the shorter axis, ending on the destination.
+    /// </summary>
+    internal static IReadOnlyList<DaggerfallTravelMapPixel> Path(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination)
+    {
+        DaggerfallTravelMapPixel[] path = [.. Route(origin, destination)];
+        if (path.Length > 0) path[^1] = destination;
+        return path;
+    }
 
+    /// <summary>Whether a map pixel is open sea, which only a ship crosses at speed.</summary>
+    internal bool IsOcean(DaggerfallTravelMapPixel pixel) => ClimateAt(pixel.X, pixel.Y).Value == OceanClimate;
+
+    /// <summary>The source climate of a map pixel, which its weather and encounters read.</summary>
+    internal int Climate(DaggerfallTravelMapPixel pixel) => ClimateAt(pixel.X, pixel.Y).Value;
+
+    /// <summary>The name of a map pixel's climate, as the land is described.</summary>
+    internal string ClimateName(DaggerfallTravelMapPixel pixel) => ClimateAt(pixel.X, pixel.Y).Name;
+
+    /// <summary>
+    /// The donor's minutes to move into one map pixel, lodging at inns rather than camping out: the sea at the ship's or
+    /// the swimmer's pace, the land at the transport's pace over the pixel's terrain.
+    /// </summary>
+    /// <param name="aboard">Whether a ship carries the traveller over the sea.</param>
+    internal int PixelMinutes(DaggerfallTravelMapPixel pixel, DaggerfallTransportMode transport, bool aboard)
+    {
+        DaggerfallClimateCell climate = ClimateAt(pixel.X, pixel.Y);
+        if (climate.Value == OceanClimate) return aboard ? _transport.ShipOceanMinutes : _transport.FootOceanMinutes;
+        int climateOffset = climate.Value - OceanClimate;
+        if ((uint)climateOffset >= (uint)ClimateIndices.Length)
+            throw new InvalidOperationException($"Travel route climate value {climate.Value} at {pixel.X}/{pixel.Y} is not a Daggerfall climate.");
+        int terrainIndex = ClimateIndices[climateOffset];
+        int transportModifier = transport switch
+        {
+            DaggerfallTransportMode.Horse => _transport.HorseTravelModifier,
+            DaggerfallTransportMode.Cart => _transport.CartTravelModifier,
+            _ => _transport.FootTravelModifier,
+        };
+        return (((102 * transportModifier) >> 8) * (256 - TerrainMovementModifiers[terrainIndex] + 256)) >> 8;
+    }
+
+    private RouteResult CalculateRoute(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination,
+        DaggerfallTravelOptions options)
+    {
+        IReadOnlyList<DaggerfallTravelMapPixel> route = Route(origin, destination);
+        int oceanPixels = 0;
+        int minutesTotal = 0;
+        DaggerfallTransportMode transport = options.HasHorse ? DaggerfallTransportMode.Horse
+            : options.HasCart ? DaggerfallTransportMode.Cart : DaggerfallTransportMode.Foot;
+        foreach (DaggerfallTravelMapPixel pixel in route)
+        {
+            if (IsOcean(pixel)) oceanPixels = checked(oceanPixels + 1);
+            int minutesThisMove = PixelMinutes(pixel, transport, options.TravelShip);
             if (!options.SleepModeInn)
                 minutesThisMove = (300 * minutesThisMove) >> 8;
             minutesTotal = checked(minutesTotal + minutesThisMove);
@@ -261,7 +303,7 @@ internal sealed class DaggerfallTravelPolicy
 
         if (!options.SpeedCautious)
             minutesTotal >>= 1;
-        return new RouteResult(furthest, oceanPixels, minutesTotal);
+        return new RouteResult(route.Count, oceanPixels, minutesTotal);
     }
 
     private DaggerfallClimateCell ClimateAt(int mapPixelX, int mapPixelY)

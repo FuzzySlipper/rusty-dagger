@@ -479,6 +479,18 @@
   "rest": {
     "innFatigueMultiplier": 4
   },
+  "expedition": {
+    "timeScales": [30, 120, 360],
+    "recklessTime": 0.5,
+    "recklessFatigue": 2,
+    "nightTime": 1.25,
+    "weatherTime": { "sunny": 1, "cloudy": 1, "overcast": 1, "fog": 1.25, "rain": 1.2, "thunder": 1.35, "snow": 1.5 },
+    "weatherFatigue": { "sunny": 1, "cloudy": 1, "overcast": 1, "fog": 1, "rain": 1.25, "thunder": 1.5, "snow": 1.5 },
+    "lodging": { "city": 30, "hamlet": 20, "village": 10, "tavern": 10 },
+    "shipHire": 100,
+    "portReach": 2,
+    "lowFatigue": 0.2
+  },
   "hazards": {
     "burningFlats": [
       [

@@ -6,6 +6,7 @@ using Rusty.Engine;
 using System.Text.Json;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Property;
+using WorldRpg.Rulesets.Daggerfall.Travel;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -56,6 +57,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallAttackTuning Attacks { get; init; } = DaggerfallAttackTuning.Default;
     internal DaggerfallHazardTuning Hazards { get; init; } = DaggerfallHazardTuning.Default;
     internal DaggerfallRestTuning Rest { get; init; } = DaggerfallRestTuning.Default;
+    internal DaggerfallExpeditionTuning Expedition { get; init; } = DaggerfallExpeditionTuning.Default;
 
     internal static DaggerfallTuning Defaults { get; } = new(
         DaggerfallInput.Look,
@@ -166,6 +168,7 @@ internal sealed record DaggerfallTuning(
             Attacks = DaggerfallAttackTuning.Read(root.GetProperty("attacks")),
             Hazards = DaggerfallHazardTuning.Read(root.GetProperty("hazards")),
             Rest = DaggerfallRestTuning.Read(root.GetProperty("rest")),
+            Expedition = DaggerfallExpeditionTuning.Read(root.GetProperty("expedition")),
         };
     }
 
