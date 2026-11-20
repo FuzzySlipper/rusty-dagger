@@ -311,4 +311,6 @@
 .dagger-hud .dagger-select-option:is(:focus-visible, :where(.keyed-navigation) :focus) { outline: 1px solid var(--brass-bright); outline-offset: -1px; }
 .keyed-navigation .dagger-select-option:hover:not(:focus) { background: none; }
 .dagger-select-option[aria-disabled="true"] { color: var(--ink-dim); cursor: var(--dagger-cursor); }
+/* The list is small and its keys are the menu's: the hints stay with the menu beneath it. */
+.dagger-select-list .dagger-input-hints { display: none; }
 .dagger-select-group { padding: .3rem .75rem .1rem; color: var(--ink-dim); font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
