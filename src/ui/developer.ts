@@ -7,7 +7,8 @@ import { createLiveDebugHttpTransport, mountDeveloperShell, type DeveloperShellM
  * (`src/ui/AGENTS.md`, "Ownership"): it lives outside the game's shell and skin, carries no game state, and opens
  * only when the host runs with live-debug, which it asks the host before opening. The Dagger panel pauses and steps
  * the Engine's held time, flies the Engine's observer camera, shows the input readout, and turns the ruleset's debug overlay sets on and off;
- * every control is one or two debug commands, the same ones the console takes.
+ * every control is one or two debug commands, the same ones the console takes. The Commands panel is the console's help:
+ * every command the host's catalogue serves, with its parameters and full description, filtered as you type.
  */
 export interface DeveloperTools {
   isOpen(): boolean;
@@ -51,6 +52,7 @@ export function mountDeveloperTools(root: HTMLElement, context: Pick<RustyApplic
       { kind: 'product', title: 'Dagger', mount: element => mountDaggerPanel(element, transport) },
       { kind: 'tunables', title: 'Workbench' },
       { kind: 'console' },
+      { kind: 'product', title: 'Commands', mount: element => mountCommandHelp(element, transport) },
       // The pane lists the product's inspection targets (player, dialogue, door) in its own subject choice and frames
       // the chosen one with its default framings; it opens on the player.
       { kind: 'view', title: 'View', options: { viewport: context.viewport, transport, subject: 'target player' } },
@@ -244,4 +246,50 @@ function mountDaggerPanel(element: HTMLElement, transport: LiveDebugTransport): 
       element.replaceChildren();
     },
   };
+}
+
+/**
+ * The Commands panel: every command in the host's live-debug catalogue (the product's `[DebugCommand]`s and the
+ * Engine's own), with its parameters and full description, narrowed as you type to those whose name or description
+ * holds every word typed. It reads the catalogue once, as the console's completion does, and runs nothing.
+ */
+function mountCommandHelp(element: HTMLElement, transport: LiveDebugTransport): { dispose(): void } {
+  element.classList.add('dagger-developer-panel', 'dagger-developer-help');
+  const filter = document.createElement('input');
+  filter.type = 'search';
+  filter.placeholder = 'Filter by name or words';
+  filter.setAttribute('aria-label', 'Filter commands');
+  const count = document.createElement('output');
+  count.className = 'dagger-developer-status';
+  const list = document.createElement('dl');
+  list.className = 'dagger-developer-commands';
+  list.tabIndex = 0;
+  element.append(filter, count, list);
+  const rows: { readonly text: string; readonly term: HTMLElement; readonly description: HTMLElement }[] = [];
+  const show = (): void => {
+    const words = filter.value.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+    let shown = 0;
+    for (const row of rows) {
+      const match = words.every(word => row.text.includes(word));
+      row.term.hidden = !match;
+      row.description.hidden = !match;
+      if (match) shown++;
+    }
+    count.textContent = `${shown} of ${rows.length} commands`;
+  };
+  filter.addEventListener('input', show);
+  void transport.catalog().then(catalog => {
+    for (const command of [...catalog.commands].sort((a, b) => a.name.localeCompare(b.name))) {
+      const term = document.createElement('dt');
+      const name = document.createElement('code');
+      name.textContent = command.name;
+      term.append(name, ...command.parameters.map(parameter => ` ${parameter.name}:${parameter.type}`));
+      const description = document.createElement('dd');
+      description.textContent = command.description;
+      list.append(term, description);
+      rows.push({ text: `${command.name} ${command.description}`.toLowerCase(), term, description });
+    }
+    show();
+  }, (error: unknown) => { count.textContent = `The catalogue did not answer: ${error instanceof Error ? error.message : String(error)}`; });
+  return { dispose() { element.replaceChildren(); } };
 }

@@ -23,11 +23,11 @@ for (const file of await readdir(new URL('../../src/ui/', import.meta.url))) {
 // The Engine's live-debug package stands in as a scripted host: a transport whose catalog answers only when a test
 // says live-debug is on, recording every command, and a developer shell that records its options and open state.
 await writeFile(join(output, 'debug-stub.js'), `
-export const developer = { liveDebug: false, commands: [], answers: {}, shells: [] };
+export const developer = { liveDebug: false, commands: [], answers: {}, shells: [], catalog: [] };
 export function createLiveDebugHttpTransport() {
   return {
     // As the Engine's HTTP transport answers: a host without live-debug resolves an unavailable catalog.
-    async catalog() { return developer.liveDebug ? { available: true, commands: [] } : { available: false, commands: [] }; },
+    async catalog() { return developer.liveDebug ? { available: true, commands: developer.catalog } : { available: false, commands: [] }; },
     async execute(command) {
       developer.commands.push(command);
       const answer = Object.entries(developer.answers).find(([prefix]) => command.startsWith(prefix));
@@ -1210,12 +1210,13 @@ test('the developer key opens the developer tools only when the host serves live
     const shell = developer.shells.at(-1);
     assert.equal(shell.isOpen, true);
     assert.equal(note.hidden, true);
-    assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'tunables', 'console', 'view', 'scene', 'metrics']);
+    assert.deepEqual(shell.options.panels.map(panel => panel.kind), ['product', 'tunables', 'console', 'product', 'view', 'scene', 'metrics']);
     assert.equal(shell.options.panels[0].title, 'Dagger');
     assert.equal(shell.options.panels[1].title, 'Workbench');
+    assert.equal(shell.options.panels[3].title, 'Commands');
     // The view pane opens on the player and keeps its own valid framings.
-    assert.equal(shell.options.panels[3].options.subject, 'target player');
-    assert.equal(shell.options.panels[3].options.framings, undefined);
+    assert.equal(shell.options.panels[4].options.subject, 'target player');
+    assert.equal(shell.options.panels[4].options.framings, undefined);
     assert.equal(f.modes.at(-1), 'interface', 'The open tools hold the cursor, so play stops taking input.');
 
     // Closing (the key again, or the shell's own Close) gives gameplay its input back at once, and the workbench's
@@ -1250,6 +1251,40 @@ test('the developer key opens the developer tools only when the host serves live
     assert.equal(f.focuses.at(-1), 'gameplay');
     assert.ok(f.focuses.length > focusesBeforeLeaving, 'Leaving the menu takes gameplay focus, and with it the lock.');
   } finally { developer.liveDebug = false; f.dispose(); }
+});
+
+test('the Commands panel lists every catalogue command with its parameters and description, narrowed as you type', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  for (const key of ['window', 'document', 'Element', 'HTMLElement', 'HTMLInputElement', 'KeyboardEvent', 'Event']) globalThis[key] = dom.window[key];
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+  developer.liveDebug = true; developer.shells.length = 0; developer.commands.length = 0;
+  developer.catalog = [
+    { name: 'world.goto', description: 'Developer: walk the player to a target.', parameters: [{ name: 'target', type: 'string' }] },
+    { name: 'actor.inspect', description: 'Developer: one actor as JSON.', parameters: [{ name: 'actor', type: 'string' }] },
+    { name: 'engine.time.mode', description: 'Hold or run the Engine clock.', parameters: [{ name: 'mode', type: 'string' }] },
+  ];
+  const tools = developerTools.mountDeveloperTools(document.getElementById('root'), { viewport: {} }, { onChange() {} });
+  try {
+    await tools.toggle();
+    const element = document.createElement('div');
+    developer.shells.at(-1).options.panels.find(panel => panel.title === 'Commands').mount(element);
+    await settle();
+    const shown = () => [...element.querySelectorAll('dt')].filter(term => !term.hidden).map(term => term.textContent);
+    assert.deepEqual(shown(), ['actor.inspect actor:string', 'engine.time.mode mode:string', 'world.goto target:string']);
+    assert.equal(element.querySelector('dd').textContent, 'Developer: one actor as JSON.');
+    assert.equal(element.querySelector('output').textContent, '3 of 3 commands');
+
+    const filter = element.querySelector('input');
+    filter.value = 'developer  JSON';
+    filter.dispatchEvent(new Event('input'));
+    assert.deepEqual(shown(), ['actor.inspect actor:string']);
+    assert.equal(element.querySelector('dt').nextElementSibling.hidden, false, 'A shown command keeps its description.');
+    assert.equal(element.querySelector('output').textContent, '1 of 3 commands');
+    filter.value = 'world.';
+    filter.dispatchEvent(new Event('input'));
+    assert.deepEqual(shown(), ['world.goto target:string']);
+    assert.deepEqual(developer.commands, [], 'Reading the help runs nothing.');
+  } finally { tools.dispose(); developer.catalog = []; developer.liveDebug = false; }
 });
 
 test('the Dagger developer panel pauses and steps held time, flies the observer camera and turns overlay sets on through debug commands', async () => {

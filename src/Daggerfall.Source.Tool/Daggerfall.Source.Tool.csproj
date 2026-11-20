@@ -18,6 +18,8 @@
     <!-- The import tool's option grammar, shared options and layout; the reference runs this way only. -->
     <ProjectReference Include="../Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj" />
     <ProjectReference Include="../Daggerfall.Import/Daggerfall.Import.csproj" />
+    <!-- The developer commands' attributes, which debug-commands lists. -->
+    <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
     <InternalsVisibleTo Include="Daggerfall.Import.Tests" />
     <Using Include="Daggerfall.Import.Tool" />
   </ItemGroup>

@@ -61,6 +61,9 @@ Every developer command (`world.*`, `player.*`, `people.*`, `held.*`) carries it
 `[DebugCommand]` in `src/WorldRpg.Kit/Developer*.cs`. A `--live-debug` host serves them as its debug catalogue,
 which `rusty-live-debug --origin URL` (`help`, `complete world.`) and the in-game Engine debug console read.
 
+- The developer shell's Commands tab lists the whole catalogue with descriptions, filtered as you type. With no host,
+  `dotnet run --project src/Daggerfall.Source.Tool -- debug-commands [--out local/debug-commands.md]` prints them.
+
 - Positions are scene-local, as `navigation.targets` reports them. Quote names with spaces.
 - They act through the owners ordinary play uses, so the next save holds the result, and they wait while a screen
   or question is open.
