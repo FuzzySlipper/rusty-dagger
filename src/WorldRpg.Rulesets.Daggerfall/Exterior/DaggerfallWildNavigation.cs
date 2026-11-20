@@ -10,8 +10,9 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// buildings alike) in a box about the player outdoors, so a walker past a location's own navigation paths around what
 /// stands in its way. It stands beside the location's composed grid on its own id (rusty-engine #10942): a walker's step
 /// tries the location's grid first and this one after (<see cref="Grids"/>). It is derived on Engine workers off the
-/// update, again once the player has gone far enough from the box's middle or a while has passed (the ground streams in
-/// behind the player), and cleared indoors.
+/// update, again once the player has gone far enough from the box's middle, or after a while once collision has
+/// changed since (the ground streams in behind the player), and cleared indoors. None is derived while the player
+/// stands on the location's own grid, which carries the walkers about it there.
 /// </summary>
 internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialMovementSystem movement, DaggerfallWildNavigationTuning tuning)
 {
@@ -25,6 +26,8 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
     private double _sinceSeconds;
     private bool _pending;
     private bool _published;
+    private bool _onComposition;
+    private ulong _collisionRevision;
     private readonly ulong[] _both = new ulong[2], _composition = new ulong[1];
 
     /// <summary>The receipt of the derivation the grid holds now, with its cost; null before the first is installed.</summary>
@@ -54,10 +57,11 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
 
     /// <summary>
     /// One admitted update: indoors the grid is cleared; outdoors a finished derivation is taken up, and another asked
-    /// for once the player has gone <see cref="DaggerfallWildNavigationTuning.MoveDistance"/> from the box's middle or
-    /// <see cref="DaggerfallWildNavigationTuning.RefreshSeconds"/> have passed.
+    /// for once the player has gone <see cref="DaggerfallWildNavigationTuning.MoveDistance"/> from the box's middle, or
+    /// once <see cref="DaggerfallWildNavigationTuning.RefreshSeconds"/> have passed and collision has changed since. While
+    /// the player stands on the <paramref name="composition"/> grid none is asked for; the one it has, if any, stays.
     /// </summary>
-    internal void Update(WorldPoint? player, bool outdoors, double seconds)
+    internal void Update(WorldPoint? player, bool outdoors, double seconds, ulong composition)
     {
         if (!outdoors || !Enabled || player is not WorldPoint feet)
         {
@@ -75,13 +79,36 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
                 _published = true;
             }
         }
-        _sinceSeconds += seconds;
         Vector3 at = feet.ToVector();
-        if (_centre is { } centre && Vector2.Distance(new(at.X, at.Z), new(centre.X, centre.Z)) < tuning.MoveDistance
-            && _sinceSeconds < tuning.RefreshSeconds)
+        if (_onComposition)
+        {
+            if (OnComposition(at, composition)) return;
+            _onComposition = false;
+            Derive(at);
             return;
+        }
+        _sinceSeconds += seconds;
+        if (_centre is { } centre && Vector2.Distance(new(at.X, at.Z), new(centre.X, centre.Z)) < tuning.MoveDistance)
+        {
+            if (_sinceSeconds < tuning.RefreshSeconds) return;
+            _sinceSeconds = 0;
+            // Nothing has streamed in or out since the last derivation: it would derive the same grid.
+            if (CollisionRevision == _collisionRevision) return;
+        }
+        if (OnComposition(at, composition))
+        {
+            _onComposition = true;
+            return;
+        }
         Derive(at);
     }
+
+    private ulong CollisionRevision => spatial.ReadProjection(new(movement.Session)).CollisionRevision;
+
+    /// <summary>Whether the player stands on the location's own grid.</summary>
+    private bool OnComposition(Vector3 feet, ulong composition) => spatial.EvaluateNavigationStep(new NavigationStepRequest(movement.Session,
+        feet, feet, 1F, 1, composition)).Outcome is not (NavigationPathOutcome.StartNotWalkable or NavigationPathOutcome.GoalNotWalkable
+        or NavigationPathOutcome.ProjectionUnavailable);
 
     private void Derive(Vector3 feet)
     {
@@ -103,6 +130,7 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
         };
         _ = spatial.ReplaceCollisionNavigation(new CollisionNavigationReplaceRequest(movement.Session, min, max, config, Deferred: true));
         _pending = true;
+        _collisionRevision = CollisionRevision;
         _centre = feet;
         _sinceSeconds = 0;
         Derivations++;
@@ -111,7 +139,7 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
     private void Clear()
     {
         if (_published || _pending) spatial.ClearNavigation(new NavigationClearRequest(movement.Session, GridId));
-        _published = _pending = false;
+        _published = _pending = _onComposition = false;
         _centre = null;
         _sinceSeconds = 0;
         Installed = null;
@@ -123,7 +151,7 @@ internal sealed class DaggerfallWildNavigation(ISpatialService spatial, SpatialM
 /// <param name="Radius">How far about the player the grid reaches, in metres, east and west and north and south.</param>
 /// <param name="CellSize">Each cell's width, in metres.</param>
 /// <param name="MoveDistance">How far the player goes from the box's middle, in metres, before the grid is derived about it again.</param>
-/// <param name="RefreshSeconds">How long, in seconds, before the grid is derived again where the player stands, as the ground streams in.</param>
+/// <param name="RefreshSeconds">How long, in seconds, before the grid is derived again where the player stands, if collision has changed since (the ground streams in).</param>
 /// <param name="VerticalReach">The box's height band, in metres: a reach below the player's band, the band, and a reach above it.</param>
 internal sealed record DaggerfallWildNavigationTuning(float Radius, float CellSize, float MoveDistance, double RefreshSeconds, float VerticalReach)
 {

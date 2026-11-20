@@ -16,6 +16,9 @@ public sealed class DaggerfallWildNavigationTests
 {
     private static readonly DaggerfallWildNavigationTuning Tuning = new(8F, 1F, 4F, 60d, 8F);
 
+    /// <summary>The location's own grid, which only the test that stands the player on it publishes.</summary>
+    private const ulong Composition = 1;
+
     [Fact]
     public void Outdoors_the_grid_is_derived_about_the_player_off_the_update_and_follows_it_and_indoors_it_is_cleared()
     {
@@ -34,7 +37,7 @@ public sealed class DaggerfallWildNavigationTests
                     ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<ulong>.Empty));
                 wild = new(engine.Spatial, movement, Tuning);
                 // A location's composed grid stays first; until the wild grid installs it is the only one.
-                wild.Update(new WorldPoint(0, 0, 0), outdoors: true, 1d / 60);
+                wild.Update(new WorldPoint(0, 0, 0), outdoors: true, 1d / 60, Composition);
                 Assert.True(wild.Pending);
                 Assert.Equal([1UL], wild.Grids(1));
             });
@@ -55,9 +58,9 @@ public sealed class DaggerfallWildNavigationTests
                     new Vector3(-3, 0, -3), new Vector3(3, 0, 3), 1F, 4096, DaggerfallWildNavigation.GridId));
                 Assert.InRange(diagonal.Path.Length, 6, 8);
                 // Within the move distance nothing is derived again; past it, the grid follows the player.
-                wild.Update(new WorldPoint(3, 0, 0), outdoors: true, 1d / 60);
+                wild.Update(new WorldPoint(3, 0, 0), outdoors: true, 1d / 60, Composition);
                 Assert.False(wild.Pending);
-                wild.Update(new WorldPoint(10, 0, 0), outdoors: true, 1d / 60);
+                wild.Update(new WorldPoint(10, 0, 0), outdoors: true, 1d / 60, Composition);
                 Assert.True(wild.Pending);
                 Assert.Equal(new Vector3(10, 0, 0), wild.Centre);
             });
@@ -66,7 +69,7 @@ public sealed class DaggerfallWildNavigationTests
             {
                 Assert.Equal(2, wild!.Derivations);
                 // Indoors there is no wild grid.
-                wild.Update(new WorldPoint(10, 0, 0), outdoors: false, 1d / 60);
+                wild.Update(new WorldPoint(10, 0, 0), outdoors: false, 1d / 60, Composition);
                 Assert.Equal([1UL], wild.Grids(1));
                 Assert.DoesNotContain(engine.Spatial.ReadNavigationGrids(new NavigationGridsRequest(movement!.Session)).ToArray(),
                     value => value.GridId == DaggerfallWildNavigation.GridId);
@@ -94,9 +97,10 @@ public sealed class DaggerfallWildNavigationTests
                 composed = Assert.Single(engine.Spatial.ReadNavigationGrids(new NavigationGridsRequest(movement.Session)).ToArray());
                 Assert.Equal(hold.Geometry.NavigationGridId, composed.GridId);
                 wild = new(engine.Spatial, movement, Tuning);
-                wild.Update(new WorldPoint(composed.MinX * (float)composed.CellSize, 0, composed.MinZ * (float)composed.CellSize), outdoors: true, 1d / 60);
+                wild.Update(new WorldPoint(0, 0, 0), outdoors: true, 1d / 60, composed.GridId);
+                Assert.True(wild.Pending);
             });
-            Installed(host, () => wild!, new WorldPoint(composed.MinX * (float)composed.CellSize, 0, composed.MinZ * (float)composed.CellSize));
+            Installed(host, () => wild!, new WorldPoint(0, 0, 0), composed.GridId);
             host.Call(engine =>
             {
                 NavigationGridInfo[] grids = engine.Spatial.ReadNavigationGrids(new NavigationGridsRequest(movement!.Session)).ToArray();
@@ -105,7 +109,7 @@ public sealed class DaggerfallWildNavigationTests
                 Assert.Contains(grids, value => value.GridId == DaggerfallWildNavigation.GridId);
                 Assert.Equal([composed.GridId, DaggerfallWildNavigation.GridId], wild!.Grids(composed.GridId));
                 // Clearing the wild grid leaves the composed one too.
-                wild.Update(null, outdoors: false, 1d / 60);
+                wild.Update(null, outdoors: false, 1d / 60, Composition);
                 NavigationGridInfo after = Assert.Single(engine.Spatial.ReadNavigationGrids(new NavigationGridsRequest(movement.Session)).ToArray());
                 Assert.Equal(composed.ProjectionHash, after.ProjectionHash);
             });
@@ -116,13 +120,68 @@ public sealed class DaggerfallWildNavigationTests
         }
     }
 
+    [Fact]
+    public void None_is_derived_while_the_player_stands_on_the_locations_grid_nor_again_where_it_stands_until_collision_changes()
+    {
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
+        SpatialMovementSystem? movement = null;
+        DaggerfallWildNavigation? wild = null;
+        try
+        {
+            host.Call(engine =>
+            {
+                movement = new(engine.Spatial, engine.Content, null, DaggerfallTuning.Defaults.Spatial);
+                Ground(engine, movement, 1);
+                // The location's grid holds the ground within 10 m of the origin.
+                _ = engine.Spatial.ReplaceCollisionNavigation(new CollisionNavigationReplaceRequest(movement.Session,
+                    new Vector3(-10, -2, -10), new Vector3(10, 4, 10),
+                    engine.Spatial.DefaultCollisionNavigationConfig() with { GridId = Composition, CellSize = 1, Character = movement.CurrentController }));
+                wild = new(engine.Spatial, movement, Tuning);
+                for (int update = 0; update < 3; update++) wild.Update(new WorldPoint(0, 0, 0), outdoors: true, 61, Composition);
+                Assert.Equal(0, wild.Derivations);
+                Assert.Equal([Composition], wild.Grids(Composition));
+                // Off it, the wild grid is derived at once.
+                wild.Update(new WorldPoint(20, 0, 0), outdoors: true, 1d / 60, Composition);
+                Assert.True(wild.Pending);
+            });
+            Installed(host, () => wild!, new WorldPoint(20, 0, 0));
+            host.Call(engine =>
+            {
+                // Standing where it was derived, a refresh finds collision as it was and derives nothing.
+                wild!.Update(new WorldPoint(20, 0, 0), outdoors: true, 61, Composition);
+                Assert.False(wild.Pending);
+                Assert.Equal(1, wild.Derivations);
+                // Once more ground has streamed in, the next refresh derives it again.
+                Ground(engine, movement!, 3);
+                wild.Update(new WorldPoint(20, 0, 0), outdoors: true, 1d / 60, Composition);
+                Assert.False(wild.Pending);
+                wild.Update(new WorldPoint(20, 0, 0), outdoors: true, 61, Composition);
+                Assert.True(wild.Pending);
+            });
+        }
+        finally
+        {
+            host.Call(_ => movement?.Dispose());
+        }
+    }
+
+    /// <summary>Ground 120 m square about the origin, as one more mesh among the session's static collision.</summary>
+    private static void Ground(IEngineContext engine, SpatialMovementSystem movement, ulong mesh)
+    {
+        Vector3[] floor = [new(-60, 0, -60), new(-60, 0, 60), new(60, 0, 60), new(60, 0, -60)];
+        _ = engine.Spatial.ApplyCollisionResidency(new CollisionResidencyRequest(movement.Session,
+            new[] { new StaticMeshAsset(mesh, 0, 4, 0, 2) }, floor, new Triangle[] { new(0, 1, 2), new(0, 2, 3) },
+            new[] { new StaticMeshInstance(mesh + 1, mesh, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) },
+            ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<ulong>.Empty));
+    }
+
     /// <summary>Updates call by call until the derivation running off the update has installed.</summary>
-    private static void Installed(EngineTestHost host, Func<DaggerfallWildNavigation> wild, WorldPoint player)
+    private static void Installed(EngineTestHost host, Func<DaggerfallWildNavigation> wild, WorldPoint player, ulong composition = Composition)
     {
         for (int call = 0; call < 400 && wild().Pending; call++)
         {
             Thread.Sleep(5);
-            host.Call(_ => wild().Update(player, outdoors: true, 1d / 60));
+            host.Call(_ => wild().Update(player, outdoors: true, 1d / 60, composition));
         }
         Assert.False(wild().Pending, "The wild grid never installed.");
     }

@@ -70,8 +70,11 @@ public sealed class ActorNavigationCoordinator
     private readonly Func<IReadOnlyList<ulong>> _grids;
     // The grid each actor's last step went by, or none when it walked straight (Route).
     private readonly Dictionary<EntityId, ulong?> _routes = [];
-    // Where each actor crosses from the grid that holds it to one that holds its goal, while that goal stays put.
-    private readonly Dictionary<EntityId, (Vector3 Goal, Vector3 Point, ulong Grid, ulong Other)> _handoffs = [];
+    // Where each actor crosses from the grid that holds it to one that holds its goal (none when no crossing was found),
+    // with the goal and start it was last checked for and the grids it was found on (Handoff).
+    private readonly Dictionary<EntityId, KeptHandoff> _handoffs = [];
+
+    private readonly record struct KeptHandoff(Vector3 Goal, Vector3 Start, Vector3? Point, ulong Grid, ulong Other, ulong Grids);
 
     /// <summary>The supplied session remains owned by its spatial composition system.</summary>
     /// <param name="grids">
@@ -158,7 +161,7 @@ public sealed class ActorNavigationCoordinator
     /// <summary>How far apart the points tried for a handoff are, along the way and across it, in metres.</summary>
     private const float HandoffSpacing = 2f;
 
-    /// <summary>How far the target may move before an actor's handoff is checked again, in metres.</summary>
+    /// <summary>How far the target may move in all, from where an actor's handoff was last checked, before it is checked again, in metres.</summary>
     private const float HandoffDrift = 2f;
 
     /// <summary>How far either side of the straight way a handoff is looked for, in metres.</summary>
@@ -171,19 +174,30 @@ public sealed class ActorNavigationCoordinator
     /// Where a walker the start grid holds, chasing a goal only another grid holds, crosses from one to the other: a
     /// point both grids hold that the start grid routes the walker to and the other grid routes on to the goal, sought
     /// across a band either side of the straight way (so around what stands on it), nearest the goal and nearest the way
-    /// first. Each point tried stands on the floor under it. Kept per actor while the other grid still routes it to the
-    /// goal.
+    /// first. Each point tried stands on the floor under it. What was found, or that none was, is kept per actor while
+    /// the grids stay as they were published: a crossing is checked again once the goal has gone
+    /// <see cref="HandoffDrift"/> from where it was last checked, and one none was found for is sought again only once
+    /// the goal has gone that far or the walker <see cref="HandoffSpacing"/>.
     /// </summary>
     private Vector3? Handoff(ActorState actor, Vector3 start, Vector3 goal, ulong startGrid, uint visited)
     {
-        if (_handoffs.TryGetValue(actor.Actor.Entity, out (Vector3 Goal, Vector3 Point, ulong Grid, ulong Other) kept) && kept.Grid == startGrid
-            && (Vector3.Distance(kept.Goal, goal) <= HandoffDrift || Routes(kept.Other, kept.Point, goal, visited)))
-        {
-            _handoffs[actor.Actor.Entity] = (goal, kept.Point, kept.Grid, kept.Other);
-            return kept.Point;
-        }
-        _handoffs.Remove(actor.Actor.Entity);
         IReadOnlyList<ulong> grids = _grids();
+        ulong published = Published(grids);
+        if (_handoffs.TryGetValue(actor.Actor.Entity, out KeptHandoff kept) && kept.Grid == startGrid && kept.Grids == published)
+        {
+            bool still = Vector3.Distance(kept.Goal, goal) <= HandoffDrift;
+            if (kept.Point is not { } point)
+            {
+                if (still && Vector3.Distance(kept.Start, start) <= HandoffSpacing) return null;
+            }
+            else if (still) return point;
+            else if (Routes(kept.Other, point, goal, visited))
+            {
+                _handoffs[actor.Actor.Entity] = kept with { Goal = goal, Start = start };
+                return point;
+            }
+        }
+        _handoffs[actor.Actor.Entity] = new(goal, start, null, startGrid, startGrid, published);
         Vector3 way = (goal - start) with { Y = 0 };
         float length = way.Length();
         if (length < HandoffSpacing) return null;
@@ -200,12 +214,21 @@ public sealed class ActorNavigationCoordinator
                         if (other == startGrid || !Holds(other, point)) continue;
                         // A usable crossing: the start grid routes the walker to it, the other on to the goal.
                         if (!Routes(other, point, goal, visited) || !Routes(startGrid, start, point, visited)) continue;
-                        _handoffs[actor.Actor.Entity] = (goal, point, startGrid, other);
+                        _handoffs[actor.Actor.Entity] = new(goal, start, point, startGrid, other, published);
                         return point;
                     }
                 }
         }
         return null;
+    }
+
+    /// <summary>The grids as they are published now: changes whenever one is published again with other cells.</summary>
+    private ulong Published(IReadOnlyList<ulong> grids)
+    {
+        ulong hash = 17;
+        foreach (NavigationGridInfo info in _spatial.ReadNavigationGrids(new NavigationGridsRequest(_session)).Span)
+            if (grids.Contains(info.GridId)) hash = hash * 31 + info.ProjectionHash ^ info.GridId;
+        return hash;
     }
 
     /// <summary>The floor under a point, looked for from just above it and then from well above; null over none.</summary>

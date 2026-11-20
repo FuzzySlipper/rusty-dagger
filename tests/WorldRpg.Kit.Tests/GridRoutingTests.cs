@@ -100,6 +100,41 @@ public sealed class GridRoutingTests
         });
     }
 
+    [Fact]
+    public void A_crossing_kept_while_the_target_creeps_away_is_checked_again_and_a_new_one_found_where_the_grids_now_meet()
+    {
+        // The town's grid holds the walker (x -150 to 0); the wild grid about the player first holds the way ahead of it
+        // (x -76 to 116, z -6 to 6). The target creeps sideways under 2 m an update while the walker barely moves, and the
+        // wild grid follows it (to z 30 to 50), so the crossing first found (near z 0) no longer leads anywhere.
+        using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
+        host.Call(engine =>
+        {
+            using SpatialMovementSystem system = new(engine.Spatial, engine.Content, null, new SpatialTuning(.5d, 8, 8, 1, new CharacterControllerTuning()));
+            Vector3[] floor = [new(-200, 0, -60), new(-200, 0, 60), new(200, 0, 60), new(200, 0, -60)];
+            _ = engine.Spatial.ApplyCollisionResidency(new CollisionResidencyRequest(system.Session,
+                new[] { new StaticMeshAsset(1, 0, 4, 0, 2) }, floor, new Triangle[] { new(0, 1, 2), new(0, 2, 3) },
+                new[] { new StaticMeshInstance(2, 1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) },
+                ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<ulong>.Empty));
+            void Publish(ulong grid, Vector3 min, Vector3 max) => _ = engine.Spatial.ReplaceCollisionNavigation(new CollisionNavigationReplaceRequest(
+                system.Session, min, max, engine.Spatial.DefaultCollisionNavigationConfig() with { GridId = grid, CellSize = 1, Character = system.CurrentController }));
+            Publish(Absent, new(-150, -2, -50), new(0, 4, 50));
+            Publish(Derived, new(-76, -2, -6), new(116, 4, 6));
+            using ActorsState actors = new();
+            actors.CreatePlayer(1, new EntityTypeId("player"), new StatsComponent(), "health");
+            ActorState actor = actors.CreateActor(42, new EntityTypeId("test"), new StatsComponent(), new ActorPose(new WorldPoint(-100, 0, 0), 0), "health");
+            ActorNavigationCoordinator navigation = new(engine.Spatial, system.Session, actors.Store, system.CurrentController,
+                _ => CharacterStepEnvironment.Empty, () => [Absent, Derived]);
+            Vector3 target = new(20, 0, 0);
+            Assert.Equal(NavigationPathOutcome.Reached, navigation.Evaluate(actor, new ActorNavigationRequest(WorldPoint.From(target), .01f, 8192)).Outcome);
+            for (; target.Z < 40; target.Z = MathF.Min(40, target.Z + 1.5f))
+                _ = navigation.Evaluate(actor, new ActorNavigationRequest(WorldPoint.From(target), .01f, 8192));
+            Publish(Derived, new(-76, -2, 30), new(116, 4, 50));
+            for (int step = 0; step < 600 && Vector3.Distance(actor.Position.ToVector() with { Y = 0 }, target) > .6f; step++)
+                _ = navigation.Evaluate(actor, new ActorNavigationRequest(WorldPoint.From(target), .5f, 8192));
+            Assert.True(Vector3.Distance(actor.Position.ToVector() with { Y = 0 }, target) <= .6f, $"The walker stopped at {actor.Position}.");
+        });
+    }
+
     private static void Run(ulong[] grids, Action<ActorNavigationCoordinator, ActorState> test)
     {
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
