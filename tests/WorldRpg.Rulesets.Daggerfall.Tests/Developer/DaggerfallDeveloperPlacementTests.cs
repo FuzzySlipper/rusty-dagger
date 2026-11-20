@@ -61,6 +61,6 @@ public sealed class DaggerfallDeveloperPlacementTests
 
     private DaggerfallDeveloperPlacement Placement(PlayerControlState player, ProductMode mode) => new(
         DeveloperOwnerStage.Hold(() => mode, DeveloperOwnerStage.Actors(health: 100), player, () => []), null!, null!, null!, null!, player, null!,
-        null!, TestPayload.Definitions, null!, null!, null!, null!, null!, () => mode, null!,
+        null!, TestPayload.Definitions, null!, null!, null!, null!, null!, null!, () => mode, null!,
         (actor, count, metres) => { _asked.Add((actor, count, metres)); return _bring; }, null!, null!);
 }

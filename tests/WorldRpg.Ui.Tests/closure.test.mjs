@@ -137,7 +137,6 @@ test('every action the DOM sends is one the ruleset admits, and every admitted a
 const UNREAD_INTERNAL = 'An owner identity or input the ruleset already turned into the label, verdict or worded text the DOM shows.';
 const UNREAD_WORDED_TIME = 'The ruleset words this time for the player in a field the DOM shows; the structured value stays for consumers that format their own.';
 const UNREAD_CREATION = 'Character-creation draft internals: the draft shows final values and grant labels, while rolls, bonuses and grant identities stay the ruleset\'s draft state.';
-const UNREAD_TRAVEL_INPUTS = 'The quote shows the ruleset-worded journey, its costs and canAfford verdict; the raw measures and the option inputs it was computed from stay for diagnostics.';
 
 /**
  * HUD fields the DOM does not read, each with the reason that is deliberate. A field the DOM starts
@@ -176,18 +175,9 @@ const UNREAD_HUD_FIELDS = new Map([
   ['hud.activation.dialogue.training.providerFaction', UNREAD_INTERNAL],
   ['hud.activation.dialogue.training.membershipFaction', UNREAD_INTERNAL],
   ['hud.activation.dialogue.training.cooldownReadySecond', UNREAD_INTERNAL],
-  ['hud.travel.quote.minutes', UNREAD_TRAVEL_INPUTS],
-  ['hud.travel.quote.distance', UNREAD_TRAVEL_INPUTS],
-  ['hud.travel.quote.options.hasHorse', UNREAD_TRAVEL_INPUTS],
-  ['hud.travel.quote.options.hasCart', UNREAD_TRAVEL_INPUTS],
-  ['hud.travel.quote.options.hasShip', UNREAD_TRAVEL_INPUTS],
-  ['hud.travel.quote.options.availableGold', UNREAD_TRAVEL_INPUTS],
-  ['hud.travel.quote.options.availableGoldPieces', UNREAD_TRAVEL_INPUTS],
-  ['hud.travel.lastResult.paidGold', 'The arrival message words what the journey cost.'],
-  ['hud.travel.map.atlas.levels[].height', 'The atlas tiles a level by its columns and rows; its width picks the level.'],
-  ['hud.travel.map.classic.world.width', 'Classic map art is placed by the world rectangle it draws, not its pixel size.'],
-  ['hud.travel.map.classic.world.height', 'Classic map art is placed by the world rectangle it draws, not its pixel size.'],
-  ['hud.travel.lastResult.elapsedSeconds', 'The arrival message words how long the journey took.'],
+  ['hud.expedition.map.atlas.levels[].height', 'The atlas tiles a level by its columns and rows; its width picks the level.'],
+  ['hud.expedition.map.classic.world.width', 'Classic map art is placed by the world rectangle it draws, not its pixel size.'],
+  ['hud.expedition.map.classic.world.height', 'Classic map art is placed by the world rectangle it draws, not its pixel size.'],
   ['hud.quests.journal.active[].entries[].diagnostics', 'Shown with every quest message\'s diagnostics through the combined message list, whose element type the checker reduces to another member.'],
   ['hud.quests.journal.active[].entries[].instance', 'A journal entry is drawn inside its quest group, which already names the instance.'],
   ['hud.quests.journal.active[].entries[].message', UNREAD_INTERNAL],

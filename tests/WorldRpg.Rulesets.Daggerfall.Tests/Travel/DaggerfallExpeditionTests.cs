@@ -27,7 +27,7 @@ public sealed class DaggerfallExpeditionTests
         expedition.SetDestination(new(4, 1), null);
         Assert.Equal(1, expedition.Speed);
         expedition.SetSpeed(Fastest);
-        expedition.Advance(10);
+        Run(expedition, 10);
 
         Assert.Equal(new DaggerfallTravelMapPixel(4, 1), expedition.Party);
         Assert.Null(expedition.Destination);
@@ -49,7 +49,7 @@ public sealed class DaggerfallExpeditionTests
         reckless.SetMode(DaggerfallExpeditionMode.Reckless);
         reckless.SetDestination(new(3, 1), null);
         reckless.SetSpeed(Fastest);
-        reckless.Advance(10);
+        Run(reckless, 10);
         Assert.Equal(FootPixel, fast.Stretches.Sum(stretch => stretch.Seconds));
         Assert.All(fast.Stretches, stretch => Assert.Equal(2d, stretch.FatigueFactor));
 
@@ -68,7 +68,7 @@ public sealed class DaggerfallExpeditionTests
         storm.SetDestination(new(2, 1), null);
         Assert.Equal(104 * 1.35, storm.MinutesToNext());
         storm.SetSpeed(Fastest);
-        storm.Advance(10);
+        Run(storm, 10);
         Assert.All(wet.Stretches, stretch => Assert.Equal(1.5, stretch.FatigueFactor));
         Assert.InRange(wet.Stretches.Sum(stretch => stretch.Seconds), 8424, 8425);
     }
@@ -81,7 +81,7 @@ public sealed class DaggerfallExpeditionTests
         expedition.SetDestination(new(4, 2), null);
         expedition.SetMode(DaggerfallExpeditionMode.Halt);
         expedition.SetSpeed(Fastest);
-        expedition.Advance(1d / 6);
+        Run(expedition, 1d / 6);
         Assert.Equal(new DaggerfallTravelMapPixel(2, 2), expedition.Party);
         Assert.Equal(3600, world.Stretches.Sum(stretch => stretch.Seconds));
         Assert.All(world.Stretches, stretch => Assert.Equal(DaggerfallExpeditionActivity.Halted, stretch.Activity));
@@ -90,7 +90,7 @@ public sealed class DaggerfallExpeditionTests
         world.Stretches.Clear();
         expedition.SetMode(DaggerfallExpeditionMode.Camp);
         expedition.SetSpeed(Fastest);
-        expedition.Advance(2.5d / 6);
+        Run(expedition, 2.5d / 6);
         Assert.Equal(DaggerfallExpeditionActivity.Camping, Assert.Single(world.Stretches.Select(stretch => stretch.Activity).Distinct()));
         Assert.Equal([false, false], world.CampHours);
         Assert.Equal(1000, world.Gold);
@@ -108,7 +108,7 @@ public sealed class DaggerfallExpeditionTests
         Assert.Equal(30, expedition.LodgingHere);
         expedition.SetMode(DaggerfallExpeditionMode.Camp);
         expedition.SetSpeed(Fastest);
-        expedition.Advance(30d / 6);
+        Run(expedition, 30d / 6);
 
         Assert.Equal(1000 - 30 - 30, world.Gold);
         Assert.Equal(30, world.CampHours.Count);
@@ -117,7 +117,7 @@ public sealed class DaggerfallExpeditionTests
         (DaggerfallExpedition poor, World broke) = Create(world => world.Gold = 5);
         poor.Begin(new(1, 1), false);
         poor.SetMode(DaggerfallExpeditionMode.Camp);
-        poor.Advance(1);
+        Run(poor, 1);
         Assert.Equal(DaggerfallExpeditionMode.Halt, poor.Mode);
         Assert.Equal(0, poor.Speed);
         Assert.Equal("A night's lodging in Ashford costs 30 gold, which you do not carry.", poor.Message);
@@ -131,7 +131,7 @@ public sealed class DaggerfallExpeditionTests
         swim.Begin(new(7, 1), false);
         swim.SetDestination(new(9, 1), null);
         swim.SetSpeed(Fastest);
-        swim.Advance(10);
+        Run(swim, 10);
         Assert.Equal(2 * 255 * 60, water.Stretches.Sum(stretch => stretch.Seconds));
         Assert.Equal(DaggerfallExpeditionActivity.Swimming, Assert.Single(water.Stretches.Select(stretch => stretch.Activity).Distinct()));
         Assert.True(swim.Swimming);
@@ -152,7 +152,7 @@ public sealed class DaggerfallExpeditionTests
         Assert.Equal(900, sea.Gold);
         voyage.SetDestination(new(10, 2), null);
         voyage.SetSpeed(Fastest);
-        voyage.Advance(10);
+        Run(voyage, 10);
         Assert.Equal(new DaggerfallTravelMapPixel(10, 2), voyage.Party);
         Assert.Equal(DaggerfallExpeditionShip.None, voyage.Ship);
         Assert.Equal([DaggerfallExpeditionActivity.Sailing, DaggerfallExpeditionActivity.Marching],
@@ -174,7 +174,7 @@ public sealed class DaggerfallExpeditionTests
         expedition.Begin(new(1, 1), false);
         expedition.SetDestination(new(6, 1), null);
         expedition.SetSpeed(Fastest);
-        expedition.Advance(10);
+        Run(expedition, 10);
 
         Assert.True(expedition.EncounterWaiting);
         Assert.False(expedition.Running);
@@ -199,14 +199,14 @@ public sealed class DaggerfallExpeditionTests
         expedition.Begin(new(1, 1), false);
         expedition.SetDestination(new(9, 1), null);
         expedition.SetSpeed(Fastest);
-        expedition.Advance(10);
+        Run(expedition, 10);
         Assert.Equal("You are growing weary. Halt or make camp before you drop.", expedition.Message);
         Assert.InRange(world.FatigueShare, .1, .2);
 
         expedition.SetSpeed(Fastest);
         world.Exhausted = false;
         world.ExhaustAtZero = true;
-        expedition.Advance(10);
+        Run(expedition, 10);
         Assert.Equal([false], world.Collapses);
         Assert.Equal((DaggerfallExpeditionMode.Halt, 0), (expedition.Mode, expedition.Speed));
         Assert.Null(expedition.Destination);
@@ -222,7 +222,7 @@ public sealed class DaggerfallExpeditionTests
         expedition.SetMode(DaggerfallExpeditionMode.Reckless);
         expedition.SetDestination(new(5, 3), new DaggerfallSiteId(0, 2));
         expedition.SetSpeed(Fastest);
-        expedition.Advance(4000d / (360 * 60));
+        Run(expedition, 4000d / (360 * 60));
         (double X, double Y) position = expedition.Position;
 
         DaggerfallExpeditionSave saved = JsonSerializer.Deserialize<DaggerfallExpeditionSave>(JsonSerializer.Serialize(expedition.Capture()))!;
@@ -248,14 +248,14 @@ public sealed class DaggerfallExpeditionTests
         expedition.Begin(new(1, 1), false);
         expedition.SetMode(DaggerfallExpeditionMode.Camp);
         expedition.SetSpeed(Fastest);
-        expedition.Advance(1d / 6);
+        Run(expedition, 1d / 6);
         Assert.Null(expedition.Leave());
         Assert.False(expedition.Open);
 
         expedition.Begin(new(1, 1), false);
         expedition.SetDestination(new(2, 1), null);
         expedition.SetSpeed(Fastest);
-        expedition.Advance(10);
+        Run(expedition, 10);
         Assert.Equal("The party has moved on. Enter to go on foot from here.", expedition.Leave());
         Assert.True(expedition.Open);
 
@@ -282,6 +282,29 @@ public sealed class DaggerfallExpeditionTests
     }
 
     [Fact]
+    public void A_map_opened_where_the_party_cannot_set_out_only_shows_where_it_is_and_closes()
+    {
+        (DaggerfallExpedition expedition, World world) = Create();
+        expedition.Begin(new(1, 1), false, held: "Leave the building or dungeon before travelling.");
+        Assert.True(expedition.Open);
+        Assert.Equal("Leave the building or dungeon before travelling.", expedition.Message);
+        expedition.SetDestination(new(3, 1), null);
+        Assert.Null(expedition.Destination);
+        expedition.SetSpeed(Fastest);
+        Assert.False(expedition.Running);
+        Assert.Null(expedition.Entry());
+        Assert.True(expedition.CanLeave);
+        Assert.False(expedition.Capture().Open);
+
+        // Opened again outdoors, the same map sets out.
+        Assert.Null(expedition.Leave());
+        expedition.Begin(new(1, 1), false);
+        expedition.SetDestination(new(3, 1), null);
+        Assert.True(expedition.Running);
+        Assert.Empty(world.Stretches);
+    }
+
+    [Fact]
     public void The_route_walk_steps_diagonally_as_the_donor_and_the_quest_clock_keeps_its_minutes()
     {
         // The donor's strict comparison never steps across a shallow diagonal; the party's path still ends where it heads.
@@ -291,6 +314,12 @@ public sealed class DaggerfallExpeditionTests
         Assert.Empty(DaggerfallTravelPolicy.Path(new(3, 3), new(3, 3)));
         // Three woodland pixels by cart, camping out: the donor's 270 minutes, under the quest clock's one-day minimum.
         Assert.Equal(24 * 60, Policy().CautiousQuestLegMinutes(new(1, 1), new(0, 2)));
+    }
+
+    /// <summary>Runs the map for real seconds, a quarter second a frame, as long as it keeps running.</summary>
+    private static void Run(DaggerfallExpedition expedition, double seconds)
+    {
+        for (double left = seconds; left > 0 && expedition.Running; left -= .25) expedition.Advance(Math.Min(.25, left));
     }
 
     private static DaggerfallCalendar At(int hour) =>
@@ -345,6 +374,7 @@ public sealed class DaggerfallExpeditionTests
         public DaggerfallWeatherKind Current { get; set; } = DaggerfallWeatherKind.Sunny;
         public DaggerfallTransportMode Transport { get; set; } = DaggerfallTransportMode.Foot;
         public bool OwnsShip { get; set; }
+        public bool FreeShipPassage { get; set; }
         public int Gold { get; set; } = 1000;
         public double FatigueShare { get; set; } = 1;
         public double DrainPerHour { get; set; }

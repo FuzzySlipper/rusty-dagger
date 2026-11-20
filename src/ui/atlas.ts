@@ -58,8 +58,14 @@ export interface TravelMapProjection {
   readonly names: readonly TravelMapNameProjection[];
 }
 
-/** The route a quote measured, in world-map pixels. */
+/** The route drawn on the map, in world-map pixels: from a point (the party's, between pixels) to a pixel's middle. */
 export interface AtlasRoute { readonly fromX: number; readonly fromY: number; readonly toX: number; readonly toY: number }
+
+/** A mark over the map at a world-map point: the party (with its heading), where it heads, or the pin. */
+export interface AtlasMark { readonly x: number; readonly y: number; readonly label: string; readonly heading?: number | null }
+
+/** The marks an expedition draws over the map, each at its world-map point; a missing one is not drawn. */
+export interface AtlasMarks { readonly party?: AtlasMark | null; readonly destination?: AtlasMark | null; readonly pin?: AtlasMark | null }
 
 export function isTravelMap(value: unknown): value is TravelMapProjection {
   if (typeof value !== 'object' || value === null) return false;
@@ -84,13 +90,25 @@ export interface Atlas {
   readonly element: HTMLElement;
   /** A place the map holds, by its region:index key. */
   place(key: string): TravelMapPlaceProjection | undefined;
-  update(map: TravelMapProjection | null, selected: string, route: AtlasRoute | null): void;
+  update(map: TravelMapProjection | null, selected: string, route: AtlasRoute | null, marks?: AtlasMarks): void;
   /** Zoom in or out about the middle of the map. */
   zoom(direction: -1 | 1): void;
   /** Centre the map on a world-map pixel, zoomed in at least as far as a place is named. */
   centre(x: number, y: number, zoom?: number): void;
   /** Art the page now holds may fill tiles it was waiting for. */
   refreshArt(): void;
+  /** Keep a world-map point in the middle of the view at the zoom it has, as the camera follows the party. */
+  follow(x: number, y: number): void;
+  /** The world-map pixel under the middle of the view, which a key or pad chooses with the centre mark. */
+  centrePixel(): [number, number];
+}
+
+/** What a map that takes points asks of its owner beyond choosing a place. */
+export interface AtlasPointing {
+  /** A click on the land or sea itself, not on a place, at this world-map pixel. */
+  readonly pick?: (x: number, y: number) => void;
+  /** The player moved the view by hand: dragged it or panned it with keys. */
+  readonly panned?: () => void;
 }
 
 /**
@@ -102,7 +120,7 @@ export interface Atlas {
  * Choosing a place asks the ruleset for the route, as the destination list does.
  */
 export function mountAtlas(requestTiles: (tiles: readonly [number, number, number][]) => void,
-  choose: (region: number, index: number, keyed: boolean) => void, askPlaces: () => void): Atlas {
+  choose: (region: number, index: number, keyed: boolean) => void, askPlaces: () => void, pointing: AtlasPointing = {}): Atlas {
   const element = document.createElement('div');
   element.className = 'dagger-atlas';
   // The map surface takes focus itself. Accepting it starts panning, as the local map's view does: the directions then
@@ -134,7 +152,11 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
   legend.setAttribute('aria-label', 'Map legend');
   const hint = document.createElement('p');
   hint.className = 'dagger-atlas-hint';
-  element.append(ground, routeLayer, marks, controls, readout, legend, hint);
+  // While the view pans by keys or a pad, the middle of the map is marked: what a Go or Pin there chooses.
+  const centreMark = document.createElement('span');
+  centreMark.className = 'dagger-atlas-centre';
+  centreMark.setAttribute('aria-hidden', 'true');
+  element.append(ground, routeLayer, marks, centreMark, controls, readout, legend, hint);
 
   let map: TravelMapProjection | null = null;
   // The places as last sent, and the revision they are; a snapshot that names another revision without them asks again.
@@ -144,6 +166,7 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
   let askedRevision = '';
   let selectedKey = '';
   let route: AtlasRoute | null = null;
+  let overlay: AtlasMarks = {};
   // The view: world-map pixel at the map's centre, and screen pixels per world-map pixel.
   let cx = 500, cy = 250, scale = 0;
   let fitted = false;
@@ -198,11 +221,21 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
   element.addEventListener('pointermove', event => {
     if (!drag) return;
     const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
-    if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+    if (Math.abs(dx) + Math.abs(dy) > 3 && !drag.moved) { drag.moved = true; pointing.panned?.(); }
     if (drag.moved) setView(drag.cx - dx / scale, drag.cy - dy / scale, scale);
   });
   const endDrag = (): void => { drag = null; };
-  element.addEventListener('pointerup', endDrag);
+  // A press that did not drag, on the land or sea rather than a place or a control, picks that point.
+  element.addEventListener('pointerup', event => {
+    const pressed = drag;
+    endDrag();
+    if (!pressed || pressed.moved || !pointing.pick || !map) return;
+    const target = event.target as HTMLElement;
+    if (target.closest('button')) return;
+    const box = element.getBoundingClientRect();
+    const x = cx + (event.clientX - box.left - size().width / 2) / scale, y = cy + (event.clientY - box.top - size().height / 2) / scale;
+    if (x >= 0 && y >= 0 && x < map.worldWidth && y < map.worldHeight) pointing.pick(Math.floor(x), Math.floor(y));
+  });
   element.addEventListener('pointercancel', endDrag);
   element.addEventListener('wheel', event => {
     event.preventDefault();
@@ -218,8 +251,10 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
     element.classList.toggle('is-panning', on);
     element.setAttribute('aria-pressed', String(on));
     element.setAttribute('aria-label', on ? 'Travel map, panning' : 'Travel map');
+    element.classList.toggle('is-centred', on);
     hint.textContent = on ? 'Directions pan · triggers or Page Up and Down zoom · accept or Back to stop'
-      : 'Drag to pan · wheel to zoom · accept to pan with keys or a controller';
+      : pointing.pick ? 'Click to set out · drag to pan · wheel to zoom · accept to pan with keys or a controller'
+        : 'Drag to pan · wheel to zoom · accept to pan with keys or a controller';
   };
   setPanning(false);
   // A step is a quarter of the view, so a few steps cross empty land or sea between places.
@@ -233,6 +268,7 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
     if (!panning || document.activeElement !== element) return;
     event.preventDefault();
     measure();
+    pointing.panned?.();
     pan((event as CustomEvent<Direction>).detail);
   });
   element.addEventListener(BACK_EVENT, event => {
@@ -251,7 +287,10 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
   element.addEventListener('blur', () => setPanning(false));
   zoomIn.addEventListener('click', () => atlas.zoom(1));
   zoomOut.addEventListener('click', () => atlas.zoom(-1));
-  here.addEventListener('click', () => { if (map?.player) atlas.centre(map.player.x + .5, map.player.y + .5, Math.max(scale, ZOOM.region)); });
+  here.addEventListener('click', () => {
+    if (overlay.party) atlas.centre(overlay.party.x, overlay.party.y, Math.max(scale, ZOOM.region));
+    else if (map?.player) atlas.centre(map.player.x + .5, map.player.y + .5, Math.max(scale, ZOOM.region));
+  });
 
   // The ground: atlas tiles at the level the zoom wants, or the classic world image and, close in, its region sheets.
   const tiles = new Map<string, HTMLImageElement>();
@@ -391,7 +430,7 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
         marks.append(button);
       }
     if (route) {
-      const [x1, y1] = toScreen(route.fromX + .5, route.fromY + .5), [x2, y2] = toScreen(route.toX + .5, route.toY + .5);
+      const [x1, y1] = toScreen(route.fromX, route.fromY), [x2, y2] = toScreen(route.toX + .5, route.toY + .5);
       routeLayer.setAttribute('viewBox', `0 0 ${width} ${height}`);
       const line = document.createElementNS(SVG, 'line');
       for (const [name, value] of [['x1', x1], ['y1', y1], ['x2', x2], ['y2', y2]] as const) line.setAttribute(name, String(value));
@@ -399,11 +438,19 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
       for (const [name, value] of [['stroke', '#7a1f12'], ['stroke-width', '2.5'], ['stroke-dasharray', '7 5'], ['stroke-linecap', 'round']] as const) line.setAttribute(name, value);
       routeLayer.append(line);
     }
-    if (map.player) {
-      const node = marker('dagger-atlas-player', map.player.x + .5, map.player.y + .5, null, 'You are here');
+    for (const [kind, mark] of [['destination', overlay.destination], ['pin', overlay.pin]] as const) {
+      if (!mark) continue;
+      const node = marker(`dagger-atlas-${kind}`, mark.x, mark.y, null, mark.label);
       node.setAttribute('role', 'img');
-      node.setAttribute('aria-label', 'You are here');
-      if (map.player.heading !== null) node.style.setProperty('--heading', `${map.player.heading}deg`);
+      node.setAttribute('aria-label', mark.label);
+      marks.append(node);
+    }
+    const party = overlay.party ?? (map.player ? { x: map.player.x + .5, y: map.player.y + .5, label: 'You are here', heading: map.player.heading } : null);
+    if (party) {
+      const node = marker('dagger-atlas-player', party.x, party.y, null, party.label);
+      node.setAttribute('role', 'img');
+      node.setAttribute('aria-label', party.label);
+      if (party.heading !== null && party.heading !== undefined) node.style.setProperty('--heading', `${party.heading}deg`);
       marks.append(node);
     }
     if (focusedKey) Array.from(marks.querySelectorAll<HTMLElement>('[data-key]')).find(node => node.dataset.key === focusedKey)?.focus({ preventScroll: true });
@@ -420,8 +467,9 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
       item.append(mark, text);
       return item;
     };
-    legend.append(key('player', 'You are here'));
+    legend.append(key('player', overlay.party ? 'Your party' : 'You are here'));
     if (route) legend.append(key('route', 'Route'));
+    if (overlay.pin) legend.append(key('pin', 'Pin'));
     for (const row of legendRows) legend.append(key('place', row.label, row.category));
   };
 
@@ -437,25 +485,25 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
   const atlas: Atlas = {
     element,
     place: key => places.find(entry => `${entry.region}:${entry.index}` === key),
-    update(next, selected, nextRoute): void {
+    update(next, selected, nextRoute, nextMarks = {}): void {
       // Held most important first, the order names are written in.
       if (next?.places) { places = [...next.places].sort((a, b) => a.tier - b.tier); legendRows = next.legend ?? []; placesRevision = next.placesRevision; }
       else if (next && next.placesRevision !== placesRevision && next.placesRevision !== askedRevision) { askedRevision = next.placesRevision; askPlaces(); }
       if (!next) { places = []; legendRows = []; placesRevision = askedRevision = ''; }
       // The places are compared by their revision, so a snapshot without them is the same map as the one that brought them.
-      const changed = JSON.stringify([next && { ...next, places: undefined, legend: undefined }, placesRevision, selected, nextRoute]);
+      const changed = JSON.stringify([next && { ...next, places: undefined, legend: undefined }, placesRevision, selected, nextRoute, nextMarks]);
       element.hidden = next === null;
       if (changed === signature) { drawGround(); return; }
       const opened = map === null && next !== null;
       signature = changed;
-      map = next; selectedKey = selected; route = nextRoute;
+      map = next; selectedKey = selected; route = nextRoute; overlay = nextMarks;
       if (!map) { fitted = false; asked.clear(); draw(); drawLegend(); return; }
       measure();
       // The map opens on the player, near enough to see their region.
       if (opened || !fitted) {
         fitted = true;
-        const player = map.player;
-        if (player) setView(player.x + .5, player.y + .5, ZOOM.region); else setView(map.worldWidth / 2, map.worldHeight / 2, fitScale());
+        const player = overlay.party ?? (map.player ? { x: map.player.x + .5, y: map.player.y + .5 } : null);
+        if (player) setView(player.x, player.y, ZOOM.close); else setView(map.worldWidth / 2, map.worldHeight / 2, fitScale());
       } else { clampView(); }
       drawLegend();
       draw();
@@ -466,6 +514,8 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
     },
     centre(x, y, zoom): void { setView(x, y, Math.max(scale, zoom ?? ZOOM.close)); },
     refreshArt(): void { if (map) drawGround(); },
+    follow(x, y): void { if (map && (Math.abs(x - cx) > .01 || Math.abs(y - cy) > .01)) setView(x, y, scale); },
+    centrePixel(): [number, number] { return [Math.floor(cx), Math.floor(cy)]; },
   };
   return atlas;
 }

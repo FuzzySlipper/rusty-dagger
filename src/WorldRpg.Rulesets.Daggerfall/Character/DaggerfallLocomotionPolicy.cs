@@ -34,6 +34,7 @@ internal sealed class DaggerfallLocomotionPolicy
     private double _climbingGameSeconds;
     private double _swimmingGameSeconds;
     private double _movementFatigueMultiplier = 1d;
+    private double _idleFatigueFactor = 1d;
     private float _athleticsJumpBonus;
 
     internal DaggerfallLocomotionPolicy(DaggerfallLocomotionTuning tuning, DaggerfallControlSettings controls)
@@ -139,6 +140,19 @@ internal sealed class DaggerfallLocomotionPolicy
             : null;
     }
 
+    /// <summary>
+    /// A stretch passed off the ground's own steps (the expedition map): its swimming seconds, if it swims, and how many
+    /// times the idle rate its other minutes pay, as a march spends more than standing. Both are spent by the next
+    /// <see cref="AdvanceCalendarMinutes"/>.
+    /// </summary>
+    internal void RecordStretch(double swimmingSeconds, double idleFatigueFactor)
+    {
+        if (!double.IsFinite(swimmingSeconds) || swimmingSeconds < 0) throw new ArgumentOutOfRangeException(nameof(swimmingSeconds));
+        if (!double.IsFinite(idleFatigueFactor) || idleFatigueFactor <= 0) throw new ArgumentOutOfRangeException(nameof(idleFatigueFactor));
+        _swimmingGameSeconds += swimmingSeconds;
+        _idleFatigueFactor = idleFatigueFactor;
+    }
+
     /// <summary>Consumes each calendar minute exactly once; the session calendar remains the only time authority.</summary>
     /// <remarks>
     /// Each minute pays one donor rate (PlayerEntity's per-minute loss): climbing, else running while
@@ -171,11 +185,12 @@ internal sealed class DaggerfallLocomotionPolicy
             + (runningMinutes * MovementFatigue(_tuning.RunningFatiguePerGameMinute))
             + (failedSwimmingMinutes * MovementFatigue(_tuning.SwimmingFatiguePerGameMinute))
             + (passedSwimmingMinutes * MovementFatigue(_tuning.IdleFatiguePerGameMinute))
-            + (idleMinutes * MovementFatigue(_tuning.IdleFatiguePerGameMinute)));
+            + (idleMinutes * (int)(MovementFatigue(_tuning.IdleFatiguePerGameMinute) * _idleFatigueFactor)));
         _ = fatigue.Spend(Math.Min(fatigue.Current, spent));
         _runningGameSeconds = 0d;
         _climbingGameSeconds = 0d;
         _swimmingGameSeconds = 0d;
+        _idleFatigueFactor = 1d;
     }
 
     /// <summary>

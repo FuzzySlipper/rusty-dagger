@@ -60,17 +60,26 @@ internal sealed class DaggerfallWorldEncounters(DaggerfallEncounterRuntime encou
         if (profile.Kind != DaggerfallWorldProfileKind.Exterior) return null;
 
         (int cellX, int cellY) = exteriorCell();
-        DaggerfallClimateCell climate = definitions.Grids.ClimateAtWorldPixel(cellX, cellY);
+        return Outdoors(minute, definitions.Grids.ClimateAtWorldPixel(cellX, cellY).Value, atLocation());
+    }
+
+    /// <summary>
+    /// The encounter an hour on the expedition map rolls for: the outdoor context of the party's pixel (its climate, day
+    /// or night, at a location or in the wild) at that minute, without the twelve-minute gate a walk in the world keeps.
+    /// </summary>
+    internal DaggerfallEncounterRequest? Overland(long minute, int climate, bool located) => Outdoors(minute, climate, located);
+
+    private DaggerfallEncounterRequest? Outdoors(long minute, int climate, bool located)
+    {
         // RandomEncounters.ChooseRandomEnemy has no table for other climates (ocean) and spawns nothing.
-        if (climate.Value is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232)) return null;
+        if (climate is not (224 or 225 or 226 or 227 or 228 or 229 or 230 or 231 or 232)) return null;
         long timeOfDay = minute % (DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour);
         bool day = timeOfDay is >= 360 and <= 1080;
-        bool located = atLocation();
         if (located && day) return null;
         DaggerfallEncounterContext context = located
             ? DaggerfallEncounterContext.LocationNight
             : day ? DaggerfallEncounterContext.WildernessDay : DaggerfallEncounterContext.WildernessNight;
-        return new(context, playerLevel(), Climate: climate.Value);
+        return new(context, playerLevel(), Climate: climate);
     }
 
     /// <summary>
@@ -78,14 +87,20 @@ internal sealed class DaggerfallWorldEncounters(DaggerfallEncounterRuntime encou
     /// admitted simulation step places it around the player, so a save between the two restores the selected source
     /// result rather than drawing again.
     /// </summary>
-    internal DaggerfallEncounterResolution Queue(DaggerfallEncounterRequest request)
+    internal DaggerfallEncounterResolution Queue(DaggerfallEncounterRequest request) => Queue(request, activeProfile().LogicalId);
+
+    /// <summary>
+    /// Resolves an encounter for the profile it will be met in: the active one, or, from the expedition map, the profile
+    /// Enter will put the player in, where it is placed around them once they arrive.
+    /// </summary>
+    internal DaggerfallEncounterResolution Queue(DaggerfallEncounterRequest request, string profile)
     {
         ArgumentNullException.ThrowIfNull(request);
         WorldPoint pose = player.Position
             ?? throw new InvalidOperationException("Daggerfall cannot select an encounter without a player position.");
         ulong? admitted = generation();
         ulong latest = admitted is > 0 ? admitted.Value : 1UL;
-        return encounters.Select(request, latest, activeProfile().LogicalId, new ActorPose(pose, player.YawRadians));
+        return encounters.Select(request, latest, profile, new ActorPose(pose, player.YawRadians));
     }
 
     /// <summary>

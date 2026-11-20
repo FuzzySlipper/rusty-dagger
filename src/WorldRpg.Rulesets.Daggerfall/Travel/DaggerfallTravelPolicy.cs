@@ -4,30 +4,6 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Travel;
 
-/// <summary>The options selected by the travel window and the transport facts it observed.</summary>
-/// <remarks>
-/// The two possession fields are facts used by the donor formula.  They are deliberately separate
-/// from <see cref="TravelShip"/>: the donor permits a player without an owned ship to charter one,
-/// charging an ocean fare for that trip.  Horse takes precedence over cart when both are present,
-/// exactly as <c>TravelTimeCalculator.CalculateTravelTime</c> does.
-/// </remarks>
-internal readonly record struct DaggerfallTravelOptions(
-    bool SpeedCautious,
-    bool SleepModeInn,
-    bool TravelShip,
-    bool HasHorse,
-    bool HasCart,
-    bool HasShip,
-    ulong AvailableGold = ulong.MaxValue,
-    ulong AvailableGoldPieces = ulong.MaxValue,
-    bool FreeShipPassage = false)
-{
-    /// <summary>The cautious camp-out/cart facts used by quest travel clocks.</summary>
-    internal static DaggerfallTravelOptions QuestClock { get; } =
-        new(SpeedCautious: true, SleepModeInn: false, TravelShip: false,
-            HasHorse: false, HasCart: true, HasShip: false);
-}
-
 /// <summary>A site that the travel map can expose as a destination.</summary>
 internal readonly record struct DaggerfallTravelDestination(
     DaggerfallSiteId Id,
@@ -35,34 +11,15 @@ internal readonly record struct DaggerfallTravelDestination(
     DaggerfallSiteKind Kind,
     DaggerfallTravelMapPixel MapPixel);
 
-/// <summary>The deterministic output of one admitted travel route calculation.</summary>
-internal sealed record DaggerfallTravelQuote(
-    DaggerfallTravelMapPixel Origin,
-    DaggerfallTravelDestination Destination,
-    DaggerfallTravelOptions Options,
-    int DistanceMapPixels,
-    int OceanPixels,
-    int TravelMinutes,
-    int InnCost,
-    int ShipCost,
-    int TotalCost,
-    string Identity)
-{
-    internal long TravelSeconds => checked((long)TravelMinutes * DaggerfallCalendar.SecondsPerMinute);
-
-    /// <summary>Whether the currency facts captured in the quote can pay both fare requirements.</summary>
-    internal bool CanAfford => (ulong)TotalCost <= Options.AvailableGold
-        && (ulong)InnCost <= Options.AvailableGoldPieces;
-}
-
 /// <summary>
-/// Daggerfall's overland route, duration and fare policy over the normalized site and climate grids.
+/// Daggerfall's overland route and its minutes over the normalized site and climate grids: the destinations the map
+/// offers, the donor's route walk, a pixel's minutes by transport and terrain, and a quest leg's clock.
 /// </summary>
 /// <remarks>
 /// This is the product-owned equivalent of DFU's <c>TravelTimeCalculator</c>.  It retains the
 /// donor's integer path walk and fixed-point shifts, while reading the admitted Rusty grids and site
 /// identities instead of a Unity content singleton.  The policy does not advance the calendar or
-/// mutate transport state; the session owns those admitted operations.
+/// mutate transport state; the expedition and the session own those admitted operations.
 /// </remarks>
 internal sealed class DaggerfallTravelPolicy
 {
@@ -115,28 +72,6 @@ internal sealed class DaggerfallTravelPolicy
     }
 
     /// <summary>
-    /// Calculates a route from an explicit current map pixel to a site destination.
-    /// </summary>
-    /// <param name="origin">The current map pixel, including an ocean pixel while on a ship.</param>
-    /// <param name="destination">The durable region/index identity selected by the travel map.</param>
-    /// <param name="options">The speed, lodging, transport, and ownership facts for this quote.</param>
-    /// <param name="requireDiscovered">Whether the destination must be revealed to ordinary travel-map play.</param>
-    internal DaggerfallTravelQuote Quote(DaggerfallTravelMapPixel origin, DaggerfallSiteId destination,
-        DaggerfallTravelOptions options, bool requireDiscovered = true)
-    {
-        origin.RequireInBounds(nameof(origin));
-        DaggerfallTravelDestination resolved = ResolveDestination(destination, requireDiscovered);
-        if (origin == resolved.MapPixel)
-            throw new InvalidOperationException($"Travel route to {destination} has no movement and is not a valid route.");
-
-        RouteResult route = CalculateRoute(origin, resolved.MapPixel, options);
-        (int innCost, int shipCost, int totalCost) = CalculateCosts(route.TravelMinutes, route.OceanPixels, options);
-        return new DaggerfallTravelQuote(origin, resolved, options, route.DistanceMapPixels,
-            route.OceanPixels, route.TravelMinutes, innCost, shipCost, totalCost,
-            Identity(origin, destination, options));
-    }
-
-    /// <summary>
     /// Calculates the cautious one-way duration used by donor quest clocks.
     /// </summary>
     /// <remarks>
@@ -149,9 +84,10 @@ internal sealed class DaggerfallTravelPolicy
     {
         origin.RequireInBounds(nameof(origin));
         DaggerfallTravelDestination resolved = ResolveDestination(destination, requireDiscovered: false);
-        int routeMinutes = origin == resolved.MapPixel
-            ? 0
-            : CalculateRoute(origin, resolved.MapPixel, DaggerfallTravelOptions.QuestClock).TravelMinutes;
+        // The donor's clock walks by cart and camps out: each pixel's minutes take the camp-out share.
+        int routeMinutes = 0;
+        foreach (DaggerfallTravelMapPixel pixel in Route(origin, resolved.MapPixel))
+            routeMinutes = checked(routeMinutes + ((300 * PixelMinutes(pixel, DaggerfallTransportMode.Cart, aboard: false)) >> 8));
         return Math.Max(routeMinutes, DaggerfallCalendar.HoursPerDay * DaggerfallCalendar.MinutesPerHour);
     }
 
@@ -284,28 +220,6 @@ internal sealed class DaggerfallTravelPolicy
         return (((102 * transportModifier) >> 8) * (256 - TerrainMovementModifiers[terrainIndex] + 256)) >> 8;
     }
 
-    private RouteResult CalculateRoute(DaggerfallTravelMapPixel origin, DaggerfallTravelMapPixel destination,
-        DaggerfallTravelOptions options)
-    {
-        IReadOnlyList<DaggerfallTravelMapPixel> route = Route(origin, destination);
-        int oceanPixels = 0;
-        int minutesTotal = 0;
-        DaggerfallTransportMode transport = options.HasHorse ? DaggerfallTransportMode.Horse
-            : options.HasCart ? DaggerfallTransportMode.Cart : DaggerfallTransportMode.Foot;
-        foreach (DaggerfallTravelMapPixel pixel in route)
-        {
-            if (IsOcean(pixel)) oceanPixels = checked(oceanPixels + 1);
-            int minutesThisMove = PixelMinutes(pixel, transport, options.TravelShip);
-            if (!options.SleepModeInn)
-                minutesThisMove = (300 * minutesThisMove) >> 8;
-            minutesTotal = checked(minutesTotal + minutesThisMove);
-        }
-
-        if (!options.SpeedCautious)
-            minutesTotal >>= 1;
-        return new RouteResult(route.Count, oceanPixels, minutesTotal);
-    }
-
     private DaggerfallClimateCell ClimateAt(int mapPixelX, int mapPixelY)
     {
         // MapsFile.GetClimateIndex adds one to world-pixel X to align CLIMATE.PAK with the height
@@ -320,33 +234,4 @@ internal sealed class DaggerfallTravelPolicy
             throw new InvalidOperationException($"Travel route climate at map pixel {mapPixelX}/{mapPixelY} has no admitted name for value {climate.Value}.");
         return climate;
     }
-
-    private static (int InnCost, int ShipCost, int TotalCost) CalculateCosts(int travelMinutes, int oceanPixels,
-        DaggerfallTravelOptions options)
-    {
-        int travelHours = checked((travelMinutes + (DaggerfallCalendar.MinutesPerHour - 1))
-            / DaggerfallCalendar.MinutesPerHour);
-        long innCost = 0;
-        if (options.SleepModeInn)
-        {
-            long chargeableHours = (long)travelHours - oceanPixels;
-            innCost = 5L * (chargeableHours / DaggerfallCalendar.HoursPerDay);
-            if (innCost < 0) innCost = 0;
-            innCost += 5;
-        }
-
-        long shipCost = oceanPixels > 0 && !options.HasShip && !options.FreeShipPassage && options.TravelShip
-            ? 25L * ((oceanPixels / DaggerfallCalendar.HoursPerDay) + 1)
-            : 0;
-        long totalCost = checked(innCost + shipCost);
-        if (innCost < 0 || shipCost < 0 || totalCost < 0)
-            throw new InvalidOperationException("Travel cost calculation produced a negative fare.");
-        return (checked((int)innCost), checked((int)shipCost), checked((int)totalCost));
-    }
-
-    private static string Identity(DaggerfallTravelMapPixel origin, DaggerfallSiteId destination,
-        DaggerfallTravelOptions options) => FormattableString.Invariant(
-            $"daggerfall.travel.v1/{origin.X},{origin.Y}/{destination.Region},{destination.Index}/cautious={(options.SpeedCautious ? 1 : 0)};inn={(options.SleepModeInn ? 1 : 0)};ship={(options.TravelShip ? 1 : 0)};horse={(options.HasHorse ? 1 : 0)};cart={(options.HasCart ? 1 : 0)};owned-ship={(options.HasShip ? 1 : 0)};free-ship={(options.FreeShipPassage ? 1 : 0)};gold={options.AvailableGold};pieces={options.AvailableGoldPieces}");
-
-    private readonly record struct RouteResult(int DistanceMapPixels, int OceanPixels, int TravelMinutes);
 }

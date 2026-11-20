@@ -3,7 +3,6 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Combat;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
-using WorldRpg.Rulesets.Daggerfall.Travel;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -25,7 +24,7 @@ public sealed class DaggerfallQuestFoesTests
     }
 
     private static DaggerfallQuestFoes Foes(SocietyStage stage, Watched watched) =>
-        new(new DaggerfallQuestInstances(stage.Definitions, RandomMinimum.Create()), stage.Actors, stage.Player, new DaggerfallTravelState(),
+        new(new DaggerfallQuestInstances(stage.Definitions, RandomMinimum.Create()), stage.Actors, stage.Player, () => false,
             stage.ActorDefinitions, stage.Placement, new DaggerfallVitalityConsequences(new CombatResolution()),
             DaggerfallTuning.Defaults.QuestSpawning,
             () => throw new InvalidOperationException("No quest foe spawns in this stage."),

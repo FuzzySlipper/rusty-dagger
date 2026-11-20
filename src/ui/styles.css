@@ -382,7 +382,6 @@ dialog.dagger-quests:not([open]) { display: none; }
 
 /* Travel map: published map art with ruleset-placed regions and destinations drawn over it. */
 /* The travel screen: the map you travel from, the journey column beside it, the transport strip below. */
-.dagger-travel { display: grid; grid-template-columns: minmax(0, 1fr) 21rem; gap: 1rem; margin-bottom: .75rem; }
 .dagger-atlas { position: relative; height: min(44rem, calc(100vh - 21rem)); min-height: 24rem; overflow: hidden; touch-action: none;
   background: #b4cbcc; border: 2px solid var(--brass); box-shadow: inset 0 0 2rem rgb(0 0 0 / .35); cursor: var(--dagger-cursor-pointer); outline: none; }
 .dagger-atlas:focus-visible, :where(.keyed-navigation) .dagger-atlas:focus { border-color: var(--brass-bright); }
@@ -436,9 +435,52 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-atlas-key[data-category="temple"] { background: #4d6f9e; }
 .dagger-atlas-key-player { background: #a3270f; border-color: #f2e6c4; box-shadow: 0 0 0 1px #2a170a; }
 .dagger-atlas-key-route { width: 1.25rem; height: 0; border: 0; border-radius: 0; border-top: 2px dashed #7a1f12; background: none; }
-.dagger-travel-journey { display: grid; gap: .6rem; align-content: start; }
-.dagger-travel-journey h3 { margin: 0; }
-.dagger-travel-quote { min-height: 4.5em; color: #f6ddb0; }
+/* The travel panel's way onto the expedition map. */
+.dagger-travel-open { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin-bottom: .75rem; }
+.dagger-travel-open h3, .dagger-travel-open p { margin: 0; }
+.dagger-travel-open p { flex: 1 1 20rem; color: #dfc987; }
+
+/*
+ * The expedition map: a screen of its own over the held world. The atlas fills the middle, the hour and the speeds sit
+ * above it, Find, the ship and the pin beside it, and how the party goes, its vitals and the way off the map below.
+ */
+.dagger-expedition { position: fixed; inset: 1rem; z-index: 30; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: .5rem; padding: .75rem; }
+.dagger-expedition[hidden] { display: none; }
+.dagger-expedition-top, .dagger-expedition-bottom { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; align-items: center; padding: .4rem .75rem; }
+.dagger-expedition-clock { margin: 0; flex: 1 1 auto; font: 700 1.15rem var(--font-label); letter-spacing: .04em; }
+.dagger-expedition-speeds, .dagger-expedition-modes { display: flex; gap: .3rem; }
+.dagger-expedition-body { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: .5rem; min-height: 0; }
+.dagger-expedition-body .dagger-atlas { height: 100%; min-height: 0; }
+.dagger-expedition-side { display: flex; flex-direction: column; gap: .45rem; padding: .6rem; overflow: auto; }
+.dagger-expedition-side h3 { margin: .4rem 0 0; }
+.dagger-expedition-find { display: flex; gap: .3rem; }
+.dagger-expedition-find input { flex: 1 1 auto; min-width: 0; }
+.dagger-expedition-found { display: grid; gap: .2rem; }
+.dagger-expedition-found button { text-align: left; font-size: .85rem; }
+.dagger-expedition-pin { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem; }
+.dagger-expedition-pin-label { margin: 0; color: #dfc987; font-size: .9rem; }
+.dagger-expedition-vitals { display: flex; gap: .3rem; height: 3rem; }
+.dagger-expedition-vital { position: relative; width: .8rem; height: 100%; border: 1px solid #2a170a; background: rgb(0 0 0 / .45); }
+.dagger-expedition-vital > span { position: absolute; left: 0; right: 0; bottom: 0; }
+.dagger-expedition-vital[data-vital="health"] > span { background: #b0391f; }
+.dagger-expedition-vital[data-vital="fatigue"] > span { background: #6f9a2e; }
+.dagger-expedition-vital[data-vital="magicka"] > span { background: #3466a8; }
+.dagger-expedition-status { flex: 1 1 20rem; min-width: 0; }
+.dagger-expedition-status p { margin: 0; }
+.dagger-expedition-journey { color: #f2e3ba; }
+.dagger-expedition-message { min-height: 1.3em; color: #f6ddb0; font-style: italic; }
+.dagger-expedition[data-encounter="true"] .dagger-expedition-message { color: #ff9a6a; font-style: normal; font-weight: 700; }
+.dagger-expedition-exits { display: flex; gap: .4rem; }
+.dagger-expedition-exits [hidden] { display: none; }
+.dagger-expedition-enter { min-width: 9rem; }
+.dagger-atlas-destination, .dagger-atlas-pin { width: .9rem; height: .9rem; pointer-events: none; z-index: 3; }
+.dagger-atlas-destination { border: 2px solid #7a1f12; border-radius: 50%; background: rgb(242 230 196 / .6); }
+.dagger-atlas-pin { border: 2px solid #f2e6c4; border-radius: 50% 50% 50% 0; background: #2c5a8a; transform: translate(-50%, -100%) rotate(-45deg); }
+.dagger-atlas-key-pin { background: #2c5a8a; border-color: #f2e6c4; }
+.dagger-atlas-centre { position: absolute; left: 50%; top: 50%; width: 1.4rem; height: 1.4rem; transform: translate(-50%, -50%); pointer-events: none; display: none;
+  border: 2px solid #ffe077; border-radius: 50%; box-shadow: 0 0 0 1px #2a170a; }
+.dagger-atlas.is-centred .dagger-atlas-centre { display: block; }
+
 /* The transport strip: how you travel, your ship, and the wagon's load. */
 .dagger-transport { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; align-items: center; padding-top: .5rem; border-top: 1px solid rgb(212 181 107 / .35); }
 .dagger-transport-options { display: flex; flex-wrap: wrap; gap: .375rem; }

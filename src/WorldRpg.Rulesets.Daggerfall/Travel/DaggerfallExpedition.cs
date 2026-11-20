@@ -35,6 +35,9 @@ internal interface IDaggerfallExpeditionSurroundings
 
     bool OwnsShip { get; }
 
+    /// <summary>A guild grants the player free passage on a hired ship.</summary>
+    bool FreeShipPassage { get; }
+
     /// <summary>Pays from carried gold; false, with nothing paid, when it is not carried.</summary>
     bool TrySpendGold(int amount);
 
@@ -131,6 +134,7 @@ internal sealed class DaggerfallExpedition
 {
     private const long SecondsPerHour = DaggerfallCalendar.SecondsPerMinute * DaggerfallCalendar.MinutesPerHour;
     private const long LongestStretch = 10 * DaggerfallCalendar.SecondsPerMinute;
+    private const double LongestFrame = .25;
 
     private static readonly IReadOnlySet<DaggerfallSiteKind> Settlements = new HashSet<DaggerfallSiteKind>
         { DaggerfallSiteKind.TownCity, DaggerfallSiteKind.TownHamlet, DaggerfallSiteKind.TownVillage, DaggerfallSiteKind.Tavern };
@@ -160,6 +164,7 @@ internal sealed class DaggerfallExpedition
     private double _owed;
     private string? _message;
     private (long NpcId, Func<bool> Available, DaggerfallSiteId? Place)? _teleport;
+    private string? _held;
     private DaggerfallTravelDestination[] _found = [];
 
     internal DaggerfallExpedition(DaggerfallTravelPolicy policy, DaggerfallSiteContext sites, DaggerfallExpeditionTuning tuning,
@@ -182,7 +187,10 @@ internal sealed class DaggerfallExpedition
     internal bool Teleporting => _teleport is not null;
 
     /// <summary>Whether time runs on the map now.</summary>
-    internal bool Running => _open && _teleport is null && _speed > 0 && !_encounterWaiting;
+    internal bool Running => _open && _teleport is null && _held is null && _speed > 0 && !_encounterWaiting;
+
+    /// <summary>Why the party cannot set out from where the player stands (indoors, enemies near), or null when it can.</summary>
+    internal string? Held => _held;
 
     /// <summary>An encounter was rolled and waits for the player to enter and meet it.</summary>
     internal bool EncounterWaiting => _encounterWaiting;
@@ -213,15 +221,17 @@ internal sealed class DaggerfallExpedition
 
     /// <summary>
     /// Puts the party on the map at the player's pixel, aboard their own ship when they stand on its deck. A map left open
-    /// by a save is already on it and stays where the party was.
+    /// by a save is already on it and stays where the party was. With <paramref name="held"/>, the player cannot set out
+    /// from where they stand (indoors, with enemies near): the map opens to be looked at, saying why, and only closes.
     /// </summary>
-    internal void Begin(DaggerfallTravelMapPixel body, bool aboardOwnShip)
+    internal void Begin(DaggerfallTravelMapPixel body, bool aboardOwnShip, string? held = null)
     {
         body.RequireInBounds(nameof(body));
-        _message = null;
         _speed = 0;
         _owed = 0;
-        if (_open) return;
+        if (_open && _held is null) { _message = null; return; }
+        _held = held;
+        _message = held;
         _open = true;
         _body = _party = _cameFrom = body;
         _leg = null;
@@ -262,6 +272,7 @@ internal sealed class DaggerfallExpedition
     {
         _open = false;
         _teleport = null;
+        _held = null;
         _leg = null;
         _route = [];
         _ship = DaggerfallExpeditionShip.None;
@@ -399,12 +410,14 @@ internal sealed class DaggerfallExpedition
         }
         if (Swimming) return _message = "No ship takes on a swimmer.";
         if (!NearPort()) return _message = "Ships sail from a port, and none is near enough.";
+        int fare = _world.FreeShipPassage ? 0 : _tuning.ShipHire;
         if (_world.OwnsShip) _ship = DaggerfallExpeditionShip.Owned;
-        else if (_world.TrySpendGold(_tuning.ShipHire)) _ship = DaggerfallExpeditionShip.Hired;
-        else return _message = $"A passage costs {_tuning.ShipHire} gold, which you do not carry.";
+        else if (_world.TrySpendGold(fare)) _ship = DaggerfallExpeditionShip.Hired;
+        else return _message = $"A passage costs {fare} gold, which you do not carry.";
         _sailed = false;
         if (_mode == DaggerfallExpeditionMode.Camp) _mode = DaggerfallExpeditionMode.Halt;
-        _message = _ship == DaggerfallExpeditionShip.Owned ? "You board your ship." : $"You hire a passage for {_tuning.ShipHire} gold.";
+        _message = _ship == DaggerfallExpeditionShip.Owned ? "You board your ship."
+            : fare == 0 ? "The guild grants you passage." : $"You hire a passage for {fare} gold.";
         return null;
     }
 
@@ -424,11 +437,38 @@ internal sealed class DaggerfallExpedition
         return port && sea;
     }
 
+    /// <summary>Whether play has revealed a place, so the map may name it.</summary>
+    internal bool Known(DaggerfallSiteId place) => _sites.IsDiscovered(place);
+
+    /// <summary>Whether the map can close with no entry: the party still stands with the body, ashore, with nothing waiting.</summary>
+    internal bool CanLeave => _open && (_teleport is not null || _held is not null
+        || (_party == _body && _ship == DaggerfallExpeditionShip.None && !_encounterWaiting));
+
+    /// <summary>The party is out under the sky: on the map, and not lodged indoors in camp.</summary>
+    internal bool UnderSky => _open && _teleport is null && _held is null && !(_mode == DaggerfallExpeditionMode.Camp && LodgingHere is not null);
+
     /// <summary>The party is in the water without a ship.</summary>
     internal bool Swimming => _ship == DaggerfallExpeditionShip.None && _policy.IsOcean(_party);
 
     /// <summary>The location standing at the party's pixel, discovered or not.</summary>
     internal DaggerfallSiteRecord? LocationHere => _locations.GetValueOrDefault(_party);
+
+    /// <summary>
+    /// The location whose exterior a player entering at a pixel stands in: the one at that pixel, else the nearest, whose
+    /// streamed wilderness reaches it. Ties go to the first in the catalog.
+    /// </summary>
+    internal DaggerfallSiteRecord HostAt(DaggerfallTravelMapPixel pixel)
+    {
+        if (_locations.TryGetValue(pixel, out DaggerfallSiteRecord? here)) return here;
+        DaggerfallSiteRecord? nearest = null;
+        long best = long.MaxValue;
+        foreach ((DaggerfallTravelMapPixel at, DaggerfallSiteRecord site) in _locations)
+        {
+            long dx = at.X - pixel.X, dy = at.Y - pixel.Y, distance = dx * dx + dy * dy;
+            if (distance < best) { best = distance; nearest = site; }
+        }
+        return nearest ?? throw new InvalidOperationException("The world has no location to enter from.");
+    }
 
     /// <summary>The location standing at a pixel, discovered or not.</summary>
     internal DaggerfallSiteRecord? LocationAt(DaggerfallTravelMapPixel pixel) => _locations.GetValueOrDefault(pixel);
@@ -474,7 +514,8 @@ internal sealed class DaggerfallExpedition
     internal long Advance(double realSeconds)
     {
         if (!Running || !double.IsFinite(realSeconds) || realSeconds <= 0) return 0;
-        _owed += realSeconds * _tuning.TimeScales[_speed - 1] * DaggerfallCalendar.SecondsPerMinute;
+        // A long frame does not leap: the map gives it at most a quarter second's time.
+        _owed += Math.Min(realSeconds, LongestFrame) * _tuning.TimeScales[_speed - 1] * DaggerfallCalendar.SecondsPerMinute;
         long passed = 0;
         while (_owed >= 1 && Running)
         {
@@ -526,6 +567,7 @@ internal sealed class DaggerfallExpedition
     internal DaggerfallExpeditionEntry? Entry()
     {
         if (!_open || _teleport is not null) return null;
+        if (_held is not null) { _message = _held; return null; }
         if (_policy.IsOcean(_party)) { _message = "There is no land here. Make for the shore first."; return null; }
         return new(_party, LocationHere, _cameFrom);
     }
@@ -543,7 +585,7 @@ internal sealed class DaggerfallExpedition
     /// <summary>The place the guild's teleport has been asked for, if any.</summary>
     internal DaggerfallSiteId? TeleportPlace => _teleport?.Place;
 
-    internal DaggerfallExpeditionSave Capture() => !_open || _teleport is not null ? DaggerfallExpeditionSave.Closed with { Mode = _pace, Pin = _pin, Lodging = _lodging }
+    internal DaggerfallExpeditionSave Capture() => !_open || _teleport is not null || _held is not null ? DaggerfallExpeditionSave.Closed with { Mode = _pace, Pin = _pin, Lodging = _lodging }
         : new(true, _body, _party, _cameFrom, _leg, _mode, _pin, _ship, _sailed, _lodging, _lowFatigueWarned, _encounterWaiting, _campSeconds);
 
     private void Restore(DaggerfallExpeditionSave saved)
@@ -574,8 +616,8 @@ internal sealed class DaggerfallExpedition
         _lodging = saved.Lodging;
     }
 
-    private string? Refused() => _teleport is not null ? "Choose where the guild should teleport you."
-        : _encounterWaiting ? "Something approaches. Enter to meet it." : null;
+    private string? Refused() => _held ?? (_teleport is not null ? "Choose where the guild should teleport you."
+        : _encounterWaiting ? "Something approaches. Enter to meet it." : null);
 
     private void SetLeg(DaggerfallExpeditionLeg leg)
     {

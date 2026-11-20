@@ -10,8 +10,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Travel;
 internal enum DaggerfallArrivalSide { North = 0, South = 1, East = 2, West = 3 }
 
 /// <summary>
-/// Where the player arrives at a location brought in from outside it: fast travel, a court's release, a
-/// ship returning to land. This is the donor's <c>StreamingWorld.PositionPlayerToLocation</c>: one side of the
+/// Where the player arrives at a location brought in from outside it: entering it from the expedition map, a court's
+/// release, a guild's teleport. This is the donor's <c>StreamingWorld.PositionPlayerToLocation</c>: one side of the
 /// location is chosen, from the direction of the journey when there is one, and the player stands a tenth of
 /// a block outside that side's midpoint, facing in. A city (and the player's ship) instead receives them at
 /// whichever of its source start markers lies nearest that point.

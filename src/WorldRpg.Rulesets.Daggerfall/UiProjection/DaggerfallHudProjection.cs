@@ -36,7 +36,7 @@ internal sealed record DaggerfallHudFrame(
     DaggerfallDungeonTextProjection? DungeonText = null,
     DaggerfallDeathView? Death = null,
     DaggerfallRestView? Rest = null,
-    DaggerfallTravelPresentation? Travel = null,
+    DaggerfallExpeditionView? Expedition = null,
     string? SiteName = null,
     DaggerfallLodgingView? Lodging = null,
     DaggerfallMapPresentation? Map = null, DaggerfallDispelView? Dispel = null, DaggerfallIdentifyView? Identify=null, IReadOnlyList<DaggerfallDetectorView>? Detectors = null, DaggerfallSpellbookView? Spells=null, bool CharacterCreationAvailable = true, DaggerfallPropertyView? Property = null, DaggerfallTeleportView? Teleport = null, DaggerfallCreateItemView? CreateItem = null, DaggerfallLegalView? Legal = null,
@@ -116,7 +116,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ArgumentNullException.ThrowIfNull(frame);
         var (player, presentation, mode, controls, slots, inventory, loot, character, panelRequest,
             saveSlots, saveSlotDiagnostic, controlSettings, controlDiagnostic, activation, quests, notebook, transport,
-            dungeonText, death, rest, travel, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _, _, calendar, effects, cinematicSource, _, bundles) = frame;
+            dungeonText, death, rest, expedition, siteName, lodging, map, dispel, identifyView, detectors, spells, _, _, _, _, _, calendar, effects, cinematicSource, _, bundles) = frame;
         UiValueBuilder builder = _builder;
         builder.Clear();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
@@ -342,7 +342,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("maximumDays", builder.Number(DaggerfallLodgingState.MaximumDays))))];
         fields = [.. fields, ("map", map is null ? builder.Null() : DaggerfallMapProjection.Wire(builder, map)),
             ("mapAbsence", frame.MapAbsence is { } absence ? builder.String(absence) : builder.Null())];
-        if (travel is not null) fields = [.. fields, ("travel", Travel(builder, travel))];
+        fields = [.. fields, ("expedition", expedition is null ? builder.Null() : Expedition(builder, expedition))];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take
         // its gate would otherwise honour, so the panel is published only in the mode that lets the
@@ -460,45 +460,51 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     /// <summary>Sends the travel map's places on the next snapshot, because the page opened the map or lost them.</summary>
     internal void RequestTravelPlaces() => _travelPlacesSent = null;
 
-    private uint Travel(UiValueBuilder builder, DaggerfallTravelPresentation travel) => builder.Object(
-        ("guildTeleport", builder.Boolean(travel.GuildTeleport)),
-        ("destinations", builder.Array(travel.Destinations.Select(destination => builder.Object(
-            ("region", builder.Number(destination.Id.Region)),
-            ("index", builder.Number(destination.Id.Index)),
-            ("name", builder.String(destination.Name)),
-            ("kind", builder.String(DaggerfallSiteKinds.Label(destination.Kind))),
-            ("regionName", builder.String(travel.RegionName(destination.Id.Region))))).ToArray())),
-        ("map", travel.Map is null ? builder.Null() : TravelMap(builder, travel.Map)),
-        ("message", travel.Message is null ? builder.Null() : builder.String(travel.Message)),
-        ("executionAvailable", builder.Boolean(travel.ExecutionAvailable)),
-        ("lastResult", travel.LastResult is null ? builder.Null() : builder.Object(
-            ("paidGold", builder.Number(travel.LastResult.PaidGold)),
-            ("elapsedSeconds", builder.Number(travel.LastResult.ElapsedSeconds)),
-            ("message", builder.String(travel.LastResult.Message)))),
-        ("quote", travel.Quote is null ? builder.Null() : builder.Object(
-            ("identity", builder.String(travel.Quote.Identity)),
-            ("destination", builder.String(travel.Quote.Destination.Name)),
-            // The route the quote measures, in world-map pixels, so the map can draw it.
-            ("route", builder.Object(
-                ("fromX", builder.Number(travel.Quote.Origin.X)), ("fromY", builder.Number(travel.Quote.Origin.Y)),
-                ("toX", builder.Number(travel.Quote.Destination.MapPixel.X)), ("toY", builder.Number(travel.Quote.Destination.MapPixel.Y)))),
-            ("minutes", builder.Number(travel.Quote.TravelMinutes)),
-            ("duration", builder.String(DaggerfallCalendar.DescribeDuration(checked((long)travel.Quote.TravelMinutes * DaggerfallCalendar.SecondsPerMinute)))),
-            ("distance", builder.Number(travel.Quote.DistanceMapPixels)),
-            ("oceanPixels", builder.Number(travel.Quote.OceanPixels)),
-            ("innCost", builder.Number(travel.Quote.InnCost)),
-            ("shipCost", builder.Number(travel.Quote.ShipCost)),
-            ("totalCost", builder.Number(travel.Quote.TotalCost)),
-            ("options", builder.Object(
-                ("cautious", builder.Boolean(travel.Quote.Options.SpeedCautious)),
-                ("inn", builder.Boolean(travel.Quote.Options.SleepModeInn)),
-                ("ship", builder.Boolean(travel.Quote.Options.TravelShip)),
-                ("hasHorse", builder.Boolean(travel.Quote.Options.HasHorse)),
-                ("hasCart", builder.Boolean(travel.Quote.Options.HasCart)),
-                ("hasShip", builder.Boolean(travel.Quote.Options.HasShip)),
-                ("availableGold", builder.String(travel.Quote.Options.AvailableGold.ToString(CultureInfo.InvariantCulture))),
-                ("availableGoldPieces", builder.String(travel.Quote.Options.AvailableGoldPieces.ToString(CultureInfo.InvariantCulture))))),
-            ("canAfford", builder.Boolean(travel.Quote.CanAfford)))));
+    /// <summary>
+    /// The expedition map: the atlas with the party and where it heads, and the panels about it. Positions are world-map
+    /// pixels (the party's between two of them as it walks); labels and refusals are the ruleset's words.
+    /// </summary>
+    private uint Expedition(UiValueBuilder builder, DaggerfallExpeditionView view)
+    {
+        uint Mark(DaggerfallExpeditionMark? mark, string? name) => mark is null ? builder.Null() : builder.Object(
+            ("x", builder.Number(mark.Pixel.X)), ("y", builder.Number(mark.Pixel.Y)),
+            ("name", name is null ? builder.Null() : builder.String(name)));
+        uint Vital(DaggerfallExpeditionVital vital) => builder.Object(
+            ("current", builder.Number(vital.Current)), ("maximum", builder.Number(vital.Maximum)));
+        return builder.Object(
+            ("map", TravelMap(builder, view.Map)),
+            ("party", builder.Object(("x", builder.Number(view.PartyX)), ("y", builder.Number(view.PartyY)),
+                ("heading", view.Heading is double heading ? builder.Number(heading) : builder.Null()))),
+            ("destination", Mark(view.Destination, view.DestinationName)),
+            ("pin", Mark(view.Pin, view.PinName)),
+            ("mode", builder.String(view.Mode.ToString().ToLowerInvariant())),
+            ("speed", builder.Number(view.Speed)),
+            ("speeds", builder.Number(view.Speeds)),
+            ("ship", builder.String(view.Ship.ToString().ToLowerInvariant())),
+            ("swimming", builder.Boolean(view.Swimming)),
+            ("canBoard", builder.Boolean(view.CanBoard)),
+            ("shipFare", builder.Number(view.ShipFare)),
+            ("date", builder.String(view.Date)),
+            ("time", builder.String(view.Time)),
+            ("weather", builder.String(view.Weather.ToString().ToLowerInvariant())),
+            ("land", builder.String(view.Land)),
+            ("here", view.Here is null ? builder.Null() : builder.String(view.Here)),
+            ("lodging", view.Lodging is int lodging ? builder.Number(lodging) : builder.Null()),
+            ("remaining", view.RemainingSeconds is long remaining ? builder.String(DaggerfallCalendar.DescribeDuration(remaining)) : builder.Null()),
+            ("transport", builder.String(view.Transport.ToString().ToLowerInvariant())),
+            ("health", Vital(view.Health)), ("fatigue", Vital(view.Fatigue)), ("magicka", Vital(view.Magicka)),
+            ("canLeave", builder.Boolean(view.CanLeave)),
+            ("canEnter", builder.Boolean(view.CanEnter)),
+            ("enterLabel", builder.String(view.EnterLabel)),
+            ("encounter", builder.Boolean(view.EncounterWaiting)),
+            ("teleport", builder.Boolean(view.Teleporting)),
+            ("teleportPlace", view.TeleportPlace is null ? builder.Null() : builder.String(view.TeleportPlace)),
+            ("message", view.Message is null ? builder.Null() : builder.String(view.Message)),
+            ("found", builder.Array(view.Found.Select(place => builder.Object(
+                ("region", builder.Number(place.Id.Region)), ("index", builder.Number(place.Id.Index)),
+                ("name", builder.String(place.Name)), ("kind", builder.String(DaggerfallSiteKinds.Label(place.Kind))),
+                ("x", builder.Number(place.MapPixel.X)), ("y", builder.Number(place.MapPixel.Y)))).ToArray())));
+    }
 
     private static uint Property(UiValueBuilder builder, DaggerfallPropertyView property) => builder.Object(
         ("bankAvailable", builder.Boolean(property.BankAvailable)),

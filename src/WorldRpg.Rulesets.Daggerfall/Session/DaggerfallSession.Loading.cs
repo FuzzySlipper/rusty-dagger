@@ -74,26 +74,6 @@ internal sealed partial class DaggerfallSession : ILoadingScreenSession, IArriva
     }
 
     /// <summary>
-    /// Accepts the live travel quote. The destination's exterior is read on the first update after the screen
-    /// goes up, the journey's days pass on the next, and the player arrives on the one after.
-    /// </summary>
-    private void AcceptTravel(string expectedQuote, ulong expectedCost)
-    {
-        if (!StagesSlowWork || FastTravel.Quote() is not { } quote)
-        {
-            _ = ExecuteTravel(expectedQuote, expectedCost);
-            return;
-        }
-        string place = quote.Destination.Name;
-        DaggerfallJourney? journey = null;
-        StageWorldChange($"Travelling to {place}", [
-            new($"Reading {place}", () => _ = FastTravel.Refusal(quote, out _)),
-            new($"On the road to {place}", () => journey = Depart(expectedQuote, expectedCost)),
-            new($"Arriving at {place}", () => { if (journey is { } road) _ = Arrive(road); }),
-        ], error => $"The journey to {place} could not be made: {error.Message}");
-    }
-
-    /// <summary>
     /// Passes through a portal (a dungeon's entrance or its way out): the destination is read, then entered.
     /// True when the portal was taken or, staged, accepted; the staged entrance reports its own failure.
     /// </summary>

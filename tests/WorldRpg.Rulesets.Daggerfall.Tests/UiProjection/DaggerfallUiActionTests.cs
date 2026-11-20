@@ -242,10 +242,18 @@ public sealed class DaggerfallUiActionTests
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 
     [Theory]
-    [InlineData("{\"action\":\"travel-map\",\"open\":true}", true)]
-    [InlineData("{\"action\":\"travel-map\",\"open\":false}", true)]
-    [InlineData("{\"action\":\"travel-map\",\"open\":true,\"region\":17,\"page\":0}", false)]
-    [InlineData("{\"action\":\"travel-map\"}", false)]
+    [InlineData("{\"action\":\"expedition-open\"}", true)]
+    [InlineData("{\"action\":\"expedition-open\",\"open\":true}", false)]
+    [InlineData("{\"action\":\"expedition-go\",\"x\":120,\"y\":240}", true)]
+    [InlineData("{\"action\":\"expedition-go\",\"x\":120,\"y\":240,\"region\":17,\"index\":3}", true)]
+    [InlineData("{\"action\":\"expedition-go\",\"x\":120,\"y\":240,\"region\":17}", false)]
+    [InlineData("{\"action\":\"expedition-go\",\"x\":1000,\"y\":240}", false)]
+    [InlineData("{\"action\":\"expedition-go\",\"x\":-1,\"y\":240}", false)]
+    [InlineData("{\"action\":\"expedition-pin\"}", true)]
+    [InlineData("{\"action\":\"expedition-speed\",\"speed\":2}", true)]
+    [InlineData("{\"action\":\"expedition-speed\"}", false)]
+    [InlineData("{\"action\":\"expedition-mode\",\"mode\":\"camp\"}", true)]
+    [InlineData("{\"action\":\"expedition-mode\",\"mode\":\"gallop\"}", false)]
     [InlineData("{\"action\":\"atlas-tiles\",\"tiles\":[[0,1,1],[2,15,7]]}", true)]
     [InlineData("{\"action\":\"atlas-tiles\",\"tiles\":[]}", false)]
     [InlineData("{\"action\":\"atlas-tiles\",\"tiles\":[[0,1]]}", false)]
@@ -254,7 +262,7 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"content-import\"}", true)]
     [InlineData("{\"action\":\"content-import-cancel\"}", true)]
     [InlineData("{\"action\":\"content-import\",\"key\":\"x\"}", false)]
-    public void The_travel_map_opens_and_closes_and_asks_for_the_atlas_tiles_it_shows(string json, bool accepted) =>
+    public void The_expedition_map_opens_takes_points_speeds_and_modes_and_asks_for_the_atlas_tiles_it_shows(string json, bool accepted) =>
         Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 
     [Fact]
@@ -338,10 +346,11 @@ public sealed class DaggerfallUiActionTests
         [DaggerfallUiActionKind.MapNoteAdd] = "\"text\":\"Lever room\"",
         [DaggerfallUiActionKind.MapNoteEdit] = "\"note\":\"note-1\",\"text\":\"Pulled\"",
         [DaggerfallUiActionKind.MapNoteRemove] = "\"note\":\"note-1\"",
-        [DaggerfallUiActionKind.TravelSearch] = "\"text\":\"Daggerfall\"",
-        [DaggerfallUiActionKind.TravelPreview] = "\"region\":17,\"destination\":3,\"cautious\":true,\"inn\":false,\"ship\":false",
-        [DaggerfallUiActionKind.TravelAccept] = "\"key\":\"journey:1\",\"amount\":0",
-        [DaggerfallUiActionKind.TravelMap] = "\"open\":true",
+        [DaggerfallUiActionKind.ExpeditionFind] = "\"text\":\"Daggerfall\"",
+        [DaggerfallUiActionKind.ExpeditionSpeed] = "\"speed\":1",
+        [DaggerfallUiActionKind.ExpeditionMode] = "\"mode\":\"reckless\"",
+        [DaggerfallUiActionKind.ExpeditionGo] = "\"x\":120,\"y\":240,\"region\":17,\"index\":3",
+        [DaggerfallUiActionKind.ExpeditionPin] = "\"x\":120,\"y\":240",
         [DaggerfallUiActionKind.AtlasTiles] = "\"tiles\":[[0,1,1]]",
         [DaggerfallUiActionKind.LodgingQuote] = "\"key\":\"room:1\",\"days\":2",
         [DaggerfallUiActionKind.LodgingBook] = "\"key\":\"room:1\",\"days\":2,\"amount\":0",

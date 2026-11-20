@@ -114,19 +114,8 @@ internal sealed class DaggerfallRestRecoveryModule
     }
 
     /// <summary>
-    /// The donor restores cautious-travel vitals before its shared elapsed-time consequences. Fatigue follows the
-    /// nights' lodging: inns restore all of it, and camping on the road the camp's share.
-    /// </summary>
-    internal static void RecoverForCautiousTravel(StatsComponent player, bool noRegeneration, int fatigueDivisor)
-    {
-        Recover(player, Maximum(player, DaggerfallMechanicsIds.HealthMaximum),
-            Maximum(player, DaggerfallMechanicsIds.FatigueMaximum) / fatigueDivisor,
-            noRegeneration ? 0 : Maximum(player, DaggerfallMechanicsIds.MagickaMaximum));
-    }
-
-    /// <summary>
-    /// One hour of rest recovery outside a rest: the donor's exhaustion collapse applies the same hourly
-    /// health, fatigue and spell point rates as a rest hour once it has raised the time by an hour.
+    /// One hour of rest recovery outside a rest: the donor's exhaustion collapse, and an hour in camp on the
+    /// expedition map, apply the same hourly health, fatigue and spell point rates as a rest hour.
     /// </summary>
     internal static void RecoverOneHour(StatsComponent player, int endurance, int medical, bool rapidHealing, bool noRegeneration, int fatigueDivisor)
     {

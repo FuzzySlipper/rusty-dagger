@@ -373,31 +373,23 @@ internal sealed class AssembledWorldRun : IDisposable
         return UseFromHere(entity);
     }
 
-    /// <summary>Pays for and makes the journey through the travel window, arriving.</summary>
+    /// <summary>Makes the journey: the party is put on the map at the destination and enters it, arriving.</summary>
     internal void Travel(DaggerfallSiteRecord destination)
     {
         AcceptJourney(destination);
         FinishLoading();
-        Assert.Equal(DaggerfallTravelOutcome.Arrived, Session.State.Travel.LastResult!.Outcome);
-        // The purse's leftover coins weigh far more than the traveller can carry; taken back, they walk on arrival.
-        ulong left = Session.State.Inventory.Read().Stacks.Single(value => value.Id == JourneyGold).Quantity;
-        Session.State.Inventory.Consume(new(JourneyGold, left));
-        Session.State.ItemInstances.RemoveStack(DaggerfallItemOwner.Player, JourneyGold);
+        Assert.False(Session.Expedition.Open);
     }
 
-    private static readonly InventoryStackId JourneyGold = InventoryStackId.Parse("journey.gold");
-
-    /// <summary>Discovers the destination, carries the fare, and accepts the journey's quote in the travel window.</summary>
+    /// <summary>
+    /// Discovers the destination and enters it from the expedition map, the party already standing on its pixel: the walk
+    /// there is the expedition's own tests', and here only the arrival matters.
+    /// </summary>
     internal void AcceptJourney(DaggerfallSiteRecord destination)
     {
         Session.Site.Discover(destination.Id);
-        DaggerfallItemDefinition gold = _world.Definitions.RequireItem(new DaggerfallItemId("gold-piece"));
-        Session.State.Inventory.Grant(new(new InventoryItemId(gold.Id.Value), JourneyGold, 100_000));
-        Session.State.ItemInstances.RegisterStack(DaggerfallItemOwner.Player, JourneyGold, DaggerfallItemInstanceMetadata.Default(gold, DaggerfallItemOwner.Player));
-        Submit(new { action = "travel-preview", region = destination.Region, destination = destination.Index, cautious = false, inn = true, ship = false });
-        DaggerfallTravelQuote quote = Session.FastTravel.Read().Quote ?? throw new InvalidOperationException(Session.FastTravel.Read().Message);
-        Assert.Null(Session.FastTravel.Read().Message);
-        Submit(new { action = "travel-accept", key = quote.Identity, amount = quote.TotalCost });
+        Session.Expedition.Begin(new(destination.MapPixelX, destination.MapPixelY), aboardOwnShip: false);
+        Submit(new { action = "expedition-enter" });
     }
 
     /// <summary>Every observer sees every target it asks about, as creatures beside the player in open ground do.</summary>

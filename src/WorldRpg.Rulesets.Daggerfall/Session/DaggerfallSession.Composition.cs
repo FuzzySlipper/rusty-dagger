@@ -346,7 +346,7 @@ internal sealed partial class DaggerfallSession
                 questTraining, tuning.Locomotion, _random, () => _time.Calendar,
                 // Training spends its own source fatigue cost, so its minutes charge no idle loss.
                 seconds => AdvanceQuestTime(seconds, idleFatigue: false)));
-            quests.BindTravelMinutes(site => FastTravel.QuestLegMinutes(site));
+            quests.BindTravelMinutes(site => MapPosition.QuestLegMinutes(site));
             character.BindCareerCommitted(skillUses.RebaseForCareerSelection);
             DaggerfallLevelUpState levelUps = new(progression, skillUses, playerStats,
                 definitions, () => character.Career, _random, _rewards);
@@ -570,7 +570,6 @@ internal sealed partial class DaggerfallSession
                 loans: loans,
                 property: property,
                 lodging: new DaggerfallLodgingState(saved?.Lodging),
-                travel: new DaggerfallTravelState(saved?.Travel),
                 services: services,
                 templeServices: templeServices,
                 skillTraining: skillTraining,
@@ -593,31 +592,11 @@ internal sealed partial class DaggerfallSession
                 || _sites.Appearances.Any(appearance => appearance.HasPendingEnemyHitTarget(DaggerfallActorIdentity.PlayerEntityId)), InputRefusals);
             _creation = new DaggerfallCharacterCreation(State.Character, definitions, _random);
             _atlasTiles = composition.Data is { } atlasData && DaggerfallAtlas.Read(atlasData) is { } atlas ? new(atlas, atlasData, engine.Ui) : null;
-            FastTravel = new DaggerfallFastTravel(travelPolicy, State.Travel, State.Transport, _site, _random,
-                definitions.BuildingNames.RegionNames, definitions.WorldNames,
-                new DaggerfallExteriorWorldBounds(definitions.Terrain.Width, definitions.Terrain.Height), _atlasTiles,
-                calendar: () => _time.Calendar,
-                passTime: slice => AdvanceElapsedTime(slice, deferSkillAdvancement: true, idleFatigue: false, completeTimeIncrease: false),
+            MapPosition = new DaggerfallMapPosition(travelPolicy, State.Transport, _site, _random,
+                new DaggerfallExteriorWorldBounds(definitions.Terrain.Width, definitions.Terrain.Height),
                 activeProfile: () => _activeProfileKey,
-                exteriorCell: () => _exterior.CurrentExteriorCell(),
-                playerDefeated: () => State.Actors.Player.IsDefeated,
-                isVampire: () => State.RacialOverrides.Current?.IsVampire == true,
-                encounterPending: _encounters.HasPending,
-                enemyNearby: () => _senses.EnemyNearby(),
-                profiles: () => _sites.Profiles,
-                options: selected =>
-                {
-                    DaggerfallCurrencyTotals funds = State.Currency.Read();
-                    return new(selected.Cautious, selected.Inn, selected.Ship,
-                        State.Transport.HasHorse(State.Inventory.Read()),
-                        State.Transport.HasCart(State.Inventory.Read()),
-                        State.Property?.OwnsShip ?? false,
-                        AvailableGold: checked(funds.Gold + funds.LettersOfCredit),
-                        AvailableGoldPieces: funds.Gold,
-                        FreeShipPassage: GuildProviders.FreeShipPassage());
-                },
-                classicArt: () => _classicArt,
-                yaw: () => State.PlayerControl.YawRadians);
+                exteriorCell: () => _exterior.CurrentExteriorCell());
+            Expedition = new DaggerfallExpedition(travelPolicy, _site, tuning.Expedition, this, saved?.Expedition);
             Banking = new DaggerfallBanking(State.Bank, State.Currency, State.Loans, State.Services, State.Social, definitions.Factions,
                 State.Progression, definitions.BuildingNames.RegionName,
                 inventorySuppressed: () => State.RacialOverrides.Current?.SuppressInventory == true,
@@ -754,7 +733,7 @@ internal sealed partial class DaggerfallSession
             State.Quests.BindEnemyRelations(clear => QuestFoes.CommandAllEnemies(clear), id => actors.TryGet(id, out var actor) && !actor.IsDefeated);
             State.Quests.BindGuardSpawning((operation, immediate, elapsed, state) => _questGuards.Spawn(operation, immediate, elapsed, state));
             State.Quests.BindRewards((instance, symbol) => _questItemPlacement.OfferReward(instance, symbol), pile => _lootActions.PresentQuestReward(pile), tuning.QuestRewards);
-            _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, FastTravel.RevealFromMap, _itemCondition, _notebook,
+            _inventoryUi.UseItemActions(new DaggerfallInventoryUseService(State.Inventory, definitions, State.ItemInstances, _uniqueItems, MapPosition.RevealFromMap, _itemCondition, _notebook,
                 useDrug: template => _poisoning.UseDrug(template) == DaggerfallPoisonAdmission.Admitted,
                 useOghma: () =>
                 {
@@ -774,7 +753,7 @@ internal sealed partial class DaggerfallSession
                 characterCreationOpen: () => State.Character.Pending is not null,
                 levelUpOpen: () => State.LevelUps.Pending is not null,
                 bankOpen: () => Banking.ActiveRegion is not null, dispelOpen: () => DispelChoice.Pending is not null, identifyOpen: () => IdentifyChoice.Open, teleportOpen: () => TeleportChoice.Pending is not null, createItemOpen: () => CreateItemChoice.Pending is not null, legalOpen: () => Law.ModalOpen,
-                tutorialOpen: () => _tutorial.Shown);
+                tutorialOpen: () => _tutorial.Shown, expeditionOpen: () => Expedition.Open);
             itemInstances.StackChanged += State.Quests.ObserveStackChange;
             itemInstances.Transferred += questItemExits.Moved;
             // Only a held bundle lives as long as its item is worn and whole. A used or striking item's
@@ -845,7 +824,7 @@ internal sealed partial class DaggerfallSession
                 strikeTuning: tuning.StrikeEnchantments);
             _itemEnchanting.Enchanted += _itemCastTriggers.Enchanted;
             effects.Completed += _itemCastTriggers.EffectCompleted;
-            _persistence = new(State, _corpseLoot, _groundContainers, _equipmentMoves, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, DungeonText, propertyStorage.Capture, FastTravel.Position, authored, () => Casting.NextSequence);
+            _persistence = new(State, _corpseLoot, _groundContainers, _equipmentMoves, _notebook, _uniqueItems, _camera, _time, _site, State.Effects, () => _doors, _locomotion, _climbing, State.Swimming, DungeonText, propertyStorage.Capture, () => Expedition.Capture(), authored, () => Casting.NextSequence);
             _persistence.EquipCountdown = () => _combat.EquipCountdown;
             if (saved is not null) _combat.EquipCountdown = saved.EquipCountdown;
             _roster = new DaggerfallActorRoster(actors, State.ActorInventories, State.Character, State.Containers, State.Effects, State.InventoryStore,
@@ -931,7 +910,7 @@ internal sealed partial class DaggerfallSession
                 (definition, pose) => _roster.Spawn(definition, pose),
                 (item, position) => _groundContainers.CreateQuestItem(item, position, _uniqueItems), _questItemPlacement.PlaceBound,
                 NpcProjection.Project, BringOutRetainedQuestActor);
-            QuestFoes = new DaggerfallQuestFoes(State.Quests, State.Actors, State.PlayerControl, State.Travel, _roster.Definitions, _placement, _vitality,
+            QuestFoes = new DaggerfallQuestFoes(State.Quests, State.Actors, State.PlayerControl, () => Expedition.Open, _roster.Definitions, _placement, _vitality,
                 tuning.QuestSpawning, () => _sites.ReadQuestLocation(), (definition, pose) => _roster.Spawn(definition, pose),
                 _roster.RemoveQuestActor, (id, allies) => _enemyBehavior.MakeHostile(id, includePlayerAllies: allies),
                 result => AppendDamage(result, DaggerfallDamageCause.Quest, 0), id => RetireDetachedActor(id), KillRetainedQuestFoe);
@@ -1082,8 +1061,10 @@ internal sealed partial class DaggerfallSession
             EconomyPanels = new DaggerfallEconomyPanels(Banking, State.Bank, MerchantTrade, RoomRental, State.Tavern, State.SkillTraining, Holdings,
                 State.Inventory, State.Wagon, _inventoryUi, definitions, () => _dialogue, CurrentInteriorBuilding, TransportAccess, RequestPanel,
                 destination => TryTransitionTo(destination), Presentation);
-            DaggerfallTravelPanel travelPanel = new(FastTravel, State.Transport, State.Wagon, State.Inventory, _inventoryUi, _hud.RequestTravelPlaces,
-                TransportAccess, AcceptTravel, BoardPropertyShip, LeavePropertyShip, ApplyTransportChange, Presentation);
+            DaggerfallExpeditionPanel travelPanel = new(Expedition, travelPolicy, this, State.Actors, definitions.BuildingNames.RegionNames,
+                definitions.WorldNames, _atlasTiles, () => _classicArt, State.Transport, State.Wagon, State.Inventory, _inventoryUi,
+                _hud.RequestTravelPlaces, TransportAccess, OpenExpedition, EnterExpedition, BoardPropertyShip, LeavePropertyShip,
+                ApplyTransportChange, Presentation);
             DaggerfallServiceCounter counter = new(() => _dialogue, CurrentInteriorBuilding, _site, () => _sites.ActiveProfile, _activationPresentation);
             DaggerfallMakerPanels makers = new(_itemMaker, _potionMaker, definitions, counter, Presentation);
             SummoningPanel = new DaggerfallSummoningPanel(Summoning, State.Quests, Cinematics, composition.VideosEnabled, counter,
@@ -1105,7 +1086,7 @@ internal sealed partial class DaggerfallSession
             HudFrames = new DaggerfallHudFrames(_hud, State.Actors, Presentation, State.PlayerControl, Slots, _inventoryUi, EconomyPanels, _lootUi,
                 _characterUi, definitions, CurrentTextContext, _controls, ActivationPanel, State.Swimming, State.Effects, State.Quests, _questTexts, _time,
                 _notebook, State.Transport, State.Inventory, TransportAccess, State.Property, State.Wagon, DungeonText, _deathScreen, RestPanel,
-                RoomRental, FastTravel, _site, EffectItemName, Cinematics, LocalMap, Law, CreateItemChoice, TeleportChoice, DispelChoice,
+                RoomRental, travelPanel, _site, EffectItemName, Cinematics, LocalMap, Law, CreateItemChoice, TeleportChoice, DispelChoice,
                 IdentifyChoice, Spellbook, Detectors, _playerTime, _loading, _tutorial, Radial, Activation, _input, () => DrawnArt,
                 () => State.WeaponDrawn, () => _interactions.HoldsWorldOpen,
                 Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone), InputReadout);
@@ -1127,7 +1108,7 @@ internal sealed partial class DaggerfallSession
                     .Select(screen => screen.ToString()),
                 Summoning, State.Quests, Law, DispelChoice, IdentifyChoice, CreateItemChoice, _openingCinematics, Cinematics);   // Developer
             DaggerfallDeveloperPlacement placement = new(hold, engine, _spatial, _sites, _site, State.PlayerControl, State.Actors, State.Npcs,
-                definitions, FastTravel, Activation, Entrance, _horizon, _time, () => _mode, Presentation, _nearbySpawn.Bring,
+                definitions, Expedition, MapPosition, Activation, Entrance, _horizon, _time, () => _mode, Presentation, _nearbySpawn.Bring,
                 local => _exterior.ProfilePosition(local), BuildingLanding);                                                    // Developer
             DaggerfallDeveloperScene scene = new(_time, seconds => { _ = AdvanceElapsedTime(seconds, idleFatigue: false); }, _horizon, _sites,
                 LocalWeather, _weatherPresentation, State.PlayerControl, definitions, UseClassicArt, () => _hanging);   // Developer

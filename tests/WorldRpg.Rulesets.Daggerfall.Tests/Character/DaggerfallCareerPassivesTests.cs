@@ -87,20 +87,18 @@ public sealed class DaggerfallCareerPassivesTests
     public void A_passive_round_falls_on_every_fourth_magic_round_within_the_catch_up(long roundBefore, long minutes, long count)
     {
         var f = new Fixture([new("regenerate-health", "general")]);
-        DaggerfallPassiveRounds rounds = f.Passives.Rounds(roundBefore, minutes, 2 * 24 * 60, vampire: false, travelling: false,
+        DaggerfallPassiveRounds rounds = f.Passives.Rounds(roundBefore, minutes, 2 * 24 * 60, vampire: false,
             () => throw new InvalidOperationException("No holy harm applies."), dark: false, sunlight: true, swimming: false);
         Assert.Equal(new DaggerfallPassiveRounds(count, true, 0), rounds);
     }
 
     [Fact]
-    public void Sunlight_and_holy_places_harm_a_vampire_except_the_sun_on_a_journey()
+    public void Sunlight_and_holy_places_harm_a_vampire()
     {
         var f = new Fixture([]);
-        Assert.Equal(DaggerfallPassiveRounds.None, f.Passives.Rounds(0, 8, 2880, vampire: false, travelling: false, () => true, false, true, false));
-        Assert.Equal(new DaggerfallPassiveRounds(2, false, 24), f.Passives.Rounds(0, 8, 2880, vampire: true, travelling: false, () => true, false, true, false));
-        Assert.Equal(new DaggerfallPassiveRounds(2, false, 12), f.Passives.Rounds(0, 8, 2880, vampire: true, travelling: true, () => true, false, true, false));
-        Assert.Equal(DaggerfallPassiveRounds.None, f.Passives.Rounds(0, 8, 2880, vampire: true, travelling: true, () => false, false, true, false));
+        Assert.Equal(DaggerfallPassiveRounds.None, f.Passives.Rounds(0, 8, 2880, vampire: false, () => true, false, true, false));
+        Assert.Equal(new DaggerfallPassiveRounds(2, false, 24), f.Passives.Rounds(0, 8, 2880, vampire: true, () => true, false, true, false));
         // Sun damage that applies out of the sun still counts its rounds, harmlessly.
-        Assert.Equal(new DaggerfallPassiveRounds(2, false, 0), f.Passives.Rounds(0, 8, 2880, vampire: true, travelling: false, () => false, true, false, false));
+        Assert.Equal(new DaggerfallPassiveRounds(2, false, 0), f.Passives.Rounds(0, 8, 2880, vampire: true, () => false, true, false, false));
     }
 }

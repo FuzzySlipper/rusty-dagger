@@ -121,6 +121,8 @@ internal sealed partial class DaggerfallSession
                 _input.Neutralize();                                                              // Character
                 _locomotion.Neutralize();                                                         // Character
                 NeutralizeGuard();                                                                // Combat
+                // The expedition map runs its own time over the held world, on this update's real seconds.
+                if (!elapsedSubmitted && Expedition.Running) AdvanceExpedition(facts.HostElapsedSeconds);   // Session: the map's list
                 DeliverFacts();                                                                   // Session
                 PublishPresentation();                                                            // UiProjection
             }
@@ -361,9 +363,10 @@ internal sealed partial class DaggerfallSession
     {
         DaggerfallCalendar calendar = _time.Calendar;
         DaggerfallPassiveRounds rounds = _passives.Rounds(roundBefore, minutes, DaggerfallEffectLifecycle.MaximumElapsedCatchupRounds,
-            vampire: State.RacialOverrides.Current?.IsVampire == true, travelling: State.Travel.IsExecuting, InHolyPlace,
-            dark: !calendar.IsDay || _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon,
-            sunlight: calendar.IsDay && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior,
+            vampire: State.RacialOverrides.Current?.IsVampire == true, InHolyPlace,
+            dark: !calendar.IsDay || (!Expedition.Open && _activeProfileKey.Kind == DaggerfallWorldProfileKind.Dungeon),
+            // On the expedition map the party is under the sky wherever the body was left, unless it lodges indoors.
+            sunlight: calendar.IsDay && (Expedition.Open ? Expedition.UnderSky : _activeProfileKey.Kind == DaggerfallWorldProfileKind.Exterior),
             swimming: State.Swimming.IsSwimming);                                                 // Character
         var player = State.Actors.Player;
         for (long round = 0; round < rounds.Count && !player.IsDefeated; round++)
@@ -630,13 +633,20 @@ internal sealed partial class DaggerfallSession
     {
         if (_mode != ProductMode.Playing || State.Actors.Player.IsDefeated
             || !_condition.Exhausted(State.Actors.Player.Stats)) return;                         // Condition
+        Collapse(State.Swimming.IsSwimming, _senses.EnemyNearby());                               // Session: the collapse, below
+    }
+
+    /// <summary>
+    /// The collapse's list, wherever the player drops (in the world or on the expedition map): in water or with enemies
+    /// near it is fatal; otherwise an hour passes where they fell and they wake with the collapse's recovery.
+    /// </summary>
+    private void Collapse(bool inWater, bool enemiesNearby)
+    {
         // The donor cancels movement as the player drops.
         _input.Neutralize();                                                                      // Character
         _locomotion.Neutralize();                                                                 // Character
         NeutralizeGuard();                                                                        // Combat
         State.Transport.Ride.Reset();                                                             // Travel
-        bool inWater = State.Swimming.IsSwimming;
-        bool enemiesNearby = _senses.EnemyNearby();                                                // Actors
         if (inWater || enemiesNearby)
         {
             var (death, line) =
@@ -916,7 +926,7 @@ internal sealed partial class DaggerfallSession
     {
         var profile = destination == _activeProfileKey ? _sites.Projection.Inputs : _sites.RequireProfiles().Require(destination);
         if (profile.ProfileKind == DaggerfallWorldProfileKind.Exterior && profile.Site is not null)
-            _sites.TryRelocatePlayer(destination, FastTravel.Landing(profile, null, $"court:{destination.LogicalId}:{_time.Calendar.MinuteNumber}"));   // Travel, Interiors
+            _sites.TryRelocatePlayer(destination, MapPosition.Landing(profile, null, $"court:{destination.LogicalId}:{_time.Calendar.MinuteNumber}"));   // Travel, Interiors
         else if (profile.Project.PlayerPosition is WorldPoint entrance)
             _sites.TryRelocatePlayer(destination, new("court-release", entrance, 0, 0));         // Interiors
     }
@@ -940,126 +950,132 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
-    /// The guild teleport's offer: the travel map opens for a free teleport while the Mages Guild still grants it to the
-    /// player through this provider, and the travel panel comes up.
+    /// The guild teleport's offer: the expedition map opens on the player to choose a place, free, while the Mages Guild
+    /// still grants it to the player through this provider.
     /// </summary>
     private DaggerfallGuildProviderResult OpenGuildTeleport(DaggerfallServiceProvider provider)
     {
-        string offer = FastTravel.OfferGuildTeleport(provider.NpcId, () => State.ConcreteGuildServices.Evaluate(
+        string offer = Expedition.OfferGuildTeleport(provider.NpcId, () => State.ConcreteGuildServices.Evaluate(
             DaggerfallConcreteGuildCatalog.MagesFactionId, DaggerfallConcreteGuildService.Teleport,
-            checked((int)_time.Calendar.DayNumber), new(provider)).CanUse);                       // Travel, asking Society
-        RequestPanel(DaggerfallPanel.Travel);                                                     // UiProjection
+            checked((int)_time.Calendar.DayNumber), new(provider)).CanUse, MapPosition.Position());   // Travel, asking Society
+        _hud.RequestTravelPlaces();                                                               // UiProjection
         return new(true, DaggerfallGuildProviderDenial.None, offer);                              // Society
     }
 
-    /// <summary>Accepts the live quote once; all elapsed consequences use the session's single calendar.</summary>
-    internal DaggerfallTravelResult? ExecuteTravel(string expectedQuote, ulong expectedCost) =>
-        Depart(expectedQuote, expectedCost) is { } journey ? Arrive(journey) : null;
-
     /// <summary>
-    /// The departure's list: the live quote is accepted and paid for, and the journey's days pass on the road. Null when
-    /// the journey was refused, or when a guild teleport (which has no road) already arrived; otherwise the journey that
-    /// <see cref="Arrive"/> ends.
+    /// The expedition map's opening, wherever the player is, as the classic travel map opens: outdoors the party stands
+    /// on the map where the player does (aboard their ship on its deck); indoors, near enemies or with an encounter on its
+    /// way, the map only shows where the player is and says why they cannot set out. A map a save left open is already up.
     /// </summary>
-    private DaggerfallJourney? Depart(string expectedQuote, ulong expectedCost)
+    internal void OpenExpedition()
     {
-        if (FastTravel.Accept(expectedQuote, expectedCost) is not { } accepted)                  // Travel
-        {
-            Presentation.SetOutcome(FastTravel.Message!);                                         // UiProjection
-            return null;
-        }
-        (DaggerfallTravelQuote quote, DaggerfallSiteProfile destination) = accepted;
-        if (FastTravel.GuildTeleport)
-        {
-            bool arrived = _sites.TryRelocatePlayer(destination.ProfileKey,
-                FastTravel.Landing(destination, null, quote.Identity));                          // Travel, Interiors
-            if (arrived)
-            {
-                FastTravel.Depart();                                                              // Travel
-                _dialogue?.Close();                                                               // Dialogue
-                _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                // Character, Combat
-                RequestPanel(DaggerfallPanel.Resume);                                             // UiProjection
-            }
-            Presentation.SetOutcome(FastTravel.Teleported(arrived, quote));                       // Travel, UiProjection
-            return null;
-        }
-        if (quote.TotalCost > 0 && !State.Currency.TrySpendCarried((ulong)quote.TotalCost, (ulong)quote.InnCost))   // Economy
-        {
-            Presentation.SetOutcome(FastTravel.Unpaid()); return null;                            // Travel, UiProjection
-        }
-        FastTravel.Depart();                                                                      // Travel
+        if (State.Actors.Player.IsDefeated) { Presentation.SetOutcome("You cannot travel while defeated."); return; }   // UiProjection
+        string? held = _activeProfileKey.Kind != DaggerfallWorldProfileKind.Exterior ? "Leave the building or dungeon before travelling."
+            : _encounters.HasPending(_activeProfileKey.LogicalId) ? "Something approaches. Move or turn to let the encounter arrive before travelling."
+            : _senses.EnemyNearby() ? "Nearby enemies prevent travel." : null;                  // Actors
+        Expedition.Begin(MapPosition.Position(), State.Transport.OnShip, held);                   // Travel
         _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                        // Character, Combat
-        DaggerfallWorldProfileKey origin = _activeProfileKey;
-        long started = _time.Calendar.ToAbsoluteSeconds();
-        FastTravel.Begin(State.Transport.ShipReturnProfile?.Site ?? origin.Site, quote, started);  // Travel
-        DaggerfallTravelOutcome outcome = DaggerfallTravelOutcome.Stopped;
-        DaggerfallTravelMapPixel departure = default;
-        try
-        {
-            if (quote.Options.SpeedCautious)
-            {
-                (_, bool noRegen) = _rest.CharacterTraits(_passives.PlayerSpecials, _activeProfileKey.Kind);   // Time
-                DaggerfallRestRecoveryModule.RecoverForCautiousTravel(State.Actors.Player.Stats, noRegen,
-                    quote.Options.SleepModeInn ? 1 : _tuning.Rest.InnFatigueMultiplier);         // Condition
-            }
-            departure = FastTravel.Position();                                                    // Travel
-            outcome = FastTravel.Road(quote.TravelSeconds, origin);                               // Travel, through Time
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException)
-        {
-            outcome = DaggerfallTravelOutcome.Unavailable;
-            FastTravel.Fail();                                                                    // Travel
-        }
-        return new(quote, destination, started, departure, outcome);
+        _hud.RequestTravelPlaces();                                                               // UiProjection
     }
 
     /// <summary>
-    /// The arrival's list: on arrival the player is placed at the destination, disembarks and waits for the arrival hour;
-    /// either way the journey's result is recorded and published, skills and level advance for the time it took, the time
-    /// increase ends once, and the player is back in control where it ended rather than under a menu.
+    /// The expedition map's time for one admitted update: the map passes its stretches through the one calendar, and,
+    /// as a rest does once it ends, the skills it used rise and the time increase ends once for the update.
     /// </summary>
-    private DaggerfallTravelResult Arrive(DaggerfallJourney journey)
+    private void AdvanceExpedition(double realSeconds)
     {
-        DaggerfallTravelOutcome outcome = journey.Outcome;
-        try
+        if (Expedition.Advance(realSeconds) <= 0) return;                                         // Travel, through Time
+        State.SkillUses.RaiseSkills(_time.Calendar.ToAbsoluteSeconds()); State.LevelUps.BeginIfEligible();   // Character
+        CompleteTimeIncrease();                                                                   // Session: the increase's end
+    }
+
+    /// <summary>
+    /// Entering from the expedition map: at a location's pixel the player arrives at its exterior from the side the party
+    /// came; anywhere else they stand over the party's pixel in the nearest location's exterior, its wilderness streamed in
+    /// around them. Off the map, a ship is left as a journey's arrival leaves it, and play resumes. A guild teleport takes
+    /// the player to its place instead. Staged, the place is read first and entered on the next update.
+    /// </summary>
+    internal void EnterExpedition()
+    {
+        if (Expedition.Teleporting) { TeleportFromExpedition(); return; }                       // Session: the teleport, below
+        if (Expedition.Entry() is not { } entry)
         {
-            if (outcome == DaggerfallTravelOutcome.Arrived && !_sites.TryRelocatePlayer(journey.Destination.ProfileKey,
-                    FastTravel.Landing(journey.Destination, journey.Departure, $"travel:{journey.Quote.Identity}:{journey.Started}")))   // Travel, Interiors
-                outcome = DaggerfallTravelOutcome.Unavailable;
-            if (outcome == DaggerfallTravelOutcome.Arrived)
+            Presentation.SetOutcome(Expedition.Message ?? "You cannot enter here.");              // Travel, UiProjection
+            return;
+        }
+        DaggerfallSiteRecord host = Expedition.HostAt(entry.Pixel);                               // Travel
+        string place = entry.Location?.Name ?? "the wilds";
+        DaggerfallSiteProfile? exterior = null;
+        void Read()
+        {
+            if (_sites.Profiles is not { } admitted || !admitted.TryGet(DaggerfallWorldProfileIds.Exterior(host.Id), out DaggerfallSiteProfile found))
+                throw new InvalidOperationException($"You cannot enter {place} from here.");
+            exterior = found;
+        }
+        void Enter()
+        {
+            DaggerfallSiteAnchor anchor = entry.Location is not null
+                ? MapPosition.Landing(exterior!, entry.CameFrom, $"expedition:{entry.Pixel.X},{entry.Pixel.Y}:{_time.Calendar.MinuteNumber}")   // Travel
+                : new("expedition", _exterior.ProfilePointAtCell(exterior!, new(entry.Pixel.X, entry.Pixel.Y)),
+                    WildYaw(entry), 0F);                                                          // Exterior
+            if (!_sites.TryRelocatePlayer(exterior!.ProfileKey, anchor))                          // Interiors
             {
-                if (State.Transport.OnShip)
-                {
-                    // Source fast travel disembarks at the destination; stored ship contents
-                    // remain on the inactive ship, while its detached land return is retired.
-                    _ = State.Transport.LeaveShip();                                              // Travel
-                    _sites.ClearReturnDestination();                                              // Interiors
-                }
-                long delay = DaggerfallFastTravel.ArrivalDelay(_time.Calendar,
-                    State.RacialOverrides.Current?.IsVampire == true || _passives.PlayerSpecials.SunDamage,
-                    journey.Quote.Options.SpeedCautious);                                         // Travel
-                // Effects and deadlines of the arrival adjustment run at the actual destination
-                // through the shared calendar.
-                if (delay > 0) outcome = FastTravel.Road(delay, _activeProfileKey);               // Travel, through Time
+                Presentation.SetOutcome($"You cannot enter {place} from here.");                  // UiProjection
+                return;
             }
+            if (State.Transport.OnShip)
+            {
+                // Coming ashore leaves the ship's deck: its stored contents stay aboard, and its land return is retired.
+                _ = State.Transport.LeaveShip();                                                  // Travel
+                _sites.ClearReturnDestination();                                                  // Interiors
+            }
+            Expedition.Close();                                                                   // Travel
+            _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                    // Character, Combat
+            RequestPanel(DaggerfallPanel.Resume);                                                 // UiProjection
+            Presentation.SetOutcome(entry.Location is null ? "You set out on foot." : $"You arrive at {place}.");   // UiProjection
         }
-        catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException)
+        if (!StagesSlowWork)
         {
-            outcome = DaggerfallTravelOutcome.Unavailable;
-            FastTravel.Fail();                                                                    // Travel
+            try { Read(); }
+            catch (InvalidOperationException failure) { Presentation.SetOutcome(failure.Message); return; }
+            Enter();
+            return;
         }
-        // The completed journey is published once, as the travel result.
-        DaggerfallTravelResult result = FastTravel.Complete(journey, outcome);                    // Travel
-        Presentation.SetOutcome(result.Message);                                                  // UiProjection
-        if (result.EndedSeconds > journey.Started && !State.Actors.Player.IsDefeated)
+        StageWorldChange($"Entering {place}", [new($"Reading {place}", Read), new($"Entering {place}", Enter)],
+            error => $"You could not enter {place}: {error.Message}");
+    }
+
+    /// <summary>The way a player entering the wilds faces: the party's way, from where it came.</summary>
+    private static float WildYaw(DaggerfallExpeditionEntry entry)
+    {
+        int east = entry.Pixel.X - entry.CameFrom.X, south = entry.Pixel.Y - entry.CameFrom.Y;
+        return east == 0 && south == 0 ? 0F : ActorHeading.Yaw(Vector3.Normalize(new(east, 0F, south)));
+    }
+
+    /// <summary>
+    /// The guild's teleport from the expedition map: once the guild still grants it and a known place is chosen, the
+    /// player lands at that place's exterior, the map closes and play resumes.
+    /// </summary>
+    private void TeleportFromExpedition()
+    {
+        if (Expedition.TeleportChoice() is not { } choice)
         {
-            State.SkillUses.RaiseSkills(result.EndedSeconds); State.LevelUps.BeginIfEligible();   // Character
+            Presentation.SetOutcome(Expedition.Message!);                                          // Travel, UiProjection
+            return;
         }
-        // Like rest, a journey is one synthetic time increase: held items reroll once, on arrival.
-        if (result.EndedSeconds > journey.Started) CompleteTimeIncrease();                       // Session: the increase's end
-        // The donor's travel windows are gone once the journey ends, arrived or interrupted.
+        bool arrived = _sites.Profiles is { } admitted && admitted.TryGet(DaggerfallWorldProfileIds.Exterior(choice.Place.Id), out DaggerfallSiteProfile destination)
+            && _sites.TryRelocatePlayer(destination.ProfileKey,
+                MapPosition.Landing(destination, null, $"guild-teleport:{choice.NpcId}:{_activeProfileKey}:{choice.Place.Id}"));   // Travel, Interiors
+        if (!arrived)
+        {
+            Presentation.SetOutcome("The destination could not be reached.");                     // UiProjection
+            return;
+        }
+        Expedition.Close();                                                                       // Travel
+        _dialogue?.Close();                                                                       // Dialogue
+        _input.Neutralize(); _locomotion.Neutralize(); NeutralizeGuard();                        // Character, Combat
         RequestPanel(DaggerfallPanel.Resume);                                                     // UiProjection
-        return result;
+        Presentation.SetOutcome($"The guild teleports you to {choice.Place.Name}.");              // UiProjection
     }
 
     /// <summary>
@@ -1491,7 +1507,7 @@ internal sealed partial class DaggerfallSession
         _mode = mode;                                                                             // Session
         // Travel is offered in play and modal interaction; the entry screen and death leave it. A host
         // pause keeps the map, since resuming returns to the same workflow.
-        if (mode is ProductMode.Title or ProductMode.Dead) FastTravel.CloseMap();                 // Travel
+        if (mode is ProductMode.Title or ProductMode.Dead) Expedition.Close();                    // Travel
         _input.Neutralize();                                                                      // Character
         _locomotion.Neutralize();                                                                 // Character
         NeutralizeGuard();                                                                        // Combat

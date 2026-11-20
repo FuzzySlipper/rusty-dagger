@@ -51,8 +51,10 @@ public sealed class HudSnapshotContractTests
         DaggerfallActivationTarget target = Assert.Single(session.Dialogue.NpcTargets());
         Assert.True(session.Dialogue.ActivateNpc(new(DaggerfallActivationMode.Talk, target)).Applied);
         session.Update(new ProductUpdate(OuterUpdate(1), []));
-        // The travel map is open, so the shared file carries its base, regions, discovered places and world names.
-        session.Update(new ProductUpdate(OuterUpdate(2), [Ui(JsonSerializer.Serialize(new { action = "travel-map", open = true }))]));
+        // The expedition map is open (in the dungeon, to be looked at), so the shared file carries the party, its map's base,
+        // regions, discovered places and world names.
+        session.Update(new ProductUpdate(OuterUpdate(2), [Ui(JsonSerializer.Serialize(new { action = "expedition-open" }))]));
+        Assert.True(session.Expedition.Open);
         // The art block rode the first update's snapshot; a fresh attach publishes it again with the map open.
         session.PublishInitial();
 

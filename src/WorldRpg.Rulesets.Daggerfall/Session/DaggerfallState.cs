@@ -46,7 +46,6 @@ internal sealed class DaggerfallState(
     DaggerfallLoanState loans,
     DaggerfallPropertyState property,
     DaggerfallLodgingState lodging,
-    DaggerfallTravelState travel,
     DaggerfallServiceTransactions services,
     DaggerfallTempleServiceRuntime templeServices,
     DaggerfallSkillTrainingService skillTraining,
@@ -124,7 +123,6 @@ internal sealed class DaggerfallState(
     internal DaggerfallLoanState Loans { get; } = loans;
     internal DaggerfallPropertyState Property { get; } = property;
     internal DaggerfallLodgingState Lodging { get; } = lodging;
-    internal DaggerfallTravelState Travel { get; } = travel;
     /// <summary>Typed Daggerfall service admission, quotes, outcomes, and pending concrete work.</summary>
     internal DaggerfallServiceTransactions Services { get; } = services;
     /// <summary>Permanent skill training through the current service and progression owners.</summary>

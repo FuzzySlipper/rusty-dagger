@@ -3492,41 +3492,19 @@ test('tavern lodging renders paid hours and quotes before booking changed durati
   } finally { f.dispose(); }
 });
 
-test('travel accepts only the current quote and shows actual paid arrival or interruption', async () => {
-  const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
-  const f = fixture();
-  try {
-    const root = document.createElement('div'); f.root.append(root);
-    const actions = []; const asked = []; const view = mountTravel(root, action => actions.push(action), question => { asked.push(question.message); question.onAccept(); });
-    const quote = { identity: 'live-quote', destination: 'Charing', minutes: 120, duration: '2 hours', distance: 2, oceanPixels: 0,
-      innCost: 5, shipCost: 0, totalCost: 5, canAfford: true,
-      options: { cautious: true, inn: true, ship: false, hasHorse: false, hasCart: false, hasShip: false, availableGold: '50', availableGoldPieces: '50' } };
-    const value = { destinations: [{ region: 17, index: 3, name: 'Charing', kind: 'Town', regionName: 'Daggerfall' }], quote,
-      executionAvailable: true, message: null, lastResult: null };
-    view.update(value);
-    assert.equal(root.querySelector('option').textContent, 'Charing · Town · Daggerfall');
-    assert.match(root.querySelector('[role="status"]').textContent, /^Charing: about 2 hours before any arrival-time adjustment, 5 gold/);
-    root.querySelector('.dagger-travel-accept').click();
-    assert.deepEqual(asked, ['Travel to Charing? About 2 hours, for 5 gold.']);
-    assert.deepEqual(actions.at(-1), { action: 'travel-accept', key: 'live-quote', amount: 5 });
-    root.querySelector('.dagger-travel-accept').click();
-    assert.equal(actions.length, 1);
-    const message = 'Arrived at Charing. Paid 5 gold; 2 hours passed.';
-    view.update({ ...value, quote: null, executionAvailable: false,
-      lastResult: { paidGold: 5, elapsedSeconds: 7200, message }, message: null });
-    assert.equal(root.querySelector('.dagger-travel-last-result').textContent, message);
-    // The ruleset publishes a finished journey once, as its result, so the status line does not repeat it.
-    assert.doesNotMatch(root.querySelector('[role="status"]').textContent, /Arrived/);
-    assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
-    const interrupted = 'Your journey was interrupted by an encounter. Paid 5 gold; 1 minute passed.';
-    view.update({ ...value, quote: null, executionAvailable: false, message: null, lastResult: { message: interrupted } });
-    assert.match(root.querySelector('.dagger-travel-last-result').textContent, /1 minute passed/);
-    assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
-    view.dispose();
-  } finally { f.dispose(); }
-});
+/** An expedition projection over a map, with what the ruleset publishes of the party and its bars. */
+function expedition(map, overrides = {}) {
+  return {
+    map, party: { x: 207.5, y: 213.5, heading: 90 }, destination: null, pin: null, mode: 'cautious', speed: 0, speeds: 3,
+    ship: 'none', swimming: false, canBoard: false, shipFare: 100, date: 'Morndas, 1st of Morning Star, 3E 405', time: '08:00',
+    weather: 'rain', land: 'Woodlands', here: 'Daggerfall', lodging: 30, remaining: null, transport: 'foot',
+    health: { current: 40, maximum: 60 }, fatigue: { current: 3000, maximum: 6400 }, magicka: { current: 10, maximum: 20 },
+    canLeave: true, canEnter: true, enterLabel: 'Enter Daggerfall', encounter: false, teleport: false, teleportPlace: null,
+    message: null, found: [], ...overrides,
+  };
+}
 
-test('the travel map draws the atlas tiles in view, asks for the ones it lacks, names places by zoom and previews a chosen place', async () => {
+test('the expedition map draws the atlas tiles in view, asks for the ones it lacks, names places by zoom and sets out for a place or a point', async () => {
   const f = fixture();
   try {
     const levels = [{ level: 0, width: 1000, height: 500, columns: 4, rows: 2 }, { level: 1, width: 2000, height: 1000, columns: 8, rows: 4 },
@@ -3538,21 +3516,20 @@ test('the travel map draws the atlas tiles in view, asks for the ones it lacks, 
       places: [place(1, 'Daggerfall', 1, 207, 213), place(2, 'Charing', 2, 241, 132, 'Town'), place(3, 'Caarcun Manor', 3, 220, 220, 'Wealthy home', 'home')],
       legend: [{ category: 'home', label: 'Homes' }, { category: 'town', label: 'Towns' }],
       names: [{ id: 'iliac-bay', name: 'Iliac Bay', kind: 'bay', shownFrom: 'world', x: 480, y: 300 }] };
-    const travel = { destinations: [], quote: null, executionAvailable: false, message: null, lastResult: null, map };
-    f.publish({ travel });
-    f.root.querySelector('[data-action="transport"]').click();
-    assert.deepEqual(f.actions.filter(action => action.action === 'travel-map'), [{ action: 'travel-map', open: true }], 'Opening travel opens the map.');
-    // The ruleset publishes the map it opened on the next snapshot.
-    f.publish({ travel });
-    const atlas = f.root.querySelector('.dagger-atlas');
-    assert.equal(atlas.hidden, false);
-    // The map opens on the player at a region's zoom, which draws the finest level, and asks for the tiles in view.
+    // Closed, the screen is hidden; the ruleset publishes the map once it opens.
+    f.publish({ expedition: null });
+    const screen = f.root.querySelector('.dagger-expedition');
+    assert.equal(screen.hidden, true);
+    f.publish({ expedition: expedition(map) });
+    assert.equal(screen.hidden, false);
+    const atlas = screen.querySelector('.dagger-atlas');
+    // The map opens on the party, close in, which draws the finest level, and asks for the tiles in view.
     const requests = f.actions.filter(action => action.action === 'atlas-tiles');
     assert.ok(requests.length > 0);
     const asked = requests.flatMap(request => request.tiles);
     assert.ok(requests.every(request => request.tiles.length <= 64));
     assert.ok(asked.every(([level]) => level === 2));
-    assert.ok(asked.some(([, column, row]) => column === Math.floor(207 * 4 / 256) && row === Math.floor(213 * 4 / 256)), 'The tile under the player is asked for.');
+    assert.ok(asked.some(([, column, row]) => column === Math.floor(207 * 4 / 256) && row === Math.floor(213 * 4 / 256)), 'The tile under the party is asked for.');
     const tile = atlas.querySelector('.dagger-atlas-tile');
     assert.equal(tile.getAttribute('src'), null, 'A tile not yet delivered draws nothing.');
     // Tiles stand on whole screen pixels, each meeting its neighbour exactly, so no seam shows between them.
@@ -3567,126 +3544,157 @@ test('the travel map draws the atlas tiles in view, asks for the ones it lacks, 
     // A granted tile is drawn from the URL the ruleset names for it, and is asked for no more.
     const [level, column, row] = asked[0];
     const url = '/ui/images/7';
-    const granted = { ...travel, map: { ...map, atlas: { ...map.atlas, tiles: [{ id: `atlas.${level}.${column}.${row}`, url }] } } };
-    f.publish({ travel: granted });
+    const granted = { ...map, atlas: { ...map.atlas, tiles: [{ id: `atlas.${level}.${column}.${row}`, url }] } };
+    f.publish({ expedition: expedition(granted) });
     assert.equal(atlas.querySelector(`[data-media-id="atlas.${level}.${column}.${row}"]`).getAttribute('src'), url);
     const before = f.actions.filter(action => action.action === 'atlas-tiles').length;
-    f.publish({ travel: granted });
+    f.publish({ expedition: expedition(granted) });
     assert.equal(f.actions.filter(action => action.action === 'atlas-tiles').length, before);
     // The places travel once: a snapshot of the same revision without them keeps them, and one of a new revision
-    // without them asks for the map again, once.
+    // without them asks for them again, once.
     const { places: _places, legend: _legend, ...bare } = map;
-    f.publish({ travel: { ...travel, map: bare } });
+    f.publish({ expedition: expedition(bare) });
     assert.ok(atlas.querySelector('[data-key="17:1"]'));
-    const reopens = () => f.actions.filter(action => action.action === 'travel-map' && action.open === true).length;
-    const opened = reopens();
-    f.publish({ travel: { ...travel, map: { ...bare, placesRevision: '4.b' } } });
-    f.publish({ travel: { ...travel, map: { ...bare, placesRevision: '4.b' } } });
-    assert.equal(reopens(), opened + 1);
-    f.publish({ travel });
-    // At a region's zoom cities are named; towns and every other place wait for closer zooms; the bay is named.
+    const asks = () => f.actions.filter(action => action.action === 'expedition-places').length;
+    const opened = asks();
+    f.publish({ expedition: expedition({ ...bare, placesRevision: '4.b' }) });
+    f.publish({ expedition: expedition({ ...bare, placesRevision: '4.b' }) });
+    assert.equal(asks(), opened + 1);
+    f.publish({ expedition: expedition(map) });
     const marker = key => atlas.querySelector(`[data-key="17:${key}"]`);
     assert.equal(marker(1).dataset.name, 'Daggerfall');
-    assert.equal(marker(3)?.dataset.name, undefined);
-    assert.ok([...atlas.querySelectorAll('.dagger-atlas-name')].some(node => node.textContent === 'Iliac Bay'));
-    assert.equal(atlas.querySelector('.dagger-atlas-player').style.getPropertyValue('--heading'), '90deg');
-    // Zooming in names the towns, then every place.
-    for (let i = 0; i < 4; i++) f.root.querySelector('[aria-label="Zoom in"]').click();
-    await new Promise(resolve => setTimeout(resolve, 40));
-    assert.equal(marker(3).dataset.name, 'Caarcun Manor');
-    // Choosing a place previews its route, with the journey's options.
+    // The party stands between pixels, facing its way.
+    const party = atlas.querySelector('.dagger-atlas-player');
+    assert.equal(party.getAttribute('aria-label'), 'Your party');
+    assert.equal(party.style.getPropertyValue('--heading'), '90deg');
+    // Choosing a place sets out for it; so does a click on the land itself.
     marker(1).click();
-    assert.deepEqual(f.actions.at(-1), { action: 'travel-preview', region: 17, destination: 1, cautious: true, inn: false, ship: false });
-    // The route the quote measured is drawn.
-    const quote = { identity: 'q', destination: 'Daggerfall', route: { fromX: 241, fromY: 132, toX: 207, toY: 213 }, minutes: 60, duration: '1 hour', distance: 1,
-      oceanPixels: 0, innCost: 0, shipCost: 0, totalCost: 0, canAfford: true,
-      options: { cautious: true, inn: false, ship: false, hasHorse: false, hasCart: false, hasShip: false, availableGold: '0', availableGoldPieces: '0' } };
-    f.publish({ travel: { ...travel, quote } });
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-go', x: 207, y: 213, region: 17, index: 1 });
+    atlas.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 0, clientY: 0 }));
+    atlas.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 0, clientY: 0 }));
+    const picked = f.actions.at(-1);
+    assert.equal(picked.action, 'expedition-go');
+    assert.ok(Number.isInteger(picked.x) && Number.isInteger(picked.y) && picked.region === undefined);
+    // A drag pans and picks nothing.
+    const count = f.actions.length;
+    atlas.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 10, clientY: 10 }));
+    atlas.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 60, clientY: 40 }));
+    atlas.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 60, clientY: 40 }));
+    assert.equal(f.actions.filter(action => action.action === 'expedition-go').length, f.actions.slice(0, count).filter(action => action.action === 'expedition-go').length);
+    // The leg is drawn, its destination marked, and the pin too.
+    f.publish({ expedition: expedition(map, { destination: { x: 241, y: 132, name: 'Charing' }, pin: { x: 220, y: 220, name: null } }) });
     assert.equal(atlas.querySelectorAll('.dagger-atlas-route line').length, 1);
-    assert.equal(marker(1).getAttribute('aria-pressed'), 'true');
+    assert.equal(atlas.querySelector('.dagger-atlas-destination').getAttribute('aria-label'), 'Charing');
+    assert.ok(atlas.querySelector('.dagger-atlas-pin'));
     // The classic art set draws the classic world image instead, under the same places.
     const snapshot = JSON.parse(await readFile(new URL('./fixtures/hud-snapshot.json', import.meta.url), 'utf8'));
-    f.publish({ travel: { ...travel, map: snapshot.travel.map } });
+    f.publish({ expedition: expedition(snapshot.expedition.map) });
     assert.equal(atlas.querySelector('.dagger-atlas-tile'), null);
     assert.ok(atlas.querySelector('.dagger-atlas-classic'));
   } finally { f.dispose(); }
 });
 
-test('the travel panel opens its map as it shows and closes it once when it is left', async () => {
+test('the expedition bars set the speed and how the party goes, find and pin places, board a ship and leave or enter', async () => {
   const f = fixture();
   try {
     const snapshot = JSON.parse(await readFile(new URL('./fixtures/hud-snapshot.json', import.meta.url), 'utf8'));
-    const travel = { destinations: [], quote: null, executionAvailable: false, message: null, lastResult: null, map: snapshot.travel.map };
-    const opens = () => f.actions.filter(action => action.action === 'travel-map' && action.open === true).length;
-    const closes = () => f.actions.filter(action => action.action === 'travel-map' && action.open === false).length;
-    f.publish({ travel });
+    const map = snapshot.expedition.map;
+    f.publish({ expedition: expedition(map) });
+    const screen = f.root.querySelector('.dagger-expedition');
+    assert.match(screen.querySelector('.dagger-expedition-clock').textContent, /^08:00 on .* · Rain$/);
+    assert.equal(screen.querySelector('.dagger-expedition-journey').textContent, 'At Daggerfall, on foot.');
+    // Speeds: pause and three, the running one pressed.
+    const speeds = [...screen.querySelectorAll('[data-speed]')];
+    assert.deepEqual(speeds.map(node => node.textContent), ['Pause', 'Slow', 'Fast', 'Fastest']);
+    assert.equal(speeds[0].getAttribute('aria-pressed'), 'true');
+    speeds[3].click();
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-speed', speed: 3 });
+    // Modes, the camp naming its lodging.
+    const modes = [...screen.querySelectorAll('[data-mode]')];
+    assert.deepEqual(modes.map(node => node.textContent), ['Cautiously', 'Recklessly', 'Halt', 'Camp · 30 gold']);
+    modes[3].click();
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-mode', mode: 'camp' });
+    // The vitals are meters over their pools.
+    const fatigue = screen.querySelector('[data-vital="fatigue"]');
+    assert.equal(fatigue.getAttribute('role'), 'meter');
+    assert.equal(fatigue.querySelector('span').style.height, `${3000 / 6400 * 100}%`);
+    // Find asks the ruleset, which pins the best match; a found place centres the map and pins it.
+    const find = screen.querySelector('.dagger-expedition-find');
+    find.querySelector('input').value = 'Char';
+    find.dispatchEvent(new window.Event('submit', { cancelable: true }));
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-find', text: 'Char' });
+    f.publish({ expedition: expedition(map, { found: [{ region: 17, index: 2, name: 'Charing', kind: 'Town', x: 241, y: 132 }],
+      pin: { x: 241, y: 132, name: 'Charing' } }) });
+    screen.querySelector('.dagger-expedition-found button').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-pin', x: 241, y: 132, region: 17, index: 2 });
+    assert.equal(screen.querySelector('.dagger-expedition-pin-label').textContent, 'Charing');
+    const press = label => [...screen.querySelectorAll('button')].find(node => node.textContent === label).click();
+    press('Travel');
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-go', x: 241, y: 132, region: 17, index: 2 });
+    press('Clear');
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-pin' });
+    // A ship boards only near a port and the sea; aboard, it goes ashore.
+    const ship = [...screen.querySelectorAll('button')].find(node => node.textContent.startsWith('Board ship'));
+    assert.equal(ship.disabled, true);
+    f.publish({ expedition: expedition(map, { canBoard: true }) });
+    assert.equal(ship.textContent, 'Board ship · 100 gold');
+    ship.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-ship' });
+    // Where the party still stands with the player the map closes; once moved on, only Enter leaves it.
+    const leave = [...screen.querySelectorAll('button')].find(node => node.textContent === 'Close map');
+    leave.click();
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-leave' });
+    f.publish({ expedition: expedition(map, { canLeave: false, here: null, enterLabel: 'Enter', destination: { x: 241, y: 132, name: 'Charing' },
+      remaining: '9 hours', speed: 1 }) });
+    assert.equal(leave.hidden, true);
+    assert.equal(screen.querySelector('.dagger-expedition-journey').textContent, 'In the woodlands, on foot · heading for Charing, about 9 hours away.');
+    screen.querySelector('.dagger-expedition-enter').click();
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-enter' });
+    // An encounter stops everything but entering.
+    f.publish({ expedition: expedition(map, { canLeave: false, encounter: true, message: 'Something approaches! Enter to meet it.' }) });
+    assert.equal(screen.querySelector('[data-speed="1"]').disabled, true);
+    assert.ok([...screen.querySelectorAll('[data-mode]')].every(node => node.disabled));
+    assert.equal(screen.querySelector('.dagger-expedition-message').textContent, 'Something approaches! Enter to meet it.');
+    assert.equal(screen.querySelector('.dagger-expedition-enter').disabled, false);
+  } finally { f.dispose(); }
+});
+
+test('the travel panel opens the expedition map and closes the menu, and the map pans by pad and keys and leaves on Back', async () => {
+  const f = fixture();
+  try {
+    const snapshot = JSON.parse(await readFile(new URL('./fixtures/hud-snapshot.json', import.meta.url), 'utf8'));
+    f.publish({});
     f.root.querySelector('[data-action="transport"]').click();
-    assert.equal(opens(), 1);
-    f.publish({ travel });
-    assert.equal(f.root.querySelector('.dagger-atlas').hidden, false);
-    // Travel opens on the map, not on its Back button.
-    assert.equal(document.activeElement, f.root.querySelector('.dagger-atlas'));
-    // Accepting the focused map starts panning: repeated directions from the pad or the arrows then move the view across
-    // the land, wherever places are, and focus stays on the map; the triggers zoom, and Back stops panning.
-    const atlas = f.root.querySelector('.dagger-atlas');
-    const player = () => atlas.querySelector('.dagger-atlas-player');
-    const at = () => `${player()?.style.left},${player()?.style.top}`;
+    f.root.querySelector('.dagger-travel-open button').click();
+    assert.ok(f.actions.some(action => action.action === 'expedition-open'));
+    assert.equal(f.root.querySelector('dialog.dagger-menu').open, false, 'The menu closes as the map opens.');
+    f.publish({ mode: 'modal', expedition: expedition(snapshot.expedition.map) });
+    const atlas = f.root.querySelector('.dagger-expedition .dagger-atlas');
+    // Accepting the focused map starts panning: the pad's directions then move the view, and focus stays on the map;
+    // the triggers zoom, and Back stops panning.
+    atlas.focus();
+    const ground = () => atlas.querySelector('.dagger-atlas-ground').style.transform;
     await new Promise(resolve => setTimeout(resolve, 40));
-    const start = at();
+    const start = ground();
     f.pad('button-0');
     assert.equal(atlas.getAttribute('aria-pressed'), 'true');
     for (const button of ['button-15', 'button-15', 'button-13']) f.pad(button);
     await new Promise(resolve => setTimeout(resolve, 40));
     assert.equal(document.activeElement, atlas);
-    const padded = at();
-    assert.notEqual(padded, start, 'The pad pans the map.');
-    for (const code of ['ArrowLeft', 'ArrowLeft', 'ArrowUp'])
+    assert.notEqual(ground(), start, 'The pad pans the map.');
+    const panned = ground();
+    for (const code of ['ArrowLeft', 'ArrowUp'])
       document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { code, key: code, bubbles: true, cancelable: true }));
     await new Promise(resolve => setTimeout(resolve, 40));
-    assert.equal(document.activeElement, atlas);
-    assert.notEqual(at(), padded, 'The arrows pan the map.');
-    const panned = at();
-    f.pad('button-7');
-    await new Promise(resolve => setTimeout(resolve, 40));
-    assert.notEqual(at(), panned, 'The triggers zoom the map.');
+    assert.notEqual(ground(), panned, 'The arrows pan the map.');
+    // The middle of the panned view is where Go to centre sets out for.
+    [...f.root.querySelectorAll('.dagger-expedition button')].find(node => node.textContent === 'Go to centre').click();
+    assert.equal(f.actions.at(-1).action, 'expedition-go');
     f.pad('button-1');
     assert.equal(atlas.getAttribute('aria-pressed'), 'false');
-    assert.equal(f.root.querySelector('.dagger-atlas').hidden, false, 'Back stops panning without leaving the map.');
-    // Leaving the panel for the menu home closes the map once, even before the ruleset answers.
-    f.root.querySelector('[data-action="back"]').click();
-    assert.equal(closes(), 1);
-    f.root.querySelector('[data-action="back"]').click();
-    assert.equal(closes(), 1);
-    // Switching straight to another panel closes it too.
-    f.root.querySelector('[data-action="transport"]').click();
-    assert.equal(opens(), 2);
-    f.root.querySelector('[data-action="map"]').click();
-    assert.equal(closes(), 2);
-  } finally { f.dispose(); }
-});
-
-test('changing travel options disables acceptance until a fresh quote arrives, including a free journey', async () => {
-  const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
-  const f = fixture();
-  try {
-    const root = document.createElement('div'); f.root.append(root);
-    const actions = []; const asked = []; const view = mountTravel(root, action => actions.push(action), question => { asked.push(question.message); question.onAccept(); });
-    const quote = { identity: 'old', destination: 'Known', minutes: 60, duration: '1 hour', distance: 1, oceanPixels: 0, innCost: 0, shipCost: 0, totalCost: 0, canAfford: true,
-      options: { cautious: true, inn: false, ship: false } };
-    const value = { destinations: [{ region: 0, index: 1, name: 'Known', kind: 'Town', regionName: 'Alik\'r Desert' }], quote, executionAvailable: true, message: null, lastResult: null };
-    view.update(value);
-    const cautious = root.querySelector('input[type="checkbox"]'); cautious.checked = false;
-    cautious.dispatchEvent(new window.Event('change'));
-    assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
-    view.update(value); // An unrelated publication of the old quote cannot re-admit changed controls.
-    assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
-    cautious.checked = true; cautious.dispatchEvent(new window.Event('change'));
-    assert.equal(root.querySelector('.dagger-travel-accept').disabled, false); // Returning to the quoted choices is valid.
-    cautious.checked = false; cautious.dispatchEvent(new window.Event('change'));
-    view.update({ ...value, quote: { ...quote, identity: 'fresh', options: { ...quote.options, cautious: false } } });
-    root.querySelector('.dagger-travel-accept').click();
-    assert.deepEqual(actions.at(-1), { action: 'travel-accept', key: 'fresh', amount: 0 });
-    view.dispose();
+    // Back on the map itself leaves it, as Close does, while the party can leave.
+    f.pad('button-1');
+    assert.deepEqual(f.actions.at(-1), { action: 'expedition-leave' });
   } finally { f.dispose(); }
 });
 
@@ -4852,28 +4860,6 @@ test('guild topics keep their semantic action and confirmation key', () => {
   } finally { f.dispose(); }
 });
 
-test('guild teleport hides travel options and confirms a zero-cost destination once', async () => {
-  const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
-  const f = fixture();
-  try {
-    const root = document.createElement('div'); f.root.append(root);
-    const actions = []; const asked = []; const view = mountTravel(root, action => actions.push(action), question => { asked.push(question.message); question.onAccept(); });
-    view.update({ guildTeleport: true, destinations: [{ region: 17, index: 3, name: 'Charing', kind: 'Town', regionName: 'Daggerfall' }],
-      map: null, quote: { identity: 'guild-destination', destination: 'Charing', minutes: 0, duration: '0 minutes', distance: 0, oceanPixels: 0,
-        innCost: 0, shipCost: 0, totalCost: 0, canAfford: true,
-        options: { cautious: true, inn: false, ship: false, hasHorse: false, hasCart: false, hasShip: false, availableGold: '0', availableGoldPieces: '0' } },
-      executionAvailable: true, message: null, lastResult: null });
-    assert.equal(root.querySelector('h3').textContent, 'Guild teleportation');
-    assert.equal(root.querySelector('.dagger-travel-accept').textContent, 'Teleport');
-    assert.ok([...root.querySelectorAll('label')].filter(label => label.querySelector('input[type="checkbox"]')).every(label => label.hidden));
-    root.querySelector('.dagger-travel-accept').click();
-    root.querySelector('.dagger-travel-accept').click();
-    assert.deepEqual(actions, [{ action: 'travel-accept', key: 'guild-destination', amount: 0 }]);
-    assert.deepEqual(asked, ['Teleport to Charing at no cost?']);
-    view.dispose();
-  } finally { f.dispose(); }
-});
-
 for (const path of ['Escape', 'toggle', 'panel request']) test(`menu open via ${path} reports the world hold once`, () => {
   const f = fixture();
   try {
@@ -4912,28 +4898,6 @@ test('identical courier letters share one footer and dismiss all source deliveri
       { action: 'quest-dismiss', questInstance: 'quest:1', questDelivery: 'letter:1' },
       { action: 'quest-dismiss', questInstance: 'quest:2', questDelivery: 'letter:2' },
     ]);
-  } finally { f.dispose(); }
-});
-
-test('ship option refreshes the quote and explains routes without sea passage', async () => {
-  const { mountTravel } = await import(pathToFileURL(join(output, 'travel.js')));
-  const f = fixture();
-  try {
-    const root = document.createElement('div'); f.root.append(root);
-    const actions = []; const asked = []; const view = mountTravel(root, action => actions.push(action), question => { asked.push(question.message); question.onAccept(); });
-    const quote = { identity: 'land', destination: 'Charing', duration: '2 hours', oceanPixels: 0,
-      innCost: 0, shipCost: 0, totalCost: 0, canAfford: true, options: { cautious: true, inn: false, ship: false } };
-    const value = { destinations: [{ region: 17, index: 3, name: 'Charing', kind: 'Town', regionName: 'Daggerfall' }],
-      quote, executionAvailable: true, message: null, lastResult: null };
-    view.update(value);
-    const ship = root.querySelectorAll('input[type=checkbox]')[2];
-    ship.click();
-    assert.deepEqual(actions.at(-1), { action: 'travel-preview', region: 17, destination: 3, cautious: true, inn: false, ship: true });
-    assert.equal(root.querySelector('.dagger-travel-accept').disabled, true);
-    view.update({ ...value, quote: { ...quote, identity: 'land-ship', options: { ...quote.options, ship: true } } });
-    assert.match(root.querySelector('[role=status]').textContent, /entirely over land/);
-    assert.equal(root.querySelector('.dagger-travel-accept').disabled, false);
-    view.dispose();
   } finally { f.dispose(); }
 });
 

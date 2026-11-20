@@ -33,19 +33,6 @@ public sealed class DaggerfallRestRecoveryModuleTests
     }
 
     [Fact]
-    public void Cautious_travel_restores_all_fatigue_at_inns_and_the_camps_share_on_the_road()
-    {
-        StatsComponent inns = PlayerStats(health: 10, fatigue: 100, magicka: 10);
-        StatsComponent road = PlayerStats(health: 10, fatigue: 100, magicka: 10);
-
-        DaggerfallRestRecoveryModule.RecoverForCautiousTravel(inns, noRegeneration: false, fatigueDivisor: 1);
-        DaggerfallRestRecoveryModule.RecoverForCautiousTravel(road, noRegeneration: false, fatigueDivisor: 4);
-
-        Assert.Equal(800, inns.GetTrack(Fatigue).Current);
-        Assert.Equal(300, road.GetTrack(Fatigue).Current);
-    }
-
-    [Fact]
     public void The_inn_multiplier_is_tuning_and_cannot_favour_the_ground()
     {
         using JsonDocument payload = JsonDocument.Parse(TestContentFiles.ReadText(Path.Combine(TestData.RepositoryRoot, "content/worldrpg/tuning/daggerfall.defaults/payload.json")));

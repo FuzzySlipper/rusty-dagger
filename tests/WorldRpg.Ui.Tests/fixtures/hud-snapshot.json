@@ -1047,9 +1047,7 @@
   "lodging": null,
   "map": null,
   "mapAbsence": null,
-  "travel": {
-    "guildTeleport": false,
-    "destinations": [],
+  "expedition": {
     "map": {
       "worldWidth": 1000,
       "worldHeight": 500,
@@ -1682,7 +1680,7 @@
       "player": {
         "x": 109,
         "y": 158,
-        "heading": 44.999938186825716
+        "heading": null
       },
       "regions": [
         {
@@ -1698,10 +1696,48 @@
       "legend": [],
       "names": []
     },
-    "message": null,
-    "executionAvailable": false,
-    "lastResult": null,
-    "quote": null
+    "party": {
+      "x": 109.5,
+      "y": 158.5,
+      "heading": null
+    },
+    "destination": null,
+    "pin": null,
+    "mode": "cautious",
+    "speed": 0,
+    "speeds": 3,
+    "ship": "none",
+    "swimming": false,
+    "canBoard": false,
+    "shipFare": 100,
+    "date": "Sundas the 1st of Midyear, 3E405",
+    "time": "00:00",
+    "weather": "sunny",
+    "land": "Woodlands",
+    "here": null,
+    "lodging": null,
+    "remaining": null,
+    "transport": "foot",
+    "health": {
+      "current": 31,
+      "maximum": 31
+    },
+    "fatigue": {
+      "current": 5568,
+      "maximum": 5568
+    },
+    "magicka": {
+      "current": 100,
+      "maximum": 120
+    },
+    "canLeave": true,
+    "canEnter": false,
+    "enterLabel": "Enter",
+    "encounter": false,
+    "teleport": false,
+    "teleportPlace": null,
+    "message": "Leave the building or dungeon before travelling.",
+    "found": []
   },
   "inventory": {
     "revision": "832:1:558:0::classic",

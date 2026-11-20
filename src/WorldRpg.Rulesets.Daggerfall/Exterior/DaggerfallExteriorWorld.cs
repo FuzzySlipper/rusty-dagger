@@ -1048,6 +1048,21 @@ internal sealed class DaggerfallExteriorWorld : IDaggerfallWaterSurface
         return translation + ExteriorLocationFrame(profile);
     }
 
+    /// <summary>
+    /// The middle of a map pixel's terrain cell in an exterior profile's own frame, at the location's height, as a
+    /// relocation into that profile takes it: where a player entering the wilds from the expedition map stands, to be
+    /// stood on the terrain as any arrival is.
+    /// </summary>
+    internal WorldPoint ProfilePointAtCell(DaggerfallSiteProfile profile, DaggerfallExteriorCellId cell)
+    {
+        if (!TryExteriorProfileCell(profile, out DaggerfallExteriorCellId site))
+            throw new InvalidOperationException($"Exterior profile '{profile.ProfileKey.LogicalId}' has no normalized map-pixel identity.");
+        float size = DaggerfallExteriorCellResidency.CellSize;
+        Vector3 frame = ExteriorLocationFrame(profile);
+        // A cell runs east along +X from its translation and north along -Z.
+        return new(((cell.X - site.X) * size) + (size / 2F) - frame.X, 0F, ((cell.Y - site.Y) * size) - (size / 2F) - frame.Z);
+    }
+
     /// <summary>Returns the current local frame for a resident or active exterior profile.</summary>
     internal Vector3 ExteriorProfileFrameTranslation(DaggerfallWorldProfileKey profile)
     {

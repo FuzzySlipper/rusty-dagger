@@ -46,7 +46,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
     private readonly DaggerfallSwimmingPolicy _swimming;
     private readonly DaggerfallDungeonText _dungeonText;
     private readonly Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> _capturePropertyStorage;
-    private readonly Func<DaggerfallTravelMapPixel> _travelPosition;
+    private readonly Func<DaggerfallExpeditionSave> _expedition;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _actorDefinitions;
     private readonly Func<long> _nextCastSequence;
     internal Func<DaggerfallInfectionsSave> Infections { get; set; } = () => DaggerfallInfectionsSave.Empty;
@@ -68,7 +68,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         DaggerfallUniqueItemAllocator uniqueItems, FirstPersonCameraSystem camera, DaggerfallWorldTime time, DaggerfallSiteContext site,
         DaggerfallEffectLifecycle effects, Func<DaggerfallDoorRuntime> doors, DaggerfallLocomotionPolicy locomotion,
         DaggerfallClimbingPolicy climbing, DaggerfallSwimmingPolicy swimming, DaggerfallDungeonText dungeonText,
-        Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> capturePropertyStorage, Func<DaggerfallTravelMapPixel> travelPosition, IReadOnlyDictionary<long, DaggerfallActorDefinition> actorDefinitions, Func<long> nextCastSequence)
+        Func<DaggerfallPropertyStorageKey, DaggerfallInventorySave> capturePropertyStorage, Func<DaggerfallExpeditionSave> expedition, IReadOnlyDictionary<long, DaggerfallActorDefinition> actorDefinitions, Func<long> nextCastSequence)
     {
         _nextCastSequence = nextCastSequence;
         ArgumentNullException.ThrowIfNull(doors);
@@ -80,7 +80,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
         _actorDefinitions = actorDefinitions;
         State = state; _corpseLoot = corpses; _groundContainers = groundContainers ?? throw new ArgumentNullException(nameof(groundContainers)); _pack = pack ?? throw new ArgumentNullException(nameof(pack)); _notebook = notebook ?? throw new ArgumentNullException(nameof(notebook)); _uniqueItems = uniqueItems; _camera = camera; _time = time; _site = site; _effects = effects; _doors = doors; _locomotion = locomotion; _climbing = climbing; _swimming = swimming; _dungeonText = dungeonText;
         _capturePropertyStorage = capturePropertyStorage;
-        _travelPosition = travelPosition ?? throw new ArgumentNullException(nameof(travelPosition));
+        _expedition = expedition ?? throw new ArgumentNullException(nameof(expedition));
     }
     internal RulesetSavePayload Capture(ulong? generation, ulong? step, IReadOnlyDictionary<long, DaggerfallActorId> dynamicActors, DaggerfallEncounterRuntime encounters, DaggerfallSiteDeltaSave[] siteDeltas, DaggerfallWorldProfileKey activeProfile, DaggerfallWorldProfileKey? returnProfile, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonDiscovery> dungeonDiscoveries, IReadOnlyDictionary<DaggerfallWorldProfileKey, DaggerfallDungeonActionGraph> dungeonActions, DaggerfallDungeonMotionSnapshot dungeonMotion, DaggerfallExteriorCellResidencySave? exteriorResidency, DaggerfallExteriorLocationResidencySave? exteriorLocationResidency = null)
     {
@@ -180,7 +180,7 @@ internal sealed class DaggerfallSessionPersistence : IDaggerfallSiteDeltas
             Loans = State.Loans.Capture(),
             Property = State.Property.Capture(_capturePropertyStorage),
             Lodging = State.Lodging.Capture(_time.Calendar.ToAbsoluteSeconds()),
-            Travel = State.Travel.Capture(_time.Calendar.ToAbsoluteSeconds(), _site.Active, _travelPosition),
+            Expedition = _expedition(),
             Crime = State.Crime.Capture(),
             KnightlyClaims = State.KnightlyClaims.Capture(),
             Services = State.Services.Capture(),

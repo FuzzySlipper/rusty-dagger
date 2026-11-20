@@ -25,7 +25,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
     DaggerfallQuestInstances quests, DaggerfallVariableStore variables, PlayerInputSystem playerInput, DaggerfallHudProjection hud,
     DaggerfallInventoryPresentation inventory, DaggerfallLootPresentation loot, DaggerfallCharacterActions characterActions,
     DaggerfallLocalMap map, DaggerfallActivationPanel activation, DaggerfallSpellbookPanel spellbook, DaggerfallMakerPanels makers,
-    DaggerfallSummoningPanel summoning, DaggerfallEconomyPanels economy, DaggerfallTravelPanel travel, DaggerfallRestPanel rest,
+    DaggerfallSummoningPanel summoning, DaggerfallEconomyPanels economy, DaggerfallExpeditionPanel travel, DaggerfallRestPanel rest,
     DaggerfallTextActions text, DaggerfallLootActions lootActions, DaggerfallDeathScreen death, DaggerfallUiDispatch.SessionCalls session,
     PresentationState presentation, DaggerfallInputRefusals refusals)
 {
@@ -81,7 +81,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
     /// </summary>
     internal static bool OpensInteraction(DaggerfallUiInput input) => input.ContainsAny(
         DaggerfallUiActionKind.Loot, DaggerfallUiActionKind.ActivationMode, DaggerfallUiActionKind.DialogueTopic,
-        DaggerfallUiActionKind.TavernBuy, DaggerfallUiActionKind.TrainingCommit, DaggerfallUiActionKind.Rest, DaggerfallUiActionKind.LodgingBook, DaggerfallUiActionKind.TravelAccept);
+        DaggerfallUiActionKind.TavernBuy, DaggerfallUiActionKind.TrainingCommit, DaggerfallUiActionKind.Rest, DaggerfallUiActionKind.LodgingBook, DaggerfallUiActionKind.ExpeditionOpen);
 
     /// <summary>
     /// Admits one UI payload in the current phase. An unrecognized payload is reported in a live phase;
@@ -247,13 +247,21 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             case DaggerfallUiActionKind.PropertyEnter:
             case DaggerfallUiActionKind.PropertyPut:
             case DaggerfallUiActionKind.PropertyTake: economy.ChangeProperty(action); break;
-            case DaggerfallUiActionKind.TravelSearch: travel.Search(action); break;
-            case DaggerfallUiActionKind.TravelPreview: travel.Preview(action); break;
-            case DaggerfallUiActionKind.TravelMap: travel.ChangeMap(action); break;
+            case DaggerfallUiActionKind.ExpeditionOpen: travel.Open(); break;
+            case DaggerfallUiActionKind.ExpeditionPlaces: travel.RequestPlaces(); break;
             case DaggerfallUiActionKind.AtlasTiles: travel.GrantAtlasTiles(action); break;
-            case DaggerfallUiActionKind.TravelAccept:
-                if (!elapsedSubmitted) { elapsedSubmitted = true; travel.Accept(action); }
+            // Entering changes the world, so it takes the update's one explicit interval, as a rest does.
+            case DaggerfallUiActionKind.ExpeditionEnter:
+                if (!elapsedSubmitted) { elapsedSubmitted = true; travel.Change(action); }
                 break;
+            case DaggerfallUiActionKind.ExpeditionSpeed:
+            case DaggerfallUiActionKind.ExpeditionMode:
+            case DaggerfallUiActionKind.ExpeditionGo:
+            case DaggerfallUiActionKind.ExpeditionStop:
+            case DaggerfallUiActionKind.ExpeditionPin:
+            case DaggerfallUiActionKind.ExpeditionFind:
+            case DaggerfallUiActionKind.ExpeditionShip:
+            case DaggerfallUiActionKind.ExpeditionLeave: travel.Change(action); break;
             // One rest per input slice: explicit elapsed time is applied once.
             case DaggerfallUiActionKind.LodgingQuote:
             case DaggerfallUiActionKind.LodgingBook: economy.ChangeLodging(action); break;
@@ -351,7 +359,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             case "transport": session.RequestPanel(DaggerfallPanel.Travel); break;
             case "logbook": session.RequestPanel(DaggerfallPanel.Journal); break;
             case "notebook": session.RequestPanel(DaggerfallPanel.Notebook); break;
-            case "travel-map": travel.OpenMap(); session.RequestPanel(DaggerfallPanel.Travel); break;
+            case "travel-map": travel.Open(); break;
             case "use-magic-item": session.RequestPanel("magic-items"); break;
             case "radial": session.RequestPanel(DaggerfallPanel.Radial); break;
             case "abort-spell": spellbook.ChangeSpell(new(DaggerfallUiAction.RuleFor(DaggerfallUiActionKind.SpellUnready).Wire)); break;

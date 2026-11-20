@@ -101,7 +101,7 @@ public sealed class LoadingScreenSessionTests
     }
 
     [Fact]
-    public void A_journey_is_acknowledged_before_it_is_made_and_arrives_on_the_updates_after()
+    public void Entering_from_the_map_is_acknowledged_before_it_is_made_and_arrives_on_the_update_after()
     {
         AssembledWorld world = Shared.Value;
         DaggerfallSiteRecord destination = world.Nearby(_ => true);
@@ -111,21 +111,17 @@ public sealed class LoadingScreenSessionTests
         DaggerfallWorldProfileKey island = DaggerfallWorldProfileIds.Exterior(PrivateersHold);
 
         run.AcceptJourney(destination);
-        Assert.Equal(new LoadingState($"Travelling to {destination.Name}", $"Reading {destination.Name}", 0, 3, 0d), loading.Current);
+        Assert.Equal(new LoadingState($"Entering {destination.Name}", $"Reading {destination.Name}", 0, 2, 0d), loading.Current);
         Assert.Equal(island, session.Sites.ActiveProfile);
-        Assert.Null(session.State.Travel.LastResult);
+        Assert.True(session.Expedition.Open);
         Assert.Equal($"Reading {destination.Name}", run.PublishedLoading()!["label"]);
 
-        // The destination is read; then the days pass on the road; then the player arrives.
+        // The destination is read; then the player arrives and the map closes.
         run.Step();
-        Assert.Equal($"On the road to {destination.Name}", loading.Current!.Label);
-        Assert.Null(session.State.Travel.LastResult);
-        run.Step();
-        Assert.Equal($"Arriving at {destination.Name}", loading.Current!.Label);
+        Assert.Equal($"Entering {destination.Name}", loading.Current!.Label);
         Assert.Equal(island, session.Sites.ActiveProfile);
-        Assert.Null(session.State.Travel.LastResult);
         run.Step();
-        Assert.Equal(DaggerfallTravelOutcome.Arrived, session.State.Travel.LastResult!.Outcome);
+        Assert.False(session.Expedition.Open);
         Assert.Equal(DaggerfallWorldProfileIds.Exterior(destination.Id), session.Sites.ActiveProfile);
         run.Step();
         Assert.Null(loading.Current);
@@ -140,7 +136,7 @@ public sealed class LoadingScreenSessionTests
         DaggerfallSession session = run.Session;
         LoadingScreen loading = run.Loading!;
         SpatialFake spatial = run.Spatial;
-        string title = $"Travelling to {destination.Name}", arriving = $"Arriving at {destination.Name}";
+        string title = $"Entering {destination.Name}", arriving = $"Entering {destination.Name}";
         // The ground and the town's placements, and whether each downward floor probe (a stand) found both live.
         ulong[] town = [];
         bool GroundLive() => spatial.HeightfieldColliderReady;
@@ -155,7 +151,6 @@ public sealed class LoadingScreenSessionTests
 
         run.AcceptJourney(destination);
         spatial.HeightfieldColliderReady = false;
-        run.Step();
         run.Step();
         int waited = spatial.SynchronousWaitsOnDeferred;
         int placements = spatial.ContentResidencyRequests.Count;
@@ -174,15 +169,15 @@ public sealed class LoadingScreenSessionTests
         Assert.False(GroundLive());
         Assert.False(TownLive());
         // The placements still parse, so the bar moves unmeasured, and nobody is stood: there is no ground yet.
-        Assert.Equal(new LoadingState(title, arriving, 2, 3, null), loading.Current);
+        Assert.Equal(new LoadingState(title, arriving, 1, 2, null), loading.Current);
         Assert.Null(run.PublishedLoading()!["fraction"]);
         Assert.Empty(probes);
 
-        // Composing: the bar counts the share of the town's cells composed, within the arrival's third.
+        // Composing: the bar counts the share of the town's cells composed, within the arrival's half.
         spatial.DeferredCompose = (250, 1000);
         run.Step();
-        Assert.Equal(new LoadingState(title, arriving, 2, 3, (2d + .25d) / 3d), loading.Current);
-        Assert.Equal((2d + .25d) / 3d, run.PublishedLoading()!["fraction"]);
+        Assert.Equal(new LoadingState(title, arriving, 1, 2, (1d + .25d) / 2d), loading.Current);
+        Assert.Equal((1d + .25d) / 2d, run.PublishedLoading()!["fraction"]);
         Assert.Empty(probes);
 
         // The placements live but no ground yet: nobody is stood.
@@ -197,7 +192,7 @@ public sealed class LoadingScreenSessionTests
         Assert.True(TownLive());
         Assert.NotEmpty(probes);
         Assert.All(probes, Assert.True);
-        Assert.Equal(new LoadingState(title, arriving, 3, 3, 1d), loading.Current);
+        Assert.Equal(new LoadingState(title, arriving, 2, 2, 1d), loading.Current);
         run.Step();
         Assert.Null(loading.Current);
         Assert.Equal(waited, spatial.SynchronousWaitsOnDeferred);

@@ -118,6 +118,19 @@ internal sealed class DaggerfallRest(DaggerfallWorldTime time, DaggerfallRestTun
     }
 
     /// <summary>
+    /// One hour of camp on the expedition map: a rest hour's recovery under the open sky, by the career's traits as they
+    /// hold now, whole when sheltered (paid lodging, a ship's berth) and the rough ground's share otherwise, with the
+    /// Medical use a rested hour gives.
+    /// </summary>
+    internal void RecoverCampHour(StatsComponent player, DaggerfallCareerSpecials specials, bool sheltered)
+    {
+        (bool rapidHealing, bool noRegeneration) = CharacterTraits(specials, DaggerfallWorldProfileKind.Exterior);
+        DaggerfallRestRecoveryModule.RecoverOneHour(player, player.GetStat(Endurance).ValueInt, player.GetStat(Medical).ValueInt,
+            rapidHealing, noRegeneration, sheltered ? 1 : tuning.InnFatigueMultiplier);
+        skillUses.Record(new DaggerfallSkillUse("medical", DaggerfallSkillUseReason.MedicalRest, DaggerfallSkillUseOutcome.Accepted));
+    }
+
+    /// <summary>
     /// Applies one rest choice: the request and eligibility are checked, then each rest tick passes through
     /// <paramref name="advanceTime"/> and every whole hour recovers the player. A caller must not pass time
     /// separately before it.

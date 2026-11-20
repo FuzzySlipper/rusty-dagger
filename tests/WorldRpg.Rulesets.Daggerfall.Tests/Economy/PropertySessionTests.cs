@@ -345,29 +345,27 @@ public sealed class PropertySessionTests
     }
 
     [Fact]
-    public void Boarded_ship_travel_uses_land_origin_disembarks_and_preserves_ship_storage_on_reload()
+    public void A_boarded_ship_sets_out_from_its_land_on_the_map_comes_ashore_on_entering_and_stays_owned_on_reload()
     {
         using Fixture f = new(); f.OpenBank();
         Assert.True(f.Session.State.Bank.TryCreditAccount(f.Land.Site!.Value.Region, 100000));
         f.Submit(new { action = "property-buy", key = "ship/small" });
         f.AddGold(1000);
         f.Session.Site.Discover(f.Destination.Site!.Value);
-        f.Submit(new { action = "travel-preview", region = f.Destination.Site.Value.Region,
-            destination = f.Destination.Site.Value.Index, cautious = false, inn = true, ship = true });
-        var landQuote = f.Session.FastTravel.Read().Quote!;
+        DaggerfallTravelMapPixel land = f.Session.MapPosition.Position();
         f.Submit(new { action = "transport-board-ship" });
-        f.Submit(new { action = "travel-preview", region = f.Destination.Site.Value.Region,
-            destination = f.Destination.Site.Value.Index, cautious = false, inn = true, ship = true });
-        var shipQuote = f.Session.FastTravel.Read().Quote!;
-        Assert.Equal(landQuote.Origin, shipQuote.Origin);
-        Assert.Equal(landQuote.TravelSeconds, shipQuote.TravelSeconds);
-        Assert.Equal(0, shipQuote.ShipCost);
-        f.Submit(new { action = "travel-accept", key = shipQuote.Identity, amount = shipQuote.TotalCost });
-        Assert.Equal(DaggerfallTravelOutcome.Arrived, f.Session.State.Travel.LastResult!.Outcome);
+        Assert.True(f.Session.State.Transport.OnShip);
+        // Aboard, the map still starts the party at the land the ship was boarded from, on the player's own ship.
+        f.Submit(new { action = "expedition-open" });
+        Assert.Equal(land, f.Session.Expedition.Party);
+        Assert.Equal(DaggerfallExpeditionShip.Owned, f.Session.Expedition.Ship);
+        // Entering comes ashore at the land the ship was boarded from, leaving the deck.
+        f.Submit(new { action = "expedition-enter" });
+        Assert.False(f.Session.Expedition.Open);
         Assert.False(f.Session.State.Transport.OnShip);
-        Assert.Equal(f.Destination.ProfileKey, f.Session.Sites.ActiveProfile);
+        Assert.Equal(f.Land.ProfileKey, f.Session.Sites.ActiveProfile);
         using var restored = f.Restore(f.Session.CaptureSave());
-        Assert.Equal(f.Destination.ProfileKey, restored.Sites.ActiveProfile);
+        Assert.Equal(f.Land.ProfileKey, restored.Sites.ActiveProfile);
         Assert.True(restored.State.Property.OwnsShip);
         Assert.Null(restored.State.Transport.ShipReturnProfile);
     }

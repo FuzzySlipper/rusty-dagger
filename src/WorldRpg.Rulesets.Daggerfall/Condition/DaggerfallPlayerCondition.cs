@@ -58,6 +58,13 @@ internal sealed class DaggerfallPlayerCondition(DaggerfallVitalityConsequences v
         return roll > swimming;
     }
 
+    /// <summary>The player's Fatigue as a share of its pool, from 0 (spent) to 1 (fresh).</summary>
+    internal double FatigueShare(StatsComponent player)
+    {
+        Track fatigue = player.GetTrack(Fatigue);
+        return fatigue.MaximumValue > 0 ? Math.Clamp(fatigue.Current / fatigue.MaximumValue, 0, 1) : 0;
+    }
+
     /// <summary>Whether a living player's Fatigue pool is empty, so the player collapses.</summary>
     internal bool Exhausted(StatsComponent player) =>
         player.GetTrack(Health).Current > 0d && player.GetTrack(Fatigue).Current <= 0d;

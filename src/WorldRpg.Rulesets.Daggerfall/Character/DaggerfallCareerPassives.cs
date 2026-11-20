@@ -75,17 +75,15 @@ internal sealed class DaggerfallCareerPassives(DaggerfallCharacterState characte
     /// <summary>
     /// The passive rounds of <paramref name="minutes"/> magic rounds after <paramref name="roundBefore"/>, at most
     /// <paramref name="catchupRounds"/> of them. Regeneration follows the career in this dark and water; sunlight
-    /// harms a career that suffers it, or a vampire, except on a journey, whose arrival the journey adjusts; a holy
+    /// harms a career that suffers it, or a vampire, on the expedition map as in the world; a holy
     /// place harms a career that suffers it, or a vampire. <paramref name="inHolyPlace"/> is asked only when that harm applies.
     /// </summary>
-    internal DaggerfallPassiveRounds Rounds(long roundBefore, long minutes, long catchupRounds, bool vampire, bool travelling,
+    internal DaggerfallPassiveRounds Rounds(long roundBefore, long minutes, long catchupRounds, bool vampire,
         Func<bool> inHolyPlace, bool dark, bool sunlight, bool swimming)
     {
         DaggerfallCareerSpecials specials = PlayerSpecials;
         bool regeneration = specials.Regeneration != 0;
-        // Classic travel advances atomically and adjusts vulnerable arrivals to dusk before
-        // its catch-up pass. Our interruptible journey must not apply daylight exposure en route.
-        bool sunDamage = (specials.SunDamage || vampire) && !travelling;
+        bool sunDamage = specials.SunDamage || vampire;
         bool holyDamage = (specials.HolyDamage || vampire) && inHolyPlace();
         if (!regeneration && !sunDamage && !holyDamage) return DaggerfallPassiveRounds.None;
         long first = (4 - roundBefore % 4) % 4;

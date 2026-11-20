@@ -1,4 +1,5 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
 using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
 using Xunit;
@@ -8,90 +9,35 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallTravelPolicyTests
 {
     [Fact]
-    public void Quote_uses_the_donor_route_walk_and_stable_canonical_options()
-    {
-        DaggerfallTravelPolicy policy = CreatePolicy();
-        DaggerfallTravelMapPixel origin = new(1, 1);
-        DaggerfallSiteId destination = new(0, 1);
-        DaggerfallTravelOptions options = new(
-            SpeedCautious: true,
-            SleepModeInn: true,
-            TravelShip: false,
-            HasHorse: false,
-            HasCart: true,
-            HasShip: false,
-            AvailableGold: 100,
-            AvailableGoldPieces: 100);
-
-        DaggerfallTravelQuote first = policy.Quote(origin, destination, options, requireDiscovered: false);
-        DaggerfallTravelQuote second = policy.Quote(new(1, 1), new(0, 1), options, requireDiscovered: false);
-
-        Assert.Equal(3, first.DistanceMapPixels);
-        Assert.Equal(0, first.OceanPixels);
-        Assert.Equal(231, first.TravelMinutes);
-        Assert.Equal(5, first.InnCost);
-        Assert.Equal(0, first.ShipCost);
-        Assert.Equal(5, first.TotalCost);
-        Assert.True(first.CanAfford);
-        Assert.Equal(first.Identity, second.Identity);
-        Assert.Equal("daggerfall.travel.v1/1,1/0,1/cautious=1;inn=1;ship=0;horse=0;cart=1;owned-ship=0;free-ship=0;gold=100;pieces=100", first.Identity);
-
-        DaggerfallTravelQuote changed = policy.Quote(origin, destination, options with { SpeedCautious = false }, requireDiscovered: false);
-        Assert.NotEqual(first.Identity, changed.Identity);
-        Assert.Equal(first.TravelMinutes / 2, changed.TravelMinutes);
-
-        DaggerfallTravelQuote moneyChanged = policy.Quote(origin, destination,
-            options with { AvailableGold = 4 }, requireDiscovered: false);
-        Assert.NotEqual(first.Identity, moneyChanged.Identity);
-        Assert.False(moneyChanged.CanAfford);
-    }
-
-    [Fact]
-    public void Ocean_route_uses_ship_minutes_and_never_reproduces_negative_fare()
+    public void A_pixel_costs_the_donors_minutes_by_transport_over_its_terrain_and_at_sea_by_ship_or_swimming()
     {
         DaggerfallTravelPolicy policy = CreatePolicy((x, y) => x >= 2 && x <= 4 ? 223 : 231);
-        DaggerfallTravelOptions charter = new(
-            SpeedCautious: true,
-            SleepModeInn: true,
-            TravelShip: true,
-            HasHorse: false,
-            HasCart: false,
-            HasShip: false);
-
-        DaggerfallTravelQuote quote = policy.Quote(new(1, 1), new(0, 1), charter, requireDiscovered: false);
-
-        Assert.Equal(3, quote.OceanPixels);
-        Assert.Equal(153, quote.TravelMinutes);
-        Assert.Equal(5, quote.InnCost);
-        Assert.Equal(25, quote.ShipCost);
-        Assert.Equal(30, quote.TotalCost);
-        Assert.True(quote.InnCost >= 0);
-        Assert.True(quote.ShipCost >= 0);
-        Assert.True(quote.TotalCost >= 0);
-
-        DaggerfallTravelQuote owned = policy.Quote(new(1, 1), new(0, 1), charter with { HasShip = true }, requireDiscovered: false);
-        Assert.Equal(0, owned.ShipCost);
-        Assert.Equal(5, owned.TotalCost);
+        // Woodland: the donor's foot, cart and horse modifiers over its terrain, without the camp-out share.
+        Assert.Equal(104, policy.PixelMinutes(new(1, 1), DaggerfallTransportMode.Foot, aboard: false));
+        Assert.Equal(77, policy.PixelMinutes(new(1, 1), DaggerfallTransportMode.Cart, aboard: false));
+        Assert.Equal(52, policy.PixelMinutes(new(1, 1), DaggerfallTransportMode.Horse, aboard: false));
+        Assert.True(policy.IsOcean(new(3, 1)));
+        Assert.Equal(51, policy.PixelMinutes(new(3, 1), DaggerfallTransportMode.Horse, aboard: true));
+        Assert.Equal(255, policy.PixelMinutes(new(3, 1), DaggerfallTransportMode.Foot, aboard: false));
+        Assert.Equal("Woodlands", policy.ClimateName(new(1, 1)));
     }
 
     /// <summary>
     /// Privateer's Hold sits on the mainland coast in CLIMATE.PAK (map pixel 109,158, woodland), so the donor walk to
-    /// Daggerfall crosses no ocean pixel and a ship adds nothing; a route across the bay to Sentinel does use the sea.
+    /// Daggerfall crosses no ocean pixel; a route across the bay to Sentinel is mostly sea.
     /// </summary>
     [Fact]
     public void Shipped_climate_routes_privateers_hold_to_daggerfall_over_land_and_daggerfall_to_sentinel_over_sea()
     {
         DaggerfallTravelPolicy policy = new(new DaggerfallSiteContext(TestPayload.Definitions.Locations),
             TestPayload.Definitions.Grids, DaggerfallTuning.Defaults.Transport);
-        DaggerfallTravelOptions ship = new(SpeedCautious: true, SleepModeInn: false, TravelShip: true,
-            HasHorse: false, HasCart: false, HasShip: false);
+        DaggerfallTravelMapPixel At(DaggerfallSiteId id) => TestPayload.Definitions.Locations.Records.Single(site => site.Id == id) is var site
+            ? new(site.MapPixelX, site.MapPixelY) : default;
+        IReadOnlyList<DaggerfallTravelMapPixel> overland = DaggerfallTravelPolicy.Route(new(109, 158), At(new(17, 1231)));
+        Assert.Equal((98, 0), (overland.Count, overland.Count(policy.IsOcean)));
 
-        DaggerfallTravelQuote overland = policy.Quote(new(109, 158), new(17, 1231), ship, requireDiscovered: false);
-        Assert.Equal((98, 0, 0), (overland.DistanceMapPixels, overland.OceanPixels, overland.ShipCost));
-
-        DaggerfallTravelQuote bay = policy.Quote(new(207, 213), new(20, 6), ship, requireDiscovered: false);
-        Assert.Equal((190, 174), (bay.DistanceMapPixels, bay.OceanPixels));
-        Assert.True(bay.ShipCost > 0);
+        IReadOnlyList<DaggerfallTravelMapPixel> bay = DaggerfallTravelPolicy.Route(new(207, 213), At(new(20, 6)));
+        Assert.Equal((190, 174), (bay.Count, bay.Count(policy.IsOcean)));
     }
 
     [Fact]
@@ -123,18 +69,11 @@ public sealed class DaggerfallTravelPolicyTests
     }
 
     [Fact]
-    public void Unknown_undiscovered_same_and_invalid_climate_routes_are_rejected()
+    public void A_climate_the_donor_has_no_terrain_for_is_refused()
     {
-        DaggerfallTravelPolicy policy = CreatePolicy();
-        DaggerfallTravelOptions options = new(true, false, false, false, false, false);
-
-        Assert.Throws<ArgumentOutOfRangeException>(() => policy.Quote(new(-1, 1), new(0, 1), options));
-        Assert.Throws<InvalidOperationException>(() => policy.Quote(new(1, 1), new(9, 9), options));
-        Assert.Throws<InvalidOperationException>(() => policy.Quote(new(1, 1), new(0, 2), options));
-        Assert.Throws<InvalidOperationException>(() => policy.Quote(new(1, 1), new(0, 0), options));
-
         DaggerfallTravelPolicy unresolved = CreatePolicy((x, y) => x == 3 ? 7 : 231);
-        Assert.Throws<InvalidOperationException>(() => unresolved.Quote(new(1, 1), new(0, 1), options, requireDiscovered: false));
+        Assert.Throws<InvalidOperationException>(() => unresolved.PixelMinutes(new(3, 1), DaggerfallTransportMode.Foot, aboard: false));
+        Assert.Throws<InvalidOperationException>(() => unresolved.CautiousQuestLegMinutes(new(1, 1), new(0, 1)));
     }
 
     private static DaggerfallTravelPolicy CreatePolicy(Func<int, int, int>? climate = null)

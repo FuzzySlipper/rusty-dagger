@@ -17,7 +17,6 @@ import { newSlotRow, slotRow } from './slots.js';
 import type { NavigationSurface } from './navigation.js';
 import { renderSpells, spellAction } from './spells.js';
 import { isTransportProjection, mountTransport } from './transport.js';
-import { mountTravel, isTravelProjection } from './travel.js';
 import { mountVideoSettings } from './video.js';
 import { mountScrollbar } from './scrollbar.js';
 
@@ -98,7 +97,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const inventoryRoot = shell.querySelector<HTMLElement>('.dagger-inventory-root')!;
   const inventoryView = mountInventory(inventoryRoot, send, host.register);
   const mapRoot = shell.querySelector<HTMLElement>('.dagger-map-root')!;
-  const mapView = mountMap(mapRoot, send, () => showPanel('transport'));
+  const mapView = mountMap(mapRoot, send, () => openTravelMap());
   let mapReported = false;
   const reportMap = (open: boolean): void => {
     if (mapReported === open) return;
@@ -111,7 +110,22 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   propertyRoot.className = 'dagger-property-root';
   inventoryRoot.append(propertyRoot);
   const propertyView = mountProperty(propertyRoot, send, ask);
-  const travelView = mountTravel(transportRoot, send, ask);
+  // Travel is the expedition map, a screen of its own over the world: this panel opens it.
+  const travelStrip = document.createElement('section');
+  travelStrip.className = 'dagger-travel-open';
+  travelStrip.setAttribute('aria-label', 'Travel');
+  const travelHeading = document.createElement('h3');
+  travelHeading.textContent = 'Travel';
+  const travelNote = document.createElement('p');
+  travelNote.textContent = 'Set out across the Iliac Bay on the travel map: time passes as your party goes.';
+  const travelOpen = button('Open the travel map');
+  travelOpen.dataset.action = 'travel-map';
+  travelStrip.append(travelHeading, travelNote, travelOpen);
+  transportRoot.prepend(travelStrip);
+  const openTravelMap = (): void => {
+    send({ action: 'expedition-open' });
+    closeMenu();
+  };
   const restRoot = shell.querySelector<HTMLElement>('.dagger-rest-root')!;
   const lodgingView = mountLodging(restRoot, send);
   const restStatus = shell.querySelector<HTMLElement>('.dagger-rest-status')!;
@@ -192,7 +206,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     reportMap(false);
     controlsView.cancel();
     const previous = activePanel;
-    if (previous === 'transport') travelView.hide();
     if (previous === 'loot') closeLoot();
     activePanel = null;
     menu.classList.remove('has-inventory', 'has-character', 'has-spells', 'has-map', 'has-transport', 'has-rest', 'has-journal', 'has-loot', 'has-debug');
@@ -216,7 +229,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
   const closeMenu = (): void => {
     inventoryView.closeActions();
     reportMap(false);
-    travelView.hide();
     controlsView.cancel();
     if (activePanel === 'loot') closeLoot();
     activePanel = null;
@@ -263,8 +275,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     inventoryView.closeActions();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
     reportMap(action === 'map');
-    if (action !== 'transport') travelView.hide();
-    else travelView.show();
     activePanel = action;
     home.hidden = true;
     panel.hidden = false;
@@ -360,6 +370,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
     else if (action === 'notebook' || action === 'book') { showPanel('journal'); journalView.select(action === 'book' ? 'book' : 'notes'); }
     else if (action === 'magic-items' || action === 'spells' || action === 'settings' || action === 'diagnostics' || action === 'inventory' || action === 'character' || action === 'map' || action === 'transport' || action === 'rest' || action === 'journal' || action === 'help') showPanel(action);
     else if (action === 'debug') { closeMenu(); host.openDeveloper(); }
+    else if (action === 'travel-map') openTravelMap();
   };
   const onClick = (event: MouseEvent): void => {
     const control = (event.target as HTMLElement).closest<HTMLButtonElement>('button');
@@ -426,11 +437,10 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       if (activePanel === 'journal') journalView.page(direction);
       else if (activePanel === 'help') helpView.page(direction);
       else if (activePanel === 'map') mapView.zoom(direction);
-      else if (activePanel === 'transport') travelView.page(direction);
     },
     pageHint() {
       return activePanel === 'journal' ? journalView.pageHint() : activePanel === 'help' ? helpView.pageHint() : activePanel === 'map' && isMapProjection(lastMap) ? 'Zoom'
-        : activePanel === 'transport' ? travelView.pageHint() : null;
+        : null;
     },
     captureKey(event) {
       if (activePanel === 'settings' && controlsView.captureKey(event)) return;
@@ -473,7 +483,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       transportView.update(isTransportProjection(value.transport) ? value.transport : null);
       lastMap = value.map;
       mapView.update(isMapProjection(value.map) ? value.map : null, value.mapAbsence);
-      travelView.update(isTravelProjection(value.travel) ? value.travel : null);
       if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
       journalView.update(value.quests?.journal, value.notebook);
       lodgingView.update(isLodgingProjection(value.lodging) ? value.lodging : null);
@@ -570,7 +579,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       inventoryView.refresh();
       characterView.refresh();
       lootView.refresh();
-      travelView.refreshArt();
     },
     dispose() {
       reportMap(false);
@@ -580,7 +588,6 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
       inventoryView.dispose();
       transportView.dispose();
       mapView.dispose();
-      travelView.dispose();
       lodgingView.dispose();
       characterView.dispose();
       journalView.dispose();
@@ -596,7 +603,7 @@ export function mountMenu(shell: HTMLElement, host: MenuHost): GameMenu {
 /** The control bindings that open a panel, and the menu action each runs. */
 const HOTKEY_ACTIONS: Readonly<Record<string, string>> = {
   inventory: 'inventory', character: 'character', spell: 'spells', rest: 'rest', map: 'map', transport: 'transport',
-  logbook: 'journal', notebook: 'notebook', 'travel-map': 'transport', 'use-magic-item': 'magic-items',
+  logbook: 'journal', notebook: 'notebook', 'travel-map': 'travel-map', 'use-magic-item': 'magic-items',
 };
 /** The panels drawn at the wide size; the rest, and the home list, are narrow (`skin.css`, panel sizes). */
 const WIDE_PANELS: ReadonlySet<Panel> = new Set(['inventory', 'character', 'spells', 'map', 'transport', 'journal', 'loot', 'settings', 'help', 'diagnostics']);

@@ -38,7 +38,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
 internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwareGameSession, IEntryScreenSession, IEntryScreenStartupSession, ICharacterCreationSession, ISaveRequestingGameSession, IPlayerPreferencesSession, IPlayerDefeatOutcomeSession, IGameBundleChoiceSession, IQuitRequestingGameSession,
-    IDaggerfallSiteTransitionHost, IDaggerfallRestSurroundings, IDaggerfallTeleportSites, IDaggerfallTransformationConsumer,
+    IDaggerfallSiteTransitionHost, IDaggerfallRestSurroundings, IDaggerfallExpeditionSurroundings, IDaggerfallTeleportSites, IDaggerfallTransformationConsumer,
     IDaggerfallMusicPlace
 {
     private readonly IRandomService _random;
@@ -376,6 +376,41 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     bool IDaggerfallRestSurroundings.EncounterArrives(long minute) => WorldEncounters.ArrivesWhileResting(minute);
 
+    // What the expedition asks of the world it crosses, each read from the domain that knows it when it asks.
+    DaggerfallCalendar IDaggerfallExpeditionSurroundings.Calendar => _time.Calendar;
+    DaggerfallWeatherKind IDaggerfallExpeditionSurroundings.Weather(int climate) => LocalWeather.State.ForClimate(climate);
+    DaggerfallTransportMode IDaggerfallExpeditionSurroundings.Transport =>
+        State.Transport.HasHorse(State.Inventory.Read()) ? DaggerfallTransportMode.Horse
+        : State.Transport.HasCart(State.Inventory.Read()) ? DaggerfallTransportMode.Cart : DaggerfallTransportMode.Foot;
+    bool IDaggerfallExpeditionSurroundings.OwnsShip => State.Property?.OwnsShip ?? false;
+    bool IDaggerfallExpeditionSurroundings.FreeShipPassage => GuildProviders.FreeShipPassage();
+    bool IDaggerfallExpeditionSurroundings.TrySpendGold(int amount) =>
+        amount == 0 || State.Currency.TrySpendCarried((ulong)amount, (ulong)amount);
+    double IDaggerfallExpeditionSurroundings.FatigueShare => _condition.FatigueShare(State.Actors.Player.Stats);
+    bool IDaggerfallExpeditionSurroundings.Exhausted => _condition.Exhausted(State.Actors.Player.Stats);
+    bool IDaggerfallExpeditionSurroundings.Defeated => State.Actors.Player.IsDefeated;
+
+    long IDaggerfallExpeditionSurroundings.Pass(DaggerfallExpeditionStretch stretch)
+    {
+        // Marching, halting and swimming pay the per-minute fatigue any minute does (a march its factor of it, a swim
+        // the swimming rate where its roll fails); a camp is a rest, and a ship carries a party that spends nothing.
+        _locomotion.RecordStretch(stretch.Activity == DaggerfallExpeditionActivity.Swimming ? stretch.Seconds : 0, stretch.FatigueFactor);   // Character
+        return AdvanceElapsedTime(stretch.Seconds, deferSkillAdvancement: true,
+            resting: stretch.Activity == DaggerfallExpeditionActivity.Camping,
+            idleFatigue: stretch.Activity is not DaggerfallExpeditionActivity.Sailing,
+            completeTimeIncrease: false).AppliedSeconds;                                          // Session: the elapsed interval's list
+    }
+
+    void IDaggerfallExpeditionSurroundings.RecoverCampHour(bool sheltered) =>
+        _rest.RecoverCampHour(State.Actors.Player.Stats, _passives.PlayerSpecials, sheltered);
+
+    void IDaggerfallExpeditionSurroundings.Collapse(bool inWater) => Collapse(inWater, enemiesNearby: false);
+
+    bool IDaggerfallExpeditionSurroundings.EncounterArrives(DaggerfallTravelMapPixel pixel, bool atLocation, long minute) =>
+        WorldEncounters.Overland(minute, _definitions.Grids.ClimateAtWorldPixel(pixel.X, pixel.Y).Value, atLocation) is { } request
+        && WorldEncounters.Queue(request, DaggerfallWorldProfileIds.Exterior(Expedition.HostAt(pixel).Id).LogicalId)
+            .Choice.MobileId is not null;
+
     // What a ready infection asks before its permanent change; the change itself is the transformation's list.
     bool IDaggerfallTransformationConsumer.HasRacialOverride => State.RacialOverrides.Current is not null;
     DaggerfallInfectionConsumption IDaggerfallTransformationConsumer.Consume(DaggerfallInfectionTransition transition) =>
@@ -704,8 +739,11 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallItemSouls ItemSouls { get; } = null!;
     internal DaggerfallTeleport TeleportChoice { get; } = null!;
 
-    /// <summary>Fast travel: the travel panel, its map and the journeys it starts.</summary>
-    internal DaggerfallFastTravel FastTravel { get; } = null!;
+    /// <summary>Where the player stands on the world map, a quest leg from there, a map's reveal and a landing at a location.</summary>
+    internal DaggerfallMapPosition MapPosition { get; } = null!;
+
+    /// <summary>The expedition map, the one way to travel overland: the party on the atlas, in running time.</summary>
+    internal DaggerfallExpedition Expedition { get; } = null!;
 
     /// <summary>The player's crimes: pickpocketing, witnesses, and what an attack on a civilian or a guard charges.</summary>
     internal DaggerfallCrimes Crimes { get; } = null!;

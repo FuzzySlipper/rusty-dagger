@@ -103,31 +103,29 @@ public sealed class GuildDialogueSessionTests
     }
 
     [Fact]
-    public void Guild_teleport_uses_rank_gate_and_existing_map_without_payment_or_time()
+    public void Guild_teleport_uses_rank_gate_and_the_expedition_map_without_payment_or_time()
     {
         using var fixture = SourceBackedServiceSessionFixture.Create();
         var source = fixture.GuildProvider("teleport");
         using var session = fixture.Start(source.Profile);
         var npc = session.State.Npcs.All.Single(value => value.StableKey == source.Placement.Id);
         Open(session, npc); Ask(session, "teleport");
-        Assert.False(session.FastTravel.Read().GuildTeleport);
+        Assert.False(session.Expedition.Teleporting);
         session.State.Social.JoinGuild(40, 0);
         for (int day = 1; day <= 7; day++) session.State.Social.PromoteGuild(40, day);
-        Ask(session, "teleport"); Assert.False(session.FastTravel.Read().GuildTeleport);
+        Ask(session, "teleport"); Assert.False(session.Expedition.Teleporting);
         session.State.Social.PromoteGuild(40, 8);
         Ask(session, "teleport");
-        Assert.True(session.FastTravel.Read().GuildTeleport);
-        session.Site.Discover(fixture.PopulationProfile.Site!.Value);
-        Submit(session, new { action = "travel-search", text = "" });
-        var destination = session.FastTravel.Read().Destinations.First(value => value.Id == fixture.PopulationProfile.Site);
-        Submit(session, new { action = "travel-preview", region = destination.Id.Region, destination = destination.Id.Index, cautious = false, inn = false, ship = false });
-        var travel = session.FastTravel.Read();
-        Assert.True(travel.ExecutionAvailable, travel.Message);
-        Assert.Equal(0, travel.Quote!.TotalCost); Assert.Equal(0, travel.Quote.TravelMinutes);
+        Assert.True(session.Expedition.Teleporting);
+        DaggerfallSiteId place = fixture.PopulationProfile.Site!.Value;
+        session.Site.Discover(place);
+        DaggerfallSiteRecord record = session.Site.Require(place);
+        Submit(session, new { action = "expedition-go", x = record.MapPixelX, y = record.MapPixelY, region = place.Region, index = place.Index });
+        Assert.Equal(place, session.Expedition.TeleportPlace);
         var before = DaggerfallSavePayload.Read(session.CaptureSave());
-        Submit(session, new { action = "travel-accept", key = travel.Quote.Identity, amount = 0 });
+        Submit(session, new { action = "expedition-enter" });
         Assert.Equal(fixture.PopulationProfile.ProfileKey, session.Sites.ActiveProfile);
-        Assert.False(session.FastTravel.Read().GuildTeleport);
+        Assert.False(session.Expedition.Open);
         Assert.Equal(before.Calendar, DaggerfallSavePayload.Read(session.CaptureSave()).Calendar);
     }
 

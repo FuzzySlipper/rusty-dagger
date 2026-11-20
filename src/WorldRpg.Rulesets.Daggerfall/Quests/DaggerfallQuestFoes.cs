@@ -22,7 +22,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// removal, enemy behaviour's hostility, retiring a detached actor and killing a foe an unloaded site keeps (the list
 /// KillRetainedQuestFoe) are handed in; where the player is changes with the site, so it is read as it is asked.</remarks>
 internal sealed class DaggerfallQuestFoes(DaggerfallQuestInstances quests, ActorsState actors, PlayerControlState playerControl,
-    DaggerfallTravelState travel, IReadOnlyDictionary<long, DaggerfallActorDefinition> actorDefinitions, DaggerfallActorPlacement placement,
+    Func<bool> travelling, IReadOnlyDictionary<long, DaggerfallActorDefinition> actorDefinitions, DaggerfallActorPlacement placement,
     DaggerfallVitalityConsequences vitality, DaggerfallQuestSpawningTuning spawning,
     Func<DaggerfallQuestLocationRead> questLocation, Func<string, ActorPose, long> spawn, Action<long> removeQuestActor,
     Action<long, bool> makeHostile, Action<DamageResult> killedByQuest, Func<long, bool> retireDetached,
@@ -48,9 +48,10 @@ internal sealed class DaggerfallQuestFoes(DaggerfallQuestInstances quests, Actor
     /// <summary>Spawns a quest foe near the player and makes it hostile; null while travelling, defeated or with no clear pose.</summary>
     internal long? Spawn(string operation, DaggerfallQuestFoeSelection foe, bool send)
     {
-        // DFU advances travel's clock before the next quest update. Calendar slices here still
-        // process deadlines, but must not populate either end of a journey at intermediate hours.
-        if (travel.IsExecuting) return null;
+        // Time passes on the expedition map while the player's body stays where the map was opened. Calendar slices
+        // here still process deadlines, but a foe waits for the player to enter the world rather than appear beside
+        // that body; a spawn refused now is asked for again.
+        if (travelling()) return null;
         if (actors.Player.IsDefeated || playerControl.Position is not WorldPoint player) return null;
         var location = questLocation();
         if (send && location.ExteriorLocation is null) return null;
