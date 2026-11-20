@@ -55,18 +55,23 @@ public sealed class GridRoutingTests
         });
     }
 
-    [Fact]
-    public void A_walker_crosses_from_the_grid_that_holds_it_to_an_overlapping_one_that_holds_its_target()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_walker_crosses_from_the_grid_that_holds_it_to_an_overlapping_one_that_holds_its_target(bool boxOnTheWay)
     {
         // As at a town's edge: the town's grid holds the walker (x -150 to 0), the wild grid about the player its target
-        // (x -76 to 116), and they overlap between; neither holds both.
+        // (x -76 to 116), and they overlap between; neither holds both. With a closed box on the straight way across the
+        // whole overlap (x -80 to 4, z -2 to 2, 8 m tall), the crossing lies off that way, around either side of it.
         using EngineTestHost host = EngineTestHost.Create(new EngineTestHostOptions());
         host.Call(engine =>
         {
             using SpatialMovementSystem system = new(engine.Spatial, engine.Content, null, new SpatialTuning(.5d, 8, 8, 1, new CharacterControllerTuning()));
-            Vector3[] floor = [new(-200, 0, -20), new(-200, 0, 20), new(200, 0, 20), new(200, 0, -20)];
+            List<Vector3> vertices = [new(-200, 0, -20), new(-200, 0, 20), new(200, 0, 20), new(200, 0, -20)];
+            List<Triangle> triangles = [new(0, 1, 2), new(0, 2, 3)];
+            if (boxOnTheWay) Box(vertices, triangles, new Vector3(-80, 0, -2), new Vector3(4, 8, 2));
             _ = engine.Spatial.ApplyCollisionResidency(new CollisionResidencyRequest(system.Session,
-                new[] { new StaticMeshAsset(1, 0, 4, 0, 2) }, floor, new Triangle[] { new(0, 1, 2), new(0, 2, 3) },
+                new[] { new StaticMeshAsset(1, 0, (uint)vertices.Count, 0, (uint)triangles.Count) }, vertices.ToArray(), triangles.ToArray(),
                 new[] { new StaticMeshInstance(2, 1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One)) },
                 ReadOnlyMemory<ulong>.Empty, ReadOnlyMemory<ulong>.Empty));
             foreach ((ulong grid, float min, float max) in new[] { (Absent, -150f, 0f), (Derived, -76f, 116f) })
@@ -80,15 +85,18 @@ public sealed class GridRoutingTests
                 _ => CharacterStepEnvironment.Empty, () => [Absent, Derived]);
             Vector3 target = new(20, 0, 0);
             List<ulong?> routes = [];
+            float widest = 0;
             for (int step = 0; step < 600 && Vector3.Distance(actor.Position.ToVector() with { Y = 0 }, target) > .6f; step++)
             {
                 Assert.Equal(NavigationPathOutcome.Reached, navigation.Evaluate(actor, new ActorNavigationRequest(WorldPoint.From(target), .5f, 8192)).Outcome);
                 Assert.True(navigation.TryRoute(actor.Actor.Entity, out ulong? grid));
                 if (routes.Count == 0 || routes[^1] != grid) routes.Add(grid);
+                widest = MathF.Max(widest, MathF.Abs(actor.Position.Z));
             }
             Assert.True(Vector3.Distance(actor.Position.ToVector() with { Y = 0 }, target) <= .6f, $"The walker stopped at {actor.Position}.");
             // It went by the town's grid to the overlap, then by the wild grid: never straight.
             Assert.Equal([Absent, Derived], routes);
+            if (boxOnTheWay) Assert.True(widest > 2f, $"The walker went no wider than {widest} m, through the box's 2 m half-width.");
         });
     }
 
@@ -125,5 +133,16 @@ public sealed class GridRoutingTests
             test(new ActorNavigationCoordinator(engine.Spatial, system.Session, actors.Store, system.CurrentController,
                 _ => CharacterStepEnvironment.Empty, () => grids), actor);
         });
+    }
+
+    /// <summary>A closed box from <paramref name="min"/> to <paramref name="max"/>: its sides and its roof.</summary>
+    private static void Box(List<Vector3> vertices, List<Triangle> triangles, Vector3 min, Vector3 max)
+    {
+        uint b = (uint)vertices.Count;
+        vertices.AddRange([
+            new(min.X, min.Y, min.Z), new(max.X, min.Y, min.Z), new(max.X, max.Y, min.Z), new(min.X, max.Y, min.Z),
+            new(min.X, min.Y, max.Z), new(max.X, min.Y, max.Z), new(max.X, max.Y, max.Z), new(min.X, max.Y, max.Z)]);
+        uint[][] faces = [[0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4], [3, 7, 6], [3, 6, 2], [0, 4, 7], [0, 7, 3], [1, 2, 6], [1, 6, 5]];
+        foreach (uint[] face in faces) triangles.Add(new(b + face[0], b + face[1], b + face[2]));
     }
 }

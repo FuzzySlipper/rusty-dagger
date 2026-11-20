@@ -71,7 +71,7 @@ public sealed class ActorNavigationCoordinator
     // The grid each actor's last step went by, or none when it walked straight (Route).
     private readonly Dictionary<EntityId, ulong?> _routes = [];
     // Where each actor crosses from the grid that holds it to one that holds its goal, while that goal stays put.
-    private readonly Dictionary<EntityId, (Vector3 Goal, Vector3 Point, ulong Grid)> _handoffs = [];
+    private readonly Dictionary<EntityId, (Vector3 Goal, Vector3 Point, ulong Grid, ulong Other)> _handoffs = [];
 
     /// <summary>The supplied session remains owned by its spatial composition system.</summary>
     /// <param name="grids">
@@ -137,7 +137,7 @@ public sealed class ActorNavigationCoordinator
         // No one grid holds both ends: the grid that took the start carries the walker to where it overlaps one that
         // holds the goal, from where that grid takes it on.
         if (carried is null && first is { Outcome: NavigationPathOutcome.GoalNotWalkable } && firstGrid is ulong startGrid && _grids().Count > 1
-            && Handoff(actor, before.Position.ToVector(), request.Target.ToVector(), startGrid) is { } handoff)
+            && Handoff(actor, before.Position.ToVector(), request.Target.ToVector(), startGrid, request.MaximumVisited) is { } handoff)
         {
             receipt = _spatial.EvaluateNavigationStep(new NavigationStepRequest(_session, before.Position.ToVector(), handoff,
                 request.MaximumStepUnits, request.MaximumVisited, startGrid));
@@ -155,49 +155,76 @@ public sealed class ActorNavigationCoordinator
         return receipt;
     }
 
-    /// <summary>How far apart the points tried along the way to a handoff are, in metres.</summary>
+    /// <summary>How far apart the points tried for a handoff are, along the way and across it, in metres.</summary>
     private const float HandoffSpacing = 2f;
 
-    /// <summary>How far the target may move before an actor's handoff is looked for again, in metres.</summary>
+    /// <summary>How far the target may move before an actor's handoff is checked again, in metres.</summary>
     private const float HandoffDrift = 2f;
 
+    /// <summary>How far either side of the straight way a handoff is looked for, in metres.</summary>
+    private const float HandoffReach = 16f;
+
+    /// <summary>How far above the way's height the floor under a point is first looked for, then the farther probe, in metres.</summary>
+    private const float HandoffNearProbe = 4f, HandoffFarProbe = 32f;
+
     /// <summary>
-    /// Where a walker the start grid holds, chasing a goal only another grid holds, crosses from one to the other: the
-    /// point nearest the goal, on the straight way to it, that both grids hold. Each point tried stands on the floor
-    /// under it, and is held when a step from it to itself starts on the grid. Kept per actor while the goal stays put.
+    /// Where a walker the start grid holds, chasing a goal only another grid holds, crosses from one to the other: a
+    /// point both grids hold that the start grid routes the walker to and the other grid routes on to the goal, sought
+    /// across a band either side of the straight way (so around what stands on it), nearest the goal and nearest the way
+    /// first. Each point tried stands on the floor under it. Kept per actor while the other grid still routes it to the
+    /// goal.
     /// </summary>
-    private Vector3? Handoff(ActorState actor, Vector3 from, Vector3 goal, ulong startGrid)
+    private Vector3? Handoff(ActorState actor, Vector3 start, Vector3 goal, ulong startGrid, uint visited)
     {
-        if (_handoffs.TryGetValue(actor.Actor.Entity, out (Vector3 Goal, Vector3 Point, ulong Grid) kept)
-            && kept.Grid == startGrid && Vector3.Distance(kept.Goal, goal) <= HandoffDrift)
+        if (_handoffs.TryGetValue(actor.Actor.Entity, out (Vector3 Goal, Vector3 Point, ulong Grid, ulong Other) kept) && kept.Grid == startGrid
+            && (Vector3.Distance(kept.Goal, goal) <= HandoffDrift || Routes(kept.Other, kept.Point, goal, visited)))
+        {
+            _handoffs[actor.Actor.Entity] = (goal, kept.Point, kept.Grid, kept.Other);
             return kept.Point;
+        }
         _handoffs.Remove(actor.Actor.Entity);
         IReadOnlyList<ulong> grids = _grids();
-        Vector3 way = goal - from;
+        Vector3 way = (goal - start) with { Y = 0 };
         float length = way.Length();
         if (length < HandoffSpacing) return null;
-        for (float along = length - HandoffSpacing; along > HandoffSpacing; along -= HandoffSpacing)
+        Vector3 along = way / length, across = new(-along.Z, 0, along.X);
+        for (float distance = length - HandoffSpacing; distance > HandoffSpacing; distance -= HandoffSpacing)
         {
-            Vector3 point = from + way * (along / length);
-            SpatialHit floor = _spatial.CastRay(new SpatialRaycastRequest(_session, point + Vector3.UnitY * HandoffProbe, -Vector3.UnitY,
-                2 * HandoffProbe, new SpatialQueryFilter(uint.MaxValue, uint.MaxValue), default, default, default));
-            if (!floor.Present || floor.StartSolid) continue;
-            if (!Holds(startGrid, floor.Point)) continue;
-            foreach (ulong other in grids)
-            {
-                if (other == startGrid || !Holds(other, floor.Point)) continue;
-                _handoffs[actor.Actor.Entity] = (goal, floor.Point, startGrid);
-                return floor.Point;
-            }
+            Vector3 onWay = start + (goal - start) * (distance / length);
+            for (float offset = 0; offset <= HandoffReach; offset += HandoffSpacing)
+                foreach (float side in offset == 0 ? new[] { 0f } : new[] { offset, -offset })
+                {
+                    if (Floor(onWay + across * side) is not { } point || !Holds(startGrid, point)) continue;
+                    foreach (ulong other in grids)
+                    {
+                        if (other == startGrid || !Holds(other, point)) continue;
+                        // A usable crossing: the start grid routes the walker to it, the other on to the goal.
+                        if (!Routes(other, point, goal, visited) || !Routes(startGrid, start, point, visited)) continue;
+                        _handoffs[actor.Actor.Entity] = (goal, point, startGrid, other);
+                        return point;
+                    }
+                }
         }
         return null;
     }
 
-    /// <summary>How far above and below the straight way the floor under a handoff is looked for, in metres.</summary>
-    private const float HandoffProbe = 64f;
+    /// <summary>The floor under a point, looked for from just above it and then from well above; null over none.</summary>
+    private Vector3? Floor(Vector3 point)
+    {
+        foreach (float above in new[] { HandoffNearProbe, HandoffFarProbe })
+        {
+            SpatialHit floor = _spatial.CastRay(new SpatialRaycastRequest(_session, point + Vector3.UnitY * above, -Vector3.UnitY,
+                above + HandoffFarProbe, new SpatialQueryFilter(uint.MaxValue, uint.MaxValue), default, default, default));
+            if (floor.Present && !floor.StartSolid) return floor.Point;
+        }
+        return null;
+    }
 
     private bool Holds(ulong grid, Vector3 point) => _spatial.EvaluateNavigationStep(new NavigationStepRequest(_session, point, point, 1f, 1,
         grid)).Outcome is not (NavigationPathOutcome.StartNotWalkable or NavigationPathOutcome.GoalNotWalkable or NavigationPathOutcome.ProjectionUnavailable);
+
+    private bool Routes(ulong grid, Vector3 from, Vector3 to, uint visited) => _spatial.EvaluateNavigationStep(new NavigationStepRequest(_session, from, to, 1f,
+        visited, grid)).Outcome == NavigationPathOutcome.Reached;
 
     /// <summary>
     /// The grid an actor's last ground step went by, or null when it walked straight for its target off every grid;
