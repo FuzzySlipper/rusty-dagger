@@ -453,7 +453,7 @@ export function mountAtlas(requestTiles: (tiles: readonly [number, number, numbe
       const [px, py] = toScreen(overlay.party.x, overlay.party.y);
       const ring = document.createElementNS(SVG, 'circle');
       for (const [name, value] of [['cx', px], ['cy', py], ['r', overlay.sight * scale]] as const) ring.setAttribute(name, String(value));
-      for (const [name, value] of [['fill', 'rgb(242 230 196 / .08)'], ['stroke', '#f2e6c4'], ['stroke-width', '1.5'], ['stroke-dasharray', '3 4'], ['stroke-opacity', '.7']] as const) ring.setAttribute(name, value);
+      for (const [name, value] of [['fill', '#f2e6c4'], ['fill-opacity', '.1'], ['stroke', '#f2e6c4'], ['stroke-width', '1.5'], ['stroke-dasharray', '3 4'], ['stroke-opacity', '.7']] as const) ring.setAttribute(name, value);
       routeLayer.append(ring);
     }
     if (route) {

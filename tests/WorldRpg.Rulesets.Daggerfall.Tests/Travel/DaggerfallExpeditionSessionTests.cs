@@ -201,7 +201,7 @@ public sealed class DaggerfallExpeditionSessionTests
     }
 
     [Fact]
-    public void A_band_that_catches_the_party_is_queued_head_by_head_and_placed_beside_its_first_when_entered()
+    public void A_band_that_catches_the_party_is_queued_head_by_head_and_waits_in_the_profile_it_is_entered_in()
     {
         using Fixture fixture = new(bands: true);
         fixture.Open();

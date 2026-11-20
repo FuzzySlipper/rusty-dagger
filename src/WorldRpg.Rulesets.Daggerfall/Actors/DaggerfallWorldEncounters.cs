@@ -131,15 +131,12 @@ internal sealed class DaggerfallWorldEncounters(DaggerfallEncounterRuntime encou
         DaggerfallEncounterContext context = pending.Request.Context;
         string operation = $"generation:{pending.Generation}:sequence:{pending.Sequence}:step:{simulationStep}";
         ActorPose? first = pending.Band is { } band ? FirstOfBand(pending, band) : null;
-        ActorPose pose;
-        if (first is { } leader)
-        {
-            // A band's later members stand beside the first placed, as it was staged on the map.
-            if (!placement.TrySpawnPose(operation, "daggerfall.encounter.band", leader.Position, BandSpacing.Minimum, BandSpacing.Maximum,
-                    out pose, SpawnDirection.Any))
-                return null;
-        }
-        else if (!placement.TrySpawnPose(operation, "daggerfall.encounter.placement", standing, DaggerfallEncounterPolicy.MinimumSpawnDistance(context),
+        // A band's later members stand beside the first placed, as it was staged on the map; where there is no room
+        // beside it, they come as any encounter does.
+        ActorPose pose = default;
+        bool beside = first is { } leader && placement.TrySpawnPose(operation, "daggerfall.encounter.band", leader.Position,
+            BandSpacing.Minimum, BandSpacing.Maximum, out pose, SpawnDirection.Any);
+        if (!beside && !placement.TrySpawnPose(operation, "daggerfall.encounter.placement", standing, DaggerfallEncounterPolicy.MinimumSpawnDistance(context),
                 DaggerfallEncounterPolicy.MaximumSpawnDistance, out pose,
                 DaggerfallEncounterPolicy.PlacesOutsideView(context) ? SpawnDirection.BesideView : SpawnDirection.Any))
             return null;

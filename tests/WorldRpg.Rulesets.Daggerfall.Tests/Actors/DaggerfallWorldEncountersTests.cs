@@ -1,3 +1,6 @@
+using System.Numerics;
+using Rusty.Engine;
+using Rusty.Engine.Entities;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -90,5 +93,56 @@ public sealed class DaggerfallWorldEncountersTests
             () => false, () => false, () => stage.Profile, () => stage.Site, () => stage.Cell, () => false, () => null, (_, _, _) => 0, _ => null, _ => { });
         Assert.Throws<InvalidOperationException>(() => nowhere.Queue(stage.Encounters.Request(Night, resting: false)!));
         Assert.Null(nowhere.Place(first, 1));
+    }
+
+    [Fact]
+    public void A_bands_members_stand_beside_its_first_or_come_as_any_encounter_where_there_is_no_room_there()
+    {
+        DaggerfallDefinitions definitions = TestPayload.Definitions;
+        using ActorsState actors = new();
+        actors.CreatePlayer(DaggerfallActorIdentity.PlayerEntityId, new EntityTypeId("player"), TestSessions.HealthyMechanics(), "health",
+            DaggerfallActorFactory.PlayerCapabilities);
+        _ = CombatCollaborators.Targeting(actors, new Dictionary<long, DaggerfallActorDefinition>(), out SpatialMovementSystem spatial, out SpatialFake fake);
+        using SpatialMovementSystem movement = spatial;
+        PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), 0f, 0f);
+        DaggerfallActorPlacement placement = new(actors, player, _ => true, new Dictionary<long, DaggerfallActorDefinition>(), _ => null,
+            _ => false, _ => true, _ => false, _ => false, () => false, spatial, PerceptionFake.Create().Service, KeyedRandomFake.Create(3).Service,
+            () => default, detectionDistance: 10d, fieldOfViewYDegrees: 60f);
+        // The ground is floor everywhere; in the second band a ray from where its first member came to stand starts
+        // inside the ground, as it can in the wilds.
+        Vector3? solid = null;
+        bool solidBesideFirst = false;
+        fake.FloorHit = request => solid is { } at && Vector3.Distance(request.Origin, at) < .01f
+            ? new SpatialHit { Present = true, StartSolid = true }
+            : request.Direction.Y < -.5f
+                ? new SpatialHit { Present = true, Kind = SpatialHitKind.Entity, Point = request.Origin with { Y = -1f }, Normal = Vector3.UnitY, Distance = 1 }
+                : default;
+        Dictionary<long, ActorPose> spawned = [];
+        HashSet<long> provoked = [];
+        DaggerfallEncounterRuntime runtime = new(definitions, RandomMinimum.Create());
+        DaggerfallSiteRecord site = definitions.Locations.Records.First(site => site.Exterior is not null);
+        DaggerfallWorldEncounters encounters = new(runtime, placement, definitions, player, () => 1, () => false, () => false,
+            () => new(site.Id, DaggerfallWorldProfileKind.Exterior, "test"), () => site, () => (site.MapPixelX, site.MapPixelY), () => false, () => 1,
+            (_, pose, _) =>
+            {
+                long id = 100 + spawned.Count;
+                spawned[id] = pose;
+                if (solidBesideFirst) solid ??= pose.Position.ToVector();
+                return id;
+            },
+            id => spawned.TryGetValue(id, out ActorPose pose) ? pose : null, id => provoked.Add(id));
+        DaggerfallEncounterRequest request = new(DaggerfallEncounterContext.WildernessDay, 1, Climate: 231);
+        DaggerfallEncounterChoice choice = DaggerfallEncounterPolicy.Pick(definitions.Encounters, request, (_, minimum, _) => minimum);
+
+        encounters.QueueBand(request, choice, new DaggerfallEncounterBand(1, DaggerfallEncounterStaging.Caught, 0f), 2, "test");
+        Assert.Equal([100L, 101L], runtime.MaterializePending("test", pending => encounters.Place(pending, 1)));
+        Assert.InRange(Vector3.Distance(spawned[100].Position.ToVector(), spawned[101].Position.ToVector()), 1.4f, 3.6f);
+        Assert.Equal([100L, 101L], provoked);
+
+        spawned.Clear();
+        solidBesideFirst = true;
+        encounters.QueueBand(request, choice, new DaggerfallEncounterBand(2, DaggerfallEncounterStaging.Camp, 1f), 2, "test");
+        Assert.Equal([100L, 101L], runtime.MaterializePending("test", pending => encounters.Place(pending, 2)));
+        Assert.Equal([100L, 101L], provoked);
     }
 }
