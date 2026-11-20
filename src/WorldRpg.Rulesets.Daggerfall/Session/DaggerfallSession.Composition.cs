@@ -588,7 +588,7 @@ internal sealed partial class DaggerfallSession
                 Presentation);
             // An enemy hit on the player is in flight while Combat holds its impact or a site appearance still times it.
             _actTiming = new DaggerfallPlayerActTiming(() => _combat.HoldsImpactAt(DaggerfallActorIdentity.PlayerEntityId)
-                || _sites.Appearances.Any(appearance => appearance.HasPendingEnemyHitTarget(DaggerfallActorIdentity.PlayerEntityId)));
+                || _sites.Appearances.Any(appearance => appearance.HasPendingEnemyHitTarget(DaggerfallActorIdentity.PlayerEntityId)), InputRefusals);
             _creation = new DaggerfallCharacterCreation(State.Character, definitions, _random);
             _atlasTiles = composition.Data is { } atlasData && DaggerfallAtlas.Read(atlasData) is { } atlas ? new(atlas, atlasData, engine.Ui) : null;
             FastTravel = new DaggerfallFastTravel(travelPolicy, State.Travel, State.Transport, _site, _random,
@@ -809,7 +809,7 @@ internal sealed partial class DaggerfallSession
                     // is the product-side identity join.
                     _ = DungeonActions.TriggerRay(look.Forward, _tuning.MeleeTargeting.MaximumDistance, DaggerfallDungeonActionEvent.Attack);
                     TryBashDoorWithSwing(look);
-                });
+                }, InputRefusals);
             DaggerfallEnemySpellRelease enemySpells = new(Casting, SpellTargets, cast => _touch.Reach(cast), _contact, _spatial,
                 () => _exterior.CharacterEnvironment(State.PlayerControl.Motion));
             _enemyMagic = new(definitions.EnemySpells, definitions.Magic, Casting, _random,
@@ -1092,14 +1092,16 @@ internal sealed partial class DaggerfallSession
                 EconomyPanels, travelPanel, RestPanel, textActions, _lootActions, _deathScreen,
                 new DaggerfallUiDispatch.SessionCalls(ChooseLegal, AnswerQuestOffer, ToggleWeapon, RequestPanel,
                     request => _saveSlotRequest = request, key => _bundleChoice.Choose(key, _mode, _newGameInitialized), open => _interactions.SetMenuOpen(open), () => _interactions.HoldsWorldOpen),
-                Presentation);
+                Presentation, InputRefusals);
+            InputReadout = new DaggerfallInputReadout(PlayerAttack, State.Actors, _guard, Casting, definitions, () => _appearance.DrawnHeld,
+                () => State.WeaponDrawn, InputRefusals);                                                  // UiProjection
             HudFrames = new DaggerfallHudFrames(_hud, State.Actors, Presentation, State.PlayerControl, Slots, _inventoryUi, EconomyPanels, _lootUi,
                 _characterUi, definitions, CurrentTextContext, _controls, ActivationPanel, State.Swimming, State.Effects, State.Quests, _questTexts, _time,
                 _notebook, State.Transport, State.Inventory, TransportAccess, State.Property, State.Wagon, DungeonText, _deathScreen, RestPanel,
                 RoomRental, FastTravel, _site, EffectItemName, Cinematics, LocalMap, Law, CreateItemChoice, TeleportChoice, DispelChoice,
                 IdentifyChoice, Spellbook, Detectors, _playerTime, _loading, _tutorial, Radial, Activation, _input, () => DrawnArt,
                 () => State.WeaponDrawn, () => _interactions.HoldsWorldOpen,
-                Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone));
+                Math.Min(_tuning.ControllerInput.MovementDeadzone, _tuning.ControllerInput.LookDeadzone), InputReadout);
             DaggerfallHeldWorkbench heldWorkbench = new(composition.HeldArt, tuning.Attacks, tuning.Viewmodel.Style, () => _appearance, () =>
             {
                 if (!_inAdmittedUpdate && !_disposed) PublishPresentation();
@@ -1151,6 +1153,7 @@ internal sealed partial class DaggerfallSession
                 _people,
                 peopleStage,
                 actorInspection,
+                InputReadout,
                 heldWorkbench,
                 new TunablesDebugModule(engine.ContentSource, heldWorkbench.Page, heldWorkbench.Choose),
             ];                                                                                     // Developer

@@ -37,6 +37,7 @@ internal readonly record struct DaggerfallHudSession(ProductMode Mode, bool NewG
 /// <param name="weaponDrawn">Whether the player's weapon is drawn.</param>
 /// <param name="holdsWorldOpen">Whether something open holds the world still, which puts the aim's prompt away.</param>
 /// <param name="deadzone">How far a stick moves before the controller counts as the device pressed on.</param>
+/// <param name="readout">The developer's input readout.</param>
 internal sealed class DaggerfallHudFrames(DaggerfallHudProjection hud, ActorsState actors, PresentationState presentation,
     PlayerControlState player, PresentationSlots slots, DaggerfallInventoryPresentation inventoryUi, DaggerfallEconomyPanels economy,
     DaggerfallLootPresentation loot, DaggerfallCharacterPresentation characterUi, DaggerfallDefinitions definitions,
@@ -50,7 +51,7 @@ internal sealed class DaggerfallHudFrames(DaggerfallHudProjection hud, ActorsSta
     DaggerfallTeleport teleport, DaggerfallDispel dispel, DaggerfallIdentify identify, DaggerfallSpellbookPanel spellbook,
     DaggerfallDetectors detectors, DaggerfallPlayerTime playerTime, LoadingScreen? loading, DaggerfallTutorial tutorial,
     DaggerfallRadialCommands radial, DaggerfallActivation aim, PlayerInputSystem playerInput, Func<DaggerfallArtReplacements?> drawnArt,
-    Func<bool> weaponDrawn, Func<bool> holdsWorldOpen, float deadzone)
+    Func<bool> weaponDrawn, Func<bool> holdsWorldOpen, float deadzone, DaggerfallInputReadout readout)
 {
     /// <summary>The device the player last pressed something on ("keyboard" or "controller"), so the HUD names its bindings for it.</summary>
     internal string InputDevice { get; private set; } = "keyboard";
@@ -101,6 +102,7 @@ internal sealed class DaggerfallHudFrames(DaggerfallHudProjection hud, ActorsSta
             Radial = radial.Read(activation.View.Mode),
             TutorialRunning = tutorial.Running,
             Tutorial = tutorial.View,
+            Readout = readout.Read(),
         });
     }
 

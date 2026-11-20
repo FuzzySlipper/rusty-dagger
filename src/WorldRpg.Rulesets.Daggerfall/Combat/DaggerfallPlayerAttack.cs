@@ -21,12 +21,13 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <param name="environment">The world environment contact queries run against now.</param>
 /// <param name="reportCast">How a cast outcome is told to the player.</param>
 /// <param name="strikeWorld">A swing admitted along a look meets the world: the environment's actions and doors.</param>
+/// <param name="refusals">Where a press that did nothing says why.</param>
 internal sealed class DaggerfallPlayerAttack(DaggerfallAttackTuning tuning, DaggerfallCombatRules combat, ActorsState actors,
     PlayerControlState control, Func<LookReceipt> look, Func<bool> weaponDrawn, DaggerfallEffectLifecycle effects,
     IAttackCapabilities<IProductFact> attacks, DaggerfallContactGuard guard, DaggerfallStrikeAim aim, ActorContact contact,
     Func<CharacterStepEnvironment?> environment, DaggerfallCasting casting, DaggerfallSpellRelease spellRelease,
     DaggerfallDefinitions definitions, FactBuffer<IProductFact> facts, Action<DaggerfallCastOutcome> reportCast,
-    Action<LookReceipt> strikeWorld) : IDaggerfallPlayerAttacks
+    Action<LookReceipt> strikeWorld, DaggerfallInputRefusals refusals) : IDaggerfallPlayerAttacks
 {
     private DaggerfallPlayerAttackClock? _clock;
     private readonly List<AttackImpactNotice> _impacts = [];
@@ -39,6 +40,11 @@ internal sealed class DaggerfallPlayerAttack(DaggerfallAttackTuning tuning, Dagg
     /// <summary>The attack clock this owner answers.</summary>
     internal DaggerfallPlayerAttackClock Clock => _clock ??= new(tuning, this);
 
+    /// <summary>How long admission's recovery from the last attack has left, at the last step's length.</summary>
+    internal double RecoverySecondsLeft => actors.Player.Actor.Get<AttackState>() is { } state && state.Generation == _step.Generation
+        && state.ReadyAtStep > _step.SimulationStep
+        ? (state.ReadyAtStep - _step.SimulationStep) * _step.Seconds : 0d;
+
     /// <summary>The last swing's sweep, for the developer overlay.</summary>
     internal SwingSweep? LastSwing { get; private set; }
 
@@ -46,16 +52,25 @@ internal sealed class DaggerfallPlayerAttack(DaggerfallAttackTuning tuning, Dagg
     internal void Step(double seconds, ulong generation, ulong simulationStep)
     {
         _step = (generation, simulationStep, seconds);
-        if ((weaponDrawn() || Clock.Casting) && !effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId).PhysicalAttacks && !actors.Player.IsDefeated)
-            Clock.Step(seconds);
-        else Retire(generation);
+        if (CannotFight(needsWeapon: !Clock.Casting) is { } reason) Retire(generation, reason);
+        else Clock.Step(seconds);
     }
 
-    /// <summary>Ends an attack in progress, interrupting its pending blow under the generation that admitted it.</summary>
-    internal void Retire(ulong generation)
+    /// <summary>Why the player cannot fight now, or null: a defeat, a restriction on physical attacks, or, where it needs one, a sheathed weapon.</summary>
+    private string? CannotFight(bool needsWeapon) =>
+        actors.Player.IsDefeated ? "defeated"
+        : effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId).PhysicalAttacks ? "paralysed"
+        : needsWeapon && !weaponDrawn() ? "weapon sheathed"
+        : null;
+
+    /// <summary>
+    /// Ends an attack in progress, interrupting its pending blow under the generation that admitted it; a press still
+    /// waiting is dropped for <paramref name="reason"/>.
+    /// </summary>
+    internal void Retire(ulong generation, string reason)
     {
         if (!Clock.Busy) return;
-        Clock.Cancel();
+        Clock.Cancel(reason);
         attacks.InterruptPendingAttack(DaggerfallActorIdentity.PlayerEntityId, generation);
     }
 
@@ -63,10 +78,37 @@ internal sealed class DaggerfallPlayerAttack(DaggerfallAttackTuning tuning, Dagg
     /// Advances the player's guard by <paramref name="seconds"/>. An attack keeps the guard down from its
     /// press until the clock has finished its motion.
     /// </summary>
-    internal void StepGuard(double seconds, ulong generation, ulong simulationStep) => guard.Step(seconds,
-        canGuard: !combat.PlayerWinded && weaponDrawn() && !effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId).PhysicalAttacks && !actors.Player.IsDefeated,
-        swinging: actors.Player.Actor.Get<AttackState>().Pending is not null || Clock.Busy,
-        generation, simulationStep, facts);
+    internal void StepGuard(double seconds, ulong generation, ulong simulationStep)
+    {
+        string? cannot = CannotFight(needsWeapon: true) ?? (combat.PlayerWinded ? "winded" : null);
+        guard.Step(seconds, canGuard: cannot is null, swinging: actors.Player.Actor.Get<AttackState>().Pending is not null || Clock.Busy,
+            generation, simulationStep, facts);
+        if (guard.Refusal is { } refusal) refusals.Refused("Block", cannot ?? refusal);
+    }
+
+    /// <summary>
+    /// A refusal admission reported as a fact, when it is the player's: the readout names it, with the time a recovery
+    /// has left. Another actor's refusal, and a blow the target's material turned, are not a press refused.
+    /// </summary>
+    internal void ObserveRejection(AttackRejectedFact rejected)
+    {
+        if (rejected.ActorId is { } actor && actor != DaggerfallActorIdentity.PlayerEntityId
+            || rejected.Reason is AttackRejection.InsufficientWeaponMaterial) return;
+        string input = _attack switch { DaggerfallAttackIds.Kick => "Kick", DaggerfallAttackIds.Shot => "Shot", _ => "Attack" };
+        refusals.Refused(input, rejected.Reason switch
+        {
+            AttackRejection.Cooldown => FormattableString.Invariant($"recovering, {RecoverySecondsLeft:0.0} s left"),
+            AttackRejection.AttackInProgress => "a blow still waits for its impact",
+            AttackRejection.Equipping => "weapon still being readied",
+            AttackRejection.Winded => "winded",
+            AttackRejection.Incapacitated => "paralysed",
+            AttackRejection.EmptyQuiver => "no arrows",
+            AttackRejection.TargetDefeated => "target already defeated",
+            AttackRejection.MissingPlayerPosition => "no player position",
+            AttackRejection.NoAttackPolicy => "no attack for what the hands hold",
+            _ => rejected.Reason.ToString(),
+        });
+    }
 
     /// <summary>The blows the player's attacks reached since the last call, for the impacts to land.</summary>
     internal AttackImpactNotice[] TakeImpacts()
@@ -106,7 +148,7 @@ internal sealed class DaggerfallPlayerAttack(DaggerfallAttackTuning tuning, Dagg
         _harmsCivilians = aim.AimedAtCivilian();
         if (attack == DaggerfallAttackIds.Cast)
         {
-            if (!spellRelease.Ready(reportCast)) return false;
+            if (!spellRelease.Ready(reportCast, reason => refusals.Refused("Cast", reason))) return false;
             _attack = attack;
             StepGuard(0d, generation, simulationStep);
             return true;
@@ -152,4 +194,6 @@ internal sealed class DaggerfallPlayerAttack(DaggerfallAttackTuning tuning, Dagg
 
     void IDaggerfallPlayerAttacks.Rest() =>
         facts.Append(new PlayerAttackRestFact(_step.Generation, _step.SimulationStep));
+
+    void IDaggerfallPlayerAttacks.Dropped(string input, string reason) => refusals.Dropped(input, reason);
 }

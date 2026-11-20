@@ -376,6 +376,7 @@ public sealed class DaggerfallUiActionTests
         [DaggerfallUiActionKind.BundleSelect] = "\"key\":\"bundle:1\"",
         [DaggerfallUiActionKind.DeleteSlot] = "\"key\":\"slot-1\"",
         [DaggerfallUiActionKind.DeathLoadGame] = "\"key\":\"slot-1\"",
+        [DaggerfallUiActionKind.InputClaimed] = "\"item\":\"attack\",\"key\":\"developer tools\"",
     };
 
     /// <summary>

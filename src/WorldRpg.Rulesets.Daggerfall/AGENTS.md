@@ -61,6 +61,7 @@ On top of the root `AGENTS.md`.
 - Hit feedback never moves the aim or overrides a gameplay rate another owner set.
 - Keep `pathGroups` in step with the held definition's `items`.
 - See a swing's arc: `world.overlay-on swing`, then `engine.inspect.overlay show set swing` after a first swing.
+- A player input that does nothing (a rule refuses it, or it never reaches one) says why through `DaggerfallInputRefusals`; a new refusal or drop reports there too. `hud.readout-on` (the Developer panel's Input readout) shows the latest beside the player's attack, guard, cast and arms state.
 
 ## Exterior
 

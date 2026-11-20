@@ -37,5 +37,5 @@ public sealed class DaggerfallHudFramesTests
     private static DaggerfallHudFrames Frames(SocietyStage stage) => new(null!, stage.Actors, new PresentationState("Ready", 5d), stage.Player,
         null!, null!, null!, null!, null!, stage.Definitions, null!, null!, null!, null!, stage.Effects, null!, null!, null!, null!, null!,
         null!, null!, null!, null!, null!, null!, null!, null!, null!, stage.Sites, item => $"item {item}", null, null!, stage.Law, null!,
-        null!, null!, null!, null!, null!, null!, null, null!, null!, null!, null!, () => null, () => false, () => false, deadzone: 0.25f);
+        null!, null!, null!, null!, null!, null!, null, null!, null!, null!, null!, () => null, () => false, () => false, deadzone: 0.25f, null!);
 }

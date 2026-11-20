@@ -84,6 +84,8 @@ export function mountHud(shell: HTMLElement, send: Send): Hud {
   const effects = shell.querySelector<HTMLElement>('.dagger-effects')!;
   const effectList = effects.querySelector<HTMLUListElement>('ul')!;
   const cinematicSkip = shell.querySelector<HTMLButtonElement>('.dagger-cinematic-skip')!;
+  // The developer's input readout (hud.readout): the projection's words as they are, while the developer has it on.
+  const readout = shell.querySelector<HTMLElement>('.dagger-readout')!;
   const skip = (): void => send({ action: 'cinematic-skip' });
   cinematicSkip.addEventListener('click', skip);
   let cinematicPlaying = false;
@@ -180,6 +182,10 @@ export function mountHud(shell: HTMLElement, send: Send): Hud {
       weapon.querySelector('.dagger-weapon-name')!.textContent = value.weapon?.name ?? '';
       activationIndicator.textContent = value.activation ? value.activation.label ?? value.activation.mode : '';
       activationIndicator.hidden = !inWorld || !value.activation;
+
+      readout.hidden = !value.readout;
+      readout.querySelector('.dagger-readout-state')!.textContent = value.readout?.state ?? '';
+      readout.querySelector('.dagger-readout-refusal')!.textContent = value.readout?.refusal ?? '';
 
       // The prompt names what use does to the aimed target and the control that does it on the device in use.
       const aimed = playing ? value.prompt ?? null : null;

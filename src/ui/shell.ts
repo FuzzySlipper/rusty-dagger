@@ -30,6 +30,7 @@ const SHELL_MARKUP = `
     <div class="dagger-breath" hidden><span class="dagger-breath-label">Breath</span><span class="dagger-bar"><span></span></span><strong></strong></div>
     <section class="dagger-quests" aria-live="polite"></section>
     <section class="dagger-detectors" aria-label="Detected nearby"></section><section class="dagger-status"></section><section class="dagger-effects" aria-label="Active effects" hidden><h2>Active effects</h2><ul></ul></section><button class="dagger-cinematic-skip" type="button" hidden>Skip</button>
+    <p class="dagger-readout" aria-live="off" hidden><span class="dagger-readout-state"></span><span class="dagger-readout-refusal"></span></p>
     <div class="dagger-death" role="alertdialog" aria-labelledby="dagger-death-title" hidden>
       <img class="dagger-death-screen" alt="You have died.">
       <div class="dagger-death-fade" aria-hidden="true"></div>

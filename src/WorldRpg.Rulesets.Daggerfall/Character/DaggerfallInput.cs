@@ -53,6 +53,35 @@ internal static class DaggerfallInput
         return null;
     }
 
+    /// <summary>The acts a press can make in the world, by the name a refusal gives them.</summary>
+    internal static readonly IReadOnlyList<(InputActionId Action, string Name)> WorldActs =
+        [(Attack, "Attack"), (Kick, "Kick"), (Block, "Block"), (Interact, "Use"), (ToggleWeapon, "Weapon toggle"), (Shortcut("recast"), "Cast")];
+
+    /// <summary>The refusal name of the world act a control binding (<c>attack</c>, <c>recast</c>) makes, or null for another binding.</summary>
+    internal static string? WorldAct(string binding) =>
+        WorldActs.Where(act => act.Action == Shortcut(binding)).Select(act => act.Name).FirstOrDefault();
+
+    /// <summary>
+    /// The world acts one input slice presses: a key binding or pad button going down, or a request the slice already
+    /// carries (a DOM action that asked for one).
+    /// </summary>
+    internal static IEnumerable<string> PressedActs(ReadOnlySpan<ProductInputEvent> inputs, IReadOnlyCollection<InputActionId> requested,
+        IReadOnlyList<ControllerActionBinding> pad)
+    {
+        HashSet<string> pressed = [];
+        foreach (ProductInputEvent input in inputs)
+        {
+            // A press as the input owner counts one: a key or button going down, or a DOM action's activation.
+            if (input.Edge != InputEdge.Pressed && !(input.Kind == InputEventKind.DirectDigital && input.Phase == InputPhase.DirectUi
+                && input.Edge == InputEdge.None)) continue;
+            foreach (var (action, name) in WorldActs)
+                if (HeldChange(input, Bindings.First(binding => binding.Action == action).Intent.Span, action, pad) == true) pressed.Add(name);
+        }
+        foreach (var (action, name) in WorldActs)
+            if (requested.Contains(action)) pressed.Add(name);
+        return WorldActs.Select(act => act.Name).Where(pressed.Contains);
+    }
+
     /// <summary>
     /// The default look: sensitivity, pitch limits and inversion. Screen-space mouse Y increases downward and
     /// Engine camera pitch increases upward, so the vertical axis is inverted unless the player chooses otherwise.

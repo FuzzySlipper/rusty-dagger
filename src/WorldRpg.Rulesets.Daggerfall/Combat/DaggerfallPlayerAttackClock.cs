@@ -38,7 +38,19 @@ internal interface IDaggerfallPlayerAttacks
 
     /// <summary>The last motion ended with nothing after it: presentation returns to rest.</summary>
     void Rest();
+
+    /// <summary>A press waiting on the clock, or a charge it held, was let go unplayed: <paramref name="input"/> and why.</summary>
+    void Dropped(string input, string reason);
 }
+
+/// <summary>
+/// What the attack clock is doing, for the developer's readout: the attack in motion, its phase and how far into it,
+/// the press waiting to start one, and the fast attack the chain is at.
+/// </summary>
+/// <param name="Phase">wind-up, swing, recovery, charging, holding or drawing; ready at rest.</param>
+/// <param name="Duration">The motion's whole time, or null for an untimed hold.</param>
+/// <param name="Waiting">The press waiting to start a motion (attack, attack held, kick or cast), or null.</param>
+internal readonly record struct DaggerfallAttackClockReading(string? Attack, string Phase, double Seconds, double? Duration, string? Waiting, int Chain);
 
 /// <summary>
 /// The player's attack as the rules time it. With a bow a press draws, and the arrow leaves once it is drawn and let go.
@@ -103,8 +115,10 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
     private void Dropped()
     {
         Release();
+        if (_press is not null) attacks.Dropped("Attack", "input cleared before it started");
         _press = null;
         if (_playing is not { Attack: DaggerfallAttackIds.PowerIn or DaggerfallAttackIds.PowerHold or DaggerfallAttackIds.ShotDraw }) return;
+        attacks.Dropped("Attack", _playing.Attack == DaggerfallAttackIds.ShotDraw ? "input cleared while drawing" : "input cleared while charging");
         _playing = null;
         attacks.Rest();
     }
@@ -117,6 +131,19 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
 
     /// <summary>The attack in motion, or null at rest.</summary>
     internal string? Current => _playing?.Attack;
+
+    /// <summary>The clock now, as the developer's readout shows it.</summary>
+    internal DaggerfallAttackClockReading Read() => new(_playing?.Attack, _playing switch
+    {
+        null => "ready",
+        { Attack: DaggerfallAttackIds.PowerIn } => "charging",
+        { Attack: DaggerfallAttackIds.PowerHold } => "holding",
+        { Attack: DaggerfallAttackIds.ShotDraw } => "drawing",
+        { Timing: { } timing, Seconds: var seconds } when seconds < timing.Windup => "wind-up",
+        { Timing: { } timing, Seconds: var seconds } when seconds < timing.Windup + timing.Commit => "swing",
+        _ => "recovery",
+    }, _playing?.Seconds ?? 0d, _playing?.Timing?.Duration,
+        _cast ? "cast" : _kick ? "kick" : _press is not null ? _held ? "attack held" : "attack" : null, _chain);
 
     /// <summary>The attack was requested this step.</summary>
     internal void Press()
@@ -247,9 +274,15 @@ internal sealed class DaggerfallPlayerAttackClock(DaggerfallAttackTuning tuning,
         return new(timing.Windup * scale, timing.Commit * scale, timing.Recovery * scale);
     }
 
-    /// <summary>Retires what is in progress without landing it: a site change, a held press lost, or the player's defeat.</summary>
-    internal void Cancel()
+    /// <summary>
+    /// Retires what is in progress without landing it: a site change, a held press lost, or the player's defeat. A press
+    /// still waiting is dropped for <paramref name="reason"/>.
+    /// </summary>
+    internal void Cancel(string reason)
     {
+        if (_press is not null) attacks.Dropped("Attack", reason);
+        if (_kick) attacks.Dropped("Kick", reason);
+        if (_cast) attacks.Dropped("Cast", reason);
         bool playing = _playing is not null || _restOwed;
         _playing = null;
         _restOwed = false;

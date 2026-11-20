@@ -17,6 +17,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// </summary>
 /// <param name="quickEntry">Whether the bundle begins with a quick-start character.</param>
 /// <param name="playerInput">The player's input, whose panel and shortcut keys are taken here between steps.</param>
+/// <param name="refusals">Where a press this dispatch drops says why.</param>
 internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, bool quickEntry, DaggerfallRacialOverrides racialOverrides,
     DaggerfallLaw law, DaggerfallPlayerTime playerTime, DaggerfallCreateItem createItem, DaggerfallIdentify identify,
     DaggerfallTeleport teleport, DaggerfallDispel dispel, DaggerfallOpeningCinematics openingCinematics,
@@ -26,7 +27,7 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
     DaggerfallLocalMap map, DaggerfallActivationPanel activation, DaggerfallSpellbookPanel spellbook, DaggerfallMakerPanels makers,
     DaggerfallSummoningPanel summoning, DaggerfallEconomyPanels economy, DaggerfallTravelPanel travel, DaggerfallRestPanel rest,
     DaggerfallTextActions text, DaggerfallLootActions lootActions, DaggerfallDeathScreen death, DaggerfallUiDispatch.SessionCalls session,
-    PresentationState presentation)
+    PresentationState presentation, DaggerfallInputRefusals refusals)
 {
     /// <summary>What the dispatch asks of the session: its cross-domain lists, its open interactions and the Host's requests.</summary>
     /// <param name="ChooseLegal">The legal choice's list.</param>
@@ -93,8 +94,17 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             return;
         }
         DaggerfallUiActionRule rule = DaggerfallUiAction.RuleFor(action.Kind);
+        string? act = action.Kind switch
+        {
+            DaggerfallUiActionKind.Attack => "Attack", DaggerfallUiActionKind.SpellCast => "Cast",
+            DaggerfallUiActionKind.Loot => "Use", DaggerfallUiActionKind.WeaponToggle => "Weapon toggle", _ => null,
+        };
         if (!rule.Admits(phase))
         {
+            if (act is not null) refusals.Dropped(act, phase switch
+            {
+                DaggerfallUiPhases.Dead => "dead", DaggerfallUiPhases.Modal => "a modal holds the world", _ => "play is held",
+            });
             if (phase != DaggerfallUiPhases.Dead && rule.Refusal is { } refusal) presentation.SetOutcome(refusal);
             return;
         }
@@ -108,7 +118,11 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
         }
         if (law.ModalOpen && action.Kind is not (DaggerfallUiActionKind.LegalChoice or DaggerfallUiActionKind.SaveGame
             or DaggerfallUiActionKind.LoadGame or DaggerfallUiActionKind.SaveSlots or DaggerfallUiActionKind.SaveSlot
-            or DaggerfallUiActionKind.LoadSlot)) return;
+            or DaggerfallUiActionKind.LoadSlot))
+        {
+            if (act is not null) refusals.Dropped(act, "the court waits for an answer");
+            return;
+        }
         Apply(action, firstStep, opensInteraction, ref elapsedSubmitted);
         // These immediate UI actions may arrive while no world step is due. Spend a step when
         // play resumes; reading panels, preparing spells and editing preferences remain free.
@@ -192,10 +206,17 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             case DaggerfallUiActionKind.SpellMakerDraft:
             case DaggerfallUiActionKind.SpellMakerBuy: spellbook.ChangeSpellMaker(action); break;
             case DaggerfallUiActionKind.SpellCast:
-                if (!opensInteraction && !session.HoldsWorldOpen()) attack.Clock.PressCast(); break;
-            case DaggerfallUiActionKind.Attack: if (!opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
+                if (opensInteraction) refusals.Dropped("Cast", "an interaction opened in the same update");
+                else if (session.HoldsWorldOpen()) refusals.Dropped("Cast", "an open screen holds the world");
+                else attack.Clock.PressCast();
+                break;
+            case DaggerfallUiActionKind.Attack:
+                if (opensInteraction) refusals.Dropped("Attack", "an interaction opened in the same update");
+                else firstStep.Request(DaggerfallInput.Attack);
+                break;
             case DaggerfallUiActionKind.Loot: firstStep.Request(DaggerfallInput.Interact); break;
             case DaggerfallUiActionKind.WeaponToggle: session.ToggleWeapon(); break;
+            case DaggerfallUiActionKind.InputClaimed: refusals.Dropped(DaggerfallInput.WorldAct(action.Item!)!, $"the {action.Key} has the cursor"); break;
             case DaggerfallUiActionKind.TutorialStart: tutorial.Start(); break;
             case DaggerfallUiActionKind.TutorialContinue: tutorial.Continue(action.Page!.Value); break;
             case DaggerfallUiActionKind.TutorialEnd: tutorial.End(); break;
@@ -298,7 +319,10 @@ internal sealed class DaggerfallUiDispatch(DaggerfallCharacterState character, b
             if (playerInput.TakeAction(action)) { session.RequestPanel(name); panel = true; }
         foreach (string shortcut in DaggerfallInput.Shortcuts)
             if (playerInput.TakeAction(DaggerfallInput.Shortcut(shortcut))) { ApplyShortcut(shortcut); panel = true; }
-        if (panel) playerInput.ClearPendingActions();
+        if (!panel) return;
+        foreach (var (action, name) in DaggerfallInput.WorldActs)
+            if (playerInput.TakeAction(action)) refusals.Dropped(name, "a panel key took the same update");
+        playerInput.ClearPendingActions();
     }
 
     /// <summary>What a shortcut key asks for: a panel, a save, an activation mode or a spell.</summary>

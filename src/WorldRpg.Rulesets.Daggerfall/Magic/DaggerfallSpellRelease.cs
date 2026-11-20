@@ -42,23 +42,48 @@ internal sealed class DaggerfallSpellRelease(DaggerfallCasting casting, Daggerfa
 
     /// <summary>Readies the spell a cast will release: the one ready, or else the last one cast, which a spellbook recalls.</summary>
     /// <param name="report">How a cast outcome is told to the player.</param>
-    internal bool Ready(Action<DaggerfallCastOutcome> report)
+    /// <param name="refused">Why a cast that cannot go was refused, in the input readout's words.</param>
+    internal bool Ready(Action<DaggerfallCastOutcome> report, Action<string>? refused = null)
     {
         long player = actors.Player.DurableId;
         if (casting.ReadyFor(player) is null)
         {
-            if (_lastPlayerSpell is null) { presentation.SetOutcome("You have not cast a spell yet."); return false; }
+            if (_lastPlayerSpell is null)
+            {
+                presentation.SetOutcome("You have not cast a spell yet.");
+                refused?.Invoke("no spell ready");
+                return false;
+            }
             if (!inventory.Read().UniqueItems.Any(item => definitions.SourceTemplateFor(definitions.RequireItem(new(item.Definition.Value)))?.Index == SpellbookTemplateIndex))
             {
                 presentation.SetOutcome("You need a spellbook to recast a spell.");
+                refused?.Invoke("no spellbook to recast from");
                 return false;
             }
-            if (ReadyPlayerSpell(_lastPlayerSpell).Outcome is var readied && readied != DaggerfallCastOutcome.Ready) { report(readied); return false; }
+            if (ReadyPlayerSpell(_lastPlayerSpell).Outcome is var readied && readied != DaggerfallCastOutcome.Ready)
+            {
+                report(readied);
+                refused?.Invoke(Refusal(readied));
+                return false;
+            }
         }
         if (casting.ReleaseRefusal(player) is not { } refusal) return true;
         report(refusal);
+        refused?.Invoke(Refusal(refusal));
         return false;
     }
+
+    // A cast refusal as the input readout words it.
+    private static string Refusal(DaggerfallCastOutcome outcome) => outcome switch
+    {
+        DaggerfallCastOutcome.InsufficientMagicka => "not enough magicka",
+        DaggerfallCastOutcome.Silenced => "silenced",
+        DaggerfallCastOutcome.Unready or DaggerfallCastOutcome.Cancelled => "no spell ready",
+        DaggerfallCastOutcome.UnknownSpell or DaggerfallCastOutcome.SourceUnavailable => "spell not available",
+        DaggerfallCastOutcome.UnsupportedEffect => "spell has unavailable effects",
+        DaggerfallCastOutcome.InvalidTarget or DaggerfallCastOutcome.TargetUnavailable => "no valid target",
+        _ => outcome.ToString(),
+    };
 
     /// <summary>The cast's windup is over: the ready spell leaves the left hand along the view.</summary>
     /// <param name="report">How a cast outcome is told to the player.</param>

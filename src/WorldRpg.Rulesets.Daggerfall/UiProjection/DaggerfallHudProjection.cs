@@ -65,6 +65,8 @@ internal sealed record DaggerfallHudFrame(
     internal DaggerfallTutorialView? Tutorial { get; init; }
     /// <summary>The command radial's commands, in ring order.</summary>
     internal IReadOnlyList<DaggerfallRadialCommand> Radial { get; init; } = [];
+    /// <summary>The developer's input readout while it is on, or null.</summary>
+    internal DaggerfallInputReadoutView? Readout { get; init; }
 }
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
@@ -204,6 +206,9 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("drawn", builder.Boolean(weapon.Drawn)), ("name", builder.String(weapon.Name)),
                 ("state", builder.String(DaggerfallHudText.WeaponState(weapon))))),
             ("inputDevice", builder.String(frame.InputDevice)),
+            ("readout", frame.Readout is not { } readout ? builder.Null() : builder.Object(
+                ("state", builder.String(readout.State)),
+                ("refusal", readout.Refusal is { } refusal ? builder.String(refusal) : builder.Null()))),
             ("prompt", frame.Prompt is not { } prompt ? builder.Null() : builder.Object(
                 ("action", builder.String(prompt.Action)), ("target", builder.String(prompt.Target)))),
             // Status rows come from the owners that publish them rather than from this projection

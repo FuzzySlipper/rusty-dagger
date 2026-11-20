@@ -26,7 +26,7 @@ internal enum DaggerfallUiActionKind
     CharacterClassQuestions, CharacterClassAnswer, CharacterClassBack,
     CharacterBegin, CharacterUpdate, CharacterBackgroundReroll, CharacterCommit, CharacterCancel, CharacterQuickStart,
     CharacterLevelAllocate, CharacterLevelCommit,
-    ActivationMode, Attack, Loot, WeaponToggle, Menu, TutorialStart, TutorialContinue, TutorialEnd,
+    ActivationMode, Attack, Loot, WeaponToggle, Menu, TutorialStart, TutorialContinue, TutorialEnd, InputClaimed,
     DialogueTone, DialogueTopic, DialogueClose, TavernBuy, TrainingCommit, MerchantBuy, MerchantSell, MerchantRepair, MerchantCollectRepair, MerchantIdentify, MerchantShoplift, MerchantQuote,
     LegalChoice, CreateItemSelect, CreateItemCancel, DispelSelect, DispelCancel, TeleportSelect, IdentifySelect, IdentifyCancel,
     TransportSelect, TransportLeaveShip, TransportBoardShip,
@@ -188,6 +188,9 @@ internal static class DaggerfallUiAction
         new(DaggerfallUiActionKind.Loot, "loot", DaggerfallUiPhases.Playing),
         // The command radial readies or sheathes the weapon as its key does, on the first step play admits.
         new(DaggerfallUiActionKind.WeaponToggle, "weapon-toggle", DaggerfallUiPhases.Live),
+        // A world act's binding pressed while a DOM surface held the cursor, so it never reached play: the developer's
+        // input readout names it (item, the binding) and the surface (key).
+        new(DaggerfallUiActionKind.InputClaimed, "input-claimed", DaggerfallUiPhases.Live | DaggerfallUiPhases.Dead),
         new(DaggerfallUiActionKind.TutorialStart, "tutorial-start", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TutorialContinue, "tutorial-continue", DaggerfallUiPhases.Interaction),
         new(DaggerfallUiActionKind.TutorialEnd, "tutorial-end", DaggerfallUiPhases.Interaction),
@@ -582,6 +585,10 @@ internal static class DaggerfallUiAction
                     return fields.SetEquals(["action", "note"]) && !string.IsNullOrWhiteSpace(note) ? new(action, Note: note) : null;
                 case DaggerfallUiActionKind.Menu: return fields.SetEquals(["action", "open"]) ? new(action, Open: open) : null;
                 case DaggerfallUiActionKind.WeaponToggle: return fields.SetEquals(["action"]) ? new(action) : null;
+                case DaggerfallUiActionKind.InputClaimed:
+                    return fields.SetEquals(["action", "item", "key"]) && item is not null && DaggerfallInput.WorldAct(item) is not null
+                        && key is { Length: > 0 and <= 40 } && key.All(letter => char.IsAsciiLetterLower(letter) || letter == ' ')
+                        ? new(action, Item: item, Key: key) : null;
                 case DaggerfallUiActionKind.TutorialStart or DaggerfallUiActionKind.TutorialEnd: return fields.SetEquals(["action"]) ? new(action) : null;
                 case DaggerfallUiActionKind.TutorialContinue: return fields.SetEquals(["action", "page"]) && page is >= 0 ? new(action, Page: page) : null;
                 case DaggerfallUiActionKind.SaveSlots: return fields.SetEquals(["action"]) ? new(action) : null;

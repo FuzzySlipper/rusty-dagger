@@ -1248,6 +1248,7 @@ test('the Dagger developer panel pauses and steps held time, flies the observer 
     'world.overlays': JSON.stringify({ sets: [{ name: 'people', on: false }, { name: 'player', on: true }] }),
     'playtest.observe': JSON.stringify({ player: { viewpoint: { x: 1, y: 2, z: 3 }, yawDegrees: 0, pitchDegrees: 0 } }),
     'engine.inspect.overlay': JSON.stringify({ on: true, collision: { radius: 8 }, sets: [] }),
+    'hud.readout': JSON.stringify({ on: true }),
     'engine.inspect.collision': JSON.stringify({ lines: 177, omitted: 0, colliders: [
       { kind: 'static-mesh', content: 'worldrpg/imports/world-blocks/rmb/resial05-rmb/exterior.rspatial', instance: 1, lines: 177 },
       { kind: 'character', lines: 12 }] }),
@@ -1277,6 +1278,14 @@ test('the Dagger developer panel pauses and steps held time, flies the observer 
     const targets = element.querySelector('[data-overlay="inspect.targets"]');
     targets.checked = true; targets.dispatchEvent(new window.Event('change')); await settle();
     assert.deepEqual(developer.commands.slice(-2), ['inspect.targets', 'engine.inspect.overlay show set inspect.targets']);
+
+    // The input readout opens as the ruleset keeps it now, and turns off and on through its commands.
+    const readout = element.querySelector('[data-readout]');
+    assert.equal(readout.checked, true);
+    readout.checked = false; readout.dispatchEvent(new window.Event('change')); await settle();
+    assert.equal(developer.commands.at(-1), 'hud.readout-off');
+    readout.checked = true; readout.dispatchEvent(new window.Event('change')); await settle();
+    assert.equal(developer.commands.at(-1), 'hud.readout-on');
 
     // Collision opens as the Engine draws it now (8 m), turns off and on at a chosen radius, and lists what it drew.
     const collision = element.querySelector('[data-collision]');
@@ -4937,6 +4946,55 @@ test('the prompt names what use does to the aimed target and the use binding for
   } finally { f.dispose(); }
 });
 
+
+test('the input readout draws the projection\'s line at the bottom of the view and tells it of a press a cursor surface kept from play', () => {
+  const f = fixture();
+  try {
+    const controls = { diagnostic: '', bindings: [
+      { id: 'attack', category: 'combat', label: 'Attack', keys: ['Primary'], fixed: false },
+      { id: 'kick', category: 'combat', label: 'Kick', keys: ['KeyK'], fixed: false },
+      { id: 'inventory', category: 'interface', label: 'Inventory', keys: ['KeyI'], fixed: false }] };
+    const claims = () => f.actions.filter(action => action.action === 'input-claimed');
+    const key = code => document.dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true }));
+    const click = target => target.dispatchEvent(new window.MouseEvent('pointerdown', { button: 0, bubbles: true, cancelable: true }));
+    f.publish({ controls });
+    const readout = f.root.querySelector('.dagger-readout');
+    assert.equal(readout.hidden, true, 'Off by default: the projection carries no readout.');
+    const state = 'weapon drawn · fastA swing 0.20/0.60 s · guard down · no spell ready · arms: classic sprite';
+    f.publish({ controls, readout: { state, refusal: null } });
+    assert.equal(readout.hidden, false);
+    assert.equal(readout.querySelector('.dagger-readout-state').textContent, state);
+    assert.equal(readout.querySelector('.dagger-readout-refusal').textContent, '');
+    f.publish({ controls, readout: { state, refusal: 'Attack refused: weapon sheathed' } });
+    assert.equal(readout.querySelector('.dagger-readout-refusal').textContent, 'Attack refused: weapon sheathed');
+    // It takes no focus and no pointer.
+    assert.equal(readout.querySelectorAll('button, [tabindex]').length, 0);
+
+    // In play the press reaches the Engine: nothing is claimed.
+    key('KeyK'); click(f.root.querySelector('.dagger-hud'));
+    assert.deepEqual(claims(), []);
+    // With the menu holding the cursor, a world act's key or a click on the view behind it is told to the ruleset; a
+    // key that is no world act, and a click on the menu's own controls, are not.
+    f.pressEscape();
+    assert.equal(f.modes.at(-1), 'interface');
+    key('KeyK'); key('KeyI');
+    click(f.root.querySelector('.dagger-menu button'));
+    click(f.root.querySelector('.dagger-hud'));
+    // The Engine's world canvas is focusable but is the view, so a click on it is told too.
+    const canvas = document.createElement('canvas');
+    canvas.dataset.rustyApplicationRenderer = 'engine-owned';
+    canvas.tabIndex = 0;
+    f.root.append(canvas);
+    click(canvas);
+    assert.deepEqual(claims(), [{ action: 'input-claimed', item: 'kick', key: 'menu' }, { action: 'input-claimed', item: 'attack', key: 'menu' },
+      { action: 'input-claimed', item: 'attack', key: 'menu' }]);
+    // With the readout off nothing is claimed.
+    f.publish({ controls, readout: null });
+    key('KeyK');
+    assert.equal(claims().length, 3);
+    assert.equal(readout.hidden, true);
+  } finally { f.dispose(); }
+});
 
 test('a missing equipment silhouette is reported and its slot keeps the plain marker', async () => {
   const f = fixture();

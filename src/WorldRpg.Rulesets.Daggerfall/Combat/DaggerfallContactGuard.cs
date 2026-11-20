@@ -26,6 +26,9 @@ internal sealed class DaggerfallContactGuard(DaggerfallContactInputs session, Da
     /// <summary>Whether the player's guard is raised now.</summary>
     public bool Raised { get; private set; }
 
+    /// <summary>Why a block held at the last step stayed down, or null when none is held or it is up.</summary>
+    internal string? Refusal { get; private set; }
+
     /// <summary>
     /// Whether the guard needs admitted steps now, so action-driven time runs for it: to raise a held guard,
     /// to spend stamina while it is up, and to lower one that was released.
@@ -57,6 +60,7 @@ internal sealed class DaggerfallContactGuard(DaggerfallContactInputs session, Da
             raise = pool.Current > 0d;
         }
         Set(raise, generation, simulationStep, facts);
+        Refusal = !_held || raise ? null : !canGuard ? "cannot guard now" : swinging ? "a swing in progress" : "out of stamina";
     }
 
     /// <summary>Drops held input on a focus, mode or site change, which a missed release must not keep raised.</summary>
@@ -64,6 +68,7 @@ internal sealed class DaggerfallContactGuard(DaggerfallContactInputs session, Da
     {
         _held = false;
         Set(false, generation, simulationStep, facts);
+        Refusal = null;
     }
 
     private void Set(bool raised, ulong generation, ulong simulationStep, FactBuffer<IProductFact> facts)

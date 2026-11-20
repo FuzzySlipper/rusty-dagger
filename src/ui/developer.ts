@@ -6,7 +6,7 @@ import { createLiveDebugHttpTransport, mountDeveloperShell, type DeveloperShellM
  * workbench (the Engine tunables panel over the ruleset's held-art workbench, `held.motion*`). This is diagnostic UI
  * (`src/ui/AGENTS.md`, "Ownership"): it lives outside the game's shell and skin, carries no game state, and opens
  * only when the host runs with live-debug, which it asks the host before opening. The Dagger panel pauses and steps
- * the Engine's held time, flies the Engine's observer camera, and turns the ruleset's debug overlay sets on and off;
+ * the Engine's held time, flies the Engine's observer camera, shows the input readout, and turns the ruleset's debug overlay sets on and off;
  * every control is one or two debug commands, the same ones the console takes.
  */
 export interface DeveloperTools {
@@ -193,6 +193,20 @@ function mountDaggerPanel(element: HTMLElement, transport: LiveDebugTransport): 
     status.textContent = [`${read.colliders.length} colliders, ${read.lines} lines${read.omitted ? `, ${read.omitted} omitted` : ''}:`,
       ...read.colliders.map(collider => `${collider.kind} ${collider.content ?? `instance ${collider.instance ?? '?'}`} · ${collider.lines} lines`)].join('\n');
   }));
+
+  // Input readout: a line at the bottom of the view with the player's attack, guard, cast and arms state and the
+  // latest input refused or dropped. The ruleset keeps it with the run, off by default; the panel opens showing it.
+  const readout = section('Input readout');
+  const showReadout = document.createElement('input');
+  showReadout.type = 'checkbox';
+  showReadout.dataset.readout = '';
+  showReadout.addEventListener('change', () => void run(showReadout.checked ? 'hud.readout-on' : 'hud.readout-off').then(answer => {
+    if (answer === null) showReadout.checked = !showReadout.checked;
+  }));
+  void run('hud.readout').then(answer => { if (answer !== null) showReadout.checked = (JSON.parse(answer) as { on: boolean }).on; });
+  const readoutLabel = document.createElement('label');
+  readoutLabel.append(showReadout, ' show the player state and refused input');
+  readout.append(readoutLabel);
 
   // Overlays: the ruleset's sets are built only while on; the Engine draws whichever are shown.
   const overlays = section('Overlays');

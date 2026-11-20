@@ -19,6 +19,7 @@ public sealed class DaggerfallUiDispatchTests : IDisposable
     private readonly PresentationState _presentation = new("Ready", 5d);
     private readonly List<string> _calls = [];
     private readonly PlayerInputSystem _input;
+    private readonly DaggerfallInputRefusals _refusals = new();
     private readonly DaggerfallUiDispatch _dispatch;
 
     public DaggerfallUiDispatchTests()
@@ -36,7 +37,7 @@ public sealed class DaggerfallUiDispatchTests : IDisposable
                 ChooseBundle: bundle => _calls.Add($"bundle {bundle}"),
                 SetMenuOpen: open => _calls.Add($"menu {open}"),
                 HoldsWorldOpen: () => false),
-            _presentation);
+            _presentation, _refusals);
     }
 
     [Fact]
@@ -55,6 +56,33 @@ public sealed class DaggerfallUiDispatchTests : IDisposable
         Admit(new DaggerfallPlayerUiAction("legal-choice", "3", Key: "plead"), DaggerfallUiPhases.Modal);
         Admit(new DaggerfallPlayerUiAction("menu", Open: true), DaggerfallUiPhases.Playing);
         Assert.Equal(["slot QuickSave", "weapon", "legal 3 plead", "menu True"], _calls);
+    }
+
+    [Fact]
+    public void A_world_act_the_dispatch_drops_says_why()
+    {
+        Admit(new DaggerfallPlayerUiAction("attack"), DaggerfallUiPhases.Modal);
+        Assert.Equal("Attack dropped: a modal holds the world", _refusals.Latest.ToString());
+        Admit(new DaggerfallPlayerUiAction("weapon-toggle"), DaggerfallUiPhases.Dead);
+        Assert.Equal("Weapon toggle dropped: dead", _refusals.Latest.ToString());
+        Admit(new DaggerfallPlayerUiAction("attack"), DaggerfallUiPhases.Playing, opensInteraction: true);
+        Assert.Equal("Attack dropped: an interaction opened in the same update", _refusals.Latest.ToString());
+
+        // A world act's binding pressed while a DOM surface held the cursor; a binding that is no world act, or a
+        // surface named in anything but words, is not a claim.
+        DaggerfallUiInput claims = _dispatch.Take([Ui("""{"action":"input-claimed","item":"kick","key":"menu"}"""),
+            Ui("""{"action":"input-claimed","item":"inventory","key":"menu"}"""), Ui("""{"action":"input-claimed","item":"kick","key":"<b>"}""")]);
+        Assert.Null(claims.ActionAt(1));
+        Assert.Null(claims.ActionAt(2));
+        Admit(claims.ActionAt(0), DaggerfallUiPhases.Held);
+        Assert.Equal("Kick dropped: the menu has the cursor", _refusals.Latest.ToString());
+
+        // A panel key that opens a panel between steps takes the attack queued with it.
+        _input.Request(DaggerfallInput.Attack);
+        _input.Request(DaggerfallInput.Inventory);
+        _dispatch.ApplyIdleInterfaceActions();
+        Assert.Equal("Attack dropped: a panel key took the same update", _refusals.Latest.ToString());
+        Assert.False(_input.HasPendingActions);
     }
 
     [Fact]
@@ -96,10 +124,10 @@ public sealed class DaggerfallUiDispatchTests : IDisposable
         Assert.Equal(["slot QuickSave", "panel rest", $"panel {DaggerfallPanel.Inventory}"], _calls);
     }
 
-    private void Admit(DaggerfallPlayerUiAction? action, DaggerfallUiPhases phase)
+    private void Admit(DaggerfallPlayerUiAction? action, DaggerfallUiPhases phase, bool opensInteraction = false)
     {
         bool elapsed = false;
-        _dispatch.Admit(action, phase, new ProductUpdateState(1f / 60f), opensInteraction: false, ref elapsed);
+        _dispatch.Admit(action, phase, new ProductUpdateState(1f / 60f), opensInteraction, ref elapsed);
     }
 
     public void Dispose() => _stage.Dispose();

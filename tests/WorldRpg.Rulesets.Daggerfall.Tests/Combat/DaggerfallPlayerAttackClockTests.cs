@@ -82,8 +82,9 @@ public sealed class DaggerfallPlayerAttackClockTests
         stage.Tap();
         stage.Clock.PressCast();
 
-        stage.Clock.Cancel();
+        stage.Clock.Cancel("weapon sheathed");
 
+        Assert.Equal("dropped Cast: weapon sheathed", stage.Log[^2]);
         Assert.False(stage.Clock.Casting);
         Assert.False(stage.Clock.Busy);
     }
@@ -354,7 +355,7 @@ public sealed class DaggerfallPlayerAttackClockTests
         stage.Clock.Observe([Input(InputEventKind.Clear, InputEdge.None)], []);
         stage.Steps(20);
 
-        Assert.Equal(["rest"], stage.Log);
+        Assert.Equal(["dropped Attack: input cleared while charging", "rest"], stage.Log);
         Assert.False(stage.Clock.Busy);
     }
 
@@ -381,7 +382,7 @@ public sealed class DaggerfallPlayerAttackClockTests
         stage.Steps(1);
         int impacts = stage.Count("impact");
 
-        stage.Clock.Cancel();
+        stage.Clock.Cancel("site changed");
         Assert.Equal("rest", stage.Log[^1]);
         Assert.False(stage.Clock.Busy);
         stage.Steps(8);
@@ -400,11 +401,11 @@ public sealed class DaggerfallPlayerAttackClockTests
         stage.Clock.Press();
         stage.Clock.PressKick();
 
-        stage.Clock.Cancel();
+        stage.Clock.Cancel("paralysed");
         stage.Up();
         stage.Steps(4);
 
-        Assert.Empty(stage.Log);
+        Assert.Equal(["dropped Attack: paralysed", "dropped Kick: paralysed"], stage.Log);
     }
 
     [Fact]
@@ -464,7 +465,7 @@ public sealed class DaggerfallPlayerAttackClockTests
         stage.Clock.Observe([Input(InputEventKind.Clear, InputEdge.None)], []);
         stage.Steps(10);
 
-        Assert.Equal(["motion shotDraw", "rest"], stage.Log);
+        Assert.Equal(["motion shotDraw", "dropped Attack: input cleared while drawing", "rest"], stage.Log);
     }
 
     [Fact]
@@ -602,6 +603,34 @@ public sealed class DaggerfallPlayerAttackClockTests
         Assert.Equal(1, stage.Count("start fastA"));
     }
 
+    [Fact]
+    public void The_reading_names_each_phase_the_press_waiting_and_a_charge()
+    {
+        Stage stage = new();
+        Assert.Equal(new DaggerfallAttackClockReading(null, "ready", 0d, null, null, 0), stage.Clock.Read());
+        stage.Tap();
+        DaggerfallAttackClockReading read = stage.Clock.Read();
+        Assert.Equal(("fastA", "wind-up", stage.Timings["fastA"]!.Value.Duration, 1), (read.Attack, read.Phase, read.Duration, read.Chain));
+        stage.Clock.Press();
+        Assert.Equal("attack", stage.Clock.Read().Waiting);
+        stage.Clock.Cancel("site changed");
+
+        stage.Tap();
+        List<string> phases = [];
+        while (stage.Clock.Read().Attack is not null)
+        {
+            if (phases.Count == 0 || phases[^1] != stage.Clock.Read().Phase) phases.Add(stage.Clock.Read().Phase);
+            stage.Steps(1);
+        }
+        Assert.Equal(["wind-up", "swing", "recovery"], phases);
+
+        stage.Down();
+        stage.Clock.Press();
+        Assert.Equal("attack held", stage.Clock.Read().Waiting);
+        stage.Steps((int)Math.Ceiling(Tuning.PowerThresholdSeconds / Step) + 1);
+        Assert.Equal(("powerIn", "charging"), (stage.Clock.Read().Attack, stage.Clock.Read().Phase));
+    }
+
     /// <summary>The clock over a session that records what it was asked, in order.</summary>
     private sealed class Stage : IDaggerfallPlayerAttacks
     {
@@ -668,5 +697,7 @@ public sealed class DaggerfallPlayerAttackClockTests
         }
 
         void IDaggerfallPlayerAttacks.Rest() => Log.Add("rest");
+
+        void IDaggerfallPlayerAttacks.Dropped(string input, string reason) => Log.Add($"dropped {input}: {reason}");
     }
 }

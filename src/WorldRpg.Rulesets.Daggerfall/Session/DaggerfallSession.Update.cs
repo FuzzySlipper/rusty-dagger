@@ -62,6 +62,7 @@ internal sealed partial class DaggerfallSession
         ReadOnlySpan<ProductInputEvent> input = update.Input;
         foreach (var appearance in _sites.Appearances) appearance.BeginAdmittedUpdate();         // Scene
         _enemyBehavior.BeginAdmittedUpdate();                                                     // Actors
+        InputRefusals.Age(facts.HostElapsedSeconds);                                              // Character
 
         // An update admits fixed steps only while the lifecycle runs; a held or paused one carries none.
         if (facts.LifecycleState == ProductLifecycleState.Running && double.IsFinite(facts.FixedDeltaSeconds)
@@ -115,6 +116,8 @@ internal sealed partial class DaggerfallSession
                 // here rather than waiting for a playing step: the batch is stable and reentrant appends wait
                 // for the next one.
                 if (elapsedSubmitted) _playerTime.ClearWorldAction();                             // Time
+                foreach (string act in DaggerfallInput.PressedActs(input, firstStep.RequestedActions, _controls.PadBindings))
+                    InputRefusals.Dropped(act, WorldHold(elapsedSubmitted, playing));            // Character
                 _input.Neutralize();                                                              // Character
                 _locomotion.Neutralize();                                                         // Character
                 NeutralizeGuard();                                                                // Combat
@@ -526,6 +529,7 @@ internal sealed partial class DaggerfallSession
     internal void Update(ProductUpdateState update)
     {
         _enemyBehavior.BeginAdmittedUpdate();                                                     // Actors
+        InputRefusals.Age(update.DeltaSeconds);                                                   // Character
         ObservePlayerInput(update.Inputs.ToArray(), update.DeltaSeconds, update);                 // Session: the input's list, below
         SimulateStep(update, 0, 0);                                                               // Session: the step's list
         DeliverFacts();                                                                           // Session
@@ -743,6 +747,7 @@ internal sealed partial class DaggerfallSession
         _playtest.ObserveUse(_latestSimulationStep ?? 0);                                         // Developer
         DaggerfallActivationOutcome outcome = Activation.Activate(look, out string? refusal)!;    // Interiors
         _playtest.ObserveUseRefusal(refusal);                                                     // Developer
+        if (refusal is not null) InputRefusals.Refused("Use", DaggerfallInputRefusals.Words(refusal));   // Character
         _activationPresentation.Report(outcome);                                                  // UiProjection
         Presentation.SetOutcome(outcome.Message);                                                 // UiProjection
         return true;
@@ -1200,6 +1205,22 @@ internal sealed partial class DaggerfallSession
     }
 
     /// <summary>
+    /// Why the world held this update's input, in the input readout's words: explicit elapsed time, a mode, ground not
+    /// yet live, a question waiting for its answer, a cinematic, or the open screens that hold the world.
+    /// </summary>
+    private string WorldHold(bool elapsedSubmitted, bool playing) =>
+        elapsedSubmitted ? "time passing"
+        : _mode != ProductMode.Playing ? $"game {_mode.ToString().ToLowerInvariant()}"
+        : _groundless ? "ground still loading"
+        : Summoning.PendingOffer || State.Quests.PendingOffer is not null ? "an offer waits for an answer"
+        : Law.ModalOpen ? "the court waits for an answer"
+        : Cinematics?.ActiveSource is not null ? "a cinematic is playing"
+        : DispelChoice.Pending is not null || IdentifyChoice.Open || CreateItemChoice.Pending is not null ? "a spell choice is open"
+        : _interactions.HoldsWorldOpen ? string.Join(", ", Enum.GetValues<DaggerfallInteractionScreen>().Where(_interactions.IsOpen)
+            .Select(screen => DaggerfallInputRefusals.Words(screen.ToString()))) + " open"
+        : playing ? "world held" : "play not running";
+
+    /// <summary>
     /// The title or a cinematic plays on world time, whatever holds play: its pictures and sound stop with Engine time,
     /// so step-indexed timers age behind a cinematic that plays over the world.
     /// </summary>
@@ -1366,6 +1387,7 @@ internal sealed partial class DaggerfallSession
     {
         State.Quests.ObserveFoeFact(fact);                                                        // Quests
         _playtest.ObserveFact(fact);                                                              // Developer
+        if (fact is AttackRejectedFact rejected) PlayerAttack.ObserveRejection(rejected);         // Combat
         EnemyBehavior.Trace.Observe(fact);                                                        // Developer
         if (fact is ActorDamagedFact { ActorId: DaggerfallActorIdentity.PlayerEntityId, ActualHealthLost: > 0 } hurt)
             _appearance.ReactPlayerHurt(hurt, State.Character.Race.Id, State.Character.Identity.Gender == DaggerfallCharacterGender.Female,
@@ -1527,7 +1549,7 @@ internal sealed partial class DaggerfallSession
     {
         if (_hanging?.Site == source.Appearance) { _hanging.Dispose(); _hanging = null; }       // Scene
         source.DeactivateWaterTriggers(_latestSimulationStep ?? 0UL);                             // Exterior
-        if (_latestUpdateGeneration is ulong swinging) PlayerAttack.Retire(swinging);            // Combat
+        if (_latestUpdateGeneration is ulong swinging) PlayerAttack.Retire(swinging, "site changed"); // Combat
         IReadOnlyList<AttackImpactNotice> departing = source.Appearance.TakeAttackImpacts();      // Scene
         if (departing.Count != 0 && _latestUpdateGeneration is ulong generation)
             State.Kit.AttackExecution.ApplyImpacts(departing, generation, _facts);                // Combat
@@ -1650,11 +1672,11 @@ internal sealed partial class DaggerfallSession
     private void ApplyPlayerActs(DaggerfallPlayerActs acts)
     {
         foreach (string shortcut in acts.Shortcuts) _dispatch.ApplyShortcut(shortcut);           // UiProjection
-        acts = acts.AfterShortcuts();                                                             // Character
+        acts = acts.AfterShortcuts(InputRefusals);                                                // Character
         if (acts.ToggleWeapon) ToggleWeapon();                                                    // Character, Travel's hands
         _appearance.UpdateRightHandEquipment(State.Equipment.Read(), State.WeaponDrawn);         // Scene
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);                 // Character
-        if (acts.Swings(State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId), State.WeaponDrawn))   // Character
+        if (acts.Swings(State.Effects.ControlsFor(DaggerfallActorIdentity.PlayerEntityId), State.WeaponDrawn, InputRefusals))   // Character
         {
             if (acts.Attack) PlayerAttack.Clock.Press();                                          // Combat
             if (acts.Kick) PlayerAttack.Clock.PressKick();                                        // Combat

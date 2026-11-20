@@ -78,6 +78,7 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     private void ToggleWeapon()
     {
         if (State.Transport.WeaponHandsFree) State.WeaponDrawn = !State.WeaponDrawn;
+        else InputRefusals.Refused("Weapon toggle", "the reins take the hands");
     }
     private readonly DaggerfallDungeonVisibility _dungeonVisibility;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
@@ -279,6 +280,10 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
     internal DaggerfallStrikeFeel StrikeFeel { get; }
     /// <summary>The player's attack around its clock.</summary>
     internal DaggerfallPlayerAttack PlayerAttack { get; } = null!;
+    /// <summary>The one seam a player input that did nothing reports through.</summary>
+    internal DaggerfallInputRefusals InputRefusals { get; } = new();
+    /// <summary>The developer's input readout, which the HUD carries while it is on.</summary>
+    internal DaggerfallInputReadout InputReadout { get; } = null!;
     /// <summary>Fires, and where a thrown body meets the traps.</summary>
     private readonly DaggerfallHazards _hazards;
     /// <summary>Hurt traps reaching past the body that set them off.</summary>

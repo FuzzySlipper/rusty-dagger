@@ -100,6 +100,8 @@ export interface DaggerHud {
   readonly prompt?: { readonly action: string; readonly target: string } | null;
   /** The device the player last pressed on, whose bindings the HUD names. */
   readonly inputDevice?: 'keyboard' | 'controller';
+  /** The developer's input readout while it is on: the player's state now and the latest input refused or dropped. */
+  readonly readout?: { readonly state: string; readonly refusal: string | null } | null;
   /** The game's help pages, each paragraph its words and the controls it names. */
   readonly help?: readonly HelpPage[];
   /** The command radial's commands in ring order, each with its words and whether the rules let it be used now. */

@@ -11,6 +11,7 @@ import { isGlints, useGlints } from './glint.js';
 import { sender } from './host.js';
 import { mountHud } from './hud.js';
 import { EDIT_TEXT_EVENT, mountLetterPicker } from './letter-picker.js';
+import { mountInputClaims } from './input-claims.js';
 import { mountInteraction } from './interaction.js';
 import { mountLoading } from './loading.js';
 import { mountMenu } from './menu.js';
@@ -132,6 +133,12 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.
   const interaction = mountInteraction(context, { onLockLostInPlay: () => { if (!menu.dialog.open && !dead && !entry.isTitle()) menu.open(); } });
   interaction.needsCursor(() => loading.open() || menu.dialog.open || radial.isOpen() || tutorial.isOpen() || dialogue.window.open || dialogue.summoningOffer.open || developer.isOpen());
+  // While the developer's input readout is on, a world act pressed while a surface holds the cursor is told to it.
+  let projectedMode = '';
+  const inputClaims = mountInputClaims(send, () => interaction.mode() !== 'interface' ? null
+    : loading.open() ? 'loading screen' : developer.isOpen() ? 'developer tools' : menu.dialog.open ? 'menu' : radial.isOpen() ? 'radial'
+    : tutorial.isOpen() ? 'tutorial' : dialogue.window.open ? 'conversation' : dialogue.summoningOffer.open ? 'summoning offer'
+    : projectedMode === 'playing' ? 'prompt' : `${projectedMode} screen`);
   // The surfaces that take the cursor, topmost first. Escape and Back go to the topmost: from any menu
   // panel Escape closes the whole menu while Back steps out one panel. A question the product needs
   // answered (a summoning offer, a court, a quest prompt, the death and title screens) has no back, so
@@ -218,6 +225,8 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     // Death outranks every other mode, so the screen the mode owns replaces the HUD rather than
     // joining it; its semantic choices and effects arrive in the same projection as the image.
     dead = value.mode === 'dead';
+    projectedMode = value.mode ?? '';
+    inputClaims.update(value);
     if (isSaveSlots(value.saveSlots)) saveSlots = value.saveSlots;
     // The interface scale follows the player's persisted choice, or the window while it is automatic.
     if (value.controls?.uiScaleRange) scale.update(value.controls.uiScale ?? null, value.controls.uiScaleRange);
@@ -274,6 +283,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
     radial.dispose();
     tutorial.dispose();
     developer.dispose();
+    inputClaims.dispose();
     document.removeEventListener('keydown', onKeyDown, true);
     document.removeEventListener('keyup', onKeyUp, true);
     disposeShell();
