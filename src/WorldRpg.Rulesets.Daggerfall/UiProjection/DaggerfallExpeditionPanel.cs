@@ -4,13 +4,14 @@ using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Transport;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Travel;
 using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-/// <summary>One of the player's vitals as a share of its pool, and the pool.</summary>
+/// <summary>One of the player's vitals and its pool, as the HUD counts them.</summary>
 internal readonly record struct DaggerfallExpeditionVital(double Current, double Maximum);
 
 /// <summary>
@@ -110,7 +111,7 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
             calendar.DescribeDate(), calendar.DescribeTime(), world.Weather(policy.Climate(party)), policy.ClimateName(party),
             here is not null && expedition.Known(here.Id) ? here.Name : null, expedition.LodgingHere,
             expedition.RemainingSeconds(), world.Transport,
-            Vital(stats, DaggerfallMechanicsIds.Health), Vital(stats, DaggerfallMechanicsIds.Fatigue), Vital(stats, DaggerfallMechanicsIds.Magicka),
+            Vital(stats, DaggerfallMechanicsIds.Health), Worn(stats), Vital(stats, DaggerfallMechanicsIds.Magicka),
             expedition.CanLeave, expedition.Teleporting ? teleport is not null : !atSea && expedition.Held is null,
             expedition.Teleporting ? "Teleport" : here is not null && expedition.Known(here.Id) ? $"Enter {here.Name}" : "Enter",
             expedition.EncounterWaiting, expedition.Teleporting, teleport?.Name,
@@ -180,6 +181,14 @@ internal sealed class DaggerfallExpeditionPanel(DaggerfallExpedition expedition,
         "camp" => DaggerfallExpeditionMode.Camp,
         _ => null,
     };
+
+    /// <summary>Fatigue as the HUD shows it: how worn out the player is, in its display units, filling as the party tires.</summary>
+    private static DaggerfallExpeditionVital Worn(StatsComponent stats)
+    {
+        Track track = stats.GetTrack(TrackId.Parse(DaggerfallMechanicsIds.Fatigue.Value));
+        long maximum = DaggerfallFormulaPolicy.DisplayFatigue(track.Maximum.ValueInt64);
+        return new(maximum - DaggerfallFormulaPolicy.DisplayFatigue(track.ValueInt64), maximum);
+    }
 
     private static DaggerfallExpeditionVital Vital(StatsComponent stats, DaggerfallTrackId id)
     {

@@ -74,7 +74,7 @@ export function isExpeditionProjection(value: unknown): value is ExpeditionProje
 const MODES: readonly { readonly mode: ExpeditionMode; readonly label: string; readonly tooltip: string }[] = [
   { mode: 'cautious', label: 'Cautiously', tooltip: 'Travel at a steady pace.' },
   { mode: 'reckless', label: 'Recklessly', tooltip: 'Travel faster, tiring twice as quickly.' },
-  { mode: 'halt', label: 'Halt', tooltip: 'Stop by the way while time passes.' },
+  { mode: 'halt', label: 'Halt', tooltip: 'Stop by the way and wait, neither tiring nor recovering.' },
   { mode: 'camp', label: 'Camp', tooltip: 'Make camp and recover, or take lodging in a settlement.' },
 ];
 
@@ -92,11 +92,11 @@ const WEATHER: Readonly<Record<string, string>> = {
  * bottom bar chooses how the party goes, shows its vitals and leaves the map, on foot from where it stands. The camera
  * follows the party until the view is moved by hand; I'm at follows it again.
  */
-export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionAction) => void): {
+export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionAction) => void, openMenu: () => void): {
   readonly root: HTMLElement;
   update(value: ExpeditionProjection | null): void;
   isOpen(): boolean;
-  /** Escape or Back: leave when the party still stands with the player, else nothing. */
+  /** Escape or Back: leave when the party still stands with the player, else the game menu (to save, say). */
   back(): void;
   /** The triggers or Page Up and Down zoom the map. */
   page(direction: -1 | 1): void;
@@ -181,11 +181,13 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   status.append(journey, message);
   const exits = document.createElement('div');
   exits.className = 'dagger-expedition-exits';
+  // The game menu over the map: its saves, settings and the rest, while the map holds the world.
+  const menuButton = button('Menu');
   const leave = button('Close map');
   leave.dataset.escape = '';
   const enter = button('Enter');
   enter.className = 'dagger-expedition-enter';
-  exits.append(leave, enter);
+  exits.append(menuButton, leave, enter);
   bottom.append(modes, vitals, status, exits);
 
   let current: ExpeditionProjection | null = null;
@@ -201,7 +203,10 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
   body.className = 'dagger-expedition-body';
   body.append(atlas.element, side);
   root.append(top, body, bottom);
-  parent.append(root);
+  // Over the HUD and under every dialog (the menu, a quest's question, a confirmation): the window's Servo has no top
+  // layer, so a dialog stays above the map only by coming after it.
+  const firstDialog = parent.querySelector('dialog');
+  if (firstDialog) firstDialog.before(root); else parent.append(root);
 
   findForm.addEventListener('submit', event => {
     event.preventDefault();
@@ -234,6 +239,7 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
       : { action: 'expedition-go', x: pin.x, y: pin.y });
   });
   clearPin.addEventListener('click', () => claim({ action: 'expedition-pin' }));
+  menuButton.addEventListener('click', openMenu);
   leave.addEventListener('click', () => claim({ action: 'expedition-leave' }));
   enter.addEventListener('click', () => claim({ action: 'expedition-enter' }));
 
@@ -341,7 +347,10 @@ export function mountExpedition(parent: HTMLElement, claim: (action: ExpeditionA
       render(value);
     },
     isOpen: () => current !== null,
-    back(): void { if (current?.canLeave) claim({ action: 'expedition-leave' }); },
+    back(): void {
+      if (current?.canLeave) claim({ action: 'expedition-leave' });
+      else if (current) openMenu();
+    },
     page(direction): void { atlas.zoom(direction); },
     pageHint: () => current ? 'Zoom' : null,
     initialFocus: () => current?.canEnter && !current.canLeave ? enter : atlas.element,

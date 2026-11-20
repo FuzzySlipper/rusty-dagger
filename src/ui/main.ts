@@ -135,7 +135,7 @@ export function mountProductUi(root: HTMLElement, context: RustyApplicationUiCon
   const tutorial = mountTutorial(shell, send);
   const entry = mountEntry(shell, send, menu.creation, () => { if (menu.dialog.open) menu.dialog.close(); });
   const dialogue = mountDialogue(shell, send, ask);
-  const expedition = mountExpedition(shell, send);
+  const expedition = mountExpedition(shell, send, () => menu.open());
 
   // A pointer lock the world held, lost in play, is the player asking for the menu: the browser and
   // the desktop shell spend Escape on releasing the lock, so this is what Escape does in play.

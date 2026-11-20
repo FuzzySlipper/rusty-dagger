@@ -102,7 +102,7 @@ public sealed class DaggerfallExpeditionSessionTests
     }
 
     [Fact]
-    public void A_camp_in_the_wild_recovers_by_the_rest_hour_and_lodging_in_a_town_costs_gold()
+    public void A_camp_in_the_wild_recovers_by_the_rest_hour_a_halt_waits_untired_and_lodging_in_a_town_costs_gold()
     {
         using Fixture fixture = new();
         fixture.AddGold(100);
@@ -118,10 +118,15 @@ public sealed class DaggerfallExpeditionSessionTests
         double lodged = fatigue.Current;
         Assert.True(lodged > fatigue.MaximumValue * .3);
 
-        // In the wild a camp is free and recovers the rough ground's share.
+        // In the wild a camp is free and recovers the rough ground's share; a halt there waits without tiring.
         fixture.Submit(new { action = "expedition-mode", mode = "cautious" });
         fixture.Go(fixture.Wild);
         fixture.RunUntilStopped();
+        double halted = fatigue.Current;
+        fixture.Submit(new { action = "expedition-mode", mode = "halt" });
+        fixture.Submit(new { action = "expedition-speed", speed = 3 });
+        fixture.RunGameMinutes(120);
+        Assert.Equal(halted, fatigue.Current);
         ulong gold = fixture.Session.State.Currency.Read().Gold;
         fatigue.SetCurrent(fatigue.MaximumValue * .3, clamp: true);
         fixture.Submit(new { action = "expedition-mode", mode = "camp" });
@@ -183,6 +188,10 @@ public sealed class DaggerfallExpeditionSessionTests
         Assert.Equal(0, fixture.Session.Expedition.Speed);
         fixture.Submit(new { action = "expedition-leave" });
         Assert.True(fixture.Session.Expedition.Open);
+
+        // A save while it waits reopens the map on the same encounter, saying so.
+        using (DaggerfallSession reloaded = fixture.Restore(fixture.Session.CaptureSave()))
+            Assert.Equal((true, "Something approaches! Enter to meet it."), (reloaded.Expedition.EncounterWaiting, reloaded.Expedition.Message));
 
         fixture.Submit(new { action = "expedition-enter" });
         Assert.False(fixture.Session.Expedition.Open);

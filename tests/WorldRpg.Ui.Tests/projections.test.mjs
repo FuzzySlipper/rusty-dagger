@@ -3695,6 +3695,10 @@ test('the travel panel opens the expedition map and closes the menu, and the map
     // Back on the map itself leaves it, as Close does, while the party can leave.
     f.pad('button-1');
     assert.deepEqual(f.actions.at(-1), { action: 'expedition-leave' });
+    // Once the party has moved on, Back opens the game menu over the map, where the game saves.
+    f.publish({ mode: 'modal', expedition: expedition(snapshot.expedition.map, { canLeave: false }) });
+    f.pad('button-1');
+    assert.equal(f.root.querySelector('dialog.dagger-menu').open, true);
   } finally { f.dispose(); }
 });
 

@@ -392,12 +392,13 @@ internal sealed partial class DaggerfallSession : ISaveableGameSession, IModeAwa
 
     long IDaggerfallExpeditionSurroundings.Pass(DaggerfallExpeditionStretch stretch)
     {
-        // Marching, halting and swimming pay the per-minute fatigue any minute does (a march its factor of it, a swim
-        // the swimming rate where its roll fails); a camp is a rest, and a ship carries a party that spends nothing.
+        // Marching and swimming pay the per-minute fatigue any minute does (a march its factor of it, a swim the swimming
+        // rate where its roll fails); a halt waits off its feet and a ship carries the party, so neither tires it; a camp
+        // is a rest.
         _locomotion.RecordStretch(stretch.Activity == DaggerfallExpeditionActivity.Swimming ? stretch.Seconds : 0, stretch.FatigueFactor);   // Character
         return AdvanceElapsedTime(stretch.Seconds, deferSkillAdvancement: true,
             resting: stretch.Activity == DaggerfallExpeditionActivity.Camping,
-            idleFatigue: stretch.Activity is not DaggerfallExpeditionActivity.Sailing,
+            idleFatigue: stretch.Activity is DaggerfallExpeditionActivity.Marching or DaggerfallExpeditionActivity.Swimming,
             completeTimeIncrease: false).AppliedSeconds;                                          // Session: the elapsed interval's list
     }
 

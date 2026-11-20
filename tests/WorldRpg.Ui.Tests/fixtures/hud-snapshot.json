@@ -1723,8 +1723,8 @@
       "maximum": 31
     },
     "fatigue": {
-      "current": 5568,
-      "maximum": 5568
+      "current": 0,
+      "maximum": 87
     },
     "magicka": {
       "current": 100,

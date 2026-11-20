@@ -444,7 +444,7 @@ dialog.dagger-quests:not([open]) { display: none; }
  * The expedition map: a screen of its own over the held world. The atlas fills the middle, the hour and the speeds sit
  * above it, Find, the ship and the pin beside it, and how the party goes, its vitals and the way off the map below.
  */
-.dagger-expedition { position: fixed; inset: 1rem; z-index: 30; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: .5rem; padding: .75rem; }
+.dagger-expedition { position: fixed; inset: 1rem; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: .5rem; padding: .75rem; }
 .dagger-expedition[hidden] { display: none; }
 .dagger-expedition-top, .dagger-expedition-bottom { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; align-items: center; padding: .4rem .75rem; }
 .dagger-expedition-clock { margin: 0; flex: 1 1 auto; font: 700 1.15rem var(--font-label); letter-spacing: .04em; }
@@ -463,7 +463,7 @@ dialog.dagger-quests:not([open]) { display: none; }
 .dagger-expedition-vital { position: relative; width: .8rem; height: 100%; border: 1px solid #2a170a; background: rgb(0 0 0 / .45); }
 .dagger-expedition-vital > span { position: absolute; left: 0; right: 0; bottom: 0; }
 .dagger-expedition-vital[data-vital="health"] > span { background: #b0391f; }
-.dagger-expedition-vital[data-vital="fatigue"] > span { background: #6f9a2e; }
+.dagger-expedition-vital[data-vital="fatigue"] > span { background: #c27a2c; }
 .dagger-expedition-vital[data-vital="magicka"] > span { background: #3466a8; }
 .dagger-expedition-status { flex: 1 1 20rem; min-width: 0; }
 .dagger-expedition-status p { margin: 0; }

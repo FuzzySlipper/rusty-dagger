@@ -6,7 +6,10 @@ using WorldRpg.Rulesets.Daggerfall.World;
 
 namespace WorldRpg.Rulesets.Daggerfall.Travel;
 
-/// <summary>How the party goes: cautious (the default), reckless (faster and more tiring), or stopped by the road or in camp.</summary>
+/// <summary>
+/// How the party goes: cautious (the default), reckless (faster and more tiring), halted by the way (waiting, neither
+/// tiring nor recovering) or in camp (recovering).
+/// </summary>
 internal enum DaggerfallExpeditionMode { Cautious, Reckless, Halt, Camp }
 
 /// <summary>What the party does with a stretch of time, which Condition charges or recovers as it would anywhere.</summary>
@@ -135,6 +138,7 @@ internal sealed class DaggerfallExpedition
     private const long SecondsPerHour = DaggerfallCalendar.SecondsPerMinute * DaggerfallCalendar.MinutesPerHour;
     private const long LongestStretch = 10 * DaggerfallCalendar.SecondsPerMinute;
     private const double LongestFrame = .25;
+    private const string EncounterLine = "Something approaches! Enter to meet it.";
 
     private static readonly IReadOnlySet<DaggerfallSiteKind> Settlements = new HashSet<DaggerfallSiteKind>
         { DaggerfallSiteKind.TownCity, DaggerfallSiteKind.TownHamlet, DaggerfallSiteKind.TownVillage, DaggerfallSiteKind.Tavern };
@@ -551,7 +555,7 @@ internal sealed class DaggerfallExpedition
                 && _world.EncounterArrives(_party, LocationHere is not null, after.MinuteNumber))
             {
                 _encounterWaiting = true;
-                Pause("Something approaches! Enter to meet it.");
+                Pause(EncounterLine);
                 break;
             }
             if (WarnLowFatigue(activity)) break;
@@ -604,6 +608,7 @@ internal sealed class DaggerfallExpedition
         _lowFatigueWarned = saved.LowFatigueWarned;
         _encounterWaiting = saved.EncounterWaiting;
         _campSeconds = saved.CampSeconds;
+        _message = _encounterWaiting ? EncounterLine : null;
     }
 
     /// <summary>A closed map's remembered pace, pin and lodging, from a save that left it closed.</summary>
