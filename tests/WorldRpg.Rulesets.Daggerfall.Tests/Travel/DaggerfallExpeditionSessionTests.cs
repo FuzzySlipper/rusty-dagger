@@ -100,6 +100,8 @@ public sealed class DaggerfallExpeditionSessionTests
         // The map's parts stand in the backdrop: the places about the party, its standard and its sight.
         AppearanceFact[] parts = [.. fixture.Facts().Where(fact => fact.Layer == RenderLayer.Backdrop)];
         Assert.NotEmpty(parts);
+        // Its colours are graded stronger while it is open.
+        Assert.Equal(DaggerfallTuning.Defaults.Expedition.Map.Grading.Saturation, fixture.Engine.Gradings[^1].Saturation);
         // Its camera shows none of the held arms, which stay in the scene for their playback.
         Assert.DoesNotContain(fixture.Facts(), fact => fact.Layer == RenderLayer.Viewmodel && fact.Visible);
 
@@ -119,6 +121,7 @@ public sealed class DaggerfallExpeditionSessionTests
         Assert.False(fixture.Engine.MapLandVisible);
         Assert.True(fixture.Engine.HeightfieldVisible);
         Assert.DoesNotContain(fixture.Facts(), fact => fact.Layer == RenderLayer.Backdrop);
+        Assert.Equal(default, fixture.Engine.Gradings[^1]);
     }
 
     [Fact]

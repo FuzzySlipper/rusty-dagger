@@ -91,7 +91,11 @@ internal sealed record DaggerfallExpeditionEntry(DaggerfallTravelMapPixel Pixel,
 
 /// <summary>A band the map shows: where it is, what it looks like, and whether it has seen the party.</summary>
 internal sealed record DaggerfallExpeditionBandView(int Id, double X, double Y, double Heading, DaggerfallBandKind Kind, string Name,
-    bool Camp, bool Spotted, double Distance);
+    bool Camp, bool Spotted, double Distance)
+{
+    /// <summary>The mobile its foe is, which the travel map draws it as.</summary>
+    internal int? Mobile { get; init; }
+}
 
 /// <summary>A point on the map the party may head for or the player may pin: a pixel, and the place there when one was chosen.</summary>
 internal sealed record DaggerfallExpeditionMark([property: JsonRequired] DaggerfallTravelMapPixel Pixel, DaggerfallSiteId? Place);
@@ -702,7 +706,8 @@ internal sealed class DaggerfallExpedition
     private DaggerfallExpeditionBandView View(DaggerfallExpeditionBand band)
     {
         (double x, double y) = Position;
-        return new(band.Id, band.X, band.Y, band.Heading, band.Kind, band.Name, band.Camp, band.Spotted, band.Distance(x, y));
+        return new(band.Id, band.X, band.Y, band.Heading, band.Kind, band.Name, band.Camp, band.Spotted, band.Distance(x, y))
+            { Mobile = band.Choice.MobileId };
     }
 
     private DaggerfallBandSightConditions SightConditions()

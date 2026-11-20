@@ -946,9 +946,10 @@ internal sealed partial class DaggerfallSession
             _horizon = new DaggerfallHorizon(engine, ground, tuning.Horizon, tuning.Water, tuning.Ground.RepeatMetres, definitions.Terrain.Rivers,
                 new DaggerfallFloraField(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
                 new DaggerfallFarForest(engine, ground, tuning.Flora, tuning.Flats, tuning.Flora.ArchiveDensity(definitions.Grids.Climate.Values)),
-                composition.ArtReplacements?.Sea, tuning.Expedition.Map.Relief);
+                composition.ArtReplacements?.Sea, tuning.Expedition.Map.Relief, tuning.Expedition.Map.Ground);
             partiallyConstructed.Add(_horizon);
-            _overland = new DaggerfallOverlandMap(engine, _horizon.Map, tuning.Expedition.Map, Expedition.Policy.AllDestinations(), _camera.Activate);
+            _overland = new DaggerfallOverlandMap(engine, _horizon.Map, tuning.Expedition.Map, Expedition.Policy.AllDestinations(), _camera.Activate,
+                mobile => _sites.Projection.Inputs.MobileSprites.GetValueOrDefault(mobile), PartyMobile, tuning.Flats.Actors);
             partiallyConstructed.Add(_overland);
             _exterior.DrawSeaWith(_horizon.AppendFacts, _horizon.CompleteSnapshot, _horizon.ReleaseSea);
             if (composition.ArtReplacements?.GroundCover is { } cover)
@@ -1155,6 +1156,7 @@ internal sealed partial class DaggerfallSession
                 heldWorkbench,
                 new TunablesDebugModule(engine.ContentSource, heldWorkbench.Page, heldWorkbench.Choose),
                 new DaggerfallExpeditionBandReadout(Expedition),
+                new DaggerfallOverlandViewCommands(_overland),
             ];                                                                                     // Developer
             if (restore is not null)
                 _persistence.Restore(restore, _sites, _roster, _encounters, _heldEnchantments,

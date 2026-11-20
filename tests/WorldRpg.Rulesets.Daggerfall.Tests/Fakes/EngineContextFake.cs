@@ -89,6 +89,8 @@ internal class EngineContextFake : DispatchProxy
     internal IReadOnlyList<AtmosphereRequest> Atmospheres => ((CameraServiceFake)(object)camera).Atmospheres;
     internal IReadOnlyList<StarsRequest> Stars => ((CameraServiceFake)(object)camera).Stars;
     internal IReadOnlyList<MoonRequest> Moons => ((CameraServiceFake)(object)camera).Moons;
+    /// <summary>The colour gradings set, in order.</summary>
+    internal IReadOnlyList<ColorGradingRequest> Gradings => ((CameraServiceFake)(object)camera).Gradings;
     /// <summary>The page element each camera's views follow, as the last anchoring left them.</summary>
     internal IReadOnlyDictionary<ulong, string> CameraAnchors => ((CameraServiceFake)(object)camera).Anchors;
     /// <summary>Whether the travel map's land has been made and draws, as the last call left it.</summary>
@@ -233,7 +235,7 @@ internal class EngineContextFake : DispatchProxy
             if (method?.Name == nameof(IHeightfieldService.Create))
             {
                 HeightfieldCreateRequest request = (HeightfieldCreateRequest)arguments![0]!;
-                if (request.Rings.Span[0].CellSize == WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallOverlandTerrain.FineCellMetres)
+                if (request.Rings.Span[0].Reach == WorldRpg.Rulesets.Daggerfall.Presentation.DaggerfallOverlandTerrain.Rings[0].Reach)
                 {
                     MapVisible = true;
                     return new Heightfield(new HeightfieldHandle(Map), () => { });
@@ -404,6 +406,7 @@ internal class EngineContextFake : DispatchProxy
                 nameof(ICameraViewService.SetMoon) => SetMoon((MoonRequest)arguments![0]!),
                 nameof(ICameraViewService.ReplaceCamera) => ReplaceCamera(((CameraUpdateRequest)arguments![0]!).Camera.Handle.Value),
                 nameof(ICameraViewService.SetViewportAnchor) => Anchor((CameraViewportAnchorRequest)arguments![0]!),
+                nameof(ICameraViewService.SetColorGrading) => Record(Gradings, arguments),
                 nameof(ICameraViewService.ReadViewportAnchor) => default(CameraViewportAnchorReadout),
                 nameof(ICameraViewService.ReadSurface) => default(CameraSurfaceReadout),
                 _ => throw new NotSupportedException(method?.Name),
@@ -414,6 +417,7 @@ internal class EngineContextFake : DispatchProxy
         private object? SetBlend(SkyBackgroundBlendRequest request) {SkyBlends.Add(request); return null;}
         private object? SetFog(FogRequest request) { Fogs.Add(request); return null; }
         private object? LinkBackdrop(bool linked) { BackdropLinked = linked; return null; }
+        internal List<ColorGradingRequest> Gradings { get; } = [];
         /// <summary>Each camera's views and the page element they follow, as the last anchoring left them.</summary>
         internal Dictionary<ulong, string> Anchors { get; } = [];
         private object? Anchor(CameraViewportAnchorRequest request) { Anchors[request.Camera.Handle.Value] = request.Anchor; return null; }

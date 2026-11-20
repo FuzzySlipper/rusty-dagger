@@ -68,6 +68,8 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     private readonly DaggerfallHorizonTuning _tuning;
     private readonly DaggerfallGroundTuning _groundTuning;
     private readonly float[] _floor;
+    /// <summary>Each map pixel's distance in pixels to the nearest land, measured the first time the travel map paints water.</summary>
+    private readonly Lazy<float[]> _offshore;
     private Frame _frame;
     private GroundMaterials? _materials;
     private readonly IReadOnlyDictionary<DaggerfallExteriorCellId, DaggerfallSiteExterior> _locations;
@@ -93,6 +95,7 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         _ = terrain.Relief;
         _ = terrain.Rivers;
         _floor = ValleyFloor(terrain);
+        _offshore = new(MeasureOffshore);
     }
 
     /// <summary>The rings, finest first, in metres; the coarsest reaches past where the haze has closed.</summary>
@@ -177,13 +180,14 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     }
 
     /// <summary>
-    /// The travel map's ground: far ground's heights and paint, without the horizon's lift and sink, its land raised above
-    /// the sea by <paramref name="relief"/> so ranges read from high above. The sea, the coast and the river channels are
-    /// where far ground and the walked ground have them, from the same function.
+    /// The travel map's ground: far ground's heights, without the horizon's lift and sink, its land raised above the sea
+    /// by <paramref name="relief"/> so ranges read from high above, painted per vertex in the <paramref name="palette"/>'s
+    /// colours by the weights the walked ground's layers take, the water shaded by its depth. The sea, the coast and the
+    /// river channels are where far ground and the walked ground have them, from the same function. Material 0 is the
+    /// water, 1 the land.
     /// </summary>
-    internal void SampleMap(HeightfieldTileRequest tile, HeightfieldTileSamples samples, double relief, bool winter)
+    internal void SampleMap(HeightfieldTileRequest tile, HeightfieldTileSamples samples, double relief, bool winter, DaggerfallMapPalette palette)
     {
-        GroundMaterials materials = Materials;
         int heightSide = tile.HeightSide, side = tile.Side;
         double[] ground = new double[heightSide * heightSide];
         Dictionary<(int X, int Y), DaggerfallTerrainWindow> windows = [];
@@ -200,11 +204,82 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
         for (int i = 0; i < side; i++)
         {
             double x = tile.SampleX(i), z = tile.SampleZ(j), height = ground[((j + 1) * heightSide) + i + 1];
-            Draw(samples, i, j, height <= OceanMetres + SeaMarginMetres || InChannel(x, z, tile.CellSize * 2) ? new(materials.Sea, new(1, 0, 0, 0))
-                : PaintOpen(x, z, height, Slope(ground, heightSide, i, j, tile.CellSize) * _groundTuning.RockFromSlope / _tuning.RockFromSlope, winter, materials,
-                    MapNoiseScale));
+            if (height <= OceanMetres + SeaMarginMetres)
+            {
+                samples.SetMaterial(i, j, 0);
+                samples.SetColor(i, j, Linear(palette.Water(Offshore(x, z))));
+                continue;
+            }
+            if (InChannel(x, z, tile.CellSize * 2))
+            {
+                samples.SetMaterial(i, j, 0);
+                samples.SetColor(i, j, Linear(palette.River));
+                continue;
+            }
+            samples.SetMaterial(i, j, 1);
+            if (height <= OceanMetres + BeachMetres) { samples.SetColor(i, j, Linear(palette.Beach)); continue; }
+            float slope = Slope(ground, heightSide, i, j, tile.CellSize) * _groundTuning.RockFromSlope / _tuning.RockFromSlope;
+            (int mapX, int mapY) = MapPixel(x, z);
+            int climate = Climate(mapX, mapY);
+            (int broadX, int broadZ) = ((int)Math.Round(x / Spacing / MapNoiseScale), (int)Math.Round(z / Spacing / MapNoiseScale));
+            float noise = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(broadX, 64_000 - broadZ);
+            System.Numerics.Vector4 weights = DaggerfallGroundBlend.Weights(_groundTuning, noise, slope, (float)height, noiseStone: false);
+            bool lush = climate == 228 && weights.W <= 0;
+            if (lush)
+            {
+                float share = DaggerfallGroundBlend.Lush(_groundTuning, noise), keep = 1 - share;
+                weights = new(weights.X * keep, weights.Y * keep, weights.Z, (weights.X + weights.Y) * share);
+            }
+            float patch = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(broadX / 4 + 7_919, 64_000 - (broadZ / 4));
+            float woods = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(broadX / 2 + 3_301, 64_000 - (broadZ / 2) + 5_107);
+            samples.SetColor(i, j, Linear(palette.Ground(climate, weights, lush, patch, woods, winter)));
         }
     }
+
+    private static Color Linear(System.Numerics.Vector3 colour) => new(colour.X, colour.Y, colour.Z, 1);
+
+    /// <summary>
+    /// How far out to sea a point lies, in metres to the nearest map pixel of land, read between pixels: the shallows by
+    /// the coast and the deep offshore. Measured once over the climate grid's sea, as a chamfer distance.
+    /// </summary>
+    internal double Offshore(double x, double z)
+    {
+        float[] offshore = _offshore.Value;
+        int width = _terrain.Width, height = _terrain.Height;
+        double px = Math.Clamp((x / DaggerfallWorldGrid.HorizontalSize) - .5, 0, width - 1.001), py = Math.Clamp((z / DaggerfallWorldGrid.HorizontalSize) + .5, 0, height - 1.001);
+        int ix = (int)px, iy = (int)py, at = (iy * width) + ix;
+        double fx = px - ix, fy = py - iy;
+        double top = offshore[at] + ((offshore[at + 1] - offshore[at]) * fx);
+        double bottom = offshore[at + width] + ((offshore[at + width + 1] - offshore[at + width]) * fx);
+        return (top + ((bottom - top) * fy)) * DaggerfallWorldGrid.HorizontalSize;
+    }
+
+    private float[] MeasureOffshore()
+    {
+        int width = _terrain.Width, height = _terrain.Height;
+        float[] distance = new float[width * height];
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+            distance[(y * width) + x] = Climate(x, y) == OceanClimate ? float.MaxValue / 4 : 0;
+        const float Straight = 1, Diagonal = 1.4142f;
+        void Relax(int x, int y, int dx, int dy, float step)
+        {
+            int nx = x + dx, ny = y + dy;
+            if ((uint)nx >= (uint)width || (uint)ny >= (uint)height) return;
+            float through = distance[(ny * width) + nx] + step;
+            if (through < distance[(y * width) + x]) distance[(y * width) + x] = through;
+        }
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        { Relax(x, y, -1, 0, Straight); Relax(x, y, 0, -1, Straight); Relax(x, y, -1, -1, Diagonal); Relax(x, y, 1, -1, Diagonal); }
+        for (int y = height - 1; y >= 0; y--)
+        for (int x = width - 1; x >= 0; x--)
+        { Relax(x, y, 1, 0, Straight); Relax(x, y, 0, 1, Straight); Relax(x, y, 1, 1, Diagonal); Relax(x, y, -1, 1, Diagonal); }
+        return distance;
+    }
+
+    /// <summary>The climate value of the open sea.</summary>
+    private const int OceanClimate = 223;
 
     /// <summary>The travel map's ground noise in broad patches, as fields seen from far above, rather than the walked ground's speckle.</summary>
     private const int MapNoiseScale = 32;
@@ -518,12 +593,10 @@ internal sealed class DaggerfallHorizonGround : IHeightfieldSampler
     }
 
     /// <summary>A vertex of open ground, by the same noise, slope and height wherever it is drawn.</summary>
-    /// <param name="noiseScale">How many walked vertices one step of the ground's noise spans: 1 as the walked ground has it;
-    /// more where the ground is seen from far above, whose cells would catch the noise only as speckle.</param>
-    internal Paint PaintOpen(double x, double z, double height, float slope, bool winter, GroundMaterials materials, int noiseScale = 1)
+    internal Paint PaintOpen(double x, double z, double height, float slope, bool winter, GroundMaterials materials)
     {
         ArchiveMaterials ground = Archive(x, z, winter, materials);
-        (int vertexX, int vertexZ) = ((int)Math.Round(x / Spacing / noiseScale), (int)Math.Round(z / Spacing / noiseScale));
+        (int vertexX, int vertexZ) = ((int)Math.Round(x / Spacing), (int)Math.Round(z / Spacing));
         float noise = DaggerfallTerrainSurfaceBuilder.DonorTerrainWeight(vertexX, 64_000 - vertexZ);
         System.Numerics.Vector4 weights = DaggerfallGroundBlend.Weights(_groundTuning, noise, slope, (float)height, ground.NoiseStone);
         if (!ground.HasLush || weights.W > 0) return new(ground.Open, weights);

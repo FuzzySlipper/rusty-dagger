@@ -1,5 +1,6 @@
 using System.Numerics;
 using Rusty.Engine;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Rulesets.Daggerfall.World;
@@ -9,6 +10,9 @@ namespace WorldRpg.Rulesets.Daggerfall.Travel;
 /// <summary>A name the travel map shows over a place, the party or its destination, where the view puts it: across and
 /// down the map's view, from its top left, 0 to 1.</summary>
 internal sealed record DaggerfallOverlandLabel(string Name, string Kind, double Across, double Down);
+
+/// <summary>The travel map's look as this run draws it: the tuning's, or what a developer set by eye with map.look.</summary>
+internal readonly record struct DaggerfallOverlandLook(DaggerfallOverlandGrading Grading, float Moon, double Haze);
 
 /// <summary>
 /// The expedition's travel map as a world the Engine draws: the land (<see cref="DaggerfallOverlandTerrain"/>) in the
@@ -48,8 +52,15 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     private readonly List<AppearanceFact> _facts = [];
     private readonly List<DaggerfallOverlandLabel> _labels = [];
     private DaggerfallOverlandModels? _models;
-    private Material? _sea;
-    private HeightfieldMaterial[]? _materials, _materialsFrom;
+    private readonly Func<int, NormalizedActorSprite?> _sprite;
+    private readonly Func<int> _partyMobile;
+    private readonly BillboardMode _facing;
+    /// <summary>Each mobile's billboard, made the first time it is drawn; none where the site publishes no sprite.</summary>
+    private readonly Dictionary<int, (SpriteAtlas Atlas, Appearance Look, RenderResource Texture)?> _billboards = [];
+    private Light? _moon;
+    private LightRequest? _moonRequest;
+    /// <summary>The parts whose identities stay put from update to update: the party's billboard, which the moonlight hangs from.</summary>
+    private const ulong PartyPart = 0, MoonlightPart = 1, FirstCountedPart = 2;
     private Camera? _camera;
     private CameraDescriptor _backdropView;
     private double _aspect = 16d / 9;
@@ -58,16 +69,64 @@ internal sealed class DaggerfallOverlandMap : IDisposable
 
     /// <param name="destinations">Every place on the world map.</param>
     /// <param name="playerCamera">Makes the player's camera the active one again.</param>
+    /// <param name="sprite">A mobile's billboard as the world draws it, or none where the site publishes none.</param>
+    /// <param name="partyMobile">The mobile the party is drawn as: the class figure of the player's career.</param>
+    /// <param name="facing">How the billboards turn to the camera, as the world's actors do.</param>
     internal DaggerfallOverlandMap(IEngineContext engine, DaggerfallOverlandTerrain terrain, DaggerfallOverlandTuning tuning,
-        IReadOnlyList<DaggerfallTravelDestination> destinations, Action playerCamera)
+        IReadOnlyList<DaggerfallTravelDestination> destinations, Action playerCamera,
+        Func<int, NormalizedActorSprite?> sprite, Func<int> partyMobile, BillboardMode facing)
     {
+        _sprite = sprite ?? throw new ArgumentNullException(nameof(sprite));
+        _partyMobile = partyMobile ?? throw new ArgumentNullException(nameof(partyMobile));
+        _facing = facing;
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _terrain = terrain ?? throw new ArgumentNullException(nameof(terrain));
         _tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
         _destinations = destinations ?? throw new ArgumentNullException(nameof(destinations));
         _playerCamera = playerCamera ?? throw new ArgumentNullException(nameof(playerCamera));
         View = new(tuning);
+        Look = new(tuning.Grading, tuning.Moonlight.Intensity, 1);
     }
+
+    /// <summary>The map's look this run.</summary>
+    internal DaggerfallOverlandLook Look { get; private set; }
+
+    /// <summary>The haze the land is seen through in a weather where the party is, per metre.</summary>
+    internal double Haze(DaggerfallWeatherKind weather) => _tuning.Haze[weather] * Look.Haze;
+
+    /// <summary>Sets one part of the look by eye for this run, or says why not.</summary>
+    internal string? Tune(string key, double value)
+    {
+        if (!double.IsFinite(value)) return "map.look takes a number.";
+        DaggerfallOverlandGrading grading = Look.Grading;
+        DaggerfallOverlandLook next = key switch
+        {
+            "contrast" => Look with { Grading = grading with { Contrast = (float)value } },
+            "saturation" => Look with { Grading = grading with { Saturation = (float)value } },
+            "temperature" => Look with { Grading = grading with { Temperature = (float)value } },
+            "moon" when value >= 0 => Look with { Moon = (float)value },
+            "haze" when value >= 0 => Look with { Haze = value },
+            _ => Look,
+        };
+        if (next == Look && key is not ("contrast" or "saturation" or "temperature" or "moon" or "haze")) return "map.look takes contrast, saturation, temperature, moon or haze.";
+        if (next.Grading.Contrast is < -1 or > 1 || next.Grading.Saturation is < -1 or > 1 || next.Grading.Temperature is < -1 or > 1) return "A grading lies from -1 to 1.";
+        Look = next;
+        if (_open) Grade();
+        return null;
+    }
+
+    private void Grade()
+    {
+        DaggerfallOverlandGrading wet = _wet ? _tuning.Wet : default, grading = Look.Grading;
+        float cool = _tuning.Moonlight.Cool * _night;
+        _engine.CameraView.SetColorGrading(new(Math.Clamp(grading.Temperature + wet.Temperature + cool, -1, 1), 0,
+            Math.Clamp(grading.Contrast + wet.Contrast, -1, 1), Math.Clamp(grading.Saturation + wet.Saturation, -1, 1)));
+    }
+
+    /// <summary>Whether the weather where the party is greys the map's colours.</summary>
+    private bool _wet;
+    /// <summary>How far into the night the grading last cooled for, in steps too small to see.</summary>
+    private float _night;
 
     internal DaggerfallOverlandView View { get; }
 
@@ -84,37 +143,27 @@ internal sealed class DaggerfallOverlandMap : IDisposable
     /// Streams the land, hidden, about map point (<paramref name="x"/>, <paramref name="z"/>) while the map is closed, so
     /// it stands ready when it opens.
     /// </summary>
-    internal void Prepare(double x, double z, bool winter, HeightfieldMaterial[] materials)
+    internal void Prepare(double x, double z, bool winter)
     {
-        if (!_open) _terrain.Follow(x, z, winter, shown: false, MapMaterials(materials));
-    }
-
-    /// <summary>
-    /// The ground's materials with the map's own sea: far ground's sea glows and ripples for a horizon seen across it,
-    /// and from high above reads as grey speckle, so the map's water is a plain deep blue the sun glints on.
-    /// </summary>
-    private HeightfieldMaterial[] MapMaterials(HeightfieldMaterial[] ground)
-    {
-        if (_materials is { } made && _materialsFrom == ground) return made;
-        _sea ??= _engine.Graphics.CreateMaterial(new MaterialRequest(Color.FromSrgb(.13f, .27f, .40f), default(RenderResourceReference), .25f,
-            new Color(1, 1, 1, 1), Vector3.Zero, 0, false));
-        _materialsFrom = ground;
-        return _materials = [.. ground.Select(bound => bound.Index == 0 ? new HeightfieldMaterial(0, _sea) : bound)];
+        if (!_open) _terrain.Follow(x, z, winter, shown: false);
     }
 
     /// <summary>
     /// Draws the map for this update: the view follows the party unless panned; the land, the places, the party, the
     /// bands, the sight ring, the way and the pin stand where the expedition has them, under the map's camera at the
-    /// player's <paramref name="eye"/>.
+    /// player's <paramref name="eye"/>. While it is open its colours are graded stronger, and a moonlight in the backdrop
+    /// alone lights it by <paramref name="night"/> (0 by day, 1 at the dark of night), so the land reads at every hour;
+    /// grey or wet <paramref name="weather"/> where the party is grades them cooler and greyer.
     /// </summary>
-    internal void Show(DaggerfallExpedition expedition, Vector3 eye, bool winter, HeightfieldMaterial[] materials)
+    internal void Show(DaggerfallExpedition expedition, Vector3 eye, bool winter, float night, DaggerfallWeatherKind weather)
     {
+        bool wet = weather is not (DaggerfallWeatherKind.Sunny or DaggerfallWeatherKind.Cloudy);
         if (_disposed) return;
         (double partyX, double partyZ) = DaggerfallOverlandView.Metres(expedition.Position.X, expedition.Position.Y);
         bool opening = !_open;
         if (opening) View.Open(partyX, partyZ);
         View.Track(partyX, partyZ);
-        _terrain.Follow(View.TargetX, View.TargetZ, winter, shown: true, MapMaterials(materials));
+        _terrain.Follow(View.TargetX, View.TargetZ, winter, shown: true);
         Vector3 target = View.Target(Height(View.TargetX, View.TargetZ));
         Vector3 viewEye = View.Eye(target.Y);
         if (!CameraQueries.TryLookAtPose(Backdrop(viewEye), Backdrop(target), View.Heading, out CameraPose pose)) return;
@@ -129,8 +178,28 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         else _engine.CameraView.UpdateCamera(new CameraUpdateRequest(_camera, world));
         _engine.CameraView.SetBackdrop(new(_camera, default, Global(eye), Backdrop(viewEye), (float)LinkScale));
         if (opening) _engine.CameraView.SetActiveCamera(_camera);
+        float dark = MathF.Round(Math.Clamp(night, 0, 1) * 20) / 20;
+        if (opening || wet != _wet || dark != _night)
+        {
+            (_wet, _night) = (wet, dark);
+            Grade();
+        }
+        // The moonlight hangs from the party's billboard, which stands in the backdrop once a snapshot has carried it.
+        else Moonlight(night);
         _open = true;
         Compose(expedition, partyX, partyZ);
+    }
+
+    /// <summary>A light that lights the map's land and nothing of the world, brighter the darker the night.</summary>
+    private void Moonlight(float night)
+    {
+        DaggerfallOverlandMoonlight moon = _tuning.Moonlight;
+        LightRequest request = new(DaggerfallPresentationObjectIds.TravelMap(MoonlightPart), true, DaggerfallPresentationObjectIds.TravelMap(PartyPart),
+            new LightDescriptor(LightKind.Directional, moon.Color, Look.Moon * Math.Clamp(night, 0, 1), true, Vector3.Zero,
+                Vector3.Normalize(new Vector3(-.35f, -.8f, -.45f)), false, 0, 0, 0, 0, LightShadowIntent.Disabled));
+        if (_moon is null) _moon = _engine.Graphics.CreateLight(request);
+        else if (request != _moonRequest) _engine.Graphics.UpdateLight(new(_moon, request));
+        _moonRequest = request;
     }
 
     /// <summary>Closes the map: the player's camera is active again and the land hides with its tiles kept.</summary>
@@ -140,6 +209,11 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         _open = false;
         _facts.Clear();
         _labels.Clear();
+        // Its parent leaves the scene with the map's parts.
+        _moon?.Dispose();
+        _moon = null;
+        _moonRequest = null;
+        _engine.CameraView.SetColorGrading(default);
         _playerCamera();
         _terrain.Hide();
     }
@@ -160,9 +234,15 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         if (_disposed) return;
         _disposed = true;
         _facts.Clear();
+        _moon?.Dispose();
         _camera?.Dispose();
         _models?.Dispose();
-        _sea?.Dispose();
+        foreach ((SpriteAtlas atlas, Appearance look, RenderResource texture) in _billboards.Values.OfType<(SpriteAtlas, Appearance, RenderResource)>())
+        {
+            look.Dispose();
+            atlas.Dispose();
+            texture.Dispose();
+        }
     }
 
     private CameraDescriptor Descriptor(CameraPose pose, double near, double far) => new(pose, CameraBasisMode.Derived, default,
@@ -212,23 +292,29 @@ internal sealed class DaggerfallOverlandMap : IDisposable
         DaggerfallOverlandModels models = _models ??= new(_engine);
         _facts.Clear();
         _labels.Clear();
-        ulong next = 0;
+        ulong next = FirstCountedPart;
         // Standards and dots keep their size on the screen better than true size would: they grow with the distance's root,
         // and close in still stand over the houses.
         float grow = Math.Max(.75f, (float)Math.Sqrt(View.Distance / _tuning.Distance.Opening));
         float token = (float)(_tuning.Token * grow), dot = token * .14f;
 
-        void Stand(Appearance look, double x, double z, float scale, float turn = 0, float sink = 0)
+        void Stand(Appearance look, double x, double z, float scale, float turn = 0, float sink = 0, ulong? part = null)
         {
             Vector3 at = new((float)x, (float)Height(x, z) - sink, (float)z);
-            _facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.TravelMap(next++), false, 0,
+            _facts.Add(new AppearanceFact(DaggerfallPresentationObjectIds.TravelMap(part ?? next++), false, 0,
                 new Transform(Backdrop(at), Quaternion.CreateFromAxisAngle(Vector3.UnitY, turn), new Vector3(scale * DaggerfallOverlandTerrain.Scale)),
                 look, true, RenderLayer.Backdrop));
         }
-        void Standard(DaggerfallOverlandBanner banner, double x, double z)
+        void Standard(DaggerfallOverlandBanner banner, double x, double z, ulong? part = null)
         {
-            Stand(models.Pole, x, z, token);
+            Stand(models.Pole, x, z, token, part: part);
             Stand(models.Flags[banner], x, z, token);
+        }
+        // A figure stands as its mobile's billboard, as tall as a standard, or as a standard where the site has no sprite for it.
+        void Figure(int? mobile, DaggerfallOverlandBanner banner, double x, double z, ulong? part = null)
+        {
+            if (mobile is int id && Billboard(id) is var (look, height)) Stand(look, x, z, token / height, part: part);
+            else Standard(banner, x, z, part);
         }
         void Label(string name, string kind, double x, double z, float above)
         {
@@ -248,7 +334,7 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             if (!known && Math.Sqrt(((x - partyX) * (x - partyX)) + ((z - partyZ) * (z - partyZ))) > sight) continue;
             // The nearest places come first, so a wide view leaves out only the farthest.
             if (_facts.Count >= MostPlaceParts) break;
-            StandPlace(models, place, x, z, Stand);
+            StandPlace(models, place, x, z, (look, px, pz, scale, turn, sink) => Stand(look, px, pz, scale, turn, sink));
             if (known && (close || Named.Contains(place.Kind))) Label(place.Name, DaggerfallSiteKinds.Label(place.Kind), x, z, (float)(_tuning.House * 2.6));
         }
 
@@ -275,17 +361,40 @@ internal sealed class DaggerfallOverlandMap : IDisposable
             (double pinX, double pinZ) = DaggerfallOverlandView.Metres(pin.Pixel.X + .5, pin.Pixel.Y + .5);
             Stand(models.Pin, pinX, pinZ, token * .7f);
         }
-        Standard(DaggerfallOverlandBanner.Party, partyX, partyZ);
+        Figure(_partyMobile(), DaggerfallOverlandBanner.Party, partyX, partyZ, PartyPart);
         Label("Your party", "party", partyX, partyZ, 0);
 
         // The bands the party sees, a spotted one ringed in red.
         foreach (DaggerfallExpeditionBandView band in expedition.SeenBands)
         {
             (double x, double z) = DaggerfallOverlandView.Metres(band.X, band.Y);
-            Standard(Banner(band.Kind), x, z);
+            Figure(band.Mobile, Banner(band.Kind), x, z);
             if (band.Spotted) Stand(models.Dots[DaggerfallOverlandDot.Spotted], x, z, token * .6f, sink: -2);
             Label(band.Name, band.Camp ? "camp" : band.Spotted ? "chase" : "band", x, z, token * 1.1f);
         }
+    }
+
+    /// <summary>
+    /// A mobile's billboard as the world's actors draw it, facing the camera in its resting frame, and its height in
+    /// metres; made the first time it is drawn and kept, or none where the site publishes no sprite for it.
+    /// </summary>
+    private (Appearance Look, float Height)? Billboard(int mobile)
+    {
+        if (!_billboards.TryGetValue(mobile, out var made))
+        {
+            made = null;
+            if (_sprite(mobile) is { } sprite && sprite.Size.Y > 0)
+            {
+                RenderResource texture = _engine.Graphics.OpenTexture(_engine.Content, sprite.TexturePath, sprite.TextureSha256).Handle;
+                SpriteAtlas atlas = _engine.Graphics.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture, SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth,
+                    sprite.AtlasHeight, [.. sprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height, frame.DisplaySize))])));
+                Appearance look = _engine.Graphics.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId,
+                    sprite.Pivot, sprite.Size, _facing, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1, 1, 1, 1)));
+                made = (atlas, look, texture);
+            }
+            _billboards[mobile] = made;
+        }
+        return made is var (_, appearance, _) && _sprite(mobile) is { } drawn ? (appearance, drawn.Size.Y) : null;
     }
 
     /// <summary>A place's model: a cluster of houses by its size, a keep, a temple, a ruin or a graveyard's stones.</summary>

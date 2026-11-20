@@ -495,7 +495,22 @@
     "portReach": 2,
     "lowFatigue": 0.2,
     "map": { "relief": 4, "fieldOfView": 40, "tilt": [30, 82, 55], "distance": [2500, 60000, 12000], "token": 420, "house": 140,
-      "haze": { "sunny": 0.000006, "cloudy": 0.000007, "overcast": 0.00001, "fog": 0.00006, "rain": 0.00002, "thunder": 0.000025, "snow": 0.000025 } },
+      "haze": { "sunny": 0.0000025, "cloudy": 0.000003, "overcast": 0.000005, "fog": 0.00004, "rain": 0.000012, "thunder": 0.000016, "snow": 0.000016 },
+      "grading": { "temperature": 0, "contrast": 0.15, "saturation": 0.12 },
+      "wet": { "temperature": -0.06, "contrast": -0.05, "saturation": -0.22 },
+      "moonlight": { "color": "#c2d6ff", "intensity": 1.0, "cool": -0.12 },
+      "ground": {
+        "climates": {
+          "desert": ["#c4a56a", "#a8865a", "#8f8a52", 0], "hotDesert": ["#d2b17a", "#b9935f", "#9c9258", 0],
+          "mountain": ["#6a7650", "#766a55", "#3f5636", 0.2], "rainforest": ["#3f7230", "#665634", "#244a22", 0.7],
+          "swamp": ["#56663a", "#4c472c", "#33452a", 0.35], "subtropical": ["#879450", "#a8905e", "#56683a", 0.25],
+          "mountainWoods": ["#4b7034", "#695e44", "#2c4a2a", 0.6], "woodlands": ["#527a33", "#6f5e3e", "#2f5228", 0.5],
+          "hauntedWoodlands": ["#45603a", "#5a5042", "#2c3f2c", 0.6]
+        },
+        "rock": "#7c7366", "snow": "#eef2f5", "lush": "#3e5a29", "beach": "#d6c69a",
+        "shallow": "#3f93a8", "deep": "#1b4a6e", "river": "#3a86a0",
+        "variation": 0.14, "winterSnow": 0.75, "shallowReach": 2500
+      } },
     "bands": {
       "stageEveryHours": 2,
       "stageChance": 40,

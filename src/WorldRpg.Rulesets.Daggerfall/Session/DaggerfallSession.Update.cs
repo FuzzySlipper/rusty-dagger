@@ -613,8 +613,18 @@ internal sealed partial class DaggerfallSession
     {
         if (Expedition.Open && State.PlayerControl.Position is { } feet)
             _overland.Show(Expedition, feet.ToVector() + (Vector3.UnitY * _tuning.Camera.EyeHeight),
-                _time.Calendar.Season == DaggerfallSeason.Winter, _horizon.Materials(_exterior.GroundLayers));   // Travel
+                _time.Calendar.Season == DaggerfallSeason.Winter, 1 - _tuning.Weather.Daylight(_time.Calendar, DaggerfallWeatherKind.Sunny),
+                LocalWeather.State.ForClimate(Expedition.Policy.Climate(Expedition.Party)));   // Travel
         else _overland.Close();                                                                  // Travel
+    }
+
+    /// <summary>The mobile the travel map draws the party as: the class figure of the player's career, the donor's first class's for a custom one.</summary>
+    private int PartyMobile()
+    {
+        IReadOnlyList<DaggerfallCareerDefinition> careers = _definitions.Catalogs.Careers;
+        string career = State.Character.Identity.CareerId;
+        int index = Enumerable.Range(0, careers.Count).FirstOrDefault(at => careers[at].Id == career);
+        return DaggerfallEncounterActors.FirstClassMobile + index;
     }
 
     /// <summary>
@@ -835,7 +845,7 @@ internal sealed partial class DaggerfallSession
             // The travel map's land streams hidden about the player, so it stands when the map opens.
             DaggerfallTravelMapPixel here = MapPosition.Position();                               // Travel
             (double mapX, double mapZ) = DaggerfallOverlandView.Metres(here.X + .5, here.Y + .5);
-            _overland.Prepare(mapX, mapZ, _time.Calendar.Season == DaggerfallSeason.Winter, _horizon.Materials(_exterior.GroundLayers));   // Travel
+            _overland.Prepare(mapX, mapZ, _time.Calendar.Season == DaggerfallSeason.Winter);   // Travel
         }
         else _horizon.Hide();                                                                     // Exterior
         DaggerfallSiteProjection site = _sites.Projection;
@@ -844,7 +854,7 @@ internal sealed partial class DaggerfallSession
             _tuning.Weather.Daylight(_time.Calendar, conditions.Kind), _tuning.Weather.Sunlight(_time.Calendar.Season, conditions.Kind),
             LocalWeather.Climate, conditions,
             LocalWeather.SkyVariant, player, sheltered, seconds, playing, _horizon.FogDensity, !_classicArt,
-            _overland.Open ? (float)_tuning.Expedition.Map.Haze[LocalWeather.State.ForClimate(Expedition.Policy.Climate(Expedition.Party))] : null); // Scene
+            _overland.Open ? (float)_overland.Haze(LocalWeather.State.ForClimate(Expedition.Policy.Climate(Expedition.Party))) : null); // Scene
     }
 
     /// <summary>

@@ -87,10 +87,11 @@ internal sealed class DaggerfallHorizon : IDisposable
 
     /// <param name="seaArt">The art set's shader and maps for the sea and the rivers, if it has them.</param>
     /// <param name="mapRelief">How far the travel map raises land above the sea.</param>
+    /// <param name="mapPalette">The colours the travel map's land and water are painted in.</param>
     internal DaggerfallHorizon(IEngineContext engine, DaggerfallHorizonGround ground, DaggerfallHorizonTuning tuning, DaggerfallWaterTuning water, float repeatMetres, DaggerfallTerrainRivers? rivers,
-        DaggerfallFloraField flora, DaggerfallFarForest farForest, DaggerfallSeaArt? seaArt, double mapRelief)
+        DaggerfallFloraField flora, DaggerfallFarForest farForest, DaggerfallSeaArt? seaArt, double mapRelief, DaggerfallMapPalette mapPalette)
     {
-        Map = new(engine, ground, mapRelief);
+        Map = new(engine, ground, mapRelief, mapPalette);
         _flora = flora ?? throw new ArgumentNullException(nameof(flora));
         _farForest = farForest ?? throw new ArgumentNullException(nameof(farForest));
         ArgumentNullException.ThrowIfNull(water);
@@ -126,9 +127,6 @@ internal sealed class DaggerfallHorizon : IDisposable
     /// </summary>
     internal DaggerfallOverlandTerrain Map { get; }
 
-    /// <summary>What ground draws by, every ground archive's layers and the far sea, bound the first time ground is drawn.</summary>
-    internal HeightfieldMaterial[] Materials(Func<int, DaggerfallGroundLayers> layers) => _bound ??= Bind(layers);
-
     /// <summary>The clear-weather haze while the horizon stands, or none when the classic fog applies.</summary>
     internal float? FogDensity => _link is null ? null : _fogDensity;
 
@@ -158,7 +156,7 @@ internal sealed class DaggerfallHorizon : IDisposable
             _waterArchive = -1;
         }
 
-        _ = Materials(layers);
+        _bound ??= Bind(layers);
         Vector3 engineLocal = local - origin.Compensation;
         double x = engineLocal.X + (origin.MapPixelX * CellSize), z = engineLocal.Z + (origin.MapPixelY * CellSize);
         // Before any focus moves, so the workers find every location's ground they paint from already read.
